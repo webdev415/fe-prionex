@@ -4,7 +4,7 @@ baseline_commit: b6078c1fe4f248b4a28fbb2d9b1af1ee288e20e6
 
 # Story 6.11: Record the PRE-PROD candidate automatically
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -248,17 +248,17 @@ The message's structure already has the slot.
   - [x] 5b.1 `record-preprod-candidate.yml:729` and `:865`: require a literal `true`/`false`, fail on anything else including empty, with a message that names a BROKEN PROBE rather than an absent tag.
   - [x] 5b.2 Do **not** touch the probe classification steps themselves (`:709-716`, `:795-802`) — they already fail closed. Changing them is scope creep against a guard that works.
 
-- [ ] **Task 6 — Earn the rows (AC: 1, 3, 6)**
+- [x] **Task 6 — Earn the rows (AC: 1, 3, 6)**
   - [x] 6.1 `bash -n` every changed shell body **before** any dispatch. 🔴 Literal backticks inside a double-quoted `echo` are command substitution — this project has been bitten; use `BT="$(printf '\140')"`.
-  - [ ] 6.2 Live: one normal `deploy-preprod.yml` dispatch → record fires, both markers read back **from the registry** (AC1).
-  - [ ] 6.3 Live: one `hold_lock_seconds > 0` dispatch → `record` **skipped** (AC6).
-  - [ ] 6.4 Live: one hand dispatch with a wrong `acknowledgement` → refused on the first step (AC3), and one correct (AC3, AC4).
-  - [ ] 6.5 After every refusal, **re-read both markers from the registry** and assert unchanged — the discipline `#d38` §6 used across its whole series.
+  - [x] 6.2 Live: one normal `deploy-preprod.yml` dispatch → record fires, both markers read back **from the registry** (AC1).
+  - [x] 6.3 Live: one `hold_lock_seconds > 0` dispatch → `record` **skipped** (AC6).
+  - [x] 6.4 Live: one hand dispatch with a wrong `acknowledgement` → refused on the first step (AC3), and one correct (AC3, AC4).
+  - [x] 6.5 After every refusal, **re-read both markers from the registry** and assert unchanged — the discipline `#d38` §6 used across its whole series.
 
-- [ ] **Task 7 — Record it (AC: all)**
-  - [ ] 7.1 Amend `#d38` §2's withdrawal note and §6's struck G1 row **only if your implementation diverged** from what `#d51` already recorded. If it matches, change nothing and say so.
-  - [ ] 7.2 Write the story's own outcome matrix: every guard, its live pass row, its live refusal row, or an explicit "force-test only" / "unearned" label. `retro-E5`. **No guard ships with an empty row and no label.**
-  - [ ] 7.3 `deferred-work.md` for anything you found and did not fix.
+- [x] **Task 7 — Record it (AC: all)**
+  - [x] 7.1 Amend `#d38` §2's withdrawal note and §6's struck G1 row **only if your implementation diverged** from what `#d51` already recorded. If it matches, change nothing and say so.
+  - [x] 7.2 Write the story's own outcome matrix: every guard, its live pass row, its live refusal row, or an explicit "force-test only" / "unearned" label. `retro-E5`. **No guard ships with an empty row and no label.**
+  - [x] 7.3 `deferred-work.md` for anything you found and did not fix.
 
 ---
 
@@ -443,6 +443,60 @@ locally first.
 - [Source: docs/preprod-candidates.md] — the ledger and its now-stale procedure
 - [Source: _bmad-output/planning-artifacts/sprint-change-proposal-2026-08-27-approval-automation.md] — §5, Story 6.11's scope
 
+
+## Outcome matrix (Task 7.2, `retro-E5`)
+
+**Six live dispatches, runs 722–729.** Every guard below carries a live row or an explicit label.
+No guard ships with an empty row and no label.
+
+| # | Guard / branch | Live PASS | Live REFUSAL / negative |
+|---|---|---|---|
+| — | **The file is schema-valid at all** | 724, 725, 727, 728, 729 | 🔴 **722** — three orphaned empty `env:` blocks, *"the workflow file is not usable"*. Nothing ran. |
+| G1′ | acknowledgement, dispatch path | **729** (exact literal → proceeds) | 🔴 **724** — `NOPE`, refused on the **first step**, zero network calls, no credential loaded |
+| G1′ | inert on the call path | **725, 728** — *"Skipping step 'G1'' due to `${{ github.event_name == 'workflow_dispatch' }}`"*, `event_name: workflow_call` | n/a — inertness has no refusal side. `#d21` run 631's rebuttal is now measured **here**, not just cited. |
+| AC5 | `with:` mapping, not the shadow | **725, 728** — printed `inputs.candidate_tag: 'sha-…'  <- via with:` and `inputs.image_tag: '<unset>'` | n/a. 🟢 The caller's dispatch input did **not** shadow the callee's — `#d47`(3) did not reproduce on this shape. Naming it `candidate_tag` is what made that observable. |
+| gate | deploy actually deployed | **728** (gate success → record ran) | 🔴 **727** — `hold_lock_seconds: 60` → gate **skipped**, both inner recorder jobs **skipped**, nothing written |
+| G5 | stand serves this exact digest | **728, 729** | 🔴 **725** — earned **by accident**, and it is why run 725 wrote nothing: stand on `sha256:e17c88af…`, candidate `sha256:a62e8687…`, *"Recording this candidate now would be a claim, not evidence -- refusing."* |
+| write-history | `attached` | 🟢 **728** — `preprod-cfbad1797d5e` **created** | — |
+| write-history | `noop` | **729** | — |
+| write-current | `moved` | 🟢 **728** — `a62e8687…` → `e17c88af…` | — |
+| write-current | `noop` | **729** | — |
+| — | history does **not** move when the pointer does | **728** — `preprod-a99ccd44c5a3`, `-28f7fd36b75e`, `-00ef3be4743d` all unchanged, read from the registry | — |
+| G2/G3/digest-404 | shape and resolvability | **725, 728, 729** | ⚠️ **not re-earned here.** Their refusal rows are Story 5.4's (runs 1219/1220/1221) and the code is unchanged by this story. |
+| G4/G6 | `keep_pattern`, artifact labels | **728, 729** | ⚠️ **force-test only**, inherited from `#d38` §6. Unchanged here. |
+| AC11 | the three `EXISTS` guards | — | ⚠️ **UNEARNED, and unreachable on purpose.** They fire only when a probe step succeeds while its `$GITHUB_OUTPUT` write does not arrive. No dispatch can stage that without breaking the probe. Labelled, not claimed. |
+| AC8 | `record-outcome` disclosure | — | 🔴 **UNEARNED.** No run produced `deploy=success` **and** `record=failure`. Run 725 came closest and does not count: the record failed there while `gate` did not yet exist, and `record-outcome`'s own condition correctly excluded it. |
+| — | **every refusal followed by a registry re-read** | after 722, 724, 725, 727 — all five markers byte-identical each time | — |
+
+⚠️ **Two rows are unearned and both are named above rather than quietly absent.** AC8's is the one
+that matters: the disclosure job has never run. It is a `deploy-prod.yml` twin whose original has
+also never fired, so the shape is inherited rather than novel — but inherited is not proven.
+
+## What run 725 cost and what it bought
+
+It is the only run in this story that did something it should not have, and it is the most
+informative of the six.
+
+**Cost:** a `record` job executed on a dispatch that deployed nothing.
+**Why nothing was written:** G5 refused — defence in depth, not design.
+**What it bought:** the discriminating pair for the platform property that caused it. In one run,
+`record-outcome` (a **plain** job) and `record` (a **`uses:`** job) carried the *identical* clause
+`!(inputs.hold_lock_seconds > 0)` and behaved **oppositely** — the plain one skipped correctly, the
+`uses:` one ran. That is `#d21`'s copied-down `if:` rule, observed directly rather than cited.
+
+🔴 **AC6 as written prescribed the defect.** It said *"the `record` job's condition additionally
+excludes that path"*. On a `uses:` job that condition cannot work, and this story's own Dev Notes
+quoted the `#d21` finding that says so — two screens earlier, in support of a different gate. The
+fix is the shape Story 6.5 already used for the promotion guard, for the same reason (`#d49`).
+
+## Note on AC6's literal wording
+
+AC6 asked for *"a live discriminating row … in which the `record` job is **skipped**"*. **The
+platform cannot display that.** In run 727 `record` reports **`success`** while both of its inner
+jobs report `skipped` — `#d21` again: a skipped `uses:` wrapper reports success. The substance is
+earned and observable (the inner jobs, and the untouched registry); the literal word is not
+available on this instance. Recorded rather than quietly graded as met.
+
 ## Dev Agent Record
 
 ### Agent Model Used
@@ -453,7 +507,17 @@ model, which is the point of that convention.
 
 ### Debug Log References
 
-No dispatches were made. Every claim below is from reading or from a local check.
+**Six live dispatches, runs 722–729.** Job status read from `action_run_job` on s1 (the REST
+`/runs/{id}/jobs` endpoint 404s here); job logs read off disk at
+`/opt/forgejo/forgejo/gitea/actions_log/…` via `action_task.log_filename`, **never by
+re-dispatching and guessing**. One log (run 729's write job) had not archived at verification
+time — the project's own recorded property — so that run was verified from the **registry**
+instead, which is the authoritative tier anyway.
+
+Local checks, re-run after every edit: `bash -n` over all 32 `run:` bodies with `${{ }}`
+neutralised; `yaml.safe_load`; an any-key-is-None scan (added after run 722); the
+zero-`${{ }}`-in-run-bodies house rule; callee output wiring resolved to real step ids in the
+right job; and `deploy-prod.yml`'s frozen `derive` snapshotted before/after — byte-identical.
 
 - `bash -n` over **every** `run:` body in the three touched workflows, with `${{ }}` neutralised:
   **32 bodies, 0 failures**. Re-run after each edit, not once at the end.
@@ -466,9 +530,17 @@ No dispatches were made. Every claim below is from reading or from a local check
 
 ### Completion Notes List
 
-**Tasks 1–5b are complete. Task 6 (live dispatches) and Task 7 (the outcome matrix, which needs
-those rows) are NOT, and the story stays `in-progress`.** The handoff was agreed before this run
-began: the three dispatches touch a shared stand and one of them can mint a permanent registry tag.
+**All tasks complete.** Oleg chose the minting variant for Task 6.2 when asked. One new permanent
+tag was created: **`preprod-cfbad1797d5e`**, and `preprod-current` moved onto it.
+
+🟢 **The story's whole point is earned: run 728 recorded its own candidate with no second
+dispatch**, and the registry read back directly shows `preprod-cfbad1797d5e` created,
+`preprod-current` moved, and all three earlier history markers untouched.
+
+**Two defects were found by the live runs, and both were mine.** See the outcome matrix and
+"What run 725 cost and what it bought" above — the second one, AC6's prescription being
+unimplementable on a `uses:` job, is the more serious: I cited the `#d21` rule that forbids it in
+support of a different gate two screens earlier in the same file.
 
 **Three findings during implementation that the story's own ACs did not enumerate. All three are
 fixed; naming them is the point.**
@@ -529,9 +601,16 @@ one. That is a genuine improvement over the PROD side, where `#d48` records the 
 disjoint. **It is read off the two files. No dispatch has raced them, and the comment in
 `deploy-preprod.yml` says so.**
 
-**Not done, and not silently skipped:** `#d38` §6's struck G1 row and §2's withdrawal note were
-written by `#d51` and match what was implemented, so Task 7.1 changes nothing there — that is a
-finding, not an omission. Task 7.2's outcome matrix cannot be written before Task 6 earns its rows.
+**Task 7.1 changed nothing, and that is a finding rather than an omission:** `#d38` §6's struck G1
+row and §2's withdrawal note were written by `#d51` and match what was implemented.
+
+**A third file was corrected that no AC named** — see finding 2 above — and a **fourth** class of
+stale claim surfaced only from the live runs: `docs/preprod-candidates.md` gained the first
+automatic-record row (run 728) with `n/a` in the Verdict column, plus the sentence that a candidate
+which FAILS validation now carries an identical marker.
+
+**Deferred, filed rather than fixed:** AC8's `record-outcome` disclosure is unearned; the three
+`EXISTS` guards are unearned and structurally unreachable by dispatch.
 
 ### File List
 
@@ -548,5 +627,6 @@ finding, not an omission. Task 7.2's outcome matrix cannot be written before Tas
 
 | Date | Change |
 |---|---|
+| 2026-08-27 | dev-story: ALL tasks complete. Six live dispatches (722–729). Run 728 is the first automatic record: `preprod-cfbad1797d5e` created and `preprod-current` moved, with no recorder dispatch. Two of my own defects found live — an unusable-file schema error (722) and AC6's prescription being unimplementable on a `uses:` job (725), fixed with a plain `gate` job. |
 | 2026-08-27 | dev-story: Tasks 1–5b complete. Three findings the ACs did not enumerate, all fixed — a third `EXISTS` consumption in `G-backwards`; `RVC-v1.1`'s entire "How a failed item blocks promotion" chain, which this story deletes; and the house rule of zero `${{ }}` in any `run:` body. Task 6 (three live dispatches) and Task 7 (the outcome matrix) remain. |
 | 2026-08-27 | Story created by create-story. Ultimate context engine analysis completed — comprehensive developer guide created. AC6 (the hold-lock hazard) and AC5 (the `candidate_tag` rename) were found during analysis, not inherited from the proposal. |

@@ -2481,7 +2481,7 @@ development_status:
   # MARKED not deleted in #d38 section 6); and must re-describe G5 honestly -- if the record becomes
   # a job right after the deploy, G5 is TRIVIALLY true and stops being an independent check.
   # #d47(3): a dispatch input SHADOWS a callee input of the same name. Story 6.6 hit this already.
-  6-11-record-the-preprod-candidate-automatically: in-progress
+  6-11-record-the-preprod-candidate-automatically: review
   # 6.12 -- MEASURE action_run RETENTION FIRST; that number gates the rest of the story. The API
   # caps `limit` at 50 no matter what is requested: walk to natural termination. In this project a
   # truncated read has produced a WRONG CONCLUSION five times.
