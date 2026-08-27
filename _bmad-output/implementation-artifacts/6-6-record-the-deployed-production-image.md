@@ -581,25 +581,25 @@ Next apparently free number on `origin/main` @ `584cc886` is **D48** (`D44` is h
 
 ### Task 4 — Wire the join (AC: 1, 2, 5) — **0 runs**
 
-- [ ] 4.1 Add `on.workflow_call` to `record-prod-image.yml`: `image_tag` required; **no**
+- [x] 4.1 Add `on.workflow_call` to `record-prod-image.yml`: `image_tag` required; **no**
       `acknowledgement`; `allow_current_move` **defaulting true on this path only**. Keep the whole
       `workflow_dispatch` block unchanged in its own defaults (§5).
-- [ ] 4.2 Gate G1 on the event. **Write the sentence** explaining why the call path is authorised by the
+- [x] 4.2 Gate G1 on the event. **Write the sentence** explaining why the call path is authorised by the
       deploy rather than by a literal (§5).
-- [ ] 4.3 Add `record:` to `deploy-prod.yml`: `needs: [derive, deploy]`,
+- [x] 4.3 Add `record:` to `deploy-prod.yml`: `needs: [derive, deploy]`,
       `if: needs.deploy.result == 'success'`, `uses: ./.forgejo/workflows/record-prod-image.yml`,
       `with: image_tag: ${{ needs.derive.outputs.deploy_tag }}`, `secrets: inherit`.
       🔴 **Verify by observation that `with:` reaches the callee** — `#d47`(3) is five days old.
-- [ ] 4.4 On a move, emit the displaced digest and its tag as a job output **and** to the step summary
+- [x] 4.4 On a move, emit the displaced digest and its tag as a job output **and** to the step summary
       (§7, AC2).
-- [ ] 4.5 §10: correct the G5 justification to the TRUE reason — **the stand exists and the caller
+- [x] 4.5 §10: correct the G5 justification to the TRUE reason — **the stand exists and the caller
       cannot see it** (`deploy-stand.yml` publishes no `workflow_call` outputs and is frozen) — **not**
       6.3's *"there is no PROD stand"*, which is now false. 🔴 **Do not implement the "digest half"**:
       it compares one resolution of one tag with itself and cannot fail (Prohibition 9). Assert nothing
       about s10 — that is Story 6.7's.
-- [ ] 4.6 Header work in **both** files, at the house ratio (§11). `deploy-prod.yml` gets the
+- [x] 4.6 Header work in **both** files, at the house ratio (§11). `deploy-prod.yml` gets the
       *"Not here, deliberately"* list updated: 6.6 leaves it.
-- [ ] 4.7 Mechanical checks before any dispatch: `bash -n` on every `run:` body; **zero `${{ }}` inside a
+- [x] 4.7 Mechanical checks before any dispatch: `bash -n` on every `run:` body; **zero `${{ }}` inside a
       `run:`** (Prohibition 10); `deploy-stand.yml`, `build.yml`, `record-preprod-candidate.yml`
       byte-identical to `origin/main`.
 
@@ -787,6 +787,58 @@ for recovery. No new workflow file is created — the census goes 13 → 13.
 ### Agent Model Used
 
 ### Debug Log References
+
+**Task 4 — 2026-08-27. The join is wired. No dispatch yet.**
+
+**4.1 `workflow_call` added to `record-prod-image.yml`** — Story 6.3 deliberately omitted it with a
+reason that has expired (*"the caller/callee decision is Story 6.4's to make"*); 6.4 made it. Two
+inputs differ from the dispatch block **by design, each with its reason in the file**: no
+`acknowledgement` (a caller passing the literal turns a guard into a constant — the authorisation on
+this path is the deploy that already succeeded), and `allow_current_move` defaults **true** here /
+**false** on dispatch, which is the policy 6.3's own comment left to this story.
+
+**4.2 G1 gated `if: github.event_name == 'workflow_dispatch'`.** ⚠️ A review layer raised this as a
+showstopper — *"`event_name` is the caller's, so G1 stays armed and fails every automatic record"*.
+**Measured evidence says otherwise and it is `#d21`, run 631:** inside the expanded callee
+`github.event_name` **is** `workflow_call`. The rebuttal is written into the file so it is not raised
+a third time.
+
+**4.3 `deploy-prod.yml` gains two jobs, `derive` untouched.**
+- `record` — `needs: [derive, deploy]`, `if: needs.deploy.result == 'success'`, **no `always()`**.
+  The contrast with `deploy` is the point: `deploy` needs `always()` because `build` may be skipped;
+  `record` must not run unless the deploy really succeeded. `always()` here would record an image that
+  was never deployed, and the registry would then lie permanently.
+- `record-outcome` — 🔴 **the review's "green deploy, failed record" finding, answered in code.** Every
+  fail-closed branch in the recorder exits *after* the container is already replaced, so the run goes
+  RED while the stand is UPDATED. This job fires only in that state and says so, names what is true
+  (stand correct, pointer stale, history tag possibly written — the write order guarantees which),
+  gives the idempotent repair, and says **do not redeploy to fix it**.
+
+**4.4 The displaced pair is now a JOB OUTPUT, not just a log line** (`displaced_digest`,
+`displaced_marker`), which is what AC2's *"not left in a log this project classifies best-effort"*
+actually requires. 🔴 **And enforcing AC2 turned out to need real code, not a print:** the epic says
+*"the previous image remains addressable by its own `prod-<12hex>` tag"* and **nothing enforced it**.
+The move branch now reads the displaced image's **own** `org.opencontainers.image.version` label,
+derives `prod-<hex>`, and **refuses the move** unless that tag resolves to the digest being displaced.
+Without it, one failed `record` in the past makes the previous release unaddressable forever — its
+sanitized-ref `<sha40>-prod` form matches no `keep_pattern` alternative and expires at 14 days.
+
+**4.5 §10 — the "digest half" is NOT implemented**, per the resolved decision. The G5 justification was
+corrected in Task 3; asserting anything about s10 is Story 6.7's.
+
+**4.6/4.7 Mechanical, all green.** YAML parses in both files; every `run:` body in both parses under
+`bash -n`; **zero `${{ }}` inside any `run:`** in either file (checked against parsed YAML).
+🔴 **Frozen files byte-identical to `origin/main`:** `deploy-stand.yml`, `build.yml`,
+`record-preprod-candidate.yml`, `deploy-dev.yml`, `deploy-preprod.yml`, `dev-reset.yml`, `ci.yml`,
+`build-main.yml` — **and `deploy-prod.yml`'s own `derive` job**, extracted and compared separately,
+because §12 owes Story 6.5 a clean rebase onto that seam and Task 4.7 did not originally check it.
+
+🔴 **One thing found while wiring and named in BOTH files rather than left for a later reader:** the
+recorder's own `concurrency` group **does not apply on the call path** (`#d21`). The automatic record
+runs under `deploy-prod-fe-prionex-prod`; a manual recovery dispatch runs under
+`record-prod-fe-prionex-prod`. **Disjoint** — nothing serializes them against each other over two
+permanent registry writes, and `imagetools create` has no compare-and-swap. Closing it needs one shared
+group declared on every caller, which is a change to a frozen file and is **not** taken here.
 
 **Task 3 — 2026-08-27. All fourteen FIXED. None deferred.**
 

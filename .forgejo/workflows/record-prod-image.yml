@@ -166,10 +166,53 @@ on:
         required: true
         type: string
       allow_current_move:
-        description: "Refused by default. Set true ONLY to deliberately repoint an existing prod-current at a different digest. Story 6.3's own first write must run with this false -- prod-current must not exist yet."
+        description: "Refused by default ON THIS PATH. Set true ONLY to deliberately repoint an existing prod-current at a different digest. The workflow_call path defaults it TRUE -- see the header."
         required: false
         type: boolean
         default: false
+
+  # ── Story 6.6: the automatic path. `deploy-prod.yml` calls this after a successful deploy ──
+  # 🔴 Story 6.3 deliberately shipped NO `workflow_call` block, with a reason that has expired:
+  # "the caller/callee decision -- including `secrets: inherit` -- is Story 6.4's to make, not
+  # this file's to pre-empt." Story 6.4 made it (`secrets: inherit` on both its callees, with
+  # the RW exposure recorded as accepted). This block is that decision being consumed.
+  #
+  # 🔴 TWO INPUTS DELIBERATELY DIFFER FROM THE DISPATCH BLOCK, AND NEITHER IS AN OVERSIGHT:
+  #   `acknowledgement` IS ABSENT. It exists so a stray or mistyped DISPATCH dies before a
+  #   credential loads. A caller that always passes the literal proves nothing -- it turns a
+  #   guard into a constant. On this path the authorisation is the deploy that already
+  #   succeeded: a job gated on `needs.deploy.result == 'success'` cannot be a stray dispatch.
+  #   G1 is therefore kept and GATED ON THE EVENT rather than fed a constant.
+  #   `allow_current_move` DEFAULTS TRUE HERE and false on dispatch. Story 6.3 refused a move by
+  #   default because it was the FIRST write and the tag must not have existed; its own comment
+  #   says "Story 6.6 sets its own policy; it does not inherit this default". Story 6.6 moves
+  #   the pointer on EVERY production deploy by design. A deploy that succeeds and then refuses
+  #   to record itself leaves `prod-current` naming the PREVIOUS release -- worse than having no
+  #   marker at all, because it is confidently wrong.
+  workflow_call:
+    inputs:
+      image_tag:
+        description: "The PROD image tag to record, in sha-<12hex>-prod form, as derived by deploy-prod.yml's `derive` job. 🔴 NOTE THE NAME: the caller's own dispatch input is `tag`, NOT `image_tag`, precisely so it cannot shadow this one (#d47(3), runs 637/640)."
+        required: true
+        type: string
+      allow_current_move:
+        description: "Defaults TRUE on this path -- moving prod-current is the normal outcome of a production deploy. See the header."
+        required: false
+        type: boolean
+        default: true
+    outputs:
+      current_written:
+        description: "created | moved | noop -- what happened to prod-current."
+        value: ${{ jobs.record.outputs.current_written }}
+      history_written:
+        description: "attached | noop -- what happened to prod-<12hex>."
+        value: ${{ jobs.record.outputs.history_written }}
+      displaced_digest:
+        description: "On a MOVE, the digest prod-current pointed at BEFORE this run; empty otherwise. AC2's own clause -- a job output rather than only a log line."
+        value: ${{ jobs.record.outputs.displaced_digest }}
+      displaced_marker:
+        description: "On a MOVE, the prod-<12hex> tag that names the displaced digest -- the durable handle for what was replaced; 'NONE' if the displaced image carries no history marker."
+        value: ${{ jobs.record.outputs.displaced_marker }}
 
 # Own literal group, recorder-against-recorder. Story 5.3's Prohibition 7 -- never copy
 # another stand's group -- applies in full.
@@ -200,6 +243,11 @@ jobs:
     # `record-preprod-candidate.yml`'s own `record` job makes the same choice.
     runs-on: node-20
     timeout-minutes: 10
+    outputs:
+      current_written: ${{ steps.write-current.outputs.current_written }}
+      history_written: ${{ steps.write-history.outputs.history_written }}
+      displaced_digest: ${{ steps.write-current.outputs.displaced_digest }}
+      displaced_marker: ${{ steps.write-current.outputs.displaced_marker }}
     # Finding #11 (Story 6.3 review, owner 6.6). G2 below tests for whitespace with ANSI-C
     # quoting (`$'\n'`), which is bash, NOT POSIX. Every step also opens `set -o pipefail`,
     # itself non-POSIX, so under `dash` a step would die loudly on line 1 rather than
@@ -214,7 +262,16 @@ jobs:
       # FIRST step of the FIRST job, and it makes ZERO network calls. A stray or mistyped
       # dispatch dies here, before a credential is loaded, before a probe, before anything
       # can be written. Mirrors G1's shape in record-preprod-candidate.yml.
-      - name: "G1 -- the acknowledgement must be the exact literal"
+      # 🔴 GATED ON THE EVENT (Story 6.6). On `workflow_call` there is no `acknowledgement`
+      # input at all, so this step must not run: it would compare an empty string to the
+      # literal and fail EVERY automatic record after a successful deploy.
+      # The expression is safe and it is MEASURED, not reasoned: `#d21`, run 631 --
+      # "`if:` у `uses:`-джобы копируется ВНИЗ в развёрнутую джобу и вычисляется там, где
+      # `github.event_name` равен `workflow_call`". A reviewer raised the opposite (that
+      # `github.event_name` stays the caller's, leaving G1 armed); that objection is recorded
+      # HERE so it is not raised a third time, and it is wrong on this instance's own evidence.
+      - name: "G1 -- the acknowledgement must be the exact literal (workflow_dispatch only)"
+        if: ${{ github.event_name == 'workflow_dispatch' }}
         env:
           ACK: ${{ inputs.acknowledgement }}
         run: |
@@ -787,10 +844,48 @@ jobs:
           fi
 
           IMAGE="${CURRENT_TAG%%:*}"
+          DISPLACED_DIGEST=""
+          DISPLACED_MARKER=""
           if [ -z "$PRE_DIGEST" ]; then
             echo "Creating ${CURRENT_TAG} for the first time."
           else
-            echo "MOVING ${CURRENT_TAG} from ${PRE_DIGEST} to ${CANDIDATE_DIGEST} (authorised)."
+            # 🔴 EPIC AC2's OWN CLAUSE, and NOTHING USED TO ENFORCE IT: "the previous image
+            # remains addressable by its own prod-<12hex> tag". If an earlier `record` failed or
+            # was skipped after its deploy succeeded, the displaced image has NO history marker,
+            # and moving the pointer off it makes it unaddressable FOREVER -- its sanitized-ref
+            # <sha40>-prod form matches no keep_pattern alternative and expires at 14 days, and
+            # prod-current was its only other name. Story 6.6's code review raised this as the
+            # sequence that falsifies epic AC2 permanently. Refuse the move; name the repair.
+            #
+            # The displaced commit is read from the ARTIFACT'S OWN LABEL rather than guessed
+            # from a tag listing: org.opencontainers.image.version is the 12-hex build.yml baked
+            # in, and it is the same label G6 checks on the way in.
+            echo "MOVE requested: ${CURRENT_TAG} ${PRE_DIGEST} -> ${CANDIDATE_DIGEST}."
+            PRE_JSON="$(docker buildx imagetools inspect --format '{{json .Image}}' "${IMAGE}@${PRE_DIGEST}" 2>/dev/null || true)"
+            PRE_HEX="$(printf '%s' "$PRE_JSON" | jq -r '.config.Labels["org.opencontainers.image.version"] // empty' 2>/dev/null || true)"
+            if ! printf '%s' "${PRE_HEX:-}" | grep -qE '^[0-9a-f]{12}$'; then
+              echo "FAIL: cannot read the DISPLACED image's own commit label"
+              echo "  (org.opencontainers.image.version) from ${IMAGE}@${PRE_DIGEST}; got"
+              echo "  '${PRE_HEX:-<empty>}'. Refusing to move the production pointer off an image"
+              echo "  this run cannot identify -- that is how a release becomes unaddressable"
+              echo "  silently. ${CURRENT_TAG} is UNCHANGED."
+              exit 1
+            fi
+            DISPLACED_MARKER="prod-${PRE_HEX}"
+            PRE_MARKER_DIGEST="$(docker buildx imagetools inspect --format '{{.Manifest.Digest}}' "${IMAGE}:${DISPLACED_MARKER}" 2>/dev/null || true)"
+            if [ "$PRE_MARKER_DIGEST" != "$PRE_DIGEST" ]; then
+              echo "FAIL: the image ${CURRENT_TAG} currently names (${PRE_DIGEST}, commit"
+              echo "  ${PRE_HEX}) is NOT addressable by ${DISPLACED_MARKER} -- that tag resolves"
+              echo "  to '${PRE_MARKER_DIGEST:-<absent>}'. Epic AC2 requires the previous image"
+              echo "  to stay addressable by its own prod-<12hex> tag AFTER the pointer moves;"
+              echo "  moving now would strip its last permanent name. THE POINTER IS UNCHANGED."
+              echo "  Repair: dispatch this workflow for the DISPLACED image's own"
+              echo "  sha-${PRE_HEX}-prod tag first, then re-run this deploy's record."
+              exit 1
+            fi
+            DISPLACED_DIGEST="$PRE_DIGEST"
+            echo "  displaced image is addressable as ${DISPLACED_MARKER} -> ${PRE_DIGEST} (AC2 satisfied)."
+            echo "MOVING ${CURRENT_TAG} (authorised)."
           fi
           docker buildx imagetools create --prefer-index=false --tag "${CURRENT_TAG}" "${IMAGE}@${CANDIDATE_DIGEST}"
 
@@ -817,12 +912,32 @@ jobs:
             echo "  run's '${CANDIDATE_DIGEST}'. Refusing to report success."
             exit 1
           fi
-          if [ -z "$PRE_DIGEST" ]; then
-            echo "current_written=created" >> "$GITHUB_OUTPUT"
-          else
-            echo "current_written=moved" >> "$GITHUB_OUTPUT"
-          fi
+          {
+            echo "displaced_digest=${DISPLACED_DIGEST}"
+            echo "displaced_marker=${DISPLACED_MARKER:-NONE}"
+            if [ -z "$PRE_DIGEST" ]; then
+              echo "current_written=created"
+            else
+              echo "current_written=moved"
+            fi
+          } >> "$GITHUB_OUTPUT"
           echo "OK: ${CURRENT_TAG} -> ${CANDIDATE_DIGEST} (verified by read-back)."
+          # AC2's displaced-pair clause reaches a DURABLE sink -- a job output the caller can
+          # read -- not only this log. Story 6.6's review found the original design routed it to
+          # the step summary alone, which #d38 S8a classifies best-effort, which is exactly what
+          # that AC forbids. The authoritative human record remains docs/prod-releases.md's own
+          # prod_tag column; this is the machine half of it.
+          if [ -n "$DISPLACED_DIGEST" ]; then
+            {
+              echo "### prod-current MOVED"
+              echo
+              echo "| | |"
+              echo "|---|---|"
+              echo "| displaced digest | ${DISPLACED_DIGEST} |"
+              echo "| displaced image still addressable as | ${DISPLACED_MARKER} |"
+              echo "| now points at | ${CANDIDATE_DIGEST} |"
+            } | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
+          fi
 
       # 🔴 FINDING #12 (Story 6.3 review, owner 6.6) -- AND IT STOPPED BEING THEORETICAL.
       # Story 6.6's own Task 2.5 reproduced this failure mode live, twice, on the sibling
