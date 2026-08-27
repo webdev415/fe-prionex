@@ -4934,7 +4934,30 @@ cost, and should be decided deliberately rather than discovered.
 **Removal trigger:** a per-person account exists and has dispatched a production release, or Oleg
 decides the account-level record is permanently sufficient and says so here.
 
-### ⚠️ `action_run` retention is UNMEASURED, and it gates Story 6.12. **Owner: Story 6.12.**
+### ~~⚠️ `action_run` retention is UNMEASURED, and it gates Story 6.12.~~ ✅ **CLOSED 2026-08-27 by Story 6.12 — with its measurement, not by deletion.**
+
+> 🟢 **Answer: nothing has ever been deleted, and the reason was OBSERVED rather than read.** Forgejo
+> splits this across two crons, and only one of them can touch run rows:
+>
+> | Cron | What it deletes | Schedule | Executions |
+> |---|---|---|---|
+> | `cleanup_actions` | logs and artifacts | `@midnight` | **26** |
+> | `delete_old_actions` | **the run records themselves** | **`-`** | **0** — `prev`/`next` both `0001-01-01` |
+>
+> The only cron that could delete an `action_run` row is **disabled and has never executed**. The one
+> that runs nightly has run 26 times and removed nothing: `repo_id=16` holds indexes **1 → 732 with no
+> gaps**. Separately, **2082** `action_task` rows have `log_in_storage=false` and **all 2082** still
+> have a live run row — the log dies, the row does not. `log_expired = 0`, so those missing logs are
+> this instance's known **delayed archival**, not retention. `app.ini` carries no `[actions]` section
+> and no retention key at all.
+>
+> ⚠️ **What it is NOT, because `#d38` §9 is the precedent here:** a **configuration state, not a
+> platform guarantee**. Turning `delete_old_actions` on makes the ledger's horizon finite that same
+> day. Full record in [`#d51`](../../docs/migration-decisions.md#d51) §10.
+>
+> **The entry below is kept, struck, as the record of what was open and why.**
+
+~~The original entry:~~
 
 `docs/prod-releases.md` becomes a file generated from `action_run` rows. Those rows are not job logs
 — that is precisely why this works (the six `log_in_storage=f` observations that put the ledger in a
