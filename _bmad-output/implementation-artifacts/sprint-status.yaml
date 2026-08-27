@@ -2235,7 +2235,41 @@ development_status:
   # something wrong. Recommendation (c) -- point the check at a deliberately wrong port/path once:
   # exercises the real code path, changes nothing, produces a real run id.
   # Floor 7 / ceiling 17. D50 apparent-next; re-verify across refs, local branches AND the working tree.
-  6-7-smoke-check-production-after-deploy: ready-for-dev
+  # ✅ -> `review` 2026-08-27. Green on run 705. 6 of 7 ACs MET; AC4 PARTIAL and cannot be otherwise.
+  # 🔴 THE HEADLINE IS NOT THE GREEN RUN. It is FOUR RED RUNS ON A HEALTHY STAND (698/699/702), every
+  # one of them MY defect, and NONE of them diagnosable remotely. Job logs are not retrievable here
+  # and step-summary persistence is unproven, so "debug by re-dispatching" is guessing on a
+  # twenty-minute cycle -- it found nothing in four attempts. LOCAL REPRODUCTION (nginx:alpine + this
+  # repo's own nginx.conf + a fake dist/) answered in about a minute, twice. Written into the step
+  # comments so the next reader does not repeat it.
+  # 🔴 DEFECT FOUND IN PRODUCTION, NOT IN THE CHECK: the three security headers nginx.conf declares
+  # with `always` at server level are served on NO HTML response. add_header is inherited into a
+  # location only if that location declares none of its own; `location ~* \.html$` declares two and
+  # the SPA fallback serves EVERY route through it. Reproduced locally. FILED to deferred-work,
+  # OWNER OLEG (his own decision when the deferral was put to him) -- nginx.conf is frozen here and
+  # the fix changes what every environment serves, not just PROD.
+  # 🔴 AND THE CHECK FAILED ON A LOG LINE IT WROTE ITSELF: the 404 probe makes nginx log
+  # `[error] open() ".../definitely-not-a-real-bundle-6-7.js" failed`. A 404 is an ACCESS-log event;
+  # a missing STATIC FILE is an ERROR-log event. Closed two ways because either alone is fragile --
+  # the log window is read BEFORE the probes, and the matcher excludes that one filename NARROWLY,
+  # so a genuinely missing bundle still trips it. The irony is recorded: a step written against
+  # "a bare grep ERROR would fail a correct deploy" failed a correct deploy for a different reason.
+  # ✅ WHAT IT ADDS OVER THE CALLEE, and epic AC1 was ALREADY IMPLEMENTED so this matters: one read
+  # AFTER the deploy job ended and the 4.4 lock was released (decay after hand-off, which the
+  # callee's in-lock check cannot see), plus CONTENT -- the asset the SERVED index actually names.
+  # And a free discriminating negative from nginx.conf itself: try_files returns 200 for ANY path,
+  # but the regex asset location takes precedence with no try_files, so a non-existent .js MUST 404.
+  # Without that assertion the bundle probe would be VACUOUS -- any asset name would have passed.
+  # 🔶 AC4 PARTIAL: run marked failed ✅, operator pointed at rollback: true with the ledger as the
+  # tag source ✅, and the summary states NO Slack was sent and why ✅. The Slack clause is BLOCKED --
+  # channel does not exist, webhook unrecoverable, new one to be created by OLEG (Story 4.5). Same
+  # deferral 6.4 took. Substituting a channel is prohibited.
+  # ⚠️ NOT EARNED and labelled: a failure caused by production genuinely serving wrong content. OQ1
+  # proposed spending a run to force one; events overtook it -- three real red runs arrived unbidden,
+  # and they prove the assertions fire, not that production was wrong. Said unevenly, not claimed.
+  # Registry unchanged; nginx.conf, Dockerfile.prod and src/ untouched; derive byte-identical.
+  # Oleg merges; the row goes `done` only after that.
+  6-7-smoke-check-production-after-deploy: review
   6-8-roll-back-production-to-a-previous-release: backlog
   6-9-cut-production-over-with-a-no-op-deploy: backlog
   # Added 2026-08-18 by sprint-change-proposal-2026-08-18-prod-target.md. Listed after 6.9 to
