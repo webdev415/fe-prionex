@@ -5024,6 +5024,147 @@ this entry exists so the gap is not rediscovered as a finding.
 
 ---
 
+## Deferred from: making PROD publicly reachable (2026-08-27)
+
+### ~~🔴 PROD Kong returns no `Access-Control-Allow-Origin` for ANY origin tried.~~ ✅ **WITHDRAWN 2026-08-27 — the entry was WRONG, and the wrongness is the useful part.**
+
+> 🔴 **I probed the wrong host.** `api.crm-prionex.online` is **legacy** (`175.110.122.17`). The
+> production API is **`https://api-crm.prod.crm-prionex.online`**, fronted from the hypervisor to
+> Kong at **`10.70.0.11:8330`** over `wg-private`. Oleg supplied the name; it was not guessable, and
+> `#d43` §4 deliberately never created `api.crm.prod` — a different name.
+>
+> 🟢 **Against the right host, CORS is already correct, with a real allow-list:**
+> `https://crm.prod.crm-prionex.online` → `Allow-Origin` echoed; a foreign origin → **zero** ACAO
+> headers. Not a blanket echo.
+>
+> ⚠️ **The lesson, which this project has paid for before:** a negative result against the wrong
+> target is indistinguishable from a negative result against the right one. The only thing that
+> exposed it was the third row — the PRE-PROD control origin, known-good, also failing. **The
+> control did exactly the job a control exists for.** Keep including one.
+>
+> Full record in [`#d43`](../../docs/migration-decisions.md#d43) §10. **The entry below is kept,
+> struck, as the record of what was concluded and how it was corrected.**
+
+~~The original entry:~~
+
+The last blocker of `#d43` §8. The public front now works, so this is measurable for the first
+time — and the measurement **reverses the assumption it was filed under**.
+
+The live PROD bundle calls `https://api.crm-prionex.online`. Preflight (`OPTIONS`, with
+`Access-Control-Request-Method`) answers **200** with `Allow-Credentials: true`, `Allow-Headers`,
+`Allow-Methods`, `Max-Age` and `vary: Origin` — and **no `Allow-Origin`**, for:
+
+| Origin | `Allow-Origin` |
+|---|---|
+| `https://crm.prod.crm-prionex.online` | absent |
+| `https://evil.example.com` (negative control) | absent |
+| `https://crm.preprod.crm-prionex.online` — **known-good since 2026-08-25** | **absent** |
+
+🔴 **The third row is the one that matters.** The PRE-PROD origin, measured working twice, also gets
+nothing here — so **`api.crm-prionex.online` is NOT the Kong that serves PRE-PROD**, and the earlier
+CORS measurements cannot be carried over to it.
+
+**Consequence:** the production frontend loads over HTTPS and serves the correct build, but a browser
+will block its API calls. ⚠️ **What this does NOT establish:** which origin this Kong does admit, or
+whether it admits any. Both readings — "the plugin never sets `Allow-Origin` on preflight" and "the
+allow-list contains none of the three" — fit the observation. Measured with `GET`/`OPTIONS`, never
+`HEAD` (`#d51` §8 records why).
+
+**Removal trigger:** `CRM/api-prionex` confirms the allow-list, or a preflight from the prod origin
+returns `Allow-Origin`.
+
+### ⚠️ The Let's Encrypt account for the prod front has NO email. **Owner: Oleg.**
+
+`certbot --register-unsafely-without-email` was used deliberately: sending Oleg's address to an
+external service was not something he had asked for. Auto-renewal does not depend on it
+(`certbot.timer` armed, `renew --dry-run` passes), but **expiry warnings will not arrive** if
+renewal ever breaks. Cert valid to **2026-11-25**. **Removal trigger:** Oleg names an address, or
+decides the timer is sufficient.
+
+### ⚠️ The zone TTL for `crm.prod.crm-prionex.online` is still `14400`. **Owner: Oleg (Hostinger).**
+
+`#d43` §8 already called this wrong for a temporary name and proposed `300`, with a precedent in the
+same zone. Unchanged. It matters more now that the name actually serves something: a mistake takes
+four hours to undo.
+
+
+### ~~🔴 PROD's frontend still calls the LEGACY API.~~ ✅ **CLOSED 2026-08-27 by run 766 — its own removal trigger fired.**
+
+> 🟢 **Measured after the release:** `https://crm.prod.crm-prionex.online` serves
+> `/assets/index-CiZvpnjL.js` (`Last-Modified: 18:12:10`) and that bundle bakes
+> **`https://api-crm.prod.crm-prionex.online`** and **`wss://api-crm.prod.crm-prionex.online`**.
+> It was `https://api.crm-prionex.online` before. **Production no longer calls the legacy API.**
+>
+> The chain that did it, all green: **762** (`build-main.yml`, dev — the first live exercise of the
+> rewiring, reading `vars.*_DEV`), **764** (`build.yml`, preprod), **765** (`deploy-preprod.yml`,
+> which recorded its own candidate), **766** (`deploy-prod.yml`, `rollback: false` — guard → build →
+> deploy → smoke → record). The `vars.` wiring is therefore proven on **all three** environments.
+>
+> **The entry below is kept, struck, as the record of what was open and what closed it.**
+
+~~The original entry:~~
+
+Both production names now work — but the deployed bundle has `https://api.crm-prionex.online`
+(legacy) baked in, not `https://api-crm.prod.crm-prionex.online`. Under Option C (`#d1`)
+`VITE_API_BASE_URL` is a **build-time** value: `build.yml:588` reads it from OpenBao (`#d15`) and the
+Dockerfile declares the `ARG` with no default.
+
+**Two steps, and both are decisions rather than consequences of the front being up:**
+1. change `VITE_API_BASE_URL` in the **prod OpenBao path** to `https://api-crm.prod.crm-prionex.online`;
+2. rebuild and redeploy (`deploy-prod.yml`, `rollback: false` — that path rebuilds).
+
+🔴 **CHANGE IT IN OPENBAO, NOT IN THE FORGEJO VARIABLE — measured 2026-08-27, and the trap is that
+both look right.** The repository DOES define Forgejo variables that appear to be the source:
+
+```
+VITE_API_BASE_URL_PROD    = https://api.crm-prionex.online     <- legacy
+VITE_API_BASE_URL_PREPROD = https://api.crm.preprod.crm-prionex.online
+VITE_API_BASE_URL_DEV     = https://api.dev.crm-prionex.online
+VITE_WS_URL_*             = the matching wss:// values
+```
+
+**Nothing reads them.** `grep -rn 'vars\.VITE_API_BASE_URL' .forgejo/workflows/` returns nothing;
+`build.yml:1376` feeds the Docker build args from `steps.bao.outputs.api_url`, i.e. OpenBao
+(`build.yml:588`). Editing the Forgejo variable would change **nothing** and the rebuild would look
+identical.
+
+⚠️ **Why the mistake is natural, and why it stayed invisible:** the repo genuinely uses BOTH
+mechanisms — `VITE_OPERATOR_PHONE_URL_*` *is* read through `vars.` (`build.yml:737-746`) — and the
+two sources currently hold the SAME value for the API, so they have never visibly diverged.
+
+🔴 **AND THE NAMES ARE NOT DEAD — they are consumed by the OTHER pipeline.** `.github/workflows/CD.yml:45,49`
+reads `secrets.VITE_API_BASE_URL_PROD` / `secrets.VITE_WS_URL_PROD`. That is the **GitHub** pipeline,
+which builds what **s2** serves — where the live users are. So the same names exist in two places
+with two different mechanisms:
+
+| Where | Mechanism | Read by | Builds what |
+|---|---|---|---|
+| GitHub | `secrets.VITE_API_BASE_URL_PROD` | `CD.yml` | **s2 — live users** |
+| Forgejo | `vars.VITE_API_BASE_URL_PROD` | **nothing** | — |
+| OpenBao | `secret/fe/<env>/app` | `build.yml:588` → `:1376` | **s10 — the new contour** |
+
+⚠️ `#d7` puts the GitHub side out of scope entirely, so its secret is not ours to touch.
+
+**Updated 2026-08-27 on Oleg's instruction, via the Forgejo API:**
+`VITE_API_BASE_URL_PROD` → `https://api-crm.prod.crm-prionex.online`,
+`VITE_WS_URL_PROD` → `wss://api-crm.prod.crm-prionex.online` (both HTTP 204).
+🔴 **This does not change any build yet** — `build.yml` still reads OpenBao. The variables are now
+*correct* rather than *effective*.
+
+**Two open decisions, both Oleg's:**
+1. **Which source is authoritative for the Forgejo pipeline?** The `_PREPROD` pair was added
+   deliberately for Option C (`#d2`) alongside the existing `_DEV`/`_PROD` — which suggests the
+   variables were created **for this pipeline** and `build.yml` was never wired to them. If so this
+   is a **defect in `build.yml`**, not merely dead config. Wiring `build.yml` to `vars.` would make
+   the value editable without OpenBao access; leaving OpenBao authoritative means deleting the
+   Forgejo variables so nobody edits the wrong one again.
+2. Until (1) is settled, changing what production calls requires the **OpenBao** value plus a rebuild.
+
+⚠️ **This moves production off the legacy API onto the prod contour** — a change to where production
+traffic goes, not a cosmetic one. **Removal trigger:** the prod bundle resolves to the prod API name.
+
+---
+
 ## Deferred from: code review of story-6.12 (2026-08-27)
 
 - **`api()` in `scripts/gen-prod-ledger.mjs` has no request timeout.** A hung connection blocks the
