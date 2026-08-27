@@ -1,5 +1,9 @@
 # Story 6.5: Guard Promotion by Commit Identity
 
+---
+baseline_commit: 0642bdd5b6e652597332beb76e4646580e7a4230
+---
+
 Status: ready-for-dev
 
 Epic: 6 — Production Release and Verified Rollback
@@ -321,11 +325,11 @@ free number on `46e7a26a` is **D49** (`D48` is Story 6.6's).
 
 ### Task 1 — Open the story (AC: —) — **1 push row**
 
-- [ ] 1.1 Branch off `origin/main`. **Re-fetch first** — `main` moved seven times on 2026-08-26 and
+- [x] 1.1 Branch off `origin/main`. **Re-fetch first** — `main` moved seven times on 2026-08-26 and
       three more on 08-27.
-- [ ] 1.2 `sprint-status.yaml` `6-5-…` → `in-progress`, **own commit**.
-- [ ] 1.3 D-number sweep across `origin/*`, local branches **and the working tree** (AC8).
-- [ ] 1.4 ⚠️ Check whether Story 6.8's cancellation has landed; it was unpushed on 2026-08-27 and
+- [x] 1.2 `sprint-status.yaml` `6-5-…` → `in-progress`, **own commit**.
+- [x] 1.3 D-number sweep across `origin/*`, local branches **and the working tree** (AC8).
+- [x] 1.4 ⚠️ Check whether Story 6.8's cancellation has landed; it was unpushed on 2026-08-27 and
       touches `sprint-status.yaml` and `deferred-work.md`. **Do not edit another story's row.**
 
 ### Task 2 — Read the contract (AC: 1, 2, 3) — **0 runs**
@@ -464,6 +468,18 @@ file.**
 ### Agent Model Used
 
 ### Debug Log References
+
+**Task 1 — 2026-08-27.** Worktree `story-6-5/impl` off `story-6-5/pr-1-context` @ `0642bdd5` — **not
+off `main`**, deliberately: PR #103 is open and the story file exists nowhere else. `origin/main` is
+`46e7a26a`; if #103 merges mid-story, rebase.
+
+**1.3 — D-sweep across all three scopes** (origin refs, local branches, and the working tree — Story
+6.3's OQ10 blind spot): highest is **D48** everywhere. **Next free: D49**, confirming AC8's prediction.
+
+**1.4 — Story 6.8's cancellation has NOT landed.** `6-8-roll-back-…: backlog` on `origin/main`, and
+the operator's working tree is now clean (the staged edits seen on 2026-08-26 are no longer there).
+Nothing to merge against yet; the collision risk in `sprint-status.yaml` and `deferred-work.md` stays
+open until it lands. **Not touched — another story's row.**
 
 ### Completion Notes List
 

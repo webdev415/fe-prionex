@@ -1880,7 +1880,12 @@ development_status:
   # deferred-work.md. Check before assuming; merge rather than rebase if a PR is already open.
   # Floor 8 / ceiling 18 runs, OPEN. Ceiling budgets a fix-pass and a closeout PR because 6.6's
   # second review needed both.
-  6-5-guard-promotion-by-commit-identity: ready-for-dev
+  # 🚧 DEV STARTED 2026-08-27, branch `story-6-5/impl`, baseline `0642bdd5` -- off the CONTEXT branch,
+  # not main: PR #103 is open and the story file exists nowhere else. Rebase if #103 lands first.
+  # D-sweep across origin refs, local branches AND the working tree: highest D48; next free D49.
+  # Story 6.8's cancellation has NOT landed (still `backlog` on main); its collision with this file
+  # and deferred-work.md stays open. Not touched -- another story's row.
+  6-5-guard-promotion-by-commit-identity: in-progress
   # Contexted 2026-08-26 (branch `story-6-6/pr-1-context`) from a SCRATCHPAD WORKTREE off origin/main
   # at 584cc886 (PR #97, Story 6.4). 🔴 origin/main MOVED THREE TIMES DURING CONTEXTING --
   # cfbad179 -> 308ea152 -> 584cc886 -- and both of this story's dependencies landed mid-analysis:
