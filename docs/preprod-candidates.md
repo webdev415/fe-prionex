@@ -2,7 +2,9 @@
 
 Two append-only tables: one row per **successful** `record-preprod-candidate.yml` run (below), and
 one row per **refused** run (["Rejected candidates"](#rejected-candidates), added by Story 5.6,
-currently scoped to a G1 refusal only — see that section's own note). This is the
+currently scoped to a G1 refusal only — see that section's own note; ⚠️ **G1 was RETIRED on
+2026-08-27 by Story 6.11, so that table can take no new rows of the kind it was built for** —
+[`#d38`](migration-decisions.md#d38) §6 carries its struck row and its two live runs, 1215 and 1218). This is the
 **authoritative human-readable record** of what was validated on PRE-PROD and why — the registry's
 own `preprod-<sha>`/`preprod-current` tags carry identity and permanence (Story 6.5 reads those, not
 this file), and the workflow's own job log / `$GITHUB_STEP_SUMMARY` are best-effort only (this
@@ -10,12 +12,40 @@ instance's logs have failed to archive repeatedly across Stories 5.3 and 5.4; wh
 persist at all here was unverified before this file existed — see Story 5.4's own Review Findings,
 code review D1).
 
-**The recording procedure, as of Story 5.4's code review fix-pass:** dispatch
-`record-preprod-candidate.yml` with `validated=pass`, confirm it went green, then append the row it
-prints (its own last step prints a ready-to-paste line in this exact format) — "record a candidate"
-is the two steps together, not the dispatch alone. This workflow does not write this file itself: it
-holds no repository-write credential, and giving it one is a separate, unopened decision (a new class
-of permission this story does not grant).
+🔴 **THE RECORDING PROCEDURE CHANGED ON 2026-08-27 (Story 6.11,
+[`#d51`](migration-decisions.md#d51)), AND THE HALF THIS FILE DEPENDS ON IS THE HALF THAT DID NOT
+BECOME AUTOMATIC.**
+
+~~As of Story 5.4's code review fix-pass: dispatch `record-preprod-candidate.yml` with
+`validated=pass`, confirm it went green, then append the row it prints — "record a candidate" is the
+two steps together, not the dispatch alone.~~
+
+**What is true now:**
+
+- **The registry marker is automatic.** A successful `deploy-preprod.yml` run records its own
+  candidate — `preprod-<12hex>` and `preprod-current` — with no dispatch of any kind. The
+  `validated` input **no longer exists**.
+- **This file is still written by a person, after the fact.** No workflow writes it. That is
+  unchanged, and it is not an oversight waiting to be closed: `#d51` measured that `main` carries
+  `enable_push: false` with an empty push whitelist, so **a direct push is refused for every
+  account** and a repository-write credential would not help even if one were granted.
+- ⚠️ **So the two halves have come apart.** They used to be minted by the same human act; now the
+  marker appears whether or not anyone writes the row. **A missing row no longer implies a missing
+  marker.** The workflow's last step still prints a ready-to-paste line in this file's exact
+  format — copy it from the automatic run's summary.
+- 🔴 **The `Verdict` column no longer derives from a workflow input.** Nothing in any workflow reads
+  a verdict any more ([`#d41`](migration-decisions.md#d41)), so `RVC-v1.1` is now carried by **this
+  file and `docs/production-approval-regulation.md` alone**, and by no machinery whatsoever. The
+  automatic runs print `n/a` in that cell; a human who has actually executed `RVC-v1.1` should
+  replace it with the derived verdict and the summary line.
+- **`preprod-<sha>` means "this commit reached PRE-PROD", not "was validated."** Story 6.5's
+  promotion guard reads it as the weaker statement; FR16 and [`#d2`](migration-decisions.md#d2) were
+  narrowed in the same change.
+
+**Rows written before 2026-08-27 are not reinterpreted.** They were recorded under a procedure in
+which the marker did imply a claimed verdict, and they remain exactly as written — this ledger is
+append-only and rows are never re-judged after the fact, the same discipline the paragraph below
+applies to the `RVC-v1` boundary.
 
 **What `pass` in the Verdict column is asserted against, as of 2026-08-24.** Story 5.5 published
 `docs/release-validation-checklist.md`, version marker **`RVC-v1`** — twelve numbered flow items

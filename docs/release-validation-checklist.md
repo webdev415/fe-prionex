@@ -79,7 +79,9 @@ verdict folded into the `P + D + F + B == 12` count (which ranges over F1…F12 
 see [the note format](#the-validation_note-format)): it means the twelve flow verdicts you are about
 to collect would describe an artifact other than the one `image_tag` names, or would describe it at
 a stale moment. **If P1 or P2 fails, stop. Do not execute F1-F12 at all.** The aggregate verdict is
-`fail`, `validated=fail` on the dispatch, and the `validation_note` is the fixed sentence
+`fail` (⚠️ **recorded in `docs/preprod-candidates.md` by hand — since 2026-08-27 there is no
+`validated` dispatch input to carry it; [`#d51`](migration-decisions.md#d51)**), and the
+`validation_note` is the fixed sentence
 `RVC-v1 <image_tag>: precondition failed (<P1|P2>) — validation aborted, no items executed` — no
 `<P>/<D>/<F>/<B>` counts, because none were collected. This is the one note shape this file
 mandates that does **not** range over 12; the invariant in [the note format](#the-validation_note-format)
@@ -727,12 +729,15 @@ is absent means that count is 0, not that it is unknown.
 the **only** shape any note can have until the CORS origin is fixed. 🔴 **Corrected, code review: an
 earlier version of this file called this "the very first note Story 5.6 will write" — that is
 unexercised, not demonstrated.** Under the aggregate verdict this file itself mandates today
-(`fail`, see [the CORS blocker](#the-cors-blocker)), `validated=fail` is what gets dispatched, and
-`record-preprod-candidate.yml`'s G1 exits as the **first step of the first job** — before the
-note-shape-validation step at `:454-467` and long before the ledger-row write at `:982`. **No note
-is written at all on that path.** The shape below is legal and correctly formed; whether the
-recorder actually accepts a note of this exact shape once F/B are both non-zero has not been
-exercised by any real dispatch, because G1 refuses before that check runs:
+(`fail`, see [the CORS blocker](#the-cors-blocker)), `validated=fail` **used to be** what got
+dispatched, and `record-preprod-candidate.yml`'s G1 exited as the first step of the first job —
+before the note-shape-validation step and long before the ledger-row print. No note was written at
+all on that path, which is why the shape below was never exercised by a real dispatch.
+🔴 **AMENDED 2026-08-27 ([`#d51`](migration-decisions.md#d51)): neither the input nor G1 exists any
+more, so that path is gone — and so is the reason the shape went unexercised.** The note is now
+optional metadata that no guard reads and no verdict rides on; a `fail` verdict lives in
+`docs/preprod-candidates.md` and nowhere else. The shape below remains the correct one to WRITE
+THERE:
 
 ```
 RVC-v1 sha-28f7fd36b75e-preprod: 1/12 pass, 1 degraded (F3), 2 fail (F2 F3), 8 BLOCKED (F4 F5 F6 F7 F8 F9 F10 F11) (CORS, CRM/api-prionex; restricted-role account, Oleg) — detail in docs/release-validation-checklist.md
@@ -741,8 +746,11 @@ RVC-v1 sha-28f7fd36b75e-preprod: 1/12 pass, 1 degraded (F3), 2 fail (F2 F3), 8 B
 `1 + 1 + 2 + 8 == 12`. ✅ (illustrative counts and ids only, not derived from a real run)
 
 **Today's honest headline, if a candidate were validated right now** — F1 and F2 pass in full, F3
-and F12 are degraded, F4-F11 are blocked. Note that this accompanies `validated=fail`, not `pass`,
-and — per the paragraph above — G1 refuses before this note is ever written to the ledger:
+and F12 are degraded, F4-F11 are blocked. Note that this accompanies an aggregate verdict of
+`fail`, not `pass`. 🔴 **AMENDED 2026-08-27 ([`#d51`](migration-decisions.md#d51)):** the sentence
+here used to read *"`validated=fail` … and G1 refuses before this note is ever written to the
+ledger"*. **Neither the input nor G1 exists.** The note below is written into
+`docs/preprod-candidates.md` by a person, or it is not written; nothing refuses anything:
 
 ```
 RVC-v1 sha-28f7fd36b75e-preprod: 2/12 pass, 2 degraded (F3 F12), 8 BLOCKED (F4 F5 F6 F7 F8 F9 F10 F11) (CORS, CRM/api-prionex; restricted-role account, Oleg) — detail in docs/release-validation-checklist.md
@@ -778,17 +786,43 @@ must not overstate coverage: it is the artifact most people read *instead of* th
 
 <a id="how-a-failed-item-blocks-promotion"></a>
 
-**No new machinery is needed, and none is added by this story.** The block is a property of what
-Story 5.4 already shipped:
+> 🔴 **THIS SECTION'S MECHANISM WAS REMOVED ON 2026-08-27. THE HEADING IS NOW A CLAIM THIS FILE
+> CANNOT MAKE.** Story 6.11 ([`#d51`](migration-decisions.md#d51)) made the PRE-PROD record
+> automatic on a successful deploy and deleted the `validated` input and **G1** with it. Every step
+> of the chain below is struck because every step of it is gone. It is kept, struck, rather than
+> deleted, because a reader who remembers that a failed item used to block promotion needs to see
+> **that it no longer does**, not to find the paragraph quietly missing.
 
-1. A failing item makes the aggregate verdict `fail`.
-2. The operator dispatches `record-preprod-candidate.yml` with `validated=fail`.
-3. **G1** (`record-preprod-candidate.yml:231-249`) is the **first step of the first job**, before
-   any registry read, any digest resolve, and any write. It refuses `fail` with `exit 1` and the
-   message *"A failed validation writes nothing to the registry."*
-4. So no `preprod-<sha>` tag is minted for that commit.
-5. Story 6.5's promotion guard matches on the existence of `preprod-<sha>` for a commit. With no
-   such tag, it has nothing to match, and promotion to PROD does not proceed.
+~~**No new machinery is needed, and none is added by this story.** The block is a property of what
+Story 5.4 already shipped:~~
+
+1. ~~A failing item makes the aggregate verdict `fail`.~~ — still true. This is the only step that survives.
+2. ~~The operator dispatches `record-preprod-candidate.yml` with `validated=fail`.~~ — **the input no longer exists.** A dispatch cannot carry a verdict.
+3. ~~**G1** is the first step of the first job… it refuses `fail` with `exit 1`.~~ — **G1 is retired.** Its matrix rows (1215 pass, 1218 refusal) are struck, not deleted, in [`#d38`](migration-decisions.md#d38) §6.
+4. ~~So no `preprod-<sha>` tag is minted for that commit.~~ — **the tag is minted by the DEPLOY**, before this checklist is even executed. A failing validation cannot un-mint it, and nothing in the pipeline can.
+5. ~~Story 6.5's promotion guard… promotion to PROD does not proceed.~~ — **it proceeds.** The guard matches on the tag's existence, the tag exists, the guard passes.
+
+### 🔴 What blocks promotion now
+
+**Nothing in any workflow. A person, reading a file.**
+
+1. A failing item makes the aggregate verdict `fail` — unchanged, and it is still **derived** from
+   twelve stated criteria rather than asserted.
+2. The operator records that verdict **by hand**, in `docs/preprod-candidates.md`. No workflow
+   writes it, and none is getting a credential to (`#d51` §2 measured that `main` refuses a direct
+   push from every account, so one would not work).
+3. `docs/production-approval-regulation.md` forbids seeking approval for a candidate whose derived
+   verdict is `fail` with no waiver covering it — and that regulation now says, in its own words,
+   that this rule is *"the **only** thing standing between a `fail` verdict and a production
+   release"*.
+4. Story 6.5's promotion guard **will not help.** It proves the commit reached PRE-PROD. It cannot
+   see a verdict, it never could see a waiver, and since 2026-08-27 there is no verdict for it to
+   see at all ([`#d2`](migration-decisions.md#d2), [`#d41`](migration-decisions.md#d41)).
+
+⚠️ **Stated plainly because it is the price `#d51` was told it was paying:** a candidate that fails
+this checklist now carries exactly the same registry marker as one that passes it. The two are
+indistinguishable to every piece of machinery in this project. **This file and
+`docs/preprod-candidates.md` are the entire difference.**
 
 The chain has one deliberate gap, and it is worth naming: nothing forces an operator to dispatch
 the recorder at all, and nothing forces the verdict they type to reflect this checklist. `RVC-v1`
@@ -855,7 +889,9 @@ has no effect: the agent's role is to derive the verdict and escalate, never to 
   that it governs one named candidate commit only. `D41` supplies both retroactively for `D40` — see
   that decision record.
 - **True counts preserved in the `validation_note`.** A waiver changes what gets *dispatched*
-  (`validated=pass` instead of the honest `fail`); it never changes the arithmetic the note reports.
+  (a `pass` recorded in the ledger instead of the honest `fail` — ⚠️ **since 2026-08-27 that is a
+  ledger edit, not a dispatch input, and no guard anywhere can catch it**); it never changes the
+  arithmetic the note reports.
   `<P>/<D>/<F>/<B>` must still sum to 12 and must still reflect what was actually observed — a waived
   `fail` is still counted in `<F>`, not silently moved into `<B>` or `<P>`. (`D40`'s own note
   under-counted this exact case by reclassifying F5 into `<B>` rather than leaving it in `<F>` — see

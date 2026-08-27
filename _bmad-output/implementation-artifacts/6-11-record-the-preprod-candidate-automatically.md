@@ -1,3 +1,7 @@
+---
+baseline_commit: b6078c1fe4f248b4a28fbb2d9b1af1ee288e20e6
+---
+
 # Story 6.11: Record the PRE-PROD candidate automatically
 
 Status: ready-for-dev
@@ -213,39 +217,39 @@ The message's structure already has the slot.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Read before writing (AC: all)**
-  - [ ] 1.1 Read `record-preprod-candidate.yml` **completely** (983 lines). Its header is ~190 lines of authoring documentation and is load-bearing: several sections are the *only* record of why a guard is shaped as it is.
-  - [ ] 1.2 Read `deploy-preprod.yml` completely (293 lines), especially the `e2e` job's header — it states three invariants for a job appended after `deploy`, and **two of them apply to `record` as well**: never fail a run for a non-reason, and never hold the PRE-PROD concurrency group waiting on a contended runner.
-  - [ ] 1.3 Read `record-prod-image.yml`'s `on:` block and `deploy-prod.yml`'s `record`/`record-outcome` jobs. **This is the model.** Do not invent a second shape.
-  - [ ] 1.4 Read [`#d51`](../../docs/migration-decisions.md#d51) §§2, 5, 6 and [`#d38`](../../docs/migration-decisions.md#d38) §2 (with its withdrawal note) and §6.
+- [x] **Task 1 — Read before writing (AC: all)**
+  - [x] 1.1 Read `record-preprod-candidate.yml` **completely** (983 lines). Its header is ~190 lines of authoring documentation and is load-bearing: several sections are the *only* record of why a guard is shaped as it is.
+  - [x] 1.2 Read `deploy-preprod.yml` completely (293 lines), especially the `e2e` job's header — it states three invariants for a job appended after `deploy`, and **two of them apply to `record` as well**: never fail a run for a non-reason, and never hold the PRE-PROD concurrency group waiting on a contended runner.
+  - [x] 1.3 Read `record-prod-image.yml`'s `on:` block and `deploy-prod.yml`'s `record`/`record-outcome` jobs. **This is the model.** Do not invent a second shape.
+  - [x] 1.4 Read [`#d51`](../../docs/migration-decisions.md#d51) §§2, 5, 6 and [`#d38`](../../docs/migration-decisions.md#d38) §2 (with its withdrawal note) and §6.
 
-- [ ] **Task 2 — `record-preprod-candidate.yml`: the call path (AC: 2, 3, 4, 5, 8)**
-  - [ ] 2.1 Delete the `validated` input and the G1 step.
-  - [ ] 2.2 Add `acknowledgement` to `workflow_dispatch` and the G1′ guard, gated on `github.event_name == 'workflow_dispatch'`. 🔴 The gating expression is the one `#d21` measured on run 631: inside an expanded callee `github.event_name` is `workflow_call`, so the guard is inert there — **cite the run number in the comment**, because a reviewer has already raised the opposite objection once (`6-6-…md`, patch item on §5) and the rebuttal must live in the file.
-  - [ ] 2.3 Add the `workflow_call` block: input `candidate_tag` (required), `allow_backwards_move` defaulting **true** on this path (a deploy just happened; the move is intentional by construction) and false on dispatch.
-  - [ ] 2.4 Make `validation_note` **optional** on dispatch, and on the call path generate it automatically as a line naming the run — so the ledger line the last step prints is still complete.
-  - [ ] 2.5 Declare `jobs.record.outputs` **and** `on.workflow_call.outputs` for the two write outcomes (history and current), mirroring `record-prod-image.yml`'s four-output block.
-  - [ ] 2.6 Resolve `CANDIDATE_TAG` once per job into an env var (AC5) and replace every `${{ inputs.image_tag }}` read in the body.
+- [x] **Task 2 — `record-preprod-candidate.yml`: the call path (AC: 2, 3, 4, 5, 8)**
+  - [x] 2.1 Delete the `validated` input and the G1 step.
+  - [x] 2.2 Add `acknowledgement` to `workflow_dispatch` and the G1′ guard, gated on `github.event_name == 'workflow_dispatch'`. 🔴 The gating expression is the one `#d21` measured on run 631: inside an expanded callee `github.event_name` is `workflow_call`, so the guard is inert there — **cite the run number in the comment**, because a reviewer has already raised the opposite objection once (`6-6-…md`, patch item on §5) and the rebuttal must live in the file.
+  - [x] 2.3 Add the `workflow_call` block: input `candidate_tag` (required), `allow_backwards_move` defaulting **true** on this path (a deploy just happened; the move is intentional by construction) and false on dispatch.
+  - [x] 2.4 Make `validation_note` **optional** on dispatch, and on the call path generate it automatically as a line naming the run — so the ledger line the last step prints is still complete.
+  - [x] 2.5 Declare `jobs.record.outputs` **and** `on.workflow_call.outputs` for the two write outcomes (history and current), mirroring `record-prod-image.yml`'s four-output block.
+  - [x] 2.6 Resolve `CANDIDATE_TAG` once per job into an env var (AC5) and replace every `${{ inputs.image_tag }}` read in the body.
 
-- [ ] **Task 3 — `deploy-preprod.yml`: the `record` and `record-outcome` jobs (AC: 1, 6, 8)**
-  - [ ] 3.1 Add `record`, `needs: deploy`, `uses: ./.forgejo/workflows/record-preprod-candidate.yml`, `with: candidate_tag: ${{ inputs.image_tag }}`, `secrets: inherit`.
-  - [ ] 3.2 🔴 The condition must exclude the hold-lock path (AC6), not merely check `success`. Write the reason in a comment naming `deploy-stand.yml`'s own `if:` and `#d21` run 631.
-  - [ ] 3.3 Add `record-outcome`, modelled on `deploy-prod.yml`'s, reading the callee's outputs.
-  - [ ] 3.4 ⚠️ **`runs-on` for `record-outcome`:** read `deploy-preprod.yml`'s `e2e` header before choosing. It rejects `node-20` for a specific reason (a job queued behind the shared CI runner holds this workflow's PRE-PROD concurrency group at `cancel-in-progress: false`, blocking the next dispatch including a hotfix) and then **corrects its own argument** for `deploy-dev-preprod` too. Make the same trade knowingly and say which you made.
+- [x] **Task 3 — `deploy-preprod.yml`: the `record` and `record-outcome` jobs (AC: 1, 6, 8)**
+  - [x] 3.1 Add `record`, `needs: deploy`, `uses: ./.forgejo/workflows/record-preprod-candidate.yml`, `with: candidate_tag: ${{ inputs.image_tag }}`, `secrets: inherit`.
+  - [x] 3.2 🔴 The condition must exclude the hold-lock path (AC6), not merely check `success`. Write the reason in a comment naming `deploy-stand.yml`'s own `if:` and `#d21` run 631.
+  - [x] 3.3 Add `record-outcome`, modelled on `deploy-prod.yml`'s, reading the callee's outputs.
+  - [x] 3.4 ⚠️ **`runs-on` for `record-outcome`:** read `deploy-preprod.yml`'s `e2e` header before choosing. It rejects `node-20` for a specific reason (a job queued behind the shared CI runner holds this workflow's PRE-PROD concurrency group at `cancel-in-progress: false`, blocking the next dispatch including a hotfix) and then **corrects its own argument** for `deploy-dev-preprod` too. Make the same trade knowingly and say which you made.
 
-- [ ] **Task 4 — The nine stale sentences (AC: 9)**
-  - [ ] 4.1 Items 1–5 in `record-preprod-candidate.yml`, including the printed AC6 boundary.
-  - [ ] 4.2 Items 6–9 in `deploy-prod.yml`.
-  - [ ] 4.3 Extract `deploy-prod.yml`'s `derive` job before and after; assert byte-identical.
+- [x] **Task 4 — The nine stale sentences (AC: 9)**
+  - [x] 4.1 Items 1–5 in `record-preprod-candidate.yml`, including the printed AC6 boundary.
+  - [x] 4.2 Items 6–9 in `deploy-prod.yml`.
+  - [x] 4.3 Extract `deploy-prod.yml`'s `derive` job before and after; assert byte-identical.
 
-- [ ] **Task 5 — `docs/preprod-candidates.md` (AC: 10)** — prose only. No generator.
+- [x] **Task 5 — `docs/preprod-candidates.md` (AC: 10)** — prose only. No generator.
 
-- [ ] **Task 5b — Harden both `EXISTS` consumptions (AC: 11)**
-  - [ ] 5b.1 `record-preprod-candidate.yml:729` and `:865`: require a literal `true`/`false`, fail on anything else including empty, with a message that names a BROKEN PROBE rather than an absent tag.
-  - [ ] 5b.2 Do **not** touch the probe classification steps themselves (`:709-716`, `:795-802`) — they already fail closed. Changing them is scope creep against a guard that works.
+- [x] **Task 5b — Harden both `EXISTS` consumptions (AC: 11)**
+  - [x] 5b.1 `record-preprod-candidate.yml:729` and `:865`: require a literal `true`/`false`, fail on anything else including empty, with a message that names a BROKEN PROBE rather than an absent tag.
+  - [x] 5b.2 Do **not** touch the probe classification steps themselves (`:709-716`, `:795-802`) — they already fail closed. Changing them is scope creep against a guard that works.
 
 - [ ] **Task 6 — Earn the rows (AC: 1, 3, 6)**
-  - [ ] 6.1 `bash -n` every changed shell body **before** any dispatch. 🔴 Literal backticks inside a double-quoted `echo` are command substitution — this project has been bitten; use `BT="$(printf '\140')"`.
+  - [x] 6.1 `bash -n` every changed shell body **before** any dispatch. 🔴 Literal backticks inside a double-quoted `echo` are command substitution — this project has been bitten; use `BT="$(printf '\140')"`.
   - [ ] 6.2 Live: one normal `deploy-preprod.yml` dispatch → record fires, both markers read back **from the registry** (AC1).
   - [ ] 6.3 Live: one `hold_lock_seconds > 0` dispatch → `record` **skipped** (AC6).
   - [ ] 6.4 Live: one hand dispatch with a wrong `acknowledgement` → refused on the first step (AC3), and one correct (AC3, AC4).
@@ -443,14 +447,106 @@ locally first.
 
 ### Agent Model Used
 
+Opus 5 (1M context). ⚠️ **Off the standing convention**, which puts `dev-story` on Sonnet; Oleg
+instructed `dev-story` in this session. Recorded so the `code-review` pass is run on a different
+model, which is the point of that convention.
+
 ### Debug Log References
+
+No dispatches were made. Every claim below is from reading or from a local check.
+
+- `bash -n` over **every** `run:` body in the three touched workflows, with `${{ }}` neutralised:
+  **32 bodies, 0 failures**. Re-run after each edit, not once at the end.
+- `yaml.safe_load` on all three files after every edit.
+- `deploy-prod.yml`'s `derive` job snapshotted (canonicalised JSON) before the edits and compared
+  after: **byte-identical**. AC9's freeze holds.
+- Callee wiring asserted mechanically: `on.workflow_call.outputs` → `jobs.record.outputs` →
+  three real step ids, all three in the `record` job (a job output cannot reference a step in
+  another job — checked, not assumed).
 
 ### Completion Notes List
 
+**Tasks 1–5b are complete. Task 6 (live dispatches) and Task 7 (the outcome matrix, which needs
+those rows) are NOT, and the story stays `in-progress`.** The handoff was agreed before this run
+began: the three dispatches touch a shared stand and one of them can mint a permanent registry tag.
+
+**Three findings during implementation that the story's own ACs did not enumerate. All three are
+fixed; naming them is the point.**
+
+1. 🔴 **AC11 enumerated two `EXISTS` consumptions. There are three.** The third is `G-backwards`
+   (`if [ "$EXISTS" != "true" ]`). It is not cosmetic: an empty `$EXISTS` there makes the step
+   report *"nothing to compare against"* and **silently skip the only warning an operator gets
+   about a pointer move**. All three are guarded. Leaving one unguarded consumption of the same
+   variable would have been exactly the "fix-pass that is a second draft" failure this project has
+   paid for three times.
+
+2. 🔴 **AC9 listed nine stale sentences across two files. There was a tenth place, in a third
+   file, and it was worse than any of the nine.** `docs/release-validation-checklist.md` has a
+   section titled **"How a failed item blocks promotion"** whose entire five-step chain runs
+   through `validated=fail` → **G1** → no marker → guard has nothing to match. **This story deletes
+   every step of that chain except the first.** Left alone, `RVC-v1.1` would have instructed an
+   operator to dispatch an input that no longer exists, and would have asserted that a failed
+   validation blocks production **when it no longer does**. The section is struck (not deleted —
+   a reader who remembers the guarantee needs to see that it is gone) and replaced with *"What
+   blocks promotion now: nothing in any workflow. A person, reading a file."* `#d39` §5, which
+   records the same chain as a decision, is amended in the same way.
+
+3. 🔴 **The house rule that the original file carries ZERO `${{ }}` inside any `run:` body.**
+   Verified by parsing `HEAD`'s copy: **0 of 22 bodies**. My first draft added four. This is not
+   stylistic — `deploy-preprod.yml`'s own `e2e` header records why (`#d21`): this instance
+   substitutes inside shell **comments** too, and one empty token has rejected an entire workflow
+   with no diagnostic beyond `action_run.pre_execution_error_details`. All four were moved into
+   `env:` blocks. **0 of 32 bodies across all three files now.**
+
+**Design decisions taken inside the story's latitude, each announced rather than asked (`#d38`
+§7's convention), Oleg's veto open:**
+
+- **G1′ is an `acknowledgement` guard, not a verdict guard**, and it is gated
+  `if: github.event_name == 'workflow_dispatch'` so it is inert on the call path. The rebuttal to
+  the objection a reviewer has already raised once — that `github.event_name` inside a callee is
+  the caller's — is written **in the file**, with its run number (`#d21`, run 631), so it is not
+  re-raised.
+- **`validation_note` became optional and is generated on the call path.** Its previous
+  fail-on-blank guard rested on *"the marker asserts a human named what they checked"*, which
+  `#d51` deleted. It is now metadata, labelled *"NOT a verdict"* everywhere it is printed.
+- **The `record` job resolves the note independently** rather than taking it from
+  `verify-on-stand`. Six duplicated lines, and it keeps this file's stated rule that the two jobs
+  pass nothing to each other — a rule whose recorded reason is that `workflow_call` output
+  plumbing has surprised this project four times (D8, D21).
+- **`record-outcome` runs on `deploy-dev-preprod`**, the same trade `e2e` makes, with the same
+  residual inherited and restated: it can queue, and while it queues this file's PRE-PROD
+  concurrency group is held.
+- **The hold-lock clause is written as `!(inputs.hold_lock_seconds > 0)`**, the literal complement
+  of `deploy-stand.yml:500`'s own condition, rather than `== 0`. Whatever that expression does
+  with a given input, this one does the exact opposite — no second interpretation of the input's
+  type is introduced.
+
+**One claim in the story's Dev Notes §3 was checked and is argued, not observed.**
+`record-preprod-candidate.yml`'s own `concurrency` group is already
+`deploy-preprod-fe-prionex-preprod` — the caller's group — so on the call path the record runs
+under the group it would have chosen anyway, and a hand dispatch is serialized against an automatic
+one. That is a genuine improvement over the PROD side, where `#d48` records the two groups as
+disjoint. **It is read off the two files. No dispatch has raced them, and the comment in
+`deploy-preprod.yml` says so.**
+
+**Not done, and not silently skipped:** `#d38` §6's struck G1 row and §2's withdrawal note were
+written by `#d51` and match what was implemented, so Task 7.1 changes nothing there — that is a
+finding, not an omission. Task 7.2's outcome matrix cannot be written before Task 6 earns its rows.
+
 ### File List
+
+- `.forgejo/workflows/record-preprod-candidate.yml` — MODIFIED
+- `.forgejo/workflows/deploy-preprod.yml` — MODIFIED
+- `.forgejo/workflows/deploy-prod.yml` — MODIFIED (four wordings + one subordinated clause; `derive` untouched and verified so)
+- `docs/preprod-candidates.md` — MODIFIED
+- `docs/release-validation-checklist.md` — MODIFIED
+- `docs/migration-decisions.md` — MODIFIED (`#d39` §5 amended)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — MODIFIED
+- `_bmad-output/implementation-artifacts/6-11-record-the-preprod-candidate-automatically.md` — MODIFIED
 
 ## Change Log
 
 | Date | Change |
 |---|---|
+| 2026-08-27 | dev-story: Tasks 1–5b complete. Three findings the ACs did not enumerate, all fixed — a third `EXISTS` consumption in `G-backwards`; `RVC-v1.1`'s entire "How a failed item blocks promotion" chain, which this story deletes; and the house rule of zero `${{ }}` in any `run:` body. Task 6 (three live dispatches) and Task 7 (the outcome matrix) remain. |
 | 2026-08-27 | Story created by create-story. Ultimate context engine analysis completed — comprehensive developer guide created. AC6 (the hold-lock hazard) and AC5 (the `candidate_tag` rename) were found during analysis, not inherited from the proposal. |
