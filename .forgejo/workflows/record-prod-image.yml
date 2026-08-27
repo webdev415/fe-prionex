@@ -710,7 +710,27 @@ jobs:
           fi
 
           if [ -z "$PRE_DIGEST" ]; then
-            echo "${HISTORY_TAG} did not exist before this run -- attaching."
+            echo "${HISTORY_TAG} did not exist before this run (HTTP probe) -- verifying before attach."
+            # 🔴 H5 (code review #2, Fable, 2026-08-27). THE FOURTEENTH GUARD CLOSED THE WRONG HALF.
+            # It rejects an `EXISTS` that is neither `true` nor `false` -- but a FALSE 404 produces a
+            # perfectly literal `false`, sails through it, and lands here with PRE_DIGEST empty. Every
+            # protective branch above is gated on `[ -n "$PRE_DIGEST" ]`, so the repoint refusal and
+            # the allow_current_move refusal are both SKIPPED and a permanent tag is written while the
+            # log says "for the first time". Finding #1's four Accept types narrow the odds of a false
+            # 404; they cannot close it, because absence is decided by a status code that can lie.
+            # The only thing that settles it is asking the registry about THIS TAG, right now, on the
+            # write path -- not trusting a probe from several steps ago.
+            # Fails CLOSED: if the tag resolves, the probe was wrong and nothing is written.
+            if VERIFY_ABSENT="$(docker buildx imagetools inspect --format '{{.Manifest.Digest}}' "${HISTORY_TAG}" 2>/dev/null)"; then
+              echo "FAIL: the existence probe reported ${HISTORY_TAG} ABSENT, but it resolves RIGHT NOW to"
+              echo "  '${VERIFY_ABSENT}'. The probe was wrong -- a false 404, a lost step output, or"
+              echo "  something wrote this tag between the probe and this step. Writing now would"
+              echo "  bypass the repoint refusal and the allow_current_move refusal, both of which"
+              echo "  are gated on a non-empty pre-digest. NOTHING WAS WRITTEN. Re-dispatch: the"
+              echo "  probe will see it and the normal comparison branches will apply."
+              exit 1
+            fi
+            echo "${HISTORY_TAG} confirmed absent on the write path -- attaching."
           elif [ "$PRE_DIGEST" = "$CANDIDATE_DIGEST" ]; then
             echo "${HISTORY_TAG} already points at ${CANDIDATE_DIGEST} -- nothing to do."
             echo "history_written=noop" >> "$GITHUB_OUTPUT"
@@ -872,7 +892,27 @@ jobs:
           DISPLACED_DIGEST=""
           DISPLACED_MARKER=""
           if [ -z "$PRE_DIGEST" ]; then
-            echo "Creating ${CURRENT_TAG} for the first time."
+            echo "${CURRENT_TAG} reported absent (HTTP probe) -- verifying before create."
+            # 🔴 H5 (code review #2, Fable, 2026-08-27). THE FOURTEENTH GUARD CLOSED THE WRONG HALF.
+            # It rejects an `EXISTS` that is neither `true` nor `false` -- but a FALSE 404 produces a
+            # perfectly literal `false`, sails through it, and lands here with PRE_DIGEST empty. Every
+            # protective branch above is gated on `[ -n "$PRE_DIGEST" ]`, so the repoint refusal and
+            # the allow_current_move refusal are both SKIPPED and a permanent tag is written while the
+            # log says "for the first time". Finding #1's four Accept types narrow the odds of a false
+            # 404; they cannot close it, because absence is decided by a status code that can lie.
+            # The only thing that settles it is asking the registry about THIS TAG, right now, on the
+            # write path -- not trusting a probe from several steps ago.
+            # Fails CLOSED: if the tag resolves, the probe was wrong and nothing is written.
+            if VERIFY_ABSENT="$(docker buildx imagetools inspect --format '{{.Manifest.Digest}}' "${CURRENT_TAG}" 2>/dev/null)"; then
+              echo "FAIL: the existence probe reported ${CURRENT_TAG} ABSENT, but it resolves RIGHT NOW to"
+              echo "  '${VERIFY_ABSENT}'. The probe was wrong -- a false 404, a lost step output, or"
+              echo "  something wrote this tag between the probe and this step. Writing now would"
+              echo "  bypass the repoint refusal and the allow_current_move refusal, both of which"
+              echo "  are gated on a non-empty pre-digest. NOTHING WAS WRITTEN. Re-dispatch: the"
+              echo "  probe will see it and the normal comparison branches will apply."
+              exit 1
+            fi
+            echo "Creating ${CURRENT_TAG} for the first time (absence confirmed on the write path)."
           else
             # 🔴 EPIC AC2's OWN CLAUSE, and NOTHING USED TO ENFORCE IT: "the previous image
             # remains addressable by its own prod-<12hex> tag". If an earlier `record` failed or
@@ -1034,10 +1074,25 @@ jobs:
             jq -r '.tags[]? // empty' "$BODY" >> "$ALL"
             # RFC5988 Link: <...>; rel="next" -- absent on the last page, which is how this ends.
             NEXT="$(tr -d '\r' < "$HDR" | awk -F'[<>]' '/^[Ll]ink:/ && /rel="next"/ {print $2}')"
+            # 🔴 H6 (code review #2, Fable, 2026-08-27). `http*)` matched BOTH `https://` and plain
+            # `http://`, and any host at all -- so a `Link` header could send the RO credential over
+            # cleartext, or to a server of the header's choosing. `--proto-redir '=https'` does NOT
+            # cover this: it constrains REDIRECTS, not a next-page URL this loop is handed and then
+            # curls itself with `--config` reattaching `user = "..."` every time.
+            # Accepted now: an absolute URL on THIS registry's own host over TLS, or a root-relative
+            # path. Anything else is a hard failure, not a silent skip -- a listing that cannot be
+            # completed must not be reported as complete.
             if [ -n "$NEXT" ]; then
               case "$NEXT" in
-                http*) URL="$NEXT" ;;
-                *)     URL="https://${IMAGE_REPO%%/*}${NEXT}" ;;
+                "https://${IMAGE_REPO%%/*}/"*)
+                  URL="$NEXT" ;;
+                /*)
+                  URL="https://${IMAGE_REPO%%/*}${NEXT}" ;;
+                *)
+                  echo "FAIL: tags/list returned a Link 'next' of '${NEXT}', which is neither an"
+                  echo "  https URL on ${IMAGE_REPO%%/*} nor a root-relative path. Refusing to send"
+                  echo "  the registry credential to a destination chosen by a response header."
+                  exit 1 ;;
               esac
             else
               URL=""
