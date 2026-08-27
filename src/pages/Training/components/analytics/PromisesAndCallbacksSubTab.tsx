@@ -219,6 +219,26 @@ export function PromisesAndCallbacksSubTab() {
         />
       </div>
 
+      {/* How "paid" is decided, stated in the open rather than left to be
+          inferred. The chain model has no fulfilment flag and no
+          promise→payment key, so a promise counts as paid when its client paid
+          ANYTHING inside the reported period, and the money columns show the
+          PROMISED amount, not what arrived. Business decision 2026-08-27: keep
+          the approximation (it is the semantics already accepted for the
+          communication-gap report — two different meanings of "paid" on
+          neighbouring screens would be worse) and label it honestly, so a
+          trainer reads a known limitation instead of guessing. NOT dismissible
+          and not a hover-only tooltip: it qualifies every number above it. */}
+      <p className="flex items-start gap-1.5 text-[11px] leading-snug text-[#676767]">
+        <Icons.Info size={13} className="mt-px flex-shrink-0 text-[#9CA3AF]" aria-hidden />
+        <span>
+          {t(
+            'pages.training.promises.paidCaveat',
+            'Оплату зараховано, якщо клієнт вніс будь-який платіж у межах обраного періоду — платіж не звіряється з конкретною домовленістю. Суми показують обіцяне, а не отримане.'
+          )}
+        </span>
+      </p>
+
       {/* Overdue banner — dismissible, two-line copy (shown when overdue > 0) */}
       {overdueCount > 0 && !bannerDismissed ? (
         <div className="flex items-start justify-between gap-3 rounded-xl border border-[#FECACA] bg-[#FEF2F2] px-4 py-3">
@@ -355,7 +375,15 @@ export function PromisesAndCallbacksSubTab() {
               <th className={ANALYTICS_TABLE_TH}>
                 {t('pages.training.promises.cols.paymentTerm', 'Payment term')}
               </th>
-              <th className={ANALYTICS_TABLE_TH}>
+              {/* The per-row restatement of the note above the table: the
+                  status pill is where the approximation actually lands. */}
+              <th
+                className={ANALYTICS_TABLE_TH}
+                title={t(
+                  'pages.training.promises.cols.statusHint',
+                  '«Сплачено» означає, що клієнт вніс платіж у межах обраного періоду; платіж не звіряється з конкретною домовленістю.'
+                )}
+              >
                 {t('pages.training.promises.cols.status', 'Status')}
               </th>
             </tr>

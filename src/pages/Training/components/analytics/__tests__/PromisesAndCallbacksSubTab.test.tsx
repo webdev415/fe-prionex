@@ -199,3 +199,23 @@ describe('PromisesAndCallbacksSubTab — operator filter', () => {
     expect(askedWith.at(-1)?.page).toBe(1)
   })
 })
+
+describe('PromisesAndCallbacksSubTab — "paid" caveat', () => {
+  it('states how "paid" is decided without requiring a hover', () => {
+    render(<PromisesAndCallbacksSubTab />)
+
+    // Business decision 2026-08-27 kept the approximation (a client who paid
+    // ANYTHING in the period counts as paid, and the money columns show the
+    // promised amount) on condition that the tab says so in the open. A
+    // hover-only tooltip would not satisfy that, so this asserts the note is
+    // rendered as ordinary text.
+    expect(screen.getByText('pages.training.promises.paidCaveat')).toBeInTheDocument()
+  })
+
+  it('repeats the caveat on the Status column, where the approximation lands', () => {
+    render(<PromisesAndCallbacksSubTab />)
+
+    const statusHeader = screen.getByText('pages.training.promises.cols.status').closest('th')
+    expect(statusHeader).toHaveAttribute('title', 'pages.training.promises.cols.statusHint')
+  })
+})

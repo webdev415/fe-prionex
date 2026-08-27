@@ -2852,7 +2852,8 @@
           "agreement": "Agreement",
           "amount": "Amount",
           "paymentTerm": "Payment term",
-          "status": "Status"
+          "status": "Status",
+          "statusHint": "\"Paid\" means the client made a payment inside the selected period; the payment is not matched to a specific promise."
         },
         "status": {
           "pending": "Pending",
@@ -2865,7 +2866,8 @@
         "filters": {
           "operator": "Operator",
           "allOperators": "All operators"
-        }
+        },
+        "paidCaveat": "A promise counts as paid when the client made any payment inside the selected period — payments are not matched to a specific promise. The amounts show what was promised, not what was received."
       },
       "assign": {
         "courses": "Published courses",
