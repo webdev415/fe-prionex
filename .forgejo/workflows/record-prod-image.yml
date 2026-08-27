@@ -98,13 +98,22 @@ name: Record PROD Image
 # UNMET by Oleg's decision, and handed the debt to "whoever next dispatches this file --
 # Story 6.6". Story 6.6 dispatched it and PAID IT. Live outcome matrix:
 #
-#   G1  acknowledgement    PASS run 600/662   REFUSE run 663  (2s, before any network call)
-#   G2  -prod suffix       PASS run 600/662   REFUSE run 664  (2s)
-#   G3  exactly-12 hex     PASS run 600/662   REFUSE run 665  (2s) <- #d18 S3's 40-hex case,
+#   G1  acknowledgement    PASS run 600/662   REFUSE run 671  (3s)
+#   G2  -prod suffix       PASS run 600/662   REFUSE run 672  (3s)
+#   G3  exactly-12 hex     PASS run 600/662   REFUSE run 673  (2s) <- #d18 S3's 40-hex case,
 #                                                                     refused live for the
 #                                                                     FIRST time in this project
-#   404 classifier         PASS run 600/662   REFUSE run 666  (18s, reached the registry and
+#   404 classifier         PASS run 600/662   REFUSE run 674  (22s, reached the registry and
 #                                                                  classified absence AS absence)
+#   ⚠️ THE REFUSAL ROWS WERE RE-EARNED ON 2026-08-27, AND THE FIRST SET IS SUPERSEDED, NOT
+#   DELETED. Runs 663-666 refused correctly, but they ran the version in which the H2 defect
+#   was live: the listing step executed under a bare `always()` after the guards had already
+#   failed, so those runs DID load the RO credential and DID reach the registry. The row that
+#   used to read "REFUSE run 663 (2s, before any network call)" was therefore FALSE at run
+#   level, and it was written by the same session that produced the defect. Runs 671-674 are
+#   the same four inputs against the gated version. **"No network call on a refusal" is now
+#   true BY CONSTRUCTION (the step is gated on `steps.install.outcome`), not by timing** --
+#   the 2-3s figures are consistent with it but do not by themselves prove absence.
 #   G6  labels             PASS run 600/662   ❌ UNEARNED -- needs a -prod-shaped tag whose
 #                                                org.prionex.environment is not prod. None
 #                                                exists and build.yml CANNOT produce one: it
