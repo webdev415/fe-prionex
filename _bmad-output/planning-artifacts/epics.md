@@ -89,7 +89,7 @@ would change what the criterion asserts, and that is Oleg's call, not a reconcil
 
 | Where | What it still says | What actually shipped | Authority |
 |---|---|---|---|
-| **FR14** and **Story 5.4 AC1** | the retag happens automatically *"after a successful PRE-PROD deploy"* | `record-preprod-candidate.yml` is `workflow_dispatch`-only with a required `validated: pass\|fail` verdict — a **deliberate deviation from FR14's letter**, taken so that `preprod-<sha>` means "validated", which is what Story 6.5's promotion guard actually reads it as | D38; Story 5.4 |
+| **FR14** and **Story 5.4 AC1** | the retag happens automatically *"after a successful PRE-PROD deploy"* | ~~`record-preprod-candidate.yml` is `workflow_dispatch`-only with a required `validated: pass\|fail` verdict — a **deliberate deviation from FR14's letter**, taken so that `preprod-<sha>` means "validated", which is what Story 6.5's promotion guard actually reads it as~~ 🟢 **CLOSED 2026-08-27, by WITHDRAWING the deviation rather than ratifying it** ([D51](../../docs/migration-decisions.md#d51), `sprint-change-proposal-2026-08-27-approval-automation.md`). The deviation stood 13 days and is the reason `#d38` §6's six-guard matrix exists; **five of those six guards survive the withdrawal, G1 (verdict = `pass`) does not.** FR16 is amended in the same change — the marker no longer means "validated" | D38; Story 5.4; **D51** |
 | **FR19** and **Story 4.3 AC3** | deploy order `down → pull → up -d → health` | shipped order is `resolve → pull → down → up -d → health`. Load-bearing: "fails before touching the container" is the guarantee 4.4, 5.3 and 6.4 all lean on | D29; Story 4.3 |
 | **FR25** | `docker-compose.server.yml` is parameterized | that file was deliberately left **untouched**; the artifact is the NEW `docker-compose.stand.yml` + `.env.stand.example`. Story 4.1's four Givens still cite line numbers inside a file the story never edited | D27; Story 4.1 |
 | **Story 4.7 AC2 / AC3** | verdict measured on the deploy job; a week-long inspection of the legacy DEV stand | AC2 rebound to run wall-clock against 600s; AC3 substituted — the legacy stand is on `72.62.17.132` and is unreachable, so the AC as written is **unexecutable** | Story 4.7 |
@@ -215,14 +215,30 @@ FR13: `deploy-preprod.yml` triggers **only** on `workflow_dispatch` with a manda
 FR14: After a successful PRE-PROD deploy the workflow retags the image in the registry as
 `preprod-current` and `preprod-<sha>` via `docker buildx imagetools create`, making the
 registry the single source of truth for release history.
+🟢 **DEVIATION WITHDRAWN 2026-08-27** (`sprint-change-proposal-2026-08-27-approval-automation.md`;
+[D51](../../docs/migration-decisions.md#d51)). Story 5.4 shipped this as a `workflow_dispatch`-only
+recorder with a mandatory `validated: pass|fail` verdict — a deliberate deviation from the text
+above, recorded as `#d38` §2. That deviation is **withdrawn**: the record returns to being automatic
+on a successful deploy, exactly as written, and **`preprod-<sha>` therefore means "this commit
+reached PRE-PROD", not "this commit was validated"**. FR16 is amended in the same change. Story 6.11
+implements it.
 
 FR15: `deploy-prod.yml` triggers on `workflow_dispatch` with an `image_tag` input and an
 optional `rollback: bool` input.
 
 FR16: `[C]` The promotion guard checks that the **commit SHA** encoded in `image_tag` has a
-corresponding `preprod-<sha>` tag in the registry — i.e. that this commit was validated on
-PRE-PROD. It cannot assert image identity, because under Option C the PROD image is rebuilt
-and is byte-different from the PRE-PROD image. The guard is skipped when `rollback: true`.
+corresponding `preprod-<sha>` tag in the registry — i.e. that ~~this commit was validated on
+PRE-PROD~~ **this commit was built for PRE-PROD and deployed there through the pipeline**. It cannot
+assert image identity, because under Option C the PROD image is rebuilt and is byte-different from
+the PRE-PROD image. The guard is skipped when `rollback: true`.
+🔴 **AMENDED 2026-08-27** ([D51](../../docs/migration-decisions.md#d51)): the struck clause was true
+only while the `preprod-<sha>` marker required a human `validated=pass` dispatch to exist. It no
+longer does. **The guard's code is unchanged and is not weakened to nothing** — it still refuses a
+commit that never went through PRE-PROD at all, which is the hotfix-straight-to-prod path
+`docs/production-approval-regulation.md`'s `## Emergency / hotfix` section exists to close, and its
+refusal branch (run 687) still discriminates. What a pass no longer proves is that **anyone looked at
+the result**. That is now carried by `docs/preprod-candidates.md` and `RVC-v1.1` alone, enforced by
+rule and by no machinery whatsoever.
 
 FR17: `[C]` `deploy-prod.yml` rebuilds the image with production build-args before
 deploying (no pure `docker pull` promotion). On `rollback: true` it pulls an existing

@@ -4894,3 +4894,58 @@ that order, both whole.
   its two original assertions turns the fix into a live, self-proving check on the real stand.
   **Removal trigger:** the next story that may edit `nginx.conf`, or a security review of the served
   headers. ⚠️ **Do not "fix" it inside a deploy workflow.**
+
+---
+
+## Deferred from: correct-course of 2026-08-27 (approval automation, `#d51`)
+
+Two items. Both are consequences of Oleg's decision that the `deploy-prod.yml` dispatch **is** the
+approval and that the PRE-PROD candidate record becomes automatic
+(`_bmad-output/planning-artifacts/sprint-change-proposal-2026-08-27-approval-automation.md`).
+Neither is a defect in anything shipped; both are limits the decision runs into.
+
+### 🔴 Per-person attribution does not exist on this instance. **Owner: OLEG.**
+
+**The measurement, so it is not re-taken:** all 717 runs in `CRM/fe-prionex` were walked to natural
+termination via `GET /api/v1/repos/CRM/fe-prionex/actions/runs` (15 pages; the walked count matched
+the reported `total_count`). `trigger_user` takes **exactly two values**: `platform-admin` (705) and
+`forgejo-actions` (12). `platform-admin` is `is_admin: true`.
+
+**Why it matters now and did not before.** Until 2026-08-27 the approval was a row a person typed
+into `docs/prod-releases.md`, so the `Approved by` cell was a name because a human wrote a name. The
+dispatch-is-the-approval model reads the approver from the instance instead — and the instance knows
+only an account. `docs/production-approval-regulation.md`'s own rule is *"a name — never a role,
+never «whoever is around»"*, inherited from this file's line 23 (*"**Owners are NAMES or STORY
+NUMBERS**"*).
+
+The value is not *wrong*; it is **unfalsifiable**. It cannot distinguish Oleg from the agent, which
+under the standing coordinator/dev-agent split dispatches production through the same account.
+
+**Accepted for now, not hidden:** the column is renamed `Dispatched by (account)` and both the ledger
+and the regulation state on their face that it names an account and not a person. That is the honest
+description of what this instance can attest to, and it should stay written that way **even if this
+item is later closed**.
+
+**The fix, and its second effect.** Create a per-person Forgejo account for Oleg and stop dispatching
+production releases through `platform-admin`. This restores a name to the ledger. ⚠️ It would also
+**stop the agent being able to dispatch production at all** — which may be the point rather than the
+cost, and should be decided deliberately rather than discovered.
+
+**Removal trigger:** a per-person account exists and has dispatched a production release, or Oleg
+decides the account-level record is permanently sufficient and says so here.
+
+### ⚠️ `action_run` retention is UNMEASURED, and it gates Story 6.12. **Owner: Story 6.12.**
+
+`docs/prod-releases.md` becomes a file generated from `action_run` rows. Those rows are not job logs
+— that is precisely why this works (the six `log_in_storage=f` observations that put the ledger in a
+file do not apply to them) — but **nothing has established how long they live.**
+
+The generated file is the archive, so a periodic regeneration bounds the exposure. But the cadence
+cannot be chosen until the retention is a **measured number**. `#d38` §9 stands as the precedent
+this project already paid for: the registry cleanup rule has never been observed either deleting or
+keeping anything, and every claim about it has had to be hedged ever since.
+
+**This is the FIRST task of Story 6.12, and it gates the rest of the story** — a generator built
+against an unknown horizon is a generator whose output nobody can date.
+
+**Removal trigger:** the retention figure is measured and recorded in `#d51` §10.
