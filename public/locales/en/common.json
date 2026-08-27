@@ -7229,6 +7229,7 @@
           "closed_debt": "Closed debt",
           "rr_active": "Active restructuring",
           "rr_first_payment": "First restructuring payment",
+          "rr_draft": "Restructuring: Draft",
           "promise_active": "Active payment promise",
           "tag_active": "Active tag"
         },
