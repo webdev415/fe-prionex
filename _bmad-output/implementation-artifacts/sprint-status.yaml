@@ -2075,7 +2075,42 @@ development_status:
   # any run:; 18/18 run bodies bash -n; the record/record-outcome if: matrix correct on EVERY
   # build/deploy/derive combination; AC1's PARTIALLY MET grade correct and not too harsh; AC5/7/8/9
   # correctly MET; Prohibitions 1-5, 7-12 clean.
-  6-6-record-the-deployed-production-image: in-progress
+  # ✅ ALL SIX HIGHS FROM REVIEW #2 FIXED AND VERIFIED LIVE, 2026-08-27. Row -> `review` again.
+  # H1/H2: finding #3's `if: always()` was a CONDITION where a new BODY was needed -- the disclaimer
+  #   claimed "PROD markers recorded" on runs that wrote nothing, and the listing step ran on refusals
+  #   after `Install docker CLI` had been skipped, loading the RO credential and curling the registry,
+  #   which made this file's own matrix line "REFUSE run 663, before any network call" FALSE. Body
+  #   rewritten to three honest paths (all exercised locally); listing gated on steps.install.outcome.
+  #   Refusal rows RE-EARNED on the fixed branch: runs 671-674. 663-666 kept as SUPERSEDED, not
+  #   deleted -- they refused correctly but did reach the registry afterwards.
+  # H5: THE FOURTEENTH GUARD CLOSED THE WRONG HALF. A false 404 yields a literal `false`, passes the
+  #   tri-state check, and arrives with PRE_DIGEST empty -- so both refusals were still bypassed. Both
+  #   write steps now re-verify absence ON THE WRITE PATH and fail closed. Proven both ways locally.
+  # H6: the Link `next` URL was followed to `http://` and to ANY host, re-attaching the RO credential
+  #   each hop (--proto-redir governs redirects, not this). Now own-host TLS or root-relative or FAIL.
+  # H4: 🔴 I had wrongly declared the Forgejo DB unreachable -- it is on s1; my grep was truncated by
+  #   `head`. FIFTH truncated read in this story. package_cleanup_rule id=1 read 2026-08-27; the
+  #   compile is NON-VACUOUS (every marker KEPT, the 40-hex <sha40>-prod NOT). G4 now also covers
+  #   sha-<12hex>-prod -- AC7's own rollback target, unchecked because it is an INPUT.
+  # H7: the comment called a job output "a DURABLE sink". It dies with the run. deploy-prod.yml now
+  #   READS history_written/current_written, so record-outcome names which write landed.
+  # 🔴 THREE ACs RE-GRADED, and the first table's own sentence was the defect: it said "nothing was
+  #   softened, and no AC was graded on intention" while three rows were exactly that.
+  #   AC2 MET -> PARTIALLY MET (for a non-release move the durable tier is closed BY DESIGN by
+  #   Prohibition 13; the clause cannot be fully met and now says so). AC3 and AC4 MET only AS OF
+  #   2026-08-27 -- AC3's stored-rule compile and AC4's disclaimer clause did not exist before.
+  #   FINAL: 7 of 9 MET, AC1 and AC2 PARTIALLY MET with their gaps named.
+  # ✅ VERIFIED AFTER EVERY FIX: runs 676 and 679 green end to end (12 rows each, record and its inner
+  # job success, record-outcome correctly skipped); registry unchanged -- prod-current,
+  # prod-a99ccd44c5a3 and sha-a99ccd44c5a3-prod on f30c7941..., prod-308ea1520c59 on 01855d1b...
+  # ⚠️ ELEVEN MEDIUMS FROM REVIEW #2 REMAIN OPEN and are listed in the story's Review Findings.
+  # Precedent exists both ways: Story 6.3 closed `done` carrying 26. That call is Oleg's, not mine.
+  # 🔴 THE REUSABLE LESSON, third occurrence in this epic: an AC graded MET by the same session that
+  # wrote the code is a SELF-ASSESSMENT. Three of the four defects fixed today were introduced by the
+  # previous fix-pass, and all of them were found by a review on a DIFFERENT MODEL (Fable), not by
+  # self-checking. "A fix-pass that is not itself re-reviewed is just a second draft" now has a third
+  # data point, and this time the re-review is what caught it.
+  6-6-record-the-deployed-production-image: review
   6-7-smoke-check-production-after-deploy: backlog
   6-8-roll-back-production-to-a-previous-release: backlog
   6-9-cut-production-over-with-a-no-op-deploy: backlog

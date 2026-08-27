@@ -4,7 +4,7 @@
 baseline_commit: 13a60eca40a46d8e147a6cb29fe04c5f12441651
 ---
 
-Status: in-progress
+Status: review
 
 Epic: 6 — Production Release and Verified Rollback
 Story key: `6-6-record-the-deployed-production-image`
