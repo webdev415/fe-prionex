@@ -1918,7 +1918,7 @@ development_status:
   # The model over-predicted; named, because that is the same family as an overrun. All three
   # dispatches came in at floor because all three matrix rows were free, exactly as contexted.
   # Oleg merges; the row goes `done` only after that.
-  6-5-guard-promotion-by-commit-identity: review
+  6-5-guard-promotion-by-commit-identity: in-progress
   # Contexted 2026-08-26 (branch `story-6-6/pr-1-context`) from a SCRATCHPAD WORKTREE off origin/main
   # at 584cc886 (PR #97, Story 6.4). 🔴 origin/main MOVED THREE TIMES DURING CONTEXTING --
   # cfbad179 -> 308ea152 -> 584cc886 -- and both of this story's dependencies landed mid-analysis:

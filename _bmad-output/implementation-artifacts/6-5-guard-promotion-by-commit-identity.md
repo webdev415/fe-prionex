@@ -4,7 +4,7 @@
 baseline_commit: 0642bdd5b6e652597332beb76e4646580e7a4230
 ---
 
-Status: review
+Status: in-progress
 
 Epic: 6 — Production Release and Verified Rollback
 Story key: `6-5-guard-promotion-by-commit-identity`
@@ -578,6 +578,22 @@ open until it lands. **Not touched — another story's row.**
 ### File List
 
 ### Review Findings
+
+**Code review 2026-08-27 — the FIRST review this story has had.** ⚠️ Until today this heading was an
+empty template artifact: `git log` shows no review commit for 6.5, so *"zero open items"* meant
+**zero review**, not a clean one. Inline, single reviewer, subagent layers disabled — floor, not
+ceiling.
+
+🟢 **The story's central design claim HOLDS.** The classification is `200` / `404` / `*)`, and the
+catch-all refuses — so `401`, `403`, `000`, timeouts and unparseable responses all fail **closed**.
+That is the inverse-of-6.6 fail-direction the story was built around, and reading the shipped code
+confirms it. `if: needs.derive.outputs.is_rollback != 'true'` sits on a **plain** job, so it is
+evaluated in the caller and is not subject to `#d21`'s copied-down trap — the trap Story 6.11 fell
+into two screens away from citing it.
+
+- [ ] [Review][Patch] **The 404 message's repair instruction is stale after Story 6.11 and FAILS if followed literally** [.forgejo/workflows/deploy-prod.yml, the guard's 404 branch] — it tells the operator: *"Validate the commit on PRE-PROD and record it — dispatch `record-preprod-candidate.yml` for `sha-${HEX}-preprod`. THEN re-dispatch."* Two things went wrong under it on 2026-08-27: that dispatch now **requires an `acknowledgement` input** (`RECORD-PREPROD-CANDIDATE`), so following the line verbatim is refused at G1′; and the **normal** way to obtain a marker is no longer a dispatch at all — a successful `deploy-preprod.yml` run records its own candidate. 🔴 This is the **twelfth** member of the "stale after 6.11" family, and the worst-placed one: it is the operator-facing repair text, read at the moment a production release has just been refused. It fails loudly rather than dangerously, so the cost is a wasted cycle — but the instruction should name the deploy, not the backfill dispatch.
+- [x] [Review][Defer] **`deploy-prod.yml` had not been parsed by the platform since Story 6.11 edited it** [.forgejo/workflows/deploy-prod.yml] — 🟢 **closed by measurement during this review, not deferred as unknown.** Its last execution was run **705 at 08:58**; 6.11's edits landed after **13:58**. Given run 722 proved a Forgejo schema error rejects an entire file before any step runs — and that `yaml.safe_load` does not catch that class — the production deploy workflow was carrying unvalidated edits. **Run 744** settles it: dispatched with `tag: prod-current`, refused by `derive` before any build, deploy or registry write (the run-644 shape), which forces Forgejo to parse the file. It parses, and 6.11's renamed guard is visible live as *"Promotion guard -- refuse a commit that never reached PRE-PROD"*. **Zero-risk validation; worth reusing whenever this file is edited without being run.**
+
 
 ---
 
