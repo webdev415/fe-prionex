@@ -73,7 +73,7 @@ function renderPage() {
  */
 async function waitForCapabilitiesSettled(queryClient: QueryClient) {
   await waitFor(() => {
-    const state = queryClient.getQueryState(['aiAssistant', 'capabilities'])
+    const state = queryClient.getQueryState(['aiAssistantCapabilities'])
     expect(state?.status === 'success' || state?.status === 'error').toBe(true)
   })
 }
@@ -312,6 +312,24 @@ describe('AiAssistantBetaPage expert (Claude) mode', () => {
     await waitFor(() =>
       expect(screen.queryByTestId('assistant-expert-external-notice')).not.toBeInTheDocument()
     )
+  })
+
+  it('refreshes the budget after an expert turn, but leaves ordinary turns alone', async () => {
+    const { queryClient } = renderPage()
+    await waitForCapabilitiesSettled(queryClient)
+    const afterMount = mockedGetCapabilities.mock.calls.length
+
+    // Обычный ход инвалидирует списки диалогов — денег он не тратил, и
+    // перезапрашивать бюджет на каждое сообщение каждого сотрудника незачем.
+    send('обычный вопрос')
+    // Ответ в ленте = мутация завершилась и её инвалидация уже отработала.
+    await screen.findByText('Готово')
+    expect(mockedGetCapabilities.mock.calls.length).toBe(afterMount)
+
+    // Экспертный ход потратил деньги — остаток обязан обновиться.
+    await selectExpertModel('claude-sonnet-5')
+    send('дорогой вопрос')
+    await waitFor(() => expect(mockedGetCapabilities.mock.calls.length).toBeGreaterThan(afterMount))
   })
 
   it('names the expert turn in the settings summary instead of calling it "fast"', async () => {

@@ -34,8 +34,16 @@ export const aiAssistantKeys = {
   conversation: (id: number) => [...aiAssistantKeys.all, 'conversation', id] as const,
   /** Персональная память сотрудника («Персоналізація»). */
   memory: ['aiAssistant', 'memory'] as const,
-  /** Что доступно сотруднику в окне ассистента (экспертный режим и его бюджет). */
-  capabilities: ['aiAssistant', 'capabilities'] as const,
+  /**
+   * Что доступно сотруднику в окне ассистента (экспертный режим и его бюджет).
+   *
+   * Ключ намеренно ВНЕ префикса `aiAssistant`: каждый ход инвалидирует
+   * {@link aiAssistantKeys.all}, чтобы обновить списки диалогов, и под общим
+   * корнем capabilities перезапрашивались бы после каждого сообщения любого
+   * оператора — при том что меняются они разве что от экспертного хода
+   * (который инвалидирует их явно).
+   */
+  capabilities: ['aiAssistantCapabilities'] as const,
 }
 
 /**
