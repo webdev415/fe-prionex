@@ -25,6 +25,7 @@ import {
 } from '@/features/aiAssistant/hooks'
 import {
   AssistantChatStreamError,
+  SOFT_DENIED_REASON_CODES,
   type AssistantCitationVerdict,
   type AssistantExpertCapability,
   type AssistantFeedbackComprehension,
@@ -538,9 +539,20 @@ function ModeDropdown({
   const rootRef = useRef<HTMLDivElement>(null)
   const isThinking = value === 'thinking'
   const isExpert = expertModel != null
+  /**
+   * Отказ, при котором пункт остаётся на виду, но выбрать нечего: дневной
+   * бюджет исчерпан либо учёт трат недоступен. Прятать здесь нельзя — у
+   * руководителя пункт молча исчез бы вместо честного «ліміт вичерпано».
+   * Отказ по роли (и выключенный режим) прячется, как и раньше.
+   */
+  const isSoftDenied =
+    !expert.allowed &&
+    expert.reasonCode != null &&
+    SOFT_DENIED_REASON_CODES.includes(expert.reasonCode)
   // Пункт экспертного режима существует только с разрешения бэкенда и только
   // при непустом списке моделей — выбирать «Експерт» без модели нечего.
-  const showExpertSection = expert.enabled && expert.allowed && expert.models.length > 0
+  const showExpertSection =
+    expert.enabled && (expert.allowed || isSoftDenied) && expert.models.length > 0
   const ActiveIcon = isExpert ? Icons.Sparkles : isThinking ? Icons.AiBrain03 : Icons.Flash
 
   useEffect(() => {
@@ -647,12 +659,18 @@ function ModeDropdown({
                     type="button"
                     role="menuitemradio"
                     aria-checked={expertModel === model}
+                    // Бюджет исчерпан / учёт трат недоступен: модель видно, но
+                    // выбрать нельзя — ход всё равно упёрся бы в 429.
+                    disabled={isSoftDenied}
                     data-testid={`assistant-expert-model-${model}`}
                     onClick={() => {
                       onSelectExpert(model)
                       setOpen(false)
                     }}
-                    className="hover:bg-muted/70 flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors"
+                    className={cn(
+                      'flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors',
+                      isSoftDenied ? 'cursor-not-allowed opacity-50' : 'hover:bg-muted/70'
+                    )}
                   >
                     <Icons.Sparkles
                       size={16}
@@ -693,6 +711,16 @@ function ModeDropdown({
                       spent: formatUsd(expert.spentTodayUsd),
                       limit: formatUsd(expert.dailyLimitUsd),
                     })}
+                  </span>
+                )}
+                {/* Почему выбрать нельзя — словами бэкенда (украинский текст
+                    уже написан для человека и несёт суммы). */}
+                {isSoftDenied && expert.reason && (
+                  <span
+                    className="text-warning-700 block font-medium"
+                    data-testid="assistant-expert-reason"
+                  >
+                    {expert.reason}
                   </span>
                 )}
               </div>

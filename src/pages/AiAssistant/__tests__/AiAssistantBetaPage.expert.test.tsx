@@ -51,6 +51,8 @@ function allowedCapabilities(
       models: ['claude-sonnet-5', 'claude-opus-5'],
       dailyLimitUsd: 5,
       spentTodayUsd: 1.2,
+      reason: null,
+      reasonCode: null,
       ...overrides,
     },
   }
@@ -135,8 +137,74 @@ describe('AiAssistantBetaPage expert (Claude) mode', () => {
     expect(within(menu).getByTestId('assistant-expert-budget')).toBeInTheDocument()
   })
 
+  it('keeps the entry visible with the reason when the daily budget is spent', async () => {
+    // Прятать пункт при исчерпанном лимите нельзя: он молча исчез бы у
+    // руководителя вместо честного «ліміт вичерпано».
+    mockedGetCapabilities.mockResolvedValue(
+      allowedCapabilities({
+        allowed: false,
+        reasonCode: 'limit',
+        reason: 'денний ліміт витрат вичерпано (5.00 з 5.00 $)',
+        spentTodayUsd: 5,
+      })
+    )
+    const { queryClient } = renderPage()
+    await waitForCapabilitiesSettled(queryClient)
+
+    const menu = openModeMenu()
+    expect(within(menu).getByTestId('assistant-expert-section')).toBeInTheDocument()
+    expect(within(menu).getByTestId('assistant-expert-reason')).toHaveTextContent(
+      'денний ліміт витрат вичерпано (5.00 з 5.00 $)'
+    )
+    // Видно, но выбрать нельзя — ход упёрся бы в 429.
+    const option = within(menu).getByTestId('assistant-expert-model-claude-sonnet-5')
+    expect(option).toBeDisabled()
+
+    fireEvent.click(option)
+    send('вопрос')
+    await waitFor(() => expect(mockedSendChatMessage).toHaveBeenCalledTimes(1))
+    expect(mockedSendChatMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ expert: undefined }),
+      expect.anything()
+    )
+  })
+
+  it('keeps the entry visible when spend accounting is unavailable', async () => {
+    mockedGetCapabilities.mockResolvedValue(
+      allowedCapabilities({
+        allowed: false,
+        reasonCode: 'unavailable',
+        reason: 'експертний режим тимчасово недоступний',
+      })
+    )
+    const { queryClient } = renderPage()
+    await waitForCapabilitiesSettled(queryClient)
+
+    const menu = openModeMenu()
+    expect(within(menu).getByTestId('assistant-expert-section')).toBeInTheDocument()
+    expect(within(menu).getByTestId('assistant-expert-reason')).toBeInTheDocument()
+  })
+
+  it('hides the entry on an unfamiliar reason code instead of guessing', async () => {
+    // Незнакомый код — прячем: показать пункт, смысла которого мы не понимаем,
+    // хуже, чем не показать.
+    mockedGetCapabilities.mockResolvedValue(
+      allowedCapabilities({ allowed: false, reasonCode: 'quantum_flux', reason: 'щось нове' })
+    )
+    const { queryClient } = renderPage()
+    await waitForCapabilitiesSettled(queryClient)
+
+    expect(within(openModeMenu()).queryByTestId('assistant-expert-section')).not.toBeInTheDocument()
+  })
+
   it('hides the expert entry from a user the backend does not allow (an operator)', async () => {
-    mockedGetCapabilities.mockResolvedValue(allowedCapabilities({ allowed: false }))
+    mockedGetCapabilities.mockResolvedValue(
+      allowedCapabilities({
+        allowed: false,
+        reasonCode: 'role',
+        reason: 'експертний режим недоступний для вашої ролі',
+      })
+    )
     const { queryClient } = renderPage()
     await waitForCapabilitiesSettled(queryClient)
 

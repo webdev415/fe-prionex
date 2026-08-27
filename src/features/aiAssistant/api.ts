@@ -395,6 +395,19 @@ export async function sendChatMessage(
  * `dailyLimitUsd` / `spentTodayUsd` — `null`, когда бэкенд их не прислал (или
  * прислал мусор): счётчик остатка тогда просто не рисуем, а не показываем «$0».
  */
+/**
+ * Машинный код причины отказа (`reason_code`). Приходит парой с текстом
+ * `reason` и только при `allowed=false`.
+ *
+ * Прятать пункт правильно лишь при `role`/`disabled`; при `limit` и
+ * `unavailable` он обязан остаться на виду с объяснением — иначе у
+ * руководителя, исчерпавшего дневной бюджет, режим молча исчезает.
+ *
+ * Тип намеренно шире четырёх известных значений: новый код на бэкенде не
+ * должен ломать сборку, а трактуется он консервативно — как «прятать».
+ */
+export type AssistantExpertReasonCode = 'role' | 'limit' | 'unavailable' | 'disabled'
+
 export interface AssistantExpertCapability {
   enabled: boolean
   allowed: boolean
@@ -402,7 +415,18 @@ export interface AssistantExpertCapability {
   models: string[]
   dailyLimitUsd: number | null
   spentTodayUsd: number | null
+  /** Текст причины отказа для человека (украинский); `null` при `allowed=true`. */
+  reason: string | null
+  /** Код причины отказа для кода; `null` при `allowed=true` или у старого бэкенда. */
+  reasonCode: AssistantExpertReasonCode | string | null
 }
+
+/**
+ * Причины, при которых пункт остаётся видимым (погашенным) с объяснением.
+ * Всё остальное — включая незнакомый код — прячем: показать пункт, смысла
+ * которого мы не понимаем, хуже, чем не показать.
+ */
+export const SOFT_DENIED_REASON_CODES: readonly string[] = ['limit', 'unavailable']
 
 export interface AssistantCapabilities {
   expert: AssistantExpertCapability
@@ -415,6 +439,8 @@ export const EXPERT_CAPABILITY_OFF: AssistantExpertCapability = {
   models: [],
   dailyLimitUsd: null,
   spentTodayUsd: null,
+  reason: null,
+  reasonCode: null,
 }
 
 /** Деньги из ответа: число (или числовая строка) ≥ 0, иначе «поля нет». */
@@ -446,6 +472,9 @@ export function normalizeCapabilities(payload: unknown): AssistantCapabilities {
       )
     : []
 
+  const cleanText = (value: unknown): string | null =>
+    typeof value === 'string' && value.trim() ? value.trim() : null
+
   return {
     expert: {
       enabled: raw.enabled === true,
@@ -453,6 +482,8 @@ export function normalizeCapabilities(payload: unknown): AssistantCapabilities {
       models,
       dailyLimitUsd: normalizeUsdAmount(raw.daily_limit_usd),
       spentTodayUsd: normalizeUsdAmount(raw.spent_today_usd),
+      reason: cleanText(raw.reason),
+      reasonCode: cleanText(raw.reason_code),
     },
   }
 }
