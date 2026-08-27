@@ -231,6 +231,11 @@ export interface AssistantToolEnd {
  * прислать модель без цифр (например, ход не тарифицировался). Бейдж тогда
  * показывает только модель, а не «$NaN».
  *
+ * `cacheReadTokens` / `cacheWriteTokens` — вход, взятый из кэша и записанный в
+ * него. Без них «токены на вход» врут: на живом ходе 27.08 `input_tokens` был
+ * **4** при реальном входе 32 442 из кэша, и подпись «4 токена на вхід» читалась
+ * бы как ошибка.
+ *
  * `spentTodayUsd` / `dailyLimitUsd` — свежий остаток дневного бюджета после
  * хода, если бэкенд его пришлёт; сегодня их в контракте нет, и счётчик в меню
  * обновляется перезапросом capabilities.
@@ -240,6 +245,8 @@ export interface AssistantExpertUsage {
   costUsd: number | null
   inputTokens: number | null
   outputTokens: number | null
+  cacheReadTokens: number | null
+  cacheWriteTokens: number | null
   spentTodayUsd: number | null
   dailyLimitUsd: number | null
 }
@@ -272,6 +279,8 @@ export function normalizeExpertUsage(payload: unknown): AssistantExpertUsage | n
     costUsd: toNonNegativeNumber(raw.cost_usd),
     inputTokens: toNonNegativeNumber(raw.input_tokens),
     outputTokens: toNonNegativeNumber(raw.output_tokens),
+    cacheReadTokens: toNonNegativeNumber(raw.cache_read_tokens),
+    cacheWriteTokens: toNonNegativeNumber(raw.cache_write_tokens),
     spentTodayUsd: toNonNegativeNumber(raw.spent_today_usd),
     dailyLimitUsd: toNonNegativeNumber(raw.daily_limit_usd),
   }

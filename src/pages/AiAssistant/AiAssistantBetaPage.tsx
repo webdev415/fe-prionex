@@ -136,6 +136,36 @@ function formatUsd(amount: number): string {
   return `$${amount.toFixed(2)}`
 }
 
+/**
+ * Подпись с токенами для тултипа ценника.
+ *
+ * Вход считается ВМЕСТЕ с кэшем: у Claude повторный контекст берётся из кэша, и
+ * `input_tokens` показывает только «свежую» часть. На живом ходе 27.08 это были
+ * 4 токена при реальном входе 32 442 из кэша — подпись «4 токена на вхід»
+ * читалась бы как поломка счётчика. Когда кэш участвовал, его объём называем
+ * отдельно, чтобы видно было, откуда взялась большая цифра.
+ *
+ * Нет ни входа, ни выхода — тултипа нет вовсе (пустая подсказка бесполезна).
+ */
+function expertTokensTitle(
+  usage: AssistantExpertUsage,
+  t: (key: string, options?: Record<string, unknown>) => string
+): string | undefined {
+  if (usage.inputTokens == null || usage.outputTokens == null) return undefined
+  const cached = usage.cacheReadTokens ?? 0
+  const input = usage.inputTokens + cached
+  return cached > 0
+    ? t('pages.aiAssistant.expertTokensCached', {
+        input,
+        cached,
+        output: usage.outputTokens,
+      })
+    : t('pages.aiAssistant.expertTokens', {
+        input,
+        output: usage.outputTokens,
+      })
+}
+
 const COMPOSER_DROPDOWN_TRIGGER_CLASS =
   'text-foreground inline-flex h-9 min-h-9 w-full min-w-0 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-border bg-card px-3 text-xs font-light shadow-none sm:h-8 sm:min-h-0 sm:w-32 sm:flex-none'
 
@@ -2624,14 +2654,7 @@ export function AiAssistantBetaPage() {
   const renderExpertCost = (usage: AssistantExpertUsage) => (
     <span
       data-testid="assistant-expert-cost"
-      title={
-        usage.inputTokens != null && usage.outputTokens != null
-          ? t('pages.aiAssistant.expertTokens', {
-              input: usage.inputTokens,
-              output: usage.outputTokens,
-            })
-          : undefined
-      }
+      title={expertTokensTitle(usage, t)}
       className="border-border bg-muted/60 text-muted-foreground inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-light"
     >
       <Icons.Sparkles size={12} strokeWidth={1.5} className="text-primary-500 shrink-0" />

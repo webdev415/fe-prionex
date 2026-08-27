@@ -803,6 +803,7 @@
       "expertComposerNotice": "The question goes to external Claude ({{model}}) on our data",
       "expertWaiting": "{{model}} is analysing… {{seconds}}s",
       "expertTokens": "Tokens: {{input}} in, {{output}} out",
+      "expertTokensCached": "Tokens: {{input}} in ({{cached}} of them from cache), {{output}} out",
       "expertForbidden": "Expert mode is not available for your role.",
       "expertLimitReached": "The daily expert-mode limit is used up.",
       "expertUnavailable": "The external service is unavailable right now, try again later.",

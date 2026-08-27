@@ -305,6 +305,8 @@ describe('AiAssistantBetaPage expert (Claude) mode', () => {
         costUsd: 0.05,
         inputTokens: 900,
         outputTokens: 120,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
         spentTodayUsd: 1.25,
         dailyLimitUsd: 5,
       })
@@ -319,6 +321,8 @@ describe('AiAssistantBetaPage expert (Claude) mode', () => {
           costUsd: 0.05,
           inputTokens: 900,
           outputTokens: 120,
+          cacheReadTokens: 0,
+          cacheWriteTokens: 0,
           spentTodayUsd: 1.25,
           dailyLimitUsd: 5,
         },
@@ -331,6 +335,35 @@ describe('AiAssistantBetaPage expert (Claude) mode', () => {
 
     const badge = await screen.findByTestId('assistant-expert-cost')
     expect(badge).toHaveTextContent('Sonnet · $0.05')
+  })
+
+  it('counts the cached context in the tokens tooltip, not just the fresh input', async () => {
+    // Живой ход: input_tokens = 4 при 32 442 из кэша. «4 токена на вхід»
+    // читалось бы как поломка счётчика — показываем полный вход и долю кэша.
+    mockedSendChatMessage.mockResolvedValue({
+      conversation_id: 1,
+      message_id: 5,
+      response: 'Готово',
+      coverage_flag: null,
+      tool_calls: [],
+      expert: {
+        model: 'claude-sonnet-5',
+        costUsd: 0.1026,
+        inputTokens: 4,
+        outputTokens: 945,
+        cacheReadTokens: 32442,
+        cacheWriteTokens: 34671,
+        spentTodayUsd: null,
+        dailyLimitUsd: null,
+      },
+    })
+
+    renderPage()
+    await selectExpertModel('claude-sonnet-5')
+    send('вопрос с длинным контекстом')
+
+    const badge = await screen.findByTestId('assistant-expert-cost')
+    expect(badge).toHaveAttribute('title', 'pages.aiAssistant.expertTokensCached')
   })
 
   it('shows the daily-limit refusal wording from the backend on a 429', async () => {
