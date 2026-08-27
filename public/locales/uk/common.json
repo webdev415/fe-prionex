@@ -10834,6 +10834,37 @@
           "training_completed": "Завершено курс - {{course}}",
           "survey_completed": "Опитування - {{name}} ({{score}})"
         }
+      },
+      "backToList": "До списку",
+      "notFound": "Такого співробітника не знайдено.",
+      "failed": "Не вдалося завантажити картку.",
+      "sectionNav": "Розділи картки",
+      "status": {
+        "active": "Активний",
+        "inactive": "Вимкнений",
+        "suspended": "Призупинений"
+      },
+      "workFormat": {
+        "office": "Офіс",
+        "remote": "Віддалено"
+      },
+      "panel": {
+        "department": "Відділ",
+        "manager": "Керівник",
+        "hiredAt": "Дата прийняття",
+        "phone": "Телефон",
+        "email": "Пошта",
+        "writeEmail": "Написати листа",
+        "openTelegram": "Відкрити Telegram"
+      },
+      "sections": {
+        "personal-information": "Особисті дані",
+        "work-information": "Робоча інформація",
+        "contacts-and-family": "Контакти та сімя",
+        "additional-data": "Додаткові дані",
+        "documents-and-hiring": "Документи та прийняття",
+        "surveys": "Опитування",
+        "chronology": "Хронологія"
       }
     }
   },

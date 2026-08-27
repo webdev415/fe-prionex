@@ -1,0 +1,96 @@
+import { useTranslation } from 'react-i18next'
+import { UserAvatar } from '@/components/ui/UserAvatar'
+import type { CardHeader } from '@/features/employeeCard/types.card'
+
+export interface ProfilePanelProps {
+  header: CardHeader
+}
+
+/**
+ * The panel that stays put while the sections scroll.
+ *
+ * It repeats a few things the sections also show. That is deliberate: it is
+ * what somebody reads to know whose card they are on, and losing it after one
+ * scroll is how the wrong person gets edited.
+ */
+export function ProfilePanel({ header }: ProfilePanelProps) {
+  const { t, i18n } = useTranslation()
+
+  const hired = header.hired_at ? new Date(header.hired_at).toLocaleDateString(i18n.language) : null
+
+  const detail = (label: string, value: string | null) =>
+    value ? (
+      <div className="space-y-0.5 text-center">
+        <p className="text-muted-foreground text-xs">{label}</p>
+        <p className="text-foreground text-sm font-medium">{value}</p>
+      </div>
+    ) : null
+
+  return (
+    <aside className="border-border bg-card sticky top-20 flex flex-col items-center gap-4 rounded-xl border p-6">
+      <UserAvatar
+        userId={header.id}
+        fullName={header.full_name}
+        avatarUrl={header.avatar_url}
+        size={96}
+      />
+
+      <div className="space-y-1 text-center">
+        <h1 className="text-foreground text-lg font-semibold">{header.full_name}</h1>
+        {header.position && <p className="text-muted-foreground text-sm">{header.position}</p>}
+      </div>
+
+      <div className="flex flex-wrap justify-center gap-2">
+        <span className="border-border text-foreground inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs">
+          <span
+            aria-hidden="true"
+            className={
+              header.status === 'active'
+                ? 'size-2 rounded-full bg-emerald-500'
+                : 'bg-muted-foreground size-2 rounded-full'
+            }
+          />
+          {t(`pages.employeeCard.status.${header.status}`, header.status)}
+        </span>
+        {header.work_format && (
+          <span className="border-border text-foreground rounded-full border px-3 py-1 text-xs">
+            {t(`pages.employeeCard.workFormat.${header.work_format}`, header.work_format)}
+          </span>
+        )}
+      </div>
+
+      <div className="border-border w-full space-y-3 border-t pt-4">
+        {detail(t('pages.employeeCard.panel.department'), header.department)}
+        {detail(t('pages.employeeCard.panel.manager'), header.manager)}
+        {detail(t('pages.employeeCard.panel.hiredAt'), hired)}
+        {detail(t('pages.employeeCard.panel.phone'), header.phone)}
+        {detail(t('pages.employeeCard.panel.email'), header.email)}
+      </div>
+
+      <div className="flex gap-3 pt-2">
+        {header.email && (
+          <a
+            href={`mailto:${header.email}`}
+            aria-label={t('pages.employeeCard.panel.writeEmail')}
+            title={t('pages.employeeCard.panel.writeEmail')}
+            className="border-border text-foreground hover:bg-muted inline-flex size-10 items-center justify-center rounded-full border"
+          >
+            @
+          </a>
+        )}
+        {header.telegram && (
+          <a
+            href={`https://t.me/${header.telegram.replace(/^@/, '')}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={t('pages.employeeCard.panel.openTelegram')}
+            title={t('pages.employeeCard.panel.openTelegram')}
+            className="border-border text-foreground hover:bg-muted inline-flex size-10 items-center justify-center rounded-full border"
+          >
+            ✈
+          </a>
+        )}
+      </div>
+    </aside>
+  )
+}

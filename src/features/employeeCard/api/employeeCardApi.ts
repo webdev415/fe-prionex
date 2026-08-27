@@ -1,0 +1,87 @@
+import api from '@/lib/api'
+import type {
+  AdditionalInformationUpdate,
+  EmployeeCard,
+  PersonalInformationUpdate,
+  RelativeInput,
+  WorkInformationUpdate,
+} from '../types.card'
+
+const base = (userId: number) => `/api/v1/admin/users/${userId}/card`
+
+export async function getEmployeeCard(
+  userId: number,
+  projectId?: number | null
+): Promise<EmployeeCard> {
+  const response = await api.get<EmployeeCard>(base(userId), {
+    params: { project_id: projectId ?? undefined },
+  })
+  return response.data
+}
+
+export async function updatePersonal(
+  userId: number,
+  changes: PersonalInformationUpdate
+): Promise<EmployeeCard> {
+  const response = await api.patch<EmployeeCard>(`${base(userId)}/personal`, changes)
+  return response.data
+}
+
+export async function updateWork(
+  userId: number,
+  changes: WorkInformationUpdate
+): Promise<EmployeeCard> {
+  const response = await api.patch<EmployeeCard>(`${base(userId)}/work`, changes)
+  return response.data
+}
+
+export async function updateAdditional(
+  userId: number,
+  changes: AdditionalInformationUpdate
+): Promise<EmployeeCard> {
+  const response = await api.patch<EmployeeCard>(`${base(userId)}/additional`, changes)
+  return response.data
+}
+
+export async function replaceContacts(
+  userId: number,
+  relatives: RelativeInput[]
+): Promise<EmployeeCard> {
+  const response = await api.put<EmployeeCard>(`${base(userId)}/contacts`, { relatives })
+  return response.data
+}
+
+export async function updateInterviewComment(
+  userId: number,
+  comment: string | null
+): Promise<EmployeeCard> {
+  const response = await api.patch<EmployeeCard>(`${base(userId)}/interview-comment`, {
+    interview_comment: comment,
+  })
+  return response.data
+}
+
+export async function uploadDocument(userId: number, file: File) {
+  const body = new FormData()
+  body.append('file', file)
+  const response = await api.post(`${base(userId)}/documents`, body)
+  return response.data
+}
+
+export async function deleteDocument(userId: number, documentId: number): Promise<void> {
+  await api.delete(`${base(userId)}/documents/${documentId}`)
+}
+
+/**
+ * Fetch a document as a blob so it can be saved.
+ *
+ * The route needs the bearer token, so a plain link cannot fetch it: the
+ * browser would send an unauthenticated request and get a 401 instead of the
+ * file. The same reason the avatars are fetched rather than linked.
+ */
+export async function downloadDocument(userId: number, documentId: number): Promise<Blob> {
+  const response = await api.get(`${base(userId)}/documents/${documentId}`, {
+    responseType: 'blob',
+  })
+  return response.data as Blob
+}

@@ -10813,6 +10813,37 @@
           "training_completed": "Completed course - {{course}}",
           "survey_completed": "Survey - {{name}} ({{score}})"
         }
+      },
+      "backToList": "To the list",
+      "notFound": "That employee could not be found.",
+      "failed": "The card could not be loaded.",
+      "sectionNav": "Card sections",
+      "status": {
+        "active": "Active",
+        "inactive": "Disabled",
+        "suspended": "Suspended"
+      },
+      "workFormat": {
+        "office": "Office",
+        "remote": "Remote"
+      },
+      "panel": {
+        "department": "Department",
+        "manager": "Manager",
+        "hiredAt": "Date of hire",
+        "phone": "Phone",
+        "email": "Email",
+        "writeEmail": "Write an email",
+        "openTelegram": "Open Telegram"
+      },
+      "sections": {
+        "personal-information": "Personal Information",
+        "work-information": "Work Information",
+        "contacts-and-family": "Contacts and Family",
+        "additional-data": "Additional Data",
+        "documents-and-hiring": "Documents and Hiring",
+        "surveys": "Surveys",
+        "chronology": "Chronology"
       }
     }
   },
