@@ -8,7 +8,7 @@
 
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useForm, Controller } from 'react-hook-form'
+import { useForm, Controller, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useCreateUser } from '../hooks/useCreateUser'
@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/Select'
-import { createUserSchema } from '../schemas/userSchemas'
+import { createUserSchema, requireAgentExtension } from '../schemas/userSchemas'
 import { ProjectRoleGroupRow } from './ProjectRoleGroupRow'
 
 interface Project {
@@ -64,6 +64,9 @@ const createUserFormSchema = createUserSchema
       path: ['projectRoles'],
     }
   )
+  // Unconditional here: a user being created has no prior state to respect,
+  // so an agent without an extension is always the admin's own doing.
+  .superRefine(requireAgentExtension)
 
 type CreateUserFormData = z.infer<typeof createUserFormSchema>
 
@@ -93,6 +96,25 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
       projectRoles: {} as Record<string, number>,
     },
   })
+
+  const isAgent = useWatch({ control, name: 'is_agent' }) === true
+
+  /**
+   * Cleared on the toggle itself, not in an effect watching `is_agent`.
+   *
+   * An effect also runs on mount, and some accounts predate this rule:
+   * Is Agent unchecked while an extension is still stored against them. Those
+   * values must stay on screen until an admin touches the checkbox, so the
+   * clear has to be something the admin did, not something the state is.
+   *
+   * `shouldDirty` matters as much as the value: the payload only sends a
+   * cleared extension when the field is dirty, so without it the field empties
+   * on screen and the row keeps its extension.
+   */
+  const clearAgentExtensions = () => {
+    setValue('asterisk_extension', '', { shouldDirty: true, shouldValidate: true })
+    setValue('dialer_extension', '', { shouldDirty: true, shouldValidate: true })
+  }
 
   const handleProjectToggle = async (projectId: number, checked: boolean) => {
     const newSelected = checked
@@ -421,6 +443,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
             <Input
               id="asterisk_extension"
               placeholder="1001"
+              disabled={!isAgent}
               {...register('asterisk_extension')}
               aria-invalid={!!errors.asterisk_extension}
               variant={errors.asterisk_extension ? 'error' : 'default'}
@@ -439,6 +462,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
             <Input
               id="dialer_extension"
               placeholder="9001"
+              disabled={!isAgent}
               {...register('dialer_extension')}
               aria-invalid={!!errors.dialer_extension}
               variant={errors.dialer_extension ? 'error' : 'default'}
@@ -460,7 +484,11 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
                 <Checkbox
                   id="is_agent"
                   checked={field.value || false}
-                  onCheckedChange={(checked) => field.onChange(checked === true)}
+                  onCheckedChange={(checked) => {
+                    const next = checked === true
+                    field.onChange(next)
+                    if (!next) clearAgentExtensions()
+                  }}
                 />
               )}
             />
