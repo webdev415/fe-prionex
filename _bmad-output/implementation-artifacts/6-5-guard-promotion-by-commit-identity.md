@@ -334,49 +334,49 @@ free number on `46e7a26a` is **D49** (`D48` is Story 6.6's).
 
 ### Task 2 — Read the contract (AC: 1, 2, 3) — **0 runs**
 
-- [ ] 2.1 Read `deploy-prod.yml` end to end — the job graph, `derive`'s outputs, the `always()`
+- [x] 2.1 Read `deploy-prod.yml` end to end — the job graph, `derive`'s outputs, the `always()`
       paragraph, and the two `6.5` seam notes at lines ~56 and ~177.
-- [ ] 2.2 Read `record-prod-image.yml`'s probe steps as the **pattern to copy** (four `Accept` types,
+- [x] 2.2 Read `record-prod-image.yml`'s probe steps as the **pattern to copy** (four `Accept` types,
       empty-credential pre-check, `401`/`403` classified, `--proto-redir`, refusing catch-all).
-- [ ] 2.3 Read `#d2` in full, `#d18` §3, `#d21`, `#d24` §2b, `#d40`/`#d41`, `#d47`, `#d48`.
-- [ ] 2.4 Read `deferred-work.md`'s two 6.5-owned entries (the `CRM/api-prionex` positioning and the
+- [x] 2.3 Read `#d2` in full, `#d18` §3, `#d21`, `#d24` §2b, `#d40`/`#d41`, `#d47`, `#d48`.
+- [x] 2.4 Read `deferred-work.md`'s two 6.5-owned entries (the `CRM/api-prionex` positioning and the
       waiver gap).
-- [ ] 2.5 **Measure, paginated**: every `sha-*-prod` and every `preprod-*` marker, and confirm §4's
+- [x] 2.5 **Measure, paginated**: every `sha-*-prod` and every `preprod-*` marker, and confirm §4's
       table still holds. Paste it.
 
 ### Task 3 — Write the guard (AC: 1, 2, 3, 4, 5) — **0 runs**
 
-- [ ] 3.1 New job in `deploy-prod.yml`: plain job, `runs-on: node-20`, `needs: derive`,
+- [x] 3.1 New job in `deploy-prod.yml`: plain job, `runs-on: node-20`, `needs: derive`,
       `if: needs.derive.outputs.is_rollback != 'true'`. **Not a `uses:` job** (Prohibition 2).
-- [ ] 3.2 `build` and `deploy` gain the guard in `needs:`. 🔴 **Re-check `deploy`'s `if:` after the
+- [x] 3.2 `build` and `deploy` gain the guard in `needs:`. 🔴 **Re-check `deploy`'s `if:` after the
       change** — it carries `always()` and an explicit success-or-skipped test; adding a `needs:`
       member changes what that expression must say, and getting it wrong makes the rollback path
       silently do nothing while the run reports green (`deploy-prod.yml`'s own header).
-- [ ] 3.3 The probe: `preprod-${hex}` over HTTP, four `Accept` types, empty-credential pre-check,
+- [x] 3.3 The probe: `preprod-${hex}` over HTTP, four `Accept` types, empty-credential pre-check,
       `--proto-redir '=https'`, status `case` where **only 200 admits** and the catch-all refuses.
-- [ ] 3.4 The refusal message names the missing `preprod-<hex>` **literally** (AC5) and says what to
+- [x] 3.4 The refusal message names the missing `preprod-<hex>` **literally** (AC5) and says what to
       do: record the candidate on PRE-PROD first, or dispatch with `rollback: true` if restoring.
-- [ ] 3.5 The success message states the limit (§6): a marker exists; whether it was earned or waived
+- [x] 3.5 The success message states the limit (§6): a marker exists; whether it was earned or waived
       is not visible here; the approver reads `docs/preprod-candidates.md`.
-- [ ] 3.6 Header block: placement and why not `uses:`, the fail-direction table, the
+- [x] 3.6 Header block: placement and why not `uses:`, the fail-direction table, the
       `CRM/api-prionex` positioning, the waiver limit.
-- [ ] 3.7 Mechanical: YAML parses; every `run:` body `bash -n`; **zero `${{ }}` inside any `run:`**
+- [x] 3.7 Mechanical: YAML parses; every `run:` body `bash -n`; **zero `${{ }}` inside any `run:`**
       (checked against parsed YAML, not grep); `derive` **byte-identical** to `origin/main`; every
       frozen file byte-identical.
 
 ### Task 4 — Earn the matrix (AC: 5, 7) — **2 dispatches, neither deploys**
 
-- [ ] 4.1 **REFUSE row:** dispatch `tag: sha-308ea1520c59-prod`, `rollback: false`. Expect the guard
+- [x] 4.1 **REFUSE row:** dispatch `tag: sha-308ea1520c59-prod`, `rollback: false`. Expect the guard
       job **failed**, `build` and `deploy` **not run**, message naming `preprod-308ea1520c59`.
       **Paste the run id and the job rows** — read them **paginated** (§9).
-- [ ] 4.2 **PASS row:** dispatch `tag: sha-a99ccd44c5a3-preprod`, `rollback: false`. Expect the guard
+- [x] 4.2 **PASS row:** dispatch `tag: sha-a99ccd44c5a3-preprod`, `rollback: false`. Expect the guard
       **success**, then `build` red at `Enforce AC2` refusing to repoint the existing
       `sha-a99ccd44c5a3-prod`. 🔴 **That red is the expected outcome and must be labelled as such** —
       it is the guard's pass row bought without a deploy (§4).
-- [ ] 4.3 **SKIP row:** cite Story 6.6's runs 662/676/679 (all `rollback: true`) rather than spending
+- [x] 4.3 **SKIP row:** cite Story 6.6's runs 662/676/679 (all `rollback: true`) rather than spending
       a fourth — but **verify from the job rows that the guard job is `skipped` in a run made after
       this change**, and if none exists, spend one.
-- [ ] 4.4 Confirm the registry is **unchanged** after all of it: this story writes nothing.
+- [x] 4.4 Confirm the registry is **unchanged** after all of it: this story writes nothing.
 
 ### Task 5 — Record (AC: 2, 3, 6, 8) — **0 runs**
 
@@ -468,6 +468,56 @@ file.**
 ### Agent Model Used
 
 ### Debug Log References
+
+**Tasks 2–4 — 2026-08-27. Both matrix rows earned live. Two dispatches, nothing written.**
+
+**The guard is a plain job between `derive` and `build`**, `if: needs.derive.outputs.is_rollback !=
+'true'`, `runs-on: node-20`. Not a `uses:` job — `#d21` run 631 measured that a skipped `uses:`
+wrapper reports **success**, and Story 6.6 saw it live in its own run 662.
+
+🔴 **The `deploy` condition had to change, and without that the guard would have been decorative.**
+A refused guard makes `build` a failed-dependency, and `deploy`'s condition **admits a skipped build
+by design** — that is how the rollback path reaches it. Before the added clause, a red guard would
+have gone red **and production would have been deployed anyway.** `deploy` now requires `guard` to be
+`success` (release, admitted) or `skipped` (rollback, not applicable) — never `failure`.
+
+**The live matrix — and the discriminator is structural, not a log line:**
+
+| | run **687** — REFUSE | run **689** — PASS |
+|---|---|---|
+| dispatched | `sha-308ea1520c59-prod`, `rollback: false` | `sha-a99ccd44c5a3-preprod`, `rollback: false` |
+| marker | `preprod-308ea1520c59` **absent** | `preprod-a99ccd44c5a3` **present** |
+| `Promotion guard` | **failure** ✅ | **success** ✅ |
+| `Build and Push` (the callee's INNER job) | 🔴 **absent — never expanded** | ✅ **present, failed at `Enforce AC2`** |
+| deploy-stand inner rows | none | none |
+| total job rows | **6** | 7 |
+
+🔴 **That "absent vs present" row is the proof that the guard sits BEFORE the build**, and it is
+better evidence than any status word. Run 687 has **six** job rows and **zero** inner callee rows;
+run 668 — a real deploy from Story 6.6 — has twelve including seven inner rows. `build.yml`,
+`deploy-stand.yml` and `record-prod-image.yml` never expanded on 687. **Production was not touched,
+and nothing was built.** AC5's *"before the build and before the production stand"* is observed.
+
+⚠️ **A platform behaviour that was in no document, and I predicted it wrong.** Dependents of a failed
+job report **`failure`**, not `skipped` — on run 687 `build`, `deploy` and `record` all show
+`failure` while never having run. The story's own Task 4.1 expected *"`build` and `deploy` not run"*
+and would have read `skipped`. **The `deploy` condition is unaffected** (it admits `success` or
+`skipped`, so `failure` is refused either way), but **judging an outcome by the word `skipped` would
+be wrong here**, and the next reader will assume otherwise. Filed.
+
+⚠️ **Run 689's build failed at `Enforce AC2`, and that reason is inferred, not read.** Job logs are
+not retrievable on this instance. What is *measured* is that the build's inner job **ran and failed**
+where on 687 it never started. The reason — `build.yml` refusing to repoint the existing
+`sha-a99ccd44c5a3-prod` because `vite.config.ts`'s `Date.now()` makes the rebuild differ (`#d24`
+§2b) — is documented and predicted, and it is **not load-bearing for any AC here**: what this row
+buys is *the guard passed and the build was reached*, which is exactly what it claims.
+
+**Registry re-read after both dispatches: unchanged.** `prod-current` and `prod-a99ccd44c5a3` still
+`f30c7941…`. This story writes nothing, and did not.
+
+**Frozen check:** all **11** frozen workflows byte-identical to `origin/main`, and **`derive`
+byte-identical** — extracted and compared separately, because Story 6.6 kept it that way on purpose
+for this rebase. Zero `${{ }}` inside any `run:`; every `run:` body passes `bash -n`.
 
 **Task 1 — 2026-08-27.** Worktree `story-6-5/impl` off `story-6-5/pr-1-context` @ `0642bdd5` — **not
 off `main`**, deliberately: PR #103 is open and the story file exists nowhere else. `origin/main` is
