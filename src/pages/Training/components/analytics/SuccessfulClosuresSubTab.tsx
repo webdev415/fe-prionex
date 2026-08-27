@@ -151,12 +151,6 @@ export function SuccessfulClosuresSubTab() {
   const projectIdNum = activeProjectId ? Number(activeProjectId) : null
   const { data: operators = [] } = useOperators(projectIdNum)
 
-  const operatorIdByLabel = useMemo(() => {
-    const m = new Map<string, number>()
-    operators.forEach((op) => m.set(op.full_name, op.id))
-    return m
-  }, [operators])
-
   // The closures endpoint (payment-service) doesn't enrich operator_name, so we
   // resolve it from the project operator list by id — matching how the other
   // sub-tabs surface the operator name + avatar instead of a bare #id.
@@ -167,10 +161,15 @@ export function SuccessfulClosuresSubTab() {
   }, [operators])
 
   const userIds = useMemo<number[] | undefined>(() => {
+    // The select carries the operator id itself. Resolving it from
+    // `full_name` through a Map — as this did — fails silently in two ways: an
+    // unresolvable label yields `undefined`, which the BE reads as "every
+    // operator" rather than as an empty result, and two employees sharing a
+    // name collapse onto whichever id the Map kept last.
     if (operatorFilter === 'all') return undefined
-    const id = operatorIdByLabel.get(operatorFilter)
-    return id != null ? [id] : undefined
-  }, [operatorFilter, operatorIdByLabel])
+    const id = Number(operatorFilter)
+    return Number.isFinite(id) ? [id] : undefined
+  }, [operatorFilter])
 
   const backendPeriod = PERIOD_TO_BACKEND[period]
 
@@ -396,7 +395,7 @@ export function SuccessfulClosuresSubTab() {
               {t('pages.training.closures.filters.allOperators', 'All operators')}
             </option>
             {operators.map((op) => (
-              <option key={op.id} value={op.full_name}>
+              <option key={op.id} value={String(op.id)}>
                 {op.full_name}
               </option>
             ))}

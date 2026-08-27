@@ -2848,7 +2848,11 @@
         },
         "loading": "Loading…",
         "loadFailed": "Failed to load. Please retry.",
-        "empty": "No data for the selected filters in this period."
+        "empty": "No data for the selected filters in this period.",
+        "filters": {
+          "operator": "Operator",
+          "allOperators": "All operators"
+        }
       },
       "assign": {
         "courses": "Published courses",
