@@ -2199,7 +2199,43 @@ development_status:
   # self-checking. "A fix-pass that is not itself re-reviewed is just a second draft" now has a third
   # data point, and this time the re-review is what caught it.
   6-6-record-the-deployed-production-image: review
-  6-7-smoke-check-production-after-deploy: backlog
+  # Contexted 2026-08-27 off origin/main @ 043ce521, branch `story-6-7/pr-1-context`. 🔴 RE-BASED
+  # MID-WRITE: the first draft targeted 0d990967 and said Story 6.5's guard was not on main; PR #104
+  # merged while the file was being written. Every graph reference corrected against the PARSED file.
+  # Real graph now: derive -> guard -> build -> deploy -> record -> record-outcome.
+  # 🔴 THE CENTRAL FINDING: EPIC AC1 IS ALREADY IMPLEMENTED BY deploy-stand.yml -- it polls
+  # docker inspect for running/restarting/healthy with a timeout, fails fast on `unhealthy`, ASSERTS
+  # THE HEALTHY CONTAINER IS THIS PROJECT'S (anchored), and issues GET / from a --network host
+  # sibling container asserting 200. Story 6.4's header already ruled: "the callee's health and Kong
+  # probes are NOT it". So AC1 is AMENDED -- this story re-asserts health AFTER the deploy job ends
+  # and the Story 4.4 lock is released, which is the state the callee's check cannot see (a container
+  # healthy at hand-off that has since crash-looped). RE-IMPLEMENTING THE POLL IS PROHIBITED: a weaker
+  # duplicate of a stronger existing check is the anti-pattern this epic banned twice already.
+  # 🔴 AC2 STRENGTHENED, because `GET / == 200` CANNOT FAIL for the reasons a smoke check exists:
+  # nginx returns 200 for a stale index, a default page, or an index whose bundle 404s. At least one
+  # probe must be CONTENT-LEVEL -- fetch /, extract the hashed asset the HTML actually references,
+  # fetch THAT. The hash changes every build, so the check can only pass if the served bundle is the
+  # one this index names.
+  # 🔴 AC4 IS ONLY PARTIALLY DELIVERABLE AND IS RECORDED BLOCKED, NOT DROPPED. The Slack channel does
+  # not exist: the webhook is Story 1.13's unrecoverable stub (write-only, URL unrecoverable) and a
+  # NEW incoming webhook must be created in Slack. Owner: OLEG. Story 4.5 is backlog and was
+  # resequenced last by him. Same deferral Story 6.4 took 2026-08-14 -- "the production deploy must
+  # work, and must be provable, without any notification". AC4 CANNOT BE GRADED MET.
+  # ⚠️ AC3's log scan is the clause most likely to ship broken: a bare `grep ERROR` over nginx access
+  # logs fails correct deploys, and a just-started container may log nothing at all. The matcher must
+  # be written after reading the real log format, anchored -- and what an EMPTY window means must be
+  # decided (recommendation: pass, stated explicitly).
+  # 🔴 RUNNER: fe-prionex-prod-deploy ONLY. Never s10/e1-rung3 (dind, cannot reach the host stand),
+  # never e1-rung3-prod-deploy (the neighbours', declared :host -- run 629 proved it fails).
+  # 🔴 CURL THE STAND AT 0.0.0.0:8080, NEVER crm.prod.crm-prionex.online -- it RESOLVES AND REFUSES
+  # (#d43): a smoke check pointed there fails on a healthy stand.
+  # FROZEN: deploy-stand.yml above all (it owns the health and Kong probes), `derive`, nginx.conf,
+  # Dockerfile.prod, src/. The stand is READ ONLY -- nothing written, restarted or reconfigured.
+  # ⚠️ OPEN QUESTION 1 is the sharp one: how a FAILING row is earned without making production serve
+  # something wrong. Recommendation (c) -- point the check at a deliberately wrong port/path once:
+  # exercises the real code path, changes nothing, produces a real run id.
+  # Floor 7 / ceiling 17. D50 apparent-next; re-verify across refs, local branches AND the working tree.
+  6-7-smoke-check-production-after-deploy: ready-for-dev
   6-8-roll-back-production-to-a-previous-release: backlog
   6-9-cut-production-over-with-a-no-op-deploy: backlog
   # Added 2026-08-18 by sprint-change-proposal-2026-08-18-prod-target.md. Listed after 6.9 to
