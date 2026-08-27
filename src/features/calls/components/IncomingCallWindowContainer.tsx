@@ -17,12 +17,14 @@ import {
   useRejectCall,
 } from '../hooks/useCall'
 import { extensionOf } from '../hooks/useIncomingCall'
+import { callService } from '../api/callService'
 import { useIncludedClients } from '../hooks/useIncludedClients'
 import { useCallStore } from '@/stores/callStore'
 import { buildMatchedClients } from '../utils/callWindow'
 import { hasUnfiledWriteUp } from '../utils/writeUp'
 import { CallOutcome } from '../types'
 import type { IncomingCallData } from '../types'
+import type { CallMatchedClient } from './CallClientContracts'
 import { IncomingCallWindow } from './IncomingCallWindow'
 import type { CallInteractionDraft, CallInteractionDraftState } from './CallInteractionForm'
 import type { CallPhase } from './CallActions'
@@ -87,7 +89,13 @@ export function IncomingCallWindowContainer({
   onDismiss,
 }: IncomingCallWindowContainerProps) {
   const { t } = useTranslation('common')
-  const clients = useMemo(() => buildMatchedClients(incomingCall), [incomingCall])
+  const matched = useMemo(() => buildMatchedClients(incomingCall), [incomingCall])
+  // The client an operator found by hand because the number matched nobody.
+  // Carries no contracts: the screen-pop only has those for numbers it
+  // recognised, and the confirmed spec files interactions against clients
+  // rather than contracts, so none are needed to write the call up.
+  const [foundClient, setFoundClient] = useState<CallMatchedClient | null>(null)
+  const clients = matched.length > 0 ? matched : foundClient ? [foundClient] : []
   const { isIncluded, setIncluded, includedClientIds } = useIncludedClients(clients)
   const [interactionSaved, setInteractionSaved] = useState(false)
   // The caller is parked. Tracked here because nothing on the wire reports it
@@ -107,19 +115,32 @@ export function IncomingCallWindowContainer({
   // writing it up is ordinary rather than exceptional.
   const [endedByOperator, setEndedByOperator] = useState(false)
 
-  // Registered for as long as the window is up, so `isCallActive()` is true
-  // during an inbound call and the click-to-call guard on the client pages
-  // stops an operator dialling out mid-conversation. useCanShowIncomingPopup
-  // is written expecting this registration and decides during render, before
-  // this effect runs, so the popup still cannot suppress itself.
+  const isEnded = ended || endedByOperator
+
+  // Registered while the call is *live*, so `isCallActive()` is true during it
+  // and the click-to-call guard on the client pages stops an operator dialling
+  // out mid-conversation. useCanShowIncomingPopup is written expecting this
+  // registration and decides during render, before this effect runs, so the
+  // popup still cannot suppress itself.
+  //
+  // Released the moment the call ends, even though the window stays up for the
+  // write-up: a finished call is not a call in progress, and holding the
+  // registration would block every outbound call until the operator happened to
+  // press Close — with nothing on screen explaining why. `isCallWindowLive()`
+  // already draws this exact distinction for the minimised bubble.
   useEffect(() => {
+    if (isEnded) {
+      const store = useCallStore.getState()
+      if (!store.minimizedCall) store.setOpenCallModal(null)
+      return
+    }
     useCallStore.getState().setOpenCallModal('call-dialog')
     return () => {
       // A minimised call window has taken over; that one is not ours to clear.
       const store = useCallStore.getState()
       if (!store.minimizedCall) store.setOpenCallModal(null)
     }
-  }, [])
+  }, [isEnded])
 
   const hasUnsavedWriteUp = hasUnfiledWriteUp(draft, interactionSaved)
   useEffect(() => {
@@ -127,7 +148,6 @@ export function IncomingCallWindowContainer({
     onUnsavedChange?.(incomingCall.call_id, hasUnsavedWriteUp)
   }, [incomingCall.call_id, hasUnsavedWriteUp, onUnsavedChange])
 
-  const isEnded = ended || endedByOperator
   const phase: CallPhase = answeredAt === null ? 'ringing' : 'connected'
   // Ticks the conversation clock. Derived from the answer time rather than
   // counted up, so a re-render or a minimise-and-restore cannot drift it.
@@ -208,6 +228,18 @@ export function IncomingCallWindowContainer({
     // once filed, so an optimistic confirmation would be a lie the operator
     // cannot correct.
     setInteractionSaved(true)
+
+    // The write-up goes to every selected client, but the call belongs on one
+    // card. PM's rule: the first client still switched on. Deliberately not
+    // awaited and deliberately not surfaced — the interaction is filed either
+    // way, and failing to re-anchor the call leaves it on the lookup's original
+    // guess rather than losing anything the operator did.
+    const primaryClientId = includedClientIds[0]
+    if (primaryClientId !== undefined) {
+      callService.setCallPrimaryClient(incomingCall.call_id, primaryClientId).catch((error) => {
+        console.error('[call] could not anchor the call to its primary client', error)
+      })
+    }
     toast.success(t('pages.clients.modals.callDialog.interaction.saved', 'Interaction saved'))
   }
 
@@ -226,6 +258,18 @@ export function IncomingCallWindowContainer({
       results={asOptions(results)}
       reasons={asOptions(contactTypes)}
       channels={asOptions(channels)}
+      onFindClient={
+        matched.length === 0 && !foundClient
+          ? (result) =>
+              setFoundClient({
+                clientId: result.id,
+                clientName: result.full_name,
+                contactCategory: null,
+                thirdPartyName: null,
+                contracts: [],
+              })
+          : undefined
+      }
       onSaveInteraction={handleSave}
       saveDisabled={!canSaveInteraction}
       interactionSaved={interactionSaved}

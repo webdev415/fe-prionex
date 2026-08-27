@@ -9,7 +9,9 @@ import {
   type CallInteractionDraft,
   type CallInteractionDraftState,
 } from './CallInteractionForm'
+import { CallClientSearch } from './CallClientSearch'
 import { CallWindowHeader } from './CallWindowHeader'
+import type { EnhancedSearchResult } from '@/api/clientSearchApi'
 
 interface IncomingCallWindowProps {
   phoneNumber: string
@@ -22,6 +24,12 @@ interface IncomingCallWindowProps {
   results: InteractionOption[]
   reasons: InteractionOption[]
   channels: InteractionOption[]
+  /**
+   * Offered only while the number matched nobody and none has been found yet.
+   * An interaction always belongs to a client, so without this the call cannot
+   * be written up at all.
+   */
+  onFindClient?: (client: EnhancedSearchResult) => void
   onSaveInteraction: (draft: CallInteractionDraft) => Promise<void> | void
   /** Nothing can be filed yet — the lookups are missing, or no client is selected. */
   saveDisabled?: boolean
@@ -61,6 +69,7 @@ export function IncomingCallWindow({
   results,
   reasons,
   channels,
+  onFindClient,
   onSaveInteraction,
   saveDisabled = false,
   interactionSaved,
@@ -105,12 +114,15 @@ export function IncomingCallWindow({
             the operator acts on, and must not leave the screen. */}
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto sm:gap-5">
           {clients.length === 0 ? (
-            <p className="text-muted-foreground text-center text-xs">
-              {t(
-                'pages.clients.modals.callDialog.clientNotFoundHint',
-                'This number is not linked to any client in your projects.'
-              )}
-            </p>
+            <div className="flex flex-col gap-3">
+              <p className="text-muted-foreground text-center text-xs">
+                {t(
+                  'pages.clients.modals.callDialog.clientNotFoundHint',
+                  'This number is not linked to any client in your projects.'
+                )}
+              </p>
+              {onFindClient && <CallClientSearch onSelect={onFindClient} />}
+            </div>
           ) : (
             clients.map((client) => (
               <CallClientContracts

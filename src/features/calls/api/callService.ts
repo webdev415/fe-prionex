@@ -187,6 +187,21 @@ class CallService {
     })
     return response.data
   }
+
+  /**
+   * Record which client this call is about.
+   *
+   * A number can resolve to several clients and the write-up goes to every one
+   * the operator selected, but the call itself belongs on one card. Until this
+   * is sent the record holds whichever match the lookup ranked first — a guess
+   * made before the operator had seen anything.
+   */
+  async setCallPrimaryClient(callId: string, clientId: number): Promise<{ status: string }> {
+    const response = await api.patch(`${API_BASE_URL}/api/v1/calls/${callId}/primary-client`, {
+      client_id: clientId,
+    })
+    return response.data
+  }
 }
 
 export const callService = new CallService()

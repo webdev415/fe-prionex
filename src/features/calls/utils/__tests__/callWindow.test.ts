@@ -38,6 +38,22 @@ const payload = (over: Partial<IncomingCallData> = {}): IncomingCallData => ({
 })
 
 describe('buildMatchedClients', () => {
+  it("carries a debt's latest restructuring status onto its card", () => {
+    const [built] = buildMatchedClients(
+      payload({ clients: [client(1, { loans: [loan(10, { restructuring_status: 'Violated' })] })] })
+    )
+
+    // Unfiltered on purpose: a violated or cancelled restructuring is exactly
+    // what an operator wants to know before they start talking.
+    expect(built.contracts[0].marker).toBe('Violated')
+  })
+
+  it('shows no marker for a debt that was never restructured', () => {
+    const [built] = buildMatchedClients(payload({ clients: [client(1)] }))
+
+    expect(built.contracts[0].marker).toBeNull()
+  })
+
   it('carries whose number the caller rang in on', () => {
     const [built] = buildMatchedClients(
       payload({

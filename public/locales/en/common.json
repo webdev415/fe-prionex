@@ -5408,6 +5408,8 @@
           "multipleClientsHint": "Choose who is calling — the interaction will be filed against this client.",
           "clientNotFound": "Client not found",
           "clientNotFoundHint": "This number is not linked to any client in your projects.",
+          "searchClient": "Find the client",
+          "searchClientPlaceholder": "Search by name, phone or tax number",
           "searchByNumber": "Search by this number",
           "interaction": {
             "title": "Interaction Form",
