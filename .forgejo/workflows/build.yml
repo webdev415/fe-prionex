@@ -394,282 +394,97 @@ jobs:
       # читает в devtools.» That asymmetry is why the token never leaves this
       # block while the URLs are allowed to cross into the build step through
       # $GITHUB_OUTPUT. Any statement that these URLs are secret is a defect.
-      - name: Read the environment's URLs from OpenBao
-        id: bao
+      # ─────────────────────────────────────────────────────────────────────
+      # The environment's app URLs — from Forgejo repository VARIABLES.
+      #
+      # 🔴 REWIRED 2026-08-27, on Oleg's decision, from OpenBao to `vars.`.
+      # The step this replaces authenticated to OpenBao per environment, read
+      # `secret/fe/<env>/app`, validated its key names, and extracted exactly
+      # two values: VITE_API_BASE_URL and VITE_WS_URL. Nothing else in this
+      # workflow consumed that KV, so OpenBao's entire role here was those two
+      # strings.
+      #
+      # Why the change: `VITE_API_BASE_URL_{DEV,PREPROD,PROD}` and the matching
+      # `VITE_WS_URL_*` already existed as repository variables — the `_PREPROD`
+      # pair was added deliberately for Option C (`#d2`) alongside the existing
+      # `_DEV`/`_PROD` — and NOTHING READ THEM. Two sources of truth for one
+      # build-time value, and they happened to agree, so the divergence was
+      # invisible until someone tried to repoint production and edited the one
+      # that does nothing (2026-08-27, `#d43` §10a).
+      #
+      # ⚠️ CONSEQUENCE, NAMED RATHER THAN LEFT TO BE FOUND: the six OPENBAO_*
+      # secrets are no longer read by this workflow. Deleting them, and
+      # deciding what remains of `#d15`'s provisioning, is a SEPARATE decision
+      # and is NOT taken here. What is taken here is the availability win: a
+      # build no longer fails because OpenBao is unreachable, for a value the
+      # build did not get from it anyway.
+      #
+      # ⚠️ AND THE ONE THIS DOES NOT TOUCH: `.github/workflows/CD.yml` reads
+      # `secrets.VITE_API_BASE_URL_PROD` on the GitHub side and builds what s2
+      # serves — where the live users are. `#d7` puts that side out of scope.
+      # The two pipelines now read two different stores with the same names.
+      #
+      # Modelled on the `Select the operator phone URL` step below, which has
+      # used `vars.` since Story 3.x — the pattern is not new here, only its
+      # application to these two values.
+      - name: Select the app URLs for this environment
+        id: app_urls
         env:
           ENVIRONMENT: ${{ inputs.environment }}
-          OPENBAO_ADDR: ${{ secrets.OPENBAO_ADDR }}
-          OPENBAO_DEV_ROLE_ID: ${{ secrets.OPENBAO_DEV_ROLE_ID }}
-          OPENBAO_DEV_SECRET_ID: ${{ secrets.OPENBAO_DEV_SECRET_ID }}
-          OPENBAO_PREPROD_ROLE_ID: ${{ secrets.OPENBAO_PREPROD_ROLE_ID }}
-          OPENBAO_PREPROD_SECRET_ID: ${{ secrets.OPENBAO_PREPROD_SECRET_ID }}
-          OPENBAO_PROD_ROLE_ID: ${{ secrets.OPENBAO_PROD_ROLE_ID }}
-          OPENBAO_PROD_SECRET_ID: ${{ secrets.OPENBAO_PROD_SECRET_ID }}
+          API_DEV: ${{ vars.VITE_API_BASE_URL_DEV }}
+          API_PREPROD: ${{ vars.VITE_API_BASE_URL_PREPROD }}
+          API_PROD: ${{ vars.VITE_API_BASE_URL_PROD }}
+          WS_DEV: ${{ vars.VITE_WS_URL_DEV }}
+          WS_PREPROD: ${{ vars.VITE_WS_URL_PREPROD }}
+          WS_PROD: ${{ vars.VITE_WS_URL_PROD }}
         shell: bash
         run: |
           set -euo pipefail
-          umask 077
-
-          # Environment -> secret pair -> KV path, from a LITERAL table.
-          # 🔴 Never concatenate the path from the secret name. Four spellings
-          # are live and only three are right in their own place: the Forgejo
-          # secret says PREPROD, the OpenBao role says fe-pre-prod, the KV path
-          # says pre-prod, and this story's tag suffix says -preprod.
-          # `secret/fe/preprod/app` — the one a naive concatenation produces —
-          # does not exist.
           case "$ENVIRONMENT" in
-            dev)     ROLE_ID="$OPENBAO_DEV_ROLE_ID";     SECRET_ID="$OPENBAO_DEV_SECRET_ID";     KV_PATH="fe/dev/app" ;;
-            preprod) ROLE_ID="$OPENBAO_PREPROD_ROLE_ID"; SECRET_ID="$OPENBAO_PREPROD_SECRET_ID"; KV_PATH="fe/pre-prod/app" ;;
-            prod)    ROLE_ID="$OPENBAO_PROD_ROLE_ID";    SECRET_ID="$OPENBAO_PROD_SECRET_ID";    KV_PATH="fe/prod/app" ;;
+            dev)     API_URL="${API_DEV:-}";     WS_URL="${WS_DEV:-}" ;;
+            preprod) API_URL="${API_PREPROD:-}"; WS_URL="${WS_PREPROD:-}" ;;
+            prod)    API_URL="${API_PROD:-}";    WS_URL="${WS_PROD:-}" ;;
             *) echo "FAIL: unknown environment '${ENVIRONMENT}'."; exit 1 ;;
           esac
-          # 🔴 EXPORT is not optional. `jq -n '{... env.ROLE_ID ...}'` reads jq's
-          # own PROCESS ENVIRONMENT — that is the whole point of using the `env`
-          # builtin instead of `--arg`, which would put the secret in jq's argv.
-          # A plain shell assignment is not in the environment, so jq sees null
-          # and the login fails with a message that blames the credential.
-          # The first version of this step omitted the export and cost a run.
-          export ROLE_ID SECRET_ID
-          echo "environment=${ENVIRONMENT}  kv=secret/${KV_PATH}"
 
-          # (P7) Preflight, two failures, two messages.
-          # Every curl below carries timeouts. Without them a wedged OpenBao that
-          # accepts the connection and never answers holds one of two runner slots
-          # until the job's 30-minute ceiling — on a host this file elsewhere
-          # describes as shared with another tenant's production.
-          CURL="curl -sf --connect-timeout 5 --max-time 20"
+          SUFFIX="$(printf '%s' "$ENVIRONMENT" | tr '[:lower:]' '[:upper:]')"
 
-          command -v curl >/dev/null || { echo "FAIL: curl missing on this runner."; exit 1; }
-          command -v jq   >/dev/null || { echo "FAIL: jq missing — the install step above did not do its job."; exit 1; }
-          grep -q openbao /etc/hosts || {
-            echo "FAIL: no 'openbao' mapping in /etc/hosts. The runner config is not carrying" \
-                 "--add-host openbao:<ip>. Both /opt/forgejo-runner-fe-prionex/config.yml and" \
-                 "config-2.yml on s1 need it, and the IP is HARDCODED — if forgejo-openbao was" \
-                 "recreated, its IP changed and both files need the new one."; exit 1; }
-          SEAL="$($CURL "${OPENBAO_ADDR}/v1/sys/seal-status")" || {
-            echo "FAIL: OpenBao unreachable at ${OPENBAO_ADDR}. See the --add-host note above —" \
-                 "this is the failure that looks like a network problem and is a config problem."; exit 1; }
-          # 🔴 Read the BODY, not just the status. `/v1/sys/seal-status` answers 200
-          # with `"sealed": true` when the store is sealed — the first version
-          # discarded the body with -o /dev/null, so a sealed OpenBao sailed through
-          # preflight and failed at the login instead, where the message tells the
-          # operator to re-mint a secret_id for a vault that only needed unsealing.
-          # This store uses Shamir (t:3 n:5), so an unattended restart IS a sealed
-          # restart; it is the likely failure, not an exotic one.
-          if printf '%s' "$SEAL" | grep -q '"sealed":[[:space:]]*true'; then
-            echo "FAIL: OpenBao at ${OPENBAO_ADDR} is SEALED. Nothing is wrong with the" \
-                 "credentials — it needs unsealing (Shamir, 3 of 5). Do NOT re-mint a secret_id."; exit 1
-          fi
-
-          # Narrow the blast radius: only the selected pair stays in the environment.
-          # All seven credentials arrive through `env:` because a dynamic secret
-          # lookup is not available here — but leaving PROD's secret_id in the
-          # environment of a `dev` build defeats the three-AppRole isolation D15
-          # measured 9/9. The `case` above chose one; the rest go now.
-          unset OPENBAO_DEV_ROLE_ID OPENBAO_DEV_SECRET_ID \
-                OPENBAO_PREPROD_ROLE_ID OPENBAO_PREPROD_SECRET_ID \
-                OPENBAO_PROD_ROLE_ID OPENBAO_PROD_SECRET_ID
-
-          # (P1) AppRole login. The body goes in on STDIN. `-d "$json"` would put
-          # the secret_id in curl's argv, which is world-readable in /proc.
-          # Fail-closed on an empty payload too: if the export above were ever
-          # lost again, jq would emit `{"role_id":null,...}` and the failure would
-          # read as a credential problem rather than a plumbing one.
-          [ -n "${ROLE_ID:-}" ] && [ -n "${SECRET_ID:-}" ] || {
-            echo "FAIL: no AppRole credential in the environment for '${ENVIRONMENT}'." \
-                 "This is a plumbing failure, not a credential failure — check that the" \
-                 "secrets are set on the repository and that they were exported."; exit 1; }
-          BAO_TOKEN="$(jq -n '{role_id: env.ROLE_ID, secret_id: env.SECRET_ID}' \
-            | $CURL --data @- "${OPENBAO_ADDR}/v1/auth/approle/login" \
-            | jq -r '.auth.client_token')" || {
-              echo "FAIL: AppRole login failed for '${ENVIRONMENT}'. A wrong secret_id fails" \
-                   "identically to a missing one — Forgejo secret values are write-only, so it" \
-                   "can only be re-minted, not read back."; exit 1; }
-          [ -n "$BAO_TOKEN" ] && [ "$BAO_TOKEN" != "null" ] || { echo "FAIL: login returned no token."; exit 1; }
-          echo "::add-mask::$BAO_TOKEN"
-
-          # (P4) 🔴 Revoke on EVERY exit path, not just the happy one. The first
-          # version revoked inline after the read, so a failing KV read exited with
-          # a live token — and swallowed a failing revoke with `|| echo WARN` and
-          # carried on into `docker build`. P4's rationale is absolute ("the token
-          # must not survive into docker build"); a trap is what makes it absolute.
-          # 🔴 Opus review 2026-08-16: this used to end the failure branch with
-          # `|| echo "::error::…"`, which made the trap absolute about ATTEMPTING
-          # the revoke and silent about whether it worked. `::error::` is an
-          # annotation, not an exit code; the `||` swallowed curl's status and the
-          # step exited 0. So the most likely failure — a sealed OpenBao, which on
-          # Shamir 3-of-5 is what any unattended restart produces, answering
-          # `revoke-self` with 503 — left a live production credential running out
-          # its full TTL behind a GREEN build, with the only trace in a job log
-          # this instance does not serve.
-          #
-          # A failed revoke now fails the step. The image may already be pushed by
-          # then, and that is the right trade: a red run tells the operator to
-          # revoke by hand, whereas a green one tells them nothing. This is the
-          # project's own rule — prove it in the database or the filesystem, never
-          # in stdout — applied at the one place in this file where a leak is
-          # actually a credential.
-          # 🚨 `return` from an EXIT trap does NOT change the shell's exit status —
-          # only `exit` does. The first version of this fix used `return 1` and was
-          # a NO-OP: the step still went green. Verified locally before shipping
-          # (`trap` + `return 1` -> exit 0; `trap` + `exit 1` -> exit 1). This is
-          # the same class as every other finding in this story — a guard that
-          # cannot fire proves nothing.
-          _revoke() {
-            _rc=$?
-            [ -n "${BAO_TOKEN:-}" ] || return
-            if printf 'header = "X-Vault-Token: %s"\n' "$BAO_TOKEN" \
-                 | $CURL --config - -o /dev/null -X POST "${OPENBAO_ADDR}/v1/auth/token/revoke-self"
-            then
-              echo "token revoked"
-              unset BAO_TOKEN
-              return
-            fi
-            unset BAO_TOKEN
-            echo "::error::self-revoke FAILED — a live token WILL outlive this step."
-            echo "FAIL: could not revoke the OpenBao token. It stays valid until its TTL"
-            echo "  expires. Revoke it by hand, and check whether OpenBao is sealed — an"
-            echo "  unattended restart is a sealed restart on Shamir 3-of-5."
-            # Preserve an existing failure's status; otherwise fail on this alone.
-            [ "$_rc" -ne 0 ] && exit "$_rc"
-            exit 1
-          }
-          trap _revoke EXIT
-
-          # (P1) 🔴 The token goes in on STDIN too, not in argv. The first version
-          # protected the secret_id with jq's env builtin and then put the token it
-          # buys — the credential that actually reads the store — into
-          # `-H "X-Vault-Token: …"`, world-readable in /proc/<pid>/cmdline, in a job
-          # holding REGISTRY_TOKEN_RW. The property is "no credential in any argv",
-          # and it has to hold for the token as well as for the thing that mints it.
-          _bao_get() {
-            printf 'header = "X-Vault-Token: %s"\n' "$BAO_TOKEN" \
-              | $CURL --config - "$1"
-          }
-
-          # (P2) Fetch once. Everything downstream reads this one JSON.
-          KV_JSON="$(_bao_get "${OPENBAO_ADDR}/v1/secret/data/${KV_PATH}")" || {
-              echo "FAIL: could not read secret/${KV_PATH}."; exit 1; }
-
-          # (P2) The JSON must parse before anything trusts it. Both safety loops
-          # below feed on `jq … <<<"$KV_JSON"` through process substitution, whose
-          # exit status a `while` loop does NOT see — so on a non-JSON 200 body
-          # (a proxy, an error page, a truncated response) they would iterate zero
-          # times and report success by producing no failure. That is Story 1.11's
-          # lesson, an empty result is not evidence of safety, reproduced inside the
-          # guards themselves. Parse once, fail loudly.
-          KEYS="$(jq -r '.data.data | keys[]' <<<"$KV_JSON")" || {
-            echo "FAIL: secret/${KV_PATH} did not return parseable JSON. This is a transport" \
-                 "failure, not a value failure — the guards below would have passed vacuously."; exit 1; }
-          [ -n "$KEYS" ] || { echo "FAIL: secret/${KV_PATH} holds no keys."; exit 1; }
-
-          # (P5) Mask every value, per line, percent-escaped. Multi-line values
-          # mask only their first line otherwise, and a literal % registers the
-          # wrong string because workflow commands are percent-decoded.
-          _escape_for_mask() {
-            local s=$1; s=${s//%/%25}; s=${s//$'\r'/%0D}; s=${s//$'\n'/%0A}; printf '%s' "$s"
-          }
-          while IFS= read -r _line || [ -n "$_line" ]; do
-            [ -n "$_line" ] && echo "::add-mask::$(_escape_for_mask "$_line")"
-          done < <(jq -r '.data.data | to_entries[] | .value' <<<"$KV_JSON")
-
-          # (P3) Allowlist AND denylist. `PATH` and `LD_PRELOAD` both satisfy the
-          # allowlist regex perfectly; on the hub repo this class of bug hijacked
-          # PATH to /tmp/pwned. Both checks stay.
-          while IFS= read -r k; do
-            printf '%s\n' "$k" | grep -Eq '^[A-Za-z_][A-Za-z0-9_]*$' \
-              || { echo "FAIL: refusing unsafe OpenBao key name: $k"; exit 1; }
-            case "$k" in
-              PATH|LD_PRELOAD|LD_LIBRARY_PATH|IFS|BASH_ENV|ENV|SHELLOPTS|BASHOPTS|HOME|TMPDIR|DOCKER_CONFIG|DOCKER_HOST|BAO_*|VAULT_*|GITHUB_*)
-                echo "FAIL: refusing reserved OpenBao key name: $k"; exit 1 ;;
-            esac
-          done <<<"$KEYS"
-
-          API_URL="$(jq -r '.data.data.VITE_API_BASE_URL // empty' <<<"$KV_JSON")"
-          WS_URL="$(jq -r '.data.data.VITE_WS_URL // empty' <<<"$KV_JSON")"
-          unset KV_JSON
-
-          # (P6) Assertions that can fail. AC2: an empty OR MISSING OR PLACEHOLDER
-          # value fails the build with the variable named.
-          #
-          # 🔴 The placeholder test is a SCHEME test, not a string match.
-          # `secret/fe/pre-prod/app` held
-          # `PLACEHOLDER-preprod-backend-not-provisioned` on both keys as of
-          # this comment's original writing. 🔴 Corrected by Story 5.2
-          # (2026-08-24): the secret's OWN content has not been re-read since
-          # it was written (D34 §5) -- what Story 5.2 actually verified is the
-          # BUNDLE of a `-preprod` image (run 680, extracted 2026-08-24), which
-          # carries the real PRE-PROD URLs and not this placeholder. That is a
-          # narrower, later-dated, and stronger claim than "the secret holds
-          # X" -- it tests the artifact the build produces, not the input it
-          # was fed. Do not read this as evidence about the secret's current
-          # value. The check stays a scheme test regardless of any of the
-          # above -- a non-empty check would have passed the placeholder
-          # happily, baking the literal word PLACEHOLDER into a bundle and
-          # satisfying AC2 with exactly the failure AC2 exists to prevent.
-          # Requiring a scheme rejects it on a property rather than on its
-          # spelling, so the check still works for whatever the next
-          # placeholder happens to say.
-          # 🔴 Rewritten by Story 3.3's own code review, which showed the first
-          # `https://` with no host; it accepted `https://PLACEHOLDER-...`; it
-          # accepted a `ws://` value as the REST API base because the
-          # `http://*|ws://*` arm never consulted which variable it was checking;
-          # and when a value carried the OTHER correct scheme — `https://` in
-          # VITE_WS_URL, a plain copy-paste slip — it failed with "it has no
-          # scheme… this is what a PLACEHOLDER looks like", which is false and sends
-          # the reader at the wrong story.
-          #
-          # A scheme test alone was always going to be weak: it caught THIS
-          # placeholder because of how this placeholder happened to be spelled. So
-          # the check is now shape-based — the right scheme for this variable, a
-          # host with a dot, and no whitespace — and the three failures say three
-          # different things.
+          # Carried over verbatim in intent from the OpenBao step this replaces.
+          # AC2: an empty OR MISSING OR PLACEHOLDER value fails the build with the
+          # variable named. The placeholder test is a SCHEME test, not a string
+          # match -- a literal blocklist ages badly, and the original comment
+          # recorded a real placeholder that had sat in the store unnoticed.
           _check_url() {
             _name="$1"; _val="$2"; _want="$3"
             if [ -z "$_val" ]; then
-              echo "FAIL: ${_name} is empty or absent at secret/${KV_PATH}." \
-                   "No fallback exists and none will be added — a silent default to the" \
-                   "production API is the mine this story exists to defuse (NFR8, D6)."; return 1
+              echo "FAIL: ${_name} is empty or unset for environment '${ENVIRONMENT}'."
+              echo "  It comes from the Forgejo repository variable ${_name}_${SUFFIX}."
+              echo "  Refusing to bake a build that would ship pointing at nothing."
+              return 1
             fi
-            # (P2) A newline in a value would inject a second line into
-            # $GITHUB_OUTPUT below, which is the KEY=VALUE re-parse P2 forbids.
-            # $'\n' (ANSI-C quoting), NOT "$(printf '\n')" — command substitution
-            # strips trailing newlines, so that form collapses to the empty string
-            # and the pattern *""* matches EVERYTHING. The first draft of this fix
-            # had exactly that bug and rejected every value including the real ones;
-            # caught by testing the block before spending a dispatch on it.
+            if printf '%s' "$_val" | grep -q '[[:space:]]'; then
+              echo "FAIL: ${_name}_${SUFFIX} contains whitespace ('${_val}')."
+              return 1
+            fi
             case "$_val" in
-              *$'\n'*|*$'\r'*|*' '*|*$'\t'*)
-                echo "FAIL: ${_name} at secret/${KV_PATH} contains whitespace or a newline." \
-                     "Refusing — a newline here injects a second step output."; return 1 ;;
+              "${_want}://"?*) ;;
+              *) echo "FAIL: ${_name}_${SUFFIX} is '${_val}', which does not start with" \
+                      "'${_want}://'. A placeholder or a wrong-scheme value reaches the" \
+                      "browser baked into the bundle and cannot be fixed without a rebuild." ; return 1 ;;
             esac
-            case "$_val" in
-              "${_want}://"*) ;;
-              *://*)
-                echo "FAIL: ${_name} at secret/${KV_PATH} has the wrong scheme for this variable —" \
-                     "expected '${_want}://'. This is a copy-paste slip between the two keys," \
-                     "not a missing backend."; return 1 ;;
-              *)
-                echo "FAIL: ${_name} at secret/${KV_PATH} is not a URL — it has no scheme at all." \
-                     "This is what a PLACEHOLDER looks like. For 'preprod' that was expected until" \
-                     "the real value was written (https://api.crm.preprod.crm-prionex.online)."; return 1 ;;
-            esac
-            # A scheme with nothing behind it is not an address.
             _host="${_val#*://}"; _host="${_host%%/*}"
             case "$_host" in
               *.*) ;;
-              *) echo "FAIL: ${_name} at secret/${KV_PATH} has scheme '${_want}' but no host with a" \
-                      "dot in it ('${_host}'). A bare scheme passed the first version of this check."; return 1 ;;
+              *) echo "FAIL: ${_name}_${SUFFIX} has scheme '${_want}' but no host with a dot in" \
+                      "it ('${_host}'). A bare scheme passed the first version of this check."; return 1 ;;
             esac
           }
+
           _check_url VITE_API_BASE_URL "$API_URL" https || exit 1
           _check_url VITE_WS_URL       "$WS_URL"  wss   || exit 1
 
-          # The URLs cross out of this block; the token did not — the trap revokes it
-          # on every exit path. Values are newline-free by the check above, so the
-          # bare `key=value` form is safe; the delimiter form is used anyway,
-          # because "safe because something upstream validated it" is how the first
-          # version of this step was wrong three separate times.
+          echo "VITE_API_BASE_URL for '${ENVIRONMENT}': ${API_URL}"
+          echo "VITE_WS_URL       for '${ENVIRONMENT}': ${WS_URL}"
           { echo "api_url<<__EOF__"; printf '%s\n' "$API_URL"; echo "__EOF__"; } >> "$GITHUB_OUTPUT"
           { echo "ws_url<<__EOF__";  printf '%s\n' "$WS_URL";  echo "__EOF__"; } >> "$GITHUB_OUTPUT"
           echo "OK: both variables present and scheme-checked for '${ENVIRONMENT}'."
@@ -1373,8 +1188,8 @@ jobs:
             org.prionex.latest-eligible=${{ steps.tags.outputs.latest_eligible }}
             org.prionex.environment=${{ inputs.environment }}
           build-args: |
-            VITE_API_BASE_URL=${{ steps.bao.outputs.api_url }}
-            VITE_WS_URL=${{ steps.bao.outputs.ws_url }}
+            VITE_API_BASE_URL=${{ steps.app_urls.outputs.api_url }}
+            VITE_WS_URL=${{ steps.app_urls.outputs.ws_url }}
             VITE_OPERATOR_PHONE_URL=${{ steps.phone.outputs.phone_url }}
 
           # 🔴 Story 3.5, decided by measurement rather than by argument.
