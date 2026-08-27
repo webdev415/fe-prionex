@@ -6,7 +6,7 @@
  * Cannot update username, password, or project/role assignments (separate endpoints).
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useForm, Controller, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -72,7 +72,6 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
     control,
     reset,
     setValue,
-    getValues,
     setError,
     formState: { errors, dirtyFields },
   } = useForm<UpdateUserFormData>({
@@ -93,29 +92,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
 
   const isAgent = useWatch({ control, name: 'is_agent' }) === true
 
-  /**
-   * Cleared on the toggle itself, not in an effect watching `is_agent`.
-   *
-   * An effect also runs on mount and again on the reset() that seeds the form, and some accounts predate this rule:
-   * Is Agent unchecked while an extension is still stored against them. Those
-   * values must stay on screen until an admin touches the checkbox, so the
-   * clear has to be something the admin did, not something the state is.
-   *
-   * `shouldDirty` matters as much as the value: the payload only sends a
-   * cleared extension when the field is dirty, so without it the field empties
-   * on screen and the row keeps its extension.
-   */
-  /**
-   * What the record supplied for the two extensions, kept from the moment the
-   * checkbox first leaves the state it loaded in.
-   *
-   * A field is remembered only if the admin had not typed in it, so what is
-   * held came off the record rather than out of the form. Anything they
-   * entered themselves is deliberately not kept: clearing that is the
-   * documented behaviour and re-checking is not meant to undo it.
-   */
   const loadedIsAgent = user.is_agent || false
-  const clearedExtensionsRef = useRef<{ asterisk?: string; dialer?: string } | null>(null)
 
   /**
    * Is Agent decides whether the extensions belong to this account, so a real
@@ -127,48 +104,58 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
    * check. An account that predates this rule starts unchecked with an
    * extension still stored against it, so the same two clicks read as check
    * then uncheck and end on the clear. Keying the restore on returning to the
-   * loaded state covers both; keying it on the clear covered only the first,
-   * and left exactly the accounts this is meant to protect losing both fields
-   * to a misclick, with nothing in the interface to get them back.
+   * loaded state covers both; keying it on the clear covers only the first,
+   * and leaves exactly the accounts this protects losing both fields to a
+   * misclick, with nothing in the interface to get them back.
    */
   const handleIsAgentToggle = (next: boolean, onChange: (value: boolean) => void) => {
-    const returningToLoaded = next === loadedIsAgent
-
-    if (!returningToLoaded && clearedExtensionsRef.current === null) {
-      clearedExtensionsRef.current = {
-        asterisk: dirtyFields.asterisk_extension ? undefined : getValues('asterisk_extension'),
-        dialer: dirtyFields.dialer_extension ? undefined : getValues('dialer_extension'),
-      }
-    }
-
     onChange(next)
     if (!next) clearAgentExtensions()
-    if (returningToLoaded) restoreAgentExtensions()
+    if (next === loadedIsAgent) restoreAgentExtensions()
   }
 
+  /**
+   * Called from the toggle rather than an effect watching `is_agent`. An
+   * effect also runs on mount and again on the reset() that seeds the form,
+   * and some accounts predate this rule: unchecked while an extension is still
+   * stored against them. Their values must survive an open-and-close, so
+   * emptying the fields has to be something the admin did rather than
+   * something the state is.
+   *
+   * `shouldDirty` matters as much as the value: the payload sends a cleared
+   * extension only when the field is dirty, so without it the field empties on
+   * screen and the record keeps its extension.
+   */
   const clearAgentExtensions = () => {
     setValue('asterisk_extension', '', { shouldDirty: true, shouldValidate: true })
     setValue('dialer_extension', '', { shouldDirty: true, shouldValidate: true })
   }
 
   /**
-   * Putting the record's own value back returns the field to its default,
-   * which clears the dirty flag with it, so the payload goes back to omitting
-   * the field rather than sending it unchanged.
+   * Puts back what the record holds, not what was on screen a moment ago.
+   *
+   * Reading from `user` rather than remembering the field's last value is the
+   * whole point. Remembering it meant deciding, at clear time, whether a field
+   * was worth keeping -- and a field the admin had typed into looked not worth
+   * keeping, because re-checking is not meant to bring a typed value back. But
+   * a typed field still has a stored value sitting behind it, and skipping the
+   * field threw that away too: the box ended where it started while the record
+   * lost an extension nobody chose to remove.
+   *
+   * A typed value is still not restored. The field goes back to what the
+   * record says, which is not what they entered. And since that is the form's
+   * default, the dirty flag clears with it and the payload omits the key, so a
+   * no-op toggle sends nothing at all.
    */
   const restoreAgentExtensions = () => {
-    const remembered = clearedExtensionsRef.current
-    if (!remembered) return
-    if (remembered.asterisk !== undefined) {
-      setValue('asterisk_extension', remembered.asterisk, {
-        shouldDirty: true,
-        shouldValidate: true,
-      })
-    }
-    if (remembered.dialer !== undefined) {
-      setValue('dialer_extension', remembered.dialer, { shouldDirty: true, shouldValidate: true })
-    }
-    clearedExtensionsRef.current = null
+    setValue('asterisk_extension', user.asterisk_extension || '', {
+      shouldDirty: true,
+      shouldValidate: true,
+    })
+    setValue('dialer_extension', user.dialer_extension || '', {
+      shouldDirty: true,
+      shouldValidate: true,
+    })
   }
 
   // Reset form when user data changes (basic fields only)

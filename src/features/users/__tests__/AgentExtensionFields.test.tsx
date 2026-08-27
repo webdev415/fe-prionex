@@ -20,7 +20,8 @@ vi.mock('../hooks/useUpdateUser', () => ({
 }))
 
 vi.mock('@/features/projects', () => ({
-  useProjects: () => ({ data: { items: [] }, isLoading: false }),
+  // The component reads `data.projects`, not `data.items`.
+  useProjects: () => ({ data: { projects: [] }, isLoading: false }),
 }))
 
 import { EditUserForm } from '../components/EditUserForm'
@@ -86,10 +87,14 @@ describe('Is Agent governs the extension fields', () => {
     expect(dialer()).toBeDisabled()
   })
 
-  it('does not restore a value the admin typed and then cleared', () => {
-    // The documented behaviour: what the admin entered is gone for good once
-    // they uncheck. Only what the record supplied comes back, and this asserts
-    // the difference rather than assuming it.
+  it('does not bring back a value the admin typed, but does not destroy the record either', () => {
+    // Two claims, and they are easy to confuse. What the admin entered is gone
+    // once they uncheck, which is the documented behaviour. What the record
+    // holds is not theirs to lose to a stray click.
+    //
+    // Reading these as one claim is what caused the bug: skipping a field the
+    // admin had typed in looked like honouring the first, and quietly
+    // discarded the second along with it.
     renderEdit(agent)
     fireEvent.change(asterisk(), { target: { value: '7777' } })
     fireEvent.change(dialer(), { target: { value: '8888' } })
@@ -97,8 +102,10 @@ describe('Is Agent governs the extension fields', () => {
     fireEvent.click(isAgentBox())
     fireEvent.click(isAgentBox())
 
-    expect(asterisk().value).toBe('')
-    expect(dialer().value).toBe('')
+    expect(asterisk().value).not.toBe('7777')
+    expect(dialer().value).not.toBe('8888')
+    expect(asterisk().value).toBe('7001')
+    expect(dialer().value).toBe('9001')
     expect(asterisk()).not.toBeDisabled()
   })
 
@@ -202,6 +209,24 @@ describe('A toggle that ends where it started changes nothing', () => {
     const payload = mutate.mock.calls[0][0].data
     expect(payload.asterisk_extension).toBeUndefined()
     expect(payload.dialer_extension).toBeUndefined()
+  })
+
+  it('sends nothing after a typed field survives a no-op toggle', async () => {
+    // The half that leaked. The submit guard covers asterisk, because an agent
+    // without one is refused outright, and it never looks at the dialer -- so
+    // a cleared dialer went to the server unremarked and took the stored
+    // extension with it.
+    renderEdit(agent)
+    fireEvent.change(dialer(), { target: { value: '8888' } })
+
+    fireEvent.click(isAgentBox())
+    fireEvent.click(isAgentBox())
+
+    save()
+    await waitFor(() => expect(mutate).toHaveBeenCalledTimes(1))
+    const payload = mutate.mock.calls[0][0].data
+    expect(payload.dialer_extension).toBeUndefined()
+    expect(payload.asterisk_extension).toBeUndefined()
   })
 
   it('still clears for real when the box is left unchecked', async () => {

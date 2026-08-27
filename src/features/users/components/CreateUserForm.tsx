@@ -100,16 +100,12 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
   const isAgent = useWatch({ control, name: 'is_agent' }) === true
 
   /**
-   * Cleared on the toggle itself, not in an effect watching `is_agent`.
+   * Nothing is at stake here that is at stake on the edit form: a user being
+   * created has no stored extension to lose and no prior state to preserve, so
+   * clearing is only ever undoing what the admin typed a moment ago.
    *
-   * An effect also runs on mount, and some accounts predate this rule:
-   * Is Agent unchecked while an extension is still stored against them. Those
-   * values must stay on screen until an admin touches the checkbox, so the
-   * clear has to be something the admin did, not something the state is.
-   *
-   * `shouldDirty` matters as much as the value: the payload only sends a
-   * cleared extension when the field is dirty, so without it the field empties
-   * on screen and the row keeps its extension.
+   * It stays on the toggle rather than an effect for consistency with the edit
+   * form, where the difference does matter.
    */
   const clearAgentExtensions = () => {
     setValue('asterisk_extension', '', { shouldDirty: true, shouldValidate: true })
