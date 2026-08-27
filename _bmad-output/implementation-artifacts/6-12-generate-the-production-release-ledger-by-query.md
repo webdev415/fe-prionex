@@ -4,7 +4,7 @@ baseline_commit: 58708ec7
 
 # Story 6.12: Generate the production release ledger by query
 
-Status: review
+Status: in-progress
 
 ## Story
 
@@ -315,6 +315,24 @@ count are what actually catch a wrong ledger.
 - [Source: docs/prod-releases.md] — the file being generated; its prose must survive intact
 - [Source: docs/production-approval-regulation.md] — `## How the approval is recorded`, `## Rollback authority` (AC12)
 - [Source: _bmad-output/planning-artifacts/sprint-change-proposal-2026-08-27-approval-automation.md] — §5, Story 6.12's scope
+
+
+
+### Review Findings
+
+**Code review 2026-08-27, inline.** ⚠️ **The adversarial-parallel structure was NOT run** — the three
+independent layers need subagents, which were disabled. **One reviewer, same model that wrote the
+code.** Floor, not ceiling.
+
+🔴 **Two findings are HIGH, and both would make the ledger wrong on its FIRST REAL ROW.** The file
+has zero rows today, so neither has a live consequence yet — which is precisely why they are worth
+fixing now rather than discovering on release day.
+
+- [ ] [Review][Patch] **`image_tag` and `prod_tag` render the IDENTICAL value, and `image_tag`'s own spec forbids what lands there** [scripts/gen-prod-ledger.mjs:218,220] — both emit `cell(tag)`, the tag as dispatched, which is a **`-prod`** tag. But `docs/prod-releases.md`'s column table defines `image_tag` as *"The PRE-PROD candidate tag whose **commit** this release promotes"*, legal value **`sha-<12hex>-preprod`**, and *"**must appear in `docs/preprod-candidates.md`'s `Candidate tag` column**"*. So every future row would violate that column's stated legal values, and anyone following the cross-reference would search the PRE-PROD ledger for a `-prod` tag and find nothing. 🟢 `prod_tag` is correct — verbatim as dispatched, which is what the regulation's rollback rule keys on. **Fix:** derive `sha-<hex>-preprod` from the same 12 hex. ⚠️ **State the rollback rule explicitly rather than deriving blindly:** a rollback promotes no candidate, so its `image_tag` is `—`, not a fabricated preprod tag.
+- [ ] [Review][Patch] **A FAILED post-epoch deploy renders a row indistinguishable from a successful release** [scripts/gen-prod-ledger.mjs] — `run.status` is read **nowhere** (the only `status` in the file is the HTTP status inside `api()`). A production deploy that fails after the epoch produces a row with a populated `Deploy end (UTC)` and **nothing saying it failed**. Under `#d51` the dispatch IS the approval, so a failed attempt genuinely belongs in the ledger — but presenting it as a completed release is the worst direction for **this** file to be wrong in, and it is the file the regulation calls the authoritative record of what production ran. **Fix:** carry `run.status` into the row — the `Note` column is the natural home, alongside the existing `**ROLLBACK**` label.
+- [ ] [Review][Patch] **The `Waiver?` cell renders BLANK by default, and the column's own spec calls a blank cell invalid** [scripts/gen-prod-ledger.mjs:222] — that column's legal values end with *"**mandatory, a blank cell is not a valid approval record.**"* AC10 deliberately chose *missing annotation ⇒ empty cell, exit 0*, and the annotations README says the generator *"cannot enforce that and does not pretend to"* — but the result is a generated file whose rows the file's own column table calls invalid, with **nothing visible flagging them**. Rendering `⚠️ MISSING` costs one string and makes the gap self-announcing instead of silent.
+- [ ] [Review][Patch] **26 fixtures, and not one asserts the column contract** [scripts/gen-prod-ledger.selftest.mjs] — the suite checks mechanics: which input name wins, the epoch in both directions, the rollback label, `index_in_repo` vs `id`, row order, pipe escaping, fatal short reads. It never checks **what value lands in which column**. That is exactly the gap the first finding above fell through: **the suite would pass with `image_tag` and `prod_tag` swapped, or with both blank.** Add a fixture asserting a full rendered row against the column table, cell by cell.
+- [x] [Review][Defer] **`api()` has no request timeout** [scripts/gen-prod-ledger.mjs] — deferred, cosmetic. A hung connection blocks a human-run script indefinitely; there is no automation depending on it finishing.
 
 
 ## Outcome matrix (Task 5.3, `retro-E5`)

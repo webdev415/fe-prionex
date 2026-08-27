@@ -2497,7 +2497,7 @@ development_status:
   #       "No production release has ever been approved." Hence the EPOCH constant, AC4.
   # The API caps `limit` at 50 no matter what is requested: walk to natural termination. In this
   # project a truncated read has produced a WRONG CONCLUSION five times.
-  6-12-generate-the-production-release-ledger-by-query: review
+  6-12-generate-the-production-release-ledger-by-query: in-progress
   epic-6-retrospective: optional
 
   # Epic 7: Forgejo as the Single Source of Delivery

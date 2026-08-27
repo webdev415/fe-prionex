@@ -5021,3 +5021,12 @@ this entry exists so the gap is not rediscovered as a finding.
   behaviour on this platform rests on `#d21`'s measurement of `github.event_name` inside a callee
   rather than on a direct observation of this expression. **Removal trigger:** any future run of
   that job whose log archives.
+
+---
+
+## Deferred from: code review of story-6.12 (2026-08-27)
+
+- **`api()` in `scripts/gen-prod-ledger.mjs` has no request timeout.** A hung connection blocks the
+  script indefinitely. Cosmetic: it is human-run, nothing schedules it, and `#d51` §2 measured that
+  nothing can. **Removal trigger:** if the generator is ever wired into anything unattended — at
+  which point the timeout stops being cosmetic.
