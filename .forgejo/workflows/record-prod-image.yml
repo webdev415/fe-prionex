@@ -439,6 +439,7 @@ jobs:
           echo "OK: all three targets begin with '${IMAGE_REPO}:'."
 
       - name: Install docker CLI
+        id: install
         run: |
           set -euo pipefail
           apt-get update
@@ -967,8 +968,18 @@ jobs:
       # `if: always()` -- FINDING #3: a failure in either write step used to suppress this
       # listing AND the disclaimer below, which is precisely the state the write-order comment
       # plans for (dead between the two writes) and precisely when a reader needs both.
+      # 🔴 H2 (code review #2, Fable, 2026-08-27). `if: always()` alone was WRONG here and it made a
+      # claim elsewhere in this file FALSE. This step sits AFTER `Install docker CLI`; on a G1-G4
+      # refusal that install never runs, yet `always()` executed this step anyway -- it loaded the RO
+      # credential, ISSUED A CURL TO THE REGISTRY, and then died on `jq` exit 127, which the parse
+      # check below reported as "did not parse as JSON with a .tags key". Three consequences, all
+      # real: G1's own "dies before a credential is loaded, before a probe" became true of the STEP
+      # and false of the RUN; the outcome matrix in this header said "REFUSE run 663, before any
+      # network call" and that was false at run level; and every refusal ended with a fabricated
+      # diagnosis pointing at JSON instead of the guard that actually fired.
+      # Gated on the install step's own outcome, which restores BOTH the behaviour and the sentence.
       - name: "List every prod-* tag with its digest (the registry's own set)"
-        if: always()
+        if: always() && steps.install.outcome == 'success'
         env:
           REG_USER: ${{ secrets.REGISTRY_USER_RO }}
           REG_TOKEN: ${{ secrets.REGISTRY_TOKEN_RO }}
@@ -1042,33 +1053,83 @@ jobs:
       # acts on it. `#d19` had to write the same sentence for the `prod` branch after the
       # fact. The authoritative sinks are docs/prod-releases.md and the decision record;
       # this is a third, best-effort sink on the run's own page.
-      # `if: always()` -- FINDING #3. This is the run's own statement of what it just did and
-      # what the markers do NOT mean; suppressing it on the failure path is exactly backwards.
-      - name: "State what prod-current means before the traffic switch"
+      # 🔴 H1 (code review #2, Fable, 2026-08-27). Finding #3's fix added `if: always()` and DID NOT
+      # TOUCH THIS BODY, so the step printed "### PROD markers recorded" -- with the full marker table,
+      # and with BLANK names when `derive` never ran -- on every run that wrote nothing, including all
+      # four Task 6 refusals. Before that fix the step only ran after both writes succeeded, when the
+      # heading was true. **The fix inverted a true statement into a false one, in the sink this file
+      # tells operators to read.** #3 needed a rewritten body, not a condition. This is it: the step
+      # now reports WHAT ACTUALLY HAPPENED on every path, and says plainly when nothing was written.
+      - name: "State what was recorded, what was not, and what the markers do not mean"
         if: always()
         env:
           CURRENT_TAG: ${{ steps.derive.outputs.current_tag }}
           HISTORY_TAG: ${{ steps.derive.outputs.history_tag }}
           SHA_TAG: ${{ steps.derive.outputs.sha_tag }}
+          HISTORY_WRITTEN: ${{ steps.write-history.outputs.history_written }}
+          CURRENT_WRITTEN: ${{ steps.write-current.outputs.current_written }}
         run: |
           set -euo pipefail
+          # A markdown code-span delimiter, held in a variable ON PURPOSE. A literal backtick inside
+          # a double-quoted echo is COMMAND SUBSTITUTION -- the first draft of this fix shipped
+          # exactly that, and 'bash -n' caught it before it ever ran. Do not "simplify" this back.
+          BT="$(printf '\140')"
+
+          # Path 1 -- refused before the derive step produced anything. No marker names exist; printing the
+          # table with empty spans is exactly the H1 defect this rewrite removes.
+          if [ -z "${CURRENT_TAG:-}" ]; then
+            {
+              echo "### NOTHING WAS RECORDED"
+              echo
+              echo "This run was refused before it derived any marker names, so **no registry write"
+              echo "was attempted and no tag was created or moved.** The guard that refused it named"
+              echo "itself in the failing step above -- read that, not this."
+            } | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
+            exit 0
+          fi
+
+          # Path 2 -- derive succeeded, but one or both writes never reported an outcome.
+          if [ -z "${HISTORY_WRITTEN:-}" ] || [ -z "${CURRENT_WRITTEN:-}" ]; then
+            {
+              echo "### PARTIAL OR NO RECORD -- read this before acting"
+              echo
+              echo "| Marker | Outcome |"
+              echo "|---|---|"
+              echo "| ${BT}${HISTORY_TAG}${BT} | ${HISTORY_WRITTEN:-NOT WRITTEN -- the step did not report} |"
+              echo "| ${BT}${CURRENT_TAG}${BT} | ${CURRENT_WRITTEN:-NOT WRITTEN -- the step did not report} |"
+              echo
+              echo "**The write order is history FIRST, pointer second.** So if the history tag is"
+              echo "written and the pointer is not, the POINTER IS STALE and the history is correct."
+              echo "Re-dispatching this same image_tag is safe: every write here is"
+              echo "attach-if-absent / no-op-if-identical."
+            } | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
+            exit 0
+          fi
+
+          # Path 3 -- both writes reported. Only here is "recorded" a true word.
           {
             echo "### PROD markers recorded"
             echo
-            echo "| Marker | Meaning |"
-            echo "|---|---|"
-            echo "| \`${SHA_TAG}\` | the deployable artifact; Story 6.9 dispatches THIS name |"
-            echo "| \`${HISTORY_TAG}\` | permanent history for this commit; Story 6.5 reads this shape |"
-            echo "| \`${CURRENT_TAG}\` | the Forgejo-side production pointer |"
+            echo "| Marker | Outcome | Meaning |"
+            echo "|---|---|---|"
+            echo "| ${BT}${SHA_TAG}${BT} | (input) | the deployable artifact; Story 6.9 dispatches THIS name |"
+            echo "| ${BT}${HISTORY_TAG}${BT} | ${HISTORY_WRITTEN} | permanent history for this commit; Story 6.5 reads this shape |"
+            echo "| ${BT}${CURRENT_TAG}${BT} | ${CURRENT_WRITTEN} | the Forgejo-side production pointer |"
             echo
-            echo "**\`prod-current\` does NOT mean users are being served this image.** Legacy"
-            echo "production (s2) serves \`ghcr.io/crm-prionex/fe-prionex:main\` and keeps serving"
-            echo "it until the external traffic switch, which is owned outside this repository"
-            echo "(Story 6.9, amended 2026-08-18). Until that switch it is a cutover pointer."
+            echo "**${BT}prod-current${BT} does NOT mean users are being served this image.** Legacy"
+            echo "production (s2) serves ghcr.io/crm-prionex/fe-prionex:main and keeps serving it"
+            echo "until the external traffic switch, owned outside this repository (Story 6.9,"
+            echo "amended 2026-08-18). Until that switch it is a cutover pointer."
             echo
-            echo "**Neither marker is deployable.** \`deploy-stand.yml\` refuses any image_tag not"
-            echo "ending in the environment suffix; these end in neither. Use the \`sha-…-prod\` tag."
+            echo "**A ${BT}prod-<12hex>${BT} marker does not by itself mean a RELEASE.** Story 6.6"
+            echo "minted ${BT}prod-308ea1520c59${BT} as a PROOF of the move path; it has no row in"
+            echo "docs/prod-releases.md because no release was approved. **The registry alone is NOT"
+            echo "a sufficient release history -- docs/prod-releases.md is the discriminator**"
+            echo "(epic AC4; #d38 section 8a's three tiers, and #d48 section 10)."
             echo
-            echo "**Protection is COMPILED, not observed** — the retention rule has never been seen"
-            echo "deleting anything (\`#d38\` §9)."
+            echo "**Neither marker is deployable.** deploy-stand.yml refuses any image_tag not ending"
+            echo "in the environment suffix; these end in neither. Use the sha-<12hex>-prod tag."
+            echo
+            echo "**Protection is COMPILED, not observed** -- the retention rule has never been seen"
+            echo "deleting anything (#d38 section 9)."
           } | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
