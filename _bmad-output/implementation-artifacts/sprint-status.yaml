@@ -1885,7 +1885,40 @@ development_status:
   # D-sweep across origin refs, local branches AND the working tree: highest D48; next free D49.
   # Story 6.8's cancellation has NOT landed (still `backlog` on main); its collision with this file
   # and deferred-work.md stays open. Not touched -- another story's row.
-  6-5-guard-promotion-by-commit-identity: in-progress
+  # ✅ -> `review` 2026-08-27. SHIPPED: a `guard` job in deploy-prod.yml between `derive` and `build`,
+  # skipped on rollback. `derive` byte-identical; all 11 frozen workflows byte-identical. 9 of 9 ACs MET.
+  # 🔴 ONLY A CLASSIFIED 200 ADMITS A RELEASE, and the reason is that the fail-direction is the
+  # INVERSE of Story 6.6's fourteenth defect: a false 404 refuses a legitimate release (loud,
+  # recoverable), a false 200 puts an UNVALIDATED COMMIT INTO PRODUCTION. 404/401/403/000/timeout/
+  # unparseable all refuse, each naming itself because the operator's next action differs.
+  # 🔴 NOT A `uses:` JOB -- #d21 run 631: a skipped wrapper reports SUCCESS, seen live in 6.6's 662.
+  # 🔴 THE `deploy` CONDITION HAD TO CHANGE OR THE GUARD WOULD HAVE BEEN DECORATIVE. A refused guard
+  # makes `build` a failed dependency, and `deploy` admits a skipped build BY DESIGN -- that is how
+  # rollback reaches it. Before the added clause a red guard would have gone red AND PRODUCTION WOULD
+  # HAVE BEEN DEPLOYED ANYWAY. Proven by run 691: guard `skipped`, rollback path complete, 13 rows.
+  # ✅ ALL THREE MATRIX ROWS LIVE: 687 REFUSE / 689 PASS / 691 SKIP. The discriminator is STRUCTURAL:
+  # run 687 has SIX job rows and ZERO inner callee rows -- build.yml, deploy-stand.yml and the
+  # recorder never expanded -- against run 668's twelve rows with seven inner. "Absent vs present"
+  # proves the guard sits BEFORE the build better than any status word does.
+  # ⚠️ PLATFORM BEHAVIOUR IN NO DOCUMENT: dependents of a FAILED job report `failure`, NOT `skipped`.
+  # Predicted wrong in this story's own task text. The deploy condition is unaffected, but judging an
+  # outcome by the word `skipped` would be wrong here.
+  # 🔴 #d2 UPDATED **AND CORRECTED**: its rollback rationale claimed retention may delete
+  # preprod-<sha>. keep_pattern protects it -- compiled against package_cleanup_rule id=1 read from
+  # the DB. The skip stands on one ground and it is enough; the false prop is removed, not propped.
+  # ⚠️ THE WAIVER GAP IS DECIDED AS UNCLOSEABLE HERE (#d49 §6): the signal is not in the tier the
+  # guard reads. The SUCCESS message states the limit; grepping docs/preprod-candidates.md from the
+  # workflow was considered and PROHIBITED (epic AC2's weaker-duplicate rule). No exclusion list --
+  # a second source of truth that goes stale. Residual owner: Oleg, as sole approver.
+  # 🔴 A NEAR-MISS WORTH MORE THAN THE TALLY: AC4 was on course to be graded on Story 6.6's rollback
+  # runs, which PREDATE this guard and contain no `guard` row at all. Task 4.3 had been batch-ticked
+  # without being performed. Caught by checking the AC clause-by-clause rather than from memory, then
+  # un-ticked and re-earned as run 691. Same failure a different model had to find twice in 6.6.
+  # ✅ LEDGER BY QUERY: 6 runs (685-691) vs floor 8 / ceiling 18 -- UNDER, and under the FLOOR.
+  # The model over-predicted; named, because that is the same family as an overrun. All three
+  # dispatches came in at floor because all three matrix rows were free, exactly as contexted.
+  # Oleg merges; the row goes `done` only after that.
+  6-5-guard-promotion-by-commit-identity: review
   # Contexted 2026-08-26 (branch `story-6-6/pr-1-context`) from a SCRATCHPAD WORKTREE off origin/main
   # at 584cc886 (PR #97, Story 6.4). 🔴 origin/main MOVED THREE TIMES DURING CONTEXTING --
   # cfbad179 -> 308ea152 -> 584cc886 -- and both of this story's dependencies landed mid-analysis:

@@ -37,7 +37,7 @@ verdict and **any waiver**, both visible. **A derived verdict of `fail` with no 
 is not approvable**; visibility is the precondition, not the permission.
 
 **The approver reads `docs/preprod-candidates.md`, not only the registry tag.** `RVC-v1.1`'s waiver
-carries no signal at the registry, and Story 6.5's guard — designed, not built, as of 2026-08-25
+carries no signal at the registry, and Story 6.5's guard — ✅ **BUILT 2026-08-27** ([D49](migration-decisions.md#d49)), and it
 (`#d2`) — will check only that a `preprod-<sha>` tag exists, so it will not be able to tell a waived
 candidate from a clean one either. The live precedent: `sha-a99ccd44c5a3-preprod` — 7/12 pass, 5
 `BLOCKED`, derived verdict `fail`, dispatched `pass` only under Oleg's written waiver
@@ -55,8 +55,11 @@ that file for the rest of its columns, and for how post-dispatch facts reach an 
 
 **As of 2026-08-25, none of this is built.** `deploy-prod.yml` does not exist (`ls
 .forgejo/workflows/` — 11 entries, no PROD deploy caller); Story 6.4 will build it. The guard is
-designed, not implemented (`#d2`'s own status line, read 2026-08-25 — Story 6.5 owns both the guard
-and updating this citation when it ships). Story 6.10 will provision the s10 contour 6.4 targets.
+✅ **implemented 2026-08-27 by Story 6.5** ([D49](migration-decisions.md#d49)) — `#d2`'s status line
+now says so, and this citation is updated as that story owed. **What it proves is unchanged:** commit
+identity only. 🔴 **And it cannot see a waiver** — the marker carries no such signal, so the rule
+above ("the approver reads `docs/preprod-candidates.md`") is not softened by the guard existing; it
+is the reason the guard is not enough. Story 6.10 will provision the s10 contour 6.4 targets.
 Nothing here claims any of it exists today; the rules describe how it **will** be used once it does.
 
 **Once built, the machine will prove commit identity only** — 6.5's guard will check a
@@ -91,7 +94,7 @@ Story 6.8 must prove rollback works before the first real release, not assume it
 
 ## Emergency / hotfix
 
-**There is no forward hotfix path today.** Once Story 6.5's guard exists, a hotfix with no
+**There is no forward hotfix path today**, and since 2026-08-27 that is enforced rather than merely stated: a hotfix with no
 `preprod-<sha>` will be refused by it. Until then and after, the procedure is the same: **(1) roll
 back, (2) fix through the normal cycle.** If a genuine forward hotfix is ever unavoidable, it
 requires a `preprod-<sha>` from an abbreviated `RVC-v1.1` run under **`RVC-v1.1`'s own existing
@@ -113,7 +116,7 @@ here** (established 2026-08-14; `epics.md:2600-2603`, `deferred-work.md:1055-105
 can verify it). As recorded there, their production promotion runs on an explicit release sha, never
 a branch head, and `ops/deploy/validate-preprod-digests.sh` compares the **digests** of the
 containers actually running on PRE-PROD against the release manifest — *"Digests, not tags: a tag
-can be moved, a digest cannot. There is no bypass flag."* Ours, once Story 6.5 ships it, will prove
+can be moved, a digest cannot. There is no bypass flag."* Ours, shipped 2026-08-27, proves
 only **commit** identity and will carry a bypass (`rollback: true`) by design; 6.5's guard is meant
 to sit as the frontend half of that pattern, not an independent one.
 

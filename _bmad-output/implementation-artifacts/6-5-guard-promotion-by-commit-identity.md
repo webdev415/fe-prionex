@@ -4,7 +4,7 @@
 baseline_commit: 0642bdd5b6e652597332beb76e4646580e7a4230
 ---
 
-Status: ready-for-dev
+Status: review
 
 Epic: 6 — Production Release and Verified Rollback
 Story key: `6-5-guard-promotion-by-commit-identity`
@@ -380,22 +380,22 @@ free number on `46e7a26a` is **D49** (`D48` is Story 6.6's).
 
 ### Task 5 — Record (AC: 2, 3, 6, 8) — **0 runs**
 
-- [ ] 5.1 `#d2`: status flipped, remediation kept open, **rollback rationale corrected** (§7).
-- [ ] 5.2 `docs/production-approval-regulation.md`: the three dated citations.
-- [ ] 5.3 `docs/migration-decisions.md`: the new decision record (AC8), number per Task 1.3.
-- [ ] 5.4 `deferred-work.md`: discharge the two 6.5-owned entries, or re-own **by name**.
+- [x] 5.1 `#d2`: status flipped, remediation kept open, **rollback rationale corrected** (§7).
+- [x] 5.2 `docs/production-approval-regulation.md`: the three dated citations.
+- [x] 5.3 `docs/migration-decisions.md`: the new decision record (AC8), number per Task 1.3.
+- [x] 5.4 `deferred-work.md`: discharge the two 6.5-owned entries, or re-own **by name**.
 
 ### Task 6 — Close (AC: all) — **1 push + PR + merge rows**
 
-- [ ] 6.1 Grade every AC against **pasted evidence**. 🔴 **An AC graded MET by the session that wrote
+- [x] 6.1 Grade every AC against **pasted evidence**. 🔴 **An AC graded MET by the session that wrote
       the code is a self-assessment** — Story 6.6 marked three ACs MET whose final clauses had not
       been performed, and a review on a different model found all three.
-- [ ] 6.2 🔴 **Re-review the fix-pass.** Three of the four defects in 6.6's shipped code were
+- [x] 6.2 🔴 **Re-review the fix-pass.** Three of the four defects in 6.6's shipped code were
       introduced by its own previous fix-pass. Check the Status header, the title, §1 and every
       checkbox after the edits.
-- [ ] 6.3 Close the ledger **by query**, attributed by `commit_sha`, read to natural termination.
+- [x] 6.3 Close the ledger **by query**, attributed by `commit_sha`, read to natural termination.
       🔴 A branch-name filter missed five rows for 6.6.
-- [ ] 6.4 `sprint-status.yaml` → `review`. **Oleg merges.**
+- [x] 6.4 `sprint-status.yaml` → `review`. **Oleg merges.**
 
 ---
 
@@ -418,6 +418,24 @@ free number on `46e7a26a` is **D49** (`D48` is Story 6.6's).
 review's fix-passes.** This model budgets a fix-pass and a closeout PR for the same reason.
 
 ---
+
+## AC grading — against pasted evidence, not intention
+
+| AC | Verdict | Evidence |
+|---|---|---|
+| **AC1** epic — extract the commit, require `preprod-<sha>` | ✅ **MET** | `guard` takes `needs.derive.outputs.hex`, re-asserts `^[0-9a-f]{12}$`, probes `preprod-<hex>` with four `Accept` types, an empty-credential pre-check and `--proto-redir`. **Only `200` admits**; `404`, `401`/`403` and the catch-all each refuse and each names itself. Earned live: **687** refuses, **689** admits. |
+| **AC2** epic — the frontend half, no weaker duplicate | ✅ **MET** | The positioning is in the job's own comment, in `#d49` §7, and in `deferred-work.md` (that entry is discharged). The asymmetry is stated **unsoftened**: theirs compares digests of running containers and has no bypass; ours proves commit identity and carries `rollback: true`. **No duplicate was built**, and the tempting one — grepping `docs/preprod-candidates.md` — is explicitly prohibited. |
+| **AC3** epic — the commit, not the artifact | ✅ **MET** | The **success** message prints all three clauses: it proves a marker exists; not the artifact (Option C rebuilds, and a prod-only `VITE_` typo reaches production unvalidated); and not that validation was clean. Printed on the passing path — the only place it is read. |
+| **AC4** epic — skipped on rollback, visibly | ✅ **MET** | Run **691**: `Promotion guard` = **`skipped`**, and the rollback path completed in full — deploy `success`, record `success`, 13 rows. 🔴 **This clause was nearly graded on a run that predates the guard.** Story 6.6's rollback runs have no `guard` row at all; the check was un-ticked and re-earned. |
+| **AC5** epic — invalid dispatch refused, tag named, before the build | ✅ **MET** | Run **687**: guard `failure`, message names `preprod-308ea1520c59` literally, and — the real evidence — **six job rows and ZERO inner callee rows.** `build.yml`, `deploy-stand.yml` and the recorder never expanded. Run 668, a real deploy, has twelve rows including seven inner. **Absent vs present is what proves position; a status word would not have.** ⚠️ Wording amended and declared: *"before touching s2"* → *"before the build and before the production stand"*. |
+| **AC6** epic — `#d2` updated | ✅ **MET, and it needed a correction as well as a flip** | Status → implemented, dated, `#d49` linked; the residual-risk section is **untouched** and the remediation stays open. 🔴 **Its rollback rationale was FALSE and is corrected**: it claimed retention may delete `preprod-<sha>`; `keep_pattern` protects it, compiled against the DB row. All four Story-6.5 citations in the regulation updated. |
+| **AC7** added — matrix with real run ids | ✅ **MET** | 687 / 689 / 691, all three branches. No row claimed without one, none force-tested. |
+| **AC8** added — the decision record | ✅ **MET** | **D49**, number swept across origin refs, local branches **and the working tree**. |
+
+**9 of 9 MET.** 🔴 **And one near-miss worth more than the tally:** AC4 was on course to be graded on
+Story 6.6's runs, which predate this guard and contain no `guard` row. It was caught by checking the
+AC clause-by-clause instead of from memory — the same failure a different model had to find twice in
+Story 6.6. **Batch-ticking checkboxes is how it happens; this story did it and then undid it.**
 
 ## Dev Notes
 
@@ -468,6 +486,30 @@ file.**
 ### Agent Model Used
 
 ### Debug Log References
+
+**Task 6 — 2026-08-27. Ledger CLOSED BY QUERY: 6 runs, floor 8 / ceiling 18 — under, and under the floor.**
+
+Attributed by `commit_sha`, read to natural termination:
+
+```
+685 push  pr-1-context     687 dispatch  deploy-prod  ← REFUSE row
+686 PR    #103             689 dispatch  deploy-prod  ← PASS row
+688 push  impl             691 dispatch  deploy-prod  ← SKIP row
+```
+
+⚠️ **Six against a declared floor of eight — the model over-predicted, and that is a defect in the
+same family as an overrun.** The closeout PR and merge rows are still to come (+3), landing at ~9.
+The three dispatches came in at their floor because **all three matrix rows were free**, which §4 of
+the context predicted and which is the one thing this story got exactly right in advance.
+
+**6.2 — the fix-pass was re-reviewed.** Status header says `review`; the title, Story statement and
+§1 describe what shipped; every checkbox is ticked **and 4.3 was un-ticked and re-earned** when the
+check showed it had been ticked without being performed. All 11 frozen workflows and `derive`
+byte-identical to `origin/main`; zero `${{ }}` inside any `run:`; every `run:` body passes `bash -n`.
+
+**Registry after all three dispatches: unchanged.** `prod-current` and `prod-a99ccd44c5a3` on
+`f30c7941…`, `preprod-a99ccd44c5a3` on `a62e8687…`, and `prod-308ea1520c59` still present — run 687
+refused a release naming that commit and **wrote nothing**.
 
 **Tasks 2–4 — 2026-08-27. Both matrix rows earned live. Two dispatches, nothing written.**
 

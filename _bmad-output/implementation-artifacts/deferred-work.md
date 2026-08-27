@@ -1057,6 +1057,12 @@ release sha — never derived from a branch head — and `ops/deploy/validate-pr
 the **digests of the containers actually running on PRE-PROD** against the release manifest before
 deploying. Digests, not tags: a tag can be moved, a digest cannot. There is no bypass flag.
 
+✅ **DISCHARGED 2026-08-27 by Story 6.5** ([D49](../../docs/migration-decisions.md#d49)). The guard is
+written as the **frontend half** of their pattern and names the asymmetry without softening it:
+theirs compares **digests of running containers** and has **no bypass**; ours proves **commit
+identity** and carries `rollback: true` by design. Both facts are printed by the guard's own success
+message, not only filed here.
+
 ⚠️ **Consequence for Story 6.5, worth acting on rather than filing.** Our [D2](../../docs/migration-decisions.md#d2)
 promotion gate proves **commit** identity, because Option C rebuilds per environment and byte-identity
 was given up. Theirs proves **image digest** identity on the backend side. When 6.5 is written it
@@ -4360,6 +4366,17 @@ duplicated here. What follows are the items that outlive Story 5.6 and need an o
   promotion) needs to be positively excluded rather than merely unlikely to be chosen. Not a defect
   in 5.6's execution; a consequence of the waiver mechanism that 5.6 correctly did not invent a fix
   for on its own.
+  🔴 **DECIDED 2026-08-27 by Story 6.5, and the decision is that it CANNOT be closed here**
+  ([D49](../../docs/migration-decisions.md#d49) §6). The waiver signal is not in the tier the guard
+  reads, so no code at this gate can distinguish a waived marker from a clean one. What the story did
+  instead: **the guard's SUCCESS message states the limit** — a green guard means a marker exists,
+  not that validation was clean — and points at `docs/preprod-candidates.md`. **Grepping that file
+  from the workflow was considered and PROHIBITED**: epic AC2 forbids a weaker duplicate of the
+  neighbouring gate, and a check that looks like it closes the gap but cannot is worse than the gap.
+  ⚠️ **The rehearsal-candidate half is answered too: NO positive exclusion list.** Any such list is a
+  second source of truth that goes stale, and the approval regulation already puts a named human in
+  front of the dispatch. **Owner of the residual: Oleg**, as the sole approver — it is a policy
+  question, not an engineering one.
 
 - ⚠️ **`RVC-v1` has no waiver mechanism to point at, and the first waiver was authorised by text the
   story wrote for itself.** `grep -i 'waiver'` over `docs/release-validation-checklist.md` returns
