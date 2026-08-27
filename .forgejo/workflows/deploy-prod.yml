@@ -53,11 +53,30 @@ name: Deploy PROD Stand
 # not deployable references, and that same guard refuses them. Story 6.9 dispatches
 # `sha-<12hex>-prod`.
 #
-# ── 🔴 WHERE STORY 6.5's PROMOTION GUARD LANDS, AND WHY IT IS NOT HERE ──────────────────
-# `derive` is the seam: it already extracts the commit, which is exactly what 6.5's guard needs
-# in order to require `preprod-<sha>` in the registry and refuse otherwise -- and to SKIP that
-# check entirely when `rollback` is true. **This story builds none of it** (Story 6.4 §12).
-# The extraction is a separate named step precisely so 6.5 has somewhere obvious to land.
+# ── ✅ STORY 6.5's PROMOTION GUARD LANDED HERE, 2026-08-27 (FR16) ───────────────────────
+# `derive` was made a separate named step "precisely so 6.5 has somewhere obvious to land", and
+# Story 6.6 then left it BYTE-IDENTICAL so this rebase would be clean. The `guard` job below
+# consumes `needs.derive.outputs.hex` and changes nothing inside `derive`.
+#
+# 🔴 ITS FAIL-DIRECTION IS THE INVERSE OF STORY 6.6's, AND THAT IS THE DESIGN.
+# 6.6's fourteenth defect was a guard that failed OPEN -- a probe said "absent", the code
+# believed it, and a permanent tag was written. Here the polarity flips:
+#   a false 404 REFUSES a legitimate release -- loud, recoverable, cheap;
+#   a false 200 ADMITS AN UNVALIDATED COMMIT TO PRODUCTION -- silent and expensive.
+# Therefore ONLY a classified 200 admits the release. 401, 403, 000, a timeout, an unparseable
+# answer -- all REFUSE. An error is never existence; a tool failure is never a verdict.
+#
+# 🔴 IT IS A PLAIN JOB, NOT A `uses:` JOB, AND THAT IS NOT A STYLE CHOICE.
+# `#d21`, run 631: a SKIPPED `uses:` wrapper reports **success**. Story 6.6 saw it live in its own
+# run 662 -- the `build` wrapper reported success while its inner job was `skipped`. A guard that
+# reports green when it did not run is worse than having no guard at all.
+#
+# 🔴 IT RUNS BEFORE `build`, AND THE `deploy` CONDITION HAD TO CHANGE FOR THAT TO BE SAFE.
+# `build` already carried `if: is_rollback != 'true'`; adding `guard` to its `needs:` means a
+# refused guard SKIPS the build. But `deploy`'s own condition admits a skipped build by design
+# (that is how the rollback path works) -- so on a refused guard, deploy would have RUN. Its
+# condition now also requires `guard` to be success-or-skipped. Get this wrong and the guard is
+# decorative: it goes red and production is deployed anyway.
 #
 # ── `secrets: inherit`, decided rather than inherited by habit (Story 6.4 AC8) ──────────
 # `deploy-stand.yml` CANNOT declare `on.workflow_call.secrets` -- the parser rejects it (`#d21`)
@@ -96,7 +115,7 @@ name: Deploy PROD Stand
 #    `crm-kong-gateway` that the image's nginx.conf actually resolves -- verified on the host.
 #
 # ── Not here, deliberately ──────────────────────────────────────────────────────────────
-#   Story 6.5 the promotion guard · 6.7 the smoke check (the callee's health and Kong probes
+#   6.7 the smoke check (the callee's health and Kong probes
 #   are NOT it) · 6.8 rollback proven with measured timing · 6.9 the cutover · 4.5 Slack,
 #   deferred 2026-08-14 and explicitly NOT gating: "the production deploy must work, and must
 #   be provable, without any notification".
@@ -334,6 +353,152 @@ jobs:
             fi
           } | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
 
+  # ── guard (Story 6.5, FR16) ───────────────────────────────────────────────────────────
+  # Refuses a release whose commit was never recorded as validated on PRE-PROD. Skipped entirely
+  # on the rollback path: a rollback restores something production ALREADY RAN, so re-validating
+  # it proves nothing -- and `#d2`'s older claim that the skip is also needed because
+  # `preprod-<sha>` may have been deleted by retention is FALSE and is corrected there:
+  # `preprod-<12hex>` matches `keep_pattern`'s `(pre)?prod-[0-9a-f]{7,64}` and is protected.
+  #
+  # 🔴 WHAT A GREEN GUARD MEANS, AND WHAT IT DOES NOT. It means a `preprod-<12hex>` marker exists
+  # for this commit. It does NOT mean the validation behind that marker was clean: `RVC-v1.1`'s
+  # waiver carries NO signal at the registry (Story 5.4's own D1 -- `validation_note` never
+  # reaches it), and the live proof is `preprod-a99ccd44c5a3`, minted on a run scoring
+  # `7/12 pass, 5 BLOCKED` and dispatched `pass` on Oleg's written waiver alone (`#d40`/`#d41`).
+  # This gate structurally cannot ask that question -- the signal is not in the tier it reads.
+  # Story 6.2 already wrote the policy half: THE APPROVER READS docs/preprod-candidates.md.
+  # 🚫 Do NOT "fix" this by grepping that file from here. Epic AC2 forbids building a weaker
+  # duplicate of the neighbouring gate, and a check that looks like it closes the gap but cannot
+  # is worse than the gap.
+  #
+  # ── Positioning (epic AC2): the FRONTEND HALF of an existing pattern ────────────────────
+  # `CRM/api-prionex` gates its own PROD promotion on `ops/deploy/validate-preprod-digests.sh`,
+  # which compares the DIGESTS OF THE CONTAINERS ACTUALLY RUNNING on PRE-PROD against the release
+  # manifest -- "Digests, not tags: a tag can be moved, a digest cannot. There is no bypass flag."
+  # (established 2026-08-14; not re-measured here and not ours to operate).
+  # 🔴 Theirs is STRICTLY STRONGER ON BOTH AXES: digest identity vs our commit identity, and no
+  # bypass vs our `rollback: true`. Stated plainly rather than softened -- under Option C we
+  # cannot compare artifacts at all, because the PROD image is a separate build (`#d2`, NFR11).
+  guard:
+    name: "Promotion guard -- refuse a commit PRE-PROD never validated"
+    needs: derive
+    if: needs.derive.outputs.is_rollback != 'true'
+    runs-on: node-20
+    timeout-minutes: 5
+    steps:
+      - name: "Require preprod-<12hex>, and admit ONLY a classified 200"
+        env:
+          REG_USER: ${{ secrets.REGISTRY_USER_RO }}
+          REG_TOKEN: ${{ secrets.REGISTRY_TOKEN_RO }}
+          HEX: ${{ needs.derive.outputs.hex }}
+          DEPLOY_TAG: ${{ needs.derive.outputs.deploy_tag }}
+          IMAGE_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          IMAGE_REPO="git.crm-prionex.com/crm/fe-prionex"
+
+          # The hex comes from `derive`, which already asserted ^[0-9a-f]{12}$. Re-checked here
+          # because this job must not be defeated by an empty output -- Story 6.4 lost two runs to
+          # `actions/checkout` silently destroying $GITHUB_OUTPUT (#d47(4)), and an empty HEX would
+          # otherwise probe `preprod-` and take whatever the registry said about it.
+          # EXACTLY twelve: #d18 §3 binds 5.4, 6.3, 6.5 and 6.6 to the same number, and
+          # record-preprod-candidate.yml mints exactly this shape. A length mismatch here fails
+          # EVERY legitimate release at this gate.
+          if ! printf '%s' "${HEX:-}" | grep -qE '^[0-9a-f]{12}$'; then
+            echo "FAIL: the commit handed to this guard is '${HEX:-<empty>}', not exactly 12 hex."
+            echo "  derive asserts that shape, so an empty or malformed value here means the"
+            echo "  output was lost in transit (#d47(4)), not that the tag was wrong. Refusing"
+            echo "  rather than probing a marker name built from nothing."
+            exit 1
+          fi
+          MARKER="preprod-${HEX}"
+
+          if [ -z "${REG_USER:-}" ] || [ -z "${REG_TOKEN:-}" ]; then
+            echo "FAIL: REGISTRY_USER_RO / REGISTRY_TOKEN_RO is empty or unset. This is a MISSING"
+            echo "  CREDENTIAL, not an absent marker. Refusing before the request so the failure"
+            echo "  names its own cause."
+            exit 1
+          fi
+
+          HTTP_CODE="$(printf 'user = "%s:%s"\n' "$REG_USER" "$REG_TOKEN" \
+            | curl -sS -L --proto-redir '=https' \
+                --retry 2 --retry-delay 2 --retry-connrefused --max-time 30 \
+                -o /dev/null -w '%{http_code}' --config - \
+                -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
+                -H "Accept: application/vnd.docker.distribution.manifest.list.v2+json" \
+                -H "Accept: application/vnd.oci.image.manifest.v1+json" \
+                -H "Accept: application/vnd.oci.image.index.v1+json" \
+                "https://${IMAGE_REPO%%/*}/v2/${IMAGE_REPO#*/}/manifests/${MARKER}" || true)"
+
+          # 🔴 ONLY 200 ADMITS. Every other answer refuses, and each names itself, because the
+          # operator's next action differs: an absent marker means "record the candidate first",
+          # a refused credential means "fix the secret", an ambiguous read means "try again".
+          case "$HTTP_CODE" in
+            200)
+              : ;;
+            404)
+              echo "FAIL: ${MARKER} is ABSENT from the registry (HTTP 404 -- a classified absence,"
+              echo "  not an ambiguous read: the registry answered, and it answered 'not found')."
+              echo
+              echo "  Commit ${HEX} was never recorded as validated on PRE-PROD, so this release"
+              echo "  is refused before anything is built and before the production stand is"
+              echo "  touched. FR16, #d2."
+              echo
+              echo "  Dispatched tag:  ${IMAGE_TAG}"
+              echo "  Would deploy:    ${DEPLOY_TAG}"
+              echo "  Missing marker:  ${MARKER}"
+              echo
+              echo "  Two legitimate ways forward:"
+              echo "    1. Validate the commit on PRE-PROD and record it -- dispatch"
+              echo "       record-preprod-candidate.yml for sha-${HEX}-preprod. THEN re-dispatch."
+              echo "    2. If you are RESTORING a release production already ran, dispatch with"
+              echo "       rollback: true -- this guard is skipped there by design."
+              exit 1
+              ;;
+            401|403)
+              echo "FAIL: probing ${MARKER} returned HTTP ${HTTP_CODE} -- the registry REFUSED THE"
+              echo "  CREDENTIAL. This is neither presence nor absence and must never be reported"
+              echo "  as either. Refusing the release: a guard that cannot read cannot clear."
+              exit 1
+              ;;
+            *)
+              echo "FAIL: probing ${MARKER} returned HTTP ${HTTP_CODE}, which is neither 200 nor"
+              echo "  404. This is AMBIGUOUS, a different outcome from ABSENT, and it must not be"
+              echo "  reported as one."
+              echo "  🔴 Refusing the release. This guard admits ONLY a classified 200, because a"
+              echo "  false negative costs a re-dispatch while a false positive puts an"
+              echo "  unvalidated commit into production."
+              exit 1
+              ;;
+          esac
+
+          # Success. Say precisely what was and was not established.
+          {
+            echo "### Promotion guard: PASSED"
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| commit | ${HEX} |"
+            echo "| marker found | ${MARKER} |"
+            echo "| will deploy | ${DEPLOY_TAG} |"
+            echo
+            echo "**What this proves:** a PRE-PROD validation marker exists for this commit."
+            echo
+            echo "**What it does NOT prove, and cannot:**"
+            echo "- **Not the artifact.** Under Option C the PROD image is a separate build,"
+            echo "  byte-different from the one PRE-PROD served, so nothing here compares"
+            echo "  artifacts. A build-time variable difference -- a typo in a prod-only"
+            echo "  VITE_ value -- reaches production unvalidated. (#d2, NFR11.)"
+            echo "- **Not that the validation was clean.** A waiver leaves NO signal at the"
+            echo "  registry, so this gate cannot tell a waived candidate from a 12/12 one."
+            echo "  The approver reads docs/preprod-candidates.md, not this marker."
+            echo "  (Story 5.4 D1; #d40/#d41; docs/production-approval-regulation.md.)"
+            echo
+            echo "Compare CRM/api-prionex's backend gate, which is stronger on both axes:"
+            echo "it compares DIGESTS of the containers actually running on PRE-PROD and has"
+            echo "no bypass flag. This is the frontend half of that pattern, not an equal."
+          } | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
+
   # ── build ─────────────────────────────────────────────────────────────────────────────
   # Release path only. Publishes sha-<12hex>-prod (permanent) and <sanitized-ref>-prod (14 days).
   # 🔴 build.yml's own "Enforce AC2" refuses to repoint an existing sha-<12hex>-prod, and
@@ -341,7 +506,7 @@ jobs:
   # ALREADY built at prod goes red, by construction and not by defect (#d24 §2b, #d46).
   build:
     name: "Rebuild the commit at environment: prod"
-    needs: derive
+    needs: [derive, guard]
     if: needs.derive.outputs.is_rollback != 'true'
     uses: ./.forgejo/workflows/build.yml
     with:
@@ -354,10 +519,17 @@ jobs:
   # what keeps the rollback path from silently doing nothing.
   deploy:
     name: "Deploy to the PROD stand on s10"
-    needs: [derive, build]
+    needs: [derive, build, guard]
+    # 🔴 STORY 6.5 ADDED THE `guard` CLAUSE, AND WITHOUT IT THE GUARD WOULD BE DECORATIVE.
+    # A refused guard SKIPS `build` (a failed `needs:` member does that) -- and this condition
+    # admits a skipped build BY DESIGN, because that is how the rollback path reaches deploy. So
+    # before this clause existed, a red guard would have gone red and PRODUCTION WOULD HAVE BEEN
+    # DEPLOYED ANYWAY. `guard` must be success (release path, admitted) or skipped (rollback path,
+    # not applicable) -- never failure.
     if: >-
       always() &&
       needs.derive.result == 'success' &&
+      (needs.guard.result == 'success' || needs.guard.result == 'skipped') &&
       (needs.build.result == 'success' || needs.build.result == 'skipped')
     uses: ./.forgejo/workflows/deploy-stand.yml
     with:
