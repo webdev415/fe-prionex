@@ -364,7 +364,6 @@ jobs:
           fi
 
       - name: G2 -- the tag must name the PRE-PROD environment
-        env:
         run: |
           set -euo pipefail
           # Code review M2: reject a multi-line value before either shape guard runs -- `grep -E
@@ -395,7 +394,6 @@ jobs:
 
       - name: G3 -- the tag must be commit-extractable, exactly 12 hex
         id: derive
-        env:
         run: |
           set -euo pipefail
           if ! printf '%s' "${CANDIDATE_TAG}" | grep -qE '^sha-[0-9a-f]{7,64}-preprod$'; then
@@ -694,7 +692,6 @@ jobs:
 
       - name: Re-derive the marker names independently (does not trust the other job's outputs)
         id: derive
-        env:
         run: |
           set -euo pipefail
           case "${CANDIDATE_TAG}" in
