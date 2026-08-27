@@ -565,18 +565,18 @@ Next apparently free number on `origin/main` @ `584cc886` is **D48** (`D44` is h
 
 ### Task 3 — Fix the thirteen (AC: 5) — **0 runs**
 
-- [ ] 3.1 🔴 **Finding #1** — four `Accept` media types on **all** probes; empty-credential pre-check;
+- [x] 3.1 🔴 **Finding #1** — four `Accept` media types on **all** probes; empty-credential pre-check;
       401 classified separately from the catch-all (#13).
-- [ ] 3.2 🔴 **Finding #2** — G6 inspects `${IMAGE}@${CANDIDATE_DIGEST}`, not `$SHA_TAG`.
-- [ ] 3.3 #3 `if: always()` on the listing and the disclaimer. #10 read-back retry, with the false-negative
+- [x] 3.2 🔴 **Finding #2** — G6 inspects `${IMAGE}@${CANDIDATE_DIGEST}`, not `$SHA_TAG`.
+- [x] 3.3 #3 `if: always()` on the listing and the disclaimer. #10 read-back retry, with the false-negative
       case named in its own message. #11 `defaults.run.shell: bash`.
-- [ ] 3.4 #6 `--proto-redir '=https'`. #5 G4's `-i` — either drop it or justify it **in the accept
+- [x] 3.4 #6 `--proto-redir '=https'`. #5 G4's `-i` — either drop it or justify it **in the accept
       direction**; do not leave `build.yml`'s reject-direction justification transplanted.
-- [ ] 3.5 #4 disclose the check-to-write window. #7 disclose the write-target step's unreachability.
+- [x] 3.5 #4 disclose the check-to-write window. #7 disclose the write-target step's unreachability.
       #12 the listing becomes guard-grade: classify the status, handle `Link`-header pagination, fail on
       an unreadable read rather than WARN green.
-- [ ] 3.6 #8, #9 — see AC8.
-- [ ] 3.7 Anything deferred: `deferred-work.md`, **named owner + removal trigger**, and say so in the
+- [x] 3.6 #8, #9 — see AC8.
+- [x] 3.7 Anything deferred: `deferred-work.md`, **named owner + removal trigger**, and say so in the
       story. **1 and 2 may not be deferred.**
 
 ### Task 4 — Wire the join (AC: 1, 2, 5) — **0 runs**
@@ -787,6 +787,39 @@ for recovery. No new workflow file is created — the census goes 13 → 13.
 ### Agent Model Used
 
 ### Debug Log References
+
+**Task 3 — 2026-08-27. All fourteen FIXED. None deferred.**
+
+| # | Finding | Disposition |
+|---|---|---|
+| 1 | one `Accept` type on the probes | ✅ **four** types on all three probes. 🔴 **The finding's premise was wrong and is corrected in the file, not silently:** the sibling's two *existence* probes send **one**, same as these; only its `verify-on-stand` digest step sends four. "Match the sibling" would have changed nothing. Four is right on its own merits — an index or a docker-v2 manifest must not read as absence. |
+| 2 | G6 inspects the tag, not the digest | ✅ inspects `${IMAGE}@${CANDIDATE_DIGEST}`. 🔴 **Its suggested fix was also wrong** — the sibling has the identical split and its `Docker-Content-Digest` read is in the other job, which by design never hands the digest over. Written, not copied. |
+| 3 | no `if: always()` | ✅ on both reporting steps — verified from parsed YAML, not from grep (the word also appears in the new comments). |
+| 4 | check-to-write window undisclosed | ✅ header block, and it now records that Story 6.6 **widens** the window rather than narrowing it (disjoint groups, below). |
+| 5 | `-Eqi` inverts safety in an ACCEPT test | ✅ `-i` **dropped**. build.yml uses it in a REJECT test where broader = more refusal; here broader = more acceptance. Every marker this file composes is lowercase by construction, so it bought nothing and cost the direction. |
+| 6 | no `--proto-redir` | ✅ **4 of 4** credentialed `curl -L` sites. |
+| 7 | write-target assertion cannot fail | ✅ **disclosed and kept**, renamed `STANDING ASSERTION -- unreachable today`. It earns no matrix row. |
+| 8 | stale `sha-41ab0470ab6b-prod` in the dispatch UI | ✅ replaced; the old value is kept in the text as history, with `#d46` for why that commit can never exist here. |
+| 9 | "goes red" as certainty | ✅ restated at the strength `build.yml`'s own table supports — `pre_digest == NEW_DIGEST` takes a documented **no-op** branch, decided by a cache hit. |
+| 10 | read-back has no retry | ✅ 3 attempts, backoff, both write steps. This was the most expensive false negative here: a transient 5xx after a successful `create` reported failure on a tag that was already correct. |
+| 11 | no `defaults.run.shell` | ✅ `shell: bash` on the job. |
+| 12 | `tags/list` degrades to a green WARN, no pagination | ✅ **guard-grade**: empty-credential pre-check, status classified (401/403 apart from everything else), `Link: rel="next"` followed to termination with a 100-page backstop, parse failure distinguished from an empty set, and **no `prod` marker at all is now a FAILURE, not a WARN**. 🔴 Task 2.5 reproduced this failure mode live before the fix existed. |
+| 13 | no empty-credential pre-check, 401 unclassified | ✅ both, on all three probes. |
+| **14** | 🔴 **`EXISTS` fails OPEN** — found by this story's review, missed by all thirteen | ✅ fails closed on anything not literally `true`/`false`. **The only guard here that failed in the unsafe direction**, and #1's fix does not touch it: #1 narrows one trigger, this closes the mechanism. |
+
+🔴 **Two of the thirteen shipped with a wrong suggested fix (#1, #2), and a third (#13) with a wrong
+premise.** Each pointed at a sibling pattern that does not exist. **Checked before copying, in all
+three cases** — the alternative was to "fix" this file toward a shape `record-preprod-candidate.yml`
+does not have.
+
+**Also corrected while in the file, both AC8's:** the G5 justification (*"THERE IS NO PROD STAND"* is
+false — s10 is live; the true reason is *"the caller cannot see the stand"*) and the `concurrency`
+justification, which carried the same dead claim **and** was hiding a live one: `#d21` says a callee's
+own group **is not applied** when called, so under Story 6.6 the automatic path and the manual dispatch
+land in **disjoint** groups over two permanent writes. Named in the file rather than left for Task 4.
+
+**Mechanical checks:** YAML parses; **all 17 `run:` bodies parse under `bash -n`**; **zero `${{ }}`
+inside any `run:`** (Prohibition 10, checked against parsed YAML rather than by grep).
 
 **Task 2 — 2026-08-26. The contract read, and finding #12 proven live BY REPRODUCING IT TWICE.**
 

@@ -12,14 +12,25 @@ name: Record PROD Image
 # no-op, or REFUSE -> read the tag back before reporting success. Both files are FROZEN and
 # neither is edited by this story; the pattern is copied, the files are not.
 #
-# 🔴 THERE IS NO G5-EQUIVALENT IN THIS FILE, AND THAT IS A NAMED ABSENCE, NOT AN OVERSIGHT.
+# 🔴 THERE IS NO G5-EQUIVALENT IN THIS FILE. STILL TRUE -- BUT THE REASON CHANGED ON
+# 2026-08-26, AND REUSING THE OLD ONE WOULD BE A LIE.
 # `record-preprod-candidate.yml`'s G5 asks whether the stand is healthy and demonstrably
-# serving this exact digest. THERE IS NO PROD STAND. s10 is Story 6.10's and is not
-# provisioned; s2 is the legacy production host, serves a `ghcr.io` image rather than this
-# one, and NFR5 as amended 2026-08-18 is absolute -- Forgejo never deploys to s2 at all, so
-# no job of this instance may reach it. A guard whose referent does not exist is not a
-# guard. Inventing one that checked s2 would be FALSE, not conservative. The cost of the
-# absence is priced in the story's own retro-E5 matrix rather than papered over here.
+# serving this exact digest.
+#   WAS (Story 6.3, true when written, FALSE NOW): "THERE IS NO PROD STAND. s10 is Story
+#   6.10's and is not provisioned." s10 IS provisioned and live -- Story 6.4 deployed to it
+#   twice, runs 634 and 642, `fe-prionex-prod` healthy on 0.0.0.0:8080.
+#   IS (Story 6.6, code review, three layers): THE CALLER CANNOT SEE THE STAND.
+#   `deploy-stand.yml` declares NO `workflow_call` outputs -- the same limitation
+#   `deploy-prod.yml`'s header records for `build.yml` ("A caller cannot learn which tag the
+#   build published") -- and it is frozen. So nothing on this path can learn what was
+#   actually deployed without a host-touching job, which is Story 6.7's smoke check, not this.
+# 🔴 AND THE OBVIOUS SUBSTITUTE IS WORSE THAN NOTHING. Story 6.6 §10 originally proposed
+# asserting that `prod-current`'s new target equals the digest `deploy-stand.yml` deployed.
+# That is A COMPARISON THAT CANNOT FAIL: this file is handed that same tag, resolves it,
+# writes the marker from it, and already refuses unless the read-back matches. Both sides are
+# one resolution of one tag; s10 is never touched. WITHDRAWN -- a digest read dressed as a
+# health guard is worse than a declared absence, because the next reader trusts it.
+# s2 remains untouchable regardless: NFR5 as amended is absolute.
 #
 # ── 🔴 What the two markers assert, and what they do NOT (Story 6.3, Task 5.2) ──────────
 # ⚠️ The reference to AC8 was REMOVED from this heading on 2026-08-26 (Oleg's decision on
@@ -57,8 +68,15 @@ name: Record PROD Image
 #       written as the general truth it should always have been.
 #       🔴 Story 6.9 must still dispatch with `rollback: true`, for an INVERTED and purely
 #       MECHANICAL reason: the release path rebuilds (Story 6.4 AC2) and `build.yml`'s
-#       `Enforce AC2` refuses to repoint an existing `sha-<12hex>-prod` (#d24 §2b), so a
-#       release-path dispatch of a commit already built here goes red. Not a guard bypass.
+#       `Enforce AC2` refuses to REPOINT an existing `sha-<12hex>-prod` (#d24 §2b). Not a
+#       guard bypass.
+#       ⚠️ FINDING #9 (owner 6.6), corrected: this used to say such a dispatch "goes red" as
+#       flat certainty. `build.yml`'s own decision table does not: `pre_digest == NEW_DIGEST`
+#       takes a documented NO-OP branch and exits 0, and which branch fires is decided by
+#       whether that build hit the shared `:buildcache`. The honest statement is: it goes red
+#       WHENEVER THE REBUILD DIFFERS, which `vite.config.ts`'s `Date.now()` makes the
+#       overwhelmingly likely case but not a guarantee. Stated at the strength its own source
+#       supports -- FR32 as amended asserts the stronger form, and that is FR32's to defend.
 #   (c) THAT THE IMAGE IS BYTE-IDENTICAL TO WHAT PRODUCTION SERVES. It is not, and cannot
 #       be: `vite.config.ts` bakes `Date.now()` into every build via `define` (D24 §2b), so
 #       two builds of one commit are never byte-identical. What IS comparable, and what
@@ -100,6 +118,20 @@ name: Record PROD Image
 # `secrets: inherit` -- is Story 6.4's to make, not this file's to pre-empt. This file names
 # `secrets.REGISTRY_*` directly, exactly as `record-preprod-candidate.yml` does.
 #
+# ── FINDING #4: the check-to-write window is real, and this file used to hide it ────────
+# `docker buildx imagetools create` offers NO compare-and-swap. Every write below is
+# probe -> compare -> create, and the gap between the probe and the create is a real window in
+# which another writer can land. `record-preprod-candidate.yml` discloses this at length; this
+# file copied the write pattern and not the disclosure.
+# What mitigates it: the mandatory read-back after every write, which fails the run if the tag
+# does not carry THIS run's digest. What that does NOT do -- and the sibling says so -- is
+# distinguish "our write landed" from "another actor wrote the identical digest"; it only ever
+# catches a DIFFERENT digest landing first.
+# What is NOT closed, and cannot be by any `concurrency:` block: a writer OUTSIDE this
+# instance's job graph -- a hand-run `imagetools create` from a host, or an operator DELETE
+# followed by a rebuild. Under Story 6.6 the window widens rather than narrows: the automatic
+# path and the manual dispatch land in DISJOINT concurrency groups (see above).
+#
 # ── `--prefer-index=false` is mandatory on every `imagetools create` ────────────────────
 # Without it, `create` wraps the source manifest in an OCI INDEX whose digest can never
 # equal the source manifest's, so every read-back below fails while blaming something else.
@@ -126,7 +158,7 @@ on:
   workflow_dispatch:
     inputs:
       image_tag:
-        description: "The PROD image tag to record, e.g. sha-41ab0470ab6b-prod. Must be an existing sha-<12hex>-prod tag produced by build.yml. This workflow creates no image."
+        description: "The PROD image tag to record, e.g. sha-a99ccd44c5a3-prod. Must be an existing sha-<12hex>-prod tag produced by build.yml. This workflow creates no image. (The example was sha-41ab0470ab6b-prod until 2026-08-26 -- a commit that is ABSENT from this Forgejo repository and can never be built here; see #d46.)"
         required: true
         type: string
       acknowledgement:
@@ -139,10 +171,20 @@ on:
         type: boolean
         default: false
 
-# Own literal group. NOT copied from any deploy workflow: there is no PROD stand for this
-# file to contend with (Story 6.10 has not provisioned one), so the group this file needs is
-# recorder-against-recorder only. Story 5.3's Prohibition 7 -- never copy another stand's
-# group -- applies in full.
+# Own literal group, recorder-against-recorder. Story 5.3's Prohibition 7 -- never copy
+# another stand's group -- applies in full.
+# 🔴 ITS ORIGINAL JUSTIFICATION IS STALE AND IS CORRECTED HERE (Story 6.6 code review): it
+# read "there is no PROD stand for this file to contend with (Story 6.10 has not provisioned
+# one)". s10 IS provisioned, and `deploy-prod.yml` deploys to it.
+# 🔴 MORE IMPORTANTLY, THIS BLOCK DOES NOT APPLY ON THE `workflow_call` PATH AT ALL. `#d21`,
+# verbatim: "собственный `concurrency` вызываемого воркфлоу при вызове не применяется --
+# молча... Сериализацию придётся объявлять у вызывающего". (`#d33` closed D21's central
+# question positively only for the CALLER's own block.) So when `deploy-prod.yml` calls this
+# file, the job runs under `deploy-prod-fe-prionex-prod`, and this group governs ONLY a
+# manual `workflow_dispatch`. The two are DISJOINT: a hand-dispatched recovery run and an
+# automatic one are not serialized against each other, over two permanent registry writes,
+# with no compare-and-swap available (see the check-to-write note below). Named here rather
+# than discovered later; closing it needs a shared group declared on the caller.
 concurrency:
   group: record-prod-fe-prionex-prod
   cancel-in-progress: false
@@ -271,12 +313,20 @@ jobs:
           # in the Forgejo database -- there is no API and no CLI for cleanup rules, and it is
           # not restorable from this repository. Story 6.3 Task 3.4 re-read the stored row
           # directly (`package_cleanup_rule`, id 1) and confirmed this literal still matches it.
-          # `-i` mirrors build.yml's own deliberate divergence: the registry folds case on
-          # write, so a case-sensitive test here would miss an uppercase spelling.
+          # 🔴 FINDING #5 (Story 6.3 review, owner 6.6): `-i` USED TO BE HERE, with build.yml's
+          # justification transplanted verbatim -- and the transplant inverted its safety
+          # direction. build.yml uses `-i` in a REJECT test (`if matches -> refuse`), where a
+          # BROADER match means MORE refusal, i.e. fail-safe. This is an ACCEPT test
+          # (`if ! matches -> refuse`), where a broader match means MORE ACCEPTANCE. `-i` here
+          # would let an uppercase spelling PASS as protected when the stored rule -- which the
+          # registry evaluates, not this copy -- may not protect it. Dropped, deliberately:
+          # every marker this file composes is lowercase by construction (G3 asserts
+          # `[0-9a-f]{12}` and the literals are lowercase), so a case-insensitive accept buys
+          # nothing and costs the direction.
           KEEP_RE='^(prod-current|preprod-current|latest|buildcache|v?[0-9]+\.[0-9]+\.[0-9]+.*|(pre)?prod-[0-9a-f]{7,64}|sha-[0-9a-f]{7,64}-(pre)?prod)$'
           for FULL_TAG in "$HISTORY_TAG" "$CURRENT_TAG"; do
             MARKER="${FULL_TAG#*:}"
-            if ! printf '%s' "$MARKER" | grep -Eqi "$KEEP_RE"; then
+            if ! printf '%s' "$MARKER" | grep -Eq "$KEEP_RE"; then
               echo "FAIL(G4): marker '${MARKER}' does not match this project's own retention"
               echo "  keep_pattern. Writing it would create a tag the 14-day rule can expire out"
               echo "  from under Story 6.8's rollback -- refusing before any write, not after."
@@ -288,7 +338,14 @@ jobs:
           echo "  anything (#d38 §9, UNPROVEN by execution), so it has never been seen keeping"
           echo "  anything either."
 
-      - name: "Assert every write target is this literal repository"
+      # ⚠️ FINDING #7 (Story 6.3 review, owner 6.6), disclosed rather than removed: THIS STEP
+      # CANNOT FAIL. All three tags are composed from `${IMAGE_REPO}:` in G3, and this tests for
+      # exactly that prefix. G4's equivalent unreachability was disclosed in the header while
+      # this one was not -- in a file that quotes Prohibition 3 repeatedly. It is kept because it
+      # is a STANDING ASSERTION: the day someone builds a tag from anything but the literal
+      # constant, this stops being vacuous and starts being the guard it claims to be. What it
+      # is NOT is evidence, and it earns no outcome-matrix row.
+      - name: "Assert every write target is this literal repository (STANDING ASSERTION -- unreachable today, see above)"
         env:
           SHA_TAG: ${{ steps.derive.outputs.sha_tag }}
           HISTORY_TAG: ${{ steps.derive.outputs.history_tag }}
@@ -591,7 +648,20 @@ jobs:
           IMAGE="${HISTORY_TAG%%:*}"
           docker buildx imagetools create --prefer-index=false --tag "${HISTORY_TAG}" "${IMAGE}@${CANDIDATE_DIGEST}"
 
-          if ! ATTACHED="$(docker buildx imagetools inspect --format '{{.Manifest.Digest}}' "${HISTORY_TAG}")"; then
+          # FINDING #10 (owner 6.6): no retry here was the most expensive false negative this
+          # file has -- a transient 5xx/429 after a SUCCESSFUL `create` reported failure while
+          # the permanent tag was written and correct, sending the operator to investigate a
+          # write that had already landed. Three attempts, then the honest refusal below.
+          ATTACHED=""
+          for ATTEMPT in 1 2 3; do
+            if ATTACHED="$(docker buildx imagetools inspect --format '{{.Manifest.Digest}}' "${HISTORY_TAG}")"; then
+              break
+            fi
+            ATTACHED=""
+            echo "  read-back attempt ${ATTEMPT}/3 failed; retrying in $((ATTEMPT * 3))s."
+            sleep "$((ATTEMPT * 3))"
+          done
+          if [ -z "$ATTACHED" ]; then
             echo "FAIL: the read-back read of ${HISTORY_TAG} itself failed after 'create' reported"
             echo "  success. Refusing to claim success on an unread tag -- re-dispatching this same"
             echo "  input is safe (idempotent) if this happens."
@@ -724,7 +794,20 @@ jobs:
           fi
           docker buildx imagetools create --prefer-index=false --tag "${CURRENT_TAG}" "${IMAGE}@${CANDIDATE_DIGEST}"
 
-          if ! ATTACHED="$(docker buildx imagetools inspect --format '{{.Manifest.Digest}}' "${CURRENT_TAG}")"; then
+          # FINDING #10 (owner 6.6): no retry here was the most expensive false negative this
+          # file has -- a transient 5xx/429 after a SUCCESSFUL `create` reported failure while
+          # the permanent tag was written and correct, sending the operator to investigate a
+          # write that had already landed. Three attempts, then the honest refusal below.
+          ATTACHED=""
+          for ATTEMPT in 1 2 3; do
+            if ATTACHED="$(docker buildx imagetools inspect --format '{{.Manifest.Digest}}' "${CURRENT_TAG}")"; then
+              break
+            fi
+            ATTACHED=""
+            echo "  read-back attempt ${ATTEMPT}/3 failed; retrying in $((ATTEMPT * 3))s."
+            sleep "$((ATTEMPT * 3))"
+          done
+          if [ -z "$ATTACHED" ]; then
             echo "FAIL: the read-back read of ${CURRENT_TAG} itself failed after 'create' reported"
             echo "  success. Refusing to claim success on an unread tag."
             exit 1
@@ -741,23 +824,83 @@ jobs:
           fi
           echo "OK: ${CURRENT_TAG} -> ${CANDIDATE_DIGEST} (verified by read-back)."
 
-      # The registry's own set, read back independently of every write above. This is the
-      # state a later reader should trust -- not this run's own claims about it.
+      # 🔴 FINDING #12 (Story 6.3 review, owner 6.6) -- AND IT STOPPED BEING THEORETICAL.
+      # Story 6.6's own Task 2.5 reproduced this failure mode live, twice, on the sibling
+      # packages endpoint: an unpaginated read returned 37 of 381 versions and made
+      # `prod-current` and every `preprod-*` marker LOOK DELETED. A conclusion that wrong,
+      # reached that easily, is what a green WARN buys.
+      # This step's own header calls its output "the state a later reader should trust", and it
+      # used to: `|| true` on the fetch, `2>/dev/null || true` on the parse, and `exit 0` on an
+      # empty result -- so a 401, a transport failure or a truncated page all rendered as a
+      # cheerful "nothing to report". It is now guard-grade: the status is classified, the
+      # `Link` header is followed to the end, and an unreadable read FAILS.
+      # `if: always()` -- FINDING #3: a failure in either write step used to suppress this
+      # listing AND the disclaimer below, which is precisely the state the write-order comment
+      # plans for (dead between the two writes) and precisely when a reader needs both.
       - name: "List every prod-* tag with its digest (the registry's own set)"
+        if: always()
         env:
           REG_USER: ${{ secrets.REGISTRY_USER_RO }}
           REG_TOKEN: ${{ secrets.REGISTRY_TOKEN_RO }}
         run: |
           set -euo pipefail
-          TAGS_JSON="$(printf 'user = "%s:%s"\n' "$REG_USER" "$REG_TOKEN" \
-            | curl -sS -L --max-time 30 --config - \
-                "https://${IMAGE_REPO%%/*}/v2/${IMAGE_REPO#*/}/tags/list" || true)"
-          MARKERS="$(printf '%s' "$TAGS_JSON" | jq -r '.tags[]? // empty' 2>/dev/null \
-            | grep -E '^(prod-|sha-[0-9a-f]{7,64}-prod$)' || true)"
+          if [ -z "${REG_USER:-}" ] || [ -z "${REG_TOKEN:-}" ]; then
+            echo "FAIL: REGISTRY_USER_RO / REGISTRY_TOKEN_RO is empty or unset -- this step"
+            echo "  cannot report the registry's state, and reporting nothing as if it were"
+            echo "  'no tags' is the defect this fix exists to remove."
+            exit 1
+          fi
+          HDR="$(mktemp)"; BODY="$(mktemp)"; ALL="$(mktemp)"
+          trap 'rm -f "$HDR" "$BODY" "$ALL"' EXIT
+          URL="https://${IMAGE_REPO%%/*}/v2/${IMAGE_REPO#*/}/tags/list?n=100"
+          PAGE=0
+          while [ -n "$URL" ]; do
+            PAGE=$((PAGE + 1))
+            if [ "$PAGE" -gt 100 ]; then
+              echo "FAIL: tags/list did not terminate within 100 pages. Refusing to report a"
+              echo "  truncated set as if it were complete."
+              exit 1
+            fi
+            CODE="$(printf 'user = "%s:%s"\n' "$REG_USER" "$REG_TOKEN" \
+              | curl -sS -L --proto-redir '=https' --retry 2 --retry-delay 2 \
+                  --max-time 30 --config - -D "$HDR" -o "$BODY" -w '%{http_code}' "$URL" || echo 000)"
+            case "$CODE" in
+              200) : ;;
+              401|403)
+                echo "FAIL: tags/list returned HTTP ${CODE} -- the credential was REFUSED."
+                echo "  Not an empty registry. Refusing to report it as one."
+                exit 1 ;;
+              *)
+                echo "FAIL: tags/list returned HTTP ${CODE} on page ${PAGE}. Refusing to report"
+                echo "  a partial or unread set as the registry's state."
+                exit 1 ;;
+            esac
+            if ! jq -e '.tags != null' "$BODY" >/dev/null 2>&1; then
+              echo "FAIL: tags/list page ${PAGE} did not parse as JSON with a .tags key. This is"
+              echo "  a PARSE failure, not an empty set."
+              cat "$BODY"
+              exit 1
+            fi
+            jq -r '.tags[]? // empty' "$BODY" >> "$ALL"
+            # RFC5988 Link: <...>; rel="next" -- absent on the last page, which is how this ends.
+            NEXT="$(tr -d '\r' < "$HDR" | awk -F'[<>]' '/^[Ll]ink:/ && /rel="next"/ {print $2}')"
+            if [ -n "$NEXT" ]; then
+              case "$NEXT" in
+                http*) URL="$NEXT" ;;
+                *)     URL="https://${IMAGE_REPO%%/*}${NEXT}" ;;
+              esac
+            else
+              URL=""
+            fi
+          done
+          echo "tags/list read to completion: ${PAGE} page(s), $(wc -l < "$ALL" | tr -d ' ') tags."
+          MARKERS="$(grep -E '^(prod-[0-9a-f]{7,64}$|prod-current$|sha-[0-9a-f]{7,64}-prod$)' "$ALL" || true)"
           if [ -z "$MARKERS" ]; then
-            echo "WARN: the tags list returned nothing matching prod-*. This step is a report,"
-            echo "  not a guard -- the read-backs above are the evidence that the writes landed."
-            exit 0
+            echo "FAIL: the registry answered completely and holds NO prod marker at all. After a"
+            echo "  successful write above that is a contradiction, not a quiet report -- and"
+            echo "  before any write it means this repository has no production history. Either"
+            echo "  way it is a finding, not a WARN."
+            exit 1
           fi
           printf '%s\n' "$MARKERS" | while IFS= read -r M; do
             [ -n "$M" ] || continue
@@ -769,7 +912,10 @@ jobs:
       # acts on it. `#d19` had to write the same sentence for the `prod` branch after the
       # fact. The authoritative sinks are docs/prod-releases.md and the decision record;
       # this is a third, best-effort sink on the run's own page.
+      # `if: always()` -- FINDING #3. This is the run's own statement of what it just did and
+      # what the markers do NOT mean; suppressing it on the failure path is exactly backwards.
       - name: "State what prod-current means before the traffic switch"
+        if: always()
         env:
           CURRENT_TAG: ${{ steps.derive.outputs.current_tag }}
           HISTORY_TAG: ${{ steps.derive.outputs.history_tag }}
