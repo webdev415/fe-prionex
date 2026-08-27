@@ -5088,7 +5088,21 @@ same zone. Unchanged. It matters more now that the name actually serves somethin
 four hours to undo.
 
 
-### 🔴 PROD's frontend still calls the LEGACY API. **Owner: Oleg.**
+### ~~🔴 PROD's frontend still calls the LEGACY API.~~ ✅ **CLOSED 2026-08-27 by run 766 — its own removal trigger fired.**
+
+> 🟢 **Measured after the release:** `https://crm.prod.crm-prionex.online` serves
+> `/assets/index-CiZvpnjL.js` (`Last-Modified: 18:12:10`) and that bundle bakes
+> **`https://api-crm.prod.crm-prionex.online`** and **`wss://api-crm.prod.crm-prionex.online`**.
+> It was `https://api.crm-prionex.online` before. **Production no longer calls the legacy API.**
+>
+> The chain that did it, all green: **762** (`build-main.yml`, dev — the first live exercise of the
+> rewiring, reading `vars.*_DEV`), **764** (`build.yml`, preprod), **765** (`deploy-preprod.yml`,
+> which recorded its own candidate), **766** (`deploy-prod.yml`, `rollback: false` — guard → build →
+> deploy → smoke → record). The `vars.` wiring is therefore proven on **all three** environments.
+>
+> **The entry below is kept, struck, as the record of what was open and what closed it.**
+
+~~The original entry:~~
 
 Both production names now work — but the deployed bundle has `https://api.crm-prionex.online`
 (legacy) baked in, not `https://api-crm.prod.crm-prionex.online`. Under Option C (`#d1`)
@@ -5148,3 +5162,12 @@ with two different mechanisms:
 
 ⚠️ **This moves production off the legacy API onto the prod contour** — a change to where production
 traffic goes, not a cosmetic one. **Removal trigger:** the prod bundle resolves to the prod API name.
+
+---
+
+## Deferred from: code review of story-6.12 (2026-08-27)
+
+- **`api()` in `scripts/gen-prod-ledger.mjs` has no request timeout.** A hung connection blocks the
+  script indefinitely. Cosmetic: it is human-run, nothing schedules it, and `#d51` §2 measured that
+  nothing can. **Removal trigger:** if the generator is ever wired into anything unattended — at
+  which point the timeout stops being cosmetic.
