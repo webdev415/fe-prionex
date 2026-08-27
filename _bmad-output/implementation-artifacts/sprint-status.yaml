@@ -1830,7 +1830,95 @@ development_status:
   # dispatched for them); the four platform findings that were in no document (#d47); and the M7 bundle
   # re-owned BY NAME to Story 6.6.
   6-4-deploy-to-production-by-dispatch: done
-  6-5-guard-promotion-by-commit-identity: backlog
+  # Contexted 2026-08-27 off origin/main @ 46e7a26a (the merge of PR #102, Story 6.6), branch
+  # `story-6-5/pr-1-context`. THE SEAM IS READY AND WAS KEPT READY: 6.4 made `derive` a separate
+  # named step "precisely so 6.5 has somewhere obvious to land", and 6.6 left it BYTE-IDENTICAL on
+  # purpose, verified by a separate extraction at its own closeout. Consume its outputs; touch it not.
+  # 🔴 THE CENTRAL DESIGN CONSTRAINT, and it is the INVERSE of Story 6.6's: 6.6's fourteenth defect
+  # was a guard that failed OPEN (a probe said "absent", the code believed it, a permanent tag got
+  # written). Here the polarity flips -- a false 404 REFUSES a legitimate release, which is loud and
+  # recoverable, while a false 200 ADMITS AN UNVALIDATED COMMIT TO PRODUCTION. So: only a classified
+  # 200 may mean "validated"; 401/403/000/timeout/unparseable all REFUSE. Never an error as existence.
+  # 🔴 BOTH MATRIX ROWS ARE FREE AND MEASURED (paginated read, 2026-08-27):
+  #   commit a99ccd44c5a3 -> preprod-a99ccd44c5a3 EXISTS  -> guard PASSES
+  #   commit 28f7fd36b75e -> preprod-28f7fd36b75e EXISTS  -> guard PASSES
+  #   commit 308ea1520c59 -> preprod-308ea1520c59 ABSENT  -> guard REFUSES  <- the discriminating row
+  # 308ea1520c59 is Story 6.6's own proof image: built at environment=prod, never through PRE-PROD.
+  # Exactly the shape FR16 exists to stop, available at zero cost.
+  # ✅ AND THE PASS ROW COSTS NO DEPLOY: dispatch sha-a99ccd44c5a3-preprod with rollback:false -- the
+  # guard passes, then build.yml's Enforce AC2 refuses to repoint the existing sha-a99ccd44c5a3-prod,
+  # so the run goes red AT THE BUILD, AFTER the guard. That red is the evidence, and must be labelled
+  # as such rather than read as a failure of this story.
+  # 🔴 THE GUARD MUST NOT BE A `uses:` JOB -- #d21 run 631: a SKIPPED `uses:` wrapper reports SUCCESS,
+  # and 6.6 saw it live in its own run 662 (build wrapper success, inner job skipped). A guard that
+  # reports green when it did not run is worse than no guard. Plain job, node-20.
+  # 🔴 IT MUST RUN BEFORE `build`: otherwise an unvalidated commit burns a build first, and a commit
+  # already built goes red at Enforce AC2 without the operator ever learning the guard would have
+  # refused it. AC5 requires the failure to NAME the missing preprod-<sha>.
+  # 🔴 #d2 IS YOURS AND IT CONTAINS AN ERROR. Its own status line says "спроектировано, не
+  # реализовано -- обновить в story 6.5". Beyond flipping that: its rollback rationale claims the
+  # guard is skipped partly because preprod-<sha> may already have been DELETED BY RETENTION. IT
+  # CANNOT BE -- preprod-<12hex> matches keep_pattern's (pre)?prod-[0-9a-f]{7,64} and compiled KEEP
+  # against the stored package_cleanup_rule row read from the DB on 2026-08-27. The skip stands on
+  # its own: a rollback restores something production already ran.
+  # ⚠️ THE WAIVER GAP IS 6.5's TO DECIDE AND CANNOT BE CLOSED HERE. preprod-a99ccd44c5a3 exists and
+  # carries NO waiver signal, yet it was minted on a 7/12 pass / 5 BLOCKED run dispatched under
+  # #d40's waiver. The signal is not in the tier this guard reads (5.4's own D1). 6.2 already wrote
+  # the policy half. PROHIBITED: grepping docs/preprod-candidates.md from the workflow -- that is
+  # epic AC2's weaker-duplicate prohibition and would give false assurance. State the limit in the
+  # SUCCESS message: a green guard means a marker exists, not that validation was clean.
+  # ⚠️ AC5's "fails before touching s2" AMENDED and declared: s2 is legacy, NFR5 forbids touching it
+  # at all, the stand is s10. Read as "before the build and before the production stand" -- the same
+  # amendment 6.6 made to its own AC4, declared rather than rewritten silently.
+  # Also owned: three dated citations in docs/production-approval-regulation.md that name Story 6.5
+  # as their reviser, and two deferred-work entries (the CRM/api-prionex positioning, the waiver gap).
+  # FROZEN: `derive` above all -- plus deploy-stand.yml, build.yml, both recorders, and every doc
+  # except #d2, the regulation and the decision record. NO HOST IS TOUCHED. REGISTRY IS READ-ONLY.
+  # Decision number D49 apparent-next; re-verify across origin refs, LOCAL branches AND the working
+  # tree (6.3's OQ10 hole, which 6.6 checked deliberately).
+  # ⚠️ Story 6.8's cancellation was authored and UNPUSHED on 2026-08-27 and touches this file and
+  # deferred-work.md. Check before assuming; merge rather than rebase if a PR is already open.
+  # Floor 8 / ceiling 18 runs, OPEN. Ceiling budgets a fix-pass and a closeout PR because 6.6's
+  # second review needed both.
+  # 🚧 DEV STARTED 2026-08-27, branch `story-6-5/impl`, baseline `0642bdd5` -- off the CONTEXT branch,
+  # not main: PR #103 is open and the story file exists nowhere else. Rebase if #103 lands first.
+  # D-sweep across origin refs, local branches AND the working tree: highest D48; next free D49.
+  # Story 6.8's cancellation has NOT landed (still `backlog` on main); its collision with this file
+  # and deferred-work.md stays open. Not touched -- another story's row.
+  # ✅ -> `review` 2026-08-27. SHIPPED: a `guard` job in deploy-prod.yml between `derive` and `build`,
+  # skipped on rollback. `derive` byte-identical; all 11 frozen workflows byte-identical. 9 of 9 ACs MET.
+  # 🔴 ONLY A CLASSIFIED 200 ADMITS A RELEASE, and the reason is that the fail-direction is the
+  # INVERSE of Story 6.6's fourteenth defect: a false 404 refuses a legitimate release (loud,
+  # recoverable), a false 200 puts an UNVALIDATED COMMIT INTO PRODUCTION. 404/401/403/000/timeout/
+  # unparseable all refuse, each naming itself because the operator's next action differs.
+  # 🔴 NOT A `uses:` JOB -- #d21 run 631: a skipped wrapper reports SUCCESS, seen live in 6.6's 662.
+  # 🔴 THE `deploy` CONDITION HAD TO CHANGE OR THE GUARD WOULD HAVE BEEN DECORATIVE. A refused guard
+  # makes `build` a failed dependency, and `deploy` admits a skipped build BY DESIGN -- that is how
+  # rollback reaches it. Before the added clause a red guard would have gone red AND PRODUCTION WOULD
+  # HAVE BEEN DEPLOYED ANYWAY. Proven by run 691: guard `skipped`, rollback path complete, 13 rows.
+  # ✅ ALL THREE MATRIX ROWS LIVE: 687 REFUSE / 689 PASS / 691 SKIP. The discriminator is STRUCTURAL:
+  # run 687 has SIX job rows and ZERO inner callee rows -- build.yml, deploy-stand.yml and the
+  # recorder never expanded -- against run 668's twelve rows with seven inner. "Absent vs present"
+  # proves the guard sits BEFORE the build better than any status word does.
+  # ⚠️ PLATFORM BEHAVIOUR IN NO DOCUMENT: dependents of a FAILED job report `failure`, NOT `skipped`.
+  # Predicted wrong in this story's own task text. The deploy condition is unaffected, but judging an
+  # outcome by the word `skipped` would be wrong here.
+  # 🔴 #d2 UPDATED **AND CORRECTED**: its rollback rationale claimed retention may delete
+  # preprod-<sha>. keep_pattern protects it -- compiled against package_cleanup_rule id=1 read from
+  # the DB. The skip stands on one ground and it is enough; the false prop is removed, not propped.
+  # ⚠️ THE WAIVER GAP IS DECIDED AS UNCLOSEABLE HERE (#d49 §6): the signal is not in the tier the
+  # guard reads. The SUCCESS message states the limit; grepping docs/preprod-candidates.md from the
+  # workflow was considered and PROHIBITED (epic AC2's weaker-duplicate rule). No exclusion list --
+  # a second source of truth that goes stale. Residual owner: Oleg, as sole approver.
+  # 🔴 A NEAR-MISS WORTH MORE THAN THE TALLY: AC4 was on course to be graded on Story 6.6's rollback
+  # runs, which PREDATE this guard and contain no `guard` row at all. Task 4.3 had been batch-ticked
+  # without being performed. Caught by checking the AC clause-by-clause rather than from memory, then
+  # un-ticked and re-earned as run 691. Same failure a different model had to find twice in 6.6.
+  # ✅ LEDGER BY QUERY: 6 runs (685-691) vs floor 8 / ceiling 18 -- UNDER, and under the FLOOR.
+  # The model over-predicted; named, because that is the same family as an overrun. All three
+  # dispatches came in at floor because all three matrix rows were free, exactly as contexted.
+  # Oleg merges; the row goes `done` only after that.
+  6-5-guard-promotion-by-commit-identity: review
   # Contexted 2026-08-26 (branch `story-6-6/pr-1-context`) from a SCRATCHPAD WORKTREE off origin/main
   # at 584cc886 (PR #97, Story 6.4). 🔴 origin/main MOVED THREE TIMES DURING CONTEXTING --
   # cfbad179 -> 308ea152 -> 584cc886 -- and both of this story's dependencies landed mid-analysis:
@@ -2111,7 +2199,83 @@ development_status:
   # self-checking. "A fix-pass that is not itself re-reviewed is just a second draft" now has a third
   # data point, and this time the re-review is what caught it.
   6-6-record-the-deployed-production-image: review
-  6-7-smoke-check-production-after-deploy: backlog
+  # Contexted 2026-08-27 off origin/main @ 043ce521, branch `story-6-7/pr-1-context`. 🔴 RE-BASED
+  # MID-WRITE: the first draft targeted 0d990967 and said Story 6.5's guard was not on main; PR #104
+  # merged while the file was being written. Every graph reference corrected against the PARSED file.
+  # Real graph now: derive -> guard -> build -> deploy -> record -> record-outcome.
+  # 🔴 THE CENTRAL FINDING: EPIC AC1 IS ALREADY IMPLEMENTED BY deploy-stand.yml -- it polls
+  # docker inspect for running/restarting/healthy with a timeout, fails fast on `unhealthy`, ASSERTS
+  # THE HEALTHY CONTAINER IS THIS PROJECT'S (anchored), and issues GET / from a --network host
+  # sibling container asserting 200. Story 6.4's header already ruled: "the callee's health and Kong
+  # probes are NOT it". So AC1 is AMENDED -- this story re-asserts health AFTER the deploy job ends
+  # and the Story 4.4 lock is released, which is the state the callee's check cannot see (a container
+  # healthy at hand-off that has since crash-looped). RE-IMPLEMENTING THE POLL IS PROHIBITED: a weaker
+  # duplicate of a stronger existing check is the anti-pattern this epic banned twice already.
+  # 🔴 AC2 STRENGTHENED, because `GET / == 200` CANNOT FAIL for the reasons a smoke check exists:
+  # nginx returns 200 for a stale index, a default page, or an index whose bundle 404s. At least one
+  # probe must be CONTENT-LEVEL -- fetch /, extract the hashed asset the HTML actually references,
+  # fetch THAT. The hash changes every build, so the check can only pass if the served bundle is the
+  # one this index names.
+  # 🔴 AC4 IS ONLY PARTIALLY DELIVERABLE AND IS RECORDED BLOCKED, NOT DROPPED. The Slack channel does
+  # not exist: the webhook is Story 1.13's unrecoverable stub (write-only, URL unrecoverable) and a
+  # NEW incoming webhook must be created in Slack. Owner: OLEG. Story 4.5 is backlog and was
+  # resequenced last by him. Same deferral Story 6.4 took 2026-08-14 -- "the production deploy must
+  # work, and must be provable, without any notification". AC4 CANNOT BE GRADED MET.
+  # ⚠️ AC3's log scan is the clause most likely to ship broken: a bare `grep ERROR` over nginx access
+  # logs fails correct deploys, and a just-started container may log nothing at all. The matcher must
+  # be written after reading the real log format, anchored -- and what an EMPTY window means must be
+  # decided (recommendation: pass, stated explicitly).
+  # 🔴 RUNNER: fe-prionex-prod-deploy ONLY. Never s10/e1-rung3 (dind, cannot reach the host stand),
+  # never e1-rung3-prod-deploy (the neighbours', declared :host -- run 629 proved it fails).
+  # 🔴 CURL THE STAND AT 0.0.0.0:8080, NEVER crm.prod.crm-prionex.online -- it RESOLVES AND REFUSES
+  # (#d43): a smoke check pointed there fails on a healthy stand.
+  # FROZEN: deploy-stand.yml above all (it owns the health and Kong probes), `derive`, nginx.conf,
+  # Dockerfile.prod, src/. The stand is READ ONLY -- nothing written, restarted or reconfigured.
+  # ⚠️ OPEN QUESTION 1 is the sharp one: how a FAILING row is earned without making production serve
+  # something wrong. Recommendation (c) -- point the check at a deliberately wrong port/path once:
+  # exercises the real code path, changes nothing, produces a real run id.
+  # Floor 7 / ceiling 17. D50 apparent-next; re-verify across refs, local branches AND the working tree.
+  # ✅ -> `review` 2026-08-27. Green on run 705. 6 of 7 ACs MET; AC4 PARTIAL and cannot be otherwise.
+  # 🔴 THE HEADLINE IS NOT THE GREEN RUN. It is FOUR RED RUNS ON A HEALTHY STAND (698/699/702), every
+  # one of them MY defect, and NONE of them diagnosable remotely. Job logs are not retrievable here
+  # and step-summary persistence is unproven, so "debug by re-dispatching" is guessing on a
+  # twenty-minute cycle -- it found nothing in four attempts. LOCAL REPRODUCTION (nginx:alpine + this
+  # repo's own nginx.conf + a fake dist/) answered in about a minute, twice. Written into the step
+  # comments so the next reader does not repeat it.
+  # 🔴 DEFECT FOUND IN PRODUCTION, NOT IN THE CHECK: the three security headers nginx.conf declares
+  # with `always` at server level are served on NO HTML response. add_header is inherited into a
+  # location only if that location declares none of its own; `location ~* \.html$` declares two and
+  # the SPA fallback serves EVERY route through it. Reproduced locally. FILED to deferred-work,
+  # OWNER OLEG (his own decision when the deferral was put to him) -- nginx.conf is frozen here and
+  # the fix changes what every environment serves, not just PROD.
+  # 🔴 AND THE CHECK FAILED ON A LOG LINE IT WROTE ITSELF: the 404 probe makes nginx log
+  # `[error] open() ".../definitely-not-a-real-bundle-6-7.js" failed`. A 404 is an ACCESS-log event;
+  # a missing STATIC FILE is an ERROR-log event. Closed two ways because either alone is fragile --
+  # the log window is read BEFORE the probes, and the matcher excludes that one filename NARROWLY,
+  # so a genuinely missing bundle still trips it. The irony is recorded: a step written against
+  # "a bare grep ERROR would fail a correct deploy" failed a correct deploy for a different reason.
+  # ✅ WHAT IT ADDS OVER THE CALLEE, and epic AC1 was ALREADY IMPLEMENTED so this matters: one read
+  # AFTER the deploy job ended and the 4.4 lock was released (decay after hand-off, which the
+  # callee's in-lock check cannot see), plus CONTENT -- the asset the SERVED index actually names.
+  # And a free discriminating negative from nginx.conf itself: try_files returns 200 for ANY path,
+  # but the regex asset location takes precedence with no try_files, so a non-existent .js MUST 404.
+  # Without that assertion the bundle probe would be VACUOUS -- any asset name would have passed.
+  # 🔶 AC4 PARTIAL: run marked failed ✅, operator pointed at rollback: true with the ledger as the
+  # tag source ✅, and the summary states NO Slack was sent and why ✅. The Slack clause is BLOCKED --
+  # channel does not exist, webhook unrecoverable, new one to be created by OLEG (Story 4.5). Same
+  # deferral 6.4 took. Substituting a channel is prohibited.
+  # ⚠️ NOT EARNED and labelled: a failure caused by production genuinely serving wrong content. OQ1
+  # proposed spending a run to force one; events overtook it -- three real red runs arrived unbidden,
+  # and they prove the assertions fire, not that production was wrong. Said unevenly, not claimed.
+  # Registry unchanged; nginx.conf, Dockerfile.prod and src/ untouched; derive byte-identical.
+  # Oleg merges; the row goes `done` only after that.
+  6-7-smoke-check-production-after-deploy: review
+  # 🔀 MERGE RESOLUTION 2026-08-27 (chore/story-6-8-cancelled <- origin/main 586a4559). BOTH SIDES
+  # KEPT WHOLE, neither absorbed -- the same resolution this file recorded for the 6.2 merge. The
+  # branch was cut when 6.7 was still `backlog`; main has since taken it through ready-for-dev to
+  # `review`. That value and its whole block come from MAIN and are untouched. What the branch
+  # carries is the 6.8 cancellation below, which main knows nothing about. They are not in conflict
+  # on the merits: they are different rows, and git only collided them because they are adjacent.
   # 6.8 CANCELLED 2026-08-26 by Oleg (sprint-change-proposal-2026-08-26-story-6-8-cancelled.md).
   # It was a rehearsal of a path Story 6.4 had already built AND dispatched live against the
   # production stand twice -- runs 634 and 642, build job skipped, stand healthy. FR24 is met by
