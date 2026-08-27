@@ -9,6 +9,7 @@ import {
 } from '@/lib/localeFormat'
 import { Pagination } from '@/components/ui/Pagination'
 import { useAuthStore } from '@/stores/authStore'
+import { useOperators } from '@/features/users/hooks'
 import { usePromisesAndCallbacks } from '@/features/training/hooks/usePromisesAndCallbacks'
 import type {
   CallMonitoringPeriod,
@@ -127,30 +128,42 @@ function formatAmount(raw: string | null | undefined, language: string): string 
 export function PromisesAndCallbacksSubTab() {
   const { t, i18n } = useTranslation('common')
   const [period, setPeriod] = useState<PeriodOption>('today')
+  const [operatorFilter, setOperatorFilter] = useState<'all' | string>('all')
   const [priorityFilter, setPriorityFilter] = useState<'all' | PromisePriority>('all')
   const [bannerDismissed, setBannerDismissed] = useState(false)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(50)
 
-  // Period change invalidates the current page offset — reset to page 1.
+  // Both are server-side filters, so each invalidates the current page offset.
   const changePeriod = (p: PeriodOption) => {
     setPeriod(p)
+    setPage(1)
+  }
+  const changeOperator = (value: string) => {
+    setOperatorFilter(value)
     setPage(1)
   }
 
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
   const projectIdNum = activeProjectId ? Number(activeProjectId) : null
+  const { data: operators = [] } = useOperators(projectIdNum)
 
-  const filters = useMemo<PromiseCallbackFilters>(
-    () => ({
+  const filters = useMemo<PromiseCallbackFilters>(() => {
+    // The select carries the operator id itself, so there is no name→id
+    // lookup that can miss. Resolving by `full_name` — as the sibling sub-tabs
+    // used to — fails silently in two ways: an unresolvable label yields
+    // `undefined`, which the BE reads as "every operator", and two employees
+    // sharing a name collapse onto whichever id the map kept last.
+    const operatorId = operatorFilter !== 'all' ? Number(operatorFilter) : undefined
+    return {
       period: PERIOD_TO_BACKEND[period],
+      user_ids: Number.isFinite(operatorId) ? [operatorId as number] : undefined,
       sort_by: 'date',
       sort_dir: 'desc',
       page,
       page_size: pageSize,
-    }),
-    [period, page, pageSize]
-  )
+    }
+  }, [period, operatorFilter, page, pageSize])
 
   const query = usePromisesAndCallbacks(filters, projectIdNum != null)
 
@@ -263,6 +276,30 @@ export function PromisesAndCallbacksSubTab() {
               </button>
             )
           })}
+
+          {/* Operator scope — sent to the BE as `user_ids`, which both the
+              list and the summary cards honour. */}
+          <div className="relative min-w-[180px]">
+            <select
+              value={operatorFilter}
+              onChange={(e) => changeOperator(e.target.value)}
+              aria-label={t('pages.training.promises.filters.operator', 'Operator')}
+              className="h-9 w-full appearance-none rounded-lg border border-[#EBECE8] bg-white px-3 pr-8 text-xs text-[#05040D] focus:outline-none"
+            >
+              <option value="all">
+                {t('pages.training.promises.filters.allOperators', 'All operators')}
+              </option>
+              {operators.map((op) => (
+                <option key={op.id} value={String(op.id)}>
+                  {op.full_name}
+                </option>
+              ))}
+            </select>
+            <Icons.ArrowDown
+              size={12}
+              className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-[#676767]"
+            />
+          </div>
         </div>
 
         {/* Priority pill chips */}
