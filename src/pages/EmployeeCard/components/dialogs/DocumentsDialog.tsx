@@ -3,8 +3,12 @@ import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/Button'
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
+import { Textarea } from '@/components/ui/Textarea'
 import { deleteDocument, uploadDocument } from '@/features/employeeCard/api/employeeCardApi'
-import { employeeCardKeys } from '@/features/employeeCard/hooks/useEmployeeCard'
+import {
+  employeeCardKeys,
+  useUpdateInterviewComment,
+} from '@/features/employeeCard/hooks/useEmployeeCard'
 import type { EmployeeCard } from '@/features/employeeCard/types.card'
 
 export interface DocumentsDialogProps {
@@ -24,6 +28,11 @@ export interface DocumentsDialogProps {
  * The server refuses anything whose bytes are not a document it accepts, and
  * that message is shown as it came rather than replaced with a general one,
  * because the specific reason is what tells somebody what to send instead.
+ *
+ * The interview comment is edited here too. The section displays it, so it
+ * needs somewhere to be written, and this is the dialog that section opens.
+ * It keeps its own Save because it is text somebody is part way through
+ * typing, unlike a file, which has either arrived or not.
  */
 export function DocumentsDialog({ card, projectId, open, onClose }: DocumentsDialogProps) {
   const { t } = useTranslation()
@@ -31,6 +40,9 @@ export function DocumentsDialog({ card, projectId, open, onClose }: DocumentsDia
   const fileInput = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [comment, setComment] = useState(card.interview_comment ?? '')
+  const saveComment = useUpdateInterviewComment(card.header.id, projectId)
+  const commentChanged = comment.trim() !== (card.interview_comment ?? '')
 
   const refresh = () =>
     queryClient.invalidateQueries({
@@ -125,6 +137,30 @@ export function DocumentsDialog({ card, projectId, open, onClose }: DocumentsDia
               ))}
             </ul>
           )}
+
+          <div className="border-border space-y-2 border-t pt-4">
+            <Textarea
+              label={t('pages.employeeCard.documents.interviewComment')}
+              rows={4}
+              value={comment}
+              disabled={saveComment.isPending}
+              onChange={(event) => setComment(event.target.value)}
+            />
+            {commentChanged && (
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                disabled={saveComment.isPending}
+                onClick={() => {
+                  setError(null)
+                  saveComment.mutate(comment.trim() || null, { onError: report })
+                }}
+              >
+                {t('actions.save')}
+              </Button>
+            )}
+          </div>
         </div>
       </ModalContent>
       <ModalFooter>

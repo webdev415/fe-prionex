@@ -33,10 +33,6 @@ export function PersonalDialog({ card, projectId, open, onClose }: PersonalDialo
 
   const [values, setValues] = useState({
     date_of_birth: card.personal.date_of_birth ?? '',
-    gender: card.personal.gender ?? '',
-    citizenship: card.personal.citizenship ?? '',
-    tax_id: card.personal.tax_id ?? '',
-    passport: card.personal.passport ?? '',
     telegram: card.personal.telegram ?? '',
     city: card.personal.city ?? '',
     address: card.personal.address ?? '',
@@ -75,10 +71,6 @@ export function PersonalDialog({ card, projectId, open, onClose }: PersonalDialo
         }}
       >
         {field('date_of_birth', t('pages.employeeCard.fields.dateOfBirth'), 'date')}
-        {field('gender', t('pages.employeeCard.fields.gender'))}
-        {field('citizenship', t('pages.employeeCard.fields.citizenship'))}
-        {field('tax_id', t('pages.employeeCard.fields.taxId'))}
-        {field('passport', t('pages.employeeCard.fields.passport'))}
         {field('telegram', t('pages.employeeCard.fields.telegram'))}
         {field('city', t('pages.employeeCard.fields.city'))}
         {field('address', t('pages.employeeCard.fields.address'))}

@@ -24,15 +24,11 @@ export interface CardHeader {
 
 export interface PersonalInformation {
   date_of_birth: string | null
-  gender: string | null
-  citizenship: string | null
   telegram: string | null
   city: string | null
   address: string | null
   nova_poshta_branch: string | null
   referral_source: string | null
-  tax_id: string | null
-  passport: string | null
 }
 
 export interface WorkInformation {
@@ -111,10 +107,6 @@ export interface EmployeeCard {
 
 export interface PersonalInformationUpdate {
   date_of_birth?: string | null
-  gender?: string | null
-  citizenship?: string | null
-  tax_id?: string | null
-  passport?: string | null
   telegram?: string | null
   city?: string | null
   address?: string | null

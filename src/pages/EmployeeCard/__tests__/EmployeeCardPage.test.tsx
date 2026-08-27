@@ -55,15 +55,11 @@ function card(overrides: Partial<EmployeeCard> = {}): EmployeeCard {
     },
     personal: {
       date_of_birth: null,
-      gender: null,
-      citizenship: null,
       telegram: '@olena',
       city: 'Kyiv',
       address: null,
       nova_poshta_branch: null,
       referral_source: null,
-      tax_id: null,
-      passport: null,
     },
     work: {
       project_id: 3,

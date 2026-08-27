@@ -23,15 +23,11 @@ function card(overrides: Partial<EmployeeCard> = {}): EmployeeCard {
     },
     personal: {
       date_of_birth: '1994-05-12',
-      gender: null,
-      citizenship: null,
       telegram: '@olena',
       city: 'Kyiv',
       address: '22 Khreshchatyk St.',
       nova_poshta_branch: 'Branch No. 5, Kyiv',
       referral_source: 'Referral - Andrii Melnyk',
-      tax_id: null,
-      passport: null,
     },
     work: {
       project_id: 3,

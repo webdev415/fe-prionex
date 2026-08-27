@@ -22,6 +22,7 @@ import { DoubleButton } from '@/components/ui/DoubleButton'
 import { LANGUAGE_NAMES, SUPPORTED_LANGUAGES, normalizeBackendLanguage } from '@/lib/i18n'
 import type { UpdateMyProfileInput } from '@/types/api'
 import { AppearanceSettings } from './AppearanceSettings'
+import { PersonalInformationSection } from './PersonalInformationSection'
 import { KeyboardShortcutsSettings } from '@/features/taHotkeys/components/KeyboardShortcutsSettings'
 
 const TRIGGER_CLASS =
@@ -779,6 +780,8 @@ export function ProfileSettingsPage() {
                   </div>
                 )}
               </form>
+
+              <PersonalInformationSection />
             </div>
           )}
         </div>

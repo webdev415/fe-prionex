@@ -8530,6 +8530,11 @@
         "clear": "Clear Selection",
         "saved": "Shortcut saved",
         "reassigned": "Shortcut moved from \"{{name}}\""
+      },
+      "personalInformation": {
+        "title": "Personal Information",
+        "description": "Kept in your employee card. Anything else in the card is maintained by HR.",
+        "saved": "Personal information saved"
       }
     },
     "reports": {
@@ -10876,10 +10881,6 @@
         "institution": "Educational Institution",
         "faculty": "Faculty / Specialty",
         "graduationYear": "Year of Graduation",
-        "gender": "Gender",
-        "citizenship": "Citizenship",
-        "taxId": "Tax ID",
-        "passport": "Passport (Series and Number)",
         "childName": "Child's Full Name"
       },
       "documents": {

@@ -50,15 +50,11 @@ function card(overrides: Partial<EmployeeCard> = {}): EmployeeCard {
     },
     personal: {
       date_of_birth: '1994-05-12',
-      gender: null,
-      citizenship: null,
       telegram: '@olena',
       city: 'Kyiv',
       address: null,
       nova_poshta_branch: null,
       referral_source: null,
-      tax_id: null,
-      passport: null,
     },
     work: {
       project_id: null,
@@ -104,11 +100,12 @@ describe('PersonalDialog', () => {
     )
   })
 
-  it('offers the identity documents the design asks for', () => {
+  it('offers every field the section displays, so all of them can be changed', () => {
     render(<PersonalDialog card={card()} projectId={null} open onClose={vi.fn()} />)
 
-    expect(screen.getByLabelText('pages.employeeCard.fields.taxId')).toBeInTheDocument()
-    expect(screen.getByLabelText('pages.employeeCard.fields.passport')).toBeInTheDocument()
+    for (const field of ['telegram', 'city', 'address', 'referralSource']) {
+      expect(screen.getByLabelText(`pages.employeeCard.fields.${field}`)).toBeInTheDocument()
+    }
   })
 
   it('keeps the dialog open and says why when the server refuses', async () => {
