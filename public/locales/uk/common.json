@@ -10865,6 +10865,49 @@
         "documents-and-hiring": "Документи та прийняття",
         "surveys": "Опитування",
         "chronology": "Хронологія"
+      },
+      "previousEmployee": "Попередній співробітник",
+      "nextEmployee": "Наступний співробітник",
+      "position": "{{position}} з {{total}}",
+      "edit": "Редагувати",
+      "notFilledIn": "Не заповнено",
+      "fields": {
+        "fullName": "ПІБ",
+        "dateOfBirth": "Дата народження",
+        "phone": "Телефон",
+        "telegram": "Telegram",
+        "email": "Пошта",
+        "city": "Місто",
+        "address": "Адреса",
+        "novaPoshta": "Нова Пошта",
+        "workFormat": "Формат роботи",
+        "referralSource": "Звідки дізнався",
+        "department": "Відділ",
+        "position": "Посада",
+        "manager": "Керівник",
+        "hiredAt": "Дата прийняття",
+        "contactPerson": "Контактна особа",
+        "children": "Діти",
+        "name": "Імя",
+        "relation": "Звязок",
+        "militaryService": "Військовий облік",
+        "visaStatus": "Статус візи",
+        "languages": "Володіння мовами",
+        "educationLevel": "Рівень освіти",
+        "institution": "Навчальний заклад",
+        "faculty": "Факультет / Спеціальність",
+        "graduationYear": "Рік випуску"
+      },
+      "documents": {
+        "none": "Документів не додано.",
+        "download": "Завантажити",
+        "downloadFailed": "Не вдалося завантажити документ.",
+        "uploaded": "Завантажено {{date}} · {{size}}",
+        "interviewComment": "Коментар після співбесіди"
+      },
+      "surveys": {
+        "none": "Опитувань не записано.",
+        "pending": "Очікує"
       }
     }
   },

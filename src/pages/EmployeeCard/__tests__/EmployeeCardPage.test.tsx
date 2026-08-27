@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import type { EmployeeCard } from '@/features/employeeCard/types.card'
 
@@ -8,12 +8,18 @@ const state = vi.hoisted(() => ({
   isLoading: false,
   isError: false,
   askedFor: undefined as unknown,
+  neighbours: undefined as unknown,
+  neighboursQuery: undefined as unknown,
 }))
 
 vi.mock('@/features/employeeCard/hooks/useEmployeeCard', () => ({
   useEmployeeCard: (userId: number, projectId?: number | null) => {
     state.askedFor = { userId, projectId }
     return { data: state.card, isLoading: state.isLoading, isError: state.isError }
+  },
+  useCardNeighbours: (userId: number, listQuery: string) => {
+    state.neighboursQuery = { userId, listQuery }
+    return { data: state.neighbours }
   },
 }))
 
@@ -96,6 +102,8 @@ describe('EmployeeCardPage', () => {
     state.isLoading = false
     state.isError = false
     state.askedFor = undefined
+    state.neighbours = undefined
+    state.neighboursQuery = undefined
   })
 
   it('reads the employee from the address', () => {
@@ -123,9 +131,36 @@ describe('EmployeeCardPage', () => {
   it('shows whose card this is', () => {
     renderAt('/dashboard/team-management/users/7')
 
-    expect(screen.getByRole('heading', { name: 'Olena Kovalchuk' })).toBeInTheDocument()
-    expect(screen.getByText('Senior Operator')).toBeInTheDocument()
-    expect(screen.getByText('Serhiy Lytvyn')).toBeInTheDocument()
+    const panel = screen.getByRole('complementary')
+    expect(within(panel).getByRole('heading', { name: 'Olena Kovalchuk' })).toBeInTheDocument()
+    expect(within(panel).getByText('Senior Operator')).toBeInTheDocument()
+    expect(within(panel).getByText('Serhiy Lytvyn')).toBeInTheDocument()
+  })
+
+  it('shows the sections the card is made of', () => {
+    renderAt('/dashboard/team-management/users/7')
+
+    expect(
+      screen.getByRole('heading', { name: 'pages.employeeCard.sections.personal-information' })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'pages.employeeCard.sections.work-information' })
+    ).toBeInTheDocument()
+    expect(screen.getByText('Kyiv')).toBeInTheDocument()
+  })
+
+  it('says a field is empty rather than leaving a gap', () => {
+    renderAt('/dashboard/team-management/users/7')
+
+    expect(screen.getAllByText('pages.employeeCard.notFilledIn').length).toBeGreaterThan(0)
+  })
+
+  it('offers no edit action to somebody who may only read', () => {
+    renderAt('/dashboard/team-management/users/7')
+
+    expect(
+      screen.queryByRole('button', { name: 'pages.employeeCard.edit' })
+    ).not.toBeInTheDocument()
   })
 
   it('offers a tab for every section', () => {
@@ -176,5 +211,72 @@ describe('EmployeeCardPage', () => {
     renderAt('/dashboard/team-management/users/not-a-number')
 
     expect(screen.getByText('pages.employeeCard.notFound')).toBeInTheDocument()
+  })
+})
+
+describe('EmployeeCardPage navigation', () => {
+  beforeEach(() => {
+    state.card = card()
+    state.isLoading = false
+    state.isError = false
+    state.neighbours = {
+      position: 3,
+      total: 247,
+      previous_user_id: 6,
+      next_user_id: 8,
+    }
+  })
+
+  it('asks for the neighbours in the list the reader came from', () => {
+    renderAt('/dashboard/team-management/users/7?project_id=3&status=active')
+
+    expect(state.neighboursQuery).toEqual({
+      userId: 7,
+      listQuery: 'project_id=3&status=active',
+    })
+  })
+
+  it('says where in the list this employee sits', () => {
+    renderAt('/dashboard/team-management/users/7')
+
+    expect(screen.getByText('pages.employeeCard.position')).toBeInTheDocument()
+  })
+
+  it('walks to either side without losing the filters', () => {
+    renderAt('/dashboard/team-management/users/7?project_id=3')
+
+    expect(
+      screen.getByRole('link', { name: 'pages.employeeCard.previousEmployee' })
+    ).toHaveAttribute('href', '/dashboard/team-management/users/6?project_id=3')
+    expect(screen.getByRole('link', { name: 'pages.employeeCard.nextEmployee' })).toHaveAttribute(
+      'href',
+      '/dashboard/team-management/users/8?project_id=3'
+    )
+  })
+
+  it('offers nothing to click at the end of the list', () => {
+    state.neighbours = {
+      position: 247,
+      total: 247,
+      previous_user_id: 6,
+      next_user_id: null,
+    }
+
+    renderAt('/dashboard/team-management/users/7')
+
+    expect(screen.getByRole('button', { name: 'pages.employeeCard.nextEmployee' })).toBeDisabled()
+  })
+
+  it('shows no position for somebody the list does not contain', () => {
+    state.neighbours = {
+      position: null,
+      total: 247,
+      previous_user_id: null,
+      next_user_id: null,
+    }
+
+    renderAt('/dashboard/team-management/users/7')
+
+    expect(screen.queryByText('pages.employeeCard.position')).not.toBeInTheDocument()
   })
 })

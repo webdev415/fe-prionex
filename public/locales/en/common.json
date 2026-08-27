@@ -10844,6 +10844,49 @@
         "documents-and-hiring": "Documents and Hiring",
         "surveys": "Surveys",
         "chronology": "Chronology"
+      },
+      "previousEmployee": "Previous employee",
+      "nextEmployee": "Next employee",
+      "position": "{{position}} from {{total}}",
+      "edit": "Edit",
+      "notFilledIn": "Not filled in",
+      "fields": {
+        "fullName": "Full Name",
+        "dateOfBirth": "Date of Birth",
+        "phone": "Phone Number",
+        "telegram": "Telegram",
+        "email": "Email",
+        "city": "City",
+        "address": "Address",
+        "novaPoshta": "Nova Poshta",
+        "workFormat": "Work Format",
+        "referralSource": "Where referred from",
+        "department": "Department",
+        "position": "Position",
+        "manager": "Manager",
+        "hiredAt": "Date of Hire",
+        "contactPerson": "Contact Person",
+        "children": "Children",
+        "name": "Name",
+        "relation": "Relationship",
+        "militaryService": "Military Service",
+        "visaStatus": "Visa Status",
+        "languages": "Foreign Language Proficiency",
+        "educationLevel": "Level of Education",
+        "institution": "Educational Institution",
+        "faculty": "Faculty / Specialty",
+        "graduationYear": "Year of Graduation"
+      },
+      "documents": {
+        "none": "No documents attached.",
+        "download": "Download",
+        "downloadFailed": "That document could not be downloaded.",
+        "uploaded": "Uploaded {{date}} · {{size}}",
+        "interviewComment": "Post-Interview Comment"
+      },
+      "surveys": {
+        "none": "No surveys recorded.",
+        "pending": "Pending"
       }
     }
   },

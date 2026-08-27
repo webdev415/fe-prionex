@@ -10,6 +10,8 @@ import type {
 
 export const employeeCardKeys = {
   all: ['employee-card'] as const,
+  neighbours: (userId: number, listQuery: string) =>
+    ['employee-card', 'neighbours', userId, listQuery] as const,
   one: (userId: number, projectId?: number | null) =>
     ['employee-card', userId, projectId ?? null] as const,
 }
@@ -73,4 +75,12 @@ export function useUpdateInterviewComment(userId: number, projectId?: number | n
     projectId,
     employeeCardApi.updateInterviewComment
   )
+}
+
+export function useCardNeighbours(userId: number, listQuery: string) {
+  return useQuery({
+    queryKey: employeeCardKeys.neighbours(userId, listQuery),
+    queryFn: () => employeeCardApi.getCardNeighbours(userId, listQuery),
+    enabled: userId > 0,
+  })
 }

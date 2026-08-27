@@ -1,10 +1,14 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { useParams, useSearchParams } from 'react-router-dom'
 import { ChronologySection } from '@/features/employeeCard'
-import { useEmployeeCard } from '@/features/employeeCard/hooks/useEmployeeCard'
+import { useCardNeighbours, useEmployeeCard } from '@/features/employeeCard/hooks/useEmployeeCard'
+import { CardNavigation } from './components/CardNavigation'
+import { CardSections } from './components/CardSections'
 import { CardTabs } from './components/CardTabs'
+import { DocumentsSection } from './components/DocumentsSection'
 import { ProfilePanel } from './components/ProfilePanel'
+import { SurveysSection } from './components/SurveysSection'
 import { useScrollSpy } from './hooks/useScrollSpy'
 
 const SECTION_IDS = [
@@ -27,6 +31,7 @@ export function EmployeeCardPage() {
   const listQuery = searchParams.toString()
 
   const { data, isLoading, isError } = useEmployeeCard(employeeId, projectId)
+  const { data: neighbours } = useCardNeighbours(employeeId, listQuery)
   const activeSection = useScrollSpy(SECTION_IDS)
 
   const tabs = useMemo(
@@ -44,12 +49,7 @@ export function EmployeeCardPage() {
 
   return (
     <div className="space-y-4 p-4 md:p-6">
-      <Link
-        to={`/dashboard/team-management/users${listQuery ? `?${listQuery}` : ''}`}
-        className="text-muted-foreground hover:text-foreground inline-flex items-center gap-2 text-sm"
-      >
-        {t('pages.employeeCard.backToList')}
-      </Link>
+      <CardNavigation listQuery={listQuery} neighbours={neighbours} />
 
       {isLoading && <p className="text-muted-foreground">{t('common.loading')}</p>}
 
@@ -70,19 +70,9 @@ export function EmployeeCardPage() {
               ariaLabel={t('pages.employeeCard.sectionNav')}
             />
 
-            {SECTION_IDS.filter((id) => id !== 'chronology').map((id) => (
-              <section
-                key={id}
-                id={id}
-                tabIndex={-1}
-                aria-labelledby={`${id}-heading`}
-                className="border-border bg-card scroll-mt-24 rounded-xl border p-6"
-              >
-                <h2 id={`${id}-heading`} className="text-foreground text-lg font-semibold">
-                  {t(`pages.employeeCard.sections.${id}`)}
-                </h2>
-              </section>
-            ))}
+            <CardSections card={data} />
+            <DocumentsSection card={data} />
+            <SurveysSection card={data} />
 
             <section
               id="chronology"

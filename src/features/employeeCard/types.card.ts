@@ -144,3 +144,10 @@ export interface AdditionalInformationUpdate {
   educations?: Array<Omit<Education, 'id'>>
   languages?: Array<Omit<Language, 'id'>>
 }
+
+export interface CardNeighbours {
+  position: number | null
+  total: number
+  previous_user_id: number | null
+  next_user_id: number | null
+}

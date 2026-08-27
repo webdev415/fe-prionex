@@ -1,6 +1,7 @@
 import api from '@/lib/api'
 import type {
   AdditionalInformationUpdate,
+  CardNeighbours,
   EmployeeCard,
   PersonalInformationUpdate,
   RelativeInput,
@@ -84,4 +85,20 @@ export async function downloadDocument(userId: number, documentId: number): Prom
     responseType: 'blob',
   })
   return response.data as Blob
+}
+
+/**
+ * Where this employee sits in the list the reader came from.
+ *
+ * The list's own query string is passed straight through, so Previous and
+ * Next walk the order that was on screen rather than some default one.
+ */
+export async function getCardNeighbours(
+  userId: number,
+  listQuery: string
+): Promise<CardNeighbours> {
+  const response = await api.get<CardNeighbours>(
+    `${base(userId)}/neighbours${listQuery ? `?${listQuery}` : ''}`
+  )
+  return response.data
 }
