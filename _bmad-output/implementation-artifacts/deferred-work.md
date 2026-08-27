@@ -5082,8 +5082,31 @@ Both production names now work — but the deployed bundle has `https://api.crm-
 Dockerfile declares the `ARG` with no default.
 
 **Two steps, and both are decisions rather than consequences of the front being up:**
-1. change `VITE_API_BASE_URL` in the **prod** OpenBao path to `https://api-crm.prod.crm-prionex.online`;
+1. change `VITE_API_BASE_URL` in the **prod OpenBao path** to `https://api-crm.prod.crm-prionex.online`;
 2. rebuild and redeploy (`deploy-prod.yml`, `rollback: false` — that path rebuilds).
+
+🔴 **CHANGE IT IN OPENBAO, NOT IN THE FORGEJO VARIABLE — measured 2026-08-27, and the trap is that
+both look right.** The repository DOES define Forgejo variables that appear to be the source:
+
+```
+VITE_API_BASE_URL_PROD    = https://api.crm-prionex.online     <- legacy
+VITE_API_BASE_URL_PREPROD = https://api.crm.preprod.crm-prionex.online
+VITE_API_BASE_URL_DEV     = https://api.dev.crm-prionex.online
+VITE_WS_URL_*             = the matching wss:// values
+```
+
+**Nothing reads them.** `grep -rn 'vars\.VITE_API_BASE_URL' .forgejo/workflows/` returns nothing;
+`build.yml:1376` feeds the Docker build args from `steps.bao.outputs.api_url`, i.e. OpenBao
+(`build.yml:588`). Editing the Forgejo variable would change **nothing** and the rebuild would look
+identical.
+
+⚠️ **Why the mistake is natural, and why it stayed invisible:** the repo genuinely uses BOTH
+mechanisms — `VITE_OPERATOR_PHONE_URL_*` *is* read through `vars.` (`build.yml:737-746`) — and the
+two sources currently hold the SAME value for the API, so they have never visibly diverged.
+
+**This is a second finding in its own right: two sources of truth for one build-time value, one of
+them inert.** Either delete the dead variables or wire them up; leaving both is how a future change
+gets made in the wrong place. **Owner: Oleg.**
 
 ⚠️ **This moves production off the legacy API onto the prod contour** — a change to where production
 traffic goes, not a cosmetic one. **Removal trigger:** the prod bundle resolves to the prod API name.
