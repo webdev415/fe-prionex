@@ -178,6 +178,29 @@ describe('sendChatMessage — expert turn', () => {
     vi.unstubAllGlobals()
   })
 
+  it('reads the usage the live gateway sends — inside the done frame', async () => {
+    // Боевая форма (ASSISTANT_MODES.md §4): отдельного `result` шлюз не шлёт,
+    // расход приезжает блоком внутри `done`.
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue(
+          sseResponse([
+            'event: text\ndata: {"delta":"Готово"}\n\n',
+            'event: done\ndata: {"session_id":"abc","cost_usd":0.02,"expert":{"model":"claude-opus-5","cost_usd":0.31,"input_tokens":1200,"output_tokens":400,"cache_read_tokens":10,"cache_write_tokens":5}}\n\n',
+          ])
+        )
+    )
+
+    const result = await sendChatMessage({ ...baseRequest, expert: { model: 'claude-opus-5' } })
+
+    // Цена берётся из expert.cost_usd, а не из занижённого done.cost_usd.
+    expect(result.expert).toMatchObject({ model: 'claude-opus-5', costUsd: 0.31 })
+
+    vi.unstubAllGlobals()
+  })
+
   it('leaves an ordinary turn without an expert block or usage', async () => {
     const fetchMock = vi
       .fn()

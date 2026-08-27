@@ -77,8 +77,8 @@ export interface AssistantChatResponse {
   /** Per-fact citations streamed in the `citations` frame (empty if none). */
   citations?: AssistantCitation[]
   /**
-   * Расход экспертного хода (модель + стоимость + токены) из фрейма `result`.
-   * Есть только у экспертных ходов; обычный ход возвращает `undefined`.
+   * Расход экспертного хода (модель + стоимость + токены) — блок `expert` в
+   * `done`. Есть только у экспертных ходов; обычный возвращает `undefined`.
    */
   expert?: AssistantExpertUsage
 }
@@ -171,7 +171,7 @@ export interface SendChatMessageCallbacks {
   onFollowups?: (questions: string[]) => void
   onToolStart?: (tool: AssistantToolStart) => void
   onToolEnd?: (tool: AssistantToolEnd) => void
-  /** Расход экспертного хода (фрейм `result`) — модель, деньги, токены. */
+  /** Расход экспертного хода (блок `expert` в `done`) — модель, деньги, токены. */
   onExpert?: (usage: AssistantExpertUsage) => void
   onError?: (error: SseErrorPayload) => void
   onDone?: (payload: SseDonePayload) => void
