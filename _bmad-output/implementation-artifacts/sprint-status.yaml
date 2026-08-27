@@ -1830,7 +1830,57 @@ development_status:
   # dispatched for them); the four platform findings that were in no document (#d47); and the M7 bundle
   # re-owned BY NAME to Story 6.6.
   6-4-deploy-to-production-by-dispatch: done
-  6-5-guard-promotion-by-commit-identity: backlog
+  # Contexted 2026-08-27 off origin/main @ 46e7a26a (the merge of PR #102, Story 6.6), branch
+  # `story-6-5/pr-1-context`. THE SEAM IS READY AND WAS KEPT READY: 6.4 made `derive` a separate
+  # named step "precisely so 6.5 has somewhere obvious to land", and 6.6 left it BYTE-IDENTICAL on
+  # purpose, verified by a separate extraction at its own closeout. Consume its outputs; touch it not.
+  # 🔴 THE CENTRAL DESIGN CONSTRAINT, and it is the INVERSE of Story 6.6's: 6.6's fourteenth defect
+  # was a guard that failed OPEN (a probe said "absent", the code believed it, a permanent tag got
+  # written). Here the polarity flips -- a false 404 REFUSES a legitimate release, which is loud and
+  # recoverable, while a false 200 ADMITS AN UNVALIDATED COMMIT TO PRODUCTION. So: only a classified
+  # 200 may mean "validated"; 401/403/000/timeout/unparseable all REFUSE. Never an error as existence.
+  # 🔴 BOTH MATRIX ROWS ARE FREE AND MEASURED (paginated read, 2026-08-27):
+  #   commit a99ccd44c5a3 -> preprod-a99ccd44c5a3 EXISTS  -> guard PASSES
+  #   commit 28f7fd36b75e -> preprod-28f7fd36b75e EXISTS  -> guard PASSES
+  #   commit 308ea1520c59 -> preprod-308ea1520c59 ABSENT  -> guard REFUSES  <- the discriminating row
+  # 308ea1520c59 is Story 6.6's own proof image: built at environment=prod, never through PRE-PROD.
+  # Exactly the shape FR16 exists to stop, available at zero cost.
+  # ✅ AND THE PASS ROW COSTS NO DEPLOY: dispatch sha-a99ccd44c5a3-preprod with rollback:false -- the
+  # guard passes, then build.yml's Enforce AC2 refuses to repoint the existing sha-a99ccd44c5a3-prod,
+  # so the run goes red AT THE BUILD, AFTER the guard. That red is the evidence, and must be labelled
+  # as such rather than read as a failure of this story.
+  # 🔴 THE GUARD MUST NOT BE A `uses:` JOB -- #d21 run 631: a SKIPPED `uses:` wrapper reports SUCCESS,
+  # and 6.6 saw it live in its own run 662 (build wrapper success, inner job skipped). A guard that
+  # reports green when it did not run is worse than no guard. Plain job, node-20.
+  # 🔴 IT MUST RUN BEFORE `build`: otherwise an unvalidated commit burns a build first, and a commit
+  # already built goes red at Enforce AC2 without the operator ever learning the guard would have
+  # refused it. AC5 requires the failure to NAME the missing preprod-<sha>.
+  # 🔴 #d2 IS YOURS AND IT CONTAINS AN ERROR. Its own status line says "спроектировано, не
+  # реализовано -- обновить в story 6.5". Beyond flipping that: its rollback rationale claims the
+  # guard is skipped partly because preprod-<sha> may already have been DELETED BY RETENTION. IT
+  # CANNOT BE -- preprod-<12hex> matches keep_pattern's (pre)?prod-[0-9a-f]{7,64} and compiled KEEP
+  # against the stored package_cleanup_rule row read from the DB on 2026-08-27. The skip stands on
+  # its own: a rollback restores something production already ran.
+  # ⚠️ THE WAIVER GAP IS 6.5's TO DECIDE AND CANNOT BE CLOSED HERE. preprod-a99ccd44c5a3 exists and
+  # carries NO waiver signal, yet it was minted on a 7/12 pass / 5 BLOCKED run dispatched under
+  # #d40's waiver. The signal is not in the tier this guard reads (5.4's own D1). 6.2 already wrote
+  # the policy half. PROHIBITED: grepping docs/preprod-candidates.md from the workflow -- that is
+  # epic AC2's weaker-duplicate prohibition and would give false assurance. State the limit in the
+  # SUCCESS message: a green guard means a marker exists, not that validation was clean.
+  # ⚠️ AC5's "fails before touching s2" AMENDED and declared: s2 is legacy, NFR5 forbids touching it
+  # at all, the stand is s10. Read as "before the build and before the production stand" -- the same
+  # amendment 6.6 made to its own AC4, declared rather than rewritten silently.
+  # Also owned: three dated citations in docs/production-approval-regulation.md that name Story 6.5
+  # as their reviser, and two deferred-work entries (the CRM/api-prionex positioning, the waiver gap).
+  # FROZEN: `derive` above all -- plus deploy-stand.yml, build.yml, both recorders, and every doc
+  # except #d2, the regulation and the decision record. NO HOST IS TOUCHED. REGISTRY IS READ-ONLY.
+  # Decision number D49 apparent-next; re-verify across origin refs, LOCAL branches AND the working
+  # tree (6.3's OQ10 hole, which 6.6 checked deliberately).
+  # ⚠️ Story 6.8's cancellation was authored and UNPUSHED on 2026-08-27 and touches this file and
+  # deferred-work.md. Check before assuming; merge rather than rebase if a PR is already open.
+  # Floor 8 / ceiling 18 runs, OPEN. Ceiling budgets a fix-pass and a closeout PR because 6.6's
+  # second review needed both.
+  6-5-guard-promotion-by-commit-identity: ready-for-dev
   # Contexted 2026-08-26 (branch `story-6-6/pr-1-context`) from a SCRATCHPAD WORKTREE off origin/main
   # at 584cc886 (PR #97, Story 6.4). 🔴 origin/main MOVED THREE TIMES DURING CONTEXTING --
   # cfbad179 -> 308ea152 -> 584cc886 -- and both of this story's dependencies landed mid-analysis:
