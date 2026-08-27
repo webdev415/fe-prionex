@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { ChronologySection } from '@/features/employeeCard'
@@ -9,6 +9,9 @@ import { CardTabs } from './components/CardTabs'
 import { DocumentsSection } from './components/DocumentsSection'
 import { ProfilePanel } from './components/ProfilePanel'
 import { SurveysSection } from './components/SurveysSection'
+import { AdditionalDialog } from './components/dialogs/AdditionalDialog'
+import { ContactsDialog } from './components/dialogs/ContactsDialog'
+import { PersonalDialog } from './components/dialogs/PersonalDialog'
 import { useScrollSpy } from './hooks/useScrollSpy'
 
 const SECTION_IDS = [
@@ -33,6 +36,7 @@ export function EmployeeCardPage() {
   const { data, isLoading, isError } = useEmployeeCard(employeeId, projectId)
   const { data: neighbours } = useCardNeighbours(employeeId, listQuery)
   const activeSection = useScrollSpy(SECTION_IDS)
+  const [editing, setEditing] = useState<string | null>(null)
 
   const tabs = useMemo(
     () =>
@@ -70,7 +74,7 @@ export function EmployeeCardPage() {
               ariaLabel={t('pages.employeeCard.sectionNav')}
             />
 
-            <CardSections card={data} />
+            <CardSections card={data} onEdit={setEditing} />
             <DocumentsSection card={data} />
             <SurveysSection card={data} />
 
@@ -81,6 +85,31 @@ export function EmployeeCardPage() {
             >
               <ChronologySection userId={employeeId} />
             </section>
+
+            {editing === 'personal' && (
+              <PersonalDialog
+                card={data}
+                projectId={projectId}
+                open
+                onClose={() => setEditing(null)}
+              />
+            )}
+            {editing === 'contacts' && (
+              <ContactsDialog
+                card={data}
+                projectId={projectId}
+                open
+                onClose={() => setEditing(null)}
+              />
+            )}
+            {editing === 'additional' && (
+              <AdditionalDialog
+                card={data}
+                projectId={projectId}
+                open
+                onClose={() => setEditing(null)}
+              />
+            )}
           </div>
         </div>
       )}

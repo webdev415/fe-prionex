@@ -10875,7 +10875,12 @@
         "educationLevel": "Level of Education",
         "institution": "Educational Institution",
         "faculty": "Faculty / Specialty",
-        "graduationYear": "Year of Graduation"
+        "graduationYear": "Year of Graduation",
+        "gender": "Gender",
+        "citizenship": "Citizenship",
+        "taxId": "Tax ID",
+        "passport": "Passport (Series and Number)",
+        "childName": "Child's Full Name"
       },
       "documents": {
         "none": "No documents attached.",
@@ -10887,6 +10892,16 @@
       "surveys": {
         "none": "No surveys recorded.",
         "pending": "Pending"
+      },
+      "saveFailed": "That could not be saved.",
+      "dialogs": {
+        "personal": "Personal Data",
+        "work": "Personnel Data",
+        "contacts": "Contacts and Family",
+        "additional": "Additional Data",
+        "add": "Add",
+        "education": "Education",
+        "languagesHint": "For example: English (B2), Polish (A2)"
       }
     }
   },

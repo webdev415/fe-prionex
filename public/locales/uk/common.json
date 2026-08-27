@@ -10896,7 +10896,12 @@
         "educationLevel": "Рівень освіти",
         "institution": "Навчальний заклад",
         "faculty": "Факультет / Спеціальність",
-        "graduationYear": "Рік випуску"
+        "graduationYear": "Рік випуску",
+        "gender": "Стать",
+        "citizenship": "Громадянство",
+        "taxId": "ІПН",
+        "passport": "Паспорт (серія та номер)",
+        "childName": "ПІБ дитини"
       },
       "documents": {
         "none": "Документів не додано.",
@@ -10908,6 +10913,16 @@
       "surveys": {
         "none": "Опитувань не записано.",
         "pending": "Очікує"
+      },
+      "saveFailed": "Не вдалося зберегти.",
+      "dialogs": {
+        "personal": "Особисті дані",
+        "work": "Кадрові дані",
+        "contacts": "Контакти та сімя",
+        "additional": "Додаткові дані",
+        "add": "Додати",
+        "education": "Освіта",
+        "languagesHint": "Наприклад: English (B2), Polish (A2)"
       }
     }
   },
