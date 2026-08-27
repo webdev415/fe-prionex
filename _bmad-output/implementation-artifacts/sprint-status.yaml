@@ -2047,7 +2047,35 @@ development_status:
   # 14 and MISSED FIVE; the commit_sha rule earned its keep on the first try. All 7 dispatch rows carry
   # the DISPATCH REF as commit_sha, not what they acted on -- named so it cannot mislead.
   # Oleg merges; the row goes `done` only after that.
-  6-6-record-the-deployed-production-image: review
+  # 🔴 CODE REVIEW #2, 2026-08-27, FABLE (a DIFFERENT model from the Opus that implemented it, at
+  # Oleg's instruction). VERDICT: CHANGES REQUESTED. Row `review` -> `in-progress`. 7 high, 12 medium.
+  # 🔴 TWO OF THE HIGHS ARE DEFECTS OF TRUTH IN COMMENTS WRITTEN THE SAME SESSION BY THE IMPLEMENTER:
+  #   H1: finding #3's `if: always()` fix added the CONDITION and not a new BODY, so the disclaimer now
+  #       prints "### PROD markers recorded" -- with blank marker names -- on runs that wrote NOTHING,
+  #       including all four Task 6 refusals. The fix inverted a true sentence into a false one.
+  #   H2: the SAME `always()` put the listing step (step 15) after `Install docker CLI` (step 5), so on
+  #       a G1-G4 refusal it still runs: loads the RO credential, CURLS THE REGISTRY, then dies on
+  #       jq-127 misreported as "a PARSE failure". So the shipped outcome matrix's own line "REFUSE run
+  #       663 (2s, BEFORE ANY NETWORK CALL)" is FALSE at run level -- a false claim about the story's
+  #       own evidence, written in this session.
+  # 🔴 H3: AC4 GRADED MET, FINAL CLAUSE NEVER PERFORMED. AC4 requires the statement in the decision
+  #       record AND in the workflow's disclaimer step; the step body is md5-identical to 6.3's.
+  #       FOURTH occurrence of that shape in this project, produced while quoting the rule against it.
+  # 🔴 H5: THE FOURTEENTH FIX CLOSED THE WRONG HALF. The tri-state guard accepts a literal `false`,
+  #       which is exactly what a FALSE 404 yields -- both refusals still bypassed, permanent tag still
+  #       repointable while the log says "for the first time". Needs a re-inspect immediately before
+  #       `create`, not a probe-output check.
+  # 🔴 H6: the `Link` next-URL is followed to `http://` and to ANY host, carrying the RO credential.
+  # 🔴 H4/H7: AC3 overstated (no DB re-read of package_cleanup_rule; G4 never checks sha-<12hex>-prod)
+  #       and AC2's "durable sink" is hollow -- deploy-prod.yml reads none of the four outputs, and on
+  #       run 668 the displaced marker was the one Prohibition 13 bars from the ledger: the exact
+  #       collapse the review item predicted.
+  # ⚠️ ALL 16 [Review][Patch] ITEMS FROM REVIEW #1 ARE STILL UNCHECKED and >=5 wholly unapplied.
+  # ✅ VERIFIED CLEAN BY FABLE: 9 frozen workflows + `derive` byte-identical (md5); zero expressions in
+  # any run:; 18/18 run bodies bash -n; the record/record-outcome if: matrix correct on EVERY
+  # build/deploy/derive combination; AC1's PARTIALLY MET grade correct and not too harsh; AC5/7/8/9
+  # correctly MET; Prohibitions 1-5, 7-12 clean.
+  6-6-record-the-deployed-production-image: in-progress
   6-7-smoke-check-production-after-deploy: backlog
   6-8-roll-back-production-to-a-previous-release: backlog
   6-9-cut-production-over-with-a-no-op-deploy: backlog

@@ -4,7 +4,7 @@
 baseline_commit: 13a60eca40a46d8e147a6cb29fe04c5f12441651
 ---
 
-Status: review
+Status: in-progress
 
 Epic: 6 — Production Release and Verified Rollback
 Story key: `6-6-record-the-deployed-production-image`
@@ -1106,6 +1106,52 @@ a value it never held).
 ### File List
 
 ### Review Findings
+
+## 🔴 CODE REVIEW #2 — 2026-08-27, **Fable**, three layers. VERDICT: CHANGES REQUESTED.
+
+Run at Oleg's instruction on a **different model** from the one that implemented the story (Opus), which
+is the project's own recommendation and the reason this review is worth more than the first.
+**Status returned `review` → `in-progress`.**
+
+🔴 **Two of the highs are defects of TRUTH in comments written during this same session, by the
+implementer, hours before the review.** That is the shape Story 6.2's review recorded and Story 6.3
+reproduced. **This is the third occurrence in Epic 6, and the first where the false claim is about
+evidence the story itself presents as proof.**
+
+### HIGH — must fix before this can be graded again
+
+- [ ] **H1. `if: always()` made the disclaimer lie on every failure path** [`record-prod-image.yml`, step 16] — *two layers, independently.* Finding #3's fix added `if: always()` and **did not touch the body**. The step now prints **"### PROD markers recorded"**, with the full three-row marker table, on runs that wrote **nothing** — including all four Task 6 refusals, where `steps.derive.outputs.*` are empty so the names render blank. Before the fix the step only ran after both writes succeeded, when the claim was true. **The fix inverted a true statement into a false one in the sink the file itself tells operators to read.** #3 needed a rewritten body ("what would have been recorded, and what was not"), not a condition.
+- [ ] **H2. `if: always()` also made "refuses before any network call" FALSE — and that sentence is in the header I wrote today** [`record-prod-image.yml`, step 15 vs steps 0–5] — *two layers.* Verified by reading the parsed step order: the listing step is step **15** with `if: always()`, while `Install docker CLI` is step **5**. On a G1–G4 refusal steps 0–4 fail, step 5 never runs, and step 15 **still executes**: it loads `REGISTRY_USER_RO`/`REGISTRY_TOKEN_RO`, **issues a curl to the registry**, then hits `jq` → exit 127, which `if ! jq -e …` misreports as *"did not parse as JSON with a .tags key. This is a PARSE failure"*. Consequences, all three real: (a) G1's load-bearing comment *"dies here, before a credential is loaded, before a probe"* is now true of the STEP and false of the RUN; (b) **the outcome matrix I wrote in this session says "REFUSE run 663 (2s, before any network call)" — that is a false claim about my own evidence**; (c) every refusal ends with a fabricated diagnosis pointing at JSON instead of the guard that actually fired.
+- [ ] **H3. AC4 was graded MET and its final clause was never performed** [story AC4, Task 7.6] — *Acceptance Auditor, md5-confirmed.* AC4: *"Write this into the decision record **and into the workflow's own disclaimer step**."* D48 §10 has the decision half. The disclaimer step body is **byte-identical to Story 6.3's** — `grep` finds zero mentions of proof markers, `prod-308ea1520c59`, "registry alone is not sufficient", or the ledger as discriminator. 🔴 **This is the fourth instance of "an AC graded MET whose final clause was not performed" in this project, and I produced it while quoting the rule against it.**
+- [ ] **H4. AC3 was graded MET on a claim the code does not support** [story AC3; patch item 7] — the item required a task that **re-reads `package_cleanup_rule` from the database**; none was added, and Task 2.5 read tags only. G4 still compiles against the in-file **copy** (which its own comment admits drops the `fe-prionex/` prefix and the `sha256:` alternative), citing **Story 6.3's** DB read as if current. G4's loop also never checks `$SHA_TAG` — the very form AC7 just settled as the deployable rollback target. "Compiles both markers against the stored `keep_pattern`" overstates both halves.
+- [ ] **H5. A false 404 still bypasses BOTH refusals — the fourteenth fix closed the wrong half** [`record-prod-image.yml`, probe→write] — *Edge Case Hunter.* The tri-state guard accepts a literal `false`, which is exactly what a false 404 produces. `PRE_DIGEST` stays empty, the repoint refusal and the `allow_current_move` refusal are both skipped, and a permanent tag is repointed while the log says *"for the first time"*. My fix closed the empty/garbage case; **the case finding #1 was actually about is still open.** Needs a re-inspect of the tag immediately before `create`, not a probe-output check.
+- [ ] **H6. The `Link` next-URL is followed to `http://` and to foreign hosts, carrying the RO credential** [`record-prod-image.yml`, listing step] — `case "$NEXT" in http*)` matches plaintext and any host; `--proto-redir '=https'` governs redirects only, not a server-supplied next URL. Must be `https://${IMAGE_REPO%%/*}/*` and nothing else.
+- [ ] **H7. AC2's "durable sink" is hollow at the only call site, and the comment contradicts the finding it cites** [`record-prod-image.yml` write-current; `deploy-prod.yml`] — the review item said *"a job output dies with the run"*; the shipped comment calls a job output **"a DURABLE sink"**. `deploy-prod.yml` never reads `needs.record.outputs.displaced_*`. On run 668 the displaced image was `prod-308ea1520c59`, which Prohibition 13 bars from the ledger — **the exact collapse the item predicted, and it happened.** AC2 was neither given a durable sink nor honestly weakened.
+
+### MEDIUM
+
+- [ ] **M1.** The new AC2 guard treats **any** `imagetools` failure as tag absence (`2>/dev/null || true`) — the M4 anti-pattern this same change eradicates everywhere else. A transient blip refuses a legitimate move and asserts a permanent AC2 violation.
+- [ ] **M2.** Both read-back retry loops **sleep 9 s after the final attempt** with no fourth try; and an `exit 0` with empty stdout is misreported as *"the read-back read itself failed"*.
+- [ ] **M3.** `displaced_marker`'s documented `'NONE'` state is **unreachable** — the AC2 guard exits before it. `NONE` actually means "nothing displaced", and the no-op path writes neither output.
+- [ ] **M4.** `record-outcome`'s *"safe to repeat / idempotent"* repair hits the new AC2 refusal in exactly the state it discloses, giving the operator a second red run on production tooling.
+- [ ] **M5.** §9's matrix was **never updated** — it still carries spec-time prospective text; the earned run ids live only in the header and Debug Log. **AC6's "§9's matrix carries a run id in every row" is therefore overstated.** Patch item 14's `allow_current_move` row is still missing everywhere.
+- [ ] **M6.** **All 16 `[Review][Patch]` items are still unchecked and at least five are wholly unapplied** to the text they target: the three broken citations, the house-ratio figure, the census count, §2's "None fires today", §12's frozen list omitting `verify-cni-netns-isolation.yml`, §11's `backlog` warning, Dev Notes §3 still forbidding the move Task 7 performed, and *"closes M7's own G3 clause"* surviving in two places while deferred-work says **"That is not M7"**.
+- [ ] **M7.** `jq -e '.tags != null'` reports a legitimate `{"tags": null}` empty page as a PARSE failure.
+- [ ] **M8.** The `awk` Link parse takes the first `<URL>` on the line regardless of its `rel` — a comma-combined `rel="prev", rel="next"` header walks backwards to the 100-page FAIL.
+- [ ] **M9.** The 100-page backstop cannot fire before `timeout-minutes: 10` kills the job unclassified — and because the step is `always()`, that reds a run whose permanent writes already succeeded.
+- [ ] **M10.** Nothing re-checks `prod-current` between the `PRE_DIGEST` read and the `create`. With the two concurrency groups disjoint, a manual and an automatic record interleave to leave the pointer on the **older** release, both runs green.
+- [ ] **M11.** D48's index row is inserted **out of numeric order** (…D43, D46, **D48**, D47).
+- [ ] **M12.** Runs **658 and 659** fall inside the ledger's own window and are named nowhere — in a closeout that celebrates catching five missed rows.
+
+### What Fable verified as correct (the negative result matters)
+
+All 9 frozen workflows and `derive` byte-identical (md5); zero `${{ }}` inside any `run:`; all 18 `run:`
+bodies pass `bash -n`; the `workflow_call` contract matches the spec; `record`'s `if:` has no `always()`;
+the `record`/`record-outcome` job matrix is correct on **every** build/deploy/derive combination;
+the `EXISTS` `case` guard is sound as written; the G4 `-i` drop is directionally right; **AC1's PARTIALLY
+MET grade is correct and not too harsh**; AC5, AC7, AC8, AC9 all correctly MET; Prohibitions 1–5 and
+7–12 clean, with 9 and 10 machine-verified.
+
 
 **Code review 2026-08-26 (Opus, four layers: Blind Hunter, Edge Case Hunter, Acceptance Auditor, plus
 an independent re-verification of the thirteen inherited findings).** Reviewed against `origin/main`
