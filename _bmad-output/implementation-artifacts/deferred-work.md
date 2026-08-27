@@ -4838,6 +4838,14 @@ reading the file rather than by re-reading that list.
   **Not fixed by Story 6.7** — `nginx.conf` is frozen for that story, the fix is an application-config
   change with its own review surface (duplicating the three `add_header` lines into each location
   that declares any, or moving to a single `map`/`include`), and it touches what every environment
-  serves, not just PROD. **Owner: unassigned — it is frontend application config, not pipeline.**
+  serves, not just PROD. **Owner: OLEG** — decided 2026-08-27, when the deferral itself was put to him and taken. It is
+  frontend application config, not pipeline, and **no story in the remaining plan owns `nginx.conf`**,
+  so "unassigned" here would mean nobody: the exact failure this ledger exists to prevent and which
+  this project hit twice inside Epic 6 alone.
+  🔴 **The cheapest correct fix, so it is not re-derived:** duplicate the three `add_header` lines
+  into every location that declares any of its own (`~* \.html$` and `~* \.(js|css|…)$`), or hoist
+  them into an `include`. Ugly, and it is what the nginx documentation prescribes.
+  ✅ **And it is verifiable the moment it lands:** Story 6.7'''s smoke check found this, and restoring
+  its two original assertions turns the fix into a live, self-proving check on the real stand.
   **Removal trigger:** the next story that may edit `nginx.conf`, or a security review of the served
   headers. ⚠️ **Do not "fix" it inside a deploy workflow.**
