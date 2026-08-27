@@ -5104,9 +5104,33 @@ identical.
 mechanisms — `VITE_OPERATOR_PHONE_URL_*` *is* read through `vars.` (`build.yml:737-746`) — and the
 two sources currently hold the SAME value for the API, so they have never visibly diverged.
 
-**This is a second finding in its own right: two sources of truth for one build-time value, one of
-them inert.** Either delete the dead variables or wire them up; leaving both is how a future change
-gets made in the wrong place. **Owner: Oleg.**
+🔴 **AND THE NAMES ARE NOT DEAD — they are consumed by the OTHER pipeline.** `.github/workflows/CD.yml:45,49`
+reads `secrets.VITE_API_BASE_URL_PROD` / `secrets.VITE_WS_URL_PROD`. That is the **GitHub** pipeline,
+which builds what **s2** serves — where the live users are. So the same names exist in two places
+with two different mechanisms:
+
+| Where | Mechanism | Read by | Builds what |
+|---|---|---|---|
+| GitHub | `secrets.VITE_API_BASE_URL_PROD` | `CD.yml` | **s2 — live users** |
+| Forgejo | `vars.VITE_API_BASE_URL_PROD` | **nothing** | — |
+| OpenBao | `secret/fe/<env>/app` | `build.yml:588` → `:1376` | **s10 — the new contour** |
+
+⚠️ `#d7` puts the GitHub side out of scope entirely, so its secret is not ours to touch.
+
+**Updated 2026-08-27 on Oleg's instruction, via the Forgejo API:**
+`VITE_API_BASE_URL_PROD` → `https://api-crm.prod.crm-prionex.online`,
+`VITE_WS_URL_PROD` → `wss://api-crm.prod.crm-prionex.online` (both HTTP 204).
+🔴 **This does not change any build yet** — `build.yml` still reads OpenBao. The variables are now
+*correct* rather than *effective*.
+
+**Two open decisions, both Oleg's:**
+1. **Which source is authoritative for the Forgejo pipeline?** The `_PREPROD` pair was added
+   deliberately for Option C (`#d2`) alongside the existing `_DEV`/`_PROD` — which suggests the
+   variables were created **for this pipeline** and `build.yml` was never wired to them. If so this
+   is a **defect in `build.yml`**, not merely dead config. Wiring `build.yml` to `vars.` would make
+   the value editable without OpenBao access; leaving OpenBao authoritative means deleting the
+   Forgejo variables so nobody edits the wrong one again.
+2. Until (1) is settled, changing what production calls requires the **OpenBao** value plus a rebuild.
 
 ⚠️ **This moves production off the legacy API onto the prod contour** — a change to where production
 traffic goes, not a cosmetic one. **Removal trigger:** the prod bundle resolves to the prod API name.
