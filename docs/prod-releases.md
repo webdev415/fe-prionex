@@ -87,6 +87,44 @@ and it is cheaper than a ledger nobody can trust.
 | `Deploy run id` | The `deploy-prod.yml` run this row records | `index_in_repo`, read from `action_run` (this is the number the UI shows, e.g. **705**; the API's `id` is a different, larger number — 1618 for that same run). 🔴 **The `pending — dispatch not yet made` legal value is REMOVED 2026-08-27** — the row is generated after the dispatch, so the run id is always known. `N/A — rollback to a ledger tag, no new approval` remains legal per the regulation's rollback rule |
 | `Note` | Anything to put on record — a break of the freeze window, an emergency/rollback context, etc. ⚠️ **Human-only, carried in the side-file.** A freeze-window break lives here, because a break is by definition not derivable from a run record | free text, one line, no pipe character (it would shift every later column, the same rule `RVC-v1.1`'s `validation_note` format states for itself) |
 
+**How to regenerate this file** (Story 6.12):
+
+```sh
+FORGEJO_TOKEN=$(tr -d '"\r\n' < ~/.config/forgejo/token) npm run ledger:prod
+```
+
+**Read scope is enough — never hand it the registry RW token.** It writes only the region between
+the `BEGIN/END GENERATED LEDGER` markers below; everything outside them is hand-written prose and a
+missing marker is a hard failure rather than a full-file overwrite. Two consecutive runs produce a
+byte-identical file. `npm run ledger:prod -- --self-test` runs its fixtures and touches no network.
+
+**The two cells no machine can know** — `Waiver?` and `Note` — come from
+`docs/prod-releases-annotations.json`, keyed by the **deploy run id** (the number the UI shows, not
+the API's own `id`). A run with no entry renders empty cells and the generator still exits 0: a
+missing annotation is the normal case for a fresh release.
+
+⚠️ **"Generated" does not mean "committed automatically."** `#d51` §2 measured that `main` carries
+`enable_push: false` with an empty push whitelist, so **no workflow can commit this file** and the
+repository-write credential Story 5.4 declined would not have helped. A person runs the command and
+merges the diff. What the tooling removes is the transcription, not the human.
+
+🔴 **THE LEDGER HAS AN EPOCH, AND 21 EXISTING DISPATCHES ARE DELIBERATELY NOT ROWS HERE**
+(Story 6.12, 2026-08-27). `action_run` holds **21 `deploy-prod.yml` dispatches**, nine of them
+successful. **Every one is a rehearsal or a proof, not a release** — `#d47` and `#d48` record them
+in those words, and two of the three permanent PROD images they produced are described there as
+*"доказательства, не релизы"*.
+
+The generator excludes every run started before **`2026-08-27T11:58:58Z`**, the merge of
+[`#d51`](migration-decisions.md#d51) (commit `89ddca51`). That instant is the boundary **on the
+merits and not for tidiness**: *"the dispatch IS the approval"* became true when that commit landed,
+so a dispatch made before it was not an approval of anything. The latest of the 21 (run 705) started
+`08:58:22Z`, hours earlier.
+
+⚠️ **Without that cut the generator would manufacture a 21-row release history into a file whose
+next sentence says it has none.** That is the single worst thing this tooling could do, and the
+epoch is a named constant in `scripts/gen-prod-ledger.mjs` with the commit in its comment — not a
+bare literal someone can "clean up".
+
 **This table has no rows as of 2026-08-27.** No production release has ever been approved.
 `deploy-prod.yml` now exists (Story 6.4) and has been dispatched several times, but every one of
 those runs was a rehearsal or a proof, not a release — see `#d47` and `#d48`. 🟢 **That this file was
@@ -96,5 +134,9 @@ no placeholder row is added, because a row here is never rewritten and a placeho
 the first time this table is genuinely used — the same reasoning `docs/preprod-candidates.md`'s own
 "Rejected candidates" table states for itself.
 
+<!-- BEGIN GENERATED LEDGER -- do not edit between these markers; see scripts/gen-prod-ledger.mjs -->
+
 | Date (UTC) | image_tag | Candidate | prod_tag | Dispatched by (account) | Waiver? | Dispatch start (UTC) | Deploy end (UTC) | Deploy run id | Note |
 |---|---|---|---|---|---|---|---|---|---|
+
+<!-- END GENERATED LEDGER -->

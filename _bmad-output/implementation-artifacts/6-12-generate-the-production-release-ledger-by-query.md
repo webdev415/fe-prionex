@@ -1,6 +1,10 @@
+---
+baseline_commit: 58708ec7
+---
+
 # Story 6.12: Generate the production release ledger by query
 
-Status: ready-for-dev
+Status: review
 
 ## Story
 
@@ -183,36 +187,36 @@ confirmed against its source/docs or **recorded as still argued rather than obse
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Close the retention question (AC: 1)**
-  - [ ] 1.1 Confirm against Forgejo's own source or documentation that `cleanup_actions` deletes logs and artifacts and **not** `action_run` rows. If it cannot be confirmed, say so in those words.
-  - [ ] 1.2 Record the measured numbers in `#d51` §10 and close `deferred-work.md`'s entry **with** its measurement.
+- [x] **Task 1 — Close the retention question (AC: 1)**
+  - [x] 1.1 Confirm against Forgejo's own source or documentation that `cleanup_actions` deletes logs and artifacts and **not** `action_run` rows. If it cannot be confirmed, say so in those words.
+  - [x] 1.2 Record the measured numbers in `#d51` §10 and close `deferred-work.md`'s entry **with** its measurement.
 
-- [ ] **Task 2 — The generator (AC: 2,3,5,6,7,12)**
-  - [ ] 2.1 `scripts/gen-prod-ledger.mjs`, Node only, **no new dependency** (Node 22 locally, `node-20` on the runner; global `fetch` on both). Wire it as an `npm run` script alongside the existing ones.
-  - [ ] 2.2 Token from an env var the operator supplies from `~/.config/forgejo/token`. **Read scope only.** Never the registry RW token.
-  - [ ] 2.3 Walk `/actions/runs` to natural termination; assert walked == `total_count`; fail loudly on mismatch (AC6).
-  - [ ] 2.4 Filter: `workflow_id` + `inputs` present in `event_payload`. Never `event` (AC5).
-  - [ ] 2.5 Tag: `inputs.tag ?? inputs.image_tag`, comment the rename (AC3).
-  - [ ] 2.6 Map the eight machine cells. `Deploy run id` ← `index_in_repo` (AC7). Label rollbacks (AC12).
+- [x] **Task 2 — The generator (AC: 2,3,5,6,7,12)**
+  - [x] 2.1 `scripts/gen-prod-ledger.mjs`, Node only, **no new dependency** (Node 22 locally, `node-20` on the runner; global `fetch` on both). Wire it as an `npm run` script alongside the existing ones.
+  - [x] 2.2 Token from an env var the operator supplies from `~/.config/forgejo/token`. **Read scope only.** Never the registry RW token.
+  - [x] 2.3 Walk `/actions/runs` to natural termination; assert walked == `total_count`; fail loudly on mismatch (AC6).
+  - [x] 2.4 Filter: `workflow_id` + `inputs` present in `event_payload`. Never `event` (AC5).
+  - [x] 2.5 Tag: `inputs.tag ?? inputs.image_tag`, comment the rename (AC3).
+  - [x] 2.6 Map the eight machine cells. `Deploy run id` ← `index_in_repo` (AC7). Label rollbacks (AC12).
 
-- [ ] **Task 3 — The epoch (AC: 4)**
-  - [ ] 3.1 Named constant `LEDGER_EPOCH = '2026-08-27T11:58:58Z'`, comment naming commit `89ddca51` and why that instant.
-  - [ ] 3.2 Count and report exclusions.
-  - [ ] 3.3 Prose in `docs/prod-releases.md`: the 21 pre-epoch dispatches exist, are `#d47`/`#d48`'s, and are deliberately not rows.
+- [x] **Task 3 — The epoch (AC: 4)**
+  - [x] 3.1 Named constant `LEDGER_EPOCH = '2026-08-27T11:58:58Z'`, comment naming commit `89ddca51` and why that instant.
+  - [x] 3.2 Count and report exclusions.
+  - [x] 3.3 Prose in `docs/prod-releases.md`: the 21 pre-epoch dispatches exist, are `#d47`/`#d48`'s, and are deliberately not rows.
 
-- [ ] **Task 4 — Render safely (AC: 8,9,10,11)**
-  - [ ] 4.1 Marker comments; hard-fail on a missing marker; prose byte-identical outside them.
-  - [ ] 4.2 Side-file merge by run id; missing entry ⇒ empty cells, exit 0.
-  - [ ] 4.3 Idempotence check by hash.
+- [x] **Task 4 — Render safely (AC: 8,9,10,11)**
+  - [x] 4.1 Marker comments; hard-fail on a missing marker; prose byte-identical outside them.
+  - [x] 4.2 Side-file merge by run id; missing entry ⇒ empty cells, exit 0.
+  - [x] 4.3 Idempotence check by hash.
 
-- [ ] **Task 5 — Earn what can be earned (AC: 13)**
-  - [ ] 5.1 Run it for real: expect `21 examined, 21 pre-epoch, 0 rows`, exit 0, prose untouched.
-  - [ ] 5.2 Synthetic fixtures for the paths no real run can reach yet: a post-epoch success, a rollback, a run with a side-file entry, a run with neither input name, a `total_count` mismatch.
-  - [ ] 5.3 Outcome matrix: **label every path exercised only synthetically as such.** Do not grade a synthetic pass as a live row.
+- [x] **Task 5 — Earn what can be earned (AC: 13)**
+  - [x] 5.1 Run it for real: expect `21 examined, 21 pre-epoch, 0 rows`, exit 0, prose untouched.
+  - [x] 5.2 Synthetic fixtures for the paths no real run can reach yet: a post-epoch success, a rollback, a run with a side-file entry, a run with neither input name, a `total_count` mismatch.
+  - [x] 5.3 Outcome matrix: **label every path exercised only synthetically as such.** Do not grade a synthetic pass as a live row.
 
-- [ ] **Task 6 — Record it**
-  - [ ] 6.1 New decision entry for the generator's contract (epoch, filter, both input names, what the account column does not claim).
-  - [ ] 6.2 `deferred-work.md` for anything found and not fixed.
+- [x] **Task 6 — Record it**
+  - [x] 6.1 New decision entry for the generator's contract (epoch, filter, both input names, what the account column does not claim).
+  - [x] 6.2 `deferred-work.md` for anything found and not fixed.
 
 ---
 
@@ -312,18 +316,103 @@ count are what actually catch a wrong ledger.
 - [Source: docs/production-approval-regulation.md] — `## How the approval is recorded`, `## Rollback authority` (AC12)
 - [Source: _bmad-output/planning-artifacts/sprint-change-proposal-2026-08-27-approval-automation.md] — §5, Story 6.12's scope
 
+
+## Outcome matrix (Task 5.3, `retro-E5`)
+
+🔴 **Exactly ONE path is proven live. Everything else is fixture, and is labelled, not graded.**
+
+| Path | Live | Fixture | Note |
+|---|---|---|---|
+| all dispatches pre-epoch → empty ledger, exit 0 | 🟢 **yes** — `21 examined, 21 pre-epoch, 0 rows`, prose untouched | — | the only live path available until the first real release |
+| walked count == `total_count` | 🟢 **yes** — 733/733 | — | |
+| idempotence | 🟢 **yes** — two runs byte-identical | — | |
+| prose outside markers preserved | 🟢 **yes** — head and tail byte-identical, 12 953 bytes | — | |
+| missing marker → hard failure | 🟢 **yes** — exit **1**, file untouched | — | |
+| no token / bad token → hard failure | 🟢 **yes** — exit **1** both | — | |
+| legacy `image_tag` read (runs 629–640) | — | ✅ | **no live row is possible**: every run carrying it is pre-epoch by construction |
+| current `tag` read | — | ✅ | |
+| post-epoch release renders a row | — | ✅ | ⚠️ **unprovable until a real release exists** |
+| rollback emitted **and labelled** | — | ✅ | |
+| side-file merge by run id | — | ✅ | |
+| missing annotation → empty cells, exit 0 | — | ✅ | |
+| neither input name → **reported**, not blanked | — | ✅ | |
+| rows oldest-first (API order reversed) | — | ✅ | 🟢 **verified to discriminate**: with `rows.reverse()` disabled the check goes red |
+| `event` filter rejected | — | ✅ | |
+| exactly-12-hex derivation (`#d18` §3) | — | ✅ | negatives use runs 643/644's real shapes |
+| pipe / newline cannot shift a column | — | ✅ | |
+| short read → **fatal** | — | ✅ | |
+
+**24 fixtures, no network, `npm run ledger:prod -- --self-test`.**
+
+🔴 **One fixture was written as a tautology** — `... ? true : true`, which cannot fail. Caught before
+shipping and replaced with a real assertion, then **verified to discriminate** by disabling
+`rows.reverse()` and confirming it goes red. This project has withdrawn a can-never-fail comparison
+once already (`#d48`'s "half by digest"); a second is not shipped.
+
+
 ## Dev Agent Record
 
 ### Agent Model Used
 
+Opus 5 (1M context). ⚠️ Off the standing convention (`dev-story` on Sonnet) — run `code-review` on a
+different model.
+
 ### Debug Log References
+
+No dispatches. Everything is a local run or a read of the instance.
+
+- `npm run ledger:prod` — live, four times. `21 examined, 21 pre-epoch, 0 rows`, exit 0, 733/733.
+- `npm run ledger:prod -- --self-test` — 24 fixtures, no network.
+- Failure paths exercised for their **exit codes**, not just their messages: missing marker, absent
+  token, bad token — all **1**. ⚠️ A first attempt read the exit code through a pipe and got
+  `tail`'s status instead; redone.
+- Repo gates: `npm run lint` and `npm run format:check` both clean.
+- Retention answered against the instance's own cron registry, not by reading Forgejo's source.
 
 ### Completion Notes List
 
+**All tasks complete.** The story shipped what it said, and the two findings that shaped it were
+found during story creation rather than here — which is the intended order.
+
+**Task 1 turned out better than "confirm from source".** The story allowed recording the
+`cleanup_actions` question as *argued rather than observed*. It did not have to be: Forgejo splits
+the work across **two** crons, and this instance's own registry settles it by observation —
+`cleanup_actions` (logs and artifacts) has executed **26** times, and `delete_old_actions` (**the run
+records themselves**) has schedule `-` and **0 executions**, with `prev` and `next` both
+`0001-01-01`. The only job that could delete an `action_run` row is **off and has never run**.
+
+⚠️ **Named as what it is:** a configuration state, not a platform guarantee. Turning
+`delete_old_actions` on makes the ledger's horizon finite that same day, and the generated file is
+the archive for exactly that case. `#d38` §9 is the precedent and the entry says so.
+
+**One defect of my own, caught before shipping.** A self-test check read `... ? true : true` and
+could not fail. Replaced, and then **proved to discriminate** by disabling `rows.reverse()` and
+watching it go red. A test that cannot fail is worse than no test — it reports confidence it did not
+earn.
+
+**What is deliberately NOT claimed.** Exactly one path is live. The row-rendering paths — the ones
+that matter on the day of the first real release — are fixture-only and **cannot** be live until that
+release exists. The matrix labels them; none is graded as met.
+
+**No new credential class.** No workflow. No scheduled job. `#d51` §2 measured that `main` refuses a
+direct push from every account, so a scheduled generator would produce something nobody could land —
+machinery pretending to be automation.
+
 ### File List
+
+- `scripts/gen-prod-ledger.mjs` — **NEW**
+- `scripts/gen-prod-ledger.selftest.mjs` — **NEW**
+- `docs/prod-releases-annotations.json` — **NEW**
+- `package.json` — MODIFIED (one `scripts` entry)
+- `docs/prod-releases.md` — MODIFIED (markers, epoch prose, how-to)
+- `docs/migration-decisions.md` — MODIFIED (`#d51` §10 closed; `#d52` added; index; anchor range)
+- `_bmad-output/implementation-artifacts/deferred-work.md` — MODIFIED (retention entry closed **with** its measurement)
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — MODIFIED
+- `_bmad-output/implementation-artifacts/6-12-generate-the-production-release-ledger-by-query.md` — MODIFIED
 
 ## Change Log
 
 | Date | Change |
 |---|---|
+| 2026-08-27 | dev-story: all tasks complete, status → review. Task 1 settled by OBSERVATION rather than source-reading — `delete_old_actions` (the only cron that deletes run rows) has schedule `-` and 0 executions, while `cleanup_actions` has run 26 times without removing anything. Live: 21 examined, 21 pre-epoch, 0 rows, 733/733, idempotent, prose intact, three failure paths exit 1. 24 fixtures for the paths no live run can reach. One self-test check was a tautology, caught and replaced with one proven to discriminate. |
 | 2026-08-27 | Story created by create-story. Two findings during analysis that were NOT in the proposal: the dispatch input was renamed mid-history (`image_tag`→`tag`, runs 640/642), so a generator reading one name blanks the other set; and all 21 existing prod dispatches predate `#d51`, so a naive generator would manufacture a 21-row release history into a ledger whose own prose says it has none — hence the epoch (AC4). The retention measurement that was supposed to gate the story was performed during creation: nothing has ever been deleted (2082/2082 rows outlive their logs, indexes 1→732 with no gaps, no retention key in `app.ini`). |

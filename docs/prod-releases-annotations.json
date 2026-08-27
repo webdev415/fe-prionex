@@ -1,0 +1,22 @@
+{
+  "_README": [
+    "The two ledger cells no machine can know: `Waiver?` and `Note`.",
+    "Keyed by DEPLOY RUN ID -- the number the Forgejo UI shows (index_in_repo), e.g. 705.",
+    "NOT the API's own `id`, which is a different and larger number (705 is id 1618).",
+    "",
+    "A run with no entry here renders EMPTY cells and the generator exits 0 -- a missing",
+    "annotation is the normal case for a fresh release, never an error.",
+    "",
+    "No pipe characters: a pipe shifts every later column, the rule docs/prod-releases.md",
+    "already states for its own Note column. The generator replaces one with '/' rather than",
+    "corrupting the table, but do not rely on that -- write the cell correctly.",
+    "",
+    "`waiver` is MANDATORY on any real release row per docs/prod-releases.md's column table:",
+    "either `none`, or the D-number AND BOTH halves of RVC-v1.1's scope (time-boxed AND",
+    "single-candidate). A blank cell is not a valid approval record -- the generator cannot",
+    "enforce that and does not pretend to.",
+    "",
+    "Example, for shape only -- this run id is a pre-epoch rehearsal and will never be a row:",
+    "  \"705\": { \"waiver\": \"none\", \"note\": \"free text, one line, no pipe\" }"
+  ]
+}

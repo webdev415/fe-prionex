@@ -17,7 +17,8 @@
     "test:coverage:ci": "cross-env NODE_OPTIONS=--max-old-space-size=16384 vitest run --coverage",
     "preview": "vite preview",
     "typecheck": "tsc -b",
-    "prepare": "husky"
+    "prepare": "husky",
+    "ledger:prod": "node scripts/gen-prod-ledger.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
