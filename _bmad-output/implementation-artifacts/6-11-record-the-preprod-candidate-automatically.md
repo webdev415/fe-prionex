@@ -4,7 +4,7 @@ baseline_commit: b6078c1fe4f248b4a28fbb2d9b1af1ee288e20e6
 
 # Story 6.11: Record the PRE-PROD candidate automatically
 
-Status: review
+Status: in-progress
 
 ## Story
 
@@ -442,6 +442,22 @@ locally first.
 - [Source: .forgejo/workflows/deploy-stand.yml#L261,#L500] — the hold-lock gating that AC6 rests on
 - [Source: docs/preprod-candidates.md] — the ledger and its now-stale procedure
 - [Source: _bmad-output/planning-artifacts/sprint-change-proposal-2026-08-27-approval-automation.md] — §5, Story 6.11's scope
+
+
+
+### Review Findings
+
+**Code review 2026-08-27, inline.** ⚠️ **The adversarial-parallel structure was NOT run** — the
+workflow's three independent layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor) require
+subagents, which were disabled for this session. This was **one reviewer, on the same model that
+wrote the code**, which is exactly what the project's own convention warns against. Treat the
+finding count as a floor, not a ceiling.
+
+- [ ] [Review][Decision] **The post-deploy job count on a `capacity: 1` runner went from 1 to 3–4, and the cumulative effect was never reasoned about** [.forgejo/workflows/deploy-preprod.yml] — before this story exactly one job (`e2e`) ran on `deploy-dev-preprod` after `deploy`. Now `e2e`, `gate`, `record.verify-on-stand`, and on the failure path `record-outcome` all want it. Measured: `deploy-dev-preprod` is served by **one runner** (`/opt/forgejo-runner-deploy/config.yml`, `capacity: 1`), shared with `deploy-dev.yml` and `dev-reset.yml`, while this workflow holds its PRE-PROD concurrency group at `cancel-in-progress: false`. **`deploy-preprod.yml`'s own `e2e` header states the consequence in its own words**: a job queued there keeps the run in-progress and blocks the next PRE-PROD dispatch, *a hotfix included*. Task 3.4 reasoned about `record-outcome`'s runner **in isolation** and never about the count. The fix is genuinely ambiguous — `gate` to `node-20` (which that same header argues against for a different reason), fold `gate` into `e2e`, accept the latency, or raise capacity — so it needs a call, not a patch.
+- [ ] [Review][Patch] **Every automatic record prints a claim that a human confirmed something no human did** [.forgejo/workflows/record-preprod-candidate.yml, `G-backwards` true-branch] — the `workflow_call` input `allow_backwards_move` defaults **true**, so **100% of pointer moves** take the branch that prints *"allow_backwards_move=true, direction explicitly confirmed by the operator"*. On the automatic path **there is no operator.** This is precisely the class of falsehood AC9 existed to delete — a sentence asserting a human act that no longer happens — reintroduced by this story on its own new path. Confirmed by construction (the input's default) and by run 728 having moved `preprod-current`; the string itself was not observed because that job's log came back `log_in_storage='f'`. The call path needs its own wording: the move is intentional **by construction of the deploy**, not confirmed by a person.
+- [ ] [Review][Patch] **`docs/release-regulation.md` §4 still describes the `validated` input this story deleted** [docs/release-regulation.md:49-54] — Story 5.6's PRE-PROD regulation, untouched by 6.11. It reads *"nothing in the software forces the `validated` input typed at dispatch time to actually reflect what `RVC-v1` was executed against."* **There is no such input.** Worse, the section now **understates**: the verdict is not merely unenforced, it is **absent from the pipeline entirely**. A regulation is the control that exists *instead of* a technical gate (NFR9, `#d5`), so a false mechanism described in one is worse than the same sentence in a comment. 🔴 **Same class as the `RVC-v1.1` finding this story DID catch — there were two, and only one was found.** The story's own AC9 enumerated nine places, dev-story found a tenth, and this is the eleventh.
+- [ ] [Review][Patch] **`verify-on-stand`'s `note` step writes a `$GITHUB_OUTPUT` nothing reads** [.forgejo/workflows/record-preprod-candidate.yml, `id: note` in `verify-on-stand`] — the `record` job resolves its own note independently (deliberately, per this file's header), so the first job's `note=` output has no consumer anywhere. The log echo is the step's real purpose. Harmless today, but a written-and-unread output invites a future reader to wire it across jobs — the exact cross-job dependency this file's header spends a paragraph refusing.
+- [x] [Review][Defer] **Two expression forms introduced by this story have never been observed rendering** [.forgejo/workflows/record-preprod-candidate.yml, summary + `G-backwards`] — deferred, pre-existing. The `HOW_RECORDED` ternary and the `allow_backwards_move=true` branch both live in steps whose run-728 logs came back `log_in_storage='f'`. The registry read-back proved the **effect**; the **strings** were never seen. This is the instance's known delayed archival, not a defect of this change.
 
 
 ## Outcome matrix (Task 7.2, `retro-E5`)
