@@ -4561,7 +4561,39 @@ needs to act.
 as **independent agents** with no access to the authoring session's reasoning — the same author wrote
 the spec, the code and the evidence. **Two layers independently reported the same G6 defect.**
 
-### 🔴 In shipped code — `.forgejo/workflows/record-prod-image.yml`. **Owner: Story 6.6.**
+### ✅ CLOSED 2026-08-27 by Story 6.6 — all thirteen FIXED, none deferred, plus a fourteenth
+
+**Story 6.6 shipped every one** (`record-prod-image.yml`, branch `story-6-6/impl`;
+[D48](../../docs/migration-decisions.md#d48)). Kept in full rather than deleted, because two entries
+below were **wrong** and the next reader must not re-derive that.
+
+🔴 **THREE OF THE THIRTEEN CARRY A FIX THAT POINTS AT NOTHING.** Findings 1, 2 and 13 compare this
+file to `record-preprod-candidate.yml`. Counted against the source 2026-08-27: the sibling has
+**three** probes, and only its `verify-on-stand` digest step sends four `Accept` types — its two
+**existence** probes, the direct analogues that gate its writes, send **one**, exactly like this
+file's did. *"The sibling avoids the split entirely by taking the digest from `Docker-Content-Digest`"*
+is **false**: its `record` job has the identical split and the header read lives in the other job,
+which by that file's own design never hands the digest over. 13 fails the same way. **Each was checked
+before being acted on**; copying "what the sibling does" would have changed nothing for the probes that
+matter, so the fixes were written on their own merits.
+
+🔴 **A FOURTEENTH DEFECT, IN NEITHER THIS LIST NOR THE STORY THAT PRODUCED IT.** `EXISTS` was produced
+as a tri-state and consumed as `[ "$EXISTS" = "true" ]`. **Any** other value — a false 404, a dropped
+`$GITHUB_OUTPUT` write, a step rename, or **a `workflow_call` refactor of exactly the kind Story 6.6
+performs** — left `PRE_DIGEST` empty, and **both** protective branches are gated on it: the repoint
+refusal and the `allow_current_move` refusal silently became a write while the log printed *"for the
+first time"*. **The only guard in the file that failed in the unsafe direction, and finding 1's fix
+does not touch it.**
+
+**Added beyond the list:** a refusal to move `prod-current` unless the displaced image is addressable
+by its own `prod-<12hex>` — the epic requires it and nothing enforced it.
+
+**Live matrix: 7 dispatches (runs 662–668), 5 writing nothing.** `#d18` §3's 40-hex refusal fired live
+for the first time (665); epic AC2 observed in both directions (667/668).
+
+**Original entry, kept for provenance:**
+
+### ~~In shipped code — `record-prod-image.yml`. Owner: Story 6.6.~~ — DISCHARGED
 
 That story inherits this file — its own header says 6.6 *"may adopt it, extend it, or replace it"* — and
 6.6 **moves `prod-current` on every production deploy**, which is precisely what the two worst findings
@@ -4695,6 +4727,23 @@ fourth permanent `sha-<12hex>-prod`. **So Story 6.9's real cutover will be the F
 deploy leg ever runs.** Epic 6's own preamble calls that arrangement a one-way door. **Owner: Story
 6.9.** The rollback path, which 6.9 actually dispatches, **is** proven twice (634, 642).
 
+## M7 bundle — re-owned AGAIN 2026-08-27, and the repeat is the finding
+
+Story 6.6 was made owner of M7 (`record-preprod-candidate.yml`'s eight unexercised branches) because it
+*"is the next story that must dispatch a recorder"*. **It dispatched the PROD recorder seven times and
+the PRE-PROD one zero times**, forcing none of M7's branches — the same outcome, by the same mechanism,
+that Story 6.4 produced when the entry was re-owned to 6.6 in the first place.
+
+🔴 **What 6.6 closed is the structurally similar half, in its OWN file only:** `record-prod-image.yml`'s
+exactly-12 clause (run 665) and its classified-absence branch (run 666) both fired live. **That is not
+M7.** M7's items live in a **frozen** file this story never ran, and 6.6's own §13 forbids claiming
+otherwise: *"Do not claim a branch was exercised in a file you never ran."*
+
+**Re-owned: Oleg** — a name, not whichever story next touches a recorder. **Two re-assignments under
+that rule have now both failed**, which is the real content of this entry: **nothing in the remaining
+plan dispatches `record-preprod-candidate.yml` again** — Epic 5 is closed. If these branches matter,
+they need a deliberate exercise, not an owner of convenience.
+
 ## Deferred from: code review of story-6.6 (2026-08-26)
 
 Four layers (Blind Hunter, Edge Case Hunter, Acceptance Auditor, plus an independent re-verification of
@@ -4740,6 +4789,10 @@ reading the file rather than by re-reading that list.
   citing the unpushed proposal by filename** — Story 6.3's Open Question 10 recorded that a
   locally-authored, unpushed record is invisible to this project's own sweeps, and that process hole
   is still OPEN. When the cancellation lands, this line can point at it; until then it must not.
+  ✅ **2026-08-27: Story 6.6 did NOT adopt the direction guard**, so this stays with **Oleg**. What it
+  added instead is an *addressability* refusal — the move is blocked unless the displaced image keeps
+  its own `prod-<12hex>` — which protects the artifact but still does not NAME the displaced commit
+  anywhere durable. The direction-warning half is untouched and open.
 - ⚠️ **A later authorised `DELETE` of a junk marker also unmakes the deployable tag.** Story 6.6's §8
   exercise mints `prod-308ea1520c59` permanently and names it a proof, not a release. But that marker,
   `sha-308ea1520c59-prod` and (transiently) `prod-current` all name **one manifest**, and the recovery

@@ -96,11 +96,39 @@ name: Deploy PROD Stand
 #    `crm-kong-gateway` that the image's nginx.conf actually resolves -- verified on the host.
 #
 # ── Not here, deliberately ──────────────────────────────────────────────────────────────
-#   Story 6.5 the promotion guard · 6.6 the prod-current/prod-<sha> retag after deploy ·
-#   6.7 the smoke check (the callee's health and Kong probes are NOT it) · 6.8 rollback proven
-#   with measured timing · 6.9 the cutover · 4.5 Slack, deferred 2026-08-14 and explicitly NOT
-#   gating this story: "the production deploy must work, and must be provable, without any
-#   notification".
+#   Story 6.5 the promotion guard · 6.7 the smoke check (the callee's health and Kong probes
+#   are NOT it) · 6.8 rollback proven with measured timing · 6.9 the cutover · 4.5 Slack,
+#   deferred 2026-08-14 and explicitly NOT gating: "the production deploy must work, and must
+#   be provable, without any notification".
+#   ✅ Story 6.6 IS here now -- the `record` job below. It was on this list until 2026-08-27.
+#
+# ── 🔴 STORY 6.6: WHY `record` IS A FOURTH JOB, AND WHAT ITS `if:` MUST SAY ─────────────
+# `record-prod-image.yml` is Story 6.3's file and already did this work on a human dispatch.
+# 6.6 does not reimplement it -- it gives that file a `workflow_call` block and calls it, so
+# there is ONE implementation of the registry write and one place to fix it.
+# Its `if:` is `needs.deploy.result == 'success'` with NO `always()`, and the contrast with the
+# `deploy` job above is the whole point: `deploy` needs `always()` because it must run when
+# `build` was SKIPPED. `record` must NOT run unless the deploy actually succeeded, so a plain
+# `needs:` (which propagates skip and failure) is exactly right. Adding `always()` here would
+# record a production image that was never deployed -- the mirror of the trap the header warns
+# about for `deploy`, and worse, because the registry would then lie permanently.
+#
+# ── 🔴 A GREEN DEPLOY WITH A FAILED `record` IS A REAL STATE, AND IT IS DISCLOSED ───────
+# Every fail-closed branch in the recorder -- the repoint refusal, both read-back mismatches,
+# the ambiguous probe, G6, and the AC2 displaced-marker guard -- exits AFTER `deploy-stand.yml`
+# has already replaced the running container. The run goes RED while the stand is UPDATED, so
+# the operator's natural reading ("the deploy failed") is wrong in the most expensive direction.
+# The `record-outcome` job below exists solely to say so, and to name the repair.
+#
+# ── 🔴 CONCURRENCY: THE CALLEE'S OWN GROUP DOES NOT APPLY, AND THAT IS `#d21` ───────────
+# `record-prod-image.yml` declares `concurrency: record-prod-fe-prionex-prod`. `#d21`: "собственный
+# `concurrency` вызываемого воркфлоу при вызове не применяется -- молча". So on THIS path the
+# recorder runs under this file's own group (`deploy-prod-fe-prionex-prod`), while a manual
+# recovery dispatch of the recorder runs under ITS group. The two are DISJOINT: nothing
+# serializes an automatic record against a hand-dispatched one, over two permanent registry
+# writes, and `imagetools create` has no compare-and-swap. Named here rather than discovered
+# later; closing it needs a single shared group declared on every caller, which is a change to
+# a frozen file and is not taken here.
 #
 # ── 🔴 THE DISPATCH INPUT IS `tag`, NOT `image_tag`, AND THE RENAME IS THE FIX ─────────
 # Runs 637 and 640 both built correctly and then failed at the deploy with the callee reporting
@@ -346,3 +374,65 @@ jobs:
       health_timeout_seconds: "120"
       expect_unrouted_api: "false"
     secrets: inherit
+
+  # ── record (Story 6.6, FR18) ──────────────────────────────────────────────────────────
+  # Retags the deployed image as prod-<12hex> (permanent history) and prod-current (the
+  # pointer). Runs on BOTH paths: a rollback moves the pointer too -- Story 6.8's own AC
+  # depends on it and nothing else in the plan does it.
+  # 🔴 `image_tag:` NOT `tag:` -- this caller's dispatch input is deliberately named `tag` so it
+  # cannot shadow the callee's `image_tag` (#d47(3), runs 637/640). Do not "tidy" either name.
+  # `allow_current_move` is not passed: the callee defaults it TRUE on the workflow_call path
+  # and FALSE on dispatch, which is Story 6.6's policy split, declared in that file.
+  record:
+    name: "Record the deployed image (prod-<12hex>, then prod-current)"
+    needs: [derive, deploy]
+    if: needs.deploy.result == 'success'
+    uses: ./.forgejo/workflows/record-prod-image.yml
+    with:
+      image_tag: ${{ needs.derive.outputs.deploy_tag }}
+    secrets: inherit
+
+  # ── record-outcome ────────────────────────────────────────────────────────────────────
+  # Exists for ONE state: the deploy succeeded and the record did not. See the header. Without
+  # it the run is red, the stand is updated, prod-current still names the PREVIOUS release, and
+  # nothing anywhere says so.
+  record-outcome:
+    name: "🔴 Disclose a green deploy whose record did not land"
+    needs: [derive, deploy, record]
+    if: always() && needs.deploy.result == 'success' && needs.record.result != 'success'
+    runs-on: node-20
+    timeout-minutes: 5
+    steps:
+      - name: "State what is true right now"
+        env:
+          DEPLOY_TAG: ${{ needs.derive.outputs.deploy_tag }}
+          RECORD_RESULT: ${{ needs.record.result }}
+          HISTORY_WRITTEN: ${{ needs.record.outputs.history_written }}
+          CURRENT_WRITTEN: ${{ needs.record.outputs.current_written }}
+        run: |
+          set -euo pipefail
+          {
+            echo "### 🔴 PRODUCTION IS UPDATED. THE REGISTRY IS NOT."
+            echo
+            echo "The deploy job SUCCEEDED and the record job did not (\`${RECORD_RESULT}\`)."
+            echo "Read this before reading the red run status."
+            echo
+            echo "**True right now:**"
+            echo "- The PROD stand on s10 is running \`${DEPLOY_TAG}\`. The deploy is done."
+            echo "- \`prod-current\` still names the **previous** release, or nothing."
+            echo "- `prod-<12hex>` for this commit: **${HISTORY_WRITTEN:-not reported}**."
+            echo "- `prod-current`: **${CURRENT_WRITTEN:-not reported}**."
+            echo "  (read from the callee's own workflow_call outputs -- H7. Empty means"
+            echo "   the record job died before that step reported, which the write order"
+            echo "   makes readable: history FIRST, pointer second.)"
+            echo
+            echo "**Repair, and it is safe to repeat:** dispatch \`record-prod-image.yml\`"
+            echo "manually with \`image_tag: ${DEPLOY_TAG}\`, acknowledgement"
+            echo "\`MOVE-PROD-CURRENT\`, and \`allow_current_move: true\`. Every write in that"
+            echo "file is attach-if-absent / no-op-if-identical, so re-running is idempotent."
+            echo
+            echo "**Do NOT redeploy to fix this.** The stand is already correct; only the"
+            echo "registry record is missing."
+          } | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
+          echo "::error::Deploy succeeded but the record did not (${RECORD_RESULT}). prod-current is stale. See the job summary."
+          exit 1

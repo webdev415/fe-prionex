@@ -1987,7 +1987,130 @@ development_status:
   # written: (1) §7's prod_tag settlement is correct against shipped code but reverses #d18 §3 and
   # deferred-work.md:2324 with no dated banner, while AC2 still carries the old words; (2) §10's
   # tautology -- drop it, build the real stand-side guard, or keep the read and grade nothing on it.
-  6-6-record-the-deployed-production-image: ready-for-dev
+  # 🚧 DEV STARTED 2026-08-26, branch `story-6-6/impl`, baseline `13a60eca` (the merge of PR #100 --
+  # this story's own code review, so the dev session starts from the REVIEWED spec, not the drafted
+  # one). 🔴 origin/main moved SEVEN times today; Task 1.1's re-fetch is not ceremonial.
+  # D-SWEEP RUN AGAINST OQ10's HOLE, not only against refs: highest `## D<n>` is D47 in all THREE
+  # scopes -- every origin ref, every LOCAL branch, and the operator's own WORKING TREE including
+  # staged uncommitted work. Next free D48, confirming AC9. D45 exists nowhere (6.3's Task 6 was
+  # cancelled and never spent it) and is deliberately NOT reused. The process half of OQ10 stays OPEN
+  # -- nothing forces the next session to check the working tree; this one chose to.
+  # ⚠️ SIXTEEN [Review][Patch] ACTION ITEMS ARE OPEN in the story's own Review Findings and are part
+  # of the work, not commentary. Two of them change what the dev does before touching code: three of
+  # the thirteen inherited findings are DESCRIBED WRONGLY (the sibling comparison does not survive
+  # counting), and a FOURTEENTH defect the thirteen missed is the one that actually arms -- `EXISTS`
+  # is a tri-state consumed as a bi-state, and a workflow_call refactor of exactly the kind this
+  # story performs bypasses both refusals.
+  # ✅ -> `review` 2026-08-27. SHIPPED: `record-prod-image.yml` gains a `workflow_call` block and
+  # `deploy-prod.yml` gains TWO jobs -- `record` (the retag, on both paths) and `record-outcome` (the
+  # one state nobody had handled: green deploy, failed record). The registry mechanism itself is NOT
+  # rewritten; 6.3's file was fixed, not replaced. `derive` is byte-identical so 6.5 rebases clean.
+  # 🔴 ALL 13 INHERITED FINDINGS FIXED, NONE DEFERRED -- plus a FOURTEENTH that was in no list:
+  # `EXISTS` was a tri-state consumed as a bi-state and failed in the UNSAFE direction; any non-`true`
+  # value emptied PRE_DIGEST, and BOTH refusals are gated on it, so both silently became a write while
+  # the log printed "for the first time". Finding #1's Accept-header fix narrows one trigger and leaves
+  # the mechanism.
+  # 🔴 THREE OF THE THIRTEEN CARRIED A WRONG FIX OR PREMISE. #1/#2/#13 all pointed at a
+  # `record-preprod-candidate.yml` pattern that does not exist -- counted at the source: its two
+  # EXISTENCE probes send ONE Accept, like this file's did, and its record job has the identical
+  # tag-vs-digest split. Checked BEFORE copying; otherwise this file would have been "fixed" toward a
+  # shape the sibling never had.
+  # ➕ ADDED BEYOND THE LIST: a refusal to move `prod-current` unless the displaced image is still
+  # addressable by its own `prod-<12hex>`. Epic AC2 requires it and NOTHING enforced it -- one failed
+  # `record` in the past would have made that release unaddressable forever.
+  # ✅ LIVE MATRIX, 7 dispatches (662-668), 5 of which write nothing. G1/663, G2/664, G3/665 (#d18 §3's
+  # 40-hex branch, refused live for the FIRST time), 404/666, MOVE/667, RETURN/668. G4 and G6 recorded
+  # UNEARNED WITH REASONS, never blank, never force-tested into looking earned. Which guard refused in
+  # 663-665 is NOT from a log (this instance serves none): established by input construction, exact for
+  # 663/665, weaker for 664 by step order -- said unevenly because the evidence is uneven.
+  # 🔴 EPIC AC2 OBSERVED IN BOTH DIRECTIONS: run 667 moved prod-current f30c7941->01855d1b and created
+  # prod-308ea1520c59 while prod-a99ccd44c5a3 DID NOT MOVE; run 668 moved it back. PROHIBITION 6
+  # SATISFIED -- prod-current ends this story on the cutover image, where Story 6.9 needs it.
+  # ⚠️ RESIDUE, named before it was created: `prod-308ea1520c59` is PERMANENT and is a PROOF, NOT A
+  # RELEASE (no ledger row; none was approved). First prod-<12hex> history marker here naming a
+  # non-release -- which is exactly why AC4 now reads "the registry alone is not sufficient".
+  # 🔴 AC1 IS PARTIALLY MET AND SAYS SO: every dispatch was rollback:true, so "runs on BOTH paths" is
+  # UNEARNED -- the release deploy leg has never been green (#d47) and Story 6.9 owns its first run.
+  # AC6 allows a labelled-unearned row; AC1 as written does not. 8 of 9 met, nothing softened.
+  # ✅ SETTLED where the ledger asked: prod_tag = `sha-<12hex>-prod`. The plan conflated two senses of
+  # "rollback target" -- prod-<12hex> KEEPS the artifact alive, sha-<12hex>-prod is what DISPATCHES --
+  # and #d18 §3 + deferred-work.md were amended in the SAME change, not left to contradict it.
+  # ⚠️ NAMED, NOT CLOSED: the recorder's own `concurrency` group does NOT apply on workflow_call
+  # (#d21), so the automatic record and a manual recovery dispatch land in DISJOINT groups over two
+  # permanent writes. Closing it needs a shared group on every caller = a frozen-file edit.
+  # ⚠️ M7 RE-OWNED TO OLEG. This story dispatched the PROD recorder 7 times and the PRE-PROD one ZERO,
+  # so it forced none of M7's branches -- the same outcome 6.4 produced. Two re-assignments under
+  # "whoever next dispatches a recorder" have now both failed, and nothing left in the plan dispatches
+  # that file again. An owner of convenience is not an owner.
+  # ✅ LEDGER CLOSED BY QUERY (retro-D4): 65 pages / 3217 task rows to natural termination, attributed
+  # by commit_sha. 19 RUNS vs floor 13 / ceiling 24 -- UNDER BUDGET. 🔴 A branch-name filter returned
+  # 14 and MISSED FIVE; the commit_sha rule earned its keep on the first try. All 7 dispatch rows carry
+  # the DISPATCH REF as commit_sha, not what they acted on -- named so it cannot mislead.
+  # Oleg merges; the row goes `done` only after that.
+  # 🔴 CODE REVIEW #2, 2026-08-27, FABLE (a DIFFERENT model from the Opus that implemented it, at
+  # Oleg's instruction). VERDICT: CHANGES REQUESTED. Row `review` -> `in-progress`. 7 high, 12 medium.
+  # 🔴 TWO OF THE HIGHS ARE DEFECTS OF TRUTH IN COMMENTS WRITTEN THE SAME SESSION BY THE IMPLEMENTER:
+  #   H1: finding #3's `if: always()` fix added the CONDITION and not a new BODY, so the disclaimer now
+  #       prints "### PROD markers recorded" -- with blank marker names -- on runs that wrote NOTHING,
+  #       including all four Task 6 refusals. The fix inverted a true sentence into a false one.
+  #   H2: the SAME `always()` put the listing step (step 15) after `Install docker CLI` (step 5), so on
+  #       a G1-G4 refusal it still runs: loads the RO credential, CURLS THE REGISTRY, then dies on
+  #       jq-127 misreported as "a PARSE failure". So the shipped outcome matrix's own line "REFUSE run
+  #       663 (2s, BEFORE ANY NETWORK CALL)" is FALSE at run level -- a false claim about the story's
+  #       own evidence, written in this session.
+  # 🔴 H3: AC4 GRADED MET, FINAL CLAUSE NEVER PERFORMED. AC4 requires the statement in the decision
+  #       record AND in the workflow's disclaimer step; the step body is md5-identical to 6.3's.
+  #       FOURTH occurrence of that shape in this project, produced while quoting the rule against it.
+  # 🔴 H5: THE FOURTEENTH FIX CLOSED THE WRONG HALF. The tri-state guard accepts a literal `false`,
+  #       which is exactly what a FALSE 404 yields -- both refusals still bypassed, permanent tag still
+  #       repointable while the log says "for the first time". Needs a re-inspect immediately before
+  #       `create`, not a probe-output check.
+  # 🔴 H6: the `Link` next-URL is followed to `http://` and to ANY host, carrying the RO credential.
+  # 🔴 H4/H7: AC3 overstated (no DB re-read of package_cleanup_rule; G4 never checks sha-<12hex>-prod)
+  #       and AC2's "durable sink" is hollow -- deploy-prod.yml reads none of the four outputs, and on
+  #       run 668 the displaced marker was the one Prohibition 13 bars from the ledger: the exact
+  #       collapse the review item predicted.
+  # ⚠️ ALL 16 [Review][Patch] ITEMS FROM REVIEW #1 ARE STILL UNCHECKED and >=5 wholly unapplied.
+  # ✅ VERIFIED CLEAN BY FABLE: 9 frozen workflows + `derive` byte-identical (md5); zero expressions in
+  # any run:; 18/18 run bodies bash -n; the record/record-outcome if: matrix correct on EVERY
+  # build/deploy/derive combination; AC1's PARTIALLY MET grade correct and not too harsh; AC5/7/8/9
+  # correctly MET; Prohibitions 1-5, 7-12 clean.
+  # ✅ ALL SIX HIGHS FROM REVIEW #2 FIXED AND VERIFIED LIVE, 2026-08-27. Row -> `review` again.
+  # H1/H2: finding #3's `if: always()` was a CONDITION where a new BODY was needed -- the disclaimer
+  #   claimed "PROD markers recorded" on runs that wrote nothing, and the listing step ran on refusals
+  #   after `Install docker CLI` had been skipped, loading the RO credential and curling the registry,
+  #   which made this file's own matrix line "REFUSE run 663, before any network call" FALSE. Body
+  #   rewritten to three honest paths (all exercised locally); listing gated on steps.install.outcome.
+  #   Refusal rows RE-EARNED on the fixed branch: runs 671-674. 663-666 kept as SUPERSEDED, not
+  #   deleted -- they refused correctly but did reach the registry afterwards.
+  # H5: THE FOURTEENTH GUARD CLOSED THE WRONG HALF. A false 404 yields a literal `false`, passes the
+  #   tri-state check, and arrives with PRE_DIGEST empty -- so both refusals were still bypassed. Both
+  #   write steps now re-verify absence ON THE WRITE PATH and fail closed. Proven both ways locally.
+  # H6: the Link `next` URL was followed to `http://` and to ANY host, re-attaching the RO credential
+  #   each hop (--proto-redir governs redirects, not this). Now own-host TLS or root-relative or FAIL.
+  # H4: 🔴 I had wrongly declared the Forgejo DB unreachable -- it is on s1; my grep was truncated by
+  #   `head`. FIFTH truncated read in this story. package_cleanup_rule id=1 read 2026-08-27; the
+  #   compile is NON-VACUOUS (every marker KEPT, the 40-hex <sha40>-prod NOT). G4 now also covers
+  #   sha-<12hex>-prod -- AC7's own rollback target, unchecked because it is an INPUT.
+  # H7: the comment called a job output "a DURABLE sink". It dies with the run. deploy-prod.yml now
+  #   READS history_written/current_written, so record-outcome names which write landed.
+  # 🔴 THREE ACs RE-GRADED, and the first table's own sentence was the defect: it said "nothing was
+  #   softened, and no AC was graded on intention" while three rows were exactly that.
+  #   AC2 MET -> PARTIALLY MET (for a non-release move the durable tier is closed BY DESIGN by
+  #   Prohibition 13; the clause cannot be fully met and now says so). AC3 and AC4 MET only AS OF
+  #   2026-08-27 -- AC3's stored-rule compile and AC4's disclaimer clause did not exist before.
+  #   FINAL: 7 of 9 MET, AC1 and AC2 PARTIALLY MET with their gaps named.
+  # ✅ VERIFIED AFTER EVERY FIX: runs 676 and 679 green end to end (12 rows each, record and its inner
+  # job success, record-outcome correctly skipped); registry unchanged -- prod-current,
+  # prod-a99ccd44c5a3 and sha-a99ccd44c5a3-prod on f30c7941..., prod-308ea1520c59 on 01855d1b...
+  # ⚠️ ELEVEN MEDIUMS FROM REVIEW #2 REMAIN OPEN and are listed in the story's Review Findings.
+  # Precedent exists both ways: Story 6.3 closed `done` carrying 26. That call is Oleg's, not mine.
+  # 🔴 THE REUSABLE LESSON, third occurrence in this epic: an AC graded MET by the same session that
+  # wrote the code is a SELF-ASSESSMENT. Three of the four defects fixed today were introduced by the
+  # previous fix-pass, and all of them were found by a review on a DIFFERENT MODEL (Fable), not by
+  # self-checking. "A fix-pass that is not itself re-reviewed is just a second draft" now has a third
+  # data point, and this time the re-review is what caught it.
+  6-6-record-the-deployed-production-image: review
   6-7-smoke-check-production-after-deploy: backlog
   6-8-roll-back-production-to-a-previous-release: backlog
   6-9-cut-production-over-with-a-no-op-deploy: backlog
