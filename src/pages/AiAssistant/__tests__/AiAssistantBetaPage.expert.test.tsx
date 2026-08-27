@@ -294,6 +294,27 @@ describe('AiAssistantBetaPage expert (Claude) mode', () => {
     expect(await screen.findByText('pages.aiAssistant.expertLimitReached')).toBeInTheDocument()
   })
 
+  it('speaks about the external service on a 503, not about the thinking mode', async () => {
+    // Прокси CRM подменяет текст мозга на 503 своим — про «думающий режим»
+    // (на нём держится откат thinking → fast). Экспертному ходу эта
+    // формулировка не подходит: показываем свою.
+    mockedSendChatMessage.mockRejectedValueOnce(
+      new AssistantChatStreamError({
+        status: 503,
+        message: 'Думающий режим сейчас недоступен. Повторите запрос в обычном режиме.',
+      })
+    )
+
+    renderPage()
+    await selectExpertModel('claude-sonnet-5')
+    send('вопрос')
+
+    expect(await screen.findByText('pages.aiAssistant.expertUnavailable')).toBeInTheDocument()
+    expect(screen.queryByText(/Думающий режим/)).not.toBeInTheDocument()
+    // Временный отказ не отбирает выбранный режим.
+    expect(screen.getByTestId('assistant-expert-external-notice')).toBeInTheDocument()
+  })
+
   it('clears the expert selection when the role loses access mid-session (403)', async () => {
     mockedSendChatMessage.mockRejectedValueOnce(
       new AssistantChatStreamError({

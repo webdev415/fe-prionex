@@ -2031,16 +2031,23 @@ export function AiAssistantBetaPage() {
         // otherwise the localised batch wording stands in.
         const isOurRefusal = Boolean(errorCode)
         // Отказы экспертного хода бэкенд формулирует сам и по-украински —
-        // «немає права», «денний ліміт вичерпано», «зовнішній сервіс не
-        // відповідає». Показываем их дословно: свои выдумки здесь были бы
-        // менее точны, чем текст того, кто отказал.
+        // «немає права», «денний ліміт витрат вичерпано (X з Y $)». Показываем
+        // их дословно: свои выдумки здесь были бы менее точны, чем текст того,
+        // кто отказал.
         const isExpertRefusal = isExpertTurn && (status === 403 || status === 429 || status === 503)
+        // 503 — исключение: прокси CRM заменяет текст мозга своим, «Думающий
+        // режим сейчас недоступен. Повторите запрос в обычном режиме», потому
+        // что на этой формулировке держится откат thinking → fast
+        // (`_status_detail` в services/ai-assistant/app/routers/chat.py). Для
+        // экспертного хода она неверна вдвойне: он не «думающий», и повторять
+        // его «в обычном режиме» — это другой вопрос к другой модели. Здесь
+        // текст сервера не показываем, а говорим про внешний сервис сами.
         const showsServerText =
           status === 400 ||
           status === 415 ||
           status === 422 ||
           (status === 413 && isOurRefusal) ||
-          isExpertRefusal
+          (isExpertRefusal && status !== 503)
         const expertFallbackMessage = isExpertRefusal
           ? status === 403
             ? t('pages.aiAssistant.expertForbidden')
