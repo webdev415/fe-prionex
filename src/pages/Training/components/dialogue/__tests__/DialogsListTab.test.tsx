@@ -57,7 +57,17 @@ vi.mock('../EmployeeMultiSelect', () => ({
   ),
 }))
 vi.mock('../CallReviewPanel', () => ({
-  CallReviewPanel: ({ callId }: { callId?: string }) => <div>panel:{callId ?? 'none'}</div>,
+  CallReviewPanel: ({ callId, canEdit }: { callId?: string; canEdit?: boolean }) => (
+    <div>
+      panel:{callId ?? 'none'}:{canEdit ? 'edit' : 'ro'}
+    </div>
+  ),
+}))
+// Mutable per-test: the «оцінювати лише закріплених» switch. `true` mirrors a
+// backend that predates the setting (legacy: only assigned operators).
+let scorecardAssignedOnly = true
+vi.mock('@/features/quality/hooks/useCallQaSettings', () => ({
+  useScorecardAssignedOnly: () => scorecardAssignedOnly,
 }))
 // Mutable so a test can grant `manage_qa_rules` and check what the head of
 // training sees that an ordinary trainer does not.
@@ -143,6 +153,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   permissions.length = 0
   clientDebtsById = new Map()
+  scorecardAssignedOnly = true
   mockUseMyOperators.mockReturnValue({ data: [41], isLoading: false } as ReturnType<
     typeof useMyOperators
   >)
@@ -538,5 +549,40 @@ describe('DialogsListTab — loan column', () => {
     fireEvent.click(link)
     // The click navigates to the card; it must NOT also select c2 for review.
     expect(screen.getByText(/panel:c1/)).toBeInTheDocument()
+  })
+})
+
+describe('scorecard_assigned_only gate', () => {
+  const foreignCall = () =>
+    setCalls({
+      // ext 102 → operator 42, who is NOT in the trainer's useMyOperators [41].
+      data: {
+        calls: [call({ agent_extension: '102' })],
+        summary: {},
+        total: 1,
+        limit: 50,
+        offset: 0,
+      } as never,
+    })
+
+  it("keeps another trainer's operator read-only while the switch is on", () => {
+    foreignCall()
+    render(<DialogsListTab />)
+    expect(screen.getByText(/panel:c1:ro/)).toBeInTheDocument()
+  })
+
+  it('lets any trainer edit any operator when the switch is off', () => {
+    scorecardAssignedOnly = false
+    foreignCall()
+    render(<DialogsListTab />)
+    expect(screen.getByText(/panel:c1:edit/)).toBeInTheDocument()
+  })
+
+  it('still allows own operators while the switch is on', () => {
+    setCalls({
+      data: { calls: [call()], summary: {}, total: 1, limit: 50, offset: 0 } as never,
+    })
+    render(<DialogsListTab />)
+    expect(screen.getByText(/panel:c1:edit/)).toBeInTheDocument()
   })
 })

@@ -2319,6 +2319,8 @@
           "all": "All employees",
           "clear": "Clear",
           "label": "Employee",
+          "noMatches": "No employees found",
+          "searchPlaceholder": "Search by name…",
           "selectAll": "Select all",
           "selected": "{{count}} selected"
         },
