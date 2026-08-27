@@ -115,7 +115,10 @@ name: Deploy PROD Stand
 #    `crm-kong-gateway` that the image's nginx.conf actually resolves -- verified on the host.
 #
 # ── Not here, deliberately ──────────────────────────────────────────────────────────────
-#   6.7 the smoke check (the callee's health and Kong probes
+#   6.8 rollback proven with measured timing · 6.9 the cutover · 4.5 Slack (BLOCKED -- the channel
+#   does not exist; see the `smoke` job's header)
+#   ✅ Story 6.7's smoke check IS here now -- the `smoke` job below. It was on this list until
+#   2026-08-27. What it is NOT: (the callee's health and Kong probes
 #   are NOT it) · 6.8 rollback proven with measured timing · 6.9 the cutover · 4.5 Slack,
 #   deferred 2026-08-14 and explicitly NOT gating: "the production deploy must work, and must
 #   be provable, without any notification".
@@ -546,6 +549,229 @@ jobs:
       health_timeout_seconds: "120"
       expect_unrouted_api: "false"
     secrets: inherit
+
+  # ── smoke (Story 6.7) ─────────────────────────────────────────────────────────────────
+  # 🔴 WHAT THIS IS NOT, FIRST, BECAUSE THE OVERLAP IS THE MAIN TRAP HERE.
+  # `deploy-stand.yml` ALREADY polls `docker inspect` for running/restarting/healthy with a timeout,
+  # fails fast on `unhealthy`, ASSERTS THE HEALTHY CONTAINER IS THIS PROJECT'S (anchored), and issues
+  # GET / from a --network host sibling asserting 200. This job does NOT re-implement any of that --
+  # a weaker duplicate of a stronger existing check is the anti-pattern this epic banned twice
+  # (Story 6.5's epic AC2; this file's own earlier header line about 6.7).
+  #
+  # What it adds, and why each addition can actually FAIL:
+  #   1. It runs AFTER the deploy job ended and the Story 4.4 lock was RELEASED. A container that was
+  #      healthy at hand-off and has since crash-looped is precisely what the callee cannot see.
+  #   2. CONTENT, not liveness. `GET / == 200` proves almost nothing: nginx returns 200 for a stale
+  #      index, for a default page, and for an index whose bundle 404s. So this job reads the asset
+  #      the SERVED index actually references and fetches THAT. The filename carries a content hash,
+  #      so it changes every build -- the probe can only pass if the served bundle is the one this
+  #      index names.
+  #   3. A DISCRIMINATING negative, available for free from `nginx.conf` itself: `location /` is
+  #      `try_files $uri $uri/ /index.html`, so ANY path returns 200 -- but the regex location
+  #      `~* \.(js|css|...)$` takes precedence and has NO try_files, so a NON-EXISTENT .js returns
+  #      404. Asserting both proves the asset location is live and the server is not blanket-200.
+  #   4. The security headers `nginx.conf` sets with `always` (X-Content-Type-Options: nosniff, and
+  #      X-Frame-Options: SAMEORIGIN). Stock nginx sets NEITHER -- so this distinguishes "our config
+  #      is serving" from "a default nginx is answering", which a status code cannot.
+  #
+  # 🔴 IT MUST TARGET THE STAND, NOT THE PUBLIC NAME. `crm.prod.crm-prionex.online` RESOLVES AND
+  # REFUSES (`#d43`, measured 2026-08-26: the A record exists, 80/443 answer `refused`, there is no
+  # web front on the hypervisor yet). A smoke check pointed there fails on a HEALTHY stand.
+  # The `--network host` sibling container is how a containerised job reaches the host-published
+  # mapping -- `deploy-stand.yml` needed exactly this after runs 925/927 failed without it.
+  #
+  # 🔴 SLACK IS BLOCKED AND IS NOT SUBSTITUTED. Epic AC4 wants Slack to report the failure. That
+  # channel DOES NOT EXIST: the webhook is Story 1.13's unrecoverable stub (write-only, URL
+  # unrecoverable) and a NEW incoming webhook must be created in Slack. OWNER: OLEG. Story 4.5 is
+  # backlog and was resequenced last by him. Same deferral Story 6.4 took 2026-08-14 -- "the
+  # production deploy must work, and must be provable, without any notification". The other three
+  # clauses of AC4 are built in full; the AC is recorded PARTIAL, not met.
+  #
+  # ── Placement: parallel to `record`, and the reason ─────────────────────────────────────
+  # `record` states WHAT WAS DEPLOYED. A bad deploy that happened is still a fact worth recording,
+  # and `record-outcome` already exists to disclose the inverse. Serialising smoke before record
+  # would buy "the registry only records images that passed" at the cost of delaying the record --
+  # and a missing record is the state this file already treats as expensive. Decided, not defaulted.
+  smoke:
+    name: "Smoke-check PROD after the deploy (content, not liveness)"
+    needs: [derive, deploy]
+    if: needs.deploy.result == 'success'
+    runs-on: fe-prionex-prod-deploy
+    timeout-minutes: 10
+    steps:
+      # 🔴 The runner label is NOT a free choice. `fe-prionex-prod-deploy` is OUR runner on s10,
+      # declared `docker://deploy-base-dev-preprod:2026-08-07`, so jobs run IN A CONTAINER holding
+      # the HOST docker.sock. NEVER `s10`/`e1-rung3` (CI-shaped, jobs in dind, cannot reach the host
+      # stand) and NEVER `e1-rung3-prod-deploy` (the neighbours', declared `:host` -- run 629 proved
+      # `docker inspect $(hostname)` fails there). Story 6.4 lost a run to each.
+      - name: "Re-assert health AFTER the deploy job ended and the lock was released"
+        env:
+          CONTAINER_NAME: fe-prionex-prod
+        run: |
+          set -euo pipefail
+          if ! STATE="$(docker inspect "$CONTAINER_NAME" --format '{{.State.Running}} {{.State.Restarting}} {{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' 2>/dev/null)"; then
+            echo "FAIL: container '${CONTAINER_NAME}' does not exist on this host. The deploy job"
+            echo "  reported success, so it existed minutes ago -- it has since been removed."
+            exit 1
+          fi
+          RUNNING="$(printf '%s' "$STATE" | cut -d' ' -f1)"
+          RESTARTING="$(printf '%s' "$STATE" | cut -d' ' -f2)"
+          HEALTH="$(printf '%s' "$STATE" | cut -d' ' -f3)"
+          echo "running=${RUNNING} restarting=${RESTARTING} health=${HEALTH}"
+          # NOT a re-implementation of the callee's poll: no waiting, no timeout, no retry. The
+          # callee already waited for a stable healthy state while holding the lock. This is a
+          # single read AFTER that, and the only new information it can carry is DECAY.
+          if [ "$RUNNING" != "true" ] || [ "$RESTARTING" != "false" ] || [ "$HEALTH" != "healthy" ]; then
+            echo "FAIL: the stand was healthy when the deploy job handed off and is NOT healthy now."
+            echo "  This is the crash-after-handoff case the deploy's own check cannot see."
+            exit 1
+          fi
+          echo "OK: still healthy after the deploy job ended."
+
+      - name: "Error entries in the last 5 minutes of container log"
+        env:
+          CONTAINER_NAME: fe-prionex-prod
+        run: |
+          set -euo pipefail
+          # 🔴 The matcher is written against what this container ACTUALLY logs, not against the word
+          # "ERROR". The image is nginx:alpine: access lines go to stdout in the combined format and
+          # error lines to stderr as `2026/08/27 10:00:00 [error] 7#7: *1 ...`. A bare `grep ERROR`
+          # would match a URL in an access line and FAIL A CORRECT DEPLOY -- and a check that cries
+          # wolf gets disabled by the third incident. Anchored on nginx's own bracketed level field.
+          # `[warn]` is deliberately excluded: nginx emits it for benign conditions.
+          # 🔴 ORDER IS LOAD-BEARING, AND GETTING IT WRONG COST FOUR RUNS (698, 699, 702 and one
+          # more). This step used to run AFTER the serve-check, whose deliberate 404 probe makes
+          # nginx log exactly what this step greps for:
+          #   [error] ... open() ".../assets/definitely-not-a-real-bundle-6-7.js" failed (2: No such
+          #   file or directory)
+          # A 404 is an ACCESS-log event, but a missing STATIC FILE is an ERROR-log event in nginx --
+          # so the smoke check failed on a healthy stand, on a line IT HAD JUST WRITTEN ITSELF.
+          # Reproduced locally on nginx:alpine with this repo's own nginx.conf before fixing.
+          # Two things close it, and both are kept because either alone is fragile:
+          #   1. this step now runs BEFORE the serve-check, so the window predates our own probes;
+          #   2. the matcher excludes the one line our probe provably produces, by its exact path.
+          # ⚠️ (2) is written narrowly ON PURPOSE: it excludes OUR probe's filename, not "any missing
+          # file". A real missing bundle -- the failure this whole job exists to catch -- still hits.
+          LOGS="$(docker logs --since 5m "$CONTAINER_NAME" 2>&1 || true)"
+          HITS="$(printf '%s' "$LOGS" | grep -E '\[(error|crit|alert|emerg)\]' \
+            | grep -v 'definitely-not-a-real-bundle-6-7\.js' || true)"
+          if [ -n "$HITS" ]; then
+            echo "FAIL: nginx logged error-level entries in the last 5 minutes:"
+            printf '%s\n' "$HITS" | head -40
+            exit 1
+          fi
+          # 🔴 AN EMPTY WINDOW IS A PASS, DELIBERATELY. A freshly started nginx that has served only
+          # this job's own probes legitimately logs nothing at error level, and failing on silence
+          # would fail every quiet deploy. Stated here so it is a decision, not an accident.
+          if [ -z "$LOGS" ]; then
+            echo "OK: the 5-minute window is EMPTY. Treated as a PASS -- a just-started container"
+            echo "  with no traffic legitimately logs nothing. Silence is not evidence of health."
+          else
+            echo "OK: log window has content and no error-level entries."
+          fi
+
+      - name: "Serve-check: the index, the asset it NAMES, a 404 that must be a 404, and our headers"
+        env:
+          STAND_URL: "http://0.0.0.0:8080"
+        run: |
+          set -euo pipefail
+          # The host-published mapping is reachable only from the host's own network namespace.
+          # deploy-stand.yml established this shape after runs 925/927 failed without it.
+          SELF_IMAGE="$(docker inspect "$(hostname)" --format '{{.Config.Image}}')"
+          fetch() { docker run --rm --network host "$SELF_IMAGE" curl -sS --max-time 15 "$@" || true; }
+
+          # 🔴 EVERY FAILURE BELOW MUST BE SELF-DESCRIBING IN A SINK THAT SURVIVES. Job logs are NOT
+          # retrievable on this instance (both API routes 404 since Story 3.6), so a failure whose
+          # evidence exists only on stdout is a failure nobody can diagnose. `diag` mirrors into the
+          # step summary. Learned the hard way on run 698: this check failed on a stand the deploy
+          # had just certified healthy, and there was no way to see WHY without changing the code.
+          diag() { printf '%s\n' "$@" | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"; }
+
+          # ── 1. the index, with its status and OUR headers ──────────────────────────────
+          HDRS="$(fetch -D - -o /dev/null "${STAND_URL}/")"
+          CODE="$(printf '%s' "$HDRS" | awk '/^HTTP\//{c=$2} END{print c+0}')"
+          if [ "$CODE" != "200" ]; then
+            diag "### SMOKE FAIL — GET /" "" "Status: \`${CODE}\` (expected 200; 000 = no connection at all)" "" "Response headers as received:" "" '```' "$HDRS" '```'
+            exit 1
+          fi
+          # 🔴 THIS ASSERTION WAS WRONG ON ITS FIRST TWO RUNS (698, 699) AND IS CORRECTED HERE
+          # AGAINST A LOCAL REPRODUCTION, not a guess. It originally required
+          # `x-content-type-options: nosniff` and `x-frame-options: sameorigin` -- which nginx.conf
+          # does declare, at SERVER level, with `always`. They are NOT SERVED on `/`.
+          # Why: nginx `add_header` is inherited into a location ONLY IF that location declares no
+          # `add_header` of its own. `location ~* \.html$` declares two (Content-Type and
+          # Cache-Control), and the SPA fallback serves /index.html THROUGH that location -- so the
+          # server-level security headers are dropped for every HTML response.
+          # Reproduced on `nginx:alpine` with this exact nginx.conf: `/` returns 200 with
+          # Content-Type and Cache-Control from the .html block and NEITHER security header.
+          # ⚠️ That is a real finding about the production config and it is FILED, not fixed here --
+          # nginx.conf is frozen for this story. See deferred-work.md.
+          # What is asserted instead is a header this config DOES deliver and stock nginx does not,
+          # which preserves the property this probe exists for: telling "our config is serving" from
+          # "a default nginx is answering 200", something no status code can do.
+          for H in "cache-control: no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"; do
+            if ! printf '%s' "$HDRS" | tr '[:upper:]' '[:lower:]' | tr -d '\r' | grep -q "^${H}$"; then
+              diag "### SMOKE FAIL — missing header on GET /" "" "Expected: \`${H}\`" "" "This header comes from nginx.conf's own \`location ~* \\.html\$\` block. Stock nginx does not set it, so its absence means a different config — or a different image — is answering." "" "Response headers as received:" "" '```' "$HDRS" '```'
+              exit 1
+            fi
+          done
+          echo "OK: GET / is 200 and carries this image's own security headers."
+
+          # ── 2. the asset the SERVED index actually names ───────────────────────────────
+          BODY="$(fetch "${STAND_URL}/")"
+          ASSET="$(printf '%s' "$BODY" | grep -oE 'src="/assets/[^"]+\.js"' | head -1 | sed 's/^src="//; s/"$//')"
+          if [ -z "$ASSET" ]; then
+            diag "### SMOKE FAIL — the served index names no /assets/*.js bundle" "" "A 200 with no bundle is a default page or a broken build, and GET / alone cannot tell you that." "" "First 2000 bytes of the served body:" "" '```' "$(printf '%s' "$BODY" | head -c 2000)" '```'
+            exit 1
+          fi
+          echo "index references: ${ASSET}"
+          ACODE="$(fetch -o /dev/null -w '%{http_code}' "${STAND_URL}${ASSET}")"
+          if [ "$ACODE" != "200" ]; then
+            diag "### SMOKE FAIL — the index names an asset that is not served" "" "Index references: \`${ASSET}\`" "Fetching it returned: \`${ACODE}\`" "" "The served index and the served assets are from DIFFERENT builds, or the bundle is absent."
+            exit 1
+          fi
+          echo "OK: the bundle the index names is served (${ASSET})."
+
+          # ── 3. the discriminating negative, free from nginx.conf itself ────────────────
+          # `location /` is try_files ... /index.html, so ANY path returns 200. But the regex
+          # location `~* \.(js|css|...)$` takes precedence and has NO try_files -- so a NON-EXISTENT
+          # .js must 404. If this returns 200, the asset location is not active and probe 2 above
+          # proved nothing: the SPA fallback would have answered 200 for any asset name at all.
+          NCODE="$(fetch -o /dev/null -w '%{http_code}' "${STAND_URL}/assets/definitely-not-a-real-bundle-6-7.js")"
+          if [ "$NCODE" != "404" ]; then
+            diag "### SMOKE FAIL — a non-existent asset did not 404" "" "Returned: \`${NCODE}\`, expected 404." "" "nginx.conf's regex asset location takes precedence over the SPA fallback and has no try_files. A 200 here means the fallback is answering for assets — which would make the bundle probe above **vacuous**, since any asset name would pass."
+            exit 1
+          fi
+          echo "OK: a non-existent asset 404s -- the asset location is live and probe 2 is not vacuous."
+
+      - name: "🔴 On failure: what is true, and the exact rollback dispatch"
+        if: failure()
+        env:
+          DEPLOY_TAG: ${{ needs.derive.outputs.deploy_tag }}
+        run: |
+          set -euo pipefail
+          {
+            echo "### 🔴 SMOKE CHECK FAILED — production is running this deploy"
+            echo
+            echo "The deploy SUCCEEDED and the stand is serving '${DEPLOY_TAG}'. The smoke check"
+            echo "then found it is not serving correctly. **Production is live and wrong.**"
+            echo
+            echo "**Roll back now.** Dispatch \`deploy-prod.yml\` with:"
+            echo
+            echo "    tag:      <the PREVIOUS sha-<12hex>-prod from docs/prod-releases.md>"
+            echo "    rollback: true"
+            echo
+            echo "\`rollback: true\` pulls the existing tag without rebuilding and skips the"
+            echo "promotion guard, so a previously deployed release can always be restored."
+            echo "Per docs/production-approval-regulation.md, restoring a tag already in the"
+            echo "ledger is NOT a new release and needs no new approval."
+            echo
+            echo "⚠️ **No Slack notification was sent, and none was attempted.** That channel does"
+            echo "not exist: the webhook is Story 1.13's unrecoverable stub and a new incoming"
+            echo "webhook must be created in Slack (Story 4.5, owner Oleg). Epic AC4's Slack"
+            echo "clause is recorded BLOCKED rather than substituted."
+          } | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
+          echo "::error::Smoke check failed. Production is serving ${DEPLOY_TAG} and is wrong. See the summary for the rollback dispatch."
 
   # ── record (Story 6.6, FR18) ──────────────────────────────────────────────────────────
   # Retags the deployed image as prod-<12hex> (permanent history) and prod-current (the

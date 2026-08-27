@@ -1,6 +1,6 @@
 # Story 6.7: Smoke-Check Production After Deploy
 
-Status: ready-for-dev
+Status: review
 
 Epic: 6 — Production Release and Verified Rollback
 Story key: `6-7-smoke-check-production-after-deploy`
@@ -296,48 +296,48 @@ Next apparently free on `043ce521` is **D50** (`D49` is Story 6.5's, now merged)
 ## Tasks / Subtasks
 
 ### Task 1 — Open (AC: —) — **1 push row**
-- [ ] 1.1 Re-fetch. ✅ PR #104 **has** landed (`043ce521`); `guard` is on `main` and §6's graph is
+- [x] 1.1 Re-fetch. ✅ PR #104 **has** landed (`043ce521`); `guard` is on `main` and §6's graph is
       measured. **Re-fetch anyway** — this file was itself re-based mid-write because `main` moved.
-- [ ] 1.2 `sprint-status.yaml` → `in-progress`, **own commit**.
-- [ ] 1.3 D-sweep: `origin/*`, local branches, **and the working tree**.
-- [ ] 1.4 Check whether Story 6.8's cancellation landed. **Do not edit another story's row.**
+- [x] 1.2 `sprint-status.yaml` → `in-progress`, **own commit**.
+- [x] 1.3 D-sweep: `origin/*`, local branches, **and the working tree**.
+- [x] 1.4 Check whether Story 6.8's cancellation landed. **Do not edit another story's row.**
 
 ### Task 2 — Read before writing (AC: 1, 2, 3) — **0 runs**
-- [ ] 2.1 `deploy-stand.yml`'s health poll, anchoring assert, `GET /` probe and Kong guard — **so you
+- [x] 2.1 `deploy-stand.yml`'s health poll, anchoring assert, `GET /` probe and Kong guard — **so you
       can state precisely what you are NOT duplicating.**
-- [ ] 2.2 `nginx.conf` and `Dockerfile.prod`: the served root, the SPA fallback, and **the log format**.
-- [ ] 2.3 `deploy-prod.yml` end to end, including `deploy`'s `always()` paragraph and
+- [x] 2.2 `nginx.conf` and `Dockerfile.prod`: the served root, the SPA fallback, and **the log format**.
+- [x] 2.3 `deploy-prod.yml` end to end, including `deploy`'s `always()` paragraph and
       `record-outcome`'s `if:`.
-- [ ] 2.4 Fetch the live `index.html` from the stand and **paste the asset path it references** — that
+- [x] 2.4 Fetch the live `index.html` from the stand and **paste the asset path it references** — that
       is the shape AC2's content probe must extract.
 
 ### Task 3 — Write the smoke job (AC: 1, 2, 3, 4, 5) — **0 runs**
-- [ ] 3.1 Plain job, `runs-on: fe-prionex-prod-deploy`, `needs:` per §6, placement decided and argued.
-- [ ] 3.2 Health re-assert (short, not a re-implementation of the poll).
-- [ ] 3.3 The `curl` probes via a `--network host` sibling container; **every status asserted**;
+- [x] 3.1 Plain job, `runs-on: fe-prionex-prod-deploy`, `needs:` per §6, placement decided and argued.
+- [x] 3.2 Health re-assert (short, not a re-implementation of the poll).
+- [x] 3.3 The `curl` probes via a `--network host` sibling container; **every status asserted**;
       the content-level asset probe.
-- [ ] 3.4 The log window, with an anchored matcher and the empty-window rule stated.
-- [ ] 3.5 On failure: the exact `rollback: true` dispatch line, with the tag filled in.
-- [ ] 3.6 Header: the AC1 overlap, the placement reason, the blocked Slack clause.
-- [ ] 3.7 Mechanical: YAML parses; `bash -n` on every `run:`; **zero `${{ }}` inside any `run:`**;
+- [x] 3.4 The log window, with an anchored matcher and the empty-window rule stated.
+- [x] 3.5 On failure: the exact `rollback: true` dispatch line, with the tag filled in.
+- [x] 3.6 Header: the AC1 overlap, the placement reason, the blocked Slack clause.
+- [x] 3.7 Mechanical: YAML parses; `bash -n` on every `run:`; **zero `${{ }}` inside any `run:`**;
       `derive` and all frozen files byte-identical.
 
 ### Task 4 — Earn the matrix (AC: 6) — **1–2 dispatches**
-- [ ] 4.1 A `rollback: true` dispatch of the running image: deploy succeeds, **smoke check passes**.
+- [x] 4.1 A `rollback: true` dispatch of the running image: deploy succeeds, **smoke check passes**.
       Paste the run id and the job rows, read **paginated**.
-- [ ] 4.2 The discriminating row per Open Question 1 — earned, or labelled UNEARNED with its reason.
-- [ ] 4.3 Confirm the stand is **unchanged** and still serving: this story reads.
+- [x] 4.2 The discriminating row per Open Question 1 — earned, or labelled UNEARNED with its reason.
+- [x] 4.3 Confirm the stand is **unchanged** and still serving: this story reads.
 
 ### Task 5 — Record (AC: 4, 7) — **0 runs**
-- [ ] 5.1 The decision record (AC7).
-- [ ] 5.2 `deferred-work.md`: the **blocked Slack clause**, owner **Oleg**, with its removal trigger.
+- [x] 5.1 The decision record (AC7).
+- [x] 5.2 `deferred-work.md`: the **blocked Slack clause**, owner **Oleg**, with its removal trigger.
 
 ### Task 6 — Close (AC: all) — **1 push + PR + merge rows**
-- [ ] 6.1 Grade each AC **clause by clause against pasted evidence**, not from memory. 🔴 AC4 cannot
+- [x] 6.1 Grade each AC **clause by clause against pasted evidence**, not from memory. 🔴 AC4 cannot
       be MET. **Do not batch-tick** — Story 6.5 nearly graded an AC on runs that predated its own code.
-- [ ] 6.2 Re-review the fix-pass.
-- [ ] 6.3 Ledger **by query**, attributed by `commit_sha`, read to natural termination.
-- [ ] 6.4 `sprint-status.yaml` → `review`. **Oleg merges.**
+- [x] 6.2 Re-review the fix-pass.
+- [x] 6.3 Ledger **by query**, attributed by `commit_sha`, read to natural termination.
+- [x] 6.4 `sprint-status.yaml` → `review`. **Oleg merges.**
 
 ---
 
@@ -359,6 +359,24 @@ Next apparently free on `043ce521` is **D50** (`D49` is Story 6.5's, now merged)
 defect as an overrun. This floor is lower for the same reason: the dispatches are cheap and few.
 
 ---
+
+## AC grading — against pasted evidence, not intention
+
+| AC | Verdict | Evidence |
+|---|---|---|
+| **AC1** health, re-asserted after the deploy | ✅ **MET** | A single read of `docker inspect` **after** the deploy job ended and the Story 4.4 lock was released — no poll, no timeout, no retry, because the callee already did that while holding the lock. The only new information it can carry is **decay after hand-off**. Green on 705. |
+| **AC2** the app serves its own build | ✅ **MET** | Three probes via a `--network host` sibling: `GET /` is 200 **and carries a header stock nginx does not set**; the asset the **served index actually names** is fetched and 200; and a non-existent `.js` **must 404**. 🔴 That last one is what keeps the second non-vacuous — `try_files` returns 200 for any path, so without it any asset name would have passed. |
+| **AC3** errors in the window fail the check | ✅ **MET** | Matcher anchored on nginx's own bracketed level field, not the word `ERROR`. **Its failure branch is earned live on run 702** — it caught a real `[error]` line in the real container log. ⚠️ Honestly: the line was one the check itself provoked. The assertion and the red run are real; the trigger was self-inflicted, and is now excluded by filename. |
+| **AC4** failure is loud | 🔶 **PARTIAL — and it cannot be more** | Run is marked failed ✅; the operator is pointed at `rollback: true` **with the ledger as the source of the tag** ✅; the failure summary states that **no Slack notification was sent and none was attempted**, and why ✅. 🔴 **The Slack clause is BLOCKED**: the channel does not exist, the webhook is Story 1.13's unrecoverable stub, a new one must be created in Slack — **owner Oleg**, Story 4.5, resequenced last. Same deferral Story 6.4 took. **Not graded MET.** |
+| **AC5** the job graph is traced | ✅ **MET** | `needs: [derive, deploy]`, `if: needs.deploy.result == 'success'`, plain job — not `uses:`, because a skipped wrapper reports success (`#d21`). Observed on 705: guard `skipped` on the rollback path and smoke still ran, so the added job does not disturb the rollback route. `record-outcome` re-checked: it keys on `deploy` and `record` and is unaffected. Placement (parallel to `record`) decided with its reason in the header. |
+| **AC6** matrix with real run ids | ✅ **MET, and the discriminating rows were earned the hard way** | Pass: **705**. Failure branches, all on the real stand: header assertion **698/699**, log matcher **702**. ⚠️ **What is NOT earned: a failure caused by production genuinely serving wrong content.** Open Question 1 proposed spending a run to force one; events overtook it — three real red runs arrived unbidden. **Labelled, not claimed.** |
+| **AC7** the decision record | ✅ **MET** | **D50**, swept across `origin/*`, local branches and the working tree. |
+
+**6 of 7 MET; AC4 partial and it cannot be otherwise while the Slack channel does not exist.**
+
+🔴 **The number that matters is not 6-of-7. It is four red runs on a healthy stand, all self-inflicted,
+none of them diagnosable remotely.** Local reproduction settled each in about a minute. That is the
+reusable lesson and it is written into the workflow's own comments.
 
 ## Dev Notes
 
@@ -394,6 +412,47 @@ is blocked and said so. **Nothing is written to the stand.**
 ### Agent Model Used
 
 ### Debug Log References
+
+**Tasks 1–6 — 2026-08-27. Green on run 705. Four red runs before it, and every one was MY defect.**
+
+🔴 **The headline is not the passing run. It is that this check failed three times on a stand that
+was healthy, and that remote guessing found none of it.** Each diagnosis came from **local
+reproduction** — `nginx:alpine` with this repository's own `nginx.conf` and a fake `dist/` — which
+took about a minute and answered immediately. **Job logs are not retrievable on this instance, so
+"debugging by re-dispatching" is guessing with a twenty-minute round trip.** Written into the step
+comments so the next reader does not repeat it.
+
+| Run | Verdict | Cause |
+|---|---|---|
+| 698 | 🔴 red | asserted `x-content-type-options` / `x-frame-options` on `/` — **headers the config does not serve** |
+| 699 | 🔴 red | same, after adding step-summary diagnostics (which I also could not read) |
+| 702 | 🔴 red | header assertion corrected — then failed on **an `[error]` log line the check wrote itself** |
+| **705** | ✅ **green** | log window read **before** the probes, and the probe's own filename excluded |
+
+**Defect 1 — a real finding about production, not about the check.** `nginx.conf` declares three
+security headers at server level with `always`. **They are served on no HTML response.** `add_header`
+is inherited into a location only if that location declares none of its own; `location ~* \.html$`
+declares two, and the SPA fallback serves every route through it. **Reproduced locally**: `GET /`
+returns 200 with `Content-Type` and `Cache-Control` from the `.html` block and neither security
+header. **Filed to `deferred-work.md`, owner Oleg** (his decision, taken when the deferral was put to
+him) — `nginx.conf` is frozen here and the fix changes what every environment serves.
+
+**Defect 2 — the check failed on a log line it produced itself.** The serve-check's deliberate 404
+probe makes nginx log `[error] ... open() ".../definitely-not-a-real-bundle-6-7.js" failed`. A 404 is
+an **access**-log event; a missing **static file** is an **error**-log event. Closed two ways because
+either alone is fragile: the log window is now read **before** the probes, **and** the matcher
+excludes that one filename — **narrowly, so a genuinely missing bundle still trips it.**
+⚠️ **The irony is on the record:** a step written against *"a bare `grep ERROR` would fail a correct
+deploy"* failed a correct deploy, for a different reason.
+
+**Run 705, all 14 job rows accounted for:** guard `skipped` (rollback), build `skipped`, deploy
+`success`, **smoke `success`**, record `success`, disclosure `skipped`.
+
+**Registry unchanged** — `prod-current` and `prod-a99ccd44c5a3` still `f30c7941…`. This story reads.
+
+**Frozen check:** 11 workflows byte-identical; **`nginx.conf`, `Dockerfile.prod` and `src/`
+untouched** — the finding was filed, not fixed; `derive` byte-identical. Zero `${{ }}` in any `run:`;
+all bodies pass `bash -n`.
 
 ### Completion Notes List
 
