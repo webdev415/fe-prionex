@@ -2270,7 +2270,21 @@ development_status:
   # Registry unchanged; nginx.conf, Dockerfile.prod and src/ untouched; derive byte-identical.
   # Oleg merges; the row goes `done` only after that.
   6-7-smoke-check-production-after-deploy: review
-  6-8-roll-back-production-to-a-previous-release: backlog
+  # 🔀 MERGE RESOLUTION 2026-08-27 (chore/story-6-8-cancelled <- origin/main 586a4559). BOTH SIDES
+  # KEPT WHOLE, neither absorbed -- the same resolution this file recorded for the 6.2 merge. The
+  # branch was cut when 6.7 was still `backlog`; main has since taken it through ready-for-dev to
+  # `review`. That value and its whole block come from MAIN and are untouched. What the branch
+  # carries is the 6.8 cancellation below, which main knows nothing about. They are not in conflict
+  # on the merits: they are different rows, and git only collided them because they are adjacent.
+  # 6.8 CANCELLED 2026-08-26 by Oleg (sprint-change-proposal-2026-08-26-story-6-8-cancelled.md).
+  # It was a rehearsal of a path Story 6.4 had already built AND dispatched live against the
+  # production stand twice -- runs 634 and 642, build job skipped, stand healthy. FR24 is met by
+  # 6.4; the smoke-check-after-rollback clause is 6.7's; the `prod-current` clause is 6.6's, whose
+  # ledger writes run on both paths by its own AC. 🔴 ONE CLAUSE IS ORPHANED, not absorbed: NFR3's
+  # MEASURED rollback duration. 6.4 §"not in scope" item 4 deferred it here by name and nothing
+  # else claims it -- filed in deferred-work.md, owner Oleg. Cheapest capture if he wants it: read
+  # the elapsed time off 6.6's §8 rollback dispatches, which are already budgeted.
+  6-8-roll-back-production-to-a-previous-release: cancelled
   6-9-cut-production-over-with-a-no-op-deploy: backlog
   # Added 2026-08-18 by sprint-change-proposal-2026-08-18-prod-target.md. Listed after 6.9 to
   # preserve numbering but MUST complete before 6.4 — same precedent as 1.13 before 1.12.

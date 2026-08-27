@@ -587,6 +587,14 @@ technical approval gate — organizational control), NFR11 (`[C]` promotion prin
 PROD image is rebuilt rather than promoted, the guard degrades from image identity to commit
 identity, and the deviation is recorded as tracked technical debt.
 
+🔴 **Story 6.8 cancelled 2026-08-26** (`sprint-change-proposal-2026-08-26-story-6-8-cancelled.md`).
+The epic still says *"rollback is proven in practice rather than in theory"* and that is still
+true — it was proven by Story 6.4's live dispatches (runs 634, 642), not by the rehearsal story,
+which had nothing left to build or to do first. **FR24 and NFR3 stay covered by this epic**, with
+one named gap: **NFR3's measured duration was never recorded and now has no owner story**
+(`deferred-work.md`, owner Oleg). The epic drops from 9 planned stories to 8, one of them
+cancelled at 6.1.
+
 🔴 **Amended 2026-08-26** (`sprint-change-proposal-2026-08-26-cutover-candidate.md`). This epic's preamble records that *"the first Forgejo
 release is a one-way door"* and that rollback depth starts at zero. **That is now sharper, not
 softer.** Under the amended FR31 the cutover image is built from a **different commit** than the one
@@ -2436,12 +2444,15 @@ Option C compromise becomes visible and is recorded as tracked technical debt.
 > **Accepted risk: the rollback horizon resets at cutover (recorded 2026-08-07).** Every image
 > built before the migration lives in `ghcr.io/crm-prionex/fe-prionex`, and no action is taken
 > on GitHub — which includes pulling from its registry. Those images are therefore
-> unreachable. Rollback via Story 6.8 can only target versions built by Forgejo.
+> unreachable. Rollback — the `rollback: true` path of `deploy-prod.yml`, Story 6.4 — can only
+> target versions built by Forgejo.
 >
 > The practical consequence: **the first Forgejo release is a one-way door.** Before it, the
 > legacy pipeline can still put an older version back. After it, rollback depth starts at zero
-> and grows one release at a time. Story 6.8 must be proven on a Forgejo-built version before
-> the cutover, not after, because there is no older version to fall back to.
+> and grows one release at a time. The path had to be proven on a Forgejo-built version before
+> the cutover, not after, because there is no older version to fall back to — **it was, in runs
+> 634 and 642 under Story 6.4**, which is the ground on which Story 6.8 was cancelled
+> (2026-08-26).
 >
 > This compounds the loss of the GitHub fallback recorded in Story 7.1 (cancelled). Together
 > they mean Epic 6 carries no external safety net at all.
@@ -2730,30 +2741,27 @@ As a release engineer,
 I want to restore the previous production release quickly,
 So that a bad release is a short incident rather than a long one.
 
-**Acceptance Criteria:**
-
-**Given** a previously deployed production `image_tag`
-**When** `deploy-prod.yml` is dispatched with that tag and `rollback` true
-**Then** the promotion guard is skipped and the image is pulled without rebuilding.
-
-**Given** the rollback executes
-**When** it completes
-**Then** the elapsed time is the pull plus container restart, with no build stage
-**And** the measured duration is recorded.
-
-**Given** the rollback completes
-**When** the smoke check from Story 6.7 runs
-**Then** it passes against the restored release.
-
-**Given** the rollback has been performed
-**When** the registry is inspected
-**Then** `prod-current` points at the restored image.
-
-**Given** this is a real rehearsal rather than a documented intention
-**When** the story closes
-**Then** an actual rollback has been executed against the production stand and observed to
-work
-**And** the procedure is documented with the observed timing.
+> **CANCELLED — the mechanism shipped and ran before the story could (decided by Oleg,
+> 2026-08-26,** `sprint-change-proposal-2026-08-26-story-6-8-cancelled.md`**).** This story was
+> written as a rehearsal of a rollback path that did not exist yet. Story 6.4 built that path and
+> then dispatched it **live against the production stand twice — runs 634 and 642** — with the
+> build job skipped and the stand healthy on both. There is no unbuilt mechanism left here and no
+> first rollback left to perform.
+>
+> **Where each of its five AC clauses now lives:**
+>
+> | AC clause | Disposition |
+> |---|---|
+> | Guard skipped, image pulled without rebuilding | ✅ **Story 6.4, AC3** — runs 634, 642. FR24 is met by the shipped `rollback: true` path, not by this story. |
+> | Elapsed time is pull + restart, **and the duration is recorded** | ⚠️ **ORPHANED.** The *no-rebuild* half is proven (the `build` job is visibly skipped); **the measured half has no owner story.** Story 6.4 §"not in scope" item 4 deferred it here explicitly. Filed in `deferred-work.md`, owner Oleg. |
+> | The Story 6.7 smoke check passes against the restored release | ➡️ **Story 6.7**, which is where the smoke check is built. It runs on every deploy, and the rollback path is a deploy. |
+> | `prod-current` points at the restored image | ➡️ **Story 6.6**, whose ledger writes run on **both** paths by its own AC, and whose §8 exercise moves `prod-current` on a rollback and then moves it back. |
+> | A real rollback executed against the production stand, procedure documented | 🟡 **Half met.** The execution happened (634, 642), and Story 6.6 has since added three more — runs **662, 667, 668**, `prod-current` moved and moved back. **Five live rollbacks, none of them timed.** The written procedure did not get written — same `deferred-work.md` entry. |
+>
+> **What this does NOT change.** The rollback horizon still resets at cutover, and the accepted
+> risk recorded in this epic's preamble stands word for word — it was never a property of this
+> story, only described by it. Rollback depth still starts at zero and grows one release at a
+> time.
 
 ### Story 6.9: Cut Production Over with a No-Op Deploy
 
@@ -2908,8 +2916,10 @@ So that decommissioning is irreversible only after the replacement has proven it
 > **The fallback it described is gone in a way worth stating plainly.** The story treated the
 > still-enabled GitHub deploy job as a safety net — "could be re-enabled if the Forgejo
 > pipeline failed badly". Re-enabling it would be an action on GitHub, so that net does not
-> exist for us. Rollback lives entirely inside Forgejo (Story 6.8, redeploy of a previous
-> `image_tag`), and Epic 6 must be proven on its own merits before production depends on it.
+> exist for us. Rollback lives entirely inside Forgejo (the `rollback: true` redeploy of a
+> previous `image_tag`, built and dispatched live in **Story 6.4**; Story 6.8, which would have
+> rehearsed it a second time, was cancelled 2026-08-26 as already met), and Epic 6 must be proven
+> on its own merits before production depends on it.
 >
 > Recording each Forgejo release cycle is still worth doing, but as ordinary release practice
 > under the regulation in Story 6.2 — not as a gate on a decommissioning that will not happen.
@@ -3032,7 +3042,9 @@ So that deleting the secret is not mistaken for the key becoming safe.
 **Then** the old key is removed from `authorized_keys` on s1.
 
 **Given** the old s2 key was deliberately retained through the migration per NFR7
-**When** the Forgejo production path has been proven by Story 6.8 and Story 6.9
+**When** the Forgejo production path has been proven — rollback by Story 6.4's live
+`rollback: true` dispatches (Story 6.8's rehearsal was cancelled 2026-08-26) and cutover by
+Story 6.9
 **Then** the old s2 key is removed from `authorized_keys` on s2
 **And** this is the final step of the migration, performed only after production delivery via
 Forgejo is confirmed working.

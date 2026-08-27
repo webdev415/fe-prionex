@@ -90,7 +90,22 @@ rollback to a tag not in the ledger is a release and needs Oleg.** One caveat: r
 on that recorded tag still existing in the registry, and the retention rule has **never been
 observed deleting anything** — `#d38` §9, `UNPROVEN by execution`, verified by compilation against
 the stored rule rather than by execution, so it has not been observed *keeping* anything either —
-Story 6.8 must prove rollback works before the first real release, not assume it.
+rollback had to be proven working before the first real release, not assumed.
+
+> 🔴 **AMENDED 2026-08-26 — the sentence above originally read "Story 6.8 must prove rollback works
+> before the first real release, not assume it." Story 6.8 was cancelled that day**
+> (`_bmad-output/planning-artifacts/sprint-change-proposal-2026-08-26-story-6-8-cancelled.md`)
+> **because the proof had already happened without it.** Story 6.4 built the `rollback: true` path
+> and dispatched it live against the production stand twice — runs **634** and **642** — with the
+> `build` job skipped and the stand healthy on both. The obligation in this section is therefore
+> **met, and this rule stands unchanged**: restoring a ledger tag is not a new release.
+>
+> **The caveat above is NOT met and is unaffected by any of this.** Rollback still depends on the
+> recorded tag surviving in the registry, and the retention rule has still never been observed
+> either deleting or keeping anything. Two things also remain unwritten and are now owned by Oleg
+> rather than by a story (`_bmad-output/implementation-artifacts/deferred-work.md`): **the measured
+> rollback duration** (NFR3's second half), and **a single procedure page** stating which tag to
+> dispatch, with which flag, and how long it takes.
 
 ## Emergency / hotfix
 
