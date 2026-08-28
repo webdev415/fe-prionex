@@ -10906,6 +10906,10 @@
         "noManager": "No manager",
         "documents": "Documents",
         "attachFile": "Attach a document (PDF or Word, up to 10 MB)"
+      },
+      "tabs": {
+        "showEarlier": "Show earlier sections",
+        "showLater": "Show later sections"
       }
     }
   },

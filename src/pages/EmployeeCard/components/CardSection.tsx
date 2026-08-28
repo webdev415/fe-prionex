@@ -30,7 +30,7 @@ export function CardSection({ id, title, children, editLabel, onEdit }: CardSect
       id={id}
       tabIndex={-1}
       aria-labelledby={`${id}-heading`}
-      className="border-border bg-card scroll-mt-32 space-y-4 rounded-xl border p-6"
+      className="border-border bg-card scroll-mt-32 space-y-4 rounded-xl border p-4 sm:p-6"
     >
       {/*
         The heading and its action sit above a rule, so a section reads as a

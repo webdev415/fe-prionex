@@ -85,6 +85,11 @@ function card(overrides: Partial<EmployeeCard> = {}): EmployeeCard {
   }
 }
 
+/** The column holding the way back and the profile panel. */
+function leftColumn(): HTMLElement {
+  return screen.getByRole('complementary').parentElement as HTMLElement
+}
+
 function renderAt(path: string) {
   return render(
     <MemoryRouter initialEntries={[path]}>
@@ -298,15 +303,20 @@ describe('EmployeeCardPage: what stays on screen while the sections scroll', () 
     state.neighbours = { position: 3, total: 247, previous_user_id: 6, next_user_id: 8 }
   })
 
-  it('keeps the panel and the way back on screen together', () => {
+  /*
+   * Only from ``lg``. Below that the two columns are stacked, and a panel
+   * pinned to the top there would cover the sections it is meant to sit
+   * beside - it would follow the reader down over its own card.
+   */
+  it('keeps the panel and the way back on screen together, once there are two columns', () => {
     renderAt('/dashboard/team-management/users/7')
 
-    const panel = screen.getByRole('complementary')
     const back = screen.getByRole('link', { name: 'pages.employeeCard.backToList' })
+    const column = leftColumn()
 
-    const column = panel.closest('.sticky')
-    expect(column).not.toBeNull()
     expect(column).toContainElement(back)
+    expect(column.className).toContain('lg:sticky')
+    expect(column.className).not.toMatch(/(^|\s)sticky(\s|$)/)
   })
 
   it('sizes the left column to its contents rather than to the row', () => {
@@ -329,12 +339,26 @@ describe('EmployeeCardPage: what stays on screen while the sections scroll', () 
 
     const tabs = screen.getByRole('tablist', { name: 'pages.employeeCard.sectionNav' })
     const header = tabs.closest('.sticky') as HTMLElement
-    const column = screen.getByRole('complementary').closest('.sticky') as HTMLElement
+    const column = leftColumn()
 
     const scroller = header.closest('.overflow-y-auto')
     expect(scroller).not.toBeNull()
     expect(scroller).toContainElement(column)
     expect(scroller?.className).toMatch(/h-\[calc\(100vh-\d+px\)\]/)
+  })
+
+  /*
+   * A phone counts the address bar's space in ``100vh``, so the card would run
+   * that far past the bottom of the screen and its last section could never be
+   * reached.
+   */
+  it('measures the container in dvh where the browser has it', () => {
+    renderAt('/dashboard/team-management/users/7')
+
+    const tabs = screen.getByRole('tablist', { name: 'pages.employeeCard.sectionNav' })
+    const scroller = tabs.closest('.overflow-y-auto') as HTMLElement
+
+    expect(scroller.className).toContain('supports-[height:100dvh]:h-[calc(100dvh-104px)]')
   })
 
   /*
@@ -367,10 +391,9 @@ describe('EmployeeCardPage: what stays on screen while the sections scroll', () 
 
     const tabs = screen.getByRole('tablist', { name: 'pages.employeeCard.sectionNav' })
     const bar = tabs.closest('.sticky') as HTMLElement
-    const column = screen.getByRole('complementary').closest('.sticky') as HTMLElement
 
     expect(bar.className).toContain('top-0')
-    expect(column.className).toContain('top-0')
+    expect(leftColumn().className).toContain('lg:top-0')
   })
 
   it('sets no height on the panel, so it is as tall as what it holds', () => {
@@ -475,5 +498,52 @@ describe('EmployeeCardPage: what stays on screen while the sections scroll', () 
 
     expect(back.parentElement).not.toBe(previous.parentElement)
     expect(back.closest('.sticky')).not.toBe(previous.closest('.sticky'))
+  })
+})
+
+/*
+ * The card is a tall, two-column page. A spinner in the middle of an empty
+ * one tells the reader nothing about what is coming and then shoves the
+ * layout into place when it does - so the wait shows the shape instead.
+ */
+describe('EmployeeCardPage: while it is still loading', () => {
+  beforeEach(() => {
+    state.card = null
+    state.isLoading = true
+    state.isError = false
+  })
+
+  it("shows the card's shape rather than a line of text", () => {
+    const { container } = renderAt('/dashboard/team-management/users/7')
+
+    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(10)
+  })
+
+  /*
+   * Two dozen empty boxes are worth nothing read aloud. One status message
+   * says the same thing in a form somebody can use.
+   */
+  it('says it is loading once, and hides the boxes from a screen reader', () => {
+    const { container } = renderAt('/dashboard/team-management/users/7')
+
+    expect(screen.getByRole('status')).toHaveTextContent('common.loading')
+    expect(container.querySelector('[aria-hidden]')).not.toBeNull()
+    expect(container.querySelector('[aria-hidden] .animate-pulse')).not.toBeNull()
+  })
+
+  it('does not offer controls for a card that is not there yet', () => {
+    renderAt('/dashboard/team-management/users/7')
+
+    expect(screen.queryByRole('tablist')).toBeNull()
+    expect(screen.queryAllByRole('button', { name: 'pages.employeeCard.edit' })).toHaveLength(0)
+  })
+
+  it('gets out of the way once the card arrives', () => {
+    state.card = card()
+    state.isLoading = false
+    const { container } = renderAt('/dashboard/team-management/users/7')
+
+    expect(container.querySelector('.animate-pulse')).toBeNull()
+    expect(screen.getByRole('tablist')).toBeInTheDocument()
   })
 })

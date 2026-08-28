@@ -6,6 +6,7 @@ import { useCardNeighbours, useEmployeeCard } from '@/features/employeeCard/hook
 import { BackToList, CardNavigation } from './components/CardNavigation'
 import { CardSections } from './components/CardSections'
 import { CardTabs } from './components/CardTabs'
+import { EmployeeCardSkeleton } from './components/EmployeeCardSkeleton'
 import { DocumentsSection } from './components/DocumentsSection'
 import { ProfilePanel } from './components/ProfilePanel'
 import { SurveysSection } from './components/SurveysSection'
@@ -76,8 +77,8 @@ export function EmployeeCardPage() {
       and 24px below - the largest of its three responsive bottom paddings,
       so no breakpoint ends up with a second scrollbar.
     */
-    <div className="h-[calc(100vh-104px)] overflow-y-auto px-4 pb-4 [scrollbar-width:none] md:px-6 md:pb-6 [&::-webkit-scrollbar]:hidden">
-      {isLoading && <p className="text-muted-foreground pt-4">{t('common.loading')}</p>}
+    <div className="h-[calc(100vh-104px)] overflow-y-auto px-4 pb-4 [scrollbar-width:none] supports-[height:100dvh]:h-[calc(100dvh-104px)] md:px-6 md:pb-6 [&::-webkit-scrollbar]:hidden">
+      {isLoading && <EmployeeCardSkeleton label={t('common.loading')} />}
 
       {isError && (
         <p role="alert" className="text-destructive">
@@ -87,7 +88,7 @@ export function EmployeeCardPage() {
 
       {data && (
         <div className="grid items-start gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-          <div className="sticky top-0 space-y-4 pt-4 md:pt-6">
+          <div className="space-y-4 pt-4 md:pt-6 lg:sticky lg:top-0">
             <BackToList listQuery={listQuery} />
             <ProfilePanel header={data.header} />
           </div>
@@ -131,7 +132,7 @@ export function EmployeeCardPage() {
             <section
               id="chronology"
               tabIndex={-1}
-              className="border-border bg-card scroll-mt-32 rounded-xl border p-6"
+              className="border-border bg-card scroll-mt-32 rounded-xl border p-4 sm:p-6"
             >
               <ChronologySection userId={employeeId} />
             </section>
