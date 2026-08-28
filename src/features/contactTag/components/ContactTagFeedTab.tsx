@@ -47,9 +47,10 @@
  *      with a day clamp and a leap February — 2024-06-01 → 2024-02-29 — is not
  *      a rule worth having two implementations of), so before the first answer
  *      lands there is simply nothing to state. An echo keeps speaking for the
- *      screen until the sell MODE moves away from the one it was fetched under
- *      — paging the same defaulted window does not, switching to an explicit
- *      bound does;
+ *      screen until the request moves out from under it — the sell MODE leaving
+ *      the one it was fetched in, or the reference day leaving the one it
+ *      answers for (the default is derived from `view_date`, so it moves with
+ *      it). Paging the same defaulted window does neither;
  *    - **off** (`?kt=`, present and empty) — `sell_to=` goes on the wire and
  *      the upper bound is switched off. Reached by the picker's "×" when a date
  *      is set, or by the explicit "switch off" button when the default is in
@@ -77,11 +78,13 @@
  * ## Sub-tabs
  *
  * «Всі» / «Контакт» / «Неконтакт», filtering the CURRENT PAGE client-side by
- * `tag_code`. They change no request, so — unlike every other key this tab
+ * `tag_code` (the endpoint takes no `tag_code` parameter yet — a follow-up
+ * carries one). They change no request, so — unlike every other key this tab
  * writes — the sub-tab does NOT reset the page: the rows on screen are the same
- * rows either way. The counts in the strip are page-scoped and labelled as
- * such; see `utils/tagTabs.ts` for why keying on the code (not the localized
- * name) is what keeps them working across a tag rename.
+ * rows either way. Both the filtering and the counts are therefore page-scoped,
+ * and the line between the strip and the table says so; see `utils/tagTabs.ts`
+ * for why keying on the code (not the localized name) is what keeps them
+ * working across a tag rename.
  */
 
 import { useEffect, useMemo, useState } from 'react'
@@ -280,11 +283,11 @@ export function ContactTagFeedTab() {
 
   // The counts belong to the PAGE, not the feed — this list is ~880 pages long,
   // so a client-side filter can only ever see the 50 rows on screen. Saying so
-  // once under the strip is what keeps "Контакт (12)" from reading as "12 in
-  // the whole feed"; it is said ONCE, in a line every reader gets, rather than
-  // also as a per-tab `title` only a mouse can find (a tooltip repeating a
-  // caveat the paragraph below already carries is noise on hover and reaches
-  // neither keyboard nor touch).
+  // in the line below the strip is what keeps "Контакт (12)" from reading as
+  // "12 in the whole feed"; it is said ONCE, in a line every reader gets,
+  // rather than also as a per-tab `title` only a mouse can find (a tooltip
+  // repeating a caveat the paragraph below already carries is noise on hover
+  // and reaches neither keyboard nor touch).
   //
   // ...and they are only appended once a page EXISTS to count. Before the first
   // answer (and while a filter error keeps the query from asking for one) there
@@ -310,7 +313,8 @@ export function ContactTagFeedTab() {
   // states a fact about the data, so it has nothing to say before there is any.
   const appliedSellTo = query.data?.sell_to
 
-  // WHICH sell-window state the answer on screen was fetched under.
+  // WHICH request the answer on screen was fetched under — the sell MODE it was
+  // asked in, plus the reference day it came back stamped with.
   //
   // Under keepPreviousData `query.data` is the PREVIOUS answer while a new one
   // flies, so an echo can outlive the state that produced it: on an explicit →
@@ -342,7 +346,17 @@ export function ContactTagFeedTab() {
   if (settledSellToMode !== null && settledSellToMode !== answeredSellToMode) {
     setAnsweredSellToMode(settledSellToMode)
   }
-  const isSellToEchoCurrent = answeredSellToMode === sellToState.mode
+  // The mode memory alone is not enough, because the DEFAULTED bound is derived
+  // from `view_date` (the last day of the month four months before it): moving
+  // the reference day moves the applied default without the mode budging, so
+  // the gate above stays silent while keepPreviousData holds the previous
+  // answer on screen — and if that refetch fails, the superseded date sits next
+  // to the error for as long as the operator leaves it there. The response's
+  // OWN echo of the day it was computed for cannot drift the way a remembered
+  // value can, so the hint speaks only while the answer it reads was computed
+  // for the day the strip is showing.
+  const isSellToEchoCurrent =
+    answeredSellToMode === sellToState.mode && query.data?.view_date === viewDate
 
   // keepPreviousData shows the previous page's rows while a new one loads —
   // they must not look final, hence the busy overlay. Placeholder only: a
@@ -378,15 +392,15 @@ export function ContactTagFeedTab() {
         ? getErrorMessage(query.error)
         : t('pages.reports.contactTag.error.title')
 
-  // The six 503s are worded distinctly by the backend on purpose — the remedies
-  // differ (two outages, throttling, two timeouts, a page cap) and monitoring
-  // must tell them apart — so the server's own sentence is shown
-  // UNDER the localized one rather than instead of it: the operator reads their
-  // language, and whoever is asked "what does it say?" can tell which
-  // dependency failed. Absent for a transport-level failure (a 502/504 or a
-  // dropped connection carries no body).
-  const errorDetail =
-    isUnavailable && hasResponseDetail(query.error) ? getErrorMessage(query.error) : null
+  // Note what is NOT shown for a 503: the server's own sentence. The six
+  // flavours are worded distinctly on purpose, but they are worded for the
+  // people who run the services — they name internal dependencies and env
+  // knobs («raise CONTACT_TAG_FEED_TAG_MAX_PAGES», «auth-service») — and the
+  // operator's move is the same in all six, so the detail is an internals leak
+  // that buys the reader nothing. Monitoring tells the six apart from the
+  // backend's own logs, where they are already distinct. Same as the sibling
+  // gap feed's 503 branch; the 400 detail keeps riding `errorMessage` above,
+  // because THAT one names a filter the operator can actually turn.
 
   return (
     <div className="flex w-full flex-col gap-4">
@@ -512,8 +526,17 @@ export function ContactTagFeedTab() {
             looking at the whole portfolio" is a claim about rows on screen, and
             a blocked request (an unusable date anywhere in the strip) has put
             none there: the tab is showing hints, not a portfolio. Same before
-            the first answer. */}
-        {sellToState.mode === 'off' && hasAnswer && (
+            the first answer.
+
+            And the same staleness gate as its sibling, read off the answer's
+            own echo: `sell_to: null` is exactly what "no upper bound was
+            applied" looks like on the wire, so it says whether the rows on
+            screen were fetched WITHOUT the bound. Under keepPreviousData a
+            switch into `off` would otherwise have this line claiming the whole
+            portfolio over rows a bound had trimmed — the mirror image of the
+            explicit → default drift above. A page turn inside the off state
+            keeps echoing `null`, so the line holds still there. */}
+        {sellToState.mode === 'off' && hasAnswer && query.data?.sell_to === null && (
           <p className="text-muted-foreground w-full text-xs">
             {t('pages.reports.contactTag.sellToOffHint')}
           </p>
@@ -547,9 +570,24 @@ export function ContactTagFeedTab() {
         ariaLabel={t('pages.reports.tabs.contact-tag')}
         idPrefix={TABS_ID_PREFIX}
       />
-      <p className="text-muted-foreground -mt-2 text-xs">
-        {t('pages.reports.contactTag.subtabCountTitle')}
-      </p>
+      {/* What the strip above actually does, said between the strip and the
+          table it governs — the two places the page scope is felt.
+
+          Both halves are named, and the FILTERING half is the load-bearing one:
+          «Контакт» shows the tagged rows OF THIS PAGE, so an operator who reads
+          the strip as a feed-wide filter would take an empty «Неконтакт» tab
+          for "none in the feed" while page 2 of ~880 is full of them. (There is
+          no server-side `tag_code` parameter yet; a follow-up carries it.)
+
+          Gated on the same `hasAnswer` as the counts themselves: with no page
+          fetched — before the first answer, or while a filter error keeps the
+          request from being made — there is nothing being scoped, and a caveat
+          about counts nobody can see is one more line to read past. */}
+      {hasAnswer && (
+        <p className="text-muted-foreground -mt-2 text-xs">
+          {t('pages.reports.contactTag.subtabCountScope')}
+        </p>
+      )}
 
       {/* Content: an invalid filter shows only the hints above.
 
@@ -572,9 +610,6 @@ export function ContactTagFeedTab() {
           <div className="border-border bg-card flex w-full flex-col items-center justify-center gap-4 rounded-xl border p-8">
             <Icons.Warning size={40} className="text-error-500" />
             <p className="text-foreground text-center text-sm font-medium">{errorMessage}</p>
-            {errorDetail && (
-              <p className="text-muted-foreground text-center text-xs">{errorDetail}</p>
-            )}
             {/* Retrying cannot fix missing permissions — no button on 403 */}
             {!isForbidden && (
               <Button variant="secondary" size="sm" onClick={() => query.refetch()}>

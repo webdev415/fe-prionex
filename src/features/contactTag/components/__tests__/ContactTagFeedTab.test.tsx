@@ -151,7 +151,12 @@ function makeResponse(
 ): ContactTagFeedResponse {
   return {
     project_id: 1,
-    view_date: '2026-08-26',
+    // The response ECHOES the day it was computed for, and the tab reads that
+    // echo to know whether the applied-bound hint still speaks for the strip
+    // (the default bound is derived from `view_date`). So the fixture echoes
+    // the day the tab actually sends when the URL names none; a test driving a
+    // different reference day overrides it.
+    view_date: tabDefaultViewDate(),
     sell_from: null,
     // The APPLIED upper bound: with no `sell_to` on the wire the backend echoes
     // its own month−4 default, which is what the tab's hint renders.
@@ -246,6 +251,20 @@ function ymdIn(timeZone: string): string {
     month: '2-digit',
     day: '2-digit',
   }).format(new Date())
+}
+
+/**
+ * The reference day the tab sends when the URL names none — "today" in the
+ * PROFILE timezone, or the browser's own calendar day when the profile carries
+ * none (the tab's fallback). Computed here rather than read off the component
+ * so the fixtures can echo it the way the backend does.
+ */
+function tabDefaultViewDate(): string {
+  const timezone = authState.user.timezone
+  if (timezone) return ymdIn(timezone)
+  const now = new Date()
+  const pad = (part: number) => String(part).padStart(2, '0')
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
 }
 
 // The shared Pagination's rows-per-page control is a Radix Select, which uses
@@ -543,6 +562,48 @@ describe('ContactTagFeedTab — the three-state sell_to', () => {
     ).toBeInTheDocument()
   })
 
+  it('DEFAULT: never presents the PREVIOUS reference day’s bound while a new one flies', async () => {
+    // The mode-based gate above cannot see this one: the applied default is
+    // DERIVED from `view_date` (the last day of the month four months before
+    // it), so moving the reference day moves the bound while the sell mode
+    // stays `default` throughout. keepPreviousData holds the old answer on
+    // screen meanwhile, and a hint reading its echo would name a window
+    // computed for a day the strip no longer shows — for the whole round trip,
+    // and indefinitely if that refetch fails, leaving a superseded date sitting
+    // next to the error. Hence the second half of the gate: the answer's OWN
+    // `view_date` echo, which cannot drift the way a remembered value can.
+    let resolveSecond: (value: ContactTagFeedResponse) => void = () => {}
+    mockGetFeed
+      .mockResolvedValueOnce(
+        makeResponse([makeRow()], { view_date: '2026-08-26', sell_to: '2026-04-30' })
+      )
+      .mockImplementationOnce(
+        () => new Promise<ContactTagFeedResponse>((resolve) => (resolveSecond = resolve))
+      )
+
+    renderTab(['/?kd=2026-08-26'])
+    expect(
+      await screen.findByText('pages.reports.contactTag.sellToDefaultHint:04/30/2026')
+    ).toBeInTheDocument()
+
+    fireEvent.change(viewDateInput(), { target: { value: '2026-01-15' } })
+
+    // The transitional frame: the sell mode has not moved at all, and the rows
+    // on screen are still August's.
+    await waitFor(() => expect(lastCall().view_date).toBe('2026-01-15'))
+    expect(
+      screen.queryByText(/pages\.reports\.contactTag\.sellToDefaultHint/)
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText(/04\/30\/2026/)).not.toBeInTheDocument()
+
+    resolveSecond(makeResponse([makeRow()], { view_date: '2026-01-15', sell_to: '2025-09-30' }))
+
+    // Only the answer computed for the day on screen gets to name its bound.
+    expect(
+      await screen.findByText('pages.reports.contactTag.sellToDefaultHint:09/30/2025')
+    ).toBeInTheDocument()
+  })
+
   it('DEFAULT: keeps the hint standing through a page turn — the applied bound has not moved', async () => {
     // The counterpart of the test above, and the reason it cannot simply be
     // "hide the hint whenever a request is in flight". Paging is THE interaction
@@ -675,6 +736,70 @@ describe('ContactTagFeedTab — the three-state sell_to', () => {
     expect(screen.queryByText('pages.reports.contactTag.sellToOffHint')).not.toBeInTheDocument()
   })
 
+  it('OFF: does not claim the whole portfolio over rows a bound had trimmed', async () => {
+    // The mirror image of the explicit → default drift above, and the same
+    // keepPreviousData frame: the moment the "×" switches the bound off the
+    // mode is already `off`, while the rows on screen are still the ones the
+    // explicit bound trimmed. "You are looking at the whole portfolio" is a
+    // claim about THOSE rows, and it is false about them. The answer's own
+    // echo settles it — `sell_to: null` is what "no upper bound was applied"
+    // looks like on the wire.
+    let resolveOff: (value: ContactTagFeedResponse) => void = () => {}
+    mockGetFeed
+      .mockResolvedValueOnce(makeResponse([makeRow()], { sell_to: '2026-06-30' }))
+      .mockImplementationOnce(
+        () => new Promise<ContactTagFeedResponse>((resolve) => (resolveOff = resolve))
+      )
+
+    renderTab(['/?kt=2026-06-30'])
+    await screen.findByText('Коваленко Іван Петрович')
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'pages.reports.contactTag.clearSellTo' })
+    )
+
+    expect(await screen.findByTestId('contact-tag-refreshing')).toBeInTheDocument()
+    await waitFor(() => expect(urlParams().get('kt')).toBe(''))
+    expect(screen.queryByText('pages.reports.contactTag.sellToOffHint')).not.toBeInTheDocument()
+
+    resolveOff(makeResponse([makeRow()], { sell_to: null }))
+
+    expect(await screen.findByText('pages.reports.contactTag.sellToOffHint')).toBeInTheDocument()
+  })
+
+  it('OFF: keeps the hint standing through a page turn — the bound is still off', async () => {
+    // The counterpart of the test above: the echo gate must not turn the line
+    // into an `isPlaceholderData` flicker on this feed's commonest interaction.
+    let resolveSecond: (value: ContactTagFeedResponse) => void = () => {}
+    mockGetFeed
+      .mockResolvedValueOnce(
+        makeResponse([makeRow()], { sell_to: null, total: 130, page: 1, total_pages: 3 })
+      )
+      .mockImplementationOnce(
+        () => new Promise<ContactTagFeedResponse>((resolve) => (resolveSecond = resolve))
+      )
+
+    renderTab(['/?kt='])
+    expect(await screen.findByText('pages.reports.contactTag.sellToOffHint')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByTitle('2'))
+
+    expect(await screen.findByTestId('contact-tag-refreshing')).toBeInTheDocument()
+    expect(screen.getByText('pages.reports.contactTag.sellToOffHint')).toBeInTheDocument()
+
+    resolveSecond(
+      makeResponse([makeRow({ client_id: 5, employee_name: 'Оновленко Олег' })], {
+        sell_to: null,
+        total: 130,
+        page: 2,
+        total_pages: 3,
+      })
+    )
+
+    expect(await screen.findByText('Оновленко Олег')).toBeInTheDocument()
+    expect(screen.getByText('pages.reports.contactTag.sellToOffHint')).toBeInTheDocument()
+  })
+
   it('OFF: says nothing before the first answer lands either — same rule as the default hint', async () => {
     mockGetFeed.mockImplementation(() => new Promise<ContactTagFeedResponse>(() => {}))
 
@@ -794,6 +919,53 @@ describe('ContactTagFeedTab — the three-state sell_to', () => {
     expect(
       screen.queryByText(/pages\.reports\.contactTag\.sellToDefaultHint/)
     ).not.toBeInTheDocument()
+  })
+
+  it('does not let an unusable ?kt= read the SWITCHED-OFF state’s cached answer', async () => {
+    // An unusable bound is a state of its own, and it must not alias onto a
+    // valid one: a request shape of `{ sell_to: '' }` for it would be
+    // byte-for-byte the off state's, i.e. the very same React Query key. The
+    // blocked query would then be handed the off state's answer out of the
+    // cache — and `usePagedFeedPages` would act on it, healing `?kpg=` from a
+    // response the current URL never asked for.
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const renderWith = (entries: string[]) =>
+      render(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={entries}>
+            <ContactTagFeedTab />
+            <LocationProbe />
+          </MemoryRouter>
+        </QueryClientProvider>
+      )
+
+    // First, populate the cache under the OFF state, at a page the feed no
+    // longer has (so an answer read here would visibly rewrite the URL).
+    mockGetFeed.mockResolvedValue(
+      makeResponse([makeRow()], {
+        sell_to: null,
+        total: 90,
+        page: 5,
+        page_size: 50,
+        total_pages: 2,
+      })
+    )
+
+    const view = renderWith(['/?kt=&kpg=5'])
+    await screen.findByText('Коваленко Іван Петрович')
+    await waitFor(() => expect(urlParams().get('kpg')).toBe('2'))
+    view.unmount()
+    const callsSoFar = mockGetFeed.mock.calls.length
+
+    // Now the same page window with an UNUSABLE upper bound, on the same cache.
+    renderWith(['/?kt=2026-02-31&kpg=5'])
+
+    expect(await screen.findByText('pages.reports.contactTag.invalidSellDate')).toBeInTheDocument()
+    // Nothing was asked for...
+    expect(mockGetFeed).toHaveBeenCalledTimes(callsSoFar)
+    // ...and nothing answered: the deep page stands as the URL spells it,
+    // rather than being healed by another state's answer.
+    expect(urlParams().get('kpg')).toBe('5')
   })
 })
 
@@ -946,20 +1118,23 @@ describe('ContactTagFeedTab — tag sub-tabs', () => {
     expect(subtab('kontakt', 2)).toBeInTheDocument()
     expect(subtab('nekontakt', 1)).toBeInTheDocument()
     expect(screen.getAllByRole('link')).toHaveLength(3)
-    // The counts are page-scoped and the strip says so — this feed is ~880
-    // pages long, so a client-side count can never speak for the whole feed.
-    // ONCE, though: a line under the strip that every reader gets, not also a
-    // per-tab `title` that repeats it on hover for mouse users alone.
-    expect(screen.getByText('pages.reports.contactTag.subtabCountTitle')).toBeInTheDocument()
+    // The FILTERING and the counts are both page-scoped, and the line between
+    // the strip and the table says so — this feed is ~880 pages long and the
+    // endpoint takes no tag parameter, so neither can ever speak for the whole
+    // feed. ONCE, though: a line every reader gets, not also a per-tab `title`
+    // that repeats it on hover for mouse users alone.
+    expect(screen.getByText('pages.reports.contactTag.subtabCountScope')).toBeInTheDocument()
     for (const tab of screen.getAllByRole('tab')) {
       expect(tab).not.toHaveAttribute('title')
     }
   })
 
-  it('appends no count until there is a page to count', async () => {
+  it('appends no count — and no scope caveat — until there is a page to count', async () => {
     // "Всі (0)" before the first answer states a fact about the feed — zero
     // tagged clients — that nothing has established; the same goes for a filter
-    // error, which stops the request from being made at all.
+    // error, which stops the request from being made at all. The caveat under
+    // the strip rides the same gate: it qualifies counts and a filtered page,
+    // and with neither on screen it is one more line to read past.
     mockGetFeed.mockImplementation(() => new Promise<ContactTagFeedResponse>(() => {}))
 
     const view = renderTab()
@@ -969,6 +1144,7 @@ describe('ContactTagFeedTab — tag sub-tabs', () => {
       screen.getByRole('tab', { name: 'pages.reports.contactTag.subtabs.all' })
     ).toBeInTheDocument()
     expect(screen.queryByRole('tab', { name: /\(0\)/ })).not.toBeInTheDocument()
+    expect(screen.queryByText('pages.reports.contactTag.subtabCountScope')).not.toBeInTheDocument()
     view.unmount()
 
     renderTab(['/?kd=2026-02-31'])
@@ -978,6 +1154,7 @@ describe('ContactTagFeedTab — tag sub-tabs', () => {
       screen.getByRole('tab', { name: 'pages.reports.contactTag.subtabs.all' })
     ).toBeInTheDocument()
     expect(screen.queryByRole('tab', { name: /\(0\)/ })).not.toBeInTheDocument()
+    expect(screen.queryByText('pages.reports.contactTag.subtabCountScope')).not.toBeInTheDocument()
   })
 
   it('filters by tag_code and writes the choice to ?kg=', async () => {
@@ -1474,21 +1651,46 @@ describe('ContactTagFeedTab — the rest of the contract and the error ladder', 
     ['the auth directory is down', 'Employee directory (auth-service) is unavailable'],
     ['the org fan-out blew its deadline', 'Employee directory lookup timed out'],
   ])(
-    'keeps the localized message but names the failing dependency when %s',
+    'shows the localized message ALONE, without the server’s internals, when %s',
     async (_case, detail) => {
       // The backend words these 503s distinctly on purpose — FOUR tag-side
       // flavours (outage, throttling, timeout, page cap) plus the auth-side
-      // pair — because the remedies differ. The operator reads their own
-      // language; the server's sentence sits under it so whoever is asked
-      // "what does it say?" can tell them apart.
+      // pair — but it words them for whoever runs the services: they name
+      // internal dependencies and env knobs. The operator's move is the same in
+      // all six (wait and retry), so the detail buys the reader nothing and
+      // leaks the deployment's shape to whoever is looking at the screen.
+      // Monitoring tells the six apart from the backend's own logs. Same 503
+      // branch as the sibling gap feed.
       mockGetFeed.mockRejectedValue(makeHttpError(503, { detail }))
 
       renderTab()
 
       expect(await screen.findByText('pages.reports.contactTag.unavailable')).toBeInTheDocument()
-      expect(screen.getByText(detail)).toBeInTheDocument()
+      expect(screen.queryByText(detail)).not.toBeInTheDocument()
+      expect(document.body.textContent).not.toContain(detail)
     }
   )
+
+  it('leaks neither a service name nor an env knob from a 503 detail', async () => {
+    // The two shapes that make this more than a wording preference: an internal
+    // hostname and a configuration variable an operator can neither read nor
+    // act on.
+    mockGetFeed.mockRejectedValue(
+      makeHttpError(503, {
+        detail:
+          'Tag lookup stopped after 60 pages (300000 clients); raise CONTACT_TAG_FEED_TAG_MAX_PAGES (auth-service)',
+      })
+    )
+
+    renderTab()
+
+    expect(await screen.findByText('pages.reports.contactTag.unavailable')).toBeInTheDocument()
+    expect(document.body.textContent).not.toMatch(/CONTACT_TAG_FEED_TAG_MAX_PAGES|auth-service/)
+    // ...and the failure is still retryable by hand.
+    expect(
+      screen.getByRole('button', { name: 'pages.reports.contactTag.error.retry' })
+    ).toBeInTheDocument()
+  })
 
   it('shows no detail line for a transient failure that carries no body', async () => {
     mockGetFeed.mockRejectedValue(makeHttpError(502))
@@ -1588,6 +1790,17 @@ describe('ContactTag locale keys', () => {
     // ...and this feed's own required date has no counterpart there at all.
     expect(uk.viewDate).toBeTruthy()
     expect((gap as Record<string, unknown>).viewDate).toBeUndefined()
+  })
+
+  it('says the sub-tabs FILTER the current page, not only that they count it', () => {
+    // The strip is a page-scoped filter, not a feed-wide one — the endpoint has
+    // no `tag_code` parameter yet (a follow-up carries it). A caveat worded
+    // about the counts alone would leave an empty «Неконтакт» tab reading as
+    // "none in this feed" while page 2 of ~880 is full of them.
+    expect(en.subtabCountScope).toMatch(/filter/i)
+    expect(en.subtabCountScope).toMatch(/page/i)
+    expect(uk.subtabCountScope).toMatch(/фільтр/i)
+    expect(uk.subtabCountScope).toMatch(/сторінк/i)
   })
 
   it('words the two sale-date "clear" controls as the DIFFERENT actions they are', () => {

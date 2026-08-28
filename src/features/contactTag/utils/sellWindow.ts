@@ -75,6 +75,15 @@ export interface SellToState {
    */
   value: string | undefined
   /**
+   * What the key literally spells, carried in `explicit` mode only (it equals
+   * `value` for a usable date and is the unusable string otherwise).
+   *
+   * It exists for the UNUSABLE case: the request params are the React Query
+   * key, so a state that produced the off state's `{ sell_to: '' }` would be
+   * indistinguishable from actually being off — see `sellToRequestParam`.
+   */
+  raw?: string
+  /**
    * True when the key carries a non-empty value that is not a real calendar
    * date. Such a value is NOT silently replaced by the default: the URL would
    * then disagree with both the field and the request, so it goes down the same
@@ -102,7 +111,7 @@ export function readSellToState(searchParams: URLSearchParams, key: string): Sel
   // Present but empty — the operator said "no upper bound".
   if (raw === '') return { mode: 'off', value: undefined, isInvalid: false }
   const isInvalid = !isRealCalendarDate(raw)
-  return { mode: 'explicit', value: isInvalid ? undefined : raw, isInvalid }
+  return { mode: 'explicit', value: isInvalid ? undefined : raw, raw, isInvalid }
 }
 
 /**
@@ -113,10 +122,17 @@ export function readSellToState(searchParams: URLSearchParams, key: string): Sel
  * The distinction is invisible to `toEqual` and very visible on the wire, so
  * the api-module test pins it with `toStrictEqual`.
  *
- * An `explicit` state with no usable value cannot reach here: the tab blocks
- * the request on an invalid bound. The `?? ''` is the safe direction anyway —
- * "no upper bound" narrows nothing away silently, whereas falling back to the
- * omitted key would re-apply a four-month-old default nobody asked for.
+ * An `explicit` state with no usable value never reaches the WIRE (the tab
+ * blocks the request on an invalid bound) — but it does reach here, because
+ * these params ARE the React Query key. So an unusable bound must not collapse
+ * into `{ sell_to: '' }`: that is byte-for-byte the `off` state's shape, i.e.
+ * the very same key, and a disabled query on a key another state has already
+ * filled would read that state's answer out of the cache — enough for the paged
+ * shell's `?kpg=` self-heal to act on a response the current URL never asked
+ * for. Carrying the raw, unusable string keeps the key its own; the `?? ''`
+ * behind it is the safe direction for the shape that cannot occur ("no upper
+ * bound" narrows nothing away silently, whereas falling back to the omitted key
+ * would re-apply a four-month-old default nobody asked for).
  */
 export function sellToRequestParam(state: SellToState): { sell_to?: string } {
   switch (state.mode) {
@@ -125,6 +141,6 @@ export function sellToRequestParam(state: SellToState): { sell_to?: string } {
     case 'off':
       return { sell_to: '' }
     case 'explicit':
-      return { sell_to: state.value ?? '' }
+      return { sell_to: state.value ?? state.raw ?? '' }
   }
 }

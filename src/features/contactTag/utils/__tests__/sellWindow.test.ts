@@ -33,7 +33,12 @@ describe('readSellToState', () => {
   it('reads a real date as the explicit state', () => {
     const state = readSellToState(params('kt=2026-06-30'), 'kt')
 
-    expect(state).toEqual({ mode: 'explicit', value: '2026-06-30', isInvalid: false })
+    expect(state).toEqual({
+      mode: 'explicit',
+      value: '2026-06-30',
+      raw: '2026-06-30',
+      isInvalid: false,
+    })
   })
 
   it.each([
@@ -48,6 +53,9 @@ describe('readSellToState', () => {
 
     expect(state.isInvalid).toBe(true)
     expect(state.value).toBeUndefined()
+    // The unusable spelling is kept: it is what keeps this state's request
+    // shape — and therefore its query key — its own (see below).
+    expect(state.raw).toBe(raw)
     // Still `explicit`: the user DID pin a bound, it is simply unusable —
     // reporting `default` would claim the backend's window is in force while
     // the tab refuses to fetch anything at all.
@@ -90,30 +98,40 @@ describe('sellToRequestParam', () => {
   })
 
   it('sends the date in the explicit state', () => {
-    expect(sellToRequestParam(state({ mode: 'explicit', value: '2026-06-30' }))).toStrictEqual({
+    expect(
+      sellToRequestParam(state({ mode: 'explicit', value: '2026-06-30', raw: '2026-06-30' }))
+    ).toStrictEqual({
       sell_to: '2026-06-30',
     })
   })
 
-  it('falls back to "no upper bound", never to the default, for an unusable explicit state', () => {
-    // Unreachable through the tab (an invalid bound blocks the request), and
-    // the fallback direction is the safe one: switching the bound off shows
-    // MORE rows, whereas silently re-applying a four-month-old default would
-    // hide clients the operator asked about.
-    expect(
-      sellToRequestParam(state({ mode: 'explicit', value: undefined, isInvalid: true }))
-    ).toStrictEqual({ sell_to: '' })
+  it('keeps an UNUSABLE explicit state out of the off state’s shape', () => {
+    // These params ARE the React Query key. `{ sell_to: '' }` here would be
+    // byte-for-byte the off state's key, so the (disabled) query for an
+    // unusable bound would be handed the answer belonging to "the bound is
+    // switched off" — an answer this URL never asked for, and one the paged
+    // shell's `?kpg=` self-heal would then act on. The raw value never reaches
+    // the wire (the tab blocks the request); it exists to keep the key its own.
+    const unusable = sellToRequestParam(
+      state({ mode: 'explicit', value: undefined, raw: '2026-02-31', isInvalid: true })
+    )
+
+    expect(unusable).toStrictEqual({ sell_to: '2026-02-31' })
+    expect(unusable).not.toStrictEqual(sellToRequestParam(state({ mode: 'off' })))
   })
 
-  it('produces three DISTINCT request shapes — one per state', () => {
-    // What makes the three states three different React Query keys, and hence
-    // three different fetches rather than one cached answer replayed.
+  it('produces a DISTINCT request shape per state, the unusable one included', () => {
+    // What makes the states different React Query keys, and hence different
+    // fetches rather than one cached answer replayed under another state.
     const shapes = [
       sellToRequestParam(state({ mode: 'default' })),
       sellToRequestParam(state({ mode: 'off' })),
-      sellToRequestParam(state({ mode: 'explicit', value: '2026-06-30' })),
+      sellToRequestParam(state({ mode: 'explicit', value: '2026-06-30', raw: '2026-06-30' })),
+      sellToRequestParam(
+        state({ mode: 'explicit', value: undefined, raw: '2026-02-31', isInvalid: true })
+      ),
     ].map((shape) => JSON.stringify(shape))
 
-    expect(new Set(shapes).size).toBe(3)
+    expect(new Set(shapes).size).toBe(4)
   })
 })

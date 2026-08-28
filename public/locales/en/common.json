@@ -8746,7 +8746,7 @@
           "kontakt": "Contact",
           "nekontakt": "No contact"
         },
-        "subtabCountTitle": "The counts cover the current page — the feed is paginated",
+        "subtabCountScope": "These tabs filter and count the current page only — the feed is paginated, so other pages may hold more rows with this tag",
         "openClient": "Open client {{id}}",
         "columns": {
           "inn": "Tax ID",
