@@ -231,6 +231,66 @@ describe('PersonalDialog: the fields that live on the employee record', () => {
   })
 })
 
+/*
+ * Dates on the card are picked, not typed into a browser's own date box. The
+ * native control renders in the browser's locale rather than the app's and
+ * cannot be styled to match, so the card used to show mm/dd/yyyy to people
+ * working in dd.MM.yyyy.
+ */
+describe('the card picks dates rather than using the browser box', () => {
+  beforeEach(() => {
+    saved.personal.mockReset()
+    saved.contacts.mockReset()
+    saved.rejectWith = null
+  })
+
+  it('offers no native date box in the personal dialog', () => {
+    const { container } = render(
+      <PersonalDialog card={card()} projectId={null} open onClose={vi.fn()} />
+    )
+
+    expect(container.querySelector('input[type="date"]')).toBeNull()
+  })
+
+  it('shows a stored date of birth the way it is written here', () => {
+    render(<PersonalDialog card={card()} projectId={null} open onClose={vi.fn()} />)
+
+    expect(screen.getByPlaceholderText('pages.employeeCard.fields.dateOfBirth')).toHaveValue(
+      '12.05.1994'
+    )
+  })
+
+  it('stores what was picked as the day it is, not the day before', async () => {
+    render(<PersonalDialog card={card()} projectId={null} open onClose={vi.fn()} />)
+
+    const picker = screen.getByPlaceholderText('pages.employeeCard.fields.dateOfBirth')
+    await userEvent.clear(picker)
+    await userEvent.type(picker, '03.09.2020')
+    await userEvent.click(screen.getByRole('button', { name: 'actions.save' }))
+
+    expect(saved.personal).toHaveBeenCalledWith(
+      expect.objectContaining({ date_of_birth: '2020-09-03' })
+    )
+  })
+
+  it('sends no date at all once one is cleared', async () => {
+    render(<PersonalDialog card={card()} projectId={null} open onClose={vi.fn()} />)
+
+    await userEvent.clear(screen.getByPlaceholderText('pages.employeeCard.fields.dateOfBirth'))
+    await userEvent.click(screen.getByRole('button', { name: 'actions.save' }))
+
+    expect(saved.personal).toHaveBeenCalledWith(expect.objectContaining({ date_of_birth: null }))
+  })
+
+  it('offers no native date box for a child either', () => {
+    const { container } = render(
+      <ContactsDialog card={card()} projectId={null} open onClose={vi.fn()} />
+    )
+
+    expect(container.querySelector('input[type="date"]')).toBeNull()
+  })
+})
+
 describe('ContactsDialog', () => {
   beforeEach(() => {
     saved.contacts.mockReset()

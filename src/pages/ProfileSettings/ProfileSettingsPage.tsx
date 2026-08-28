@@ -25,6 +25,7 @@ import {
 import { Label } from '@/components/ui/Label'
 import { Button } from '@/components/ui/Button'
 import { DoubleButton } from '@/components/ui/DoubleButton'
+import { formatPickerDateAsYMD, parsePickerYMD } from '@/lib/dateUtils'
 import { LANGUAGE_NAMES, SUPPORTED_LANGUAGES, normalizeBackendLanguage } from '@/lib/i18n'
 import type { MyPersonalInformationInput, UpdateMyProfileInput } from '@/types/api'
 import { AppearanceSettings } from './AppearanceSettings'
@@ -47,21 +48,6 @@ const MY_PERSONAL_FIELDS = [
   'address',
   'nova_poshta_branch',
 ] as const
-
-function parseDateString(value: string): Date | null {
-  if (!value) return null
-  const [year, month, day] = value.split('-').map(Number)
-  if (!year || !month || !day) return null
-  return new Date(year, month - 1, day)
-}
-
-function formatDateString(value: Date | null): string {
-  if (!value) return ''
-  const year = value.getFullYear()
-  const month = String(value.getMonth() + 1).padStart(2, '0')
-  const day = String(value.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
 
 const CONTENT_CLASS =
   'max-h-60 min-w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto p-1.5'
@@ -868,9 +854,12 @@ export function ProfileSettingsPage() {
                       </Label>
                       <DateSelect
                         id="date-of-birth"
-                        value={parseDateString(form.date_of_birth)}
+                        value={parsePickerYMD(form.date_of_birth)}
                         onChange={({ value }) =>
-                          setForm({ ...form, date_of_birth: formatDateString(value) })
+                          setForm({
+                            ...form,
+                            date_of_birth: value ? formatPickerDateAsYMD(value) : '',
+                          })
                         }
                         max={new Date()}
                         format="dd.MM.yyyy"

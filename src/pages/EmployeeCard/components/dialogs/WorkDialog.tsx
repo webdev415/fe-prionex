@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Input } from '@/components/ui/Input'
+import { DateSelect } from '@/components/ui/DateSelect'
+import '@/components/ui/DateSelect.theme.css'
 import {
   Select,
   SelectContent,
@@ -13,6 +14,7 @@ import { useUpdateWork } from '@/features/employeeCard/hooks/useEmployeeCard'
 import type { EmployeeCard } from '@/features/employeeCard/types.card'
 import { useRoles } from '@/features/roles'
 import { useUsers } from '@/features/users/hooks/useUsers'
+import { formatPickerDateAsYMD, parsePickerYMD } from '@/lib/dateUtils'
 import { SectionDialog } from './SectionDialog'
 import { useSectionSave } from './useSectionSave'
 
@@ -154,12 +156,18 @@ export function WorkDialog({ card, projectId, open, onClose }: WorkDialogProps) 
           </Select>
         </div>
 
-        <Input
-          label={t('pages.employeeCard.fields.hiredAt')}
-          type="date"
-          value={hiredAt}
-          onChange={(event) => setHiredAt(event.target.value)}
-        />
+        <div className="space-y-1.5">
+          <span className="text-muted-foreground text-xs">
+            {t('pages.employeeCard.fields.hiredAt')}
+          </span>
+          <DateSelect
+            value={parsePickerYMD(hiredAt)}
+            onChange={({ value }) => setHiredAt(value ? formatPickerDateAsYMD(value) : '')}
+            format="dd.MM.yyyy"
+            allowManualInput
+            placeholder={t('pages.employeeCard.fields.hiredAt')}
+          />
+        </div>
       </form>
     </SectionDialog>
   )

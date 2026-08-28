@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { DateSelect } from '@/components/ui/DateSelect'
+import '@/components/ui/DateSelect.theme.css'
 import { Input } from '@/components/ui/Input'
 import {
   Select,
@@ -9,6 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/Select'
 import { useUpdatePersonal } from '@/features/employeeCard/hooks/useEmployeeCard'
+import { formatPickerDateAsYMD, parsePickerYMD } from '@/lib/dateUtils'
 import type { EmployeeCard, PersonalInformationUpdate } from '@/features/employeeCard/types.card'
 import { SectionDialog } from './SectionDialog'
 import { useSectionSave } from './useSectionSave'
@@ -59,6 +62,22 @@ export function PersonalDialog({ card, projectId, open, onClose }: PersonalDialo
 
   const REQUIRED = ['last_name', 'first_name', 'email']
 
+  const date = (name: keyof typeof values, label: string) => (
+    <div className="space-y-1.5">
+      <span className="text-muted-foreground text-xs">{label}</span>
+      <DateSelect
+        value={parsePickerYMD(values[name])}
+        onChange={({ value }) =>
+          setValues({ ...values, [name]: value ? formatPickerDateAsYMD(value) : '' })
+        }
+        max={new Date()}
+        format="dd.MM.yyyy"
+        allowManualInput
+        placeholder={label}
+      />
+    </div>
+  )
+
   const field = (name: keyof typeof values, label: string, type = 'text') => (
     <Input
       label={label}
@@ -92,7 +111,7 @@ export function PersonalDialog({ card, projectId, open, onClose }: PersonalDialo
         {field('last_name', t('pages.employeeCard.fields.lastName'))}
         {field('first_name', t('pages.employeeCard.fields.firstName'))}
         {field('middle_name', t('pages.employeeCard.fields.middleName'))}
-        {field('date_of_birth', t('pages.employeeCard.fields.dateOfBirth'), 'date')}
+        {date('date_of_birth', t('pages.employeeCard.fields.dateOfBirth'))}
         {field('phone', t('pages.employeeCard.fields.phone'), 'tel')}
         {field('telegram', t('pages.employeeCard.fields.telegram'))}
         {field('email', t('pages.employeeCard.fields.email'), 'email')}

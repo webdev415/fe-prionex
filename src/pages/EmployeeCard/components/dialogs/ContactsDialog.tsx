@@ -1,9 +1,12 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
+import { DateSelect } from '@/components/ui/DateSelect'
+import '@/components/ui/DateSelect.theme.css'
 import { Input } from '@/components/ui/Input'
 import { useReplaceContacts } from '@/features/employeeCard/hooks/useEmployeeCard'
 import type { EmployeeCard, RelativeInput } from '@/features/employeeCard/types.card'
+import { formatPickerDateAsYMD, parsePickerYMD } from '@/lib/dateUtils'
 import { SectionDialog } from './SectionDialog'
 import { useSectionSave } from './useSectionSave'
 
@@ -88,12 +91,23 @@ export function ContactsDialog({ card, projectId, open, onClose }: ContactsDialo
                 />
               </div>
             ) : (
-              <Input
-                label={t('pages.employeeCard.fields.dateOfBirth')}
-                type="date"
-                value={row.date_of_birth ?? ''}
-                onChange={(event) => update(index, { date_of_birth: event.target.value })}
-              />
+              <div className="space-y-1.5">
+                <span className="text-muted-foreground text-xs">
+                  {t('pages.employeeCard.fields.dateOfBirth')}
+                </span>
+                <DateSelect
+                  value={parsePickerYMD(row.date_of_birth)}
+                  onChange={({ value }) =>
+                    update(index, {
+                      date_of_birth: value ? formatPickerDateAsYMD(value) : '',
+                    })
+                  }
+                  max={new Date()}
+                  format="dd.MM.yyyy"
+                  allowManualInput
+                  placeholder={t('pages.employeeCard.fields.dateOfBirth')}
+                />
+              </div>
             )}
             <Button type="button" variant="cancel" size="sm" onClick={() => remove(index)}>
               {t('actions.delete')}
