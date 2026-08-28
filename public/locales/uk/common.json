@@ -449,9 +449,12 @@
       "course_assigned": "Курс",
       "assignment_taken": "Звернення",
       "correction_task_assigned": "Корекційне завдання",
-      "drill_assigned": "Вправа"
+      "drill_assigned": "Вправа",
+      "training_scheduled": "Груповий тренінг",
+      "training_reminder": "Тренінг скоро"
     },
     "training": {
+      "joinMeeting": "Приєднатися до зустрічі",
       "withTrainer": "З: {{name}}",
       "durationMin_one": "{{count}} хв",
       "durationMin_few": "{{count}} хв",

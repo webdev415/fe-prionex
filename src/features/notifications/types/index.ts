@@ -36,6 +36,13 @@ export const NotificationType = {
   // Legal workplace task deadline reminders.
   LEGAL_TASK_DUE_TOMORROW: 'legal_task_due_tomorrow',
   LEGAL_TASK_DUE_TODAY: 'legal_task_due_today',
+  // KAN-752 — group-training lifecycle. Both fan out to the training's
+  // participants: TRAINING_SCHEDULED when a trainer assigns them,
+  // TRAINING_REMINDER 30 min before it starts.
+  TRAINING_SCHEDULED: 'training_scheduled',
+  TRAINING_REMINDER: 'training_reminder',
+  // Trainer-facing nudge: a completed 1-on-1 still has no feedback filed.
+  ONE_ON_ONE_FEEDBACK_DUE: 'one_on_one_feedback_due',
   // KAN-761 / KAN-615 — Trainings & Sessions assignment lifecycle.
   DRILL_ASSIGNED: 'drill_assigned',
   DRILL_COMPLETED: 'drill_completed',
