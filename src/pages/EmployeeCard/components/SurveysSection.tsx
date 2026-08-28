@@ -4,6 +4,7 @@ import { CardSection } from './CardSection'
 
 export interface SurveysSectionProps {
   card: EmployeeCard
+  onEdit?: (section: string) => void
 }
 
 /**
@@ -15,12 +16,22 @@ export interface SurveysSectionProps {
  * The link to the details points outside this system, because the survey ran
  * there. It opens in its own tab with the opener withheld, since nothing here
  * chose that address - it arrived in an import.
+ *
+ * The action loads such an import. It is the one action on the card that is
+ * not about the employee whose card is open - one file covers whoever is in
+ * it - so it is labelled for what it does rather than "edit".
  */
-export function SurveysSection({ card }: SurveysSectionProps) {
+export function SurveysSection({ card, onEdit }: SurveysSectionProps) {
   const { t, i18n } = useTranslation()
 
   return (
-    <CardSection id="surveys" title={t('pages.employeeCard.sections.surveys')}>
+    <CardSection
+      id="surveys"
+      title={t('pages.employeeCard.sections.surveys')}
+      {...(card.can_edit && onEdit
+        ? { editLabel: t('pages.employeeCard.surveys.import'), onEdit: () => onEdit('surveys') }
+        : {})}
+    >
       {card.surveys.length === 0 ? (
         <p className="text-muted-foreground text-sm">{t('pages.employeeCard.surveys.none')}</p>
       ) : (

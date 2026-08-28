@@ -10,6 +10,7 @@ import { EmployeeCardSkeleton } from './components/EmployeeCardSkeleton'
 import { DocumentsSection } from './components/DocumentsSection'
 import { ProfilePanel } from './components/ProfilePanel'
 import { SurveysSection } from './components/SurveysSection'
+import { SurveysDialog } from './components/dialogs/SurveysDialog'
 import { AdditionalDialog } from './components/dialogs/AdditionalDialog'
 import { ContactsDialog } from './components/dialogs/ContactsDialog'
 import { DocumentsDialog } from './components/dialogs/DocumentsDialog'
@@ -127,7 +128,7 @@ export function EmployeeCardPage() {
 
             <CardSections card={data} onEdit={setEditing} />
             <DocumentsSection card={data} onEdit={setEditing} />
-            <SurveysSection card={data} />
+            <SurveysSection card={data} onEdit={setEditing} />
 
             <section
               id="chronology"
@@ -171,6 +172,7 @@ export function EmployeeCardPage() {
             {editing === 'work' && (
               <WorkDialog card={data} projectId={projectId} open onClose={() => setEditing(null)} />
             )}
+            {editing === 'surveys' && <SurveysDialog open onClose={() => setEditing(null)} />}
             {editing === 'documents' && (
               <DocumentsDialog
                 card={data}

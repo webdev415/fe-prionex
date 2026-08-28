@@ -119,6 +119,33 @@ describe('DocumentsSection', () => {
 })
 
 describe('SurveysSection', () => {
+  /*
+   * Every other section carries an action; this one had none, so an import
+   * that existed on the server could not be reached from the product at all.
+   */
+  it('offers a way to load an export, to somebody who may edit', () => {
+    render(<SurveysSection card={card({ can_edit: true })} onEdit={vi.fn()} />)
+
+    expect(
+      screen.getByRole('button', { name: 'pages.employeeCard.surveys.import' })
+    ).toBeInTheDocument()
+  })
+
+  it('offers none to somebody who may only read', () => {
+    render(<SurveysSection card={card({ can_edit: false })} onEdit={vi.fn()} />)
+
+    expect(screen.queryByRole('button', { name: 'pages.employeeCard.surveys.import' })).toBeNull()
+  })
+
+  it('names the section it is on when the action is used', async () => {
+    const onEdit = vi.fn()
+    render(<SurveysSection card={card({ can_edit: true })} onEdit={onEdit} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'pages.employeeCard.surveys.import' }))
+
+    expect(onEdit).toHaveBeenCalledWith('surveys')
+  })
+
   it('shows a completed answer with its score', () => {
     render(
       <SurveysSection

@@ -152,3 +152,24 @@ export interface CardNeighbours {
   previous_user_id: number | null
   next_user_id: number | null
 }
+
+/** One row an import would not load, and why. */
+export interface RefusedSurveyRow {
+  row: number
+  email: string | null
+  reason: string
+}
+
+/**
+ * What an import did, and what it would not do.
+ *
+ * The refused rows carry their line number so a file can be corrected rather
+ * than a missing survey noticed months later - which is the whole reason the
+ * endpoint returns them, and why this screen has to show them.
+ */
+export interface SurveyImportReport {
+  created: number
+  updated: number
+  refused: number
+  rows: RefusedSurveyRow[]
+}

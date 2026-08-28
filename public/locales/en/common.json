@@ -10895,7 +10895,14 @@
       "surveys": {
         "none": "No surveys recorded.",
         "pending": "Pending",
-        "details": "Details"
+        "details": "Details",
+        "import": "Import answers",
+        "importHint": "One export can carry answers for many employees. Each row is matched to an employee by email address; a row matching nobody is reported rather than guessed at.",
+        "file": "Export file (CSV)",
+        "name": "Survey name",
+        "nameHint": "What to call these answers. Google Forms keeps the name in the form's title, not in the file.",
+        "loaded": "{{created}} added, {{updated}} updated, {{refused}} not loaded.",
+        "line": "Line {{line}}"
       },
       "saveFailed": "That could not be saved.",
       "dialogs": {
@@ -10910,7 +10917,8 @@
         "noManager": "No manager",
         "documents": "Documents",
         "attachFile": "Attach a document (PDF or Word, up to 10 MB)",
-        "searchManager": "Search by name"
+        "searchManager": "Search by name",
+        "surveys": "Import survey answers"
       },
       "tabs": {
         "showEarlier": "Show earlier sections",

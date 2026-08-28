@@ -6,6 +6,7 @@ import type {
   EmployeeCard,
   PersonalInformationUpdate,
   RelativeInput,
+  SurveyImportReport,
   WorkInformationUpdate,
 } from '../types.card'
 
@@ -66,7 +67,37 @@ export async function updateInterviewComment(
 export async function uploadDocument(userId: number, file: File) {
   const body = new FormData()
   body.append('file', file)
-  const response = await api.post(`${base(userId)}/documents`, body)
+  const response = await api.post(`${base(userId)}/documents`, body, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  })
+  return response.data
+}
+
+/**
+ * Load one export of survey answers.
+ *
+ * Not addressed to an employee, unlike everything else here: one file covers
+ * whoever is in it, matched by email. That is also why it is gated on the
+ * editing permission alone rather than on the manager relationship that opens
+ * a single card.
+ *
+ * ``surveyName`` names the survey the whole file belongs to. Google Forms
+ * keeps that in the form's title and never writes it into the export, so
+ * without it there is nothing to call the answers.
+ */
+export async function importSurveys(file: File, surveyName: string): Promise<SurveyImportReport> {
+  const body = new FormData()
+  body.append('file', file)
+  body.append('survey_name', surveyName)
+  const response = await api.post<SurveyImportReport>(
+    '/api/v1/admin/employee-surveys/import',
+    body,
+    // The shared client declares JSON for every request, and that default
+    // survives a FormData body - so without saying otherwise the file goes as
+    // multipart bytes labelled JSON and the server cannot read it. Naming the
+    // type lets axios replace it with one carrying the boundary.
+    { headers: { 'Content-Type': 'multipart/form-data' } }
+  )
   return response.data
 }
 
