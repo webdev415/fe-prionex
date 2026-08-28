@@ -35,6 +35,10 @@ const FORM_ID = 'employee-card-personal'
  * all - which is exactly what happened once the employees list dropped its
  * Actions column and took the user edit modal with it.
  *
+ * Given name before surname, the order the card itself reads in, so somebody
+ * checking the dialog against the name at the top of the page is comparing
+ * like with like.
+ *
  * A field left blank is sent as null rather than omitted, so clearing one
  * works. Name, email and work format are the exception: those columns cannot
  * be empty, so the form requires them rather than sending a null the server
@@ -46,8 +50,8 @@ export function PersonalDialog({ card, projectId, open, onClose }: PersonalDialo
   const { save, error, saving } = useSectionSave(mutation, onClose)
 
   const [values, setValues] = useState({
-    last_name: card.header.last_name ?? '',
     first_name: card.header.first_name ?? '',
+    last_name: card.header.last_name ?? '',
     middle_name: card.header.middle_name ?? '',
     date_of_birth: card.personal.date_of_birth ?? '',
     phone: card.header.phone ?? '',
@@ -60,7 +64,7 @@ export function PersonalDialog({ card, projectId, open, onClose }: PersonalDialo
   })
   const [workFormat, setWorkFormat] = useState(card.header.work_format ?? 'office')
 
-  const REQUIRED = ['last_name', 'first_name', 'email']
+  const REQUIRED = ['first_name', 'last_name', 'email']
 
   const date = (name: keyof typeof values, label: string) => (
     <div className="space-y-1.5">
@@ -108,8 +112,8 @@ export function PersonalDialog({ card, projectId, open, onClose }: PersonalDialo
           void save({ ...changes, work_format: workFormat })
         }}
       >
-        {field('last_name', t('pages.employeeCard.fields.lastName'))}
         {field('first_name', t('pages.employeeCard.fields.firstName'))}
+        {field('last_name', t('pages.employeeCard.fields.lastName'))}
         {field('middle_name', t('pages.employeeCard.fields.middleName'))}
         {date('date_of_birth', t('pages.employeeCard.fields.dateOfBirth'))}
         {field('phone', t('pages.employeeCard.fields.phone'), 'tel')}

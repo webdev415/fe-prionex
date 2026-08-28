@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { UserAvatar } from '@/components/ui/UserAvatar'
+import { displayName } from '@/features/employeeCard/lib/displayName'
 import type { CardHeader } from '@/features/employeeCard/types.card'
 
 export interface ProfilePanelProps {
@@ -36,13 +37,15 @@ export function ProfilePanel({ header }: ProfilePanelProps) {
     <aside className="border-border bg-card flex flex-col items-center gap-4 rounded-xl border p-6">
       <UserAvatar
         userId={header.id}
+        // The monogram keeps the app's own ordering, so the same person is
+        // not "CJ" in the employees list and "JC" here.
         fullName={header.full_name}
         avatarUrl={header.avatar_url}
         size={96}
       />
 
       <div className="space-y-1 text-center">
-        <h1 className="text-foreground text-lg font-semibold">{header.full_name}</h1>
+        <h1 className="text-foreground text-lg font-semibold">{displayName(header)}</h1>
         {header.position && <p className="text-muted-foreground text-sm">{header.position}</p>}
       </div>
 

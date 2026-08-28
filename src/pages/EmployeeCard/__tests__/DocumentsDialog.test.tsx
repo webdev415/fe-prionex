@@ -18,7 +18,7 @@ function card(overrides: Partial<EmployeeCard> = {}): EmployeeCard {
   return {
     header: {
       id: 7,
-      full_name: 'Olena Kovalchuk',
+      full_name: 'Kovalchuk Olena',
       last_name: 'Kovalchuk',
       first_name: 'Olena',
       middle_name: null,

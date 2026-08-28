@@ -8,7 +8,7 @@ function card(overrides: Partial<EmployeeCard> = {}): EmployeeCard {
   return {
     header: {
       id: 7,
-      full_name: 'Olena Kovalchuk',
+      full_name: 'Kovalchuk Olena',
       last_name: 'Kovalchuk',
       first_name: 'Olena',
       middle_name: null,
@@ -188,6 +188,17 @@ describe('CardSections', () => {
  * contents begin.
  */
 describe('CardSections: the section headings', () => {
+  /*
+   * The monogram keeps the app's own ordering so the same person is not
+   * "CJ" in the list and "JC" here; only the text the card prints changes.
+   */
+  it('prints the given name first, and only on the card', () => {
+    render(<CardSections card={card()} />)
+
+    expect(screen.getByText('Olena Kovalchuk')).toBeInTheDocument()
+    expect(screen.queryByText('Kovalchuk Olena')).toBeNull()
+  })
+
   it('rules the heading off from the fields under it', () => {
     render(<CardSections card={card()} />)
 

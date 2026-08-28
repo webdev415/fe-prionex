@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { displayName } from '@/features/employeeCard/lib/displayName'
 import type { EmployeeCard } from '@/features/employeeCard/types.card'
 import { CardSection } from './CardSection'
 import { FieldGrid } from './FieldGrid'
@@ -37,7 +38,7 @@ export function CardSections({ card, onEdit }: CardSectionsProps) {
         <FieldGrid
           emptyLabel={empty}
           fields={[
-            { label: t('pages.employeeCard.fields.fullName'), value: card.header.full_name },
+            { label: t('pages.employeeCard.fields.fullName'), value: displayName(card.header) },
             {
               label: t('pages.employeeCard.fields.dateOfBirth'),
               value: day(card.personal.date_of_birth),

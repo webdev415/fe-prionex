@@ -43,7 +43,7 @@ function card(overrides: Partial<EmployeeCard> = {}): EmployeeCard {
   return {
     header: {
       id: 7,
-      full_name: 'Olena Kovalchuk',
+      full_name: 'Kovalchuk Olena',
       last_name: 'Kovalchuk',
       first_name: 'Olena',
       middle_name: null,
@@ -164,6 +164,24 @@ describe('PersonalDialog: the fields that live on the employee record', () => {
 
     expect(field('lastName')).toHaveValue('Kovalchuk')
     expect(field('firstName')).toHaveValue('Olena')
+  })
+
+  /*
+   * Given name first, matching the name printed at the top of the card. The
+   * two disagreeing is how somebody checking one against the other ends up
+   * swapping them.
+   */
+  it('asks for the given name before the surname, as the card reads', () => {
+    open()
+
+    const inputs = Array.from(
+      document.querySelectorAll<HTMLInputElement>('#employee-card-personal input')
+    )
+    const first = inputs.indexOf(field('firstName') as HTMLInputElement)
+    const last = inputs.indexOf(field('lastName') as HTMLInputElement)
+
+    expect(first).toBeGreaterThanOrEqual(0)
+    expect(first).toBeLessThan(last)
   })
 
   it('offers every field the section displays', () => {

@@ -40,7 +40,7 @@ function card(overrides: Partial<EmployeeCard> = {}): EmployeeCard {
   return {
     header: {
       id: 7,
-      full_name: 'Olena Kovalchuk',
+      full_name: 'Kovalchuk Olena',
       last_name: 'Kovalchuk',
       first_name: 'Olena',
       middle_name: null,
@@ -132,11 +132,23 @@ describe('EmployeeCardPage', () => {
     )
   })
 
-  it('shows whose card this is', () => {
+  /*
+   * The panel prints the given name first like the rest of the card, while the
+   * monogram keeps the app's ordering - the same person should not be "CJ" in
+   * the employees list and "JC" here.
+   */
+  it('names the employee the way the card reads, not the way the API sends it', () => {
     renderAt('/dashboard/team-management/users/7')
 
     const panel = screen.getByRole('complementary')
     expect(within(panel).getByRole('heading', { name: 'Olena Kovalchuk' })).toBeInTheDocument()
+    expect(within(panel).queryByRole('heading', { name: 'Kovalchuk Olena' })).toBeNull()
+  })
+
+  it('shows whose card this is', () => {
+    renderAt('/dashboard/team-management/users/7')
+
+    const panel = screen.getByRole('complementary')
     expect(within(panel).getByText('Senior Operator')).toBeInTheDocument()
     expect(within(panel).getByText('Serhiy Lytvyn')).toBeInTheDocument()
   })
