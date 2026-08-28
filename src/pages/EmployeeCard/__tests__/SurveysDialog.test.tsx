@@ -85,13 +85,14 @@ function card(overrides: Partial<EmployeeCard> = {}): EmployeeCard {
 
 function show(given: EmployeeCard = card(), surveyId: number | null = null) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const invalidate = vi.spyOn(client, 'invalidateQueries')
   const onClose = vi.fn()
   render(
     <QueryClientProvider client={client}>
       <SurveysDialog card={given} projectId={null} surveyId={surveyId} open onClose={onClose} />
     </QueryClientProvider>
   )
-  return { onClose }
+  return { onClose, invalidate }
 }
 
 const field = (key: string) => screen.getByLabelText(`pages.employeeCard.surveys.${key}`)
@@ -231,6 +232,21 @@ describe('SurveysDialog', () => {
     show(card({ surveys: [SURVEY] as never }), null)
 
     expect(field('name')).toHaveValue('')
+  })
+
+  /*
+   * A dated answer puts a line in the chronology, and the chronology is its
+   * own query - the card coming back does not refresh it. Without this the
+   * section below says nothing happened until the page is reloaded, which
+   * reads as the save having half worked.
+   */
+  it('refreshes the chronology the answer just appeared in', async () => {
+    const { invalidate } = show()
+
+    await userEvent.type(field('name'), 'Q2 2024 Satisfaction')
+    await userEvent.click(add())
+
+    await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ['employee-events'] }))
   })
 
   it('closes once the answer is saved', async () => {

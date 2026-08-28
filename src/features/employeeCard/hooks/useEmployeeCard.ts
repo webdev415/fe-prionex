@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/errors'
 import { usersKeys } from '@/features/users/hooks/useUsers'
 import * as employeeCardApi from '../api/employeeCardApi'
+import { employeeEventKeys } from './useEmployeeEvents'
 import type {
   AdditionalInformationUpdate,
   EmployeeCard,
@@ -109,6 +110,9 @@ export function useRemoveSurvey(userId: number, projectId?: number | null) {
     mutationFn: (surveyId: number) => employeeCardApi.removeSurvey(userId, surveyId),
     onSuccess: (card) => {
       queryClient.setQueryData(employeeCardKeys.one(userId, projectId), card)
+      // Its chronology line went with it, and the timeline is a separate
+      // query that would otherwise keep showing the removed answer.
+      void queryClient.invalidateQueries({ queryKey: employeeEventKeys.all })
     },
     onError: (error) => {
       toast.error(getErrorMessage(error))

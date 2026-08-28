@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/Input'
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
 import { addSurvey, updateSurvey } from '@/features/employeeCard/api/employeeCardApi'
 import { employeeCardKeys } from '@/features/employeeCard/hooks/useEmployeeCard'
+import { employeeEventKeys } from '@/features/employeeCard/hooks/useEmployeeEvents'
 import type { EmployeeCard, SurveyInput } from '@/features/employeeCard/types.card'
 import { formatPickerDateAsYMD, parsePickerYMD } from '@/lib/dateUtils'
 import { getErrorMessage } from '@/lib/errors'
@@ -95,6 +96,13 @@ export function SurveysDialog({ card, projectId, surveyId, open, onClose }: Surv
         ? await updateSurvey(employeeId, editing.id, payload())
         : await addSurvey(employeeId, payload())
       queryClient.setQueryData(employeeCardKeys.one(employeeId, projectId), saved)
+      /*
+       * The chronology is its own query, so the card coming back does not
+       * refresh it - and a dated answer has just put a line in it. Without
+       * this the section below says nothing happened until the page is
+       * reloaded, which reads as the save having half worked.
+       */
+      await queryClient.invalidateQueries({ queryKey: employeeEventKeys.all })
       onClose()
     } catch (caught) {
       setError(getErrorMessage(caught))

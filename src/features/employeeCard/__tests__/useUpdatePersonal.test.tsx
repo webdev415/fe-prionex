@@ -14,10 +14,12 @@ import type { ReactNode } from 'react'
 import { usersKeys } from '@/features/users/hooks/useUsers'
 
 const updatePersonal = vi.hoisted(() => vi.fn())
+const removeSurvey = vi.hoisted(() => vi.fn())
 
-vi.mock('../api/employeeCardApi', () => ({ updatePersonal }))
+vi.mock('../api/employeeCardApi', () => ({ updatePersonal, removeSurvey }))
 
-const { useUpdatePersonal, employeeCardKeys } = await import('../hooks/useEmployeeCard')
+const { useUpdatePersonal, useRemoveSurvey, employeeCardKeys } =
+  await import('../hooks/useEmployeeCard')
 
 function harness() {
   const client = new QueryClient({
@@ -48,6 +50,35 @@ describe('useUpdatePersonal', () => {
 
     const { result } = renderHook(() => useUpdatePersonal(7, null), { wrapper })
     await result.current.mutateAsync({ last_name: 'Kovalenko' })
+
+    expect(client.getQueryData(employeeCardKeys.one(7, null))).toEqual(saved)
+  })
+})
+
+/*
+ * Removing a survey takes its chronology line with it, and the timeline is a
+ * separate query - so the card coming back is not enough to stop the removed
+ * answer still showing in the history below.
+ */
+describe('useRemoveSurvey', () => {
+  it('refreshes the chronology the answer was on', async () => {
+    const { client, wrapper } = harness()
+    removeSurvey.mockResolvedValue({ header: { id: 7 } })
+    const invalidate = vi.spyOn(client, 'invalidateQueries')
+
+    const { result } = renderHook(() => useRemoveSurvey(7, null), { wrapper })
+    await result.current.mutateAsync(11)
+
+    await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ['employee-events'] }))
+  })
+
+  it('puts the card it answers with straight into the cache', async () => {
+    const { client, wrapper } = harness()
+    const saved = { header: { id: 7 }, surveys: [] }
+    removeSurvey.mockResolvedValue(saved)
+
+    const { result } = renderHook(() => useRemoveSurvey(7, null), { wrapper })
+    await result.current.mutateAsync(11)
 
     expect(client.getQueryData(employeeCardKeys.one(7, null))).toEqual(saved)
   })
