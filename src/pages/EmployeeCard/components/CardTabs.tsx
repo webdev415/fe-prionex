@@ -10,6 +10,8 @@ export interface CardTabsProps {
   tabs: CardTab[]
   activeId: string
   ariaLabel: string
+  /** Told which section was asked for, so the bar can answer before the scroll arrives. */
+  onSelect?: (id: string) => void
 }
 
 /**
@@ -19,22 +21,31 @@ export interface CardTabsProps {
  * page, so replacing it with a route would throw away what has been loaded
  * and lose the reader's place on the way back.
  *
+ * The bar marks what was clicked straight away rather than waiting to be told
+ * by the scroll. The last sections can all fit on one screen, and then the
+ * scroll cannot move far enough for the one that was asked for to become the
+ * answer - the click would appear to do nothing.
+ *
  * The strip scrolls sideways on a narrow screen. Seven tabs do not fit on a
  * phone, and a clipped tab is one nobody can reach.
  */
-export function CardTabs({ tabs, activeId, ariaLabel }: CardTabsProps) {
-  const goTo = useCallback((id: string) => {
-    const section = document.getElementById(id)
-    if (!section) return
-    section.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    section.focus({ preventScroll: true })
-  }, [])
+export function CardTabs({ tabs, activeId, ariaLabel, onSelect }: CardTabsProps) {
+  const goTo = useCallback(
+    (id: string) => {
+      const section = document.getElementById(id)
+      if (!section) return
+      onSelect?.(id)
+      section.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      section.focus({ preventScroll: true })
+    },
+    [onSelect]
+  )
 
   return (
     <div
       role="tablist"
       aria-label={ariaLabel}
-      className="bg-background border-border sticky top-0 z-10 flex gap-1 overflow-x-auto border-b"
+      className="bg-background border-border flex gap-1 overflow-x-auto border-b"
     >
       {tabs.map((tab) => {
         const isActive = tab.id === activeId

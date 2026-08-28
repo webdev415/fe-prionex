@@ -1,94 +1,218 @@
+/**
+ * Which tab the underline sits under.
+ *
+ * jsdom lays nothing out - every rectangle is zero - so the positions are
+ * stubbed and the scroll events fired by hand. That is the only way to say
+ * "the reader has scrolled to here" and check the answer.
+ *
+ * The case worth keeping in mind while reading these: the rule has to hold for
+ * sections of wildly different heights. The version before this ranked them by
+ * how much of each was on screen as a fraction of its own height, so a short
+ * section scored higher than a tall one that filled the screen, and the
+ * underline sat under a section the reader had already passed.
+ */
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, render, screen } from '@testing-library/react'
-import { useScrollSpy } from '../hooks/useScrollSpy'
+import { CARD_HEADER_OFFSET, useScrollSpy } from '../hooks/useScrollSpy'
 
-/**
- * The observer is driven by hand here.
- *
- * jsdom lays nothing out, so nothing ever intersects on its own. Capturing the
- * callback and calling it is the only way to say "the reader is looking at
- * this one" and check the answer.
- */
-let notify: ((entries: unknown[]) => void) | null = null
-let observed: Element[] = []
+const IDS = ['personal', 'work', 'documents']
 
-class FakeObserver {
-  constructor(callback: (entries: unknown[]) => void) {
-    notify = callback
+let container: HTMLDivElement
+
+/** Place each section's top edge, in viewport coordinates. */
+function place(
+  tops: Record<string, number>,
+  scroll?: { top: number; client: number; height: number }
+) {
+  for (const [id, top] of Object.entries(tops)) {
+    const element = document.getElementById(id) as HTMLElement
+    element.getBoundingClientRect = () => ({ top, bottom: top + 200, height: 200 }) as DOMRect
   }
-  observe(element: Element) {
-    observed.push(element)
-  }
-  disconnect() {
-    observed = []
+  if (scroll) {
+    Object.defineProperty(container, 'scrollTop', { value: scroll.top, configurable: true })
+    Object.defineProperty(container, 'clientHeight', { value: scroll.client, configurable: true })
+    Object.defineProperty(container, 'scrollHeight', { value: scroll.height, configurable: true })
   }
 }
 
-function Probe({ ids }: { ids: string[] }) {
-  const active = useScrollSpy(ids)
-  return <span data-testid="active">{active}</span>
+function scroll() {
+  act(() => {
+    container.dispatchEvent(new Event('scroll'))
+  })
 }
 
-function entry(id: string, ratio: number) {
-  return { target: { id }, intersectionRatio: ratio }
+let select: ((id: string) => void) | null = null
+
+function Probe({ ids, ready = true }: { ids: string[]; ready?: boolean }) {
+  const spy = useScrollSpy(ids, CARD_HEADER_OFFSET, ready)
+  select = spy.select
+  return <span data-testid="active">{spy.active}</span>
 }
 
 describe('useScrollSpy', () => {
   beforeEach(() => {
-    notify = null
-    observed = []
-    vi.stubGlobal('IntersectionObserver', FakeObserver)
-    document.body.innerHTML = `
-      <div id="one"></div><div id="two"></div><div id="three"></div>
-    `
+    vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+      cb(0)
+      return 1
+    })
+    vi.stubGlobal('cancelAnimationFrame', () => {})
+
+    container = document.createElement('div')
+    container.style.overflowY = 'auto'
+    container.getBoundingClientRect = () => ({ top: 0 }) as DOMRect
+    Object.defineProperty(container, 'scrollTop', { value: 0, configurable: true })
+    Object.defineProperty(container, 'clientHeight', { value: 800, configurable: true })
+    Object.defineProperty(container, 'scrollHeight', { value: 4000, configurable: true })
+
+    for (const id of IDS) {
+      const section = document.createElement('section')
+      section.id = id
+      container.appendChild(section)
+    }
+    document.body.appendChild(container)
   })
 
   afterEach(() => {
+    container.remove()
     vi.unstubAllGlobals()
-    document.body.innerHTML = ''
   })
 
-  it('starts on the first section before anything has been seen', () => {
-    render(<Probe ids={['one', 'two', 'three']} />)
+  it('starts on the first section', () => {
+    place({ personal: 200, work: 900, documents: 1600 })
+    render(<Probe ids={IDS} />)
 
-    expect(screen.getByTestId('active')).toHaveTextContent('one')
+    expect(screen.getByTestId('active')).toHaveTextContent('personal')
   })
 
-  it('watches every section it was given', () => {
-    render(<Probe ids={['one', 'two', 'three']} />)
+  it('follows the reader down, one section at a time', () => {
+    place({ personal: 200, work: 900, documents: 1600 })
+    render(<Probe ids={IDS} />)
 
-    expect(observed.map((element) => element.id)).toEqual(['one', 'two', 'three'])
+    place({ personal: -400, work: 100, documents: 800 })
+    scroll()
+    expect(screen.getByTestId('active')).toHaveTextContent('work')
+
+    place({ personal: -1100, work: -600, documents: 100 })
+    scroll()
+    expect(screen.getByTestId('active')).toHaveTextContent('documents')
   })
 
-  it('follows whichever section is most in view', () => {
-    render(<Probe ids={['one', 'two', 'three']} />)
+  /*
+   * The one the old rule got wrong: a tall section filling the screen loses to
+   * a short one that has already been scrolled past, because the score was a
+   * fraction of each section's own height.
+   */
+  it('names the section under the header, not the one that fits best', () => {
+    place({ personal: 200, work: 900, documents: 1600 })
+    render(<Probe ids={IDS} />)
 
-    act(() => notify?.([entry('one', 0.1), entry('two', 0.9)]))
+    // `work` is short and entirely on screen; `documents` is tall, starts just
+    // under the header and runs off the bottom. The reader is in `documents`.
+    const documents = document.getElementById('documents') as HTMLElement
+    place({ personal: -900, work: -300 })
+    documents.getBoundingClientRect = () => ({ top: 120, bottom: 3000, height: 2880 }) as DOMRect
+    scroll()
 
-    expect(screen.getByTestId('active')).toHaveTextContent('two')
+    expect(screen.getByTestId('active')).toHaveTextContent('documents')
   })
 
-  it('does not move to a section that has scrolled out of view', () => {
-    render(<Probe ids={['one', 'two', 'three']} />)
+  it('does not move on for a section that has not reached the header yet', () => {
+    place({ personal: 200, work: 900, documents: 1600 })
+    render(<Probe ids={IDS} />)
 
-    act(() => notify?.([entry('two', 0.9)]))
-    act(() => notify?.([entry('two', 0), entry('three', 0.4)]))
+    place({ personal: -100, work: CARD_HEADER_OFFSET + 40, documents: 900 })
+    scroll()
 
-    expect(screen.getByTestId('active')).toHaveTextContent('three')
+    expect(screen.getByTestId('active')).toHaveTextContent('personal')
   })
 
-  it('keeps the last answer when nothing is in view at all', () => {
-    render(<Probe ids={['one', 'two', 'three']} />)
+  /*
+   * The bug this replaced a rule for. The card's last sections can all fit on
+   * one screen, so scrolling to the bottom does not push the final section's
+   * top under the header - and an earlier version answered "the last one"
+   * whenever the container was at its end. That overrode everything: asking
+   * for Documents and Hiring scrolled there and the underline snapped back to
+   * Chronology, so the tab looked broken.
+   */
+  it('holds the section that was asked for, even at the bottom', () => {
+    place({ personal: 200, work: 900, documents: 1600 })
+    render(<Probe ids={IDS} />)
 
-    act(() => notify?.([entry('two', 0.9)]))
-    act(() => notify?.([entry('two', 0)]))
+    act(() => select?.('work'))
+    place({ personal: -2000, work: 400, documents: 700 }, { top: 3200, client: 800, height: 4000 })
+    scroll()
 
-    expect(screen.getByTestId('active')).toHaveTextContent('two')
+    expect(screen.getByTestId('active')).toHaveTextContent('work')
   })
 
-  it('survives a section the page does not have', () => {
-    render(<Probe ids={['one', 'missing']} />)
+  it('answers for itself again once the card has been still for a moment', () => {
+    vi.useFakeTimers()
+    try {
+      place({ personal: 200, work: 900, documents: 1600 })
+      render(<Probe ids={IDS} />)
 
-    expect(observed.map((element) => element.id)).toEqual(['one'])
+      act(() => select?.('work'))
+      place({ personal: -1100, work: -600, documents: 100 })
+      scroll()
+      expect(screen.getByTestId('active')).toHaveTextContent('work')
+
+      act(() => {
+        vi.advanceTimersByTime(200)
+      })
+      expect(screen.getByTestId('active')).toHaveTextContent('documents')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('does not let a section scrolled past overrule what was asked for', () => {
+    place({ personal: 200, work: 900, documents: 1600 })
+    render(<Probe ids={IDS} />)
+
+    act(() => select?.('personal'))
+    place({ personal: -1100, work: -600, documents: -100 })
+    scroll()
+
+    expect(screen.getByTestId('active')).toHaveTextContent('personal')
+  })
+
+  it('answers again when the window is resized, not only when scrolled', () => {
+    place({ personal: 200, work: 900, documents: 1600 })
+    render(<Probe ids={IDS} />)
+
+    place({ personal: -400, work: 100, documents: 800 })
+    act(() => {
+      window.dispatchEvent(new Event('resize'))
+    })
+
+    expect(screen.getByTestId('active')).toHaveTextContent('work')
+  })
+
+  /*
+   * Same cold-load problem as the spacer: the sections do not exist while the
+   * card is still loading, and nothing here changes afterwards to make it look
+   * again. Without being told, the bar follows the reader only on a visit
+   * where the card was already in hand.
+   */
+  it('starts following once the sections have arrived', () => {
+    place({ personal: 200, work: 900, documents: 1600 })
+    const { rerender } = render(<Probe ids={IDS} ready={false} />)
+
+    place({ personal: -400, work: 100, documents: 800 })
+    scroll()
+    expect(screen.getByTestId('active')).toHaveTextContent('personal')
+
+    rerender(<Probe ids={IDS} ready />)
+    scroll()
+
+    expect(screen.getByTestId('active')).toHaveTextContent('work')
+  })
+
+  it('says nothing about sections that are not on the page', () => {
+    place({ personal: 200, work: 900, documents: 1600 })
+    render(<Probe ids={['personal', 'missing', 'work']} />)
+
+    expect(screen.getByTestId('active')).toHaveTextContent('personal')
   })
 })

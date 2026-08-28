@@ -9,7 +9,27 @@ export interface CardNavigationProps {
 }
 
 /**
- * Back to the list, and the two employees either side of this one.
+ * The way back to the list, carrying whatever it was filtered by.
+ *
+ * Separate from the pagination beside it because they sit in different
+ * columns: this one belongs over the profile panel, and walking the list
+ * belongs over the sections being walked.
+ */
+export function BackToList({ listQuery }: { listQuery: string }) {
+  const { t } = useTranslation()
+
+  return (
+    <Link
+      to={`/dashboard/team-management/users${listQuery ? `?${listQuery}` : ''}`}
+      className="text-muted-foreground hover:text-foreground inline-flex items-center gap-2 text-sm"
+    >
+      {t('pages.employeeCard.backToList')}
+    </Link>
+  )
+}
+
+/**
+ * The two employees either side of this one, and where this one sits.
  *
  * Both moves carry the list's query with them, so walking the list from a
  * card keeps whatever was filtered rather than dropping back to everybody.
@@ -35,27 +55,18 @@ export function CardNavigation({ listQuery, neighbours }: CardNavigationProps) {
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <Link
-        to={`/dashboard/team-management/users${suffix}`}
-        className="text-muted-foreground hover:text-foreground inline-flex items-center gap-2 text-sm"
-      >
-        {t('pages.employeeCard.backToList')}
-      </Link>
+      {step(neighbours?.previous_user_id, t('pages.employeeCard.previousEmployee'))}
 
-      <div className="flex items-center gap-3">
-        {step(neighbours?.previous_user_id, t('pages.employeeCard.previousEmployee'))}
+      {neighbours?.position ? (
+        <span className="text-muted-foreground text-sm tabular-nums">
+          {t('pages.employeeCard.position', {
+            position: neighbours.position,
+            total: neighbours.total,
+          })}
+        </span>
+      ) : null}
 
-        {neighbours?.position ? (
-          <span className="text-muted-foreground text-sm tabular-nums">
-            {t('pages.employeeCard.position', {
-              position: neighbours.position,
-              total: neighbours.total,
-            })}
-          </span>
-        ) : null}
-
-        {step(neighbours?.next_user_id, t('pages.employeeCard.nextEmployee'))}
-      </div>
+      {step(neighbours?.next_user_id, t('pages.employeeCard.nextEmployee'))}
     </div>
   )
 }

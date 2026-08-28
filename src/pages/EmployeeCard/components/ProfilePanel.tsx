@@ -12,6 +12,12 @@ export interface ProfilePanelProps {
  * It repeats a few things the sections also show. That is deliberate: it is
  * what somebody reads to know whose card they are on, and losing it after one
  * scroll is how the wrong person gets edited.
+ *
+ * Staying put is the column's job rather than this panel's: the way back to
+ * the list sits above it and has to stay too. No height is set here, and the
+ * grid it sits in is ``items-start`` - a grid item stretches to its row by
+ * default, and something already as tall as everything beside it has nowhere
+ * to slide, which is how this was marked sticky and did nothing.
  */
 export function ProfilePanel({ header }: ProfilePanelProps) {
   const { t, i18n } = useTranslation()
@@ -27,7 +33,7 @@ export function ProfilePanel({ header }: ProfilePanelProps) {
     ) : null
 
   return (
-    <aside className="border-border bg-card sticky top-20 flex flex-col items-center gap-4 rounded-xl border p-6">
+    <aside className="border-border bg-card flex flex-col items-center gap-4 rounded-xl border p-6">
       <UserAvatar
         userId={header.id}
         fullName={header.full_name}
