@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 import '@testing-library/jest-dom'
 import { configure } from '@testing-library/react'
-import { vi, beforeAll, afterAll } from 'vitest'
+import { vi, beforeAll, beforeEach, afterAll } from 'vitest'
 import './mocks/callQaSettings'
 import './mocks/aiAssistantSettings'
 import './mocks/assistantOverview'
@@ -68,11 +68,23 @@ class BlockedXHR {
     setTimeout(() => this.onerror?.call(this, new Event('error')), 0)
   }
 }
-vi.stubGlobal('XMLHttpRequest', BlockedXHR)
-vi.stubGlobal(
-  'fetch',
-  vi.fn(() => Promise.reject(failOffline()))
-)
+// Installed by ASSIGNMENT, not vi.stubGlobal, and re-applied before every test.
+// Ten files (most of them AiAssistant ones) call vi.unstubAllGlobals() in their
+// teardown, which restores whatever vitest recorded when the stub was created —
+// the REAL XMLHttpRequest, if the block were a stub. That switched the block off
+// for the rest of those files, which is precisely where it is needed. A plain
+// assignment is not vitest's to revert, and the beforeEach covers a file that
+// reaches for the global itself.
+//
+// The hook runs before any hook the test file registers, so a file that wants
+// its own fetch (SSE, TTS, transcribe sockets) still overrides this and wins.
+const blockedFetch = () => Promise.reject(failOffline())
+const installNetworkBlock = () => {
+  globalThis.XMLHttpRequest = BlockedXHR as unknown as typeof XMLHttpRequest
+  globalThis.fetch = blockedFetch as unknown as typeof fetch
+}
+installNetworkBlock()
+beforeEach(installNetworkBlock)
 
 // Suppress console warnings in tests
 const originalError = console.error
