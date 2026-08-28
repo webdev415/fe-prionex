@@ -118,32 +118,107 @@ describe('DocumentsSection', () => {
   })
 })
 
+const SURVEY: EmployeeCard['surveys'][number] = {
+  id: 11,
+  name: 'Q2 2024 Satisfaction',
+  completed_on: '2024-06-15',
+  status: 'completed',
+  score: 87,
+  max_score: 100,
+  details_url: null,
+}
+
 describe('SurveysSection', () => {
   /*
-   * Every other section carries an action; this one had none, so an import
-   * that existed on the server could not be reached from the product at all.
+   * Every other section carries an action; this one had none, so results that
+   * could be recorded on the server could not be reached from the product.
    */
-  it('offers a way to load an export, to somebody who may edit', () => {
-    render(<SurveysSection card={card({ can_edit: true })} onEdit={vi.fn()} />)
+  it('offers a way to record answers, to somebody who may edit', () => {
+    render(<SurveysSection card={card({ can_edit: true })} onAdd={vi.fn()} />)
 
     expect(
-      screen.getByRole('button', { name: 'pages.employeeCard.surveys.import' })
+      screen.getByRole('button', { name: 'pages.employeeCard.surveys.record' })
     ).toBeInTheDocument()
   })
 
   it('offers none to somebody who may only read', () => {
-    render(<SurveysSection card={card({ can_edit: false })} onEdit={vi.fn()} />)
+    render(<SurveysSection card={card({ can_edit: false })} onAdd={vi.fn()} />)
 
-    expect(screen.queryByRole('button', { name: 'pages.employeeCard.surveys.import' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'pages.employeeCard.surveys.record' })).toBeNull()
   })
 
-  it('names the section it is on when the action is used', async () => {
-    const onEdit = vi.fn()
-    render(<SurveysSection card={card({ can_edit: true })} onEdit={onEdit} />)
+  /*
+   * A plus, not a pencil. Nothing here is opened for correction from the
+   * heading - the rows carry that - so a pencil over the section would point
+   * at something that is not there.
+   */
+  it('marks the heading action as adding rather than correcting', () => {
+    render(<SurveysSection card={card({ can_edit: true })} onAdd={vi.fn()} />)
 
-    await userEvent.click(screen.getByRole('button', { name: 'pages.employeeCard.surveys.import' }))
+    expect(
+      screen.getByRole('button', { name: 'pages.employeeCard.surveys.record' })
+    ).toHaveAttribute('data-action', 'add')
+  })
 
-    expect(onEdit).toHaveBeenCalledWith('surveys')
+  it('asks for a new answer when the action is used', async () => {
+    const onAdd = vi.fn()
+    render(<SurveysSection card={card({ can_edit: true })} onAdd={onAdd} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'pages.employeeCard.surveys.record' }))
+
+    expect(onAdd).toHaveBeenCalled()
+  })
+
+  /*
+   * Correcting one answer of several should not mean opening a dialog and
+   * finding it again in a list, when the reader is looking straight at it.
+   */
+  it('offers each answer its own correction and removal', async () => {
+    const onEditSurvey = vi.fn()
+    const onRemoveSurvey = vi.fn()
+    render(
+      <SurveysSection
+        card={card({ can_edit: true, surveys: [SURVEY] })}
+        onEditSurvey={onEditSurvey}
+        onRemoveSurvey={onRemoveSurvey}
+      />
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: /surveys.edit/ }))
+    await userEvent.click(screen.getByRole('button', { name: /surveys.remove/ }))
+
+    expect(onEditSurvey).toHaveBeenCalledWith(SURVEY.id)
+    expect(onRemoveSurvey).toHaveBeenCalledWith(SURVEY.id)
+  })
+
+  /*
+   * A bare number beside a dated answer says nothing about whether it was
+   * good, and both states wear the same pill so a waiting row and a scored one
+   * read as two values of one thing.
+   */
+  it('shows a score with what it was out of', () => {
+    render(<SurveysSection card={card({ surveys: [SURVEY] })} />)
+
+    expect(screen.getByText('87/100')).toBeInTheDocument()
+  })
+
+  it('shows an imported answer against its own total', () => {
+    render(<SurveysSection card={card({ surveys: [{ ...SURVEY, score: 18, max_score: 20 }] })} />)
+
+    expect(screen.getByText('18/20')).toBeInTheDocument()
+  })
+
+  it('offers a reader neither', () => {
+    render(
+      <SurveysSection
+        card={card({ can_edit: false, surveys: [SURVEY] })}
+        onEditSurvey={vi.fn()}
+        onRemoveSurvey={vi.fn()}
+      />
+    )
+
+    expect(screen.queryByRole('button', { name: /surveys.edit/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /surveys.remove/ })).toBeNull()
   })
 
   it('shows a completed answer with its score', () => {

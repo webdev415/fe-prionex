@@ -7,6 +7,7 @@ import type {
   PersonalInformationUpdate,
   RelativeInput,
   SurveyImportReport,
+  SurveyInput,
   WorkInformationUpdate,
 } from '../types.card'
 
@@ -98,6 +99,33 @@ export async function importSurveys(file: File, surveyName: string): Promise<Sur
     // type lets axios replace it with one carrying the boundary.
     { headers: { 'Content-Type': 'multipart/form-data' } }
   )
+  return response.data
+}
+
+/**
+ * Record a survey this employee answered.
+ *
+ * Addressed to the employee, unlike the file import: surveys run outside this
+ * system and most people here are recorded under personal addresses, so who a
+ * result belongs to is a judgement rather than a lookup. Whoever adds it makes
+ * that judgement.
+ */
+export async function addSurvey(userId: number, survey: SurveyInput): Promise<EmployeeCard> {
+  const response = await api.post<EmployeeCard>(`${base(userId)}/surveys`, survey)
+  return response.data
+}
+
+export async function updateSurvey(
+  userId: number,
+  surveyId: number,
+  survey: SurveyInput
+): Promise<EmployeeCard> {
+  const response = await api.patch<EmployeeCard>(`${base(userId)}/surveys/${surveyId}`, survey)
+  return response.data
+}
+
+export async function removeSurvey(userId: number, surveyId: number): Promise<EmployeeCard> {
+  const response = await api.delete<EmployeeCard>(`${base(userId)}/surveys/${surveyId}`)
   return response.data
 }
 

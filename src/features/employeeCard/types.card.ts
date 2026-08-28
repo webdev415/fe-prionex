@@ -173,3 +173,13 @@ export interface SurveyImportReport {
   refused: number
   rows: RefusedSurveyRow[]
 }
+
+/** One survey answer, as somebody records it on the card. */
+export interface SurveyInput {
+  name: string
+  completed_on?: string | null
+  score?: number | null
+  max_score?: number | null
+  status: 'completed' | 'pending'
+  details_url?: string | null
+}

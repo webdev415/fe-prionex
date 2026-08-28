@@ -16,6 +16,7 @@ import { ContactsDialog } from './components/dialogs/ContactsDialog'
 import { DocumentsDialog } from './components/dialogs/DocumentsDialog'
 import { PersonalDialog } from './components/dialogs/PersonalDialog'
 import { WorkDialog } from './components/dialogs/WorkDialog'
+import { useRemoveSurvey } from '@/features/employeeCard/hooks/useEmployeeCard'
 import { CARD_HEADER_OFFSET, useScrollSpy } from './hooks/useScrollSpy'
 import { useTailSpace } from './hooks/useTailSpace'
 
@@ -48,6 +49,13 @@ export function EmployeeCardPage() {
   )
   const tailSpace = useTailSpace(SECTION_IDS[SECTION_IDS.length - 1], CARD_HEADER_OFFSET, rendered)
   const [editing, setEditing] = useState<string | null>(null)
+  /*
+   * Which survey the one dialog is opened on: null means a new one. Kept
+   * beside `editing` rather than folded into it, because "the surveys dialog
+   * is open" and "it is open on survey 11" are two different facts.
+   */
+  const [survey, setSurvey] = useState<number | null>(null)
+  const removeOne = useRemoveSurvey(employeeId, projectId)
 
   const tabs = useMemo(
     () =>
@@ -128,7 +136,18 @@ export function EmployeeCardPage() {
 
             <CardSections card={data} onEdit={setEditing} />
             <DocumentsSection card={data} onEdit={setEditing} />
-            <SurveysSection card={data} onEdit={setEditing} />
+            <SurveysSection
+              card={data}
+              onAdd={() => {
+                setSurvey(null)
+                setEditing('surveys')
+              }}
+              onEditSurvey={(surveyId) => {
+                setSurvey(surveyId)
+                setEditing('surveys')
+              }}
+              onRemoveSurvey={(surveyId) => removeOne.mutate(surveyId)}
+            />
 
             <section
               id="chronology"
@@ -172,7 +191,15 @@ export function EmployeeCardPage() {
             {editing === 'work' && (
               <WorkDialog card={data} projectId={projectId} open onClose={() => setEditing(null)} />
             )}
-            {editing === 'surveys' && <SurveysDialog open onClose={() => setEditing(null)} />}
+            {editing === 'surveys' && (
+              <SurveysDialog
+                card={data}
+                projectId={projectId}
+                surveyId={survey}
+                open
+                onClose={() => setEditing(null)}
+              />
+            )}
             {editing === 'documents' && (
               <DocumentsDialog
                 card={data}

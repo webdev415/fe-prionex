@@ -1,4 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/errors'
 import { usersKeys } from '@/features/users/hooks/useUsers'
 import * as employeeCardApi from '../api/employeeCardApi'
 import type {
@@ -92,6 +94,26 @@ export function useUpdateInterviewComment(userId: number, projectId?: number | n
     projectId,
     employeeCardApi.updateInterviewComment
   )
+}
+
+/**
+ * Remove one survey from an employee's card.
+ *
+ * Acted from the row rather than from a dialog, so there is nowhere on screen
+ * to put a failure - a toast is where the rest of the app says so. The card
+ * comes back with the answer, which is why nothing is refetched.
+ */
+export function useRemoveSurvey(userId: number, projectId?: number | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (surveyId: number) => employeeCardApi.removeSurvey(userId, surveyId),
+    onSuccess: (card) => {
+      queryClient.setQueryData(employeeCardKeys.one(userId, projectId), card)
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error))
+    },
+  })
 }
 
 export function useCardNeighbours(userId: number, listQuery: string) {

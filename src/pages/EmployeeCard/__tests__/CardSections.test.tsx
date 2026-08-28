@@ -236,6 +236,15 @@ describe('CardSections: the section headings', () => {
     expect(heading.parentElement?.className).toContain('border-b')
   })
 
+  it('marks a section that opens what is already there as correcting', () => {
+    render(<CardSections card={card({ can_edit: true })} onEdit={vi.fn()} />)
+
+    expect(screen.getAllByRole('button', { name: 'pages.employeeCard.edit' })[0]).toHaveAttribute(
+      'data-action',
+      'edit'
+    )
+  })
+
   it('edits with a pencil rather than a word', () => {
     render(<CardSections card={card({ can_edit: true })} onEdit={vi.fn()} />)
 

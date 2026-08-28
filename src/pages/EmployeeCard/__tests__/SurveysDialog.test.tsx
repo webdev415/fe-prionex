@@ -1,143 +1,258 @@
 /**
- * Loading an export of survey answers.
+ * Recording the surveys somebody answered.
  *
- * The refusals are the point of this screen. The server returns every rejected
- * row with its line number so a file can be corrected, and a dialog reporting
- * only "5 loaded" would throw away the half that makes a bad file fixable.
+ * Surveys run outside Prionex, and 84% of employees here are recorded under
+ * personal addresses across five providers - so an export cannot be attributed
+ * to people by matching what it carries. Whoever enters the answer supplies
+ * that judgement, which is why this is a form on one person's card rather than
+ * a file covering many.
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import type { EmployeeCard } from '@/features/employeeCard/types.card'
 
-const importSurveys = vi.hoisted(() => vi.fn())
+const api = vi.hoisted(() => ({
+  addSurvey: vi.fn(),
+  updateSurvey: vi.fn(),
+  removeSurvey: vi.fn(),
+}))
 
-vi.mock('@/features/employeeCard/api/employeeCardApi', () => ({ importSurveys }))
+vi.mock('@/features/employeeCard/api/employeeCardApi', () => api)
 
 const { SurveysDialog } = await import('../components/dialogs/SurveysDialog')
 
-function show() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  const invalidate = vi.spyOn(client, 'invalidateQueries')
-  render(
-    <QueryClientProvider client={client}>
-      <SurveysDialog open onClose={vi.fn()} />
-    </QueryClientProvider>
-  )
-  return { invalidate }
+const SURVEY = {
+  id: 11,
+  name: 'Q2 2024 Satisfaction',
+  completed_on: '2024-06-15',
+  status: 'completed',
+  score: 87,
+  max_score: 100,
+  details_url: null,
 }
 
-const csv = () =>
-  new File(['Timestamp,Email Address\n6/15/2024,a@b.com\n'], 'answers.csv', { type: 'text/csv' })
+function card(overrides: Partial<EmployeeCard> = {}): EmployeeCard {
+  return {
+    header: {
+      id: 7,
+      full_name: 'Kovalchuk Olena',
+      last_name: 'Kovalchuk',
+      first_name: 'Olena',
+      middle_name: null,
+      status: 'active',
+      work_format: null,
+      avatar_url: null,
+      phone: null,
+      email: 'olena@prionex.com',
+      position: null,
+      department: null,
+      manager: null,
+      manager_user_id: null,
+      hired_at: null,
+      telegram: null,
+    },
+    personal: {
+      date_of_birth: null,
+      telegram: null,
+      city: null,
+      address: null,
+      nova_poshta_branch: null,
+      referral_source: null,
+    },
+    work: {
+      project_id: null,
+      project_name: null,
+      department: null,
+      department_id: null,
+      position: null,
+      role_id: null,
+      manager: null,
+      hired_at: null,
+    },
+    contacts: [],
+    children: [],
+    additional: { military_status: null, visa_status: null, educations: [], languages: [] },
+    documents: [],
+    surveys: [],
+    interview_comment: null,
+    can_edit: true,
+    ...overrides,
+  } as EmployeeCard
+}
 
-const picker = () => screen.getByLabelText('pages.employeeCard.surveys.file')
-const runIt = () =>
-  userEvent.click(screen.getByRole('button', { name: 'pages.employeeCard.surveys.import' }))
+function show(given: EmployeeCard = card(), surveyId: number | null = null) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const onClose = vi.fn()
+  render(
+    <QueryClientProvider client={client}>
+      <SurveysDialog card={given} projectId={null} surveyId={surveyId} open onClose={onClose} />
+    </QueryClientProvider>
+  )
+  return { onClose }
+}
+
+const field = (key: string) => screen.getByLabelText(`pages.employeeCard.surveys.${key}`)
+const add = () => screen.getByRole('button', { name: 'pages.employeeCard.surveys.add' })
 
 describe('SurveysDialog', () => {
+  /*
+   * Cancel and save, where every other dialog on this card ends. The submit
+   * lives in the footer rather than among the fields, so `form` is what keeps
+   * it a submit for the fields it commits.
+   */
+  it('ends with cancel beside the save, not a close on its own', () => {
+    show()
+
+    const cancel = screen.getByRole('button', { name: 'Cancel' })
+    const save = screen.getByRole('button', { name: 'pages.employeeCard.surveys.add' })
+
+    expect(cancel).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Close' })).toBeNull()
+    expect(save).toHaveAttribute('type', 'submit')
+    expect(save).toHaveAttribute('form', 'employee-card-survey')
+  })
+
+  it('leaves the dialog without saving when cancelled', async () => {
+    const { onClose } = show()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(onClose).toHaveBeenCalled()
+    expect(api.addSurvey).not.toHaveBeenCalled()
+  })
+
   beforeEach(() => {
-    importSurveys.mockReset().mockResolvedValue({ created: 5, updated: 0, refused: 0, rows: [] })
+    api.addSurvey.mockReset().mockResolvedValue(card())
+    api.updateSurvey.mockReset().mockResolvedValue(card())
+    api.removeSurvey.mockReset().mockResolvedValue(card())
   })
 
-  it('will not import until a file has been chosen', () => {
+  it('will not add a survey with no name', () => {
     show()
 
-    expect(screen.getByRole('button', { name: 'pages.employeeCard.surveys.import' })).toBeDisabled()
-  })
-
-  it('sends the file and the name it was given', async () => {
-    show()
-
-    await userEvent.upload(picker(), csv())
-    await userEvent.type(screen.getByLabelText(/surveys.name/), 'Q2 2024 Satisfaction')
-    await runIt()
-
-    await waitFor(() => expect(importSurveys).toHaveBeenCalled())
-    expect(importSurveys.mock.calls[0][1]).toBe('Q2 2024 Satisfaction')
-  })
-
-  it('says what was loaded', async () => {
-    show()
-
-    await userEvent.upload(picker(), csv())
-    await runIt()
-
-    expect(await screen.findByText(/surveys.loaded/)).toBeInTheDocument()
+    expect(add()).toBeDisabled()
   })
 
   /*
-   * The reason the endpoint returns the rows at all. Without them somebody has
-   * to guess which of several thousand rows went missing.
+   * The employee is the card's, not something typed in or matched from a file.
+   * That is the whole point of recording it here.
    */
-  it('lists every row it would not load, with its line number', async () => {
-    importSurveys.mockResolvedValue({
-      created: 1,
-      updated: 0,
-      refused: 2,
-      rows: [
-        { row: 4, email: 'ghost@nowhere.com', reason: 'no employee with that email' },
-        { row: 9, email: null, reason: 'missing email or survey name' },
-      ],
-    })
+  it('records the answer against the employee whose card this is', async () => {
     show()
 
-    await userEvent.upload(picker(), csv())
-    await runIt()
+    await userEvent.type(field('name'), 'Q2 2024 Satisfaction')
+    await userEvent.click(add())
 
-    expect(await screen.findByText(/no employee with that email/)).toBeInTheDocument()
-    expect(screen.getByText(/missing email or survey name/)).toBeInTheDocument()
-    expect(screen.getAllByText(/surveys.line/)).toHaveLength(2)
+    await waitFor(() => expect(api.addSurvey).toHaveBeenCalled())
+    expect(api.addSurvey.mock.calls[0][0]).toBe(7)
+  })
+
+  it('sends the score', async () => {
+    show()
+
+    await userEvent.type(field('name'), 'Q2 2024 Satisfaction')
+    await userEvent.type(field('score'), '87')
+    await userEvent.click(add())
+
+    await waitFor(() => expect(api.addSurvey).toHaveBeenCalled())
+    expect(api.addSurvey.mock.calls[0][1]).toMatchObject({ score: 87 })
   })
 
   /*
-   * One file covers whoever is in it, so every card can have changed - not
-   * only the one that happens to be open behind this dialog.
+   * Not asked for, but not invented either. The field is bounded by 100, so a
+   * score entered here is out of 100 as a matter of fact - which is what makes
+   * storing it honest rather than a guess.
    */
-  it('drops every cached card, not just the open one', async () => {
-    const { invalidate } = show()
+  it('bounds the score and records what it is out of', async () => {
+    show()
 
-    await userEvent.upload(picker(), csv())
-    await runIt()
+    expect(screen.queryByLabelText(/surveys.maxScore/)).toBeNull()
+    expect(field('score')).toHaveAttribute('min', '0')
+    expect(field('score')).toHaveAttribute('max', '100')
 
-    await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ['employee-card'] }))
+    await userEvent.type(field('name'), 'Q2 2024 Satisfaction')
+    await userEvent.type(field('score'), '87')
+    await userEvent.click(add())
+
+    await waitFor(() => expect(api.addSurvey).toHaveBeenCalled())
+    expect(api.addSurvey.mock.calls[0][1]).toMatchObject({ score: 87, max_score: 100 })
   })
 
-  it('says what the server refused and keeps the dialog open', async () => {
-    importSurveys.mockRejectedValue({
+  it('records no total for an answer still being waited on', async () => {
+    show()
+
+    await userEvent.type(field('name'), 'Manager Evaluation Q3')
+    await userEvent.click(add())
+
+    await waitFor(() => expect(api.addSurvey).toHaveBeenCalled())
+    expect(api.addSurvey.mock.calls[0][1]).toMatchObject({ score: null, max_score: null })
+  })
+
+  /*
+   * A result with a score is one that came back. Asking a second question
+   * about it would be asking somebody to say the same thing twice.
+   */
+  it('treats an answer with no score as still being waited on', async () => {
+    show()
+
+    await userEvent.type(field('name'), 'Manager Evaluation Q3')
+    await userEvent.click(add())
+
+    await waitFor(() => expect(api.addSurvey).toHaveBeenCalled())
+    expect(api.addSurvey.mock.calls[0][1]).toMatchObject({ status: 'pending', score: null })
+  })
+
+  /*
+   * One dialog for both jobs: opened on a survey it corrects that one, opened
+   * on nothing it records a new one. Adding and correcting ask for exactly the
+   * same six things.
+   */
+  it('corrects the survey it was opened on rather than adding another', async () => {
+    show(card({ surveys: [SURVEY] as never }), 11)
+
+    await userEvent.click(screen.getByRole('button', { name: 'pages.employeeCard.surveys.save' }))
+
+    await waitFor(() => expect(api.updateSurvey).toHaveBeenCalled())
+    expect(api.updateSurvey.mock.calls[0][1]).toBe(11)
+    expect(api.addSurvey).not.toHaveBeenCalled()
+  })
+
+  it('opens filled with what it is correcting', () => {
+    show(card({ surveys: [SURVEY] as never }), 11)
+
+    expect(field('name')).toHaveValue('Q2 2024 Satisfaction')
+    expect(field('score')).toHaveValue(87)
+  })
+
+  it('opens empty when it is recording a new one', () => {
+    show(card({ surveys: [SURVEY] as never }), null)
+
+    expect(field('name')).toHaveValue('')
+  })
+
+  it('closes once the answer is saved', async () => {
+    const { onClose } = show()
+
+    await userEvent.type(field('name'), 'Q2 2024 Satisfaction')
+    await userEvent.click(add())
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled())
+  })
+
+  it('says what the server refused and keeps the form filled', async () => {
+    api.addSurvey.mockRejectedValue({
       isAxiosError: true,
-      response: { data: { detail: 'The export needs a column for email.' } },
+      response: { data: { detail: 'Insufficient permissions.' } },
     })
     show()
 
-    await userEvent.upload(picker(), csv())
-    await runIt()
+    await userEvent.type(field('name'), 'Q2 2024 Satisfaction')
+    await userEvent.click(add())
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('column for email')
-  })
-
-  /*
-   * A rejected body comes back with `detail` as a list of validation objects.
-   * Reading only the string case turned every one of those into a message that
-   * said nothing about what to fix - which is what a bad Content-Type looked
-   * like from the outside.
-   */
-  it('says something useful when the body itself was refused', async () => {
-    importSurveys.mockRejectedValue({
-      isAxiosError: true,
-      response: {
-        data: {
-          detail: [{ type: 'missing', loc: ['body', 'file'], msg: 'Field required' }],
-        },
-      },
-    })
-    show()
-
-    await userEvent.upload(picker(), csv())
-    await runIt()
-
-    const alert = await screen.findByRole('alert')
-    expect(alert.textContent).not.toBe('pages.employeeCard.saveFailed')
-    expect(alert).toHaveTextContent(/required/i)
+    expect(await screen.findByRole('alert')).toHaveTextContent('Insufficient permissions')
+    expect(field('name')).toHaveValue('Q2 2024 Satisfaction')
   })
 })

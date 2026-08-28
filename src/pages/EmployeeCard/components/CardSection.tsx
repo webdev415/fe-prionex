@@ -7,6 +7,12 @@ export interface CardSectionProps {
   children: ReactNode
   editLabel?: string
   onEdit?: () => void
+  /**
+   * What the action does to the section. A section whose action adds a row
+   * rather than opening what is already there says so with a plus: a pencil
+   * over an empty section suggests there is something to correct.
+   */
+  action?: 'edit' | 'add'
 }
 
 /**
@@ -24,7 +30,14 @@ export interface CardSectionProps {
  * scroll here, and ``tabIndex`` lets the same jump move focus so a keyboard
  * reader lands where a mouse reader looks.
  */
-export function CardSection({ id, title, children, editLabel, onEdit }: CardSectionProps) {
+export function CardSection({
+  id,
+  title,
+  children,
+  editLabel,
+  onEdit,
+  action = 'edit',
+}: CardSectionProps) {
   return (
     <section
       id={id}
@@ -51,10 +64,18 @@ export function CardSection({ id, title, children, editLabel, onEdit }: CardSect
             type="button"
             aria-label={editLabel}
             title={editLabel}
+            // States which of the two this is. Both render an svg and neither
+            // carries text, so nothing else on the element says whether it
+            // opens what is there or adds something new.
+            data-action={action}
             onClick={onEdit}
             className="text-muted-foreground hover:text-primary-500 focus-visible:ring-primary-500 focus-visible:ring-offset-card shrink-0 cursor-pointer rounded transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
           >
-            <Icons.Edit02 size={18} strokeWidth={1.8} />
+            {action === 'add' ? (
+              <Icons.Add size={20} strokeWidth={1.8} />
+            ) : (
+              <Icons.Edit02 size={18} strokeWidth={1.8} />
+            )}
           </button>
         )}
       </div>

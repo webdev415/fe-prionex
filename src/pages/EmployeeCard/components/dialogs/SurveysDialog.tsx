@@ -1,56 +1,102 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/Button'
+import { DateSelect } from '@/components/ui/DateSelect'
+import '@/components/ui/DateSelect.theme.css'
 import { Input } from '@/components/ui/Input'
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
-import { importSurveys } from '@/features/employeeCard/api/employeeCardApi'
+import { addSurvey, updateSurvey } from '@/features/employeeCard/api/employeeCardApi'
 import { employeeCardKeys } from '@/features/employeeCard/hooks/useEmployeeCard'
+import type { EmployeeCard, SurveyInput } from '@/features/employeeCard/types.card'
+import { formatPickerDateAsYMD, parsePickerYMD } from '@/lib/dateUtils'
 import { getErrorMessage } from '@/lib/errors'
-import type { SurveyImportReport } from '@/features/employeeCard/types.card'
 
 export interface SurveysDialogProps {
+  card: EmployeeCard
+  projectId: number | null
+  /** The survey being corrected, or null to record a new one. */
+  surveyId: number | null
   open: boolean
   onClose: () => void
 }
 
+const FORM_ID = 'employee-card-survey'
+
+/** What a score is marked out of here. The field is bounded by it. */
+const OUT_OF = 100
+
+const BLANK = {
+  name: '',
+  completed_on: '',
+  score: '',
+  details_url: '',
+}
+
 /**
- * Loading an export of survey answers.
+ * The surveys somebody answered, recorded one at a time.
  *
- * One file covers whoever is in it, matched by email - so this is not an
- * action on the employee whose card is open, and the wording says so. Every
- * card in the file changes, which is why the whole card cache is dropped
- * afterwards rather than the open one refreshed.
+ * Surveys run outside this system - Google Forms - and most employees here are
+ * recorded under personal addresses, five providers between them. So an export
+ * cannot be attributed to people by matching what it carries; whoever enters
+ * the answer supplies the judgement the matching cannot. That is why this is a
+ * form on one person's card rather than a file covering many.
  *
- * The refusals are the point of the screen. The server returns each rejected
- * row with its line number precisely so a file can be corrected, and a dialog
- * that showed only "5 loaded" would throw away the half that makes a bad file
- * fixable.
+ * A dated answer takes its place in the chronology too, which is what the
+ * section is for: a survey nobody can see in the history is a survey that only
+ * half happened.
+ *
+ * One dialog for both jobs. Adding and correcting ask for exactly the same
+ * six things, and a second dialog would be the same form with a different
+ * title - two places to keep in step for no gain to the reader.
  */
-export function SurveysDialog({ open, onClose }: SurveysDialogProps) {
+export function SurveysDialog({ card, projectId, surveyId, open, onClose }: SurveysDialogProps) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
-  const fileInput = useRef<HTMLInputElement>(null)
 
-  const [file, setFile] = useState<File | null>(null)
-  const [name, setName] = useState('')
+  const employeeId = card.header.id
+  const editing =
+    surveyId === null ? null : (card.surveys.find((one) => one.id === surveyId) ?? null)
+
+  const [values, setValues] = useState(() =>
+    editing
+      ? {
+          name: editing.name,
+          completed_on: editing.completed_on ?? '',
+          score: editing.score === null ? '' : String(editing.score),
+          details_url: editing.details_url ?? '',
+        }
+      : BLANK
+  )
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [report, setReport] = useState<SurveyImportReport | null>(null)
 
-  const run = async () => {
-    if (!file) return
+  const payload = (): SurveyInput => ({
+    name: values.name.trim(),
+    completed_on: values.completed_on || null,
+    score: values.score.trim() ? Number(values.score) : null,
+    // Not asked for, but not invented either: the field above is bounded by
+    // 100, so a score entered here is out of 100 as a matter of fact rather
+    // than assumption. An import still states its own total, which is why the
+    // column stays - a quiz marked out of twenty is still a quiz.
+    max_score: values.score.trim() ? OUT_OF : null,
+    // Inferred rather than asked for: a result with a score is one that came
+    // back, and a question about it on top of the score is a question nobody
+    // needs to answer twice.
+    status: values.score.trim() ? 'completed' : 'pending',
+    details_url: values.details_url.trim() || null,
+  })
+
+  const save = async () => {
     setBusy(true)
     setError(null)
     try {
-      const answer = await importSurveys(file, name.trim())
-      setReport(answer)
-      await queryClient.invalidateQueries({ queryKey: employeeCardKeys.all })
+      const saved = editing
+        ? await updateSurvey(employeeId, editing.id, payload())
+        : await addSurvey(employeeId, payload())
+      queryClient.setQueryData(employeeCardKeys.one(employeeId, projectId), saved)
+      onClose()
     } catch (caught) {
-      // The shared reader, not a hand-rolled one: a rejected body comes back
-      // with `detail` as a list of validation objects rather than a sentence,
-      // and reading only the string case turns every one of those into "that
-      // could not be saved" - which says nothing about what to fix.
       setError(getErrorMessage(caught))
     } finally {
       setBusy(false)
@@ -61,9 +107,7 @@ export function SurveysDialog({ open, onClose }: SurveysDialogProps) {
     <Modal open={open} onClose={onClose} maxWidth="2xl">
       <ModalHeader title={t('pages.employeeCard.dialogs.surveys')} />
       <ModalContent>
-        <p className="text-muted-foreground mb-4 text-sm">
-          {t('pages.employeeCard.surveys.importHint')}
-        </p>
+        <p className="text-muted-foreground mb-4 text-sm">{t('pages.employeeCard.surveys.hint')}</p>
 
         {error && (
           <p role="alert" className="text-destructive mb-4 text-sm">
@@ -71,60 +115,65 @@ export function SurveysDialog({ open, onClose }: SurveysDialogProps) {
           </p>
         )}
 
-        <div className="space-y-4">
-          <label className="block space-y-1.5">
-            <span className="text-muted-foreground text-xs">
-              {t('pages.employeeCard.surveys.file')}
-            </span>
-            <input
-              ref={fileInput}
-              type="file"
-              accept=".csv,text/csv"
-              disabled={busy}
-              onChange={(event) => {
-                setFile(event.target.files?.[0] ?? null)
-                setReport(null)
-              }}
-              className="text-foreground file:border-border file:bg-muted file:text-foreground block w-full text-sm file:mr-3 file:rounded-md file:border file:px-3 file:py-1.5"
-            />
-          </label>
-
+        <form
+          id={FORM_ID}
+          className="grid gap-4 sm:grid-cols-2"
+          onSubmit={(event) => {
+            event.preventDefault()
+            void save()
+          }}
+        >
           <Input
             label={t('pages.employeeCard.surveys.name')}
-            value={name}
+            value={values.name}
+            required
             disabled={busy}
-            onChange={(event) => setName(event.target.value)}
-            helperText={t('pages.employeeCard.surveys.nameHint')}
+            onChange={(event) => setValues({ ...values, name: event.target.value })}
+            className="sm:col-span-2"
           />
 
-          {report && (
-            <div className="border-border space-y-3 rounded-lg border p-4">
-              <p className="text-foreground text-sm">
-                {t('pages.employeeCard.surveys.loaded', {
-                  created: report.created,
-                  updated: report.updated,
-                  refused: report.refused,
-                })}
-              </p>
+          <div className="space-y-1.5">
+            <span className="text-muted-foreground text-xs">
+              {t('pages.employeeCard.surveys.completedOn')}
+            </span>
+            <DateSelect
+              value={parsePickerYMD(values.completed_on)}
+              onChange={({ value }) =>
+                setValues({ ...values, completed_on: value ? formatPickerDateAsYMD(value) : '' })
+              }
+              max={new Date()}
+              format="dd.MM.yyyy"
+              allowManualInput
+              placeholder={t('pages.employeeCard.surveys.completedOn')}
+            />
+          </div>
 
-              {report.rows.length > 0 && (
-                <ul className="space-y-1.5">
-                  {report.rows.map((row) => (
-                    <li key={`${row.row}-${row.email ?? ''}`} className="text-sm">
-                      <span className="text-muted-foreground tabular-nums">
-                        {t('pages.employeeCard.surveys.line', { line: row.row })}
-                      </span>{' '}
-                      <span className="text-foreground">{row.email || '—'}</span>{' '}
-                      <span className="text-muted-foreground">— {row.reason}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          )}
-        </div>
+          <Input
+            label={t('pages.employeeCard.surveys.detailsUrl')}
+            value={values.details_url}
+            disabled={busy}
+            onChange={(event) => setValues({ ...values, details_url: event.target.value })}
+          />
+
+          <Input
+            label={t('pages.employeeCard.surveys.score')}
+            type="number"
+            min={0}
+            max={OUT_OF}
+            value={values.score}
+            disabled={busy}
+            onChange={(event) => setValues({ ...values, score: event.target.value })}
+            helperText={t('pages.employeeCard.surveys.scoreHint')}
+          />
+        </form>
       </ModalContent>
       <ModalFooter>
+        {/*
+          Cancel and save, the way every other dialog on this card ends. The
+          submit sits here rather than in the form because that is where
+          somebody looks for it, and `form` is what keeps it a submit while it
+          lives outside the fields it commits.
+        */}
         <Button
           type="button"
           variant="cancel"
@@ -132,16 +181,16 @@ export function SurveysDialog({ open, onClose }: SurveysDialogProps) {
           disabled={busy}
           className="h-[45px] flex-1 text-sm"
         >
-          {t('actions.close')}
+          {t('actions.cancel')}
         </Button>
         <Button
-          type="button"
+          type="submit"
+          form={FORM_ID}
           variant="primary"
-          onClick={() => void run()}
-          disabled={busy || !file}
+          disabled={busy || !values.name.trim()}
           className="h-[45px] flex-1 text-sm"
         >
-          {t('pages.employeeCard.surveys.import')}
+          {editing ? t('pages.employeeCard.surveys.save') : t('pages.employeeCard.surveys.add')}
         </Button>
       </ModalFooter>
     </Modal>

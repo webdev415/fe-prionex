@@ -21,6 +21,7 @@ vi.mock('@/features/employeeCard/hooks/useEmployeeCard', () => ({
     state.neighboursQuery = { userId, listQuery }
     return { data: state.neighbours }
   },
+  useRemoveSurvey: () => ({ mutate: vi.fn() }),
 }))
 
 vi.mock('@/features/employeeCard', () => ({

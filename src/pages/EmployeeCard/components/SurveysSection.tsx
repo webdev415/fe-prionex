@@ -1,10 +1,16 @@
 import { useTranslation } from 'react-i18next'
 import type { EmployeeCard } from '@/features/employeeCard/types.card'
+import { Icons } from '@/lib/icons'
 import { CardSection } from './CardSection'
 
 export interface SurveysSectionProps {
   card: EmployeeCard
-  onEdit?: (section: string) => void
+  /** Record a new answer. */
+  onAdd?: () => void
+  /** Correct the one named. */
+  onEditSurvey?: (surveyId: number) => void
+  /** Remove the one named. */
+  onRemoveSurvey?: (surveyId: number) => void
 }
 
 /**
@@ -17,19 +23,22 @@ export interface SurveysSectionProps {
  * there. It opens in its own tab with the opener withheld, since nothing here
  * chose that address - it arrived in an import.
  *
- * The action loads such an import. It is the one action on the card that is
- * not about the employee whose card is open - one file covers whoever is in
- * it - so it is labelled for what it does rather than "edit".
+ * The action records one, for this employee. Surveys run outside the system
+ * and most people here are recorded under personal addresses, so a file of
+ * answers cannot be attributed to employees by matching what it carries -
+ * whoever enters the answer supplies that judgement instead.
  */
-export function SurveysSection({ card, onEdit }: SurveysSectionProps) {
+export function SurveysSection({ card, onAdd, onEditSurvey, onRemoveSurvey }: SurveysSectionProps) {
   const { t, i18n } = useTranslation()
+  const mayEdit = card.can_edit
 
   return (
     <CardSection
       id="surveys"
       title={t('pages.employeeCard.sections.surveys')}
-      {...(card.can_edit && onEdit
-        ? { editLabel: t('pages.employeeCard.surveys.import'), onEdit: () => onEdit('surveys') }
+      action="add"
+      {...(mayEdit && onAdd
+        ? { editLabel: t('pages.employeeCard.surveys.record'), onEdit: onAdd }
         : {})}
     >
       {card.surveys.length === 0 ? (
@@ -47,13 +56,20 @@ export function SurveysSection({ card, onEdit }: SurveysSectionProps) {
                 )}
               </div>
               <div className="flex items-center gap-3">
+                {/*
+                  Both states wear the same pill, so a row that is waiting and
+                  a row that scored read as two values of one thing rather than
+                  as two different kinds of row. The score keeps its total: a
+                  bare number beside a dated answer says nothing about whether
+                  it was good.
+                */}
                 {survey.status === 'pending' || survey.score === null ? (
-                  <span className="rounded-full bg-amber-100 px-3 py-1 text-xs text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                  <span className="bg-muted text-muted-foreground rounded-full px-3 py-1 text-xs font-medium">
                     {t('pages.employeeCard.surveys.pending')}
                   </span>
                 ) : (
-                  <span className="text-foreground text-sm tabular-nums">
-                    {survey.max_score ? `${survey.score}/${survey.max_score}` : survey.score}
+                  <span className="bg-muted text-foreground rounded-full px-3 py-1 text-xs font-medium tabular-nums">
+                    {survey.score}/{survey.max_score ?? 100}
                   </span>
                 )}
 
@@ -66,6 +82,34 @@ export function SurveysSection({ card, onEdit }: SurveysSectionProps) {
                   >
                     {t('pages.employeeCard.surveys.details')}
                   </a>
+                )}
+
+                {/*
+                  On the row rather than inside the dialog: correcting one
+                  answer of several should not mean opening a list and finding
+                  it again, when the reader is already looking straight at it.
+                */}
+                {mayEdit && onEditSurvey && (
+                  <button
+                    type="button"
+                    aria-label={t('pages.employeeCard.surveys.edit', { name: survey.name })}
+                    title={t('pages.employeeCard.surveys.edit', { name: survey.name })}
+                    onClick={() => onEditSurvey(survey.id)}
+                    className="text-muted-foreground hover:text-primary-500 focus-visible:ring-primary-500 focus-visible:ring-offset-card shrink-0 cursor-pointer rounded transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                  >
+                    <Icons.Edit02 size={16} strokeWidth={1.8} />
+                  </button>
+                )}
+                {mayEdit && onRemoveSurvey && (
+                  <button
+                    type="button"
+                    aria-label={t('pages.employeeCard.surveys.remove', { name: survey.name })}
+                    title={t('pages.employeeCard.surveys.remove', { name: survey.name })}
+                    onClick={() => onRemoveSurvey(survey.id)}
+                    className="text-muted-foreground hover:text-destructive focus-visible:ring-destructive focus-visible:ring-offset-card shrink-0 cursor-pointer rounded transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                  >
+                    <Icons.Delete01 size={16} strokeWidth={1.8} />
+                  </button>
                 )}
               </div>
             </li>
