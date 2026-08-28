@@ -180,3 +180,53 @@ describe('CardSections', () => {
     ).not.toBeInTheDocument()
   })
 })
+
+/*
+ * The heading and its action are ruled off from the fields below them. In the
+ * sections that are mostly "Not filled in" - which is most of them on a fresh
+ * employee - nothing else marks where one section's heading ends and its
+ * contents begin.
+ */
+describe('CardSections: the section headings', () => {
+  it('rules the heading off from the fields under it', () => {
+    render(<CardSections card={card()} />)
+
+    const heading = screen.getByRole('heading', {
+      name: 'pages.employeeCard.sections.personal-information',
+    })
+    expect(heading.parentElement?.className).toContain('border-b')
+  })
+
+  it('edits with a pencil rather than a word', () => {
+    render(<CardSections card={card({ can_edit: true })} onEdit={vi.fn()} />)
+
+    const edit = screen.getAllByRole('button', { name: 'pages.employeeCard.edit' })[0]
+    expect(edit.querySelector('svg')).not.toBeNull()
+    expect(edit).toHaveTextContent('')
+  })
+
+  /*
+   * A link, not a button: the pencil sits in the heading row and should read
+   * as part of it, so it carries no fill of its own and grows no chip on
+   * hover - only its colour changes.
+   */
+  it('wears no button chrome', () => {
+    render(<CardSections card={card({ can_edit: true })} onEdit={vi.fn()} />)
+
+    const edit = screen.getAllByRole('button', { name: 'pages.employeeCard.edit' })[0]
+    expect(edit.className).not.toMatch(/\bbg-/)
+    expect(edit.className).not.toMatch(/\bborder\b/)
+    expect(edit.className).toContain('hover:text-')
+  })
+
+  /*
+   * A pencil on its own says nothing about which section it edits, so the
+   * label has to be spoken even though it is no longer shown.
+   */
+  it('still says what it edits, for a reader who cannot see the pencil', () => {
+    render(<CardSections card={card({ can_edit: true })} onEdit={vi.fn()} />)
+
+    const edit = screen.getAllByRole('button', { name: 'pages.employeeCard.edit' })[0]
+    expect(edit).toHaveAttribute('aria-label', 'pages.employeeCard.edit')
+  })
+})

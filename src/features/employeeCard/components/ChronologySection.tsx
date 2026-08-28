@@ -44,7 +44,9 @@ export function ChronologySection({ userId }: ChronologySectionProps) {
 
   return (
     <section aria-labelledby="chronology-heading" className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* Ruled off like every other section's heading, so this one does not
+          read as a different kind of block from the ones above it. */}
+      <div className="border-border flex flex-wrap items-center justify-between gap-3 border-b pb-4">
         <h2 id="chronology-heading" className="text-foreground text-lg font-semibold">
           {t('pages.employeeCard.chronology.title')}
         </h2>

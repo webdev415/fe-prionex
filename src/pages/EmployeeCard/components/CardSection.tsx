@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Button } from '@/components/ui/Button'
+import { Icons } from '@/lib/icons'
 
 export interface CardSectionProps {
   id: string
@@ -32,14 +32,30 @@ export function CardSection({ id, title, children, editLabel, onEdit }: CardSect
       aria-labelledby={`${id}-heading`}
       className="border-border bg-card scroll-mt-32 space-y-4 rounded-xl border p-6"
     >
-      <div className="flex items-start justify-between gap-4">
+      {/*
+        The heading and its action sit above a rule, so a section reads as a
+        titled block rather than a heading loose among its own fields - which
+        matters most in the sections that are mostly empty, where nothing else
+        marks where one ends and the next begins.
+      */}
+      <div className="border-border flex items-center justify-between gap-4 border-b pb-4">
         <h2 id={`${id}-heading`} className="text-foreground text-lg font-semibold">
           {title}
         </h2>
         {onEdit && editLabel && (
-          <Button type="button" variant="secondary" size="sm" onClick={onEdit}>
-            {editLabel}
-          </Button>
+          // A link rather than a button: no fill, no chip on hover, just the
+          // pencil changing colour. And icon only, so the label has to be
+          // spoken rather than shown - a pencil on its own tells a screen
+          // reader nothing about which section it edits.
+          <button
+            type="button"
+            aria-label={editLabel}
+            title={editLabel}
+            onClick={onEdit}
+            className="text-muted-foreground hover:text-primary-500 focus-visible:ring-primary-500 focus-visible:ring-offset-card shrink-0 cursor-pointer rounded transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+          >
+            <Icons.Edit02 size={18} strokeWidth={1.8} />
+          </button>
         )}
       </div>
       {children}
