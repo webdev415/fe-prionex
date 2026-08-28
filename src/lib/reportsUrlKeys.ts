@@ -77,6 +77,12 @@ export const REPORTS_URL_KEYS = {
     page: 'kpg',
     pageSize: 'kps',
   },
+  /**
+   * «Вихідні дзвінки» (outboundCalls). "oc…" for Outbound-Calls, the same
+   * initials scheme the operator-promises set uses ("op…") — the bare `o…`
+   * spellings are already that tab's.
+   */
+  outboundCalls: { dateFrom: 'ocf', dateTo: 'oct' },
 } as const
 
 export type ReportsUrlKeyOwner = keyof typeof REPORTS_URL_KEYS

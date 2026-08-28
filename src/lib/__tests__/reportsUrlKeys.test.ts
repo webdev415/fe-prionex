@@ -61,6 +61,7 @@ describe('REPORTS_URL_KEYS', () => {
         page: 'kpg',
         pageSize: 'kps',
       },
+      outboundCalls: { dateFrom: 'ocf', dateTo: 'oct' },
     })
   })
 
