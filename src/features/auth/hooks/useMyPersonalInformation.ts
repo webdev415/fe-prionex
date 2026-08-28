@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { authApi } from '@/features/auth/api/authApi'
 import { getErrorMessage } from '@/lib/errors'
@@ -14,9 +13,15 @@ export function useMyPersonalInformation() {
   })
 }
 
+/**
+ * These fields are saved by the profile form's own button, alongside the name
+ * and phone beside them, so the success toast belongs to that save rather than
+ * to this half of it - two toasts for one press reads as two things happening.
+ * A failure still speaks for itself: the profile write may well have gone
+ * through, and silence would leave somebody believing all of it did.
+ */
 export function useUpdateMyPersonalInformation() {
   const queryClient = useQueryClient()
-  const { t } = useTranslation()
 
   return useMutation({
     mutationFn: (data: MyPersonalInformationInput) => authApi.updateMyPersonalInformation(data),
@@ -27,7 +32,6 @@ export function useUpdateMyPersonalInformation() {
      */
     onSuccess: (saved: MyPersonalInformation) => {
       queryClient.setQueryData(MY_PERSONAL_INFORMATION_QUERY_KEY, saved)
-      toast.success(t('pages.profile.personalInformation.saved'))
     },
     onError: (error) => {
       toast.error(getErrorMessage(error))

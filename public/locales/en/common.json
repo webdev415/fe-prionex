@@ -8530,11 +8530,6 @@
         "clear": "Clear Selection",
         "saved": "Shortcut saved",
         "reassigned": "Shortcut moved from \"{{name}}\""
-      },
-      "personalInformation": {
-        "title": "Personal Information",
-        "description": "Kept in your employee card. Anything else in the card is maintained by HR.",
-        "saved": "Personal information saved"
       }
     },
     "reports": {

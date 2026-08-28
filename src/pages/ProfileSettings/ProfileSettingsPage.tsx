@@ -5,10 +5,16 @@ import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { ProfilePhotoField } from './ProfilePhotoField'
 import { useAuth, useUpdateMyProfile, ChangePasswordModal, TwoFactorSection } from '@/features/auth'
+import {
+  useMyPersonalInformation,
+  useUpdateMyPersonalInformation,
+} from '@/features/auth/hooks/useMyPersonalInformation'
 import { useAuthStore } from '@/stores/authStore'
 import { authApi } from '@/features/auth/api/authApi'
 import { timezoneOptions } from '@/features/users/schemas/userSchemas'
 import { Input } from '@/components/ui/Input'
+import { DateSelect } from '@/components/ui/DateSelect'
+import '@/components/ui/DateSelect.theme.css'
 import { ProjectSelector } from '@/components/layout/ProjectSelector'
 import {
   DropdownMenu,
@@ -20,13 +26,42 @@ import { Label } from '@/components/ui/Label'
 import { Button } from '@/components/ui/Button'
 import { DoubleButton } from '@/components/ui/DoubleButton'
 import { LANGUAGE_NAMES, SUPPORTED_LANGUAGES, normalizeBackendLanguage } from '@/lib/i18n'
-import type { UpdateMyProfileInput } from '@/types/api'
+import type { MyPersonalInformationInput, UpdateMyProfileInput } from '@/types/api'
 import { AppearanceSettings } from './AppearanceSettings'
-import { PersonalInformationSection } from './PersonalInformationSection'
 import { KeyboardShortcutsSettings } from '@/features/taHotkeys/components/KeyboardShortcutsSettings'
 
 const TRIGGER_CLASS =
   'text-foreground border-input-border bg-input flex h-[45px] w-full items-center justify-between rounded-lg border px-4 py-2 text-sm font-light'
+
+/**
+ * The six card fields somebody keeps about themselves. They sit in the same
+ * form as the name and phone above them because they are the same kind of
+ * thing - what a person knows about themselves and nobody else finds out when
+ * it changes. Only the table behind them differs, and that is not something a
+ * form should show.
+ */
+const MY_PERSONAL_FIELDS = [
+  'date_of_birth',
+  'telegram',
+  'city',
+  'address',
+  'nova_poshta_branch',
+] as const
+
+function parseDateString(value: string): Date | null {
+  if (!value) return null
+  const [year, month, day] = value.split('-').map(Number)
+  if (!year || !month || !day) return null
+  return new Date(year, month - 1, day)
+}
+
+function formatDateString(value: Date | null): string {
+  if (!value) return ''
+  const year = value.getFullYear()
+  const month = String(value.getMonth() + 1).padStart(2, '0')
+  const day = String(value.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
 
 const CONTENT_CLASS =
   'max-h-60 min-w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto p-1.5'
@@ -36,6 +71,8 @@ export function ProfileSettingsPage() {
   const refreshUser = useAuthStore((state) => state.refreshUser)
   const { t, i18n } = useTranslation('common')
   const { mutateAsync: updateMyProfileMutateAsync } = useUpdateMyProfile()
+  const { data: myPersonal } = useMyPersonalInformation()
+  const { mutateAsync: updateMyPersonalMutateAsync } = useUpdateMyPersonalInformation()
   const [isUpdatingLocal, setIsUpdatingLocal] = useState(false)
   const [isChangingLocal, setIsChangingLocal] = useState(false)
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false)
@@ -61,6 +98,11 @@ export function ProfileSettingsPage() {
       timezone: user?.timezone || 'Europe/Kyiv',
       agent_status: user?.agent_status || 'offline',
       work_format: (user?.work_format ?? 'office') as 'office' | 'remote',
+      date_of_birth: '',
+      telegram: '',
+      city: '',
+      address: '',
+      nova_poshta_branch: '',
       currentPassword: '',
       newPassword: '',
     }
@@ -84,6 +126,11 @@ export function ProfileSettingsPage() {
     timezone: initialForm.timezone,
     work_format: initialForm.work_format,
     agent_status: initialForm.agent_status,
+    date_of_birth: initialForm.date_of_birth,
+    telegram: initialForm.telegram,
+    city: initialForm.city,
+    address: initialForm.address,
+    nova_poshta_branch: initialForm.nova_poshta_branch,
   }))
 
   const workFormatOptions = [
@@ -190,6 +237,37 @@ export function ProfileSettingsPage() {
     }))
   }, [user])
 
+  /*
+   * The card fields answer from their own request, so they arrive after the
+   * form has already rendered - and they can arrive again on a refetch. The
+   * rule is the one the auth user follows above: take a server value only for
+   * a field nobody has touched, and let the snapshot follow the server either
+   * way, so an untouched field reads as clean and an edited one keeps offering
+   * to save.
+   */
+  useEffect(() => {
+    if (!myPersonal) return
+
+    const { form: current, savedProfileSnapshot: saved } = latest.current
+
+    setForm((prev) => {
+      const next = { ...prev }
+      for (const field of MY_PERSONAL_FIELDS) {
+        if (current[field] !== saved[field]) continue
+        next[field] = myPersonal[field] ?? ''
+      }
+      return next
+    })
+
+    setSavedProfileSnapshot((prev) => {
+      const next = { ...prev }
+      for (const field of MY_PERSONAL_FIELDS) {
+        next[field] = myPersonal[field] ?? ''
+      }
+      return next
+    })
+  }, [myPersonal])
+
   const hasProfileChanges = useMemo(() => {
     return (
       form.email !== savedProfileSnapshot.email ||
@@ -201,6 +279,7 @@ export function ProfileSettingsPage() {
       form.timezone !== savedProfileSnapshot.timezone ||
       form.work_format !== savedProfileSnapshot.work_format ||
       form.agent_status !== savedProfileSnapshot.agent_status ||
+      MY_PERSONAL_FIELDS.some((field) => form[field] !== savedProfileSnapshot[field]) ||
       // Picking the value already on screen is not a value change, but it is
       // still something to save: the field may be showing its fallback while
       // the server holds the other one.
@@ -276,9 +355,27 @@ export function ProfileSettingsPage() {
       work_format: workFormatTouched ? form.work_format : undefined,
     }
 
+    /*
+     * The card fields are stored elsewhere, so saving them is a second
+     * request. It only goes out when one of them actually changed - a form
+     * that always wrote both would turn a language switch into a card write
+     * and give a second thing to fail for no reason.
+     */
+    const personalChanges = MY_PERSONAL_FIELDS.filter(
+      (field) => form[field] !== savedProfileSnapshot[field]
+    )
+
     try {
       setIsUpdatingLocal(true)
       await updateMyProfileMutateAsync(updatePayload)
+
+      if (personalChanges.length > 0) {
+        await updateMyPersonalMutateAsync(
+          Object.fromEntries(
+            personalChanges.map((field) => [field, form[field].trim() || null])
+          ) as MyPersonalInformationInput
+        )
+      }
 
       setSavedProfileSnapshot({
         email: form.email,
@@ -290,6 +387,11 @@ export function ProfileSettingsPage() {
         timezone: form.timezone,
         work_format: form.work_format,
         agent_status: form.agent_status,
+        date_of_birth: form.date_of_birth,
+        telegram: form.telegram,
+        city: form.city,
+        address: form.address,
+        nova_poshta_branch: form.nova_poshta_branch,
       })
       setWorkFormatTouched(false)
       setForm((f) => ({ ...f, currentPassword: '', newPassword: '' }))
@@ -310,6 +412,11 @@ export function ProfileSettingsPage() {
       timezone: savedProfileSnapshot.timezone,
       work_format: savedProfileSnapshot.work_format,
       agent_status: savedProfileSnapshot.agent_status,
+      date_of_birth: savedProfileSnapshot.date_of_birth,
+      telegram: savedProfileSnapshot.telegram,
+      city: savedProfileSnapshot.city,
+      address: savedProfileSnapshot.address,
+      nova_poshta_branch: savedProfileSnapshot.nova_poshta_branch,
       currentPassword: '',
       newPassword: '',
     }))
@@ -754,6 +861,57 @@ export function ProfileSettingsPage() {
                       )}
                     </div>
                   )}
+                  <div className="flex w-full flex-col items-start gap-4 self-stretch 2xl:flex-row">
+                    <div className="flex w-full flex-col gap-2 self-stretch">
+                      <Label htmlFor="date-of-birth">
+                        {t('pages.employeeCard.fields.dateOfBirth')}
+                      </Label>
+                      <DateSelect
+                        id="date-of-birth"
+                        value={parseDateString(form.date_of_birth)}
+                        onChange={({ value }) =>
+                          setForm({ ...form, date_of_birth: formatDateString(value) })
+                        }
+                        max={new Date()}
+                        format="dd.MM.yyyy"
+                        allowManualInput
+                        placeholder={t('pages.employeeCard.fields.dateOfBirth')}
+                      />
+                    </div>
+
+                    <Input
+                      label={t('pages.employeeCard.fields.telegram')}
+                      value={form.telegram}
+                      onChange={(e) => setForm({ ...form, telegram: e.target.value })}
+                      className="w-full"
+                    />
+                  </div>
+
+                  <div className="flex w-full flex-col items-start gap-4 self-stretch 2xl:flex-row">
+                    <Input
+                      label={t('pages.employeeCard.fields.city')}
+                      value={form.city}
+                      onChange={(e) => setForm({ ...form, city: e.target.value })}
+                      className="w-full"
+                    />
+
+                    <Input
+                      label={t('pages.employeeCard.fields.address')}
+                      value={form.address}
+                      onChange={(e) => setForm({ ...form, address: e.target.value })}
+                      className="w-full"
+                    />
+                  </div>
+
+                  <div className="flex w-full flex-col items-start gap-4 self-stretch 2xl:flex-row">
+                    <Input
+                      label={t('pages.employeeCard.fields.novaPoshta')}
+                      value={form.nova_poshta_branch}
+                      onChange={(e) => setForm({ ...form, nova_poshta_branch: e.target.value })}
+                      className="w-full"
+                    />
+                    <div className="w-full" />
+                  </div>
                 </div>
                 {hasProfileChanges && (
                   <div className="mt-4 flex flex-wrap items-center justify-center gap-4">
@@ -780,8 +938,6 @@ export function ProfileSettingsPage() {
                   </div>
                 )}
               </form>
-
-              <PersonalInformationSection />
             </div>
           )}
         </div>
