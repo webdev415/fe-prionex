@@ -265,8 +265,16 @@ export function ContactTagFeedTab() {
   const rows = useMemo(() => query.data?.rows ?? [], [query.data])
 
   // Totals, the display clamp for a bookmarked page the drained feed no longer
-  // has, and the URL self-heal that follows the answer — shared shell.
-  const { total, totalPages, clampedPage } = usePagedFeedPages(filters, query.data)
+  // has, and the URL self-heal that follows the answer — shared shell. The
+  // answer is withheld while a filter error blocks the request: a disabled
+  // query still returns cached data for its key, and an unusable ?kd=/?kf=
+  // falls back to the VALID state's params (unlike ?kt=, which carries its
+  // raw spelling), so without the guard the ?kpg= self-heal could rewrite
+  // the URL from an answer the current filters never asked for.
+  const { total, totalPages, clampedPage } = usePagedFeedPages(
+    filters,
+    hasFilterError ? undefined : query.data
+  )
 
   const activeTab: ContactTagTabId = resolveContactTagTab(searchParams.get(TAG_KEY))
   const visibleRows = useMemo(() => filterRowsByTagTab(rows, activeTab), [rows, activeTab])

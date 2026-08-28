@@ -967,6 +967,47 @@ describe('ContactTagFeedTab — the three-state sell_to', () => {
     // rather than being healed by another state's answer.
     expect(urlParams().get('kpg')).toBe('5')
   })
+
+  it('does not let an unusable ?kf= heal ?kpg= from the valid state’s cached answer', async () => {
+    // Unlike ?kt= (which carries its raw spelling into the query key), an
+    // unusable ?kf= falls back to undefined — the VALID state's params, and
+    // therefore its React Query key. The blocked query is handed that cached
+    // answer; the tab withholds it from usePagedFeedPages while a filter
+    // error is up, so the ?kpg= self-heal must not act on it.
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const renderWith = (entries: string[]) =>
+      render(
+        <QueryClientProvider client={queryClient}>
+          <MemoryRouter initialEntries={entries}>
+            <ContactTagFeedTab />
+            <LocationProbe />
+          </MemoryRouter>
+        </QueryClientProvider>
+      )
+
+    // Populate the cache with no lower bound, at a page the feed no longer has.
+    mockGetFeed.mockResolvedValue(
+      makeResponse([makeRow()], {
+        total: 90,
+        page: 5,
+        page_size: 50,
+        total_pages: 2,
+      })
+    )
+
+    const view = renderWith(['/?kpg=5'])
+    await screen.findByText('Коваленко Іван Петрович')
+    await waitFor(() => expect(urlParams().get('kpg')).toBe('2'))
+    view.unmount()
+    const callsSoFar = mockGetFeed.mock.calls.length
+
+    // The same window with an UNUSABLE lower bound, on the same cache.
+    renderWith(['/?kf=2026-02-31&kpg=5'])
+
+    expect(await screen.findByText('pages.reports.contactTag.invalidSellDate')).toBeInTheDocument()
+    expect(mockGetFeed).toHaveBeenCalledTimes(callsSoFar)
+    expect(urlParams().get('kpg')).toBe('5')
+  })
 })
 
 describe('ContactTagFeedTab — the optional lower bound', () => {
