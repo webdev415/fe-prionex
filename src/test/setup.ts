@@ -186,6 +186,12 @@ vi.mock('react-i18next', () => ({
       if (key === 'pages.reports.operatorPromises.totals.generatedAt') {
         return `${key}:${String(vars?.value)}`
       }
+      // Same shape, same reason: the contact-tag feed's hint states the sale-date
+      // upper bound the BACKEND applied when the tab sent none — the whole point
+      // of the line is the date, so it has to be assertable and not just the key.
+      if (key === 'pages.reports.contactTag.sellToDefaultHint') {
+        return `${key}:${String(vars?.date)}`
+      }
       // Same shape, same reason: the dialogs-list loan cell collapses extra
       // active loans into a "+N more" badge — the N is the whole point of the
       // badge, so it has to be assertable and not just the key it rides on.
