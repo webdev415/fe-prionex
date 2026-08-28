@@ -37,11 +37,15 @@ export function ProfilePanel({ header }: ProfilePanelProps) {
     <aside className="border-border bg-card flex flex-col items-center gap-4 rounded-xl border p-6">
       <UserAvatar
         userId={header.id}
-        // The monogram keeps the app's own ordering, so the same person is
-        // not "CJ" in the employees list and "JC" here.
-        fullName={header.full_name}
+        // The two parts rather than the whole name: the monogram then reads
+        // in the same order as the heading under it, and it cannot be thrown
+        // by a middle name or a surname of two words the way splitting a
+        // string on its spaces would be.
+        firstName={header.first_name}
+        lastName={header.last_name}
+        fullName={displayName(header)}
         avatarUrl={header.avatar_url}
-        size={96}
+        size={112}
       />
 
       <div className="space-y-1 text-center">
@@ -75,19 +79,13 @@ export function ProfilePanel({ header }: ProfilePanelProps) {
         {detail(t('pages.employeeCard.panel.phone'), header.phone)}
         {detail(t('pages.employeeCard.panel.email'), header.email)}
       </div>
-
-      <div className="flex gap-3 pt-2">
-        {header.email && (
-          <a
-            href={`mailto:${header.email}`}
-            aria-label={t('pages.employeeCard.panel.writeEmail')}
-            title={t('pages.employeeCard.panel.writeEmail')}
-            className="border-border text-foreground hover:bg-muted inline-flex size-10 items-center justify-center rounded-full border"
-          >
-            @
-          </a>
-        )}
-        {header.telegram && (
+      {/*
+        Telegram only. The mail action went because the address is already
+        printed just above it, and a round button that does the same thing as
+        the line above is a second way to say one thing.
+      */}
+      {header.telegram && (
+        <div className="flex gap-3 pt-2">
           <a
             href={`https://t.me/${header.telegram.replace(/^@/, '')}`}
             target="_blank"
@@ -98,8 +96,8 @@ export function ProfilePanel({ header }: ProfilePanelProps) {
           >
             ✈
           </a>
-        )}
-      </div>
+        </div>
+      )}
     </aside>
   )
 }

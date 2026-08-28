@@ -191,15 +191,36 @@ describe('EmployeeCardPage', () => {
     expect(screen.getByTestId('chronology')).toHaveTextContent('chronology for 7')
   })
 
-  it('offers a way to write to them and to open Telegram', () => {
+  /*
+   * The initials follow the heading under them rather than the API's
+   * surname-first name - the card reads "James Chang", so the monogram is JC.
+   * The two name parts are handed over separately, so a middle name or a
+   * two-word surname cannot shuffle them.
+   */
+  it('reads the monogram in the same order as the name it sits above', () => {
+    renderAt('/dashboard/team-management/users/7')
+
+    const panel = screen.getByRole('complementary')
+    expect(within(panel).getByText('OK')).toBeInTheDocument()
+    expect(within(panel).queryByText('KO')).toBeNull()
+  })
+
+  it('offers a way to open Telegram', () => {
     renderAt('/dashboard/team-management/users/7')
 
     expect(
-      screen.getByRole('link', { name: 'pages.employeeCard.panel.writeEmail' })
-    ).toHaveAttribute('href', 'mailto:olena@prionex.com')
-    expect(
       screen.getByRole('link', { name: 'pages.employeeCard.panel.openTelegram' })
     ).toHaveAttribute('href', 'https://t.me/olena')
+  })
+
+  /*
+   * The address is printed on the panel a line above, so a round button doing
+   * the same thing was a second way to say one thing.
+   */
+  it('does not repeat the address as a button', () => {
+    const { container } = renderAt('/dashboard/team-management/users/7')
+
+    expect(container.querySelector('a[href^="mailto:"]')).toBeNull()
   })
 
   it('leaves out a quick action it has no address for', () => {

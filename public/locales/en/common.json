@@ -10833,7 +10833,6 @@
         "hiredAt": "Date of hire",
         "phone": "Phone",
         "email": "Email",
-        "writeEmail": "Write an email",
         "openTelegram": "Open Telegram"
       },
       "sections": {
