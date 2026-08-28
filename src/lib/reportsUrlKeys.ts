@@ -48,6 +48,35 @@ export const REPORTS_URL_KEYS = {
   communicationGap: { sellFrom: 'gf', sellTo: 'gt', gapMin: 'gm', page: 'gpg', pageSize: 'gps' },
   /** «Обіцянки по операторах» (operatorPromises). */
   operatorPromises: { dateFrom: 'opf', dateTo: 'opt', department: 'opd' },
+  /**
+   * «Вхід без відпрацювання» feed (inboundFollowup). `n` for iNbound: the
+   * obvious `i…` spellings are the searcher feed's (`if`/`it`), and this feed
+   * is its closest sibling — sharing a prefix is exactly how a transplant gets
+   * written by accident.
+   */
+  inboundFollowup: { dateFrom: 'nf', dateTo: 'nt', page: 'npg', pageSize: 'nps' },
+  /**
+   * «Контакт/Неконтакт» feed (contactTag). `k…` for Kontakt: the obvious `c…`
+   * spellings are already the verification tab's (`cf`/`ct` — count from/to),
+   * and `ct` is exactly the abbreviation this tab would have reached for.
+   *
+   * `viewDate` is this page's only REQUIRED single date (`kd`); `sellFrom` /
+   * `sellTo` are the optional purchase window, and `kt` carries THREE states
+   * rather than two — absent (the backend default applies), present-and-empty
+   * (`kt=`, upper bound switched off) and a date. That is why the tab reads it
+   * with its own `readSellToState` instead of the shared `readUrlDateBound`,
+   * which folds absent and empty together. `tag` (`kg`) is the sub-tab strip's
+   * population filter: it travels to the endpoint as `tag_code` and, like every
+   * other filter here, resets the page.
+   */
+  contactTag: {
+    viewDate: 'kd',
+    sellFrom: 'kf',
+    sellTo: 'kt',
+    tag: 'kg',
+    page: 'kpg',
+    pageSize: 'kps',
+  },
 } as const
 
 export type ReportsUrlKeyOwner = keyof typeof REPORTS_URL_KEYS

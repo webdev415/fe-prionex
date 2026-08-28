@@ -16,19 +16,28 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/DropdownMenu'
 import {
+  aiAssistantKeys,
   useAssistantConversation,
+  useExpertCapability,
   useMarkCitation,
   useSendAssistantMessage,
   useSendFeedback,
 } from '@/features/aiAssistant/hooks'
 import {
   AssistantChatStreamError,
+  SOFT_DENIED_REASON_CODES,
   type AssistantCitationVerdict,
+  type AssistantExpertCapability,
   type AssistantFeedbackComprehension,
   type AssistantFeedbackRating,
 } from '@/features/aiAssistant/api'
 import { normalizeCitations } from '@/features/aiAssistant/sse'
-import type { AssistantCitation, AssistantSources } from '@/features/aiAssistant/sse'
+import type {
+  AssistantCitation,
+  AssistantExpertUsage,
+  AssistantSources,
+} from '@/features/aiAssistant/sse'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   ATTACHMENT_ACCEPT,
   blobToBase64,
@@ -97,6 +106,66 @@ const VOICE_SILENCE_OPTIONS: AssistantVoiceSilenceTimeout[] = [1.5, 2, 3]
 /** Max-recording-length choices (seconds) offered in voice settings. */
 const VOICE_MAX_DURATION_OPTIONS: AssistantVoiceMaxDuration[] = [30, 60, 120]
 
+/**
+ * Короткое имя экспертной модели для меню и бейджа («Sonnet», «Opus»).
+ * Незнакомая модель показывается своим идентификатором: список приходит с
+ * бэкенда, и новая модель должна появляться в меню без релиза фронта.
+ */
+const EXPERT_MODEL_LABELS: Record<string, string> = {
+  'claude-sonnet-5': 'Sonnet',
+  'claude-opus-5': 'Opus',
+}
+
+/** Однострочная подсказка под моделью — только для известных моделей. */
+const EXPERT_MODEL_HINT_KEYS: Record<string, string> = {
+  'claude-sonnet-5': 'pages.aiAssistant.expertSonnetHint',
+  'claude-opus-5': 'pages.aiAssistant.expertOpusHint',
+}
+
+function expertModelLabel(model: string): string {
+  return EXPERT_MODEL_LABELS[model] ?? model
+}
+
+/**
+ * Деньги в бейдже: «$0.05». Ход дешевле цента показывается с четырьмя знаками
+ * («$0.0007»), иначе округление до копеек превратило бы его в «$0.00» — а «ход
+ * стоил ноль» и «ход стоил меньше цента» это разные утверждения.
+ */
+function formatUsd(amount: number): string {
+  if (amount > 0 && amount < 0.01) return `$${amount.toFixed(4)}`
+  return `$${amount.toFixed(2)}`
+}
+
+/**
+ * Подпись с токенами для тултипа ценника.
+ *
+ * Вход считается ВМЕСТЕ с кэшем: у Claude повторный контекст берётся из кэша, и
+ * `input_tokens` показывает только «свежую» часть. На живом ходе 27.08 это были
+ * 4 токена при реальном входе 32 442 из кэша — подпись «4 токена на вхід»
+ * читалась бы как поломка счётчика. Когда кэш участвовал, его объём называем
+ * отдельно, чтобы видно было, откуда взялась большая цифра.
+ *
+ * Нет ни входа, ни выхода — тултипа нет вовсе (пустая подсказка бесполезна).
+ */
+function expertTokensTitle(
+  usage: AssistantExpertUsage,
+  t: (key: string, options?: Record<string, unknown>) => string
+): string | undefined {
+  if (usage.inputTokens == null || usage.outputTokens == null) return undefined
+  const cached = usage.cacheReadTokens ?? 0
+  const input = usage.inputTokens + cached
+  return cached > 0
+    ? t('pages.aiAssistant.expertTokensCached', {
+        input,
+        cached,
+        output: usage.outputTokens,
+      })
+    : t('pages.aiAssistant.expertTokens', {
+        input,
+        output: usage.outputTokens,
+      })
+}
+
 const COMPOSER_DROPDOWN_TRIGGER_CLASS =
   'text-foreground inline-flex h-9 min-h-9 w-full min-w-0 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-border bg-card px-3 text-xs font-light shadow-none sm:h-8 sm:min-h-0 sm:w-32 sm:flex-none'
 
@@ -159,6 +228,40 @@ type ChatMessage = {
   reasoningStartedAt?: number
   /** Frozen reasoning duration (ms) once the turn settles. */
   reasoningElapsedMs?: number
+  /**
+   * Экспертный ход: модель, которую ждём. Живёт только пока ход идёт — питает
+   * подпись со своим секундным тиком («Sonnet аналізує… 24 с»), чтобы 30–40
+   * секунд внешнего ответа не выглядели зависанием.
+   */
+  expertWaitingModel?: string
+  /** Расход экспертного хода (фрейм `result`) — бейдж «Sonnet · $0.05». */
+  expert?: AssistantExpertUsage
+}
+
+/**
+ * Подпись ожидания экспертного хода с СОБСТВЕННЫМ секундным тиком.
+ *
+ * Обычный ход перерисовывается на каждой дельте, и таймеру хватает чужих
+ * рендеров; экспертный ход молчит десятки секунд — без своего интервала
+ * счётчик замер бы на «0 с» и читался бы как зависание.
+ */
+function ExpertWaitingLabel({ model }: { model: string }) {
+  const { t } = useTranslation('common')
+  const [seconds, setSeconds] = useState(0)
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setSeconds((value) => value + 1), 1000)
+    return () => window.clearInterval(timer)
+  }, [])
+
+  return (
+    <span
+      data-testid="assistant-expert-waiting"
+      className="text-muted-foreground ml-1.5 text-xs font-light"
+    >
+      {t('pages.aiAssistant.expertWaiting', { model: expertModelLabel(model), seconds })}
+    </span>
+  )
 }
 
 function joinDictation(prev: string, text: string): string {
@@ -407,6 +510,14 @@ type ModeDropdownProps = {
   /** Настройка «показывать раздумья» — живёт рядом с выбором режима. */
   showReasoning: boolean
   onShowReasoningChange: (show: boolean) => void
+  /**
+   * Экспертный режим этого сотрудника. Пункт «Експерт (Claude)» рисуется только
+   * когда режим включён И разрешён: у оператора его в меню нет вовсе.
+   */
+  expert: AssistantExpertCapability
+  /** Выбранная экспертная модель или `null` — идёт обычный ход (fast/thinking). */
+  expertModel: string | null
+  onSelectExpert: (model: string) => void
 }
 
 const MODE_OPTIONS: {
@@ -449,12 +560,30 @@ function ModeDropdown({
   onChange,
   showReasoning,
   onShowReasoningChange,
+  expert,
+  expertModel,
+  onSelectExpert,
 }: ModeDropdownProps) {
   const { t } = useTranslation('common')
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const isThinking = value === 'thinking'
-  const ActiveIcon = isThinking ? Icons.AiBrain03 : Icons.Flash
+  const isExpert = expertModel != null
+  /**
+   * Отказ, при котором пункт остаётся на виду, но выбрать нечего: дневной
+   * бюджет исчерпан либо учёт трат недоступен. Прятать здесь нельзя — у
+   * руководителя пункт молча исчез бы вместо честного «ліміт вичерпано».
+   * Отказ по роли (и выключенный режим) прячется, как и раньше.
+   */
+  const isSoftDenied =
+    !expert.allowed &&
+    expert.reasonCode != null &&
+    SOFT_DENIED_REASON_CODES.includes(expert.reasonCode)
+  // Пункт экспертного режима существует только с разрешения бэкенда и только
+  // при непустом списке моделей — выбирать «Експерт» без модели нечего.
+  const showExpertSection =
+    expert.enabled && (expert.allowed || isSoftDenied) && expert.models.length > 0
+  const ActiveIcon = isExpert ? Icons.Sparkles : isThinking ? Icons.AiBrain03 : Icons.Flash
 
   useEffect(() => {
     if (!open) return
@@ -489,12 +618,14 @@ function ModeDropdown({
         <ActiveIcon
           size={15}
           strokeWidth={1.5}
-          className={isThinking ? 'text-primary-500' : 'text-warning-500'}
+          className={isExpert || isThinking ? 'text-primary-500' : 'text-warning-500'}
         />
         <span className="min-w-0 truncate">
-          {isThinking
-            ? t('pages.aiAssistant.modeThinkingShort')
-            : t('pages.aiAssistant.modeFastShort')}
+          {isExpert
+            ? t('pages.aiAssistant.expertTrigger', { model: expertModelLabel(expertModel) })
+            : isThinking
+              ? t('pages.aiAssistant.modeThinkingShort')
+              : t('pages.aiAssistant.modeFastShort')}
         </span>
         <Icons.ArrowDown size={13} strokeWidth={1.5} className="text-muted-foreground shrink-0" />
       </button>
@@ -509,7 +640,7 @@ function ModeDropdown({
               key={mode}
               type="button"
               role="menuitemradio"
-              aria-checked={value === mode}
+              aria-checked={!isExpert && value === mode}
               onClick={() => {
                 onChange(mode)
                 setOpen(false)
@@ -520,7 +651,7 @@ function ModeDropdown({
               <span className="min-w-0 flex-1">
                 <span className="text-foreground flex items-center gap-1.5 text-sm font-medium">
                   {t(labelKey)}
-                  {value === mode && (
+                  {!isExpert && value === mode && (
                     <Icons.Checkmark
                       size={14}
                       strokeWidth={2}
@@ -534,6 +665,97 @@ function ModeDropdown({
               </span>
             </button>
           ))}
+
+          {/* Экспертный режим: вопрос уходит во внешний Claude. Секции нет
+              вовсе, если бэкенд не подтвердил доступ — у оператора этот пункт
+              не должен даже мелькать. */}
+          {showExpertSection && (
+            <div
+              className="border-border/70 mt-1 border-t pt-1"
+              data-testid="assistant-expert-section"
+            >
+              <div className="flex items-center gap-1.5 px-2.5 pt-1 pb-0.5">
+                <Icons.Sparkles size={14} strokeWidth={1.5} className="text-primary-500 shrink-0" />
+                <span className="text-foreground text-[11px] font-semibold tracking-tight">
+                  {t('pages.aiAssistant.expertTitle')}
+                </span>
+              </div>
+
+              {expert.models.map((model) => {
+                const hintKey = EXPERT_MODEL_HINT_KEYS[model]
+                return (
+                  <button
+                    key={model}
+                    type="button"
+                    role="menuitemradio"
+                    aria-checked={expertModel === model}
+                    // Бюджет исчерпан / учёт трат недоступен: модель видно, но
+                    // выбрать нельзя — ход всё равно упёрся бы в 429.
+                    disabled={isSoftDenied}
+                    data-testid={`assistant-expert-model-${model}`}
+                    onClick={() => {
+                      onSelectExpert(model)
+                      setOpen(false)
+                    }}
+                    className={cn(
+                      'flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors',
+                      isSoftDenied ? 'cursor-not-allowed opacity-50' : 'hover:bg-muted/70'
+                    )}
+                  >
+                    <Icons.Sparkles
+                      size={16}
+                      strokeWidth={1.5}
+                      className="text-primary-500 mt-0.5 shrink-0"
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="text-foreground flex items-center gap-1.5 text-sm font-medium">
+                        {expertModelLabel(model)}
+                        {expertModel === model && (
+                          <Icons.Checkmark
+                            size={14}
+                            strokeWidth={2}
+                            className="text-primary-500 shrink-0"
+                          />
+                        )}
+                      </span>
+                      {hintKey && (
+                        <span className="text-muted-foreground mt-0.5 block text-[11px] leading-snug font-light">
+                          {t(hintKey)}
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                )
+              })}
+
+              {/* Куда уходит запрос и сколько бюджета осталось — рядом с
+                  выбором, а не спрятано в настройках. */}
+              <div className="text-muted-foreground space-y-1 px-2.5 pt-1 pb-1.5 text-[11px] leading-snug font-light">
+                <span className="flex items-start gap-1.5" data-testid="assistant-expert-external">
+                  <Icons.Link01 size={13} strokeWidth={1.5} className="mt-px shrink-0" />
+                  {t('pages.aiAssistant.expertExternalNotice')}
+                </span>
+                {expert.dailyLimitUsd != null && expert.spentTodayUsd != null && (
+                  <span className="block" data-testid="assistant-expert-budget">
+                    {t('pages.aiAssistant.expertBudget', {
+                      spent: formatUsd(expert.spentTodayUsd),
+                      limit: formatUsd(expert.dailyLimitUsd),
+                    })}
+                  </span>
+                )}
+                {/* Почему выбрать нельзя — словами бэкенда (украинский текст
+                    уже написан для человека и несёт суммы). */}
+                {isSoftDenied && expert.reason && (
+                  <span
+                    className="text-warning-700 block font-medium"
+                    data-testid="assistant-expert-reason"
+                  >
+                    {expert.reason}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
 
           <div
             className="border-border/70 mt-1 flex items-start gap-2.5 border-t px-2.5 pt-2.5 pb-1.5"
@@ -811,6 +1033,30 @@ export function AiAssistantBetaPage() {
   const { mutateAsync: sendChat } = useSendAssistantMessage()
   const { mutate: mutateFeedback } = useSendFeedback()
   const { mutate: mutateMarkCitation } = useMarkCitation()
+  const queryClient = useQueryClient()
+  const expertCapability = useExpertCapability()
+  /**
+   * Экспертная модель, с которой РЕАЛЬНО уйдёт следующий ход.
+   *
+   * Право на режим принадлежит бэкенду, а не localStorage: сохранённый выбор
+   * действует, только пока capabilities подтверждают доступ и знают эту модель.
+   * Иначе (роль сняли, режим выключили, модель убрали из списка) ход тихо
+   * уходит обычным путём — вместо 403 на каждое сообщение.
+   */
+  const activeExpertModel = useMemo(() => {
+    const chosen = assistantSettings.expertModel
+    if (chosen == null) return null
+    const available =
+      expertCapability.enabled &&
+      expertCapability.allowed &&
+      expertCapability.models.includes(chosen)
+    return available ? chosen : null
+  }, [
+    assistantSettings.expertModel,
+    expertCapability.allowed,
+    expertCapability.enabled,
+    expertCapability.models,
+  ])
 
   // Re-hydrate the dialog persisted for this user: history lives on the
   // backend, the store only keeps the conversation pointer. Hydration is
@@ -1341,17 +1587,28 @@ export function AiAssistantBetaPage() {
 
           {/* Reasoning mode now lives in the dropdown next to the composer
               (single source of truth); the settings panel only points to it. */}
-          <div className="bg-muted/60 border-border/70 mt-2.5 flex items-center gap-2 rounded-lg border px-2.5 py-2">
-            {assistantSettings.mode === 'thinking' ? (
+          <div
+            className="bg-muted/60 border-border/70 mt-2.5 flex items-center gap-2 rounded-lg border px-2.5 py-2"
+            data-testid="assistant-settings-mode-summary"
+          >
+            {activeExpertModel ? (
+              <Icons.Sparkles size={14} strokeWidth={1.5} className="text-primary-500 shrink-0" />
+            ) : assistantSettings.mode === 'thinking' ? (
               <Icons.AiBrain03 size={14} strokeWidth={1.5} className="text-primary-500 shrink-0" />
             ) : (
               <Icons.Flash size={14} strokeWidth={1.5} className="text-warning-500 shrink-0" />
             )}
             <span className="text-foreground min-w-0 flex-1 text-[11px] leading-snug font-light">
               {t('pages.aiAssistant.mode')}:{' '}
-              {assistantSettings.mode === 'thinking'
-                ? t('pages.aiAssistant.modeThinkingShort')
-                : t('pages.aiAssistant.modeFastShort')}
+              {/* Экспертный ход идёт не на нашем боксе — сводка обязана
+                  называть его, а не «Швидкий», под которым он уезжает. */}
+              {activeExpertModel
+                ? t('pages.aiAssistant.expertTrigger', {
+                    model: expertModelLabel(activeExpertModel),
+                  })
+                : assistantSettings.mode === 'thinking'
+                  ? t('pages.aiAssistant.modeThinkingShort')
+                  : t('pages.aiAssistant.modeFastShort')}
             </span>
             <span className="text-muted-foreground shrink-0 text-[11px] font-light">
               {t('pages.aiAssistant.modeChangeHint')}
@@ -1639,13 +1896,20 @@ export function AiAssistantBetaPage() {
       respondingRef.current = true
       setIsAssistantResponding(true)
 
-      const isThinking = assistantSettings.mode === 'thinking'
+      const expertModel = activeExpertModel
+      const isExpertTurn = expertModel != null
+      // Экспертный ход идёт во внешнюю модель — «думающего» окна раздумий у
+      // него нет, поэтому режим раздумий на него не распространяется.
+      const isThinking = !isExpertTurn && assistantSettings.mode === 'thinking'
       const reasoningStartedAt = Date.now()
       const loadingId = appendChatMessage({
         role: 'assistant',
         content: isThinking
           ? t('pages.aiAssistant.assistantThinking')
           : t('pages.aiAssistant.assistantTyping'),
+        // Экспертный ход отвечает десятки секунд: подпись со своим таймером
+        // держит ожидание читаемым (см. ExpertWaitingLabel).
+        expertWaitingModel: expertModel ?? undefined,
         isLoading: true,
         // Start marker for the "Xс" reasoning timer (chip + activity panel).
         reasoningStartedAt,
@@ -1697,6 +1961,9 @@ export function AiAssistantBetaPage() {
             deep_research: assistantSettings.deepResearch ? true : undefined,
             attachments:
               attachmentList.length > 0 ? toChatAttachmentPayload(attachmentList) : undefined,
+            // Поле уходит только у экспертного хода — обычный запрос остаётся
+            // байт-в-байт прежним.
+            expert: expertModel ? { model: expertModel } : undefined,
           },
           callbacks: {
             onText: (delta) => {
@@ -1753,6 +2020,7 @@ export function AiAssistantBetaPage() {
             onFollowups: (questions) => {
               if (questions.length > 0) patchLoadingMessage({ followups: questions })
             },
+            onExpert: (usage) => patchLoadingMessage({ expert: usage }),
           },
         })
         // The turn reached the brain, so the page context it carried is spent —
@@ -1782,7 +2050,14 @@ export function AiAssistantBetaPage() {
           // Freeze the reasoning timer at its final value.
           reasoningElapsedMs: Date.now() - reasoningStartedAt,
           serverMessageId: result.message_id > 0 ? result.message_id : undefined,
+          // Ожидание закончилось — подпись с таймером уходит, ценник остаётся.
+          expertWaitingModel: undefined,
+          expert: result.expert,
         })
+        if (isExpertTurn) {
+          // Ход потратил деньги — счётчик остатка в меню обязан это увидеть.
+          void queryClient.invalidateQueries({ queryKey: aiAssistantKeys.capabilities })
+        }
       } catch (error) {
         if (requestToken !== responseTokenRef.current) {
           return
@@ -1813,17 +2088,50 @@ export function AiAssistantBetaPage() {
         // the text is trusted here only when the code proves it is ours;
         // otherwise the localised batch wording stands in.
         const isOurRefusal = Boolean(errorCode)
+        // Отказы экспертного хода бэкенд формулирует сам и по-украински —
+        // «немає права», «денний ліміт витрат вичерпано (X з Y $)». Показываем
+        // их дословно: свои выдумки здесь были бы менее точны, чем текст того,
+        // кто отказал.
+        const isExpertRefusal = isExpertTurn && (status === 403 || status === 429 || status === 503)
+        // 503 — исключение: прокси CRM заменяет текст мозга своим, «Думающий
+        // режим сейчас недоступен. Повторите запрос в обычном режиме», потому
+        // что на этой формулировке держится откат thinking → fast
+        // (`_status_detail` в services/ai-assistant/app/routers/chat.py). Для
+        // экспертного хода она неверна вдвойне: он не «думающий», и повторять
+        // его «в обычном режиме» — это другой вопрос к другой модели. Здесь
+        // текст сервера не показываем, а говорим про внешний сервис сами.
         const showsServerText =
-          status === 400 || status === 415 || status === 422 || (status === 413 && isOurRefusal)
+          status === 400 ||
+          status === 415 ||
+          status === 422 ||
+          (status === 413 && isOurRefusal) ||
+          (isExpertRefusal && status !== 503)
+        const expertFallbackMessage = isExpertRefusal
+          ? status === 403
+            ? t('pages.aiAssistant.expertForbidden')
+            : status === 429
+              ? t('pages.aiAssistant.expertLimitReached')
+              : t('pages.aiAssistant.expertUnavailable')
+          : undefined
         const errorMessage = isThinkingUnavailable
           ? t('pages.aiAssistant.thinkingUnavailable')
           : showsServerText && serverDetail
             ? serverDetail
-            : status === 413
-              ? t('pages.aiAssistant.attachTotalTooLarge')
-              : t('pages.aiAssistant.apiError')
+            : (expertFallbackMessage ??
+              (status === 413
+                ? t('pages.aiAssistant.attachTotalTooLarge')
+                : t('pages.aiAssistant.apiError')))
         if (isThinkingUnavailable) {
           setAssistantSettings((s) => ({ ...s, mode: 'fast' }))
+        }
+        if (isExpertRefusal) {
+          // 403 — права больше нет: снимаем выбор, иначе каждый следующий ход
+          // упирается в тот же отказ. 429/503 — препятствие временное, выбор
+          // руководителя остаётся за ним.
+          if (status === 403) {
+            setAssistantSettings((s) => ({ ...s, expertModel: null }))
+          }
+          void queryClient.invalidateQueries({ queryKey: aiAssistantKeys.capabilities })
         }
         // Give the typed text back so a failed send is one Enter away from a
         // retry — unless the user has already started typing something else.
@@ -1840,6 +2148,8 @@ export function AiAssistantBetaPage() {
           followups: undefined,
           reasoning: undefined,
           toolSteps: undefined,
+          expertWaitingModel: undefined,
+          expert: undefined,
         })
       } finally {
         if (requestToken === responseTokenRef.current) {
@@ -1850,6 +2160,7 @@ export function AiAssistantBetaPage() {
       }
     },
     [
+      activeExpertModel,
       appendChatMessage,
       assistantSettings.deepResearch,
       assistantSettings.mode,
@@ -1861,6 +2172,7 @@ export function AiAssistantBetaPage() {
       isAssistantResponding,
       isEmbedded,
       onexContext,
+      queryClient,
       scrollToConversationBottom,
       sendChat,
       setActiveConversation,
@@ -2334,10 +2646,29 @@ export function AiAssistantBetaPage() {
     )
   }
 
+  /**
+   * Ценник экспертного хода: «Sonnet · $0.05». Без цифр (бэкенд их не прислал)
+   * остаётся одна модель — так видно, что отвечал внешний Claude, даже когда
+   * стоимость неизвестна.
+   */
+  const renderExpertCost = (usage: AssistantExpertUsage) => (
+    <span
+      data-testid="assistant-expert-cost"
+      title={expertTokensTitle(usage, t)}
+      className="border-border bg-muted/60 text-muted-foreground inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-light"
+    >
+      <Icons.Sparkles size={12} strokeWidth={1.5} className="text-primary-500 shrink-0" />
+      {usage.costUsd != null
+        ? `${expertModelLabel(usage.model)} · ${formatUsd(usage.costUsd)}`
+        : expertModelLabel(usage.model)}
+    </span>
+  )
+
   /** TTS playback + feedback in one row under an assistant bubble. */
   const renderAssistantActions = (item: ChatMessage) => (
     <div className="mt-1.5 flex flex-wrap items-center gap-1.5 px-1">
       {renderTtsButton(item)}
+      {item.expert && renderExpertCost(item.expert)}
       {item.serverMessageId != null && (
         <>
           <span className="bg-border mx-0.5 h-4 w-px" aria-hidden />
@@ -2636,10 +2967,14 @@ export function AiAssistantBetaPage() {
                               <span className="bg-secondary-500 h-1.5 w-1.5 animate-bounce rounded-full [animation-delay:-0.2s]" />
                               <span className="bg-secondary-500 h-1.5 w-1.5 animate-bounce rounded-full [animation-delay:-0.1s]" />
                               <span className="bg-secondary-500 h-1.5 w-1.5 animate-bounce rounded-full" />
-                              {item.loadingLabel && (
-                                <span className="text-muted-foreground ml-1.5 text-xs font-light">
-                                  {item.loadingLabel}
-                                </span>
+                              {item.expertWaitingModel ? (
+                                <ExpertWaitingLabel model={item.expertWaitingModel} />
+                              ) : (
+                                item.loadingLabel && (
+                                  <span className="text-muted-foreground ml-1.5 text-xs font-light">
+                                    {item.loadingLabel}
+                                  </span>
+                                )
                               )}
                             </span>
                           )
@@ -2836,6 +3171,23 @@ export function AiAssistantBetaPage() {
               <OnexContextChip context={onexContext} onClear={clearOnexContext} />
             )}
 
+            {/* Экспертный режим включён — руководитель видит ДО отправки, что
+                этот вопрос уйдёт во внешний сервис. Констатация, не
+                предупреждение: отправлять данные туда решено осознанно. */}
+            {activeExpertModel && (
+              <div
+                data-testid="assistant-expert-external-notice"
+                className="border-primary-200 bg-primary-50/60 text-muted-foreground mb-2 flex items-center gap-2 rounded-xl border border-dashed px-2.5 py-1.5 text-[11px] font-light"
+              >
+                <Icons.Link01 size={14} strokeWidth={1.5} className="text-primary-600 shrink-0" />
+                <span className="min-w-0 flex-1">
+                  {t('pages.aiAssistant.expertComposerNotice', {
+                    model: expertModelLabel(activeExpertModel),
+                  })}
+                </span>
+              </div>
+            )}
+
             <div className="relative">
               <Textarea
                 ref={textareaRef}
@@ -3009,10 +3361,20 @@ export function AiAssistantBetaPage() {
                     видимости раздумий. */}
                 <ModeDropdown
                   value={assistantSettings.mode}
-                  onChange={(mode) => applySettings((s) => ({ ...s, mode }))}
+                  // Выбор обычного режима снимает экспертный: пункты меню
+                  // взаимоисключающие, «Швидкий + Експерт» одновременно не бывает.
+                  onChange={(mode) => applySettings((s) => ({ ...s, mode, expertModel: null }))}
                   showReasoning={assistantSettings.showReasoning}
                   onShowReasoningChange={(show) =>
                     applySettings((s) => ({ ...s, showReasoning: show }))
+                  }
+                  expert={expertCapability}
+                  expertModel={activeExpertModel}
+                  // Экспертный ход идёт во внешнюю модель — «думающий» режим
+                  // нашего бокса при этом ни при чём, поэтому сбрасываем его в
+                  // fast, чтобы возврат к обычному ходу был предсказуем.
+                  onSelectExpert={(model) =>
+                    applySettings((s) => ({ ...s, mode: 'fast', expertModel: model }))
                   }
                 />
 

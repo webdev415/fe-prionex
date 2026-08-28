@@ -83,7 +83,11 @@ export {
   callQaSettingsKey,
 } from './api/callQaSettingsService'
 export type { CallQaSettings } from './api/callQaSettingsService'
-export { useCallQaSettings, useUpdateCallQaSettings } from './hooks/useCallQaSettings'
+export {
+  useCallQaSettings,
+  useScorecardAssignedOnly,
+  useUpdateCallQaSettings,
+} from './hooks/useCallQaSettings'
 // Call QA listening rules — blocker dictionary + AI rubrics (manage_qa_rules)
 export {
   listQaBlockers,

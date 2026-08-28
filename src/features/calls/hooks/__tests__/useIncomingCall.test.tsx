@@ -324,6 +324,54 @@ describe('useIncomingCall', () => {
       return mockSocket.on.mock.calls.find((c) => c[0] === 'call.state_changed')?.[1]
     }
 
+    describe('when the call ends', () => {
+      it('keeps a window the operator was connected to', async () => {
+        const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
+        await openPopup(result)
+
+        act(() => {
+          stateHandler()({
+            event_type: 'call.state_changed',
+            timestamp: '',
+            data: { call_id: 'shared-call', state: 'ACTIVE', answered_by: mockAgentExtension },
+          })
+        })
+        await waitFor(() => expect(result.current.answeredAt).not.toBeNull())
+
+        act(() => {
+          stateHandler()({
+            event_type: 'call.state_changed',
+            timestamp: '',
+            data: { call_id: 'shared-call', state: 'COMPLETED' },
+          })
+        })
+
+        // The interaction form lives in that window and there is no way back to
+        // it, so unmounting on hangup loses whatever the operator had written
+        // — and a caller ringing off before Save is ordinary.
+        await waitFor(() => expect(result.current.callEnded).toBe(true))
+        expect(result.current.hasIncomingCall).toBe(true)
+      })
+
+      it('drops a window that only ever rang', async () => {
+        const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
+        await openPopup(result)
+
+        act(() => {
+          stateHandler()({
+            event_type: 'call.state_changed',
+            timestamp: '',
+            data: { call_id: 'shared-call', state: 'COMPLETED' },
+          })
+        })
+
+        // Nothing was typed and nothing can be filed, so leaving it up would
+        // just be a dead window the operator has to dismiss.
+        await waitFor(() => expect(result.current.hasIncomingCall).toBe(false))
+        expect(result.current.callEnded).toBe(false)
+      })
+    })
+
     it('closes the window when a colleague answers', async () => {
       const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
       await openPopup(result)
@@ -550,23 +598,31 @@ describe('useIncomingCall', () => {
     })
 
     describe('telling the consumer a call is over', () => {
-      it.each(['COMPLETED', 'FAILED', 'CANCELLED'] as const)(
-        'reports the call id on %s',
-        async (state) => {
-          const onCallSettled = vi.fn()
-          renderHook(() => useIncomingCall(mockAgentExtension, { onCallSettled }))
+      it.each([
+        ['COMPLETED', 'ended'],
+        ['FAILED', 'failed'],
+        // A caller who gives up mid-ring is not an error to put in front of
+        // the operator in red.
+        ['CANCELLED', 'ended'],
+      ] as const)('reports %s as %s', async (state, expected) => {
+        const onCallSettled = vi.fn()
+        renderHook(() => useIncomingCall(mockAgentExtension, { onCallSettled }))
 
-          act(() => {
-            stateHandler()({
-              event_type: 'call.state_changed',
-              timestamp: '',
-              data: { call_id: 'shared-call', state },
-            })
+        act(() => {
+          stateHandler()({
+            event_type: 'call.state_changed',
+            timestamp: '',
+            data: { call_id: 'shared-call', state, total_duration: 137 },
           })
+        })
 
-          expect(onCallSettled).toHaveBeenCalledWith('shared-call')
-        }
-      )
+        expect(onCallSettled).toHaveBeenCalledWith('shared-call', {
+          state: expected,
+          // This event is the last chance to learn the talk time: a window told
+          // the call is over stops polling for it.
+          totalDuration: 137,
+        })
+      })
 
       it('says nothing while the call is still going', async () => {
         const onCallSettled = vi.fn()
@@ -881,6 +937,89 @@ describe('useIncomingCall', () => {
       } finally {
         vi.useRealTimers()
       }
+    })
+  })
+
+  describe('reporting when this operator took the call', () => {
+    const popup = (): IncomingCallEvent => ({
+      event_type: 'call.incoming',
+      data: {
+        call_id: 'shared-call',
+        customer_phone: '+380971234567',
+        agent_extension: mockAgentExtension,
+        loan_count: 0,
+        total_debt: '0',
+        loans: [],
+      },
+    })
+
+    const stateHandler = () =>
+      mockSocket.on.mock.calls.find((c) => c[0] === 'call.state_changed')?.[1]
+
+    async function openPopup(result: { current: { hasIncomingCall: boolean } }) {
+      const handler = mockSocket.on.mock.calls.find((c) => c[0] === 'call.incoming')?.[1]
+      act(() => handler(popup()))
+      await waitFor(() => expect(result.current.hasIncomingCall).toBe(true))
+    }
+
+    it('is unanswered while the call is only ringing', async () => {
+      const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
+      await openPopup(result)
+
+      expect(result.current.answeredAt).toBeNull()
+    })
+
+    it('reports the answer when this operator is named', async () => {
+      const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
+      await openPopup(result)
+
+      act(() => {
+        stateHandler()({
+          event_type: 'call.state_changed',
+          timestamp: '',
+          data: { call_id: 'shared-call', state: 'ACTIVE', answered_by: mockAgentExtension },
+        })
+      })
+
+      await waitFor(() => expect(result.current.answeredAt).not.toBeNull())
+    })
+
+    it('stays unanswered when nobody is named', async () => {
+      const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
+      await openPopup(result)
+
+      act(() => {
+        stateHandler()({
+          event_type: 'call.state_changed',
+          timestamp: '',
+          data: { call_id: 'shared-call', state: 'RINGING', outcome: 'answered' },
+        })
+      })
+
+      // A missing answered_by could equally mean a colleague took it. Showing a
+      // connected window would invite this operator to file an interaction for a
+      // conversation somebody else is having.
+      expect(result.current.answeredAt).toBeNull()
+    })
+
+    it('does not carry the answer onto the next call', async () => {
+      const { result } = renderHook(() => useIncomingCall(mockAgentExtension))
+      await openPopup(result)
+      act(() => {
+        stateHandler()({
+          event_type: 'call.state_changed',
+          timestamp: '',
+          data: { call_id: 'shared-call', state: 'ACTIVE', answered_by: mockAgentExtension },
+        })
+      })
+      await waitFor(() => expect(result.current.answeredAt).not.toBeNull())
+
+      const incoming = mockSocket.on.mock.calls.find((c) => c[0] === 'call.incoming')?.[1]
+      act(() => incoming({ ...popup(), data: { ...popup().data, call_id: 'a-second-call' } }))
+
+      // A queue can replace one ringing call with another; inheriting the answer
+      // would open the second call already connected, with a running clock.
+      expect(result.current.answeredAt).toBeNull()
     })
   })
 })

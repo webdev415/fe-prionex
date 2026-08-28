@@ -156,6 +156,52 @@ class CallService {
     })
     return response.data
   }
+
+  /**
+   * Take a ringing inbound call.
+   *
+   * The operator's extension identifies which of the queue's ringing legs is
+   * being answered — a queue rings every member at once, so without it the
+   * backend can only fall back to the extension recorded on the call, which is
+   * the first operator rung rather than necessarily this one.
+   */
+  async answerCall(
+    callId: string,
+    agentExtension?: string | null
+  ): Promise<{ status: string; message: string }> {
+    const response = await api.post(`${API_BASE_URL}/api/v1/calls/${callId}/answer`, {
+      agent_extension: agentExtension ?? null,
+    })
+    return response.data
+  }
+
+  /** Park the caller, or take them back off hold. */
+  async holdCall(
+    callId: string,
+    hold: boolean,
+    agentExtension?: string | null
+  ): Promise<{ status: string; message: string }> {
+    const response = await api.post(`${API_BASE_URL}/api/v1/calls/${callId}/hold`, {
+      hold,
+      agent_extension: agentExtension ?? null,
+    })
+    return response.data
+  }
+
+  /**
+   * Record which client this call is about.
+   *
+   * A number can resolve to several clients and the write-up goes to every one
+   * the operator selected, but the call itself belongs on one card. Until this
+   * is sent the record holds whichever match the lookup ranked first — a guess
+   * made before the operator had seen anything.
+   */
+  async setCallPrimaryClient(callId: string, clientId: number): Promise<{ status: string }> {
+    const response = await api.patch(`${API_BASE_URL}/api/v1/calls/${callId}/primary-client`, {
+      client_id: clientId,
+    })
+    return response.data
+  }
 }
 
 export const callService = new CallService()

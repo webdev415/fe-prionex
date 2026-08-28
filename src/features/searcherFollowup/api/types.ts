@@ -74,7 +74,7 @@ export interface SearcherFollowupRow {
    * backend deliberately does NOT enum-validate, so that a new outcome never
    * turns the work list into a 500. Localisation (and openness to values this
    * build has no label for) lives in the shared `classifyCallOutcome`
-   * (src/lib/callOutcome.ts) via utils/callOutcome.ts.
+   * (src/lib/callOutcome.ts) via src/lib/feedCallOutcome.ts.
    */
   last_call_outcome: string | null
 }

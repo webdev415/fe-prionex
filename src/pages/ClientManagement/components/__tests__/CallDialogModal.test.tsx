@@ -557,6 +557,7 @@ describe('CallDialogModal', () => {
       contact_comment: null,
       contact_source: null,
       contact_type_name: null,
+      contact_category: null,
       recent_interactions: [],
       loans: [],
     })
@@ -639,6 +640,7 @@ describe('CallDialogModal', () => {
             contact_comment: 'робочий номер',
             contact_source: 'employer',
             contact_type_name: 'Work phone',
+            contact_category: null,
             recent_interactions: [
               {
                 id: 1,

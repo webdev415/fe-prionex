@@ -22,9 +22,23 @@ ARG VITE_WS_URL
 # given "true"/"1" — an unset ARG lands as an empty string, i.e. the feature
 # stays off. Vite inlines the value at build time, so it MUST arrive here.
 ARG VITE_ASSISTANT_REPORT_TABLES_ENABLED
+# Origin serving the hidden WebRTC softphone the CRM embeds as a background
+# iframe. Vite inlines it at build time, so it MUST arrive as a build-arg: an
+# unset value falls through to the localhost dev default in
+# src/features/operatorPhone/constants.ts and the phone never loads.
+ARG VITE_OPERATOR_PHONE_URL
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 ENV VITE_WS_URL=$VITE_WS_URL
 ENV VITE_ASSISTANT_REPORT_TABLES_ENABLED=$VITE_ASSISTANT_REPORT_TABLES_ENABLED
+ENV VITE_OPERATOR_PHONE_URL=$VITE_OPERATOR_PHONE_URL
+
+# Fail the image build rather than ship a bundle with no phone origin. Without
+# it the operator phone silently never mounts, which looks identical to the
+# feature being switched off.
+RUN test -n "$VITE_OPERATOR_PHONE_URL" || { \
+      echo "VITE_OPERATOR_PHONE_URL build-arg is required (e.g. https://webrtc.crm-prionex.online)"; \
+      exit 1; \
+    }
 
 # Build the application
 RUN npm run build

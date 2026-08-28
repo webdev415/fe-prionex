@@ -1,7 +1,9 @@
 import { useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { formatDateTime } from '@/lib/localeFormat'
+import type { DebtDetail } from '@/features/clients/api/types'
 import {
   AddMarkerButton,
   CallTranscriptPanel,
@@ -12,6 +14,7 @@ import {
 import { useMarkersForCall } from '@/features/quality/hooks/useMarkers'
 import { CallPlayer, type CallPlayerHandle } from '@/pages/ClientManagement/components/CallPlayer'
 import { CreateCorrectionTaskDialog } from '../inbox/CreateCorrectionTaskDialog'
+import { LoanLink } from './LoanLink'
 
 /**
  * Inline trainer review panel (Scorecard Review Panel redesign) — the right
@@ -39,6 +42,13 @@ export interface CallReviewPanelProps {
   canEdit?: boolean
   /** Known talk time, used to position markers before the audio is fetched. */
   talkDurationSec?: number | null
+  /** The call's client — shown in the header with the loan-number link
+   *  («Навчання» п.8). Absent → the client line is simply not rendered. */
+  clientId?: number | null
+  /** Resolved client display name (falls back to `#id`). */
+  clientName?: string
+  /** The client's loans, for the header loan-number link. */
+  clientDebts?: DebtDetail[]
   /** Emits the editor's unsaved-changes state so the tab can guard row switches. */
   onDirtyChange?: (dirty: boolean) => void
 }
@@ -51,6 +61,9 @@ export function CallReviewPanel({
   scorecardId,
   canEdit = false,
   talkDurationSec,
+  clientId,
+  clientName,
+  clientDebts,
   onDirtyChange,
 }: CallReviewPanelProps) {
   const { t, i18n } = useTranslation('common')
@@ -86,6 +99,21 @@ export function CallReviewPanel({
           </p>
           {createdAt ? (
             <p className="text-[11px] text-[#6B7280]">{formatDateTime(createdAt, i18n.language)}</p>
+          ) : null}
+          {clientId != null ? (
+            <p
+              className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-[#6B7280]"
+              data-testid="review-client-line"
+            >
+              <span>{t('pages.training.dialogue.list.client', 'Client')}:</span>
+              <Link
+                to={`/dashboard/clients/${clientId}`}
+                className="font-medium text-[#204E4D] hover:underline"
+              >
+                {clientName ?? `#${clientId}`}
+              </Link>
+              <LoanLink clientId={clientId} debts={clientDebts} />
+            </p>
           ) : null}
         </div>
 

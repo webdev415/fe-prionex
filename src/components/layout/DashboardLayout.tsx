@@ -32,9 +32,14 @@ import { Icons } from '@/lib/icons'
 import { useCallStore } from '@/stores/callStore'
 import { CallDialogModal } from '@/pages/ClientManagement/components/CallDialogModal'
 import { CallRecordingModal } from '@/pages/ClientManagement/components/CallRecordingModal'
-import { useIncomingCall } from '@/features/calls/hooks/useIncomingCall'
+import {
+  useIncomingCall,
+  type UseIncomingCallOptions,
+} from '@/features/calls/hooks/useIncomingCall'
 import { useCanShowIncomingPopup } from '@/features/calls/hooks/useCanShowIncomingPopup'
-import { buildIncomingCallLoans, resolvePrimaryClient } from '@/features/calls/utils/incomingCall'
+import { useUnfiledWriteUpWarning } from '@/features/calls/hooks/useUnfiledWriteUpWarning'
+import { IncomingCallWindowContainer } from '@/features/calls/components/IncomingCallWindowContainer'
+import { MinimizedCallPill } from '@/features/calls/components/MinimizedCallPill'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -506,42 +511,41 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   // a window whose call ended is cleared solely by the bubble's own polling —
   // which needs the bubble mounted and the lookup to succeed, and leaves the
   // window suppressing the incoming popup whenever either fails.
-  const handleCallSettled = useCallback((callId: string) => {
-    useCallStore.getState().closeWindowForCall(callId)
-  }, [])
+  const handleCallSettled = useCallback<NonNullable<UseIncomingCallOptions['onCallSettled']>>(
+    (callId, settled) => {
+      useCallStore.getState().settleWindowForCall(callId, settled)
+    },
+    []
+  )
 
   // Handle incoming calls
-  const { incomingCall, dismissIncomingCall } = useIncomingCall(agentExtension, {
-    onCallSettled: handleCallSettled,
-  })
+  const { incomingCall, answeredAt, callEnded, markAnswered, dismissIncomingCall } =
+    useIncomingCall(agentExtension, {
+      onCallSettled: handleCallSettled,
+    })
 
   // One call window at a time. False until the answer is known — see the hook
   // for why the popup may not render before then.
   const canShowIncomingPopup = useCanShowIncomingPopup(incomingCall?.call_id)
 
-  // Which client the operator picked when the number is shared. Reset per call
-  // so a previous choice never leaks onto the next caller.
-  const [selectedIncomingClientId, setSelectedIncomingClientId] = useState<number | null>(null)
+  // A new call always arrives expanded, never inheriting the last one's state.
+  const [callMinimized, setCallMinimized] = useState(false)
   useEffect(() => {
-    setSelectedIncomingClientId(null)
+    setCallMinimized(false)
   }, [incomingCall?.call_id])
 
-  const primaryIncomingClient = useMemo(
-    () => resolvePrimaryClient(incomingCall, selectedIncomingClientId),
-    [incomingCall, selectedIncomingClientId]
-  )
-  const incomingCallLoans = useMemo(
-    () => buildIncomingCallLoans(incomingCall, selectedIncomingClientId),
-    [incomingCall, selectedIncomingClientId]
-  )
+  const reportUnfiledWriteUp = useUnfiledWriteUpWarning(incomingCall?.call_id)
 
-  const handleSearchIncomingByPhone = useCallback(() => {
-    if (!incomingCall) return
-    // Mirrors the header search: the client list reads these off the store.
-    useSearchStore.getState().setSearchType('phone')
-    useSearchStore.getState().setSearchQuery(incomingCall.customer_phone)
-    navigate('/dashboard')
-  }, [incomingCall, navigate])
+  // Last in the header, after the user menu, per the design. Defined once
+  // because the desktop and mobile header variants render the same pill.
+  const minimizedCallPill = incomingCall && callMinimized && (
+    <MinimizedCallPill
+      phoneNumber={incomingCall.customer_phone}
+      clientName={incomingCall.clients?.length === 1 ? incomingCall.client_name : null}
+      answeredAt={answeredAt}
+      onRestore={() => setCallMinimized(false)}
+    />
+  )
 
   const handleLogoutClick = useCallback(() => {
     setShowLogoutModal(true)
@@ -1248,6 +1252,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 <ThemeModeToggle />
                 <AiAssistantHeaderButton />
                 <UserProfile onLogoutClick={handleLogoutClick} />
+                {minimizedCallPill}
               </div>
 
               <div className="flex shrink-0 items-center gap-1.5 self-center sm:gap-2 lg:hidden">
@@ -1257,6 +1262,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 <ThemeModeToggle />
                 <AiAssistantHeaderButton />
                 <MobileHeaderMenu onLogoutClick={handleLogoutClick} />
+                {minimizedCallPill}
               </div>
             </header>
           )}
@@ -1304,27 +1310,20 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             runs the dock as its only CRM surface opts out — see
             `shouldSuppressIncomingCallPopup`. */}
         {incomingCall && canShowIncomingPopup && !suppressIncomingCallPopup && (
-          <CallDialogModal
+          <IncomingCallWindowContainer
             // A queue can replace one ringing call with another without the
-            // popup ever unmounting, and the modal resets its timer and state
-            // on `open`, not on the call. Without a per-call identity the
-            // second call inherits the first's "Ringing MM:SS" and, if the
-            // first had already ended, its auto-close countdown.
+            // window ever unmounting; a per-call identity keeps the second
+            // call from inheriting the first one's timer and form state.
             key={incomingCall.call_id}
-            open={true}
-            onClose={dismissIncomingCall}
-            initialState="incoming"
-            clientId={incomingCall.client_id ?? null}
-            clientName={incomingCall.client_name || 'Unknown Caller'}
-            phoneNumber={incomingCall.customer_phone}
-            callId={incomingCall.call_id}
-            loans={incomingCallLoans}
-            incomingContext={primaryIncomingClient}
-            incomingClients={incomingCall.clients ?? []}
-            selectedIncomingClientId={selectedIncomingClientId}
-            onSelectIncomingClient={setSelectedIncomingClientId}
-            onSearchByPhone={handleSearchIncomingByPhone}
-            onReject={dismissIncomingCall}
+            ended={callEnded}
+            incomingCall={incomingCall}
+            answeredAt={answeredAt}
+            onAnswered={markAnswered}
+            agentExtension={agentExtension}
+            minimized={callMinimized}
+            onMinimize={() => setCallMinimized(true)}
+            onUnsavedChange={reportUnfiledWriteUp}
+            onDismiss={dismissIncomingCall}
           />
         )}
       </div>

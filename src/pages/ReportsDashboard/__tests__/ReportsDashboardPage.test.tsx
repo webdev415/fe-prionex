@@ -53,6 +53,16 @@ vi.mock('@/features/searcherFollowup', () => ({
   SearcherFollowupFeedTab: () => <div data-testid="searcher-followup-feed-tab" />,
 }))
 
+// …and for the inbound follow-up feed (features/inboundFollowup).
+vi.mock('@/features/inboundFollowup', () => ({
+  InboundFollowupFeedTab: () => <div data-testid="inbound-followup-feed-tab" />,
+}))
+
+// …and for the contact-tag feed (features/contactTag).
+vi.mock('@/features/contactTag', () => ({
+  ContactTagFeedTab: () => <div data-testid="contact-tag-feed-tab" />,
+}))
+
 // …and for the communication-gap feed (features/communicationGap).
 vi.mock('@/features/communicationGap', () => ({
   CommunicationGapFeedTab: () => <div data-testid="communication-gap-feed-tab" />,
@@ -132,6 +142,9 @@ const lowVerificationTab = () =>
   screen.getByRole('tab', { name: 'pages.reports.tabs.low-verification' })
 const searcherFollowupTab = () =>
   screen.getByRole('tab', { name: 'pages.reports.tabs.searcher-followup' })
+const inboundFollowupTab = () =>
+  screen.getByRole('tab', { name: 'pages.reports.tabs.inbound-followup' })
+const contactTagTab = () => screen.getByRole('tab', { name: 'pages.reports.tabs.contact-tag' })
 const communicationGapTab = () =>
   screen.getByRole('tab', { name: 'pages.reports.tabs.communication-gap' })
 const operatorPromisesTab = () =>
@@ -160,6 +173,8 @@ describe('ReportsDashboardPage (tab host)', () => {
     expect(screen.queryByTestId('third-party-verification-tab')).not.toBeInTheDocument()
     expect(screen.queryByTestId('low-verification-feed-tab')).not.toBeInTheDocument()
     expect(screen.queryByTestId('searcher-followup-feed-tab')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('inbound-followup-feed-tab')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('contact-tag-feed-tab')).not.toBeInTheDocument()
     expect(screen.queryByTestId('communication-gap-feed-tab')).not.toBeInTheDocument()
     expect(screen.queryByTestId('operator-promises-tab')).not.toBeInTheDocument()
     expect(dashboardTab()).toHaveAttribute('aria-selected', 'true')
@@ -279,11 +294,116 @@ describe('ReportsDashboardPage (tab host)', () => {
     expect(search()).toContain('sps=100')
   })
 
+  it('renders the inbound follow-up feed panel for ?tab=inbound-followup', () => {
+    renderPage(['/reports?tab=inbound-followup'])
+
+    expect(screen.getByTestId('inbound-followup-feed-tab')).toBeInTheDocument()
+    // Its semantic twin sits right next to it in the strip — the two must not
+    // be confusable at the routing level.
+    expect(screen.queryByTestId('searcher-followup-feed-tab')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('agent-performance-table')).not.toBeInTheDocument()
+    expect(inboundFollowupTab()).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'reports-panel-inbound-followup')
+  })
+
+  it('keeps the inbound follow-up filters when switching tabs', async () => {
+    renderPage(['/reports?tab=inbound-followup&nf=2026-08-01&nt=2026-08-07&npg=2&nps=100'])
+    expect(screen.getByTestId('inbound-followup-feed-tab')).toBeInTheDocument()
+
+    await userEvent.click(dashboardTab())
+
+    // Same documented contract as the other report tabs: the filters survive a
+    // round-trip through the dashboard, and no key set collides with another
+    // tab's (`nf/nt/npg/nps` vs the searcher's `if/it/spg/sps` vs
+    // `pf/pt/mv/pg/ps` vs `sf/st/cf/ct` vs `from/to/dept`).
+    expect(screen.getByTestId('agent-performance-table')).toBeInTheDocument()
+    expect(search()).not.toContain('tab=')
+    expect(search()).toContain('nf=2026-08-01')
+    expect(search()).toContain('nt=2026-08-07')
+    expect(search()).toContain('npg=2')
+    expect(search()).toContain('nps=100')
+  })
+
+  it('keeps the two follow-up feeds’ windows apart in one URL', () => {
+    // Both tabs park a date pair and a page window in the SAME query string,
+    // and their shapes are identical — the registry is what keeps them from
+    // transplanting into each other. Opening one with both sets present must
+    // mount only that one; the sibling's keys are inert here.
+    renderPage([
+      '/reports?tab=inbound-followup&if=2026-01-01&it=2026-01-31&spg=3&nf=2026-08-01&nt=2026-08-07',
+    ])
+
+    expect(screen.getByTestId('inbound-followup-feed-tab')).toBeInTheDocument()
+    expect(screen.queryByTestId('searcher-followup-feed-tab')).not.toBeInTheDocument()
+    expect(search()).toContain('if=2026-01-01')
+    expect(search()).toContain('nf=2026-08-01')
+  })
+
+  it('renders the contact-tag feed panel for ?tab=contact-tag', () => {
+    renderPage(['/reports?tab=contact-tag'])
+
+    expect(screen.getByTestId('contact-tag-feed-tab')).toBeInTheDocument()
+    expect(screen.queryByTestId('inbound-followup-feed-tab')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('agent-performance-table')).not.toBeInTheDocument()
+    expect(contactTagTab()).toHaveAttribute('aria-selected', 'true')
+    // The panel is labelled by the active tab, so the pairing must follow it
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'reports-panel-contact-tag')
+  })
+
+  it('keeps the contact-tag filters when switching tabs', async () => {
+    renderPage([
+      '/reports?tab=contact-tag&kd=2026-08-26&kf=2026-01-01&kt=2026-06-30&kg=kontakt&kpg=2&kps=100',
+    ])
+    expect(screen.getByTestId('contact-tag-feed-tab')).toBeInTheDocument()
+
+    await userEvent.click(dashboardTab())
+
+    // Same documented contract as the other report tabs: the filters survive a
+    // round-trip through the dashboard, and no key set collides with another
+    // tab's (`kd/kf/kt/kg/kpg/kps` vs `nf/nt/npg/nps` vs `if/it/spg/sps` vs
+    // `pf/pt/mv/pg/ps` vs `sf/st/cf/ct` vs `from/to/dept`).
+    expect(screen.getByTestId('agent-performance-table')).toBeInTheDocument()
+    expect(search()).not.toContain('tab=')
+    expect(search()).toContain('kd=2026-08-26')
+    expect(search()).toContain('kf=2026-01-01')
+    expect(search()).toContain('kt=2026-06-30')
+    expect(search()).toContain('kg=kontakt')
+    expect(search()).toContain('kpg=2')
+    expect(search()).toContain('kps=100')
+  })
+
+  it('carries the contact-tag feed’s switched-off sale bound (?kt=) through a tab round-trip', async () => {
+    // `?kt=` present-but-empty is a REAL state of that tab (the upper bound is
+    // off, as opposed to absent, where the backend defaults it). A host that
+    // dropped empty values while rebuilding the query string would silently
+    // restore a four-month window on the way back.
+    renderPage(['/reports?tab=contact-tag&kt='])
+    expect(screen.getByTestId('contact-tag-feed-tab')).toBeInTheDocument()
+
+    await userEvent.click(dashboardTab())
+    await userEvent.click(contactTagTab())
+
+    expect(screen.getByTestId('contact-tag-feed-tab')).toBeInTheDocument()
+    expect(new URLSearchParams(search()).get('kt')).toBe('')
+  })
+
+  it('keeps the contact-tag and verification date keys apart in one URL', () => {
+    // `ct` is the verification tab's "count to" and is exactly the
+    // abbreviation a «Контакт» feed would have taken — the registry is what
+    // keeps them from transplanting into each other.
+    renderPage(['/reports?tab=contact-tag&cf=2026-01-01&ct=2026-01-31&kt=2026-06-30'])
+
+    expect(screen.getByTestId('contact-tag-feed-tab')).toBeInTheDocument()
+    expect(screen.queryByTestId('third-party-verification-tab')).not.toBeInTheDocument()
+    expect(search()).toContain('ct=2026-01-31')
+    expect(search()).toContain('kt=2026-06-30')
+  })
+
   it('renders the communication-gap feed panel for ?tab=communication-gap', () => {
     renderPage(['/reports?tab=communication-gap'])
 
     expect(screen.getByTestId('communication-gap-feed-tab')).toBeInTheDocument()
-    expect(screen.queryByTestId('searcher-followup-feed-tab')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('inbound-followup-feed-tab')).not.toBeInTheDocument()
     expect(screen.queryByTestId('agent-performance-table')).not.toBeInTheDocument()
     expect(communicationGapTab()).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'reports-panel-communication-gap')
@@ -335,7 +455,7 @@ describe('ReportsDashboardPage (tab host)', () => {
     expect(search()).toContain('opd=collection')
   })
 
-  it('offers all seven report tabs in a fixed order', () => {
+  it('offers all nine report tabs in a fixed order', () => {
     // The strip is the only place the tab set is visible at a glance; a new
     // report must be ADDED here rather than replace a sibling.
     renderPage()
@@ -346,6 +466,12 @@ describe('ReportsDashboardPage (tab host)', () => {
       'pages.reports.tabs.verification',
       'pages.reports.tabs.low-verification',
       'pages.reports.tabs.searcher-followup',
+      // The two follow-up feeds are neighbours on purpose — same source column
+      // shape, same operator workflow.
+      'pages.reports.tabs.inbound-followup',
+      // …and the tagged-client work list follows them, before the gap feed
+      // whose client/employee/debt column shape it shares.
+      'pages.reports.tabs.contact-tag',
       'pages.reports.tabs.communication-gap',
       'pages.reports.tabs.operator-promises',
     ])

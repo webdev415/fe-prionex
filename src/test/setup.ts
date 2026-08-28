@@ -1,15 +1,90 @@
 /* eslint-disable no-console */
 import '@testing-library/jest-dom'
-import { vi, beforeAll, afterAll } from 'vitest'
+import { configure } from '@testing-library/react'
+import { vi, beforeAll, beforeEach, afterAll } from 'vitest'
 import './mocks/callQaSettings'
 import './mocks/aiAssistantSettings'
 import './mocks/assistantOverview'
 import './mocks/assistantAdmin'
 
+// Testing Library's own async budget, which `testTimeout` does NOT cover:
+// every `findBy*` and bare `waitFor` gives up after 1s regardless of the 20s
+// per-test limit in vitest.config.ts. That second is the tightest deadline in
+// the suite and the one that breaks first on CI — `AiAssistantBetaPage.sidebar`
+// runs in ~840ms locally, so its mobile case (resize, render, open the drawer,
+// select, wait for the drawer to unmount, then wait for the conversation to
+// load through react-query) has nothing left to spare once the runner is under
+// load. With `pool: 'forks'`, `maxWorkers: 1` and `fileParallelism: false`
+// every file shares one core, so "slower than local" is the normal case.
+//
+// 5s keeps a hang visible well inside the 20s test timeout while removing the
+// flake. Raise the per-query timeout locally instead of this global if a single
+// test genuinely needs longer — that keeps the slow one honest about being slow.
+configure({ asyncUtilTimeout: 5000 })
+
 // Set default API base URL for tests (deployed backend) if not already set
 // This ensures tests use the deployed backend URL
 // Note: import.meta.env is read-only, so we use vi.stubEnv which works at test runtime
 vi.stubEnv('VITE_API_BASE_URL', 'https://api.dev.crm-prionex.online')
+
+// ── No real network from a unit test ─────────────────────────────────────────
+// The base URL above is a REAL, reachable host, so any request a test forgets
+// to mock actually leaves the machine — and the dev API answers 401. That 401
+// hits the interceptor in lib/api.ts, which calls triggerAuthExpired() and
+// wipes the auth store (user: null, isAuthenticated: false) out from under a
+// test that never logged anybody out. The visible tell is jsdom's "Not
+// implemented: navigation to another Document", from the `location.href =
+// '/login'` on the same path.
+//
+// It lands as a race, not a hard failure: whether the reply arrives before or
+// after the test's own assertions depends purely on how loaded the runner is.
+// AiAssistantBetaPage.sidebar's mobile case is where it showed up — with auth
+// cleared, handleSelectConversation closes the drawer, hits `if (userId ==
+// null) return`, and the conversation is silently never selected. Green
+// locally, red on CI, and a different subset of tests each run.
+//
+// So cut the transport. Axios goes through XMLHttpRequest under jsdom; both it
+// and fetch now fail the way an offline machine would — a network error with
+// NO response, which is exactly what keeps `error.response?.status === 401`
+// false and leaves the auth store alone. Tests that mock their API module are
+// untouched; a test that wants a response still has to say what it is.
+const failOffline = () => new Error('Network request blocked in tests')
+class BlockedXHR {
+  status = 0
+  readyState = 0
+  responseText = ''
+  onerror: ((this: unknown, ev: unknown) => unknown) | null = null
+  open() {}
+  setRequestHeader() {}
+  abort() {}
+  getAllResponseHeaders() {
+    return ''
+  }
+  addEventListener(type: string, cb: (ev: unknown) => void) {
+    if (type === 'error') this.onerror = cb
+  }
+  removeEventListener() {}
+  send() {
+    setTimeout(() => this.onerror?.call(this, new Event('error')), 0)
+  }
+}
+// Installed by ASSIGNMENT, not vi.stubGlobal, and re-applied before every test.
+// Ten files (most of them AiAssistant ones) call vi.unstubAllGlobals() in their
+// teardown, which restores whatever vitest recorded when the stub was created —
+// the REAL XMLHttpRequest, if the block were a stub. That switched the block off
+// for the rest of those files, which is precisely where it is needed. A plain
+// assignment is not vitest's to revert, and the beforeEach covers a file that
+// reaches for the global itself.
+//
+// The hook runs before any hook the test file registers, so a file that wants
+// its own fetch (SSE, TTS, transcribe sockets) still overrides this and wins.
+const blockedFetch = () => Promise.reject(failOffline())
+const installNetworkBlock = () => {
+  globalThis.XMLHttpRequest = BlockedXHR as unknown as typeof XMLHttpRequest
+  globalThis.fetch = blockedFetch as unknown as typeof fetch
+}
+installNetworkBlock()
+beforeEach(installNetworkBlock)
 
 // Suppress console warnings in tests
 const originalError = console.error
@@ -110,6 +185,12 @@ vi.mock('react-i18next', () => ({
       // just the key it rides on.
       if (key === 'pages.reports.operatorPromises.totals.generatedAt') {
         return `${key}:${String(vars?.value)}`
+      }
+      // Same shape, same reason: the contact-tag feed's hint states the sale-date
+      // upper bound the BACKEND applied when the tab sent none — the whole point
+      // of the line is the date, so it has to be assertable and not just the key.
+      if (key === 'pages.reports.contactTag.sellToDefaultHint') {
+        return `${key}:${String(vars?.date)}`
       }
       // Same shape, same reason: the dialogs-list loan cell collapses extra
       // active loans into a "+N more" badge — the N is the whole point of the

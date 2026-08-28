@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Pagination } from '@/components/ui/Pagination'
 import { useConfirm } from '@/components/ui/useConfirm'
@@ -12,10 +11,12 @@ import { PERMISSIONS } from '@/constants/permissions'
 import { useCallMonitoring } from '@/features/training'
 import type { CallMonitoringItem, ScorecardCategory, TelephonyType } from '@/features/training'
 import { useMyOperators, useOperatorTrainers } from '@/features/quality/coaching/hooks'
+import { useScorecardAssignedOnly } from '@/features/quality/hooks/useCallQaSettings'
 import { useClientDebts, useClientNames } from '@/features/clients/hooks/useClients'
 import type { DebtDetail } from '@/features/clients/api/types'
 import { useScopedUserIds } from '../../lib/scope'
 import { EmployeeMultiSelect } from './EmployeeMultiSelect'
+import { LoanLink } from './LoanLink'
 import { DepartmentMultiSelect } from './DepartmentMultiSelect'
 import { EmployeeAvatar } from './EmployeeAvatar'
 import { CallReviewPanel } from './CallReviewPanel'
@@ -75,38 +76,6 @@ function categoryOf(call: CallMonitoringItem): ScorecardCategory {
   return call.has_scorecard ? (call.scorecard_category ?? 'unscored') : 'unscored'
 }
 
-// Same semantics as the client card's «Кредити» tab (LoansCardList):
-// open/active = any status but 'closed'.
-function isActiveLoan(debt: DebtDetail): boolean {
-  return debt.status !== 'closed'
-}
-function loanRecency(debt: DebtDetail): number {
-  const iso = debt.credit_issued_date ?? debt.debt_start_date ?? debt.purchase_date
-  const ts = iso ? Date.parse(iso) : Number.NaN
-  return Number.isNaN(ts) ? 0 : ts
-}
-/**
- * The loan the row shows: the freshest ACTIVE loan (with a "+N more" badge
- * when there are several active ones), falling back to the freshest loan of
- * any status when none is active. There is no per-call loan link in the data
- * (the call record carries only the client), so this is a display heuristic —
- * the cell links to the client card where every loan is listed.
- */
-function pickDisplayLoan(
-  debts: DebtDetail[] | undefined
-): { loan: DebtDetail; moreActive: number } | null {
-  if (!debts || debts.length === 0) return null
-  const active = debts.filter(isActiveLoan)
-  const pool = active.length > 0 ? active : debts
-  const loan = pool.reduce((best, d) => {
-    const a = loanRecency(d)
-    const b = loanRecency(best)
-    if (a !== b) return a > b ? d : best
-    return d.id > best.id ? d : best
-  })
-  return { loan, moreActive: Math.max(0, active.length - 1) }
-}
-
 interface Selected {
   callId: string
   operatorId: number
@@ -114,6 +83,7 @@ interface Selected {
   createdAt?: string
   operatorName?: string
   talkDurationSec?: number | null
+  clientId: number | null
 }
 
 /**
@@ -159,6 +129,10 @@ export function DialogsListTab() {
   const myOperatorsQuery = useMyOperators()
   const myOperatorIds = useMemo(() => myOperatorsQuery.data ?? [], [myOperatorsQuery.data])
   const { data: operatorTrainers = [] } = useOperatorTrainers()
+  // «Оцінювати лише закріплених»: while the admin switch is on (or the backend
+  // predates it), editing is limited to the trainer's own operators; off means
+  // any trainer with the scorecard permission can score any project operator.
+  const scorecardAssignedOnly = useScorecardAssignedOnly()
 
   // Nothing to filter by until the trainer has operators under their control;
   // without this the button would be a silent no-op.
@@ -346,6 +320,7 @@ export function DialogsListTab() {
       createdAt: call.initiated_at,
       operatorName: operatorByExtension.get(call.agent_extension)?.name,
       talkDurationSec: call.talk_duration,
+      clientId: call.client_id ?? null,
     })
   }
 
@@ -566,7 +541,13 @@ export function DialogsListTab() {
           createdAt={selected?.createdAt}
           operatorName={selected?.operatorName}
           talkDurationSec={selected?.talkDurationSec}
-          canEdit={selected != null && myOperatorIds.includes(selected.operatorId)}
+          clientId={selected?.clientId}
+          clientName={selected?.clientId != null ? clientNames.get(selected.clientId) : undefined}
+          clientDebts={selected?.clientId != null ? clientDebts.get(selected.clientId) : undefined}
+          canEdit={
+            selected != null &&
+            (!scorecardAssignedOnly || myOperatorIds.includes(selected.operatorId))
+          }
           onDirtyChange={setReviewDirty}
         />
       </div>
@@ -586,37 +567,9 @@ function EmptyBox({ children, tone }: { children: ReactNode; tone?: 'error' }) {
   )
 }
 
-/**
- * Loan-number cell: the freshest active loan as a link to the client card
- * (a real <Link>, so ctrl/middle-click opens a new tab), plus a "+N more"
- * badge when other active loans exist. stopPropagation keeps a plain click
- * from also selecting the row for review.
- */
+/** Loan-number cell — see {@link LoanLink} (shared with the review panel). */
 function LoanCell({ clientId, debts }: { clientId: number | null; debts?: DebtDetail[] }) {
-  const { t } = useTranslation('common')
-  const picked = clientId != null ? pickDisplayLoan(debts) : null
-  if (clientId == null || !picked) return <>—</>
-  return (
-    <span className="flex items-center gap-1.5 whitespace-nowrap">
-      <Link
-        to={`/dashboard/clients/${clientId}`}
-        onClick={(e) => e.stopPropagation()}
-        className="text-primary-600 hover:underline"
-      >
-        {picked.loan.contract_number}
-      </Link>
-      {picked.moreActive > 0 ? (
-        <span
-          data-testid="more-loans-badge"
-          className="rounded-full bg-[#F3F4F6] px-1.5 py-0.5 text-[10px] font-medium text-[#4B5563]"
-        >
-          {t('pages.training.dialogue.list.moreLoans', '+{{count}} more', {
-            count: picked.moreActive,
-          })}
-        </span>
-      ) : null}
-    </span>
-  )
+  return <LoanLink clientId={clientId} debts={debts} fallback="—" />
 }
 
 function DialogsTable({

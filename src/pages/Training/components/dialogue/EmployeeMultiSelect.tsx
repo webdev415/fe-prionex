@@ -42,6 +42,118 @@ function initialsFor(name: string): string {
   return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
 }
 
+/** The minimal operator shape the search list needs — dialogs pass anything
+ *  from the full `OperatorUser` down to `{ id, full_name }` literals. */
+export interface EmployeeOption {
+  id: number
+  full_name: string | null
+}
+
+export interface EmployeeSearchListProps {
+  operators: EmployeeOption[]
+  /** Checked ids — rows render a checkbox when provided (multi-select mode).
+   *  Omit for single-pick mode (plain rows, `onSelect` picks). */
+  selectedIds?: number[]
+  /** Row click: toggles the id in multi mode, picks it in single mode. */
+  onSelect: (id: number) => void
+  /** Operators to hide entirely (e.g. already taken by another slot). */
+  excludeIds?: number[]
+  /** Height cap for the scrolling list (defaults to `max-h-[240px]`). */
+  listClassName?: string
+}
+
+/**
+ * The one searchable employee roster («Навчання» п.1/2/5): a name filter on
+ * top of a checkbox (multi) or click-to-pick (single) list. Reused by the
+ * EmployeeMultiSelect dropdown below and inline inside the assign dialogs —
+ * build new employee pickers on top of this instead of another search impl.
+ */
+export function EmployeeSearchList({
+  operators,
+  selectedIds,
+  onSelect,
+  excludeIds,
+  listClassName,
+}: EmployeeSearchListProps) {
+  const { t } = useTranslation('common')
+  const [query, setQuery] = useState('')
+
+  const rows = useMemo(() => {
+    const excluded = excludeIds && excludeIds.length > 0 ? new Set(excludeIds) : null
+    const q = query.trim().toLowerCase()
+    return operators
+      .map((op, i) => {
+        const name = op.full_name ?? `#${op.id}`
+        return {
+          id: op.id,
+          name,
+          initials: initialsFor(name),
+          avatarColor: AVATAR_PALETTE[i % AVATAR_PALETTE.length],
+        }
+      })
+      .filter((row) => !excluded?.has(row.id))
+      .filter((row) => !q || row.name.toLowerCase().includes(q))
+  }, [operators, excludeIds, query])
+
+  return (
+    <div className="flex min-h-0 flex-col">
+      <div className="relative border-b border-[#EBECE8] p-2">
+        <Icons.Search
+          size={14}
+          className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-[#9CA3AF]"
+        />
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={t('pages.training.dialogue.employee.searchPlaceholder', 'Search by name…')}
+          aria-label={t('pages.training.dialogue.employee.searchPlaceholder', 'Search by name…')}
+          className="h-8 w-full rounded-md border border-[#EBECE8] bg-white pr-2 pl-8 text-xs text-[#05040D] placeholder:text-[#9CA3AF] focus:outline-none"
+        />
+      </div>
+      {rows.length === 0 ? (
+        <p className="px-3 py-3 text-center text-[11px] text-[#9CA3AF]">
+          {t('pages.training.dialogue.employee.noMatches', 'No employees found')}
+        </p>
+      ) : (
+        <ul className={`overflow-y-auto py-1 ${listClassName ?? 'max-h-[240px]'}`}>
+          {rows.map((row) => {
+            const checked = selectedIds?.includes(row.id) ?? false
+            return (
+              <li key={row.id}>
+                <button
+                  type="button"
+                  onClick={() => onSelect(row.id)}
+                  className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-[#F7F7F7]"
+                >
+                  {selectedIds ? (
+                    <span
+                      className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border ${
+                        checked
+                          ? 'border-[#204E4D] bg-[#204E4D] text-white'
+                          : 'border-[#DFDFDF] bg-white'
+                      }`}
+                    >
+                      {checked ? <Icons.Checkmark size={10} className="text-white" /> : null}
+                    </span>
+                  ) : null}
+                  <div
+                    className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[9px] font-semibold text-[#05040D]"
+                    style={{ backgroundColor: row.avatarColor }}
+                  >
+                    {row.initials}
+                  </div>
+                  <span className="truncate text-xs text-[#05040D]">{row.name}</span>
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </div>
+  )
+}
+
 export function EmployeeMultiSelect({
   value,
   onChange,
@@ -171,37 +283,7 @@ export function EmployeeMultiSelect({
             </button>
           ) : null}
 
-          <ul className="max-h-[240px] overflow-y-auto py-1">
-            {candidates.map((row) => {
-              const checked = value.includes(row.operatorId)
-              return (
-                <li key={row.operatorId}>
-                  <button
-                    type="button"
-                    onClick={() => toggle(row.operatorId)}
-                    className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-[#F7F7F7]"
-                  >
-                    <span
-                      className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border ${
-                        checked
-                          ? 'border-[#204E4D] bg-[#204E4D] text-white'
-                          : 'border-[#DFDFDF] bg-white'
-                      }`}
-                    >
-                      {checked ? <Icons.Checkmark size={10} className="text-white" /> : null}
-                    </span>
-                    <div
-                      className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[9px] font-semibold text-[#05040D]"
-                      style={{ backgroundColor: row.avatarColor }}
-                    >
-                      {row.initials}
-                    </div>
-                    <span className="truncate text-xs text-[#05040D]">{row.name}</span>
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
+          <EmployeeSearchList operators={operators} selectedIds={value} onSelect={toggle} />
         </div>
       ) : null}
     </div>

@@ -146,25 +146,24 @@ export function InteractionsSubTab() {
   const { data: operators = [] } = useOperators(projectIdNum)
   const { data: resultOptions = [] } = useInteractionResults()
 
-  const operatorIdByLabel = useMemo(() => {
-    const m = new Map<string, number>()
-    operators.forEach((op) => m.set(op.full_name, op.id))
-    return m
-  }, [operators])
-
   const filters = useMemo<InteractionMonitoringFilters>(() => {
-    const userId = operatorFilter !== 'all' ? operatorIdByLabel.get(operatorFilter) : undefined
+    // The select carries the operator id itself. Resolving it from
+    // `full_name` through a Map — as this did — fails silently in two ways: an
+    // unresolvable label yields `undefined`, which the BE reads as "every
+    // operator" rather than as an empty result, and two employees sharing a
+    // name collapse onto whichever id the Map kept last.
+    const userId = operatorFilter !== 'all' ? Number(operatorFilter) : undefined
     const resultId = statusFilter !== 'all' ? Number(statusFilter) : undefined
     return {
       period: PERIOD_TO_BACKEND[period],
-      user_ids: userId != null ? [userId] : undefined,
+      user_ids: Number.isFinite(userId) ? [userId as number] : undefined,
       result_ids: resultId != null && Number.isFinite(resultId) ? [resultId] : undefined,
       sort_by: 'date',
       sort_dir: 'desc',
       page,
       page_size: pageSize,
     }
-  }, [period, operatorFilter, statusFilter, operatorIdByLabel, page, pageSize])
+  }, [period, operatorFilter, statusFilter, page, pageSize])
 
   const interactionsQuery = useInteractionMonitoring(filters, projectIdNum != null)
 
@@ -232,7 +231,7 @@ export function InteractionsSubTab() {
               {t('pages.training.interactions.filters.allOperators', 'All operators')}
             </option>
             {operators.map((op) => (
-              <option key={op.id} value={op.full_name}>
+              <option key={op.id} value={String(op.id)}>
                 {op.full_name}
               </option>
             ))}

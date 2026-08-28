@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createMemoryItem,
   deleteMemoryItem,
+  getAssistantCapabilities,
   getConversation,
   getConversations,
   getMemoryItems,
@@ -14,11 +15,15 @@ import {
   type AssistantConversationsFilters,
   type AssistantConversationSummary,
   type AssistantFeedbackRequest,
+  type AssistantCapabilities,
+  type AssistantExpertCapability,
   type AssistantMemoryList,
   type AssistantMarkCitationRequest,
   type CreateAssistantMemoryRequest,
   type SendChatMessageCallbacks,
 } from './api'
+import { EXPERT_CAPABILITY_OFF } from './api'
+import { useAuthStore } from '@/stores/authStore'
 
 export const aiAssistantKeys = {
   all: ['aiAssistant'] as const,
@@ -29,6 +34,16 @@ export const aiAssistantKeys = {
   conversation: (id: number) => [...aiAssistantKeys.all, 'conversation', id] as const,
   /** Персональная память сотрудника («Персоналізація»). */
   memory: ['aiAssistant', 'memory'] as const,
+  /**
+   * Что доступно сотруднику в окне ассистента (экспертный режим и его бюджет).
+   *
+   * Ключ намеренно ВНЕ префикса `aiAssistant`: каждый ход инвалидирует
+   * {@link aiAssistantKeys.all}, чтобы обновить списки диалогов, и под общим
+   * корнем capabilities перезапрашивались бы после каждого сообщения любого
+   * оператора — при том что меняются они разве что от экспертного хода
+   * (который инвалидирует их явно).
+   */
+  capabilities: ['aiAssistantCapabilities'] as const,
 }
 
 /**
@@ -52,6 +67,37 @@ export function useSendAssistantMessage() {
       queryClient.invalidateQueries({ queryKey: aiAssistantKeys.all })
     },
   })
+}
+
+/**
+ * Что доступно сотруднику в окне ассистента (сейчас — экспертный режим).
+ *
+ * Запрос не ретраится и никогда не «падает» наружу: бэкенд без этого маршрута
+ * (404), отказ по роли (403) или сеть означают одно — экспертного пункта в меню
+ * нет, остальное окно работает как прежде. `staleTime` минута: дневной остаток
+ * бюджета не обязан быть посекундно точным, а точку после хода двигает
+ * инвалидация в {@link useSendAssistantMessage}.
+ */
+export function useAssistantCapabilities() {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+
+  return useQuery<AssistantCapabilities>({
+    queryKey: aiAssistantKeys.capabilities,
+    queryFn: getAssistantCapabilities,
+    enabled: isAuthenticated,
+    retry: false,
+    staleTime: 60_000,
+  })
+}
+
+/**
+ * Экспертный режим текущего сотрудника — всегда конкретная форма, без
+ * `undefined` на стороне UI: пока идёт запрос и при любом отказе это
+ * {@link EXPERT_CAPABILITY_OFF}, то есть «пункта нет».
+ */
+export function useExpertCapability(): AssistantExpertCapability {
+  const { data } = useAssistantCapabilities()
+  return data?.expert ?? EXPERT_CAPABILITY_OFF
 }
 
 export function useAssistantConversations(

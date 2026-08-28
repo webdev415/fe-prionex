@@ -845,6 +845,19 @@ describe('SearcherFollowupFeedTab', () => {
     expect(await screen.findByText('date_start must not be after date_end')).toBeInTheDocument()
   })
 
+  it('falls back to the localized title for a 400 whose body never arrived', async () => {
+    // A proxy that strips the body would otherwise leave axios' own
+    // untranslated "Request failed with status code 400" on screen.
+    mockGetFeed.mockRejectedValue(makeHttpError(400))
+
+    renderTab()
+
+    expect(
+      await screen.findByText('pages.reports.searcherFollowup.error.title')
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/Request failed with status code/)).not.toBeInTheDocument()
+  })
+
   it('shows a permissions message without a retry button on 403', async () => {
     mockGetFeed.mockRejectedValue(makeHttpError(403))
 
@@ -870,6 +883,45 @@ describe('SearcherFollowupFeedTab', () => {
       ).toBeInTheDocument()
     }
   )
+
+  it.each([
+    ['the auth-service directory is down', 'Employee directory (auth-service) is unavailable'],
+    ['the call-service is down', 'Call history (call-service) is unavailable'],
+    ['the call-service is throttling', 'Call history lookup was throttled by the call-service'],
+    [
+      'the fan-out deadline expired',
+      'Internal lookups (employee directory and call history) timed out',
+    ],
+  ])(
+    'keeps the localized message but names the failing dependency when %s',
+    async (_case, detail) => {
+      // The backend words its FOUR 503s distinctly because the remedies differ
+      // (an outage, a second outage, throttling, a timeout). The operator reads
+      // their own language; the server's sentence sits under it so whoever is
+      // asked "what does it say?" can tell the four apart.
+      mockGetFeed.mockRejectedValue(makeHttpError(503, { detail }))
+
+      renderTab()
+
+      expect(
+        await screen.findByText('pages.reports.searcherFollowup.unavailable')
+      ).toBeInTheDocument()
+      expect(screen.getByText(detail)).toBeInTheDocument()
+    }
+  )
+
+  it('shows no detail line for a transient failure that carries no body', async () => {
+    // A 502 from a proxy or a dropped connection has nothing to say — the
+    // localized sentence must stand alone rather than gain axios' own text.
+    mockGetFeed.mockRejectedValue(makeHttpError(502))
+
+    renderTab()
+
+    expect(
+      await screen.findByText('pages.reports.searcherFollowup.unavailable')
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/Request failed with status code/)).not.toBeInTheDocument()
+  })
 
   it('treats network failures as transient unavailability too', async () => {
     mockGetFeed.mockRejectedValue(makeNetworkError('ERR_NETWORK'))

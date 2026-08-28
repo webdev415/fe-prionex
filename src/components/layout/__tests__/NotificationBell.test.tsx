@@ -84,6 +84,46 @@ const reminderItem = makeItem({
   created_at: HOUR_AGO,
 })
 
+// Group training (KAN-752), shaped like quality-service's
+// ``training_event_data``: the topic is metadata.title (n.title is the
+// generic headline the consumer renders), and meeting_url is optional.
+const groupTrainingItem = makeItem({
+  id: 'n-group-training',
+  type: 'training_scheduled',
+  title: 'Вас призначено на груповий тренінг',
+  body: '«Робота із запереченнями» — 26.08.2026 17:00\nПосилання на зустріч: https://meet.example.com/abc',
+  metadata: {
+    group_training_id: 5,
+    trainer_id: 7,
+    title: 'Робота із запереченнями',
+    scheduled_at: '2026-08-26T14:00:00+00:00',
+    duration_minutes: 90,
+    meeting_url: 'https://meet.example.com/abc',
+    location: null,
+    participant_ids: [12],
+  },
+  created_at: HOUR_AGO,
+})
+
+// Trainer-facing post-session nudge. No dedicated card — the backend
+// ships a ready-to-read title/body, so it belongs in «Інше».
+// Deliberately ALREADY READ, so it is absent from the unread by_type
+// aggregate below: the dynamic unknown-type fallback only discovers
+// types that are currently unread, so this item is reachable only if
+// the type is in KNOWN_MISC_TYPES. Were it unread, the fallback alone
+// would render it and the test would pass without the frontend knowing
+// the type at all.
+const feedbackDueItem = makeItem({
+  id: 'n-feedback-due',
+  type: 'one_on_one_feedback_due',
+  title: "Залиште зворотний зв'язок за зустріччю 1-на-1",
+  body: 'Зустріч 1-на-1 з оператором Іван Петров завершилась',
+  metadata: { one_on_one_id: 3, trainer_id: 7, operator_id: 12 },
+  read: true,
+  read_at: HOUR_AGO,
+  created_at: HOUR_AGO,
+})
+
 const unknownTypeItem = makeItem({
   id: 'n-future',
   type: 'brand_new_type' as NotificationItem['type'],
@@ -120,12 +160,13 @@ let unread: UnreadCountResponse
 function installApiMocks() {
   allRead = false
   unread = {
-    total: 11577,
+    total: 11578,
     by_type: {
       ta_chain_created: 11572,
       task_overdue: 2,
       one_on_one_scheduled: 1,
       one_on_one_reminder: 1,
+      training_scheduled: 1,
       brand_new_type: 1,
     },
   }
@@ -134,9 +175,15 @@ function installApiMocks() {
 
   mockGetNotifications.mockImplementation(async (params) => {
     const types = Array.isArray(params.type) ? params.type : params.type ? [params.type] : []
-    let all = [taskItem, oneOnOneItem, reminderItem, unknownTypeItem, ...noiseItems].map((n) =>
-      allRead ? { ...n, read: true, read_at: new Date().toISOString() } : n
-    )
+    let all = [
+      taskItem,
+      oneOnOneItem,
+      reminderItem,
+      groupTrainingItem,
+      feedbackDueItem,
+      unknownTypeItem,
+      ...noiseItems,
+    ].map((n) => (allRead ? { ...n, read: true, read_at: new Date().toISOString() } : n))
     if (params.read !== undefined) {
       all = all.filter((n) => n.read === params.read)
     }
@@ -216,6 +263,105 @@ describe('NotificationBell — visibility of all types', () => {
     expect(trainingCall![0].type).toContain('one_on_one_reminder')
   })
 
+  it('renders a group training in the training tab with topic, time and meeting link', async () => {
+    const user = userEvent.setup()
+    renderBell()
+    await openBell(user)
+
+    await user.click(await screen.findByText('notificationBell.tabs.training'))
+
+    expect(await screen.findByText('Вас призначено на груповий тренінг')).toBeInTheDocument()
+    // The topic rides in metadata.title — n.title is only the headline.
+    expect(screen.getByText('«Робота із запереченнями»')).toBeInTheDocument()
+    // Time comes from metadata too, formatted rather than raw ISO.
+    expect(screen.getByText(/26-08-2026/)).toBeInTheDocument()
+    expect(
+      screen.getByText('notificationBell.trainingTypes.training_scheduled')
+    ).toBeInTheDocument()
+    // A real anchor, not text inside the card button: the operator can
+    // open the meeting without the click being eaten by mark-as-read.
+    expect(
+      screen.getByRole('link', { name: 'notificationBell.training.joinMeeting' })
+    ).toHaveAttribute('href', 'https://meet.example.com/abc')
+
+    // Both group-training types must be part of the tab's scoped fetch.
+    const trainingCall = mockGetNotifications.mock.calls.find(([params]) => {
+      const types = Array.isArray(params.type) ? params.type : []
+      return types.includes('training_scheduled')
+    })
+    expect(trainingCall).toBeDefined()
+    expect(trainingCall![0].type).toContain('training_reminder')
+  })
+
+  it('drops a non-http meeting_url instead of rendering it as a link', async () => {
+    // meeting_url is free text typed by a trainer, so a `javascript:` href
+    // would execute on click. The card must still render everything else.
+    // Reuse the real fixture pipeline (ordering, pagination, type scoping)
+    // and rewrite only the one field under test.
+    const base = mockGetNotifications.getMockImplementation()!
+    mockGetNotifications.mockImplementation(async (params) => {
+      const page = await base(params)
+      return {
+        ...page,
+        items: page.items.map((n) =>
+          n.type === 'training_scheduled'
+            ? { ...n, metadata: { ...n.metadata, meeting_url: 'javascript:alert(1)' } }
+            : n
+        ),
+      }
+    })
+
+    const user = userEvent.setup()
+    renderBell()
+    await openBell(user)
+    await user.click(await screen.findByText('notificationBell.tabs.training'))
+
+    expect(await screen.findByText('«Робота із запереченнями»')).toBeInTheDocument()
+    expect(
+      screen.queryByRole('link', { name: 'notificationBell.training.joinMeeting' })
+    ).not.toBeInTheDocument()
+  })
+
+  it('renders one_on_one_feedback_due in the "other" tab', async () => {
+    const user = userEvent.setup()
+    renderBell()
+    await openBell(user)
+
+    await user.click(await screen.findByText('notificationBell.tabs.other'))
+
+    // Already read, so it is not in the unread by_type aggregate: the
+    // type reaches the fetch from KNOWN_MISC_TYPES, not from the dynamic
+    // unknown-type fallback.
+    expect(
+      await screen.findByText("Залиште зворотний зв'язок за зустріччю 1-на-1")
+    ).toBeInTheDocument()
+    await waitFor(() => {
+      const calledWithFeedbackDue = mockGetNotifications.mock.calls.some(([params]) => {
+        const types = Array.isArray(params.type) ? params.type : []
+        return types.includes('one_on_one_feedback_due')
+      })
+      expect(calledWithFeedbackDue).toBe(true)
+    })
+  })
+
+  it('the read tab fetch is scoped to include the new training types', async () => {
+    allRead = true
+    const user = userEvent.setup()
+    renderBell()
+    await openBell(user)
+
+    await user.click(await screen.findByText('notificationBell.tabs.read'))
+
+    await waitFor(() => {
+      const readCall = mockGetNotifications.mock.calls.find(([params]) => params.read === true)
+      expect(readCall).toBeDefined()
+      const types = Array.isArray(readCall![0].type) ? readCall![0].type : []
+      expect(types).toContain('training_scheduled')
+      expect(types).toContain('training_reminder')
+      expect(types).toContain('one_on_one_feedback_due')
+    })
+  })
+
   it('renders an unknown future type generically in the "other" tab', async () => {
     const user = userEvent.setup()
     renderBell()
@@ -237,9 +383,9 @@ describe('NotificationBell — visibility of all types', () => {
   it('badge counts only visible types — ta_chain_created noise is excluded', async () => {
     renderBell()
     // 2 (task_overdue) + 1 (one_on_one_scheduled) + 1 (one_on_one_reminder)
-    // + 1 (brand_new_type) = 5; 11 572 ta_chain_created unread must NOT
-    // leak into the badge.
-    expect(await screen.findByText('5')).toBeInTheDocument()
+    // + 1 (training_scheduled) + 1 (brand_new_type) = 6; 11 572
+    // ta_chain_created unread must NOT leak into the badge.
+    expect(await screen.findByText('6')).toBeInTheDocument()
     expect(screen.queryByText('99+')).not.toBeInTheDocument()
   })
 

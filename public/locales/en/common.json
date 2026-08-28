@@ -67,6 +67,12 @@
     "contactTags": "Contact Tags"
   },
   "dialer": {
+    "phone": {
+      "offline": "Offline",
+      "connecting": "Connecting",
+      "ready": "Ready",
+      "error": "Phone error"
+    },
     "title": "Dialer",
     "comingSoon": "{{section}} — coming soon",
     "tabs": {
@@ -147,7 +153,9 @@
       "loadError": "Failed to load queues.",
       "deleteTitle": "Delete '{{name}}'?",
       "deleteMessage": "This action is irreversible. The queue will be deleted along with all settings.",
-      "deleted": "Queue deleted"
+      "deleted": "Queue deleted",
+      "notSynced": "Not synced",
+      "notSyncedHint": "This queue has no campaign on the dialer and cannot place calls. Re-save it to retry."
     },
     "queueForm": {
       "createTitle": "Add a new queue",
@@ -163,7 +171,19 @@
       "create": "Create queue",
       "save": "Save changes",
       "created": "Queue created",
-      "updated": "Queue updated"
+      "updated": "Queue updated",
+      "dialingSettings": "Dialing settings",
+      "telephonyType": "Telephony type",
+      "telephonyTypeHint": "Must match the SIM pool for this department. Cannot be changed later.",
+      "immutable": "(cannot be changed after creation)",
+      "priority": "Priority",
+      "priorityHint": "1–5. Higher wins when SIMs are scarce.",
+      "simCardLimit": "SIM card limit",
+      "simCardLimitHint": "Capped at the department's own SIM limit.",
+      "maxAttempts": "Attempts per number",
+      "maxAttemptsHint": "Total attempts, including the first. Line failures are periodic, so a retry usually lands on another SIM.",
+      "retryDelayFailed": "Retry delay (seconds)",
+      "retryDelayFailedHint": "0 disables retrying failures."
     },
     "numbers": {
       "inQueue": "In Queue",
@@ -244,6 +264,10 @@
       "simActive": "Active",
       "simDisabled": "Disabled",
       "noSims": "No SIM data."
+    },
+    "telephonyType": {
+      "white": "White",
+      "grey": "Grey"
     }
   },
   "search": {
@@ -420,9 +444,12 @@
       "course_assigned": "Course",
       "assignment_taken": "Assignment",
       "correction_task_assigned": "Correction task",
-      "drill_assigned": "Drill"
+      "drill_assigned": "Drill",
+      "training_scheduled": "Group training",
+      "training_reminder": "Training soon"
     },
     "training": {
+      "joinMeeting": "Join the meeting",
       "withTrainer": "With: {{name}}",
       "durationMin_one": "{{count}} min",
       "durationMin_other": "{{count}} min"
@@ -770,6 +797,19 @@
       "modeFastHint": "Answers instantly",
       "modeThinkingHint": "Analyzes more thoroughly, but slower",
       "modeChangeHint": "Set next to the input",
+      "expertTitle": "Expert (Claude)",
+      "expertTrigger": "Expert · {{model}}",
+      "expertSonnetHint": "Faster and cheaper",
+      "expertOpusHint": "Deeper, but pricier",
+      "expertExternalNotice": "The request goes to the external Claude service (Anthropic)",
+      "expertBudget": "Spent {{spent}} of {{limit}}",
+      "expertComposerNotice": "The question goes to external Claude ({{model}}) on our data",
+      "expertWaiting": "{{model}} is analysing… {{seconds}}s",
+      "expertTokens": "Tokens: {{input}} in, {{output}} out",
+      "expertTokensCached": "Tokens: {{input}} in ({{cached}} of them from cache), {{output}} out",
+      "expertForbidden": "Expert mode is not available for your role.",
+      "expertLimitReached": "The daily expert-mode limit is used up.",
+      "expertUnavailable": "The external service is unavailable right now, try again later.",
       "showReasoning": "Show reasoning",
       "showReasoningHint": "The train of thought is shown in the «Activity» panel",
       "showReasoningFastHint": "Fast mode produces no reasoning",
@@ -2295,6 +2335,8 @@
           "all": "All employees",
           "clear": "Clear",
           "label": "Employee",
+          "noMatches": "No employees found",
+          "searchPlaceholder": "Search by name…",
           "selectAll": "Select all",
           "selected": "{{count}} selected"
         },
@@ -2813,7 +2855,8 @@
           "agreement": "Agreement",
           "amount": "Amount",
           "paymentTerm": "Payment term",
-          "status": "Status"
+          "status": "Status",
+          "statusHint": "\"Paid\" means the client made a payment inside the selected period; the payment is not matched to a specific promise."
         },
         "status": {
           "pending": "Pending",
@@ -2822,7 +2865,12 @@
         },
         "loading": "Loading…",
         "loadFailed": "Failed to load. Please retry.",
-        "empty": "No data for the selected filters in this period."
+        "empty": "No data for the selected filters in this period.",
+        "filters": {
+          "operator": "Operator",
+          "allOperators": "All operators"
+        },
+        "paidCaveat": "A promise counts as paid when the client made any payment inside the selected period — payments are not matched to a specific promise. The amounts show what was promised, not what was received."
       },
       "assign": {
         "courses": "Published courses",
@@ -5369,6 +5417,7 @@
           "seconds": "seconds",
           "mute": "Mute",
           "hold": "Hold",
+          "resume": "Resume",
           "hangUp": "Hang Up",
           "viewClient": "View Client",
           "loanPrincipal": "Loan principal",
@@ -5383,7 +5432,39 @@
           "multipleClientsHint": "Choose who is calling — the interaction will be filed against this client.",
           "clientNotFound": "Client not found",
           "clientNotFoundHint": "This number is not linked to any client in your projects.",
-          "searchByNumber": "Search by this number"
+          "searchClient": "Find the client",
+          "searchClientPlaceholder": "Search by name, phone or tax number",
+          "searchByNumber": "Search by this number",
+          "interaction": {
+            "title": "Interaction Form",
+            "result": "Result",
+            "selectResult": "Select a result",
+            "reason": "Reason for contact",
+            "selectReason": "Select a reason",
+            "channel": "Communication channel",
+            "comment": "Comment",
+            "commentPlaceholder": "Add a comment to the interaction...",
+            "save": "Save Interaction",
+            "saved": "Interaction saved"
+          },
+          "accept": "Accept",
+          "ignoreInteraction": "Ignore Interaction",
+          "unknownContact": "Unknown contact",
+          "callDuration": "Call Duration",
+          "contracts": {
+            "client": "Client by contracts",
+            "thirdParty": "Third party by contracts",
+            "guarantor": "Guarantor by contracts",
+            "unknown": "Contracts",
+            "view": "View",
+            "open": "Open",
+            "closed": "Closed"
+          },
+          "minimize": "Minimize",
+          "cancel": "Cancel",
+          "close": "Close",
+          "previousWriteUpLost": "The previous call was not written up — that interaction was not saved.",
+          "restore": "Return to the call"
         },
         "callLogCard": {
           "message": "Message",
@@ -7151,6 +7232,7 @@
           "closed_debt": "Closed debt",
           "rr_active": "Active restructuring",
           "rr_first_payment": "First restructuring payment",
+          "rr_draft": "Restructuring: Draft",
           "promise_active": "Active payment promise",
           "tag_active": "Active tag"
         },
@@ -8541,6 +8623,8 @@
         "verification": "Third-party verification",
         "low-verification": "Low verifications",
         "searcher-followup": "Unworked searcher finds",
+        "inbound-followup": "Inbound without follow-up",
+        "contact-tag": "Contact / No contact",
         "communication-gap": "Communication gap",
         "operator-promises": "Operator promises"
       },
@@ -8660,6 +8744,73 @@
         "empty": "No searcher finds in the selected window",
         "forbidden": "You don't have permission to view this report",
         "unavailable": "Employee or call data is temporarily unavailable. Please try again later.",
+        "error": {
+          "title": "Failed to load the data",
+          "retry": "Retry"
+        }
+      },
+      "inboundFollowup": {
+        "dateFrom": "Request date from",
+        "dateTo": "Request date to",
+        "invalidDate": "The request date is not a valid calendar date — pick a date to replace it",
+        "invalidRange": "Request date from is later than request date to",
+        "openClient": "Open client {{id}}",
+        "columns": {
+          "inn": "Tax ID",
+          "interactionAt": "Request date",
+          "interactionType": "Reasons for the request",
+          "employee": "Employee",
+          "department": "Department",
+          "group": "Group",
+          "lastCall": "Last call",
+          "lastCallOutcome": "Call outcome"
+        },
+        "outcome": {
+          "unknown": "Unknown"
+        },
+        "empty": "No unworked inbound requests in the selected window",
+        "forbidden": "You don't have permission to view this report",
+        "unavailable": "Employee or call data is temporarily unavailable. Please try again later.",
+        "error": {
+          "title": "Failed to load the data",
+          "retry": "Retry"
+        }
+      },
+      "contactTag": {
+        "viewDate": "As-of date",
+        "sellFrom": "Sale date from",
+        "sellTo": "Sale date to",
+        "clearSellFrom": "Clear sale date from",
+        "clearSellTo": "Switch the sale date upper bound off",
+        "disableSellTo": "Switch the upper bound off",
+        "restoreSellToDefault": "Use the default bound",
+        "sellToDefaultHint": "Default sale-date upper bound: {{date}}. Switch it off to see the whole portfolio.",
+        "sellToOffHint": "The sale-date upper bound is off — the whole portfolio is shown.",
+        "subtabs": {
+          "all": "All",
+          "kontakt": "Contact",
+          "nekontakt": "No contact"
+        },
+        "openClient": "Open client {{id}}",
+        "columns": {
+          "inn": "Tax ID",
+          "tag": "Tag",
+          "sellDate": "Sale date",
+          "assignmentDate": "Assignment date",
+          "lastPlanned": "Promise date",
+          "employee": "Employee",
+          "department": "Department",
+          "group": "Group",
+          "lastInteraction": "Last interaction",
+          "bodyAmount": "Debt amount"
+        },
+        "empty": "No unworked «Contact»/«No contact» clients for the selected filters",
+        "emptyTag": "No unworked clients with this tag for the selected filters",
+        "invalidViewDate": "The as-of date is not a valid calendar date — pick a date to replace it",
+        "invalidSellDate": "The link contains an invalid sale date — pick a date to replace it",
+        "invalidSellRange": "Sale date from is later than sale date to",
+        "forbidden": "You don't have permission to view this report",
+        "unavailable": "Tag or employee data is temporarily unavailable. Please try again later.",
         "error": {
           "title": "Failed to load the data",
           "retry": "Retry"
@@ -9075,6 +9226,7 @@
         "title": "Audit Log Details",
         "eventInformation": "Event Information",
         "changes": "Changes",
+        "details": "Details",
         "requestInformation": "Request Information",
         "timestamp": "Timestamp",
         "user": "User",

@@ -52,6 +52,27 @@ describe('REPORTS_URL_KEYS', () => {
         pageSize: 'gps',
       },
       operatorPromises: { dateFrom: 'opf', dateTo: 'opt', department: 'opd' },
+      inboundFollowup: { dateFrom: 'nf', dateTo: 'nt', page: 'npg', pageSize: 'nps' },
+      contactTag: {
+        viewDate: 'kd',
+        sellFrom: 'kf',
+        sellTo: 'kt',
+        tag: 'kg',
+        page: 'kpg',
+        pageSize: 'kps',
+      },
     })
+  })
+
+  it('keeps the contact-tag set clear of the `c…` spellings it would naturally take', () => {
+    // `ct` is the verification tab's "count to" and `cf` its "count from" — the
+    // two keys a feed about «Контакт/Неконтакт» would reach for first. The
+    // collision test above already fails on a reused key; this one records WHY
+    // the set is spelled with `k…`, so a later "tidy-up" rename cannot quietly
+    // walk it back into the taken prefix.
+    const contactTagKeys = Object.values<string>(REPORTS_URL_KEYS.contactTag)
+    expect(contactTagKeys).not.toContain('ct')
+    expect(contactTagKeys).not.toContain('cf')
+    expect(contactTagKeys.every((key) => key.startsWith('k'))).toBe(true)
   })
 })

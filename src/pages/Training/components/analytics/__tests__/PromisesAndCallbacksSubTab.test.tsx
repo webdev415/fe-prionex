@@ -7,7 +7,7 @@
  *   2) show the empty state — not stale rows — once an empty page settles.
  */
 
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render as rtlRender, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 
@@ -16,6 +16,24 @@ const render = (ui: React.ReactElement) => rtlRender(<MemoryRouter>{ui}</MemoryR
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: (selector: (state: { user: { active_project_id: number } }) => unknown) =>
     selector({ user: { active_project_id: 1 } }),
+}))
+
+// Two operators share a full name on purpose: the picker used to send the
+// LABEL and resolve it back through a name→id map, which silently collapsed a
+// duplicate pair onto one id. The options must carry distinct ids.
+//
+// None of these names is the row's operator ("Kateryna Antonova"): the option
+// list and the table share one DOM, so a name in both would make the existing
+// `getByText` assertions below ambiguous rather than meaningful.
+const operatorsMock = vi.hoisted(() => ({
+  data: [
+    { id: 41, full_name: 'Olena Kovalenko', department_name: 'Hard Collection' },
+    { id: 51, full_name: 'Bohdan Melnyk', department_name: 'Soft Collection' },
+    { id: 77, full_name: 'Bohdan Melnyk', department_name: 'Legal' },
+  ],
+}))
+vi.mock('@/features/users/hooks', () => ({
+  useOperators: () => operatorsMock,
 }))
 
 const promisesMock = vi.hoisted(() => ({
@@ -67,8 +85,14 @@ const promisesMock = vi.hoisted(() => ({
 // Filter-aware mock: "yesterday" simulates the keepPreviousData window (the
 // previous period's rows are still in `data` while `isFetching` is true);
 // "last_7d" simulates a SETTLED empty response.
+// Every filter object the component asks with, in order — this is how the
+// "operator filter is ignored" regression is pinned: the assertion is that
+// `user_ids` actually reaches the query.
+const askedWith = vi.hoisted(() => [] as Array<Record<string, unknown>>)
+
 vi.mock('@/features/training/hooks/usePromisesAndCallbacks', () => ({
   usePromisesAndCallbacks: (filters: { period?: string }) => {
+    askedWith.push(filters as Record<string, unknown>)
     if (filters.period === 'yesterday') {
       return { ...promisesMock, isFetching: true }
     }
@@ -114,5 +138,84 @@ describe('PromisesAndCallbacksSubTab — filter change UX', () => {
     expect(screen.getByText('pages.training.promises.empty')).toBeInTheDocument()
     expect(screen.queryByText('Kateryna Antonova')).not.toBeInTheDocument()
     expect(screen.queryByTestId('analytics-table-overlay')).not.toBeInTheDocument()
+  })
+})
+
+describe('PromisesAndCallbacksSubTab — operator filter', () => {
+  beforeEach(() => {
+    askedWith.length = 0
+  })
+
+  function operatorSelect(): HTMLSelectElement {
+    return screen.getByLabelText('pages.training.promises.filters.operator') as HTMLSelectElement
+  }
+
+  it('offers every operator of the project', () => {
+    render(<PromisesAndCallbacksSubTab />)
+    const options = Array.from(operatorSelect().options).map((o) => o.value)
+    expect(options).toEqual(['all', '41', '51', '77'])
+  })
+
+  it('asks for no operator scope until one is picked', () => {
+    render(<PromisesAndCallbacksSubTab />)
+    expect(askedWith.at(-1)?.user_ids).toBeUndefined()
+  })
+
+  it('sends the picked operator as user_ids — the reported regression', () => {
+    render(<PromisesAndCallbacksSubTab />)
+
+    fireEvent.change(operatorSelect(), { target: { value: '41' } })
+
+    expect(askedWith.at(-1)?.user_ids).toEqual([41])
+  })
+
+  it('distinguishes two operators who share a full name', () => {
+    render(<PromisesAndCallbacksSubTab />)
+
+    fireEvent.change(operatorSelect(), { target: { value: '77' } })
+
+    // The option value is the id, so the second "Bohdan Melnyk" is reachable.
+    // Keyed by label, both options carried the same string and the filter
+    // resolved to whichever id the map happened to keep.
+    expect(askedWith.at(-1)?.user_ids).toEqual([77])
+  })
+
+  it('returns to the unscoped query when the operator is cleared', () => {
+    render(<PromisesAndCallbacksSubTab />)
+    fireEvent.change(operatorSelect(), { target: { value: '51' } })
+    expect(askedWith.at(-1)?.user_ids).toEqual([51])
+
+    fireEvent.change(operatorSelect(), { target: { value: 'all' } })
+
+    expect(askedWith.at(-1)?.user_ids).toBeUndefined()
+  })
+
+  it('resets to the first page when the operator changes', () => {
+    render(<PromisesAndCallbacksSubTab />)
+
+    fireEvent.change(operatorSelect(), { target: { value: '41' } })
+
+    // A stale offset would page past the end of a smaller filtered set.
+    expect(askedWith.at(-1)?.page).toBe(1)
+  })
+})
+
+describe('PromisesAndCallbacksSubTab — "paid" caveat', () => {
+  it('states how "paid" is decided without requiring a hover', () => {
+    render(<PromisesAndCallbacksSubTab />)
+
+    // Business decision 2026-08-27 kept the approximation (a client who paid
+    // ANYTHING in the period counts as paid, and the money columns show the
+    // promised amount) on condition that the tab says so in the open. A
+    // hover-only tooltip would not satisfy that, so this asserts the note is
+    // rendered as ordinary text.
+    expect(screen.getByText('pages.training.promises.paidCaveat')).toBeInTheDocument()
+  })
+
+  it('repeats the caveat on the Status column, where the approximation lands', () => {
+    render(<PromisesAndCallbacksSubTab />)
+
+    const statusHeader = screen.getByText('pages.training.promises.cols.status').closest('th')
+    expect(statusHeader).toHaveAttribute('title', 'pages.training.promises.cols.statusHint')
   })
 })

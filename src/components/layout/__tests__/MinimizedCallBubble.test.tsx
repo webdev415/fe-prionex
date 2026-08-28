@@ -202,4 +202,56 @@ describe('MinimizedCallBubble', () => {
       expect(useCallStore.getState().minimizedCall).not.toBeNull()
     })
   })
+  describe('a call the socket reports over', () => {
+    beforeEach(() => {
+      // The socket beats the 2 s poll on nearly every call, so this path — not
+      // the poll — is what an operator actually sees at the end of a call.
+      useCallDetails.mockReturnValue({
+        data: undefined,
+        error: null,
+        dataUpdatedAt: 0,
+        errorUpdatedAt: 0,
+      })
+    })
+
+    it('shows the call as ended with its final duration', async () => {
+      useCallStore.setState({
+        minimizedCall: minimized({ callState: 'connected', elapsedTime: 5 }),
+      })
+      const { poll, getByText } = renderBubble()
+
+      useCallStore
+        .getState()
+        .settleWindowForCall(minimized().callId!, { state: 'ended', totalDuration: 137 })
+      poll()
+
+      await waitFor(() => {
+        expect(getByText('Call Ended')).toBeInTheDocument()
+      })
+      // 137 s, from the backend — not the locally ticked estimate.
+      expect(getByText(/02:17/)).toBeInTheDocument()
+    })
+
+    it('clears itself once the operator has had a chance to see it', async () => {
+      vi.useFakeTimers()
+      try {
+        useCallStore.setState({ minimizedCall: minimized({ callState: 'connected' }) })
+        const { poll } = renderBubble()
+
+        useCallStore
+          .getState()
+          .settleWindowForCall(minimized().callId!, { state: 'ended', totalDuration: 137 })
+        poll()
+        expect(useCallStore.getState().minimizedCall).not.toBeNull()
+
+        await vi.advanceTimersByTimeAsync(3100)
+
+        // The grace period is the point: deleting the window on the terminal
+        // event skipped it, and the bar vanished mid-call-end.
+        expect(useCallStore.getState().minimizedCall).toBeNull()
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+  })
 })

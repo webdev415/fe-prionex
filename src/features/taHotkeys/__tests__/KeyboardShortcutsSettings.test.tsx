@@ -11,7 +11,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 const assignMutate = vi.fn().mockResolvedValue({
-  hotkey: 'Ctrl+1',
+  hotkey: 'Ctrl+Digit1',
   quick_pick_id: 10,
   reassigned_from: null,
 })
@@ -219,7 +219,7 @@ describe('KeyboardShortcutsSettings', () => {
     // operator can neither see nor clear, which returns later as a surprise
     // reassignment. Remove is the whole point of the row.
     chains = [{ id: 1, chain_type: 'automatic' }]
-    bindings = [{ hotkey: 'Ctrl+1', quick_pick_id: 10 }]
+    bindings = [{ hotkey: 'Ctrl+Digit1', quick_pick_id: 10 }]
     render(<KeyboardShortcutsSettings />)
 
     const dead = row('Messenger — Restructuring')
@@ -277,8 +277,8 @@ describe('KeyboardShortcutsSettings', () => {
     // `isPending` is shared mutation state, so using it alone greys out every
     // row's Remove while one request is in flight.
     bindings = [
-      { hotkey: 'Ctrl+1', quick_pick_id: 10 },
-      { hotkey: 'Ctrl+2', quick_pick_id: 11 },
+      { hotkey: 'Ctrl+Digit1', quick_pick_id: 10 },
+      { hotkey: 'Ctrl+Digit2', quick_pick_id: 11 },
     ]
     clearPendingFor = 10
     render(<KeyboardShortcutsSettings />)
@@ -290,7 +290,7 @@ describe('KeyboardShortcutsSettings', () => {
   it('still names a hidden template in the conflict warning', async () => {
     // The warning is built from every template, not the filtered set, or a
     // search would turn it into 'Already used by "#10"'.
-    bindings = [{ hotkey: 'Ctrl+1', quick_pick_id: 10 }]
+    bindings = [{ hotkey: 'Ctrl+Digit1', quick_pick_id: 10 }]
     const user = userEvent.setup()
     render(<KeyboardShortcutsSettings />)
 
@@ -319,12 +319,12 @@ describe('KeyboardShortcutsSettings', () => {
 
     await user.click(screen.getByRole('button', { name: 'Save Shortcut' }))
     await waitFor(() =>
-      expect(assignMutate).toHaveBeenCalledWith({ hotkey: 'Ctrl+1', quick_pick_id: 10 })
+      expect(assignMutate).toHaveBeenCalledWith({ hotkey: 'Ctrl+Digit1', quick_pick_id: 10 })
     )
   })
 
   it('warns which template already owns the combination, without blocking save', async () => {
-    bindings = [{ hotkey: 'Ctrl+1', quick_pick_id: 10 }]
+    bindings = [{ hotkey: 'Ctrl+Digit1', quick_pick_id: 10 }]
     const user = userEvent.setup()
     render(<KeyboardShortcutsSettings />)
 
@@ -340,7 +340,7 @@ describe('KeyboardShortcutsSettings', () => {
   })
 
   it('does not warn when re-recording onto the template that already has it', async () => {
-    bindings = [{ hotkey: 'Ctrl+1', quick_pick_id: 10 }]
+    bindings = [{ hotkey: 'Ctrl+Digit1', quick_pick_id: 10 }]
     const user = userEvent.setup()
     render(<KeyboardShortcutsSettings />)
 
@@ -352,7 +352,7 @@ describe('KeyboardShortcutsSettings', () => {
   })
 
   it('shows the assigned keys as separate pills', () => {
-    bindings = [{ hotkey: 'Ctrl+1', quick_pick_id: 10 }]
+    bindings = [{ hotkey: 'Ctrl+Digit1', quick_pick_id: 10 }]
     render(<KeyboardShortcutsSettings />)
     const assigned = row('Messenger — Restructuring')
     expect(within(assigned).getByText('Ctrl')).toBeInTheDocument()
@@ -361,8 +361,8 @@ describe('KeyboardShortcutsSettings', () => {
 
   it('clears the shortcut for the row whose Remove was clicked', async () => {
     bindings = [
-      { hotkey: 'Ctrl+1', quick_pick_id: 10 },
-      { hotkey: 'Alt+2', quick_pick_id: 11 },
+      { hotkey: 'Ctrl+Digit1', quick_pick_id: 10 },
+      { hotkey: 'Alt+Digit2', quick_pick_id: 11 },
     ]
     const user = userEvent.setup()
     render(<KeyboardShortcutsSettings />)
@@ -380,5 +380,59 @@ describe('KeyboardShortcutsSettings', () => {
 
     await user.click(within(row('Messenger — Restructuring')).getByText('+ Assign shortcut'))
     expect(save).toBeDisabled() // template chosen, nothing recorded yet
+  })
+})
+
+// ── The reported defect, driven through the real screen ─────────────────────
+// An operator assigned one quick pick on a Latin layout and another on a
+// Ukrainian one, using THE SAME physical button — the screen showed "D" on one
+// row and "В" on the other, so nothing looked wrong. Before this change the two
+// were stored as different strings, no conflict warning appeared, and one
+// button silently opened whichever template matched the active layout.
+//
+// `userEvent` presses by physical code with a custom keyboard map, so the same
+// button really can report a different character here, exactly as it does when
+// an operator switches layout mid-session.
+describe('one physical button is one binding, whatever the layout prints', () => {
+  // The D button as a Ukrainian layout reports it: same code, different key.
+  const KEY_D_CYRILLIC = { code: 'KeyD', key: 'в' }
+
+  it('warns that the button is taken even when it now types a different letter', async () => {
+    // "Messenger — Restructuring" already owns the D button, recorded on Latin.
+    bindings = [{ hotkey: 'KeyD', quick_pick_id: 10 }]
+    // ONLY the Cyrillic entry: two entries sharing a code would resolve to the
+    // first, quietly pressing the Latin key and making this test pass on the
+    // old behaviour too.
+    const user = userEvent.setup({ keyboardMap: [KEY_D_CYRILLIC] })
+    render(<KeyboardShortcutsSettings />)
+
+    // The operator, now on a Ukrainian layout, records what looks to them like
+    // a different key on a different template.
+    await user.click(within(row('Messenger — Refusal')).getByText('+ Assign shortcut'))
+    await user.click(screen.getByRole('button', { name: 'Shortcut recorder' }))
+    await user.keyboard('[KeyD]')
+
+    // Previously: silence, and a second binding on the same button.
+    expect(
+      screen.getByText('Already used by "Messenger — Restructuring". Saving will reassign it here.')
+    ).toBeInTheDocument()
+  })
+
+  it('records the button, and shows the operator the letter on their keycap', async () => {
+    const user = userEvent.setup({ keyboardMap: [KEY_D_CYRILLIC] })
+    render(<KeyboardShortcutsSettings />)
+
+    await user.click(within(row('Messenger — Restructuring')).getByText('+ Assign shortcut'))
+    const recorder = screen.getByRole('button', { name: 'Shortcut recorder' })
+    await user.click(recorder)
+    await user.keyboard('[KeyD]')
+
+    // Displayed as the Latin legend, stored as the physical key — the operator
+    // never sees 'KeyD', and the server never sees 'в'.
+    expect(recorder).toHaveTextContent('D')
+    await user.click(screen.getByRole('button', { name: 'Save Shortcut' }))
+    await waitFor(() =>
+      expect(assignMutate).toHaveBeenCalledWith({ hotkey: 'KeyD', quick_pick_id: 10 })
+    )
   })
 })
