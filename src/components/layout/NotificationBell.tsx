@@ -138,6 +138,10 @@ const TRAINING_TAB_TYPES: string[] = [
   NotificationType.ASSIGNMENT_TAKEN,
   NotificationType.CORRECTION_TASK_ASSIGNED,
   NotificationType.DRILL_ASSIGNED,
+  // Group trainings (KAN-752) — same card as the 1-on-1 events: the
+  // assignment fan-out and the 30-min-before reminder.
+  NotificationType.TRAINING_SCHEDULED,
+  NotificationType.TRAINING_REMINDER,
 ]
 
 // System-noise types: never rendered and excluded from the badge.
@@ -164,6 +168,9 @@ const KNOWN_MISC_TYPES: string[] = [
   NotificationType.DRILL_CONFIRMED,
   NotificationType.DRILL_RETURNED,
   NotificationType.DRILL_OVERDUE,
+  // Post-session nudge to the trainer; the backend ships a ready-to-read
+  // title/body, so the generic card is enough.
+  NotificationType.ONE_ON_ONE_FEEDBACK_DUE,
 ]
 
 // Read-history window for the "Прочитані" tab.
@@ -1265,8 +1272,17 @@ function TrainingNotificationItem({
   const scheduledAt = typeof meta.scheduled_at === 'string' ? meta.scheduled_at : undefined
   const durationMinutes =
     typeof meta.duration_minutes === 'number' ? meta.duration_minutes : undefined
+  // Group trainings (KAN-752): n.title is the generic headline ("Вас
+  // призначено на груповий тренінг"), so the topic comes from
+  // metadata.title; meeting_url is optional (offline trainings have a
+  // location instead). Missing fields fall back to n.body below, which
+  // the backend already renders with both.
+  const isGroupTraining =
+    n.type === NotificationType.TRAINING_SCHEDULED || n.type === NotificationType.TRAINING_REMINDER
+  const topic = typeof meta.title === 'string' ? meta.title : undefined
+  const meetingUrl = typeof meta.meeting_url === 'string' ? meta.meeting_url : undefined
   return (
-    <div className="group border-border hover:bg-muted relative flex border-b transition-colors last:border-b-0">
+    <div className="group border-border hover:bg-muted relative flex flex-col border-b transition-colors last:border-b-0">
       <button
         type="button"
         onClick={(e) => onNotificationClick(e, n.id, n.read)}
@@ -1286,7 +1302,10 @@ function TrainingNotificationItem({
             {t('notificationBell.training.withTrainer', { name: trainerName })}
           </p>
         )}
-        {isOneOnOne && scheduledAt ? (
+        {isGroupTraining && topic && (
+          <p className="text-foreground line-clamp-2 w-full min-w-0 text-xs">«{topic}»</p>
+        )}
+        {(isOneOnOne || isGroupTraining) && scheduledAt ? (
           <div className="text-foreground flex items-center gap-1">
             <Icons.Clock01 size={11} strokeWidth={1.5} />
             <span className="text-[11px]">
@@ -1307,6 +1326,19 @@ function TrainingNotificationItem({
           {n.created_at ? formatRelativeTime(n.created_at, t) : ''}
         </span>
       </button>
+      {/* Sibling of the card button, not a child: an <a> inside a
+          <button> is invalid nesting and would swallow the click into
+          mark-as-read instead of opening the meeting. */}
+      {isGroupTraining && meetingUrl && (
+        <a
+          href={meetingUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-information-600 -mt-1.5 line-clamp-1 px-4 pb-3 text-[11px] hover:underline"
+        >
+          {t('notificationBell.training.joinMeeting')}
+        </a>
+      )}
       <button
         type="button"
         aria-label={t('notificationBell.dismissAria')}

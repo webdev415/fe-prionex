@@ -444,9 +444,12 @@
       "course_assigned": "Course",
       "assignment_taken": "Assignment",
       "correction_task_assigned": "Correction task",
-      "drill_assigned": "Drill"
+      "drill_assigned": "Drill",
+      "training_scheduled": "Group training",
+      "training_reminder": "Training soon"
     },
     "training": {
+      "joinMeeting": "Join the meeting",
       "withTrainer": "With: {{name}}",
       "durationMin_one": "{{count}} min",
       "durationMin_other": "{{count}} min"
