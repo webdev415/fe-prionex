@@ -62,11 +62,24 @@
  * service: `limit` defaults to 50 server-side and is capped at 500. The feed
  * is ~44 000 rows (~880 pages at the default limit), so paging is not optional
  * here the way it is for the tiny sibling feeds.
+ *
+ * `tag_code` narrows the feed to ONE of the two populations and is the sub-tab
+ * strip's parameter. Absent means both — not a default the backend fills in,
+ * but the genuine absence of the filter — so «Всі» omits the key rather than
+ * spelling anything out. An unknown code is a **400** (same class as a
+ * malformed date), which is why the UI resolves `?kg=` against its own fixed
+ * triple before sending it.
  */
 export interface ContactTagFeedParams {
   project_id: number
   /** REQUIRED reference day, YYYY-MM-DD. */
   view_date: string
+  /**
+   * `kontakt` | `nekontakt` — omit the key entirely for both populations. The
+   * server filters BEFORE paginating, so `rows`, `total` and `total_pages` all
+   * describe the narrowed feed.
+   */
+  tag_code?: string
   /** YYYY-MM-DD; omit the key entirely for "no lower bound". */
   sell_from?: string
   /**
@@ -84,7 +97,7 @@ export interface ContactTagFeedParams {
  * One stale tagged client, with its responsible employee's org labels.
  *
  * `tag_code` is the STABLE key (`kontakt` / `nekontakt`) and is what the
- * sub-tab strip filters by; `tag_name` is the display label the backend read
+ * sub-tab strip sends as its request parameter; `tag_name` is the display label the backend read
  * out of the tag directory («Контакт» / «Неконтакт») and is what the table
  * renders. The card returns only the name — the code exists in this contract
  * precisely because the tag definition ids are not stable across projects (52
@@ -174,9 +187,16 @@ export interface ContactTagFeedRow {
  * the same client and skip another — over a feed ~880 pages long. The sort is
  * fixed SERVER-side and the UI never re-sorts.
  *
- * `total` counts the whole feed, not the returned page, and stays stable
- * across pages. An empty feed is a normal 200 (zero tagged clients and zero
- * surviving candidates both answer 200, not an error).
+ * `tag_code` echoes the population filter that was APPLIED — the requested code
+ * for a tag sub-tab, `null` when the request carried no filter at all. It is
+ * the answer's own statement of WHICH feed the numbers below describe, which is
+ * exactly what `total` needs to be read against.
+ *
+ * `total` counts the whole feed the filter selects — not the returned page, and
+ * not the unfiltered feed: the server narrows by `tag_code` BEFORE paginating,
+ * so `total` and `total_pages` are honest for the tab that asked. An empty feed
+ * is a normal 200 (zero tagged clients, zero surviving candidates and a filter
+ * that matches nothing all answer 200, not an error).
  *
  * `generated_at` is stamped when the rows were COMPUTED, not when they were
  * served — the feed is cached for 15 minutes per worker (parity with the
@@ -192,6 +212,8 @@ export interface ContactTagFeedResponse {
   view_date: string // YYYY-MM-DD
   sell_from: string | null // YYYY-MM-DD, applied
   sell_to: string | null // YYYY-MM-DD, applied (null = upper bound switched off)
+  /** The applied population filter; `null` = no filter (both populations). */
+  tag_code: string | null
   rows: ContactTagFeedRow[]
   total: number
   page: number

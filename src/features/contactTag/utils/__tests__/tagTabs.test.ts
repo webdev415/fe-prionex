@@ -1,32 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import type { ContactTagFeedRow } from '../../types'
 import {
   CONTACT_TAG_TAB_IDS,
   DEFAULT_CONTACT_TAG_TAB,
-  countRowsByTagTab,
-  filterRowsByTagTab,
   isContactTagTab,
   resolveContactTagTab,
+  tagTabRequestParam,
 } from '../tagTabs'
-
-function makeRow(overrides: Partial<ContactTagFeedRow> = {}): ContactTagFeedRow {
-  return {
-    client_id: 421395,
-    inn: '3210987654',
-    tag_code: 'nekontakt',
-    tag_name: 'Неконтакт',
-    sell_date: '2026-03-11',
-    assignment_date: '2026-06-02',
-    last_planed_interaction_date: null,
-    employee_id: 6971,
-    employee_name: 'Коваленко Іван Петрович',
-    body_amount: '15000.00',
-    last_interaction_date: '2026-08-14',
-    department: 'Стягнення',
-    group_name: 'Група №3',
-    ...overrides,
-  }
-}
 
 describe('contact-tag sub-tabs', () => {
   it('offers the aggregate first and defaults to it', () => {
@@ -36,10 +15,10 @@ describe('contact-tag sub-tabs', () => {
   })
 
   it('spells the two tag ids exactly as the backend spells the CODES', () => {
-    // The ids travel in `?kg=` AND are compared against `row.tag_code`, so a
-    // display-flavoured id ("contact") would filter nothing while still
-    // rendering a plausible-looking strip. The backend's configured codes are
-    // `kontakt` / `nekontakt` (CONTACT_TAG_FEED_TAG_CODES).
+    // The ids travel in `?kg=` AND go on the wire as `tag_code`, so a
+    // display-flavoured id ("contact") would earn a 400 from an endpoint that
+    // only knows `kontakt`/`nekontakt` (CONTACT_TAG_FEED_TAG_CODES), while
+    // still rendering a plausible-looking strip.
     expect(CONTACT_TAG_TAB_IDS).toContain('kontakt')
     expect(CONTACT_TAG_TAB_IDS).toContain('nekontakt')
   })
@@ -58,6 +37,16 @@ describe('contact-tag sub-tabs', () => {
     it.each(CONTACT_TAG_TAB_IDS)('accepts the known id %s', (id) => {
       expect(resolveContactTagTab(id)).toBe(id)
     })
+
+    it('never lets an unknown value reach the wire as a tag_code', () => {
+      // The resolve step is what stands between a hand-edited `?kg=` and the
+      // endpoint's 400 for an unconfigured code: whatever the URL says, the
+      // request either carries one of the two known codes or no key at all.
+      for (const raw of ['kontakty', 'Контакт', 'd17', '']) {
+        const param = tagTabRequestParam(resolveContactTagTab(raw))
+        expect(param).toStrictEqual({})
+      }
+    })
   })
 
   it('narrows isContactTagTab to the three known ids', () => {
@@ -65,93 +54,27 @@ describe('contact-tag sub-tabs', () => {
     expect(isContactTagTab('Неконтакт')).toBe(false)
   })
 
-  describe('filterRowsByTagTab', () => {
-    const rows = [
-      makeRow({ client_id: 1, tag_code: 'kontakt', tag_name: 'Контакт' }),
-      makeRow({ client_id: 2, tag_code: 'nekontakt' }),
-      makeRow({ client_id: 3, tag_code: 'kontakt', tag_name: 'Контакт' }),
-    ]
-
-    it('returns the SAME array reference for «Всі» so a memo over it does not churn', () => {
-      expect(filterRowsByTagTab(rows, 'all')).toBe(rows)
+  describe('tagTabRequestParam', () => {
+    it('sends the tab id verbatim as the tag_code of a tag tab', () => {
+      // The URL value and the wire value are deliberately the same string.
+      expect(tagTabRequestParam('kontakt')).toStrictEqual({ tag_code: 'kontakt' })
+      expect(tagTabRequestParam('nekontakt')).toStrictEqual({ tag_code: 'nekontakt' })
     })
 
-    it('keeps only the exact code matches on a tag tab', () => {
-      expect(filterRowsByTagTab(rows, 'kontakt').map((row) => row.client_id)).toEqual([1, 3])
-      expect(filterRowsByTagTab(rows, 'nekontakt').map((row) => row.client_id)).toEqual([2])
+    it('omits the KEY entirely for «Всі», rather than sending an undefined one', () => {
+      // «Всі» is the absence of the filter, not a code the backend knows. The
+      // omission has to be a real one: axios would drop an `undefined` value
+      // just the same, but the params object is also the query key, where
+      // `{ tag_code: undefined }` and `{}` must not be two spellings of one
+      // cache entry. `toStrictEqual` is what tells them apart.
+      expect(tagTabRequestParam('all')).toStrictEqual({})
+      expect('tag_code' in tagTabRequestParam('all')).toBe(false)
     })
 
-    it('filters by the CODE, never by the localized name', () => {
-      // A directory rename (or a locale switch) must not empty a tab. Here the
-      // display label is nonsense and the code is right: the row still lands on
-      // its tab, which is the whole reason the strip is keyed on the code.
-      const renamed = [makeRow({ client_id: 9, tag_code: 'kontakt', tag_name: 'Контактний' })]
+    it('gives every tab its own request shape, so no two share a query key', () => {
+      const shapes = CONTACT_TAG_TAB_IDS.map((id) => JSON.stringify(tagTabRequestParam(id)))
 
-      expect(filterRowsByTagTab(renamed, 'kontakt')).toHaveLength(1)
-      expect(filterRowsByTagTab(renamed, 'nekontakt')).toHaveLength(0)
-    })
-
-    it('leaves a row whose code is outside the configured pair on «Всі» only', () => {
-      // Only reachable if CONTACT_TAG_FEED_TAG_CODES is reconfigured. Nothing
-      // is hidden — «Всі» is the default tab and the table names the tag on
-      // every row — but no tag tab claims it.
-      const mixed = [...rows, makeRow({ client_id: 4, tag_code: 'vip', tag_name: 'VIP' })]
-
-      expect(filterRowsByTagTab(mixed, 'all')).toHaveLength(4)
-      expect(filterRowsByTagTab(mixed, 'kontakt')).toHaveLength(2)
-      expect(filterRowsByTagTab(mixed, 'nekontakt')).toHaveLength(1)
-    })
-
-    it('preserves the server-side order inside a tab', () => {
-      // Rows arrive sorted by employee, then last_interaction_date DESC, then
-      // client_id; a client-side filter must not reorder what it keeps.
-      const ordered = [
-        makeRow({ client_id: 10, tag_code: 'kontakt', last_interaction_date: '2026-08-20' }),
-        makeRow({ client_id: 11, tag_code: 'nekontakt' }),
-        makeRow({ client_id: 12, tag_code: 'kontakt', last_interaction_date: '2026-08-02' }),
-      ]
-
-      expect(filterRowsByTagTab(ordered, 'kontakt').map((row) => row.client_id)).toEqual([10, 12])
-    })
-  })
-
-  describe('countRowsByTagTab', () => {
-    it('counts every tab, «Всі» being the whole page', () => {
-      const rows = [
-        makeRow({ client_id: 1, tag_code: 'kontakt' }),
-        makeRow({ client_id: 2, tag_code: 'kontakt' }),
-        makeRow({ client_id: 3, tag_code: 'nekontakt' }),
-      ]
-
-      expect(countRowsByTagTab(rows)).toEqual({ all: 3, kontakt: 2, nekontakt: 1 })
-    })
-
-    it('is zero everywhere for an empty page', () => {
-      expect(countRowsByTagTab([])).toEqual({ all: 0, kontakt: 0, nekontakt: 0 })
-    })
-
-    it('counts an unknown code into «Всі» only, so the two halves visibly disagree', () => {
-      // The reader can then see that some row belongs to neither tag, instead
-      // of a strip whose numbers happen to add up while a row is nowhere.
-      const rows = [makeRow({ tag_code: 'vip' }), makeRow({ tag_code: 'kontakt' })]
-
-      expect(countRowsByTagTab(rows)).toEqual({ all: 2, kontakt: 1, nekontakt: 0 })
-    })
-
-    it('agrees with filterRowsByTagTab on every tab', () => {
-      // The two are derived from the same equality on purpose — a strip whose
-      // count disagreed with its own table is the failure this pins.
-      const rows = [
-        makeRow({ client_id: 1, tag_code: 'kontakt' }),
-        makeRow({ client_id: 2, tag_code: 'nekontakt' }),
-        makeRow({ client_id: 3, tag_code: 'nekontakt' }),
-        makeRow({ client_id: 4, tag_code: 'vip' }),
-      ]
-      const counts = countRowsByTagTab(rows)
-
-      for (const id of CONTACT_TAG_TAB_IDS) {
-        expect(filterRowsByTagTab(rows, id)).toHaveLength(counts[id])
-      }
+      expect(new Set(shapes).size).toBe(CONTACT_TAG_TAB_IDS.length)
     })
   })
 })

@@ -8,16 +8,20 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { getContactTagFeed } from '../api/contactTagFeedApi'
 import type { ContactTagFeedParams, ContactTagFeedResponse } from '../types'
 import { sellToRequestParam, type SellToState } from '../utils/sellWindow'
+import { tagTabRequestParam, type ContactTagTabId } from '../utils/tagTabs'
 
 /**
  * Query keys for the feed. The whole params object goes into the key, so
- * project, the view date, both sell bounds, the page window and the timezone
- * each refetch on change.
+ * project, the view date, both sell bounds, the tag population, the page
+ * window and the timezone each refetch on change.
  *
  * The three `sell_to` states produce three DIFFERENT keys — `{}`,
  * `{ sell_to: '' }` and `{ sell_to: '2026-06-30' }` — which is what makes
  * switching the upper bound off actually refetch instead of replaying the
- * defaulted window from cache.
+ * defaulted window from cache. The three sub-tabs likewise produce three keys —
+ * no `tag_code` member at all for «Всі», `{ tag_code: 'kontakt' }` and
+ * `{ tag_code: 'nekontakt' }` — so each population is cached as the separate
+ * feed it is, with its own totals.
  */
 export const contactTagFeedKeys = {
   all: ['contactTagFeed'] as const,
@@ -41,6 +45,12 @@ export interface UseContactTagFeedParams {
    * cannot mean both "apply the backend default" and "no upper bound".
    */
   sellTo: SellToState
+  /**
+   * The sub-tab, i.e. WHICH population to fetch. Taken as the tab id rather
+   * than as a bare code so the "«Всі» sends no parameter" rule lives in exactly
+   * one place (`tagTabRequestParam`) instead of at every call site.
+   */
+  tagTab: ContactTagTabId
   /** Rows to skip — `(page - 1) * limit`. */
   skip: number
   /** Rows per page (backend default 50, max 500). */
@@ -55,6 +65,7 @@ export function useContactTagFeed({
   viewDate,
   sellFrom,
   sellTo,
+  tagTab,
   skip,
   limit,
   timezone,
@@ -69,6 +80,9 @@ export function useContactTagFeed({
     // ...whereas the upper bound's absence is a THIRD state. The spread is what
     // keeps "key omitted" a real omission rather than an `undefined` value.
     ...sellToRequestParam(sellTo),
+    // ...and so is the sub-tab: «Всі» is the ABSENCE of the population filter,
+    // not a code the backend would recognise, so it contributes no key.
+    ...tagTabRequestParam(tagTab),
     skip,
     limit,
     // Part of the query key via `params`, so a timezone change refetches. It
@@ -86,9 +100,9 @@ export function useContactTagFeed({
     enabled: enabled && !!projectId,
     // The endpoint caches a computed feed for 15 minutes per worker, but that
     // cache is keyed on the WINDOW only — paging through ~880 pages still costs
-    // a round trip each. This client-side window is what keeps a tab switch (or
-    // a sub-tab click, which does not change the request at all) from refiring
-    // one. Same minute as every sibling report tab.
+    // a round trip each. This client-side window is what keeps a page-tab switch
+    // (and a walk back and forth across the sub-tab strip, each population being
+    // its own key) from refiring one. Same minute as every sibling report tab.
     staleTime: 60_000,
     // No query-level retry: the axios client (src/lib/api.ts) already retries
     // transient 502/503/504 and network failures on GET twice with backoff.

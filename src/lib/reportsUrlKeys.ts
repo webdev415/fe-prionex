@@ -65,8 +65,9 @@ export const REPORTS_URL_KEYS = {
    * rather than two — absent (the backend default applies), present-and-empty
    * (`kt=`, upper bound switched off) and a date. That is why the tab reads it
    * with its own `readSellToState` instead of the shared `readUrlDateBound`,
-   * which folds absent and empty together. `tag` (`kg`) is the client-side
-   * sub-tab, and it is the one key here that does NOT change the request.
+   * which folds absent and empty together. `tag` (`kg`) is the sub-tab strip's
+   * population filter: it travels to the endpoint as `tag_code` and, like every
+   * other filter here, resets the page.
    */
   contactTag: {
     viewDate: 'kd',

@@ -8,6 +8,17 @@
  * one tab per tag, exactly the shape the sibling operator-promises report uses
  * for its departments.
  *
+ * ## The strip is a SERVER-side filter
+ *
+ * The endpoint takes an optional `tag_code` (`kontakt` | `nekontakt`; absent =
+ * both populations) and computes `rows`, `total` and `total_pages` over the
+ * filtered set. So a tag tab is a FILTER of the whole ~44 000-row feed, not a
+ * view of the page on screen: the pager, the totals and the empty state all
+ * speak for the tag that is selected, and there is nothing left for the client
+ * to sift. That is why this module carries no row-filtering and no counting
+ * helper — it only maps the tab the URL names onto the parameter the request
+ * sends.
+ *
  * ## Keyed by CODE, not by name
  *
  * The one place this deliberately diverges from that sample: operator-promises
@@ -20,35 +31,25 @@
  * display label the directory can rename at any time; keying tabs on it would
  * empty both of them the day somebody edits «Контакт» to «Контактний».
  *
- * So: filter by `tag_code`, LABEL from the locale files, and let the table's
- * own tag column carry the live `tag_name` — a renamed tag then shows its new
- * name in the rows while the tabs keep working.
+ * So: send `tag_code`, LABEL from the locale files, and let the table's own tag
+ * column carry the live `tag_name` — a renamed tag then shows its new name in
+ * the rows while the tabs keep working.
  *
  * ## Why the strip is FIXED at three
  *
  * Unlike departments, the tag pair is a frozen server-side setting rather than
  * a directory that grows on its own, so there is no dynamic half here. Both tag
- * tabs are ALWAYS rendered even when the current page holds none of that tag:
- * a strip whose shape changed with the page would make "no stale Контакт here"
+ * tabs are ALWAYS rendered even when the feed holds none of that tag: a strip
+ * whose shape changed with the answer would make "no stale Контакт right now"
  * indistinguishable from "the Контакт tab is gone".
  *
  * A row whose code is neither (only reachable if the backend's code list is
  * reconfigured) is readable on «Всі» ONLY — the same accepted edge as
- * operator-promises' null-department rows. Nothing is hidden: «Всі» is the
- * default tab, and the table's tag column names the tag on every row.
- *
- * ## Counts are PAGE-scoped, and that is not a detail
- *
- * The other divergence from the sample. Operator-promises filters ONE response
- * holding the whole roster (~136 rows), so its client-side view is complete.
- * This feed is server-paginated over ~44 000 rows, so a sub-tab can only ever
- * filter the 50 rows currently on screen. The counts these helpers produce are
- * therefore counts OF THE CURRENT PAGE, the tab strip says so, and no total is
- * displayed per tag — a "Контакт: 12" that silently meant "12 of the 44 000"
- * would be a lie the operator has no way to catch.
+ * operator-promises' null-department rows, and now the server's own doing:
+ * «Всі» sends no `tag_code` at all, so it is the tab that asks for every
+ * population the endpoint knows about. Nothing is hidden: «Всі» is the default
+ * tab, and the table's tag column names the tag on every row.
  */
-
-import type { ContactTagFeedRow } from '../types'
 
 /**
  * The tabs, in display order: the aggregate first, then the two tags. Ids are
@@ -68,9 +69,10 @@ export type ContactTagTabId = (typeof CONTACT_TAG_TAB_IDS)[number]
 export const DEFAULT_CONTACT_TAG_TAB: ContactTagTabId = 'all'
 
 /**
- * Tab id → the `tag_code` the backend emits. `all` maps to null: it is not a
- * tag but the absence of a filter, so it also carries the rows no other tab
- * shows — a row whose code is outside the configured pair above all.
+ * Tab id → the `tag_code` the request carries. `all` maps to null: it is not a
+ * tag but the ABSENCE of the parameter, which is why it also returns the rows
+ * no other tab shows — a row whose code is outside the configured pair above
+ * all.
  */
 const TAB_TAG_CODE: Record<ContactTagTabId, string | null> = {
   all: null,
@@ -87,43 +89,23 @@ export function isContactTagTab(tabId: string): tabId is ContactTagTabId {
  * rather than to an empty screen, and the fallback is a pure derivation that is
  * never written back to the URL: rewriting it would destroy a deep link the
  * moment it was opened, and a stale view preference is harmless.
+ *
+ * Load-bearing for the REQUEST now, not only for the strip: an unknown `?kg=`
+ * resolving to «Всі» is also what keeps a hand-edited link from sending a code
+ * the endpoint answers 400 for.
  */
 export function resolveContactTagTab(raw: string | null): ContactTagTabId {
   return raw !== null && isContactTagTab(raw) ? raw : DEFAULT_CONTACT_TAG_TAB
 }
 
 /**
- * Rows visible on `tabId`. «Всі» returns the input array itself (same
- * reference, so a memo over it does not churn); a tag tab keeps the exact
- * `tag_code` matches, which by construction excludes any row whose code is
- * outside the configured pair.
+ * The tab as a REQUEST parameter — an object to spread, the same shape (and for
+ * the same reason) as `sellToRequestParam`: «Всі» must send no `tag_code` KEY
+ * at all, and `{ tag_code: undefined }` is a different thing from an omission
+ * for anything that hashes the params object — the query key above all, where
+ * an `undefined` member and a missing one must not be allowed to drift apart.
  */
-export function filterRowsByTagTab(
-  rows: ContactTagFeedRow[],
-  tabId: ContactTagTabId
-): ContactTagFeedRow[] {
+export function tagTabRequestParam(tabId: ContactTagTabId): { tag_code?: string } {
   const code = TAB_TAG_CODE[tabId]
-  if (code === null) return rows
-  return rows.filter((row) => row.tag_code === code)
-}
-
-/**
- * How many rows of the CURRENT PAGE each tab would show — «Всі» included, so
- * the strip's three numbers always add up to at least the page size and a
- * reader can see at a glance when some row belongs to neither tag.
- *
- * One pass over the rows rather than three `filter` calls: the page is at most
- * 500 rows, so this is not a performance argument but a correctness one — the
- * counts and `filterRowsByTagTab` must never disagree, and deriving both from
- * the same `tag_code` equality is what guarantees it.
- */
-export function countRowsByTagTab(
-  rows: readonly ContactTagFeedRow[]
-): Record<ContactTagTabId, number> {
-  const counts: Record<ContactTagTabId, number> = { all: rows.length, kontakt: 0, nekontakt: 0 }
-  for (const row of rows) {
-    if (row.tag_code === TAB_TAG_CODE.kontakt) counts.kontakt += 1
-    else if (row.tag_code === TAB_TAG_CODE.nekontakt) counts.nekontakt += 1
-  }
-  return counts
+  return code === null ? {} : { tag_code: code }
 }

@@ -161,6 +161,10 @@ function makeResponse(
     // The APPLIED upper bound: with no `sell_to` on the wire the backend echoes
     // its own month−4 default, which is what the tab's hint renders.
     sell_to: '2026-04-30',
+    // The APPLIED population filter — `null` is what the default «Всі» tab
+    // asks for (no `tag_code` on the wire at all); a test driving a sub-tab
+    // overrides it with the code it expects back.
+    tag_code: null,
     rows,
     total: rows.length,
     page: 1,
@@ -236,8 +240,33 @@ async function selectPageSize(size: string) {
   fireEvent.click(await screen.findByRole('option', { name: size }))
 }
 
-const subtab = (id: 'all' | 'kontakt' | 'nekontakt', count: number) =>
-  screen.getByRole('tab', { name: `pages.reports.contactTag.subtabs.${id} (${count})` })
+/**
+ * A sub-tab by its BARE label. No count rides the name: the strip is a
+ * server-side filter now, so a per-tab number would be a request of its own for
+ * a tab nobody selected — and the selected tab's own count is the pager's
+ * total. Looking tabs up by the bare key is therefore also the assertion that
+ * no count crept back in.
+ */
+const subtab = (id: 'all' | 'kontakt' | 'nekontakt') =>
+  screen.getByRole('tab', { name: `pages.reports.contactTag.subtabs.${id}` })
+
+/**
+ * The strip carries LABELS only: no count inside the accessible name, no
+ * `title` tooltip carrying one, and no page-scope caveat under it. All three
+ * belonged to the client-side era — a count per tab would now cost a request
+ * per tab, and the caveat qualified a page-scoped filter this strip no longer
+ * is.
+ */
+function expectBareSubtabs() {
+  for (const id of ['all', 'kontakt', 'nekontakt'] as const) {
+    expect(subtab(id)).toBeInTheDocument()
+  }
+  expect(screen.queryByRole('tab', { name: /\(\d+\)/ })).not.toBeInTheDocument()
+  for (const tab of screen.getAllByRole('tab')) {
+    expect(tab).not.toHaveAttribute('title')
+  }
+  expect(screen.queryByText(/subtabCountScope/)).not.toBeInTheDocument()
+}
 
 /**
  * Today's calendar day in an IANA zone, computed independently of the
@@ -1149,85 +1178,58 @@ describe('ContactTagFeedTab — tag sub-tabs', () => {
     makeRow({ client_id: 3, inn: '333', tag_code: 'kontakt', tag_name: 'Контакт' }),
   ]
 
-  it('opens on «Всі» with every row, and counts the page in each tab', async () => {
+  it('opens on «Всі» and asks for no population filter at all', async () => {
     mockGetFeed.mockResolvedValue(makeResponse(mixedPage))
 
     renderTab()
     await screen.findByRole('link', { name: '111' })
 
-    expect(subtab('all', 3)).toHaveAttribute('aria-selected', 'true')
-    expect(subtab('kontakt', 2)).toBeInTheDocument()
-    expect(subtab('nekontakt', 1)).toBeInTheDocument()
+    expect(subtab('all')).toHaveAttribute('aria-selected', 'true')
+    expect(subtab('kontakt')).toBeInTheDocument()
+    expect(subtab('nekontakt')).toBeInTheDocument()
     expect(screen.getAllByRole('link')).toHaveLength(3)
-    // The FILTERING and the counts are both page-scoped, and the line between
-    // the strip and the table says so — this feed is ~880 pages long and the
-    // endpoint takes no tag parameter, so neither can ever speak for the whole
-    // feed. ONCE, though: a line every reader gets, not also a per-tab `title`
-    // that repeats it on hover for mouse users alone.
-    expect(screen.getByText('pages.reports.contactTag.subtabCountScope')).toBeInTheDocument()
-    for (const tab of screen.getAllByRole('tab')) {
-      expect(tab).not.toHaveAttribute('title')
-    }
+    // «Всі» is the ABSENCE of the filter, not a code — the key must not travel.
+    expect('tag_code' in lastCall()).toBe(false)
   })
 
-  it('appends no count — and no scope caveat — until there is a page to count', async () => {
-    // "Всі (0)" before the first answer states a fact about the feed — zero
-    // tagged clients — that nothing has established; the same goes for a filter
-    // error, which stops the request from being made at all. The caveat under
-    // the strip rides the same gate: it qualifies counts and a filtered page,
-    // and with neither on screen it is one more line to read past.
-    mockGetFeed.mockImplementation(() => new Promise<ContactTagFeedResponse>(() => {}))
-
-    const view = renderTab()
-    await waitFor(() => expect(mockGetFeed).toHaveBeenCalled())
-
-    expect(
-      screen.getByRole('tab', { name: 'pages.reports.contactTag.subtabs.all' })
-    ).toBeInTheDocument()
-    expect(screen.queryByRole('tab', { name: /\(0\)/ })).not.toBeInTheDocument()
-    expect(screen.queryByText('pages.reports.contactTag.subtabCountScope')).not.toBeInTheDocument()
-    view.unmount()
-
-    renderTab(['/?kd=2026-02-31'])
-    await screen.findByText('pages.reports.contactTag.invalidViewDate')
-
-    expect(
-      screen.getByRole('tab', { name: 'pages.reports.contactTag.subtabs.all' })
-    ).toBeInTheDocument()
-    expect(screen.queryByRole('tab', { name: /\(0\)/ })).not.toBeInTheDocument()
-    expect(screen.queryByText('pages.reports.contactTag.subtabCountScope')).not.toBeInTheDocument()
-  })
-
-  it('filters by tag_code and writes the choice to ?kg=', async () => {
+  it('sends tag_code and writes the choice to ?kg= when a tag tab is picked', async () => {
     mockGetFeed.mockResolvedValue(makeResponse(mixedPage))
 
     renderTab()
     await screen.findByRole('link', { name: '111' })
 
-    await userEvent.click(subtab('kontakt', 2))
+    mockGetFeed.mockResolvedValue(
+      makeResponse([mixedPage[0], mixedPage[2]], { tag_code: 'kontakt' })
+    )
+    await userEvent.click(subtab('kontakt'))
 
     await waitFor(() => expect(urlParams().get('kg')).toBe('kontakt'))
+    await waitFor(() => expect(lastCall().tag_code).toBe('kontakt'))
     expect(screen.getAllByRole('link').map((link) => link.textContent)).toEqual(['111', '333'])
-    // The counts do not move with the selection — they describe the page.
-    expect(subtab('all', 3)).toBeInTheDocument()
   })
 
-  it('never spells the default sub-tab out in the URL', async () => {
-    mockGetFeed.mockResolvedValue(makeResponse(mixedPage))
+  it('never spells the default sub-tab out in the URL, and drops the wire key with it', async () => {
+    mockGetFeed.mockResolvedValue(makeResponse([mixedPage[1]], { tag_code: 'nekontakt' }))
 
     renderTab(['/?kg=nekontakt'])
     await screen.findByRole('link', { name: '222' })
+    expect(lastCall().tag_code).toBe('nekontakt')
 
-    await userEvent.click(subtab('all', 3))
+    mockGetFeed.mockResolvedValue(makeResponse(mixedPage))
+    await userEvent.click(subtab('all'))
 
-    // A shared link then carries only choices somebody made.
+    // A shared link then carries only choices somebody made — and the request
+    // goes back to asking for both populations.
     await waitFor(() => expect(urlParams().has('kg')).toBe(false))
+    await waitFor(() => expect('tag_code' in lastCall()).toBe(false))
   })
 
-  it('does NOT refetch or reset the page when the sub-tab changes', async () => {
-    // The sub-tab filters rows already on screen — it changes no request, so
-    // resetting the page would throw away the operator's position in an
-    // 880-page feed for nothing.
+  it('refetches and RESETS the page on a sub-tab change, like every other filter here', async () => {
+    // The convention of the shared URL shell: a changed filter invalidates the
+    // current offset. It is not a formality here — the server narrows the feed
+    // before it pages it, so page 3 of «Всі» addresses rows that page 3 of
+    // «Неконтакт» does not have, and keeping the offset would drop the operator
+    // into a hole of a list they never read (or past its end).
     mockGetFeed.mockResolvedValue(
       makeResponse(mixedPage, { total: 130, page: 3, page_size: 50, total_pages: 3 })
     )
@@ -1235,84 +1237,163 @@ describe('ContactTagFeedTab — tag sub-tabs', () => {
     renderTab(['/?kpg=3'])
     await screen.findByRole('link', { name: '111' })
     expect(mockGetFeed).toHaveBeenCalledTimes(1)
+    expect(lastCall().skip).toBe(100)
 
-    await userEvent.click(subtab('nekontakt', 1))
+    mockGetFeed.mockResolvedValue(
+      makeResponse([mixedPage[1]], {
+        tag_code: 'nekontakt',
+        total: 41,
+        page: 1,
+        page_size: 50,
+        total_pages: 1,
+      })
+    )
+    await userEvent.click(subtab('nekontakt'))
 
     await waitFor(() => expect(urlParams().get('kg')).toBe('nekontakt'))
-    expect(urlParams().get('kpg')).toBe('3')
-    expect(mockGetFeed).toHaveBeenCalledTimes(1)
+    expect(urlParams().has('kpg')).toBe(false)
+    await waitFor(() => expect(mockGetFeed).toHaveBeenCalledTimes(2))
+    expect(lastCall()).toMatchObject({ tag_code: 'nekontakt', skip: 0 })
   })
 
-  it('survives a page change and keeps filtering the new page', async () => {
+  it('caches each population under its own query key rather than replaying one answer', async () => {
+    // Three tabs, three different requests — and a walk back to a tab already
+    // answered costs nothing, which is what makes the strip cheap enough for
+    // selection to follow focus.
+    mockGetFeed.mockResolvedValue(makeResponse(mixedPage))
+
+    renderTab()
+    await screen.findByRole('link', { name: '111' })
+
     mockGetFeed.mockResolvedValue(
-      makeResponse(mixedPage, { total: 130, page: 1, page_size: 50, total_pages: 3 })
+      makeResponse([mixedPage[0], mixedPage[2]], { tag_code: 'kontakt' })
+    )
+    await userEvent.click(subtab('kontakt'))
+    await waitFor(() => expect(mockGetFeed).toHaveBeenCalledTimes(2))
+
+    await userEvent.click(subtab('all'))
+    await waitFor(() => expect(urlParams().has('kg')).toBe(false))
+    // «Всі» was answered a moment ago and is still fresh — no third request.
+    expect(mockGetFeed).toHaveBeenCalledTimes(2)
+    expect(screen.getAllByRole('link')).toHaveLength(3)
+  })
+
+  it('renders the answer verbatim — the tab does not re-filter what the server sent', async () => {
+    // The server owns the population filter now. A row the old client-side
+    // filter would have hidden must still render: sifting the answer a second
+    // time would silently disagree with the `total` the pager shows, and would
+    // hide exactly the rows a mis-answering backend needs to be caught by.
+    mockGetFeed.mockResolvedValue(
+      makeResponse([...mixedPage, makeRow({ client_id: 4, inn: '444', tag_code: 'vip' })], {
+        tag_code: 'kontakt',
+        total: 4,
+        total_pages: 1,
+      })
     )
 
     renderTab(['/?kg=kontakt'])
     await screen.findByRole('link', { name: '111' })
-    expect(subtab('kontakt', 2)).toHaveAttribute('aria-selected', 'true')
 
-    await userEvent.click(screen.getByTitle('2'))
+    expect(screen.getAllByRole('link').map((link) => link.textContent)).toEqual([
+      '111',
+      '222',
+      '333',
+      '444',
+    ])
+  })
 
-    await waitFor(() => expect(lastCall().skip).toBe(50))
-    expect(urlParams().get('kg')).toBe('kontakt')
-    expect(screen.getAllByRole('link').map((link) => link.textContent)).toEqual(['111', '333'])
+  it('reads the pager and the totals off the FILTERED answer', async () => {
+    // `total`/`total_pages` describe the population that was asked for — the
+    // server narrows before it paginates — so the pager is honest per tab
+    // instead of counting a feed three times the length of the one on screen.
+    mockGetFeed.mockResolvedValue(
+      makeResponse([mixedPage[1]], {
+        tag_code: 'nekontakt',
+        total: 14002,
+        page: 1,
+        page_size: 50,
+        total_pages: 281,
+      })
+    )
+
+    renderTab(['/?kg=nekontakt'])
+    await screen.findByRole('link', { name: '222' })
+
+    expect(pageIndicator()).toEqual(['1', '281'])
   })
 
   it.each([
     ['an unknown id', '/?kg=kontakty'],
     ['a LOCALIZED name instead of the code', '/?kg=%D0%9A%D0%BE%D0%BD%D1%82%D0%B0%D0%BA%D1%82'],
-  ])('degrades %s to «Всі» without rewriting the URL', async (_case, entry) => {
-    mockGetFeed.mockResolvedValue(makeResponse(mixedPage))
+  ])(
+    'degrades %s to «Всі» without rewriting the URL or sending the bad code',
+    async (_case, entry) => {
+      mockGetFeed.mockResolvedValue(makeResponse(mixedPage))
 
-    renderTab([entry])
-    await screen.findByRole('link', { name: '111' })
+      renderTab([entry])
+      await screen.findByRole('link', { name: '111' })
 
-    expect(subtab('all', 3)).toHaveAttribute('aria-selected', 'true')
-    expect(screen.getAllByRole('link')).toHaveLength(3)
-    // A stale view preference is harmless; rewriting it would destroy the deep
-    // link the moment it was opened.
-    expect(urlParams().has('kg')).toBe(true)
-  })
+      expect(subtab('all')).toHaveAttribute('aria-selected', 'true')
+      expect(screen.getAllByRole('link')).toHaveLength(3)
+      // The endpoint answers 400 for a code it does not configure, so a
+      // hand-edited value must not reach it — it stops at the resolve step.
+      expect('tag_code' in lastCall()).toBe(false)
+      // A stale view preference is harmless; rewriting it would destroy the deep
+      // link the moment it was opened.
+      expect(urlParams().has('kg')).toBe(true)
+    }
+  )
 
-  it('tells "this tag has nothing here" apart from "the feed has nothing"', async () => {
+  it('tells an empty POPULATION apart from an empty feed, honestly and with no pager', async () => {
+    // An empty filtered selection is a plain 200 with `rows: []` — the same
+    // calm silence as an empty feed, worded for the question that was actually
+    // asked. Nothing on screen may still claim there are rows elsewhere on
+    // another page: the server counted the whole tag, and it counted zero.
     mockGetFeed.mockResolvedValue(
-      makeResponse([makeRow({ client_id: 2, inn: '222', tag_code: 'nekontakt' })])
+      makeResponse([], { tag_code: 'kontakt', total: 0, total_pages: 0 })
     )
 
     renderTab(['/?kg=kontakt'])
 
     expect(await screen.findByText('pages.reports.contactTag.emptyTag')).toBeInTheDocument()
     expect(screen.queryByText('pages.reports.contactTag.empty')).not.toBeInTheDocument()
-    // The pager follows the FEED, not the tab: hiding this page's rows has not
-    // made the feed shorter.
-    expect(screen.getByText('Page')).toBeInTheDocument()
+    expect(screen.queryByText('Page')).not.toBeInTheDocument()
   })
 
-  it('keeps a row whose code is outside the configured pair on «Всі» only', async () => {
-    // Only reachable if CONTACT_TAG_FEED_TAG_CODES is reconfigured. Nothing is
-    // hidden — the default tab shows it and the table names its tag.
-    mockGetFeed.mockResolvedValue(
-      makeResponse([
-        ...mixedPage,
-        makeRow({ client_id: 4, inn: '444', tag_code: 'vip', tag_name: 'VIP' }),
-      ])
-    )
+  it('keeps the aggregate wording on «Всі» — the empty state follows the question asked', async () => {
+    mockGetFeed.mockResolvedValue(makeResponse([], { total: 0, total_pages: 0 }))
 
     renderTab()
-    await screen.findByRole('link', { name: '444' })
 
-    expect(subtab('all', 4)).toBeInTheDocument()
-    // The two halves visibly disagree (2 + 1 < 4), which is the honest signal.
-    expect(subtab('kontakt', 2)).toBeInTheDocument()
-    expect(subtab('nekontakt', 1)).toBeInTheDocument()
+    expect(await screen.findByText('pages.reports.contactTag.empty')).toBeInTheDocument()
+    expect(screen.queryByText('pages.reports.contactTag.emptyTag')).not.toBeInTheDocument()
+  })
 
-    await userEvent.click(subtab('kontakt', 2))
-    await waitFor(() => expect(screen.queryByRole('link', { name: '444' })).not.toBeInTheDocument())
+  it('shows no per-tab counts and no page-scope caveat, in any state', async () => {
+    // Both belonged to the client-side era: a count per tab would now be a
+    // request per tab, and the caveat qualified a page-scoped filter this strip
+    // no longer is. Asserted across all three states the strip can be in, so a
+    // count reappearing in one of them cannot hide.
+    mockGetFeed.mockImplementation(() => new Promise<ContactTagFeedResponse>(() => {}))
+
+    const loading = renderTab()
+    await waitFor(() => expect(mockGetFeed).toHaveBeenCalled())
+    expectBareSubtabs()
+    loading.unmount()
+
+    const blocked = renderTab(['/?kd=2026-02-31'])
+    await screen.findByText('pages.reports.contactTag.invalidViewDate')
+    expectBareSubtabs()
+    blocked.unmount()
+
+    mockGetFeed.mockResolvedValue(makeResponse(mixedPage))
+    renderTab()
+    await screen.findByRole('link', { name: '111' })
+    expectBareSubtabs()
   })
 
   it('labels the panel with the active sub-tab', async () => {
-    mockGetFeed.mockResolvedValue(makeResponse(mixedPage))
+    mockGetFeed.mockResolvedValue(makeResponse([mixedPage[1]], { tag_code: 'nekontakt' }))
 
     renderTab(['/?kg=nekontakt'])
     await screen.findByRole('link', { name: '222' })
@@ -1328,18 +1409,26 @@ describe('ContactTagFeedTab — tag sub-tabs', () => {
 describe('ContactTagFeedTab — paging', () => {
   it('round-trips every filter and the page window through the URL', async () => {
     mockGetFeed.mockResolvedValue(
-      makeResponse([makeRow()], { total: 44113, page: 2, page_size: 100, total_pages: 442 })
+      makeResponse([makeRow()], {
+        tag_code: 'nekontakt',
+        total: 14002,
+        page: 2,
+        page_size: 100,
+        total_pages: 141,
+      })
     )
 
     renderTab(['/?kd=2026-08-26&kf=2026-01-01&kt=2026-06-30&kg=nekontakt&kpg=2&kps=100'])
     await screen.findByText('Коваленко Іван Петрович')
 
-    // skip is derived from the ACTIVE page size, not the default one.
+    // skip is derived from the ACTIVE page size, not the default one — and the
+    // sub-tab rides along as a real filter, `tag_code` and all.
     expect(lastCall()).toEqual({
       project_id: 1,
       view_date: '2026-08-26',
       sell_from: '2026-01-01',
       sell_to: '2026-06-30',
+      tag_code: 'nekontakt',
       skip: 100,
       limit: 100,
     })
@@ -1807,7 +1896,8 @@ describe('ContactTag locale keys', () => {
 
   it('names the sub-tabs by CODE in the key and by label in the value', () => {
     // The key spelling is the backend's code, so a locale file cannot drift
-    // away from what `filterRowsByTagTab` compares against.
+    // away from the `tag_code` the strip sends. The VALUE is free to be
+    // renamed — that is the whole reason the two are separate.
     expect(Object.keys(uk.subtabs)).toEqual(['all', 'kontakt', 'nekontakt'])
     expect(Object.keys(en.subtabs)).toEqual(['all', 'kontakt', 'nekontakt'])
     expect(uk.subtabs.kontakt).toBe('Контакт')
@@ -1833,15 +1923,24 @@ describe('ContactTag locale keys', () => {
     expect((gap as Record<string, unknown>).viewDate).toBeUndefined()
   })
 
-  it('says the sub-tabs FILTER the current page, not only that they count it', () => {
-    // The strip is a page-scoped filter, not a feed-wide one — the endpoint has
-    // no `tag_code` parameter yet (a follow-up carries it). A caveat worded
-    // about the counts alone would leave an empty «Неконтакт» tab reading as
-    // "none in this feed" while page 2 of ~880 is full of them.
-    expect(en.subtabCountScope).toMatch(/filter/i)
-    expect(en.subtabCountScope).toMatch(/page/i)
-    expect(uk.subtabCountScope).toMatch(/фільтр/i)
-    expect(uk.subtabCountScope).toMatch(/сторінк/i)
+  it('carries no page-scope caveat — the strip filters the whole feed now', () => {
+    // `subtabCountScope` qualified a client-side, page-scoped strip ("other
+    // pages may hold more rows with this tag"). The endpoint takes `tag_code`
+    // and pages the narrowed feed, so that sentence is now false in both
+    // locales; leaving it behind would be a lie the operator acts on.
+    expect((uk as Record<string, unknown>).subtabCountScope).toBeUndefined()
+    expect((en as Record<string, unknown>).subtabCountScope).toBeUndefined()
+  })
+
+  it('words the tag-filtered empty state as a fact about the FEED, not about a page', () => {
+    // The server filters before it paginates, so "none with this tag" is now
+    // the whole truth for the selected filters — the old copy pointed at «Всі»
+    // for rows that were merely hidden client-side, and there are none such.
+    expect(en.emptyTag).not.toMatch(/page/i)
+    expect(uk.emptyTag).not.toMatch(/сторінц/i)
+    // ...and it still says something the aggregate empty state does not.
+    expect(en.emptyTag).not.toBe(en.empty)
+    expect(uk.emptyTag).not.toBe(uk.empty)
   })
 
   it('words the two sale-date "clear" controls as the DIFFERENT actions they are', () => {

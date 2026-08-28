@@ -30,6 +30,7 @@ describe('getContactTagFeed', () => {
     view_date: '2026-08-26',
     sell_from: null,
     sell_to: '2026-04-30',
+    tag_code: null,
     rows: [],
     total: 0,
     page: 1,
@@ -50,6 +51,7 @@ describe('getContactTagFeed', () => {
     await getContactTagFeed({
       project_id: 1,
       view_date: '2026-08-26',
+      tag_code: 'kontakt',
       sell_from: '2026-01-01',
       sell_to: '2026-06-30',
       skip: 50,
@@ -62,6 +64,7 @@ describe('getContactTagFeed', () => {
       params: {
         project_id: 1,
         view_date: '2026-08-26',
+        tag_code: 'kontakt',
         sell_from: '2026-01-01',
         sell_to: '2026-06-30',
         skip: 50,
@@ -69,6 +72,15 @@ describe('getContactTagFeed', () => {
         timezone: 'Europe/Kyiv',
       },
     })
+  })
+
+  it('passes an ABSENT tag_code through as a genuinely absent KEY', async () => {
+    // «Всі» is the absence of the population filter, not a code — the key must
+    // not appear at all, or the backend would answer 400 for an unknown one.
+    await getContactTagFeed({ project_id: 1, view_date: '2026-08-26' })
+
+    const [, config] = mockApi.get.mock.calls[0]
+    expect('tag_code' in config.params).toBe(false)
   })
 
   it('forwards an EMPTY sell_to as an empty string, not as an absent key', async () => {
@@ -113,6 +125,7 @@ describe('getContactTagFeed', () => {
       view_date: '2026-08-26',
       sell_from: null,
       sell_to: '2026-04-30',
+      tag_code: 'nekontakt',
       rows: [
         {
           client_id: 421395,
@@ -150,6 +163,24 @@ describe('getContactTagFeed', () => {
     expect(result.rows[0].tag_name).toBe('Неконтакт')
     // The APPLIED window is echoed even though the request carried no sell_to.
     expect(result.sell_to).toBe('2026-04-30')
+  })
+
+  it('parses the applied population echo, both filtered and unfiltered', async () => {
+    // `tag_code` is the answer's own statement of WHICH feed its `total` counts
+    // — the requested code on a tag tab, `null` when no filter was applied.
+    mockApi.get.mockResolvedValue({ data: { ...response, tag_code: 'kontakt', total: 14002 } })
+    const filtered = await getContactTagFeed({
+      project_id: 1,
+      view_date: '2026-08-26',
+      tag_code: 'kontakt',
+    })
+    expect(filtered.tag_code).toBe('kontakt')
+    expect(filtered.total).toBe(14002)
+
+    mockApi.get.mockResolvedValue({ data: { ...response, tag_code: null, total: 44113 } })
+    const unfiltered = await getContactTagFeed({ project_id: 1, view_date: '2026-08-26' })
+    expect(unfiltered.tag_code).toBeNull()
+    expect(unfiltered.total).toBe(44113)
   })
 
   it('parses the switched-off window echo (sell_to: null) without reshaping it', async () => {

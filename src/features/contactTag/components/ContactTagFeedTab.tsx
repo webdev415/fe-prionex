@@ -77,13 +77,17 @@
  *
  * ## Sub-tabs
  *
- * «Всі» / «Контакт» / «Неконтакт», filtering the CURRENT PAGE client-side by
- * `tag_code` (the endpoint takes no `tag_code` parameter yet — a follow-up
- * carries one). They change no request, so — unlike every other key this tab
- * writes — the sub-tab does NOT reset the page: the rows on screen are the same
- * rows either way. Both the filtering and the counts are therefore page-scoped,
- * and the line between the strip and the table says so; see `utils/tagTabs.ts`
- * for why keying on the code (not the localized name) is what keeps them
+ * «Всі» / «Контакт» / «Неконтакт» — a SERVER-side filter. The tab travels to
+ * the endpoint as `tag_code` («Всі» sends no parameter), which narrows the feed
+ * before it is paginated, so `rows`, `total` and `total_pages` all describe the
+ * selected population: the pager counts that tag's pages and an empty tab means
+ * the tag really is empty under these filters, not "empty on this page". It is
+ * therefore an ordinary filter of this tab and goes through the shell's
+ * `setFilterParam` like every other one — which resets the page to 1, because a
+ * page-40 offset into «Всі» addresses nothing in a feed a third the length. No
+ * per-tab counts are shown: they would each cost their own request, and the
+ * selected tab's own count is already the pager's total. See `utils/tagTabs.ts`
+ * for why keying on the code (not the localized name) is what keeps the strip
  * working across a tag rename.
  */
 
@@ -114,8 +118,6 @@ import { readViewDateBound } from '../utils/viewDate'
 import {
   CONTACT_TAG_TAB_IDS,
   DEFAULT_CONTACT_TAG_TAB,
-  countRowsByTagTab,
-  filterRowsByTagTab,
   resolveContactTagTab,
   type ContactTagTabId,
 } from '../utils/tagTabs'
@@ -138,12 +140,12 @@ const TABS_ID_PREFIX = 'contact-tag'
  * so a misspelled key is a compile error rather than a value written under a
  * name nothing reads (or, worse, one a sibling tab owns).
  *
- * `TAG_KEY` is deliberately NOT in this union: it is not a filter. It changes
- * no request, so it must not go through `setFilterParam` (which resets the
- * page) — it is written with the raw `setUrlParams` instead. The paging keys
- * are the shell's own and are configured, not passed per call.
+ * `TAG_KEY` belongs here with the dates: the sub-tab is a genuine filter — it
+ * goes on the wire as `tag_code` and the server pages the narrowed feed — so it
+ * takes the shell's page reset like every other filter. The paging keys are the
+ * shell's own and are configured, not passed per call.
  */
-type FilterKey = typeof VIEW_DATE_KEY | typeof SELL_FROM_KEY | typeof SELL_TO_KEY
+type FilterKey = typeof VIEW_DATE_KEY | typeof SELL_FROM_KEY | typeof SELL_TO_KEY | typeof TAG_KEY
 
 export function ContactTagFeedTab() {
   const { t, i18n } = useTranslation('common')
@@ -192,7 +194,7 @@ export function ContactTagFeedTab() {
     pageKey: PAGE_KEY,
     pageSizeKey: PAGE_SIZE_KEY,
   })
-  const { searchParams, pageSize, setFilterParam, setUrlParams } = filters
+  const { searchParams, pageSize, setFilterParam } = filters
 
   // A present-but-unusable bound is NOT silently replaced by the default: the
   // URL would then disagree with both the field and the request. It goes down
@@ -249,11 +251,18 @@ export function ContactTagFeedTab() {
 
   const hasFilterError = isViewDateInvalid || hasInvalidSellDate || isSellInverted
 
+  // WHICH population to ask for. An unknown `?kg=` degrades to «Всі» rather
+  // than travelling to the endpoint, which answers 400 for a code it does not
+  // configure — the URL keeps its raw spelling (a stale view preference is
+  // harmless), the request does not.
+  const activeTab: ContactTagTabId = resolveContactTagTab(searchParams.get(TAG_KEY))
+
   const query = useContactTagFeed({
     projectId,
     viewDate,
     sellFrom,
     sellTo: sellToState,
+    tagTab: activeTab,
     skip: filters.skip,
     limit: pageSize,
     timezone: userTimezone,
@@ -261,7 +270,9 @@ export function ContactTagFeedTab() {
   })
 
   // Stable identity for the empty fallback — a fresh `[]` every render would
-  // defeat the memos below and ContactTagTable's own.
+  // defeat ContactTagTable's own memo. The rows go to the table AS THEY ARRIVE:
+  // the server has already applied the sub-tab, so there is nothing left to
+  // sift out of them here.
   const rows = useMemo(() => query.data?.rows ?? [], [query.data])
 
   // Totals, the display clamp for a bookmarked page the drained feed no longer
@@ -276,45 +287,28 @@ export function ContactTagFeedTab() {
     hasFilterError ? undefined : query.data
   )
 
-  const activeTab: ContactTagTabId = resolveContactTagTab(searchParams.get(TAG_KEY))
-  const visibleRows = useMemo(() => filterRowsByTagTab(rows, activeTab), [rows, activeTab])
-  const tabCounts = useMemo(() => countRowsByTagTab(rows), [rows])
-
-  // Is there an ANSWER this screen may speak for? Both hints under the filters
-  // and the counts in the tab strip state facts about data, so all three wait
-  // for data to exist — and none of them may speak while a filter error keeps
-  // the query from asking at all. (`query.data` alone would not do: an
-  // unusable `?kd=` leaves the view date at today, i.e. on a query key that may
-  // still hold a cached answer, which React Query hands back even with the
-  // query disabled.)
+  // Is there an ANSWER this screen may speak for? The hints under the filters
+  // state facts about data, so they wait for data to exist — and neither may
+  // speak while a filter error keeps the query from asking at all. (`query.data`
+  // alone would not do: an unusable `?kd=` leaves the view date at today, i.e.
+  // on a query key that may still hold a cached answer, which React Query hands
+  // back even with the query disabled.)
   const hasAnswer = !hasFilterError && !!query.data
 
-  // The counts belong to the PAGE, not the feed — this list is ~880 pages long,
-  // so a client-side filter can only ever see the 50 rows on screen. Saying so
-  // in the line below the strip is what keeps "Контакт (12)" from reading as
-  // "12 in the whole feed"; it is said ONCE, in a line every reader gets,
-  // rather than also as a per-tab `title` only a mouse can find (a tooltip
-  // repeating a caveat the paragraph below already carries is noise on hover
-  // and reaches neither keyboard nor touch).
-  //
-  // ...and they are only appended once a page EXISTS to count. Before the first
-  // answer (and while a filter error keeps the query from asking for one) there
-  // are no rows, and "Всі (0)" would state a fact about the feed — zero tagged
-  // clients — that nothing has established. The bare label says the same thing
-  // the empty strip does: nothing yet.
+  // Plain labels, like every sibling SegmentedTabs strip on this page. A count
+  // per tab is not a formatting choice this strip declined: each tab is now its
+  // own server-side feed, so three numbers would mean three requests fired on
+  // every filter change to fill in two tabs nobody is looking at — and the
+  // number for the tab that IS selected is already on screen as the pager's
+  // total.
   const tabItems: SegmentedTabItem<ContactTagTabId>[] = useMemo(
     () =>
-      CONTACT_TAG_TAB_IDS.map((id) => {
-        const name = t(`pages.reports.contactTag.subtabs.${id}`)
-        return { id, label: hasAnswer ? `${name} (${tabCounts[id]})` : name }
-      }),
-    [t, tabCounts, hasAnswer]
+      CONTACT_TAG_TAB_IDS.map((id) => ({
+        id,
+        label: t(`pages.reports.contactTag.subtabs.${id}`),
+      })),
+    [t]
   )
-
-  // "The page produced rows, but none of them carry this tag" — a different
-  // fact from "the feed produced nothing", and saying "no data" there would be
-  // false: the page has data, this tab just cannot see it.
-  const hasUnmatchedRows = rows.length > 0 && visibleRows.length === 0
 
   // The APPLIED upper bound, straight from the answer — never recomputed here
   // (see the module docblock). `undefined` until the first response: the hint
@@ -559,10 +553,15 @@ export function ContactTagFeedTab() {
         )}
       </div>
 
-      {/* Tag sub-tabs: a fixed triple, always present. Switching is pure
-          client-side filtering of an already-fetched page — cheap, so selection
-          follows focus (`activation` default) per the ARIA APG rule the host
-          page's own expensive strip deliberately opts out of. */}
+      {/* Tag sub-tabs: a fixed triple, always present — a strip whose shape
+          followed the answer would make "no stale Контакт right now"
+          indistinguishable from "the Контакт tab is gone".
+
+          Selection follows focus (SegmentedTabs' `activation` default) per the
+          ARIA APG rule, which the host page's own strip deliberately opts out
+          of because switching a REPORT costs a whole panel. Switching a
+          population here costs one request the shell already caches per tab,
+          and arrowing across the strip is how a keyboard reads it. */}
       <SegmentedTabs<ContactTagTabId>
         items={tabItems}
         value={activeTab}
@@ -570,32 +569,16 @@ export function ContactTagFeedTab() {
           // The default tab is the ABSENCE of the key, never a spelled-out
           // `kg=all`: a shared link then carries only choices somebody made.
           //
-          // `setUrlParams`, NOT `setFilterParam`: the sub-tab changes no
-          // request, so resetting the page would throw away the operator's
-          // position in an 880-page feed for nothing.
-          setUrlParams({ [TAG_KEY]: tabId === DEFAULT_CONTACT_TAG_TAB ? null : tabId })
+          // `setFilterParam` — the sub-tab IS a filter now (it goes on the wire
+          // as `tag_code` and the server pages what it selects), so it takes the
+          // shell's page reset: page 40 of «Всі» addresses nothing in a feed a
+          // third as long, and keeping the offset would drop the operator into
+          // a hole (or past the end) of a list they have not read.
+          setFilterParam(TAG_KEY, tabId === DEFAULT_CONTACT_TAG_TAB ? null : tabId)
         }
         ariaLabel={t('pages.reports.tabs.contact-tag')}
         idPrefix={TABS_ID_PREFIX}
       />
-      {/* What the strip above actually does, said between the strip and the
-          table it governs — the two places the page scope is felt.
-
-          Both halves are named, and the FILTERING half is the load-bearing one:
-          «Контакт» shows the tagged rows OF THIS PAGE, so an operator who reads
-          the strip as a feed-wide filter would take an empty «Неконтакт» tab
-          for "none in the feed" while page 2 of ~880 is full of them. (There is
-          no server-side `tag_code` parameter yet; a follow-up carries it.)
-
-          Gated on the same `hasAnswer` as the counts themselves: with no page
-          fetched — before the first answer, or while a filter error keeps the
-          request from being made — there is nothing being scoped, and a caveat
-          about counts nobody can see is one more line to read past. */}
-      {hasAnswer && (
-        <p className="text-muted-foreground -mt-2 text-xs">
-          {t('pages.reports.contactTag.subtabCountScope')}
-        </p>
-      )}
 
       {/* Content: an invalid filter shows only the hints above.
 
@@ -627,23 +610,25 @@ export function ContactTagFeedTab() {
           </div>
         ) : (
           <div className="relative w-full" aria-busy={isRefreshing || undefined}>
-            {/* Two different silences, told apart. A genuinely empty answer is
-                a normal 200 (zero tagged clients and zero surviving candidates
-                both answer 200) and gets the calm "nothing to work". A page
-                that HAS rows none of which carry this tag is a different fact,
-                and the message points at «Всі», where they certainly are. */}
+            {/* An empty answer is a normal 200 — zero tagged clients, zero
+                surviving candidates and a population the filters leave nothing
+                of all answer 200 — so it gets the calm "nothing to work"
+                either way. The wording follows WHICH question was asked: on a
+                tag tab the server was asked about that tag alone, and naming it
+                is what keeps the sentence from over-claiming about the other
+                population, which nothing here looked at. */}
             <ContactTagTable
-              rows={visibleRows}
+              rows={rows}
               emptyMessage={t(
-                hasUnmatchedRows
-                  ? 'pages.reports.contactTag.emptyTag'
-                  : 'pages.reports.contactTag.empty'
+                activeTab === DEFAULT_CONTACT_TAG_TAB
+                  ? 'pages.reports.contactTag.empty'
+                  : 'pages.reports.contactTag.emptyTag'
               )}
             />
             {/* No pager for an empty feed — a lone "Page 1 of 1" under a "no
-                data" row is noise. It follows the FEED's total, not the
-                sub-tab's visible count: paging is server-side, so a tag tab
-                that hides every row of this page has not made the feed shorter. */}
+                data" row is noise. The total is the SELECTED population's: the
+                server filters before it paginates, so a tag tab's pager counts
+                that tag's pages and nothing else. */}
             {total > 0 && (
               <Pagination
                 currentPage={clampedPage}

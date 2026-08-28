@@ -21,6 +21,11 @@ const CONTACT_TAG_FEED_URL = '/api/v1/clients/reports/feeds/contact-tag'
  * backend applies its month−4 default) while `sell_to: ''` serialises as
  * `sell_to=` (the upper bound is switched off). Building that distinction is
  * the caller's job (`utils/sellWindow.ts`); preserving it is this module's.
+ *
+ * The optional `tag_code` rides the same rule: a sub-tab sends its code, «Всі»
+ * omits the key, and the backend narrows the feed BEFORE paginating — so the
+ * `total`/`total_pages` in the answer belong to the population that was asked
+ * for. Which tab may be asked for is `utils/tagTabs.ts`.
  */
 export async function getContactTagFeed(
   params: ContactTagFeedParams

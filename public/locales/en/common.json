@@ -8746,7 +8746,6 @@
           "kontakt": "Contact",
           "nekontakt": "No contact"
         },
-        "subtabCountScope": "These tabs filter and count the current page only — the feed is paginated, so other pages may hold more rows with this tag",
         "openClient": "Open client {{id}}",
         "columns": {
           "inn": "Tax ID",
@@ -8761,7 +8760,7 @@
           "bodyAmount": "Debt amount"
         },
         "empty": "No unworked «Contact»/«No contact» clients for the selected filters",
-        "emptyTag": "No clients with this tag on this page — every row is visible on the «All» tab",
+        "emptyTag": "No unworked clients with this tag for the selected filters",
         "invalidViewDate": "The as-of date is not a valid calendar date — pick a date to replace it",
         "invalidSellDate": "The link contains an invalid sale date — pick a date to replace it",
         "invalidSellRange": "Sale date from is later than sale date to",

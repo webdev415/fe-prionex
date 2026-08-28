@@ -21,10 +21,9 @@ export { readViewDateBound, type ViewDateBound } from './utils/viewDate'
 export {
   CONTACT_TAG_TAB_IDS,
   DEFAULT_CONTACT_TAG_TAB,
-  countRowsByTagTab,
-  filterRowsByTagTab,
   isContactTagTab,
   resolveContactTagTab,
+  tagTabRequestParam,
   type ContactTagTabId,
 } from './utils/tagTabs'
 export type { ContactTagFeedParams, ContactTagFeedRow, ContactTagFeedResponse } from './types'
