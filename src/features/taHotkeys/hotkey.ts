@@ -54,6 +54,50 @@ export function normalizeKey(key: string): string {
 }
 
 /**
+ * Latin characters we can map back to the physical key that produces them.
+ *
+ * Only needed for the fallback below: real browser events carry ``code``. A
+ * synthetic event (a test, an on-screen keyboard, some IME paths) may not, and
+ * silently producing a different spelling from the same keystroke would create
+ * a second, unmatchable row for one button — the exact bug this change fixes.
+ */
+function codeFromChar(char: string): string | null {
+  if (/^[A-Z]$/.test(char)) return `Key${char}`
+  if (/^[0-9]$/.test(char)) return `Digit${char}`
+  return null
+}
+
+/**
+ * The physical key an event names — ``event.code``, with a fallback.
+ *
+ * Named keys (``F2``, ``ArrowUp``, ``Enter``) are spelled the same in ``key``
+ * and ``code``, so the fallback returns them unchanged and old stored bindings
+ * for them keep matching without migration.
+ */
+export function physicalKey(event: { key: string; code?: string }): string {
+  if (event.code) return event.code
+  const normalized = normalizeKey(event.key)
+  return codeFromChar(normalized) ?? normalized
+}
+
+/**
+ * How a physical key reads to a human: ``KeyD`` -> ``D``, ``Digit1`` -> ``1``.
+ *
+ * Display only — never stored, never compared. The operator sees the legend on
+ * their keycap; the storage layer keeps the position. Anything we do not
+ * recognise (``F2``, ``ArrowUp``) is already human-readable and passes through.
+ */
+export function displayKey(key: string): string {
+  const letter = /^Key([A-Z])$/.exec(key)
+  if (letter) return letter[1]
+  const digit = /^Digit([0-9])$/.exec(key)
+  if (digit) return digit[1]
+  const numpad = /^Numpad([0-9])$/.exec(key)
+  if (numpad) return `Num ${numpad[1]}`
+  return key
+}
+
+/**
  * The combination a keyboard event represents, or ``null`` when the event
  * cannot be one.
  *
@@ -66,40 +110,55 @@ export function normalizeKey(key: string): string {
  *   modifier would make Cmd+1 fire a plain ``1`` binding on a Mac — a
  *   keystroke the operator never assigned.
  *
- * Reads ``event.key``, not ``event.code``, so a binding follows the printed
- * legend rather than the physical position: on a French AZERTY keyboard the
- * key an operator sees as ``A`` matches a binding recorded as ``A``, where
- * ``event.code`` would report ``KeyQ``. The trade-off is that a binding does
- * not survive the operator switching layout mid-session, which ``event.code``
- * would give us.
+ * Reads ``event.code`` — the PHYSICAL key — not ``event.key``, so a binding is
+ * the button, not the letter printed on it. This is what the earlier rounds of
+ * KAN-973 deferred; it lands here with the KAN-975 settings tab and revision
+ * 163, exactly where the deferral said it belonged.
  *
- * Deliberately deferred rather than overlooked (KAN-973 review, round 1 and 2).
- * Bindings are persisted server-side as the formatted string this produces
- * (``TAHotkeyBinding.hotkey``, matched by lookup with no parsing), so moving to
- * ``event.code`` rewrites every stored binding — ``Ctrl+1`` becomes
- * ``Ctrl+Digit1`` — and silently breaks every shortcut already saved unless a
- * migration ships with it. That belongs with the KAN-975 Profile Settings tab:
- * it owns the write side (assign / clear) and is where a combination is
- * recorded in the first place, so the switch and the migration of existing
- * bindings can land together with the screen that produces them.
+ * Why it had to change: on a Ukrainian layout the button labelled ``D`` reports
+ * ``event.key === 'В'``. Storing the letter meant one physical button could
+ * hold TWO different bindings — ``D`` recorded on Latin and ``В`` on Cyrillic —
+ * with no conflict warning, because the two strings differ. Operators hit this
+ * in the field (KAN-975 follow-up). Reading ``code`` collapses both to
+ * ``KeyD``, so the existing conflict check and the ``(user_id, hotkey)``
+ * unique constraint start catching it, and a binding keeps firing after the
+ * operator switches layout mid-session.
+ *
+ * The cost, stated plainly: a binding now follows the physical POSITION. On a
+ * French AZERTY keyboard the key an operator sees as ``A`` reports ``KeyQ`` and
+ * would display as ``Q``. Accepted deliberately — operators here run Ukrainian
+ * and English on the same QWERTY hardware, where position and legend agree.
+ *
+ * Named keys need no translation: ``F2``, ``ArrowUp``, ``Enter``, ``Home`` and
+ * friends are spelled identically in ``key`` and ``code``, so only single
+ * characters ever had to be migrated (``S`` -> ``KeyS``, ``1`` -> ``Digit1``).
  */
 export function hotkeyFromEvent(event: {
   key: string
+  /** ``KeyboardEvent.code``. Optional so synthetic events stay constructible. */
+  code?: string
   ctrlKey: boolean
   altKey: boolean
   shiftKey: boolean
   metaKey: boolean
 }): Hotkey | null {
+  // The modifier and activation guards stay on ``key``: those spellings
+  // ('Control', 'Enter', 'Escape') are already layout-independent, and a
+  // modifier's ``code`` distinguishes left from right ('ShiftLeft'), which
+  // would let a bare Shift press through as a final key.
   if (MODIFIER_KEYS.has(event.key)) return null
   if (ACTIVATION_KEYS.has(event.key)) return null
   if (event.metaKey) return null
-  if (!event.key) return null
+  if (!event.key && !event.code) return null
+
+  const key = physicalKey(event)
+  if (!key) return null
 
   return {
     ctrl: event.ctrlKey,
     alt: event.altKey,
     shift: event.shiftKey,
-    key: normalizeKey(event.key),
+    key,
   }
 }
 
@@ -240,6 +299,7 @@ export function ownsItsKeystrokes(target: EventTarget | null): boolean {
 export function resolveHotkeyTarget<T>(
   event: {
     key: string
+    code?: string
     ctrlKey: boolean
     altKey: boolean
     shiftKey: boolean
