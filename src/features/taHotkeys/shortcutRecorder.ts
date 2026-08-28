@@ -10,7 +10,7 @@
  * operator is still holding modifiers, nothing has been chosen yet, but the box
  * must show what they are holding or it looks broken.
  */
-import { formatHotkey, hotkeyFromEvent, type Hotkey } from './hotkey'
+import { displayKey, formatHotkey, hotkeyFromEvent, type Hotkey } from './hotkey'
 
 /** Modifiers we record, in the order they are displayed. Cmd is out of scope. */
 const MODIFIER_ORDER = ['Ctrl', 'Alt', 'Shift'] as const
@@ -27,6 +27,11 @@ export type RecorderOutcome =
 
 export interface RecorderEvent {
   key: string
+  /**
+   * ``KeyboardEvent.code`` — the physical key, which is what gets stored.
+   * Optional so a synthetic event stays constructible; see ``physicalKey``.
+   */
+  code?: string
   ctrlKey: boolean
   altKey: boolean
   shiftKey: boolean
@@ -46,17 +51,28 @@ function heldModifiers(event: RecorderEvent): string[] {
  * How a combination reads to a human: spaced around the plus signs.
  *
  * Deliberately not the same string we store. `formatHotkey` produces the
- * canonical `Ctrl+1` the server and the launch path compare on; this is for
- * the box and the key pills, where `Ctrl + 1` is easier to read. Keeping them
- * apart stops a display tweak from silently changing what gets saved.
+ * canonical `Ctrl+Digit1` the server and the launch path compare on; this is
+ * for the box and the key pills, where `Ctrl + 1` is easier to read. Keeping
+ * them apart stops a display tweak from silently changing what gets saved —
+ * and since the stored form is now a physical key code, this is also where
+ * `KeyD` becomes the `D` printed on the operator's keycap.
  */
 export function describeHotkey(hotkey: string): string {
-  return hotkey.split('+').join(' + ')
+  return hotkeyParts(hotkey).join(' + ')
 }
 
-/** The pills a badge shows — one per part of the combination. */
+/**
+ * The pills a badge shows — one per part of the combination.
+ *
+ * Each part goes through ``displayKey``, so the stored physical key reads as
+ * the legend on the operator's keycap: ``Ctrl+KeyD`` shows as ``Ctrl`` ``D``.
+ * Modifiers are not key codes and pass through untouched.
+ */
 export function hotkeyParts(hotkey: string): string[] {
-  return hotkey.split('+').filter(Boolean)
+  return hotkey
+    .split('+')
+    .filter(Boolean)
+    .map((part) => displayKey(part))
 }
 
 /**
