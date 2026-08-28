@@ -10803,16 +10803,23 @@
           "training": "Training"
         },
         "events": {
-          "hired": "Hired - {{department}}, {{role}}",
-          "role_changed": "Role changed - {{from}} to {{to}}",
-          "department_changed": "Department changed - {{from}} to {{to}}",
-          "evaluation_completed": "Quality assessment - {{score}}",
-          "evaluation_updated": "Quality assessment revised - {{score}}",
-          "feedback_given": "Feedback - {{kind}}",
-          "training_assigned": "Course assigned - {{course}}",
-          "training_completed": "Completed course - {{course}}",
-          "survey_completed": "Survey - {{name}} ({{score}})"
-        }
+          "hired": "Hired — {{department}}, {{role}}",
+          "hired_noDepartment": "Hired — {{role}}",
+          "role_changed": "Role changed — {{from}} to {{to}}",
+          "role_changed_noFrom": "Role set — {{to}}",
+          "department_changed": "Department changed — {{from}} to {{to}}",
+          "department_changed_noFrom": "Department set — {{to}}",
+          "evaluation_completed": "Quality assessment — {{score}}",
+          "evaluation_updated": "Quality assessment revised — {{score}}",
+          "feedback_given": "Feedback — {{kind}}",
+          "training_assigned": "Course assigned — {{course}}",
+          "training_completed": "Completed course — {{course}}",
+          "survey_completed": "Survey — {{name}} ({{score}})"
+        },
+        "from": "From",
+        "to": "To",
+        "selectPeriod": "Select period",
+        "clearPeriod": "Clear the period"
       },
       "backToList": "To the list",
       "notFound": "That employee could not be found.",

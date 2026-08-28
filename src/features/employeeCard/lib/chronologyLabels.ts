@@ -20,6 +20,22 @@ function score(payload: Record<string, unknown>): string {
   return typeof outOf === 'number' ? `${points}/${outOf}` : String(points)
 }
 
+/**
+ * Which wording an event needs, given what it actually carries.
+ *
+ * Half these events have a part missing in practice. Somebody hired before
+ * departments were recorded has no department; the first role or department
+ * an employee is given has nothing to have changed from. Filling the gap with
+ * an empty string is what produced lines like "Hired - , Admin" and
+ * "Department changed -  to Support", where the sentence still contains the
+ * punctuation that joined the missing piece to the rest.
+ */
+function wording(eventType: string, values: Record<string, string>): string | undefined {
+  if (eventType === 'hired' && !values.department) return 'noDepartment'
+  if (eventType.endsWith('_changed') && !values.from) return 'noFrom'
+  return undefined
+}
+
 export function chronologyLabel(event: EmployeeEvent, t: TFunction): string {
   const key = `pages.employeeCard.chronology.events.${event.event_type}`
   const payload = event.payload ?? {}
@@ -35,7 +51,7 @@ export function chronologyLabel(event: EmployeeEvent, t: TFunction): string {
     score: score(payload),
   }
 
-  const rendered = t(key, values)
+  const rendered = t(key, { ...values, context: wording(event.event_type, values) })
   return rendered === key ? event.event_type : rendered
 }
 
