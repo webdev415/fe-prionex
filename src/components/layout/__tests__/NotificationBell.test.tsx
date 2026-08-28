@@ -305,8 +305,7 @@ describe('NotificationBell — visibility of all types', () => {
         ...page,
         items: page.items.map((n) =>
           n.type === 'training_scheduled'
-            ? // eslint-disable-next-line no-script-url
-              { ...n, metadata: { ...n.metadata, meeting_url: 'javascript:alert(1)' } }
+            ? { ...n, metadata: { ...n.metadata, meeting_url: 'javascript:alert(1)' } }
             : n
         ),
       }
