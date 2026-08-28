@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
@@ -10,7 +10,7 @@ import {
   useLeaveQueue,
   useMyDialerSession,
 } from '@/features/dialer'
-import { OperatorPhonePanel } from '@/features/operatorPhone'
+import { OperatorPhonePanel, useOperatorPhone } from '@/features/operatorPhone'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 
@@ -33,7 +33,21 @@ export function OperatorDialerView() {
   const [autoConnect, setAutoConnect] = useState(false)
   const [acceptedCallId, setAcceptedCallId] = useState<string | null>(null)
 
-  const { routedCall, queueComplete, clearRoutedCall } = useDialerSocket(joinedQueueId != null)
+  const {
+    routedCall: socketRoutedCall,
+    queueComplete,
+    clearRoutedCall: clearSocketRoutedCall,
+  } = useDialerSocket(joinedQueueId != null)
+
+  const phoneFrameRef = useRef<HTMLIFrameElement>(null)
+  const {
+    status: phoneStatus,
+    aor: phoneAor,
+    routedCall: phoneRoutedCall,
+    answerCall,
+    setAutoAnswer,
+    clearRoutedCall: clearPhoneRoutedCall,
+  } = useOperatorPhone(phoneFrameRef)
 
   const activeId = selectedId ?? joinedQueueId
   const activeCampaign = useMemo(
@@ -41,6 +55,46 @@ export function OperatorDialerView() {
     [campaigns, activeId]
   )
   const isJoinedHere = activeCampaign != null && activeCampaign.id === joinedQueueId
+
+  // Two drivers announce a routed call by different routes. The fake engine
+  // emits `dialer.call_routed` on the CRM's own socket; the Aggressive Dialer
+  // publishes it only to the phone's presence socket, which the phone relays up
+  // over postMessage. Without this second source the CRM shows nothing at all
+  // while the operator's handset is ringing.
+  const routedCall = useMemo(() => {
+    if (socketRoutedCall) return socketRoutedCall
+    if (!phoneRoutedCall) return null
+    return {
+      call_id: phoneRoutedCall.call_id,
+      client_id: phoneRoutedCall.client_id ?? 0,
+      client_name: phoneRoutedCall.client_name ?? '',
+      phone: phoneRoutedCall.phone ?? '',
+      line_type: activeCampaign?.telephony_type ?? 'white',
+      started_at: new Date().toISOString(),
+    }
+  }, [socketRoutedCall, phoneRoutedCall, activeCampaign?.telephony_type])
+
+  const clearRoutedCall = useCallback(() => {
+    clearSocketRoutedCall()
+    clearPhoneRoutedCall()
+  }, [clearSocketRoutedCall, clearPhoneRoutedCall])
+
+  // The operator's preference has to reach the phone, which is what actually
+  // answers the SIP session — local state alone would leave auto-connect on in
+  // the UI and the call ringing unanswered.
+  const applyAutoConnect = useCallback(
+    (enabled: boolean) => {
+      setAutoConnect(enabled)
+      setAutoAnswer(enabled)
+    },
+    [setAutoAnswer]
+  )
+
+  const handleAccept = useCallback(() => {
+    if (!routedCall) return
+    setAcceptedCallId(routedCall.call_id)
+    answerCall()
+  }, [routedCall, answerCall])
 
   const isCallActive = routedCall != null && (autoConnect || acceptedCallId === routedCall.call_id)
 
@@ -57,6 +111,7 @@ export function OperatorDialerView() {
     if (!activeCampaign) return
     try {
       await joinMutation.mutateAsync({ queueId: activeCampaign.id, autoConnect })
+      setAutoAnswer(autoConnect)
       toast.success(t('dialer.operator.joinedToast', 'Joined the dialer'))
     } catch {
       void 0
@@ -104,7 +159,7 @@ export function OperatorDialerView() {
           pill — always mounted so the phone session persists regardless of
           which campaign is selected (KAN-353). */}
       <div className="mb-4 flex items-center justify-end">
-        <OperatorPhonePanel />
+        <OperatorPhonePanel iframeRef={phoneFrameRef} status={phoneStatus} aor={phoneAor} />
       </div>
 
       <div className="dialer-operator-view grid grid-cols-1 gap-4 lg:grid-cols-[minmax(280px,420px)_1fr]">
@@ -141,8 +196,8 @@ export function OperatorDialerView() {
                   routedCall={routedCall!}
                   campaignName={activeCampaign.name}
                   autoConnect={autoConnect}
-                  onToggleAutoConnect={setAutoConnect}
-                  onAccept={() => setAcceptedCallId(routedCall!.call_id)}
+                  onToggleAutoConnect={applyAutoConnect}
+                  onAccept={handleAccept}
                   onLeave={handleLeave}
                   leaving={leaveMutation.isPending}
                 />
@@ -153,7 +208,7 @@ export function OperatorDialerView() {
                   campaignName={activeCampaign.name}
                   waitTimeSeconds={activeCampaign.wait_time_seconds ?? 8}
                   autoConnect={autoConnect}
-                  onToggleAutoConnect={setAutoConnect}
+                  onToggleAutoConnect={applyAutoConnect}
                   onLeave={handleLeave}
                   leaving={leaveMutation.isPending}
                   onHangup={handleHangup}
@@ -181,7 +236,7 @@ export function OperatorDialerView() {
                       <div className="flex flex-wrap items-center gap-2">
                         <ToggleChip
                           active={autoConnect}
-                          onClick={() => setAutoConnect(!autoConnect)}
+                          onClick={() => applyAutoConnect(!autoConnect)}
                         >
                           {t('dialer.call.autoConnection', 'Auto-connection')}
                         </ToggleChip>

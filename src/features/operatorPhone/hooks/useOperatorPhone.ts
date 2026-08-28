@@ -3,18 +3,34 @@ import { type RefObject, useCallback, useEffect, useRef, useState } from 'react'
 import { issuePhoneToken } from '../api/operatorPhoneService'
 import { OPERATOR_PHONE_ORIGIN } from '../constants'
 import {
+  MSG_ANSWER,
   MSG_LOGOUT,
   MSG_READY_FOR_TOKEN,
+  MSG_ROUTED_CALL,
+  MSG_SET_AUTO_ANSWER,
   MSG_STATUS,
   MSG_TOKEN,
   MSG_TOKEN_EXPIRED,
   parsePhoneMessage,
   type PhoneStatus,
+  type RoutedCallPayload,
 } from '../protocol'
 
 export interface OperatorPhoneState {
   status: PhoneStatus
   aor: string | null
+  /**
+   * The call currently offered to this operator, relayed up by the phone. The
+   * dialer publishes this only to the phone's presence socket, so it is the
+   * CRM's sole notice that a call has arrived.
+   */
+  routedCall: RoutedCallPayload | null
+  /** Accept the offered call — sends the SIP answer via the phone. */
+  answerCall: () => void
+  /** Push the operator's auto-answer preference down to the phone. */
+  setAutoAnswer: (enabled: boolean) => void
+  /** Drop the offered call locally once it is over or superseded. */
+  clearRoutedCall: () => void
 }
 
 // Bounded retry for a transient mint failure (the token endpoint is a POST, which
@@ -40,6 +56,7 @@ export function useOperatorPhone(
 ): OperatorPhoneState {
   const [status, setStatus] = useState<PhoneStatus>('offline')
   const [aor, setAor] = useState<string | null>(null)
+  const [routedCall, setRoutedCall] = useState<RoutedCallPayload | null>(null)
   const mintingRef = useRef(false)
 
   const postToPhone = useCallback(
@@ -92,6 +109,9 @@ export function useOperatorPhone(
         case MSG_TOKEN_EXPIRED:
           void mintAndSend()
           break
+        case MSG_ROUTED_CALL:
+          setRoutedCall(message.call)
+          break
         case MSG_STATUS:
           setStatus(message.status)
           // Keep the AOR only while connected; drop it once offline/errored so
@@ -109,5 +129,18 @@ export function useOperatorPhone(
     }
   }, [mintAndSend, postToPhone, iframeRef])
 
-  return { status, aor }
+  const answerCall = useCallback(() => {
+    postToPhone({ type: MSG_ANSWER })
+  }, [postToPhone])
+
+  const setAutoAnswer = useCallback(
+    (enabled: boolean) => {
+      postToPhone({ type: MSG_SET_AUTO_ANSWER, enabled })
+    },
+    [postToPhone]
+  )
+
+  const clearRoutedCall = useCallback(() => setRoutedCall(null), [])
+
+  return { status, aor, routedCall, answerCall, setAutoAnswer, clearRoutedCall }
 }

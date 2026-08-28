@@ -183,7 +183,9 @@
       "maxAttempts": "Attempts per number",
       "maxAttemptsHint": "Total attempts, including the first. Line failures are periodic, so a retry usually lands on another SIM.",
       "retryDelayFailed": "Retry delay (seconds)",
-      "retryDelayFailedHint": "0 disables retrying failures."
+      "retryDelayFailedHint": "0 disables retrying failures.",
+      "answerMode": "Answer mode",
+      "answerModeHint": "Manual gives operators an accept window before the customer is connected."
     },
     "numbers": {
       "inQueue": "In Queue",
@@ -268,6 +270,10 @@
     "telephonyType": {
       "white": "White",
       "grey": "Grey"
+    },
+    "answerMode": {
+      "auto": "Automatic",
+      "manual": "Manual (operator accepts)"
     }
   },
   "search": {
