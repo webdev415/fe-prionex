@@ -10832,8 +10832,7 @@
         "manager": "Manager",
         "hiredAt": "Date of hire",
         "phone": "Phone",
-        "email": "Email",
-        "openTelegram": "Open Telegram"
+        "email": "Email"
       },
       "sections": {
         "personal-information": "Personal Information",

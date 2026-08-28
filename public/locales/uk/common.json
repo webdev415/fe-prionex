@@ -10853,8 +10853,7 @@
         "manager": "Керівник",
         "hiredAt": "Дата прийняття",
         "phone": "Телефон",
-        "email": "Пошта",
-        "openTelegram": "Відкрити Telegram"
+        "email": "Пошта"
       },
       "sections": {
         "personal-information": "Особисті дані",

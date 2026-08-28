@@ -205,34 +205,69 @@ describe('EmployeeCardPage', () => {
     expect(within(panel).queryByText('KO')).toBeNull()
   })
 
-  it('offers a way to open Telegram', () => {
+  /*
+   * The panel carries no quick actions any more. The address is printed on it
+   * a line above where the mail button was, so that one repeated what was
+   * already there, and the Telegram one went with it.
+   */
+  /*
+   * The rule belongs to what is under it. On somebody with no department,
+   * manager, hire date or phone recorded - which is most people on a fresh
+   * install - drawing it anyway leaves a line across the panel with nothing
+   * beneath it.
+   */
+  it('rules off the details only when there are details', () => {
+    renderAt('/dashboard/team-management/users/7')
+    const panel = screen.getByRole('complementary')
+    expect(panel.querySelector('.border-t')).not.toBeNull()
+
+    state.card = card({
+      header: {
+        ...card().header,
+        department: null,
+        manager: null,
+        hired_at: null,
+        phone: null,
+        email: null,
+      },
+    })
     renderAt('/dashboard/team-management/users/7')
 
-    expect(
-      screen.getByRole('link', { name: 'pages.employeeCard.panel.openTelegram' })
-    ).toHaveAttribute('href', 'https://t.me/olena')
+    const bare = screen.getAllByRole('complementary')[1]
+    expect(bare.querySelector('.border-t')).toBeNull()
+  })
+
+  it('gives each badge its own line', () => {
+    renderAt('/dashboard/team-management/users/7')
+
+    const panel = screen.getByRole('complementary')
+    // One level, not two: the badge's parent is the row that holds both. Two
+    // levels lands on the <aside>, which is itself flex-col and would say yes
+    // whatever the row did.
+    const badges = within(panel).getByText('pages.employeeCard.status.active').parentElement
+
+    expect(badges?.className).toContain('flex-col')
+    expect(badges?.className).not.toContain('flex-wrap')
   })
 
   /*
-   * The address is printed on the panel a line above, so a round button doing
-   * the same thing was a second way to say one thing.
+   * Where somebody works is a fact worth seeing at a glance, and the word
+   * alone reads as another status pill beside the one above it.
    */
-  it('does not repeat the address as a button', () => {
+  it('marks the work format with an icon as well as a word', () => {
+    renderAt('/dashboard/team-management/users/7')
+
+    const panel = screen.getByRole('complementary')
+    const badge = within(panel).getByText('pages.employeeCard.workFormat.remote').parentElement
+
+    expect(badge?.querySelector('svg')).not.toBeNull()
+  })
+
+  it('carries no quick-action buttons', () => {
     const { container } = renderAt('/dashboard/team-management/users/7')
 
     expect(container.querySelector('a[href^="mailto:"]')).toBeNull()
-  })
-
-  it('leaves out a quick action it has no address for', () => {
-    state.card = card({
-      header: { ...card().header, telegram: null, email: null },
-    })
-
-    renderAt('/dashboard/team-management/users/7')
-
-    expect(
-      screen.queryByRole('link', { name: 'pages.employeeCard.panel.openTelegram' })
-    ).not.toBeInTheDocument()
+    expect(container.querySelector('a[href^="https://t.me/"]')).toBeNull()
   })
 
   it('reports a failure instead of an empty card', () => {

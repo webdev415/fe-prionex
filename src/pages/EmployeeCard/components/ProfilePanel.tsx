@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { UserAvatar } from '@/components/ui/UserAvatar'
+import { Icons } from '@/lib/icons'
 import { displayName } from '@/features/employeeCard/lib/displayName'
 import type { CardHeader } from '@/features/employeeCard/types.card'
 
@@ -25,13 +26,13 @@ export function ProfilePanel({ header }: ProfilePanelProps) {
 
   const hired = header.hired_at ? new Date(header.hired_at).toLocaleDateString(i18n.language) : null
 
-  const detail = (label: string, value: string | null) =>
-    value ? (
-      <div className="space-y-0.5 text-center">
-        <p className="text-muted-foreground text-xs">{label}</p>
-        <p className="text-foreground text-sm font-medium">{value}</p>
-      </div>
-    ) : null
+  const details = [
+    [t('pages.employeeCard.panel.department'), header.department],
+    [t('pages.employeeCard.panel.manager'), header.manager],
+    [t('pages.employeeCard.panel.hiredAt'), hired],
+    [t('pages.employeeCard.panel.phone'), header.phone],
+    [t('pages.employeeCard.panel.email'), header.email],
+  ].filter((entry): entry is [string, string] => Boolean(entry[1]))
 
   return (
     <aside className="border-border bg-card flex flex-col items-center gap-4 rounded-xl border p-6">
@@ -53,7 +54,9 @@ export function ProfilePanel({ header }: ProfilePanelProps) {
         {header.position && <p className="text-muted-foreground text-sm">{header.position}</p>}
       </div>
 
-      <div className="flex flex-wrap justify-center gap-2">
+      {/* One badge per line. Side by side they wrap unevenly in a 280px
+          column as soon as a work format is longer than "Remote". */}
+      <div className="flex flex-col items-center gap-2">
         <span className="border-border text-foreground inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs">
           <span
             aria-hidden="true"
@@ -66,36 +69,28 @@ export function ProfilePanel({ header }: ProfilePanelProps) {
           {t(`pages.employeeCard.status.${header.status}`, header.status)}
         </span>
         {header.work_format && (
-          <span className="border-border text-foreground rounded-full border px-3 py-1 text-xs">
+          <span className="border-border text-foreground inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs">
+            {header.work_format === 'remote' ? (
+              <Icons.Home size={13} strokeWidth={1.8} aria-hidden="true" />
+            ) : (
+              <Icons.Briefcase01 size={13} strokeWidth={1.8} aria-hidden="true" />
+            )}
             {t(`pages.employeeCard.workFormat.${header.work_format}`, header.work_format)}
           </span>
         )}
       </div>
 
-      <div className="border-border w-full space-y-3 border-t pt-4">
-        {detail(t('pages.employeeCard.panel.department'), header.department)}
-        {detail(t('pages.employeeCard.panel.manager'), header.manager)}
-        {detail(t('pages.employeeCard.panel.hiredAt'), hired)}
-        {detail(t('pages.employeeCard.panel.phone'), header.phone)}
-        {detail(t('pages.employeeCard.panel.email'), header.email)}
-      </div>
-      {/*
-        Telegram only. The mail action went because the address is already
-        printed just above it, and a round button that does the same thing as
-        the line above is a second way to say one thing.
-      */}
-      {header.telegram && (
-        <div className="flex gap-3 pt-2">
-          <a
-            href={`https://t.me/${header.telegram.replace(/^@/, '')}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={t('pages.employeeCard.panel.openTelegram')}
-            title={t('pages.employeeCard.panel.openTelegram')}
-            className="border-border text-foreground hover:bg-muted inline-flex size-10 items-center justify-center rounded-full border"
-          >
-            ✈
-          </a>
+      {/* The rule belongs to what is under it. On somebody with no department,
+          manager, hire date or phone recorded, drawing it anyway leaves a line
+          across the panel with nothing beneath it. */}
+      {details.length > 0 && (
+        <div className="border-border w-full space-y-3 border-t pt-4">
+          {details.map(([label, value]) => (
+            <div key={label} className="space-y-0.5 text-center">
+              <p className="text-muted-foreground text-xs">{label}</p>
+              <p className="text-foreground text-sm font-medium">{value}</p>
+            </div>
+          ))}
         </div>
       )}
     </aside>
