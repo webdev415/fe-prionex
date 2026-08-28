@@ -13,7 +13,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import { CARD_HEADER_OFFSET, useScrollSpy } from '../hooks/useScrollSpy'
 
 const IDS = ['personal', 'work', 'documents']
@@ -42,12 +42,26 @@ function scroll() {
   })
 }
 
-let select: ((id: string) => void) | null = null
-
+/*
+ * The probe offers a button per section rather than handing `select` out to
+ * the test. Assigning it during render is a side effect, and one the linter
+ * rightly refuses: what a render writes to the outside depends on when React
+ * happens to re-render.
+ */
 function Probe({ ids, ready = true }: { ids: string[]; ready?: boolean }) {
   const spy = useScrollSpy(ids, CARD_HEADER_OFFSET, ready)
-  select = spy.select
-  return <span data-testid="active">{spy.active}</span>
+  return (
+    <>
+      <span data-testid="active">{spy.active}</span>
+      {ids.map((id) => (
+        <button key={id} data-testid={`choose-${id}`} onClick={() => spy.select(id)} />
+      ))}
+    </>
+  )
+}
+
+function choose(id: string) {
+  fireEvent.click(screen.getByTestId(`choose-${id}`))
 }
 
 describe('useScrollSpy', () => {
@@ -139,7 +153,7 @@ describe('useScrollSpy', () => {
     place({ personal: 200, work: 900, documents: 1600 })
     render(<Probe ids={IDS} />)
 
-    act(() => select?.('work'))
+    choose('work')
     place({ personal: -2000, work: 400, documents: 700 }, { top: 3200, client: 800, height: 4000 })
     scroll()
 
@@ -152,7 +166,7 @@ describe('useScrollSpy', () => {
       place({ personal: 200, work: 900, documents: 1600 })
       render(<Probe ids={IDS} />)
 
-      act(() => select?.('work'))
+      choose('work')
       place({ personal: -1100, work: -600, documents: 100 })
       scroll()
       expect(screen.getByTestId('active')).toHaveTextContent('work')
@@ -170,7 +184,7 @@ describe('useScrollSpy', () => {
     place({ personal: 200, work: 900, documents: 1600 })
     render(<Probe ids={IDS} />)
 
-    act(() => select?.('personal'))
+    choose('personal')
     place({ personal: -1100, work: -600, documents: -100 })
     scroll()
 

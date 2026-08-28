@@ -366,10 +366,10 @@ describe('EmployeeCardPage: what stays on screen while the sections scroll', () 
     renderAt('/dashboard/team-management/users/7')
 
     const tabs = screen.getByRole('tablist', { name: 'pages.employeeCard.sectionNav' })
-    const header = tabs.closest('.sticky') as HTMLElement
+    const bar = tabs.closest('.sticky') as HTMLElement
     const column = screen.getByRole('complementary').closest('.sticky') as HTMLElement
 
-    expect(header.className).toContain('top-0')
+    expect(bar.className).toContain('top-0')
     expect(column.className).toContain('top-0')
   })
 
@@ -396,11 +396,31 @@ describe('EmployeeCardPage: what stays on screen while the sections scroll', () 
     renderAt('/dashboard/team-management/users/7')
 
     const tabs = screen.getByRole('tablist', { name: 'pages.employeeCard.sectionNav' })
-    const previous = screen.getByRole('link', { name: 'pages.employeeCard.previousEmployee' })
+    const previous = screen.getByRole('link', { name: /pages.employeeCard.previousEmployee/ })
 
     const header = tabs.closest('.sticky')
     expect(header).not.toBeNull()
     expect(header).toContainElement(previous)
+  })
+
+  /*
+   * ``neutral-dim`` and the light theme both define a dashboard background
+   * image, so the right colour alone is not the page - it reads as a strip
+   * laid over the card. The bar carries the page's own two background classes
+   * instead, with fixed attachment so the image lines up rather than starting
+   * over inside the bar.
+   */
+  it('wears the page background rather than one of its own', () => {
+    renderAt('/dashboard/team-management/users/7')
+
+    const tabs = screen.getByRole('tablist', { name: 'pages.employeeCard.sectionNav' })
+    const bar = tabs.closest('.sticky') as HTMLElement
+
+    expect(bar.className).toContain('bg-background')
+    expect(bar.className).toContain('bg-dashboard-light')
+    expect(bar.className).toContain('[background-attachment:fixed]')
+    expect(bar.className).not.toContain('backdrop-blur')
+    expect(tabs.className).not.toContain('bg-background')
   })
 
   /*
@@ -415,6 +435,31 @@ describe('EmployeeCardPage: what stays on screen while the sections scroll', () 
     expect(tabs.className).not.toContain('sticky')
   })
 
+  /*
+   * ``secondary`` paints near-black on a dark theme, so the link that could be
+   * clicked read as plain text while the disabled one, in muted grey, was the
+   * only thing that looked like a button - exactly backwards.
+   */
+  it('makes the way onward look clickable, not the way that is closed', () => {
+    renderAt('/dashboard/team-management/users/7')
+
+    const next = screen.getByRole('link', { name: /pages.employeeCard.nextEmployee/ })
+    expect(next.className).toContain('border')
+    expect(next.className).not.toContain('bg-secondary-800')
+  })
+
+  it('points each control the way it goes', () => {
+    renderAt('/dashboard/team-management/users/7')
+
+    const back = screen.getByRole('link', { name: 'pages.employeeCard.backToList' })
+    const previous = screen.getByRole('link', { name: /pages.employeeCard.previousEmployee/ })
+    const next = screen.getByRole('link', { name: /pages.employeeCard.nextEmployee/ })
+
+    expect(back.querySelector('svg')).not.toBeNull()
+    expect(previous.querySelector('svg')).not.toBeNull()
+    expect(next.querySelector('svg')).not.toBeNull()
+  })
+
   it('spreads the walk controls across the header rather than bunching them', () => {
     renderAt('/dashboard/team-management/users/7')
 
@@ -426,10 +471,8 @@ describe('EmployeeCardPage: what stays on screen while the sections scroll', () 
     renderAt('/dashboard/team-management/users/7')
 
     const back = screen.getByRole('link', { name: 'pages.employeeCard.backToList' })
-    const previous = screen.getByRole('link', { name: 'pages.employeeCard.previousEmployee' })
+    const previous = screen.getByRole('link', { name: /pages.employeeCard.previousEmployee/ })
 
-    // Both stay on screen, in different blocks: leaving is about the list, and
-    // Previous/Next is about the sections it sits over.
     expect(back.parentElement).not.toBe(previous.parentElement)
     expect(back.closest('.sticky')).not.toBe(previous.closest('.sticky'))
   })

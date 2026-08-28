@@ -99,7 +99,21 @@ export function EmployeeCardPage() {
               scroll under them. They are one sticky block rather than two so
               the tabs never need to know how tall the row above them is.
             */}
-            <div className="bg-background sticky top-0 z-10 space-y-3 pt-4 pb-2 md:pt-6">
+            {/*
+              The page's own background, not an approximation of it: the same
+              two classes the layout root carries, so the colour comes from
+              ``--background`` and the image from ``--dashboard-bg-image`` -
+              ``neutral-dim`` and the light theme both define one, which is why
+              a flat fill of the right colour still read as a strip laid over
+              the card.
+
+              ``fixed`` attachment is what lines the two up. It measures the
+              background against the viewport rather than against this bar, and
+              the root - which does not scroll, the card's own container does -
+              measures against a box the size of the viewport too. So the strip
+              paints exactly the part of the page it covers.
+            */}
+            <div className="bg-background bg-dashboard-light sticky top-0 z-10 space-y-3 bg-cover [background-attachment:fixed] bg-center pt-4 pb-2 md:pt-6">
               <CardNavigation listQuery={listQuery} neighbours={neighbours} />
 
               <CardTabs

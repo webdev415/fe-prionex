@@ -45,7 +45,7 @@ export function CardTabs({ tabs, activeId, ariaLabel, onSelect }: CardTabsProps)
     <div
       role="tablist"
       aria-label={ariaLabel}
-      className="bg-background border-border flex gap-1 overflow-x-auto border-b"
+      className="border-border flex gap-1 overflow-x-auto border-b"
     >
       {tabs.map((tab) => {
         const isActive = tab.id === activeId
