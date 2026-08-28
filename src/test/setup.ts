@@ -27,6 +27,53 @@ configure({ asyncUtilTimeout: 5000 })
 // Note: import.meta.env is read-only, so we use vi.stubEnv which works at test runtime
 vi.stubEnv('VITE_API_BASE_URL', 'https://api.dev.crm-prionex.online')
 
+// ── No real network from a unit test ─────────────────────────────────────────
+// The base URL above is a REAL, reachable host, so any request a test forgets
+// to mock actually leaves the machine — and the dev API answers 401. That 401
+// hits the interceptor in lib/api.ts, which calls triggerAuthExpired() and
+// wipes the auth store (user: null, isAuthenticated: false) out from under a
+// test that never logged anybody out. The visible tell is jsdom's "Not
+// implemented: navigation to another Document", from the `location.href =
+// '/login'` on the same path.
+//
+// It lands as a race, not a hard failure: whether the reply arrives before or
+// after the test's own assertions depends purely on how loaded the runner is.
+// AiAssistantBetaPage.sidebar's mobile case is where it showed up — with auth
+// cleared, handleSelectConversation closes the drawer, hits `if (userId ==
+// null) return`, and the conversation is silently never selected. Green
+// locally, red on CI, and a different subset of tests each run.
+//
+// So cut the transport. Axios goes through XMLHttpRequest under jsdom; both it
+// and fetch now fail the way an offline machine would — a network error with
+// NO response, which is exactly what keeps `error.response?.status === 401`
+// false and leaves the auth store alone. Tests that mock their API module are
+// untouched; a test that wants a response still has to say what it is.
+const failOffline = () => new Error('Network request blocked in tests')
+class BlockedXHR {
+  status = 0
+  readyState = 0
+  responseText = ''
+  onerror: ((this: unknown, ev: unknown) => unknown) | null = null
+  open() {}
+  setRequestHeader() {}
+  abort() {}
+  getAllResponseHeaders() {
+    return ''
+  }
+  addEventListener(type: string, cb: (ev: unknown) => void) {
+    if (type === 'error') this.onerror = cb
+  }
+  removeEventListener() {}
+  send() {
+    setTimeout(() => this.onerror?.call(this, new Event('error')), 0)
+  }
+}
+vi.stubGlobal('XMLHttpRequest', BlockedXHR)
+vi.stubGlobal(
+  'fetch',
+  vi.fn(() => Promise.reject(failOffline()))
+)
+
 // Suppress console warnings in tests
 const originalError = console.error
 const originalWarn = console.warn
