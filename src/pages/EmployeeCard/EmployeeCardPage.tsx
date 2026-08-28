@@ -16,6 +16,7 @@ import { ContactsDialog } from './components/dialogs/ContactsDialog'
 import { DocumentsDialog } from './components/dialogs/DocumentsDialog'
 import { PersonalDialog } from './components/dialogs/PersonalDialog'
 import { WorkDialog } from './components/dialogs/WorkDialog'
+import { useConfirm } from '@/components/ui/useConfirm'
 import { useRemoveSurvey } from '@/features/employeeCard/hooks/useEmployeeCard'
 import { CARD_HEADER_OFFSET, useScrollSpy } from './hooks/useScrollSpy'
 import { useTailSpace } from './hooks/useTailSpace'
@@ -56,6 +57,23 @@ export function EmployeeCardPage() {
    */
   const [survey, setSurvey] = useState<number | null>(null)
   const removeOne = useRemoveSurvey(employeeId, projectId)
+  const { confirm, confirmDialog } = useConfirm()
+
+  /*
+   * Asked before removing, not after. A survey carries a score somebody
+   * recorded from a form that has long since closed, and its chronology line
+   * goes with it - neither is anywhere else to be recovered from.
+   */
+  const confirmRemoval = async (surveyId: number) => {
+    const survey = data?.surveys.find((one) => one.id === surveyId)
+    const agreed = await confirm({
+      title: t('pages.employeeCard.surveys.removeTitle'),
+      message: t('pages.employeeCard.surveys.removeMessage', { name: survey?.name ?? '' }),
+      confirmLabel: t('actions.delete'),
+      tone: 'danger',
+    })
+    if (agreed) removeOne.mutate(surveyId)
+  }
 
   const tabs = useMemo(
     () =>
@@ -87,6 +105,8 @@ export function EmployeeCardPage() {
       so no breakpoint ends up with a second scrollbar.
     */
     <div className="h-[calc(100vh-104px)] overflow-y-auto px-4 pb-4 [scrollbar-width:none] supports-[height:100dvh]:h-[calc(100dvh-104px)] md:px-6 md:pb-6 [&::-webkit-scrollbar]:hidden">
+      {confirmDialog}
+
       {isLoading && <EmployeeCardSkeleton label={t('common.loading')} />}
 
       {isError && (
@@ -146,7 +166,7 @@ export function EmployeeCardPage() {
                 setSurvey(surveyId)
                 setEditing('surveys')
               }}
-              onRemoveSurvey={(surveyId) => removeOne.mutate(surveyId)}
+              onRemoveSurvey={(surveyId) => void confirmRemoval(surveyId)}
             />
 
             <section

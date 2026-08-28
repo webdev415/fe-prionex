@@ -10906,7 +10906,9 @@
         "add": "Add survey",
         "save": "Save changes",
         "edit": "Correct {{name}}",
-        "remove": "Remove {{name}}"
+        "remove": "Remove {{name}}",
+        "removeTitle": "Remove this survey?",
+        "removeMessage": "“{{name}}” and its line in the chronology will both be removed. The answers themselves live in the form this was recorded from."
       },
       "saveFailed": "That could not be saved.",
       "dialogs": {

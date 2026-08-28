@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import type { EmployeeCard } from '@/features/employeeCard/types.card'
+
+const removeSurvey = vi.hoisted(() => vi.fn())
 
 const state = vi.hoisted(() => ({
   card: null as EmployeeCard | null,
@@ -21,7 +24,7 @@ vi.mock('@/features/employeeCard/hooks/useEmployeeCard', () => ({
     state.neighboursQuery = { userId, listQuery }
     return { data: state.neighbours }
   },
-  useRemoveSurvey: () => ({ mutate: vi.fn() }),
+  useRemoveSurvey: () => ({ mutate: removeSurvey }),
 }))
 
 vi.mock('@/features/employeeCard', () => ({
@@ -614,5 +617,59 @@ describe('EmployeeCardPage: while it is still loading', () => {
 
     expect(container.querySelector('.animate-pulse')).toBeNull()
     expect(screen.getByRole('tablist')).toBeInTheDocument()
+  })
+})
+
+/*
+ * A survey carries a score somebody recorded from a form that has long since
+ * closed, and its chronology line goes with it. Neither is anywhere else to be
+ * recovered from, so the question is asked before the removal, not after.
+ */
+describe('EmployeeCardPage: removing a survey', () => {
+  beforeEach(() => {
+    state.card = card({
+      surveys: [
+        {
+          id: 11,
+          name: 'Q2 2024 Satisfaction',
+          completed_on: '2024-06-15',
+          status: 'completed',
+          score: 87,
+          max_score: 100,
+          details_url: null,
+        },
+      ],
+      can_edit: true,
+    })
+    state.isLoading = false
+    state.isError = false
+    removeSurvey.mockReset()
+  })
+
+  it('asks before removing, naming the one it would remove', async () => {
+    renderAt('/dashboard/team-management/users/7')
+
+    await userEvent.click(screen.getByRole('button', { name: /surveys.remove/ }))
+
+    expect(await screen.findByText('pages.employeeCard.surveys.removeTitle')).toBeInTheDocument()
+    expect(removeSurvey).not.toHaveBeenCalled()
+  })
+
+  it('removes it once the question is answered', async () => {
+    renderAt('/dashboard/team-management/users/7')
+
+    await userEvent.click(screen.getByRole('button', { name: /surveys.remove/ }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Delete' }))
+
+    await waitFor(() => expect(removeSurvey).toHaveBeenCalledWith(11))
+  })
+
+  it('leaves it alone when the question is declined', async () => {
+    renderAt('/dashboard/team-management/users/7')
+
+    await userEvent.click(screen.getByRole('button', { name: /surveys.remove/ }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Cancel' }))
+
+    expect(removeSurvey).not.toHaveBeenCalled()
   })
 })
