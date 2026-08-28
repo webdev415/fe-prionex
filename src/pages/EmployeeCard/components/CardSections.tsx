@@ -13,8 +13,12 @@ export interface CardSectionsProps {
  * Everything the card shows, read-only.
  *
  * Dates are rendered in the reader's own locale rather than as the ISO string
- * the API sends, and a blank field says so rather than showing nothing, so an
- * empty value reads as empty rather than as a rendering fault.
+ * the API sends.
+ *
+ * Two different kinds of empty, deliberately. A field with no value gets a
+ * dash - quiet enough that the filled ones still show. A whole empty list gets
+ * a sentence, because "no contact person recorded" is worth saying outright
+ * and a dash under a subheading would just look like a missing row.
  */
 export function CardSections({ card, onEdit }: CardSectionsProps) {
   const { t, i18n } = useTranslation()
@@ -36,7 +40,6 @@ export function CardSections({ card, onEdit }: CardSectionsProps) {
         {...editable('personal')}
       >
         <FieldGrid
-          emptyLabel={empty}
           fields={[
             { label: t('pages.employeeCard.fields.fullName'), value: displayName(card.header) },
             {
@@ -72,7 +75,6 @@ export function CardSections({ card, onEdit }: CardSectionsProps) {
         {...editable('work')}
       >
         <FieldGrid
-          emptyLabel={empty}
           fields={[
             { label: t('pages.employeeCard.fields.department'), value: card.work.department },
             { label: t('pages.employeeCard.fields.position'), value: card.work.position },
@@ -102,7 +104,6 @@ export function CardSections({ card, onEdit }: CardSectionsProps) {
                 {card.contacts.map((contact) => (
                   <li key={contact.id}>
                     <FieldGrid
-                      emptyLabel={empty}
                       fields={[
                         {
                           label: t('pages.employeeCard.fields.name'),
@@ -135,7 +136,6 @@ export function CardSections({ card, onEdit }: CardSectionsProps) {
                 {card.children.map((child) => (
                   <li key={child.id}>
                     <FieldGrid
-                      emptyLabel={empty}
                       fields={[
                         {
                           label: t('pages.employeeCard.fields.name'),
@@ -162,7 +162,6 @@ export function CardSections({ card, onEdit }: CardSectionsProps) {
       >
         <div className="space-y-6">
           <FieldGrid
-            emptyLabel={empty}
             fields={[
               {
                 label: t('pages.employeeCard.fields.militaryService'),
@@ -186,7 +185,6 @@ export function CardSections({ card, onEdit }: CardSectionsProps) {
               {card.additional.educations.map((education) => (
                 <li key={education.id}>
                   <FieldGrid
-                    emptyLabel={empty}
                     fields={[
                       {
                         label: t('pages.employeeCard.fields.educationLevel'),

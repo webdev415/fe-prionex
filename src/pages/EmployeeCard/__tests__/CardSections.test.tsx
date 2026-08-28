@@ -192,6 +192,32 @@ describe('CardSections: the section headings', () => {
    * The monogram keeps the app's own ordering so the same person is not
    * "CJ" in the list and "JC" here; only the text the card prints changes.
    */
+  /*
+   * The same dash the employees list writes. Spelling it out put a sentence in
+   * every empty field, and on a new employee that is nearly all of them - the
+   * two or three real values had to be picked out of a wall of "Not filled in".
+   */
+  it('leaves an empty field as a dash rather than a sentence', () => {
+    const { container } = render(<CardSections card={card()} />)
+
+    // Field values only: the sentence still belongs to the empty lists below,
+    // and asserting on the whole page would confuse the two kinds of empty.
+    const values = Array.from(container.querySelectorAll('dd')).map((dd) => dd.textContent)
+
+    expect(values).toContain('—')
+    expect(values).not.toContain('pages.employeeCard.notFilledIn')
+  })
+
+  /*
+   * A whole empty list is the other kind of empty: worth saying outright,
+   * where a dash under a subheading would read as a missing row.
+   */
+  it('says outright when there is no contact person at all', () => {
+    render(<CardSections card={card({ contacts: [], children: [] })} />)
+
+    expect(screen.getAllByText('pages.employeeCard.notFilledIn').length).toBe(2)
+  })
+
   it('prints the given name first, and only on the card', () => {
     render(<CardSections card={card()} />)
 
