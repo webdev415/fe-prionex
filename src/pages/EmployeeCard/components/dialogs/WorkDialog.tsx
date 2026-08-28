@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/Select'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { useDepartments } from '@/features/departments'
 import { useUpdateWork } from '@/features/employeeCard/hooks/useEmployeeCard'
 import type { EmployeeCard } from '@/features/employeeCard/types.card'
@@ -27,6 +28,7 @@ export interface WorkDialogProps {
 
 const FORM_ID = 'employee-card-work'
 const NOBODY = 'none'
+const MANAGER_FIELD = 'employee-card-manager'
 
 /**
  * The Personnel Data dialog.
@@ -62,6 +64,23 @@ export function WorkDialog({ card, projectId, open, onClose }: WorkDialogProps) 
   const [hiredAt, setHiredAt] = useState<string>(card.work.hired_at ?? '')
 
   const roles = useMemo(() => rolesData?.roles ?? [], [rolesData?.roles])
+  /*
+   * Nobody is an option, and it heads the list rather than being buried among
+   * the names: removing a manager is a thing somebody comes here to do.
+   */
+  const managers = useMemo(
+    () => [
+      { id: NOBODY, name: t('pages.employeeCard.dialogs.noManager') },
+      ...(peopleData?.users ?? [])
+        .filter((person) => person.id !== card.header.id)
+        .map((person) => ({
+          id: String(person.id),
+          name: person.full_name || person.username,
+        })),
+    ],
+    [peopleData, card.header.id, t]
+  )
+
   const positions = useMemo(
     () =>
       departmentId
@@ -136,24 +155,27 @@ export function WorkDialog({ card, projectId, open, onClose }: WorkDialogProps) 
         </div>
 
         <div className="space-y-1.5">
-          <span className="text-muted-foreground text-xs">
+          {/* A real label, not a span beside it: the picker is a button rather
+              than a native select, so without one it has no accessible name at
+              all - a screen reader would announce whichever name happens to be
+              chosen and nothing about what it is choosing. */}
+          <label htmlFor={MANAGER_FIELD} className="text-muted-foreground block text-xs">
             {t('pages.employeeCard.fields.manager')}
-          </span>
-          <Select value={managerId} onValueChange={setManagerId}>
-            <SelectTrigger>
-              <SelectValue placeholder={t('pages.employeeCard.dialogs.choose')} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={NOBODY}>{t('pages.employeeCard.dialogs.noManager')}</SelectItem>
-              {(peopleData?.users ?? [])
-                .filter((person) => person.id !== card.header.id)
-                .map((person) => (
-                  <SelectItem key={person.id} value={String(person.id)}>
-                    {person.full_name || person.username}
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
+          </label>
+          {/*
+            Searchable, unlike the two above it. Department and position are
+            short lists somebody can read; every employee is not, and picking a
+            manager out of it by scrolling means knowing where in the order
+            they fall. The names are already loaded, so the filtering is local.
+          */}
+          <SearchableSelect
+            id={MANAGER_FIELD}
+            options={managers}
+            value={managerId}
+            onValueChange={setManagerId}
+            placeholder={t('pages.employeeCard.dialogs.choose')}
+            searchPlaceholder={t('pages.employeeCard.dialogs.searchManager')}
+          />
         </div>
 
         <div className="space-y-1.5">

@@ -10847,7 +10847,6 @@
       "nextEmployee": "Next employee",
       "position": "{{position}} from {{total}}",
       "edit": "Edit",
-      "notFilledIn": "Not filled in",
       "fields": {
         "fullName": "Full Name",
         "dateOfBirth": "Date of Birth",
@@ -10903,7 +10902,8 @@
         "choose": "Choose",
         "noManager": "No manager",
         "documents": "Documents",
-        "attachFile": "Attach a document (PDF or Word, up to 10 MB)"
+        "attachFile": "Attach a document (PDF or Word, up to 10 MB)",
+        "searchManager": "Search by name"
       },
       "tabs": {
         "showEarlier": "Show earlier sections",

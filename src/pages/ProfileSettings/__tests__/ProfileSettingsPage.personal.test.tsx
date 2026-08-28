@@ -116,6 +116,35 @@ describe('Profile Settings: the card fields', () => {
     expect(forms[0]).toContainElement(field('pages.users.forms.firstName'))
   })
 
+  /*
+   * The form paired its fields only from 2xl - 1536px - so on any ordinary
+   * laptop every field ran the full width, one per row, and the form was a
+   * very long single column with nothing beside it.
+   */
+  it('pairs its fields on a laptop, not only on a very wide screen', () => {
+    const { container } = render(<ProfileSettingsPage />)
+
+    const rows = Array.from(container.querySelectorAll('form div')).filter((node) =>
+      node.className.includes('flex-row')
+    )
+
+    expect(rows.length).toBeGreaterThan(0)
+    for (const row of rows) {
+      expect(row.className).toContain('md:flex-row')
+      expect(row.className).not.toContain('2xl:flex-row')
+    }
+  })
+
+  it('leaves no empty cell beside the last field', () => {
+    const { container } = render(<ProfileSettingsPage />)
+
+    const empties = Array.from(container.querySelectorAll('form div')).filter(
+      (node) => node.className.trim() === 'w-full' && node.children.length === 0
+    )
+
+    expect(empties).toHaveLength(0)
+  })
+
   it('picks a date of birth with the date control rather than a bare input', () => {
     const { container } = render(<ProfileSettingsPage />)
 

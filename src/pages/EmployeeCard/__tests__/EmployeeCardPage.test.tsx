@@ -165,10 +165,10 @@ describe('EmployeeCardPage', () => {
     expect(screen.getByText('Kyiv')).toBeInTheDocument()
   })
 
-  it('says a field is empty rather than leaving a gap', () => {
+  it('marks a field with nothing in it rather than leaving a gap', () => {
     renderAt('/dashboard/team-management/users/7')
 
-    expect(screen.getAllByText('pages.employeeCard.notFilledIn').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('—').length).toBeGreaterThan(0)
   })
 
   it('offers no edit action to somebody who may only read', () => {

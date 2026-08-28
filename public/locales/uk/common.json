@@ -10868,7 +10868,6 @@
       "nextEmployee": "Наступний співробітник",
       "position": "{{position}} з {{total}}",
       "edit": "Редагувати",
-      "notFilledIn": "Не заповнено",
       "fields": {
         "fullName": "ПІБ",
         "dateOfBirth": "Дата народження",
@@ -10924,7 +10923,8 @@
         "choose": "Оберіть",
         "noManager": "Без керівника",
         "documents": "Документи",
-        "attachFile": "Додати документ (PDF або Word, до 10 МБ)"
+        "attachFile": "Додати документ (PDF або Word, до 10 МБ)",
+        "searchManager": "Пошук за іменем"
       },
       "tabs": {
         "showEarlier": "Показати попередні розділи",

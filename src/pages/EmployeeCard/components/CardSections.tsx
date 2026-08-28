@@ -15,10 +15,10 @@ export interface CardSectionsProps {
  * Dates are rendered in the reader's own locale rather than as the ISO string
  * the API sends.
  *
- * Two different kinds of empty, deliberately. A field with no value gets a
- * dash - quiet enough that the filled ones still show. A whole empty list gets
- * a sentence, because "no contact person recorded" is worth saying outright
- * and a dash under a subheading would just look like a missing row.
+ * Nothing recorded reads as a dash, wherever it appears - the same mark the
+ * employees list writes in an empty cell. Spelling it out put a sentence
+ * everywhere there was no value, and on a new employee that is nearly
+ * everywhere: the few real values had to be picked out of a wall of prose.
  */
 export function CardSections({ card, onEdit }: CardSectionsProps) {
   const { t, i18n } = useTranslation()
@@ -26,7 +26,6 @@ export function CardSections({ card, onEdit }: CardSectionsProps) {
   const day = (value: string | null) =>
     value ? new Date(value).toLocaleDateString(i18n.language) : null
 
-  const empty = t('pages.employeeCard.notFilledIn')
   const editable = (section: string) =>
     card.can_edit && onEdit
       ? { editLabel: t('pages.employeeCard.edit'), onEdit: () => onEdit(section) }
@@ -98,7 +97,7 @@ export function CardSections({ card, onEdit }: CardSectionsProps) {
               {t('pages.employeeCard.fields.contactPerson')}
             </h3>
             {card.contacts.length === 0 ? (
-              <p className="text-muted-foreground text-sm">{empty}</p>
+              <p className="text-muted-foreground text-sm">—</p>
             ) : (
               <ul className="space-y-3">
                 {card.contacts.map((contact) => (
@@ -130,7 +129,7 @@ export function CardSections({ card, onEdit }: CardSectionsProps) {
               {t('pages.employeeCard.fields.children')}
             </h3>
             {card.children.length === 0 ? (
-              <p className="text-muted-foreground text-sm">{empty}</p>
+              <p className="text-muted-foreground text-sm">—</p>
             ) : (
               <ul className="space-y-3">
                 {card.children.map((child) => (

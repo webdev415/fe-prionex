@@ -96,7 +96,7 @@ export function DocumentsSection({ card, onEdit }: DocumentsSectionProps) {
             {t('pages.employeeCard.documents.interviewComment')}
           </h3>
           <p className="text-muted-foreground text-sm whitespace-pre-line">
-            {card.interview_comment || t('pages.employeeCard.notFilledIn')}
+            {card.interview_comment || '—'}
           </p>
         </div>
       </div>

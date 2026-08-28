@@ -205,17 +205,19 @@ describe('CardSections: the section headings', () => {
     const values = Array.from(container.querySelectorAll('dd')).map((dd) => dd.textContent)
 
     expect(values).toContain('—')
-    expect(values).not.toContain('pages.employeeCard.notFilledIn')
+    expect(values.join(' ')).not.toMatch(/filled/i)
   })
 
   /*
-   * A whole empty list is the other kind of empty: worth saying outright,
-   * where a dash under a subheading would read as a missing row.
+   * The same mark for an empty list as for an empty field. Two ways of saying
+   * "nothing here" in one section reads as two different states.
    */
-  it('says outright when there is no contact person at all', () => {
-    render(<CardSections card={card({ contacts: [], children: [] })} />)
+  it('marks an empty list the same way it marks an empty field', () => {
+    const { container } = render(<CardSections card={card({ contacts: [], children: [] })} />)
 
-    expect(screen.getAllByText('pages.employeeCard.notFilledIn').length).toBe(2)
+    const lists = Array.from(container.querySelectorAll('p')).map((p) => p.textContent)
+    expect(lists.filter((text) => text === '—').length).toBe(2)
+    expect(lists.join(' ')).not.toMatch(/filled/i)
   })
 
   it('prints the given name first, and only on the card', () => {

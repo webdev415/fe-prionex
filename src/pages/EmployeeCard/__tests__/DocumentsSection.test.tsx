@@ -105,6 +105,17 @@ describe('DocumentsSection', () => {
 
     expect(screen.getByText('Confident, communicative.')).toBeInTheDocument()
   })
+
+  /*
+   * The same dash the fields and the empty lists use. Three ways of writing
+   * "nothing here" on one card reads as three different states.
+   */
+  it('marks an unwritten comment the same way as everything else empty', () => {
+    const { container } = render(<DocumentsSection card={card()} />)
+
+    expect(screen.getByText('—')).toBeInTheDocument()
+    expect(container.textContent).not.toMatch(/filled/i)
+  })
 })
 
 describe('SurveysSection', () => {

@@ -596,7 +596,7 @@ export function ProfileSettingsPage() {
                   {t('pages.users.modals.edit.title')}
                 </span>
                 <div className="flex w-full flex-col items-center gap-6 self-stretch">
-                  <div className="flex w-full flex-col items-start gap-4 self-stretch 2xl:flex-row">
+                  <div className="flex w-full flex-col items-start gap-4 self-stretch md:flex-row">
                     <Input
                       label={t('pages.users.forms.username')}
                       value={form.username}
@@ -613,7 +613,7 @@ export function ProfileSettingsPage() {
                       className="w-full"
                     />
                   </div>
-                  <div className="flex w-full flex-col items-start gap-4 self-stretch 2xl:flex-row">
+                  <div className="flex w-full flex-col items-start gap-4 self-stretch md:flex-row">
                     <Input
                       label={t('pages.users.forms.firstName')}
                       value={form.first_name}
@@ -630,7 +630,7 @@ export function ProfileSettingsPage() {
                       className="w-full"
                     />
                   </div>
-                  <div className="flex w-full flex-col items-start gap-4 self-stretch 2xl:flex-row">
+                  <div className="flex w-full flex-col items-start gap-4 self-stretch md:flex-row">
                     <Input
                       label={t('pages.users.forms.middleName')}
                       value={form.middle_name}
@@ -646,7 +646,7 @@ export function ProfileSettingsPage() {
                       className="w-full"
                     />
                   </div>
-                  <div className="flex w-full flex-col items-start gap-4 self-stretch 2xl:flex-row">
+                  <div className="flex w-full flex-col items-start gap-4 self-stretch md:flex-row">
                     <div className="flex w-full flex-col gap-2 self-stretch">
                       <Label htmlFor="language">{t('pages.users.forms.language')}</Label>
                       <DropdownMenu modal={false}>
@@ -768,7 +768,7 @@ export function ProfileSettingsPage() {
 
                   {/* Call Settings Section - Only visible for agents */}
                   {user?.is_agent && (
-                    <div className="flex w-full flex-col items-start gap-4 self-stretch 2xl:flex-row">
+                    <div className="flex w-full flex-col items-start gap-4 self-stretch md:flex-row">
                       <Input
                         label={t('pages.users.forms.asteriskExtension') || 'Asterisk Extension'}
                         value={user?.asterisk_extension || ''}
@@ -847,7 +847,7 @@ export function ProfileSettingsPage() {
                       )}
                     </div>
                   )}
-                  <div className="flex w-full flex-col items-start gap-4 self-stretch 2xl:flex-row">
+                  <div className="flex w-full flex-col items-start gap-4 self-stretch md:flex-row">
                     <div className="flex w-full flex-col gap-2 self-stretch">
                       <Label htmlFor="date-of-birth">
                         {t('pages.employeeCard.fields.dateOfBirth')}
@@ -876,7 +876,7 @@ export function ProfileSettingsPage() {
                     />
                   </div>
 
-                  <div className="flex w-full flex-col items-start gap-4 self-stretch 2xl:flex-row">
+                  <div className="flex w-full flex-col items-start gap-4 self-stretch md:flex-row">
                     <Input
                       label={t('pages.employeeCard.fields.city')}
                       value={form.city}
@@ -885,22 +885,22 @@ export function ProfileSettingsPage() {
                     />
 
                     <Input
-                      label={t('pages.employeeCard.fields.address')}
-                      value={form.address}
-                      onChange={(e) => setForm({ ...form, address: e.target.value })}
-                      className="w-full"
-                    />
-                  </div>
-
-                  <div className="flex w-full flex-col items-start gap-4 self-stretch 2xl:flex-row">
-                    <Input
                       label={t('pages.employeeCard.fields.novaPoshta')}
                       value={form.nova_poshta_branch}
                       onChange={(e) => setForm({ ...form, nova_poshta_branch: e.target.value })}
                       className="w-full"
                     />
-                    <div className="w-full" />
                   </div>
+
+                  {/* The address takes the row on its own: it is the longest
+                      thing anybody types here, and paired with a short field it
+                      was the one that ran out of room first. */}
+                  <Input
+                    label={t('pages.employeeCard.fields.address')}
+                    value={form.address}
+                    onChange={(e) => setForm({ ...form, address: e.target.value })}
+                    className="w-full"
+                  />
                 </div>
                 {hasProfileChanges && (
                   <div className="mt-4 flex flex-wrap items-center justify-center gap-4">

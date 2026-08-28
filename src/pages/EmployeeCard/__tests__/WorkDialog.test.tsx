@@ -139,10 +139,35 @@ describe('WorkDialog', () => {
   it('never offers somebody as their own manager', async () => {
     render(<WorkDialog card={card()} projectId={3} open onClose={vi.fn()} />)
 
-    await userEvent.click(screen.getAllByRole('combobox')[2])
+    await userEvent.click(screen.getByLabelText('pages.employeeCard.fields.manager'))
 
     expect(screen.getByRole('option', { name: 'Serhiy Lytvyn' })).toBeInTheDocument()
     expect(screen.queryByRole('option', { name: 'Olena Kovalchuk' })).not.toBeInTheDocument()
+  })
+
+  /*
+   * Every employee is on this list, which is not something anybody can pick
+   * from by scrolling - it means knowing where in the order a name falls.
+   * Department and position stay plain: those are short lists you can read.
+   */
+  it('lets a manager be found by typing rather than only by scrolling', async () => {
+    render(<WorkDialog card={card()} projectId={3} open onClose={vi.fn()} />)
+
+    await userEvent.click(screen.getByLabelText('pages.employeeCard.fields.manager'))
+    const search = screen.getByPlaceholderText('pages.employeeCard.dialogs.searchManager')
+    await userEvent.type(search, 'Serhiy')
+
+    expect(screen.getByRole('option', { name: 'Serhiy Lytvyn' })).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: /noManager/ })).not.toBeInTheDocument()
+  })
+
+  it('keeps removing a manager at the top rather than buried among the names', async () => {
+    render(<WorkDialog card={card()} projectId={3} open onClose={vi.fn()} />)
+
+    await userEvent.click(screen.getByLabelText('pages.employeeCard.fields.manager'))
+
+    const options = screen.getAllByRole('option')
+    expect(options[0]).toHaveTextContent('pages.employeeCard.dialogs.noManager')
   })
 
   it('sends the project so the right assignment is the one that changes', async () => {
@@ -165,7 +190,7 @@ describe('WorkDialog', () => {
       />
     )
 
-    await userEvent.click(screen.getAllByRole('combobox')[2])
+    await userEvent.click(screen.getByLabelText('pages.employeeCard.fields.manager'))
     await userEvent.click(
       screen.getByRole('option', { name: 'pages.employeeCard.dialogs.noManager' })
     )
