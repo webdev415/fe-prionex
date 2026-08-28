@@ -293,6 +293,36 @@ describe('NotificationBell — visibility of all types', () => {
     expect(trainingCall![0].type).toContain('training_reminder')
   })
 
+  it('drops a non-http meeting_url instead of rendering it as a link', async () => {
+    // meeting_url is free text typed by a trainer, so a `javascript:` href
+    // would execute on click. The card must still render everything else.
+    // Reuse the real fixture pipeline (ordering, pagination, type scoping)
+    // and rewrite only the one field under test.
+    const base = mockGetNotifications.getMockImplementation()!
+    mockGetNotifications.mockImplementation(async (params) => {
+      const page = await base(params)
+      return {
+        ...page,
+        items: page.items.map((n) =>
+          n.type === 'training_scheduled'
+            ? // eslint-disable-next-line no-script-url
+              { ...n, metadata: { ...n.metadata, meeting_url: 'javascript:alert(1)' } }
+            : n
+        ),
+      }
+    })
+
+    const user = userEvent.setup()
+    renderBell()
+    await openBell(user)
+    await user.click(await screen.findByText('notificationBell.tabs.training'))
+
+    expect(await screen.findByText('«Робота із запереченнями»')).toBeInTheDocument()
+    expect(
+      screen.queryByRole('link', { name: 'notificationBell.training.joinMeeting' })
+    ).not.toBeInTheDocument()
+  })
+
   it('renders one_on_one_feedback_due in the "other" tab', async () => {
     const user = userEvent.setup()
     renderBell()
