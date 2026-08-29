@@ -17,6 +17,14 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Alert } from '@/components/ui/Alert'
 import { useURLState } from '@/hooks/useURLState'
+import { Pagination } from '@/components/ui/Pagination'
+import {
+  CREDIT_PAGE_SIZE_OPTIONS,
+  cursorForPage,
+  parsePage,
+  parsePageSize,
+  totalPagesOf,
+} from '@/features/credit/api/pagination'
 import { useCreditApplications, useCreditOverview } from '@/features/credit/hooks/useCredit'
 import { buildApplicationMetrics } from '@/features/credit/api/metrics'
 import {
@@ -28,8 +36,6 @@ import { CreditStatusBadge } from './components/CreditStatusBadge'
 import { CreditMetricCards } from './components/CreditMetricCards'
 import { CreditStandBanner } from './components/CreditStandBanner'
 import { formatDateTime } from '@/lib/formatters'
-
-const PAGE_SIZE = 25
 
 /** Строка таблицы = строка контракта + `id`, которого требует DataTable. */
 type ApplicationRow = CreditApplicationSummary & { id: string }
@@ -50,6 +56,12 @@ export function CreditApplicationsPage() {
   const [statusParam, setStatusParam] = useURLState<string>('status', '')
   const [query, setQuery] = useURLState<string>('q', '')
   const [searchDraft, setSearchDraft] = useState(query)
+  // Страница и её размер живут в URL: ссылку на «третью страницу отказов»
+  // можно переслать коллеге, как и любой другой фильтр раздела.
+  const [pageParam, setPageParam] = useURLState<string>('page', '1')
+  const [pageSizeParam, setPageSizeParam] = useURLState<string>('pageSize', '')
+  const page = parsePage(pageParam)
+  const pageSize = parsePageSize(pageSizeParam)
 
   const statuses = useMemo(
     () =>
@@ -61,18 +73,20 @@ export function CreditApplicationsPage() {
 
   const { data: overview } = useCreditOverview()
   const {
-    data: page,
+    data: pageData,
     isLoading,
     error,
   } = useCreditApplications({
     status: statuses.length ? statuses : undefined,
     query: query || undefined,
-    limit: PAGE_SIZE,
+    limit: pageSize,
+    cursor: cursorForPage(page, pageSize),
   })
 
   // Мемоизуем сам массив: `page?.items ?? []` создаёт новую ссылку на каждый
   // рендер и заставляет метрики пересчитываться вхолостую.
-  const items = useMemo(() => page?.items ?? [], [page])
+  const items = useMemo(() => pageData?.items ?? [], [pageData])
+  const page_total = pageData?.total
   const metrics = useMemo(
     () => buildApplicationMetrics(overview, items, statuses),
     [overview, items, statuses]
@@ -83,6 +97,7 @@ export function CreditApplicationsPage() {
     if (next.has(status)) next.delete(status)
     else next.add(status)
     setStatusParam([...next].join(','))
+    setPageParam('1')
   }
 
   // DataTable требует у строки поле `id` (на нём держится выделение и ключи).
@@ -153,7 +168,7 @@ export function CreditApplicationsPage() {
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-foreground text-xl font-semibold">{t('credit.applications.title')}</h1>
         <span className="text-muted-foreground text-sm">
-          {t('credit.applications.total', { count: page?.total ?? items.length })}
+          {t('credit.applications.total', { count: page_total ?? items.length })}
         </span>
       </div>
 
@@ -185,6 +200,7 @@ export function CreditApplicationsPage() {
           onSubmit={(event) => {
             event.preventDefault()
             setQuery(searchDraft.trim())
+            setPageParam('1')
           }}
         >
           <div className="min-w-[260px] flex-1">
@@ -204,6 +220,7 @@ export function CreditApplicationsPage() {
               setSearchDraft('')
               setQuery('')
               setStatusParam('')
+              setPageParam('1')
             }}
           >
             {t('credit.actions.reset')}
@@ -226,12 +243,27 @@ export function CreditApplicationsPage() {
       {isLoading ? (
         <TableSkeleton columns={columns.length} rows={8} />
       ) : (
-        <DataTable
-          columns={columns}
-          data={rows}
-          emptyMessage={t('credit.applications.empty')}
-          onRowClick={(row) => navigate(`/dashboard/credit/applications/${row.application_id}`)}
-        />
+        <>
+          <DataTable
+            columns={columns}
+            data={rows}
+            emptyMessage={t('credit.applications.empty')}
+            onRowClick={(row) => navigate(`/dashboard/credit/applications/${row.application_id}`)}
+          />
+          <div className="mt-4">
+            <Pagination
+              currentPage={page}
+              totalPages={totalPagesOf(page_total, pageSize)}
+              pageSize={pageSize}
+              pageSizeOptions={CREDIT_PAGE_SIZE_OPTIONS}
+              onPageChange={(next) => setPageParam(String(next))}
+              onPageSizeChange={(size) => {
+                setPageSizeParam(String(size))
+                setPageParam('1')
+              }}
+            />
+          </div>
+        </>
       )}
     </div>
   )

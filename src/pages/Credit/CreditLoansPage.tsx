@@ -13,6 +13,14 @@ import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { Button } from '@/components/ui/Button'
 import { Alert } from '@/components/ui/Alert'
 import { useURLState } from '@/hooks/useURLState'
+import { Pagination } from '@/components/ui/Pagination'
+import {
+  CREDIT_PAGE_SIZE_OPTIONS,
+  cursorForPage,
+  parsePage,
+  parsePageSize,
+  totalPagesOf,
+} from '@/features/credit/api/pagination'
 import { useCreditLoans, useCreditOverview } from '@/features/credit/hooks/useCredit'
 import { buildLoanMetrics } from '@/features/credit/api/metrics'
 import type { CreditLoanStatus, CreditLoanSummary } from '@/features/credit/api/types'
@@ -20,8 +28,6 @@ import { CreditStatusBadge } from './components/CreditStatusBadge'
 import { CreditMetricCards } from './components/CreditMetricCards'
 import { CreditStandBanner } from './components/CreditStandBanner'
 import { formatDate } from '@/lib/formatters'
-
-const PAGE_SIZE = 25
 
 /** Строка таблицы = строка контракта + `id`, которого требует DataTable. */
 type LoanRow = CreditLoanSummary & { id: string }
@@ -39,6 +45,10 @@ export function CreditLoansPage() {
   const { t } = useTranslation('common')
   const navigate = useNavigate()
   const [statusParam, setStatusParam] = useURLState<string>('status', '')
+  const [pageParam, setPageParam] = useURLState<string>('page', '1')
+  const [pageSizeParam, setPageSizeParam] = useURLState<string>('pageSize', '')
+  const page = parsePage(pageParam)
+  const pageSize = parsePageSize(pageSizeParam)
 
   const statuses = useMemo(
     () =>
@@ -50,12 +60,17 @@ export function CreditLoansPage() {
 
   const { data: overview } = useCreditOverview()
   const {
-    data: page,
+    data: pageData,
     isLoading,
     error,
-  } = useCreditLoans({ status: statuses.length ? statuses : undefined, limit: PAGE_SIZE })
+  } = useCreditLoans({
+    status: statuses.length ? statuses : undefined,
+    limit: pageSize,
+    cursor: cursorForPage(page, pageSize),
+  })
 
-  const items = useMemo(() => page?.items ?? [], [page])
+  const items = useMemo(() => pageData?.items ?? [], [pageData])
+  const page_total = pageData?.total
   const metrics = useMemo(() => buildLoanMetrics(overview, items), [overview, items])
 
   const toggleStatus = (status: string) => {
@@ -63,6 +78,7 @@ export function CreditLoansPage() {
     if (next.has(status)) next.delete(status)
     else next.add(status)
     setStatusParam([...next].join(','))
+    setPageParam('1')
   }
 
   // См. комментарий в CreditApplicationsPage: DataTable ключуется по `id`.
@@ -127,7 +143,7 @@ export function CreditLoansPage() {
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-foreground text-xl font-semibold">{t('credit.loans.title')}</h1>
         <span className="text-muted-foreground text-sm">
-          {t('credit.loans.total', { count: page?.total ?? items.length })}
+          {t('credit.loans.total', { count: page_total ?? items.length })}
         </span>
       </div>
 
@@ -156,12 +172,27 @@ export function CreditLoansPage() {
       {isLoading ? (
         <TableSkeleton columns={columns.length} rows={8} />
       ) : (
-        <DataTable
-          columns={columns}
-          data={rows}
-          emptyMessage={t('credit.loans.empty')}
-          onRowClick={(row) => navigate(`/dashboard/credit/loans/${row.loan_id}`)}
-        />
+        <>
+          <DataTable
+            columns={columns}
+            data={rows}
+            emptyMessage={t('credit.loans.empty')}
+            onRowClick={(row) => navigate(`/dashboard/credit/loans/${row.loan_id}`)}
+          />
+          <div className="mt-4">
+            <Pagination
+              currentPage={page}
+              totalPages={totalPagesOf(page_total, pageSize)}
+              pageSize={pageSize}
+              pageSizeOptions={CREDIT_PAGE_SIZE_OPTIONS}
+              onPageChange={(next) => setPageParam(String(next))}
+              onPageSizeChange={(size) => {
+                setPageSizeParam(String(size))
+                setPageParam('1')
+              }}
+            />
+          </div>
+        </>
       )}
     </div>
   )
