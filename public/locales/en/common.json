@@ -11146,7 +11146,9 @@
       "balanceAfter": "Balance after",
       "installment": "Instalment",
       "allocation": "Allocation",
-      "totalRow": "Total"
+      "totalRow": "Total",
+      "interest": "Interest",
+      "fee": "Fee"
     },
     "fields": {
       "name": "Name",
@@ -11280,7 +11282,8 @@
     "loans": {
       "title": "Loans",
       "total": "{{count}} total",
-      "empty": "No loans"
+      "empty": "No loans",
+      "searchPlaceholder": "Contract number or client email"
     },
     "card": {
       "applicationTitle": "Application {{number}}",
@@ -11638,6 +11641,10 @@
       "transit_number": "Transit number",
       "institution_number": "Institution number",
       "items": "Items"
+    },
+    "filters": {
+      "dpdFrom": "Days past due",
+      "any": "Any"
     }
   }
 }

@@ -11169,7 +11169,9 @@
       "balanceAfter": "Залишок після",
       "installment": "Внесок",
       "allocation": "Рознесення",
-      "totalRow": "Разом"
+      "totalRow": "Разом",
+      "interest": "Проценти",
+      "fee": "Комісія"
     },
     "fields": {
       "name": "Клієнт",
@@ -11303,7 +11305,8 @@
     "loans": {
       "title": "Кредити",
       "total": "усього {{count}}",
-      "empty": "Кредитів немає"
+      "empty": "Кредитів немає",
+      "searchPlaceholder": "Номер договору або пошта клієнта"
     },
     "card": {
       "applicationTitle": "Заявка {{number}}",
@@ -11661,6 +11664,10 @@
       "transit_number": "Транзитний номер",
       "institution_number": "Номер установи",
       "items": "Записи"
+    },
+    "filters": {
+      "dpdFrom": "Днів прострочення",
+      "any": "Будь-яке"
     }
   }
 }
