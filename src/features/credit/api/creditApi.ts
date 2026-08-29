@@ -197,6 +197,7 @@ export const creditApi = {
     get<CreditPage<CreditApplicationSummary>>('/applications', {
       status: params.status,
       query: params.query || undefined,
+      sort: params.sort,
       limit: params.limit ?? 25,
       cursor: params.cursor,
     }),
@@ -225,6 +226,12 @@ export const creditApi = {
   loans: async (params: CreditLoansParams): Promise<CreditPage<CreditLoanSummary>> => {
     const query = {
       status: params.status,
+      query: params.query || undefined,
+      dpd_min: params.dpd_min,
+      dpd_max: params.dpd_max,
+      disbursed_from: params.disbursed_from,
+      disbursed_to: params.disbursed_to,
+      sort: params.sort,
       limit: params.limit ?? 25,
       cursor: params.cursor,
     }

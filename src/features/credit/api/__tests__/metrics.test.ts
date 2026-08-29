@@ -81,10 +81,12 @@ describe('buildApplicationMetrics', () => {
 
   it('суммирует запрошенное по странице', () => {
     const metrics = buildApplicationMetrics(OVERVIEW, [APPLICATION, APPLICATION], [])
-    // toLocaleString('ru-RU') разделяет разряды НЕРАЗРЫВНЫМ пробелом —
-    // нормализуем, иначе тест ловит невидимую разницу, а не смысл.
+    // 90 000 minor × 2 = 180 000 minor = 1 800 в основных единицах.
+    // Разделитель разрядов зависит от языка (мок фиксирует 'en'), поэтому
+    // сравниваем по цифрам, а не по форме: смысл теста — сумма, не локаль.
     const value = metrics.find((metric) => metric.key === 'sum:requested')?.value
-    expect(value?.replace(/\s/g, ' ')).toBe('1 800 CAD')
+    expect(value?.replace(/[^\d]/g, '')).toBe('1800')
+    expect(value).toContain('CAD')
   })
 })
 

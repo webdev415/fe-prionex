@@ -39,6 +39,7 @@ import type {
   CreditScheduleVersion,
 } from '@/features/credit/api/types'
 import { CreditStatusBadge } from './components/CreditStatusBadge'
+import { CreditDocumentOpenButton } from './components/CreditDocumentOpenButton'
 import {
   CreditCardHeader,
   CreditNotice,
@@ -753,26 +754,61 @@ function LoanPayments({
           </tr>
         </thead>
         <tbody>
-          {payments.map((payment) => (
-            <tr key={payment.payment_id} className="border-border border-b last:border-0">
-              <td className="py-2">{formatDate(payment.effective_date)}</td>
-              <td className="py-2 pr-6 text-right tabular-nums">
-                {money(payment.amount_minor, currency)}
-              </td>
-              <td className="text-muted-foreground py-2 text-xs">
-                {payment.allocation?.length
-                  ? payment.allocation
-                      .map(
-                        (part) =>
-                          `${t(`credit.bucket.${part.bucket}`, part.bucket)} ${money(part.amount_minor)}`
-                      )
-                      .join(' · ')
-                  : '—'}
-              </td>
-            </tr>
-          ))}
+          {payments.map((payment) => {
+            // Сторно проверяем по значению, а не по наличию поля: модуль
+            // отдаёт `state` всегда, и если он однажды пропадёт — это дефект
+            // модуля, который должен быть виден, а не тихо приравнен к
+            // обычному платежу.
+            const reversed = payment.state === 'reversed'
+            return (
+              <tr key={payment.payment_id} className="border-border border-b last:border-0">
+                <td className="py-2">{formatDate(payment.effective_date)}</td>
+                <td className="py-2 pr-6 text-right tabular-nums">
+                  {/* Зачёркивание и подпись — не только цвет: иначе разницу
+                      не увидят ни в чёрно-белой печати, ни при дальтонизме,
+                      а разговор «я же платил» начинается именно с неё. */}
+                  <span className={reversed ? 'text-muted-foreground line-through' : undefined}>
+                    {money(payment.amount_minor, currency)}
+                  </span>
+                  {reversed && (
+                    <span className="text-error-600 mt-0.5 block text-xs whitespace-nowrap">
+                      {t('credit.card.paymentReversedOn', {
+                        date: formatDate(payment.reversed_on ?? undefined),
+                      })}
+                    </span>
+                  )}
+                </td>
+                <td className="text-muted-foreground py-2 text-xs">
+                  {payment.allocation?.length
+                    ? payment.allocation
+                        .map(
+                          (part) =>
+                            `${t(`credit.bucket.${part.bucket}`, part.bucket)} ${money(part.amount_minor)}`
+                        )
+                        .join(' · ')
+                    : '—'}
+                </td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
+      {/* Без этой строки на экране необъяснённое расхождение: плитка «Сплачено»
+          считает только зачтённое, а таблица показывает все строки. Оператор
+          видит три платежа, система — один. */}
+      {payments.some((payment) => payment.state === 'reversed') && (
+        <p className="text-muted-foreground mt-3 text-xs">
+          {t('credit.card.paymentsReversedHint', {
+            count: payments.filter((payment) => payment.state === 'reversed').length,
+            amount: money(
+              payments
+                .filter((payment) => payment.state === 'reversed')
+                .reduce((sum, payment) => sum + payment.amount_minor, 0),
+              currency
+            ),
+          })}
+        </p>
+      )}
     </AsyncPanel>
   )
 }
@@ -807,7 +843,8 @@ function LoanDocuments({
             <th className="py-2 pr-3 text-left font-medium">
               {t('credit.fields.templateVersion')}
             </th>
-            <th className="py-2 text-left font-medium">{t('credit.columns.uploaded')}</th>
+            <th className="py-2 pr-3 text-left font-medium">{t('credit.columns.uploaded')}</th>
+            <th />
           </tr>
         </thead>
         <tbody>
@@ -818,8 +855,11 @@ function LoanDocuments({
               <td className="text-muted-foreground py-2 pr-3 text-xs">
                 {doc.template_version ?? '—'}
               </td>
-              <td className="text-muted-foreground py-2 text-xs">
+              <td className="text-muted-foreground py-2 pr-3 text-xs">
                 {formatDateTime(doc.generated_at)}
+              </td>
+              <td className="py-2 text-right">
+                <CreditDocumentOpenButton document={doc} />
               </td>
             </tr>
           ))}

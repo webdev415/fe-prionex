@@ -11,13 +11,14 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { DataTable, type Column } from '@/components/ui/DataTable'
+import { DataTable, type Column, type SortOrder } from '@/components/ui/DataTable'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Alert } from '@/components/ui/Alert'
 import { useURLState } from '@/hooks/useURLState'
 import { Pagination } from '@/components/ui/Pagination'
+import { sortConfigFromParam, sortParamFrom } from '@/features/credit/api/sorting'
 import {
   CREDIT_PAGE_SIZE_OPTIONS,
   cursorForPage,
@@ -27,6 +28,7 @@ import {
 } from '@/features/credit/api/pagination'
 import { useCreditApplications, useCreditOverview } from '@/features/credit/hooks/useCredit'
 import { buildApplicationMetrics } from '@/features/credit/api/metrics'
+import { formatCreditMoney } from '@/features/credit/api/money'
 import {
   CREDIT_APPLICATION_STATUSES,
   type CreditApplicationStatus,
@@ -40,14 +42,7 @@ import { formatDateTime } from '@/lib/formatters'
 /** Строка таблицы = строка контракта + `id`, которого требует DataTable. */
 type ApplicationRow = CreditApplicationSummary & { id: string }
 
-function formatMoney(minor: number | null | undefined, currency?: string): string {
-  if (minor === null || minor === undefined) return '—'
-  const value = (minor / 100).toLocaleString('ru-RU', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
-  return currency ? `${value} ${currency}` : value
-}
+const formatMoney = formatCreditMoney
 
 export function CreditApplicationsPage() {
   const { t } = useTranslation('common')
@@ -60,6 +55,7 @@ export function CreditApplicationsPage() {
   // можно переслать коллеге, как и любой другой фильтр раздела.
   const [pageParam, setPageParam] = useURLState<string>('page', '1')
   const [pageSizeParam, setPageSizeParam] = useURLState<string>('pageSize', '')
+  const [sortParam, setSortParam] = useURLState<string>('sort', '')
   const page = parsePage(pageParam)
   const pageSize = parsePageSize(pageSizeParam)
 
@@ -79,6 +75,7 @@ export function CreditApplicationsPage() {
   } = useCreditApplications({
     status: statuses.length ? statuses : undefined,
     query: query || undefined,
+    sort: sortParam || undefined,
     limit: pageSize,
     cursor: cursorForPage(page, pageSize),
   })
@@ -111,6 +108,8 @@ export function CreditApplicationsPage() {
   const columns: Column<ApplicationRow>[] = [
     {
       key: 'number',
+      sortable: true,
+      sortKey: 'number',
       header: t('credit.columns.number'),
       render: (row) => <span className="font-mono text-xs">{row.number}</span>,
     },
@@ -126,6 +125,8 @@ export function CreditApplicationsPage() {
     },
     {
       key: 'requested',
+      sortable: true,
+      sortKey: 'requested_amount_minor',
       header: t('credit.columns.requested'),
       align: 'right',
       render: (row) => (
@@ -156,6 +157,8 @@ export function CreditApplicationsPage() {
     },
     {
       key: 'created',
+      sortable: true,
+      sortKey: 'created_at',
       header: t('credit.columns.created'),
       render: (row) => (
         <span className="text-muted-foreground text-xs">{formatDateTime(row.created_at)}</span>
@@ -220,6 +223,7 @@ export function CreditApplicationsPage() {
               setSearchDraft('')
               setQuery('')
               setStatusParam('')
+              setSortParam('')
               setPageParam('1')
             }}
           >
@@ -249,6 +253,11 @@ export function CreditApplicationsPage() {
             data={rows}
             emptyMessage={t('credit.applications.empty')}
             onRowClick={(row) => navigate(`/dashboard/credit/applications/${row.application_id}`)}
+            sortConfig={sortConfigFromParam(sortParam || undefined)}
+            onSort={(key: string, order: SortOrder) => {
+              setSortParam(sortParamFrom(key, order))
+              setPageParam('1')
+            }}
           />
           <div className="mt-4">
             <Pagination

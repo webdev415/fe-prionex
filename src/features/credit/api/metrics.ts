@@ -8,6 +8,7 @@
  * заменяется ТОЛЬКО тело функций ниже — страницы их не заметят. Ради этого
  * агрегация вынесена сюда и нигде больше не дублируется.
  */
+import { formatCreditCount, formatCreditMinorTotal } from './money'
 import type {
   CreditApplicationStatus,
   CreditApplicationSummary,
@@ -40,13 +41,12 @@ const STATUS_TONE: Record<string, CreditMetric['tone']> = {
 }
 
 function formatCount(value: number): string {
-  return value.toLocaleString('ru-RU')
+  return formatCreditCount(value)
 }
 
 /** Сумма в major units без дробной части — для крупных агрегатов. */
 export function formatMinorTotal(minor: number, currency?: string): string {
-  const major = Math.round(minor / 100)
-  return `${major.toLocaleString('ru-RU')}${currency ? ` ${currency}` : ''}`
+  return formatCreditMinorTotal(minor, currency)
 }
 
 /**

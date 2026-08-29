@@ -5,15 +5,17 @@
  * каждый кредит. В таблице — паспортные поля и кэш просрочки, истина — в
  * карточке (`/loans/{id}/state`). Так же устроен и сам контракт.
  */
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { DataTable, type Column } from '@/components/ui/DataTable'
+import { DataTable, type Column, type SortOrder } from '@/components/ui/DataTable'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { Button } from '@/components/ui/Button'
 import { Alert } from '@/components/ui/Alert'
 import { useURLState } from '@/hooks/useURLState'
 import { Pagination } from '@/components/ui/Pagination'
+import { Input } from '@/components/ui/Input'
+import { sortConfigFromParam, sortParamFrom } from '@/features/credit/api/sorting'
 import {
   CREDIT_PAGE_SIZE_OPTIONS,
   cursorForPage,
@@ -23,6 +25,7 @@ import {
 } from '@/features/credit/api/pagination'
 import { useCreditLoans, useCreditOverview } from '@/features/credit/hooks/useCredit'
 import { buildLoanMetrics } from '@/features/credit/api/metrics'
+import { formatCreditMoney } from '@/features/credit/api/money'
 import type { CreditLoanStatus, CreditLoanSummary } from '@/features/credit/api/types'
 import { CreditStatusBadge } from './components/CreditStatusBadge'
 import { CreditMetricCards } from './components/CreditMetricCards'
@@ -32,14 +35,7 @@ import { formatDate } from '@/lib/formatters'
 /** Строка таблицы = строка контракта + `id`, которого требует DataTable. */
 type LoanRow = CreditLoanSummary & { id: string }
 
-function money(minor: number | null | undefined, currency?: string): string {
-  if (minor === null || minor === undefined) return '—'
-  const value = (minor / 100).toLocaleString('ru-RU', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
-  return currency ? `${value} ${currency}` : value
-}
+const money = formatCreditMoney
 
 export function CreditLoansPage() {
   const { t } = useTranslation('common')
@@ -47,6 +43,10 @@ export function CreditLoansPage() {
   const [statusParam, setStatusParam] = useURLState<string>('status', '')
   const [pageParam, setPageParam] = useURLState<string>('page', '1')
   const [pageSizeParam, setPageSizeParam] = useURLState<string>('pageSize', '')
+  const [sortParam, setSortParam] = useURLState<string>('sort', '')
+  const [queryParam, setQueryParam] = useURLState<string>('q', '')
+  const [dpdParam, setDpdParam] = useURLState<string>('dpd', '')
+  const [searchDraft, setSearchDraft] = useState(queryParam)
   const page = parsePage(pageParam)
   const pageSize = parsePageSize(pageSizeParam)
 
@@ -65,6 +65,9 @@ export function CreditLoansPage() {
     error,
   } = useCreditLoans({
     status: statuses.length ? statuses : undefined,
+    query: queryParam || undefined,
+    dpd_min: dpdParam ? Number(dpdParam) : undefined,
+    sort: sortParam || undefined,
     limit: pageSize,
     cursor: cursorForPage(page, pageSize),
   })
@@ -87,6 +90,8 @@ export function CreditLoansPage() {
   const columns: Column<LoanRow>[] = [
     {
       key: 'contract',
+      sortable: true,
+      sortKey: 'contract_number',
       header: t('credit.columns.contract'),
       render: (row) => <span className="font-mono text-xs">{row.contract_number}</span>,
     },
@@ -97,6 +102,8 @@ export function CreditLoansPage() {
     },
     {
       key: 'principal',
+      sortable: true,
+      sortKey: 'principal_minor',
       header: t('credit.columns.principal'),
       align: 'right',
       render: (row) => (
@@ -105,6 +112,8 @@ export function CreditLoansPage() {
     },
     {
       key: 'payable',
+      sortable: true,
+      sortKey: 'total_payable_minor',
       header: t('credit.columns.payable'),
       align: 'right',
       render: (row) => (
@@ -113,6 +122,8 @@ export function CreditLoansPage() {
     },
     {
       key: 'dpd',
+      sortable: true,
+      sortKey: 'delinquency_days',
       header: t('credit.columns.dpd'),
       align: 'right',
       render: (row) =>
@@ -131,6 +142,8 @@ export function CreditLoansPage() {
     },
     {
       key: 'maturity',
+      sortable: true,
+      sortKey: 'maturity_date',
       header: t('credit.columns.maturity'),
       render: (row) => (
         <span className="text-muted-foreground text-xs">{formatDate(row.maturity_date)}</span>
@@ -148,6 +161,60 @@ export function CreditLoansPage() {
       </div>
 
       <CreditStandBanner overview={overview} />
+
+      <div className="border-border bg-card mb-4 rounded-xl border p-4 shadow-sm">
+        <form
+          className="flex flex-wrap items-end gap-2"
+          onSubmit={(event) => {
+            event.preventDefault()
+            setQueryParam(searchDraft.trim())
+            setPageParam('1')
+          }}
+        >
+          <div className="min-w-[260px] flex-1">
+            <Input
+              value={searchDraft}
+              onChange={(event) => setSearchDraft(event.target.value)}
+              placeholder={t('credit.loans.searchPlaceholder')}
+            />
+          </div>
+          <label className="text-muted-foreground flex flex-col gap-1.5 text-xs">
+            {t('credit.filters.dpdFrom')}
+            <select
+              className="border-input-border bg-card text-foreground h-10 rounded-md border px-3 text-sm"
+              value={dpdParam}
+              onChange={(event) => {
+                setDpdParam(event.target.value)
+                setPageParam('1')
+              }}
+            >
+              <option value="">{t('credit.filters.any')}</option>
+              <option value="1">1+</option>
+              <option value="8">8+</option>
+              <option value="31">31+</option>
+              <option value="61">61+</option>
+              <option value="91">91+</option>
+            </select>
+          </label>
+          <Button type="submit" variant="white-secondary">
+            {t('credit.actions.search')}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => {
+              setSearchDraft('')
+              setQueryParam('')
+              setDpdParam('')
+              setStatusParam('')
+              setSortParam('')
+              setPageParam('1')
+            }}
+          >
+            {t('credit.actions.reset')}
+          </Button>
+        </form>
+      </div>
 
       <CreditMetricCards
         metrics={metrics}
@@ -178,6 +245,13 @@ export function CreditLoansPage() {
             data={rows}
             emptyMessage={t('credit.loans.empty')}
             onRowClick={(row) => navigate(`/dashboard/credit/loans/${row.loan_id}`)}
+            sortConfig={sortConfigFromParam(sortParam || undefined)}
+            onSort={(key: string, order: SortOrder) => {
+              // Сортировка меняет ВЕСЬ набор, а не порядок на странице —
+              // значит и страницу надо вернуть на первую.
+              setSortParam(sortParamFrom(key, order))
+              setPageParam('1')
+            }}
           />
           <div className="mt-4">
             <Pagination

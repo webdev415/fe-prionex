@@ -11377,7 +11377,9 @@
       "scheduleHistory": "Версії графіка:",
       "versionShort": "в.{{version}}",
       "scheduleVersionEmpty": "У версії {{version}} ({{reason}}) немає внесків — вони у версії {{previous}}.",
-      "openPreviousVersion": "Відкрити її"
+      "openPreviousVersion": "Відкрити її",
+      "paymentReversedOn": "Сторновано {{date}}",
+      "paymentsReversedHint": "Зі списку платежів сторновано {{count}} на {{amount}} — ця сума в борг не зарахована, гроші повернулися банку."
     },
     "stand": {
       "notice": "Етап 1: модуль працює поза Kong і ще не знає ролей CRM — роль нижче є макетом стенда (WS-20 замінить її на JWT).",

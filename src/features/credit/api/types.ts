@@ -445,6 +445,16 @@ export interface CreditPayment {
   payment_id: string
   effective_date: string
   amount_minor: number
+  /**
+   * Состояние платежа. Сторнированный платёж В ДОЛГ НЕ ЗАСЧИТАН: деньги
+   * вернулись банку, обязательство восстановлено. Поле обязательное, потому
+   * что модуль отдаёт его всегда — ветка «поля нет, считаем обычным»
+   * замаскировала бы дефект модуля вместо того, чтобы его показать.
+   */
+  state: 'accepted' | 'reversed'
+  /** Учётная дата сторно из журнала — НЕ дата нажатия кнопки и не
+   * `effective_date` платежа: возврат приходит позже, иногда сильно. */
+  reversed_on: string | null
   allocation?: CreditPaymentAllocation[]
   receipt_document_id?: string
 }
@@ -508,12 +518,20 @@ export interface CreditPage<T> {
 export interface CreditApplicationsParams {
   status?: CreditApplicationStatus[]
   query?: string
+  sort?: string
   limit?: number
   cursor?: string
 }
 
 export interface CreditLoansParams {
   status?: CreditLoanStatus[]
+  query?: string
+  dpd_min?: number
+  dpd_max?: number
+  disbursed_from?: string
+  disbursed_to?: string
+  /** Поле сортировки; `-` в начале — по убыванию. */
+  sort?: string
   limit?: number
   cursor?: string
 }

@@ -18,14 +18,14 @@ import {
   useCreditManualDecision,
   useCreditOverview,
 } from '@/features/credit/hooks/useCredit'
-import { creditApi, CreditApiError } from '@/features/credit/api/creditApi'
+import type { CreditApiError } from '@/features/credit/api/creditApi'
 import { normalizeDraft } from '@/features/credit/api/draft'
 import type {
   CreditApplicationDetail,
   CreditDecisionOutcome,
-  CreditDocumentMeta,
 } from '@/features/credit/api/types'
 import { CreditStatusBadge } from './components/CreditStatusBadge'
+import { CreditDocumentOpenButton } from './components/CreditDocumentOpenButton'
 import { CreditDraftBlocks } from './components/CreditDraftBlocks'
 import { CreditFlagList } from './components/CreditFlagList'
 import { collectApplicationFlags } from '@/features/credit/api/applicantFlags'
@@ -359,35 +359,8 @@ function ApplicationForm({ application }: { application: CreditApplicationDetail
 
 function ApplicationDocuments({ application }: { application: CreditApplicationDetail }) {
   const { t } = useTranslation('common')
-  const [busyId, setBusyId] = useState<string | null>(null)
   const [failure, setFailure] = useState<string | null>(null)
   const documents = application.documents ?? []
-
-  const open = async (doc: CreditDocumentMeta) => {
-    setBusyId(doc.document_id)
-    setFailure(null)
-    try {
-      const { blob, disposition } = await creditApi.documentContent(doc.document_id)
-      const url = URL.createObjectURL(blob)
-      // Политику inline/attachment задаёт сервер (файл прислал клиент —
-      // доверять его типу нельзя). Фронт лишь исполняет решение сервера.
-      if (disposition.startsWith('inline')) {
-        window.open(url, '_blank', 'noopener,noreferrer')
-      } else {
-        const link = document.createElement('a')
-        link.href = url
-        link.download = doc.title ?? 'document'
-        document.body.append(link)
-        link.click()
-        link.remove()
-      }
-      setTimeout(() => URL.revokeObjectURL(url), 60_000)
-    } catch (error) {
-      setFailure(error instanceof CreditApiError ? error.message : String(error))
-    } finally {
-      setBusyId(null)
-    }
-  }
 
   return (
     <Panel title={t('credit.tabs.documents')}>
@@ -417,14 +390,7 @@ function ApplicationDocuments({ application }: { application: CreditApplicationD
                   {formatDateTime(doc.generated_at)}
                 </td>
                 <td className="py-2 text-right">
-                  <Button
-                    size="sm"
-                    variant="white-secondary"
-                    isLoading={busyId === doc.document_id}
-                    onClick={() => void open(doc)}
-                  >
-                    {t('credit.actions.openDocument')}
-                  </Button>
+                  <CreditDocumentOpenButton document={doc} onError={setFailure} />
                 </td>
               </tr>
             ))}

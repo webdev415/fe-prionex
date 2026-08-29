@@ -47,7 +47,18 @@ const ENUM_NAMESPACE: Record<string, string> = {
  * исчезали income и params у четырнадцати из сорока пяти, personal и phones —
  * у тринадцати. Пустой блок с подписью «Не заповнено» честнее отсутствия.
  */
-const ALWAYS_SHOWN_BLOCKS = ['personal', 'address', 'phones', 'income', 'params']
+const ALWAYS_SHOWN_BLOCKS = [
+  'personal',
+  'address',
+  'phones',
+  'income',
+  'params',
+  // Блока `disbursement` нет в ответе НИ У ОДНОЙ заявки, поэтому «Реквізити
+  // видачі» исчезали с экрана целиком — тот самый случай, ради которого
+  // список и заведён: отсутствие блока должно читаться как «не заповнено»,
+  // а не как «такого раздела не бывает».
+  'disbursement',
+]
 
 /** Порядок показа; неизвестные блоки уйдут в конец как есть. */
 const BLOCK_ORDER = [...ALWAYS_SHOWN_BLOCKS, 'banking', 'employment', 'disbursement']
