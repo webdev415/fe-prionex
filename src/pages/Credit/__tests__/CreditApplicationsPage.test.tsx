@@ -12,23 +12,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { CreditApplicationsPage } from '../CreditApplicationsPage'
-import { creditApi } from '@/features/credit/api/creditApi'
+import { useCreditApplications, useCreditOverview } from '@/features/credit/hooks/useCredit'
 import type { CreditApplicationSummary, CreditOverview } from '@/features/credit/api/types'
 
-vi.mock('@/features/credit/api/creditApi', async () => {
-  const actual = await vi.importActual<typeof import('@/features/credit/api/creditApi')>(
-    '@/features/credit/api/creditApi'
-  )
-  return {
-    ...actual,
-    creditApi: {
-      overview: vi.fn(),
-      applications: vi.fn(),
-    },
-  }
-})
+// Мокаем ХУКИ, а не HTTP-клиент: живой QueryClient оставляет таймеры
+// notifyManager, которые срабатывают уже после teardown jsdom и падают в
+// чужом тест-файле («window is not defined»). Странице всё равно, откуда
+// данные, — проверяем ровно её поведение.
+vi.mock('@/features/credit/hooks/useCredit', () => ({
+  useCreditOverview: vi.fn(),
+  useCreditApplications: vi.fn(),
+}))
 
 const OVERVIEW: CreditOverview = {
   role: 'underwriter',
@@ -58,24 +53,24 @@ const ROW: CreditApplicationSummary = {
 }
 
 function renderPage(initialEntry = '/dashboard/credit/applications') {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
-    <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={[initialEntry]}>
-        <CreditApplicationsPage />
-      </MemoryRouter>
-    </QueryClientProvider>
+    <MemoryRouter initialEntries={[initialEntry]}>
+      <CreditApplicationsPage />
+    </MemoryRouter>
   )
 }
 
 describe('CreditApplicationsPage', () => {
   beforeEach(() => {
-    vi.mocked(creditApi.overview).mockResolvedValue(OVERVIEW)
-    vi.mocked(creditApi.applications).mockResolvedValue({
-      items: [ROW],
-      next_cursor: null,
-      total: 1,
-    })
+    vi.clearAllMocks()
+    vi.mocked(useCreditOverview).mockReturnValue({ data: OVERVIEW } as ReturnType<
+      typeof useCreditOverview
+    >)
+    vi.mocked(useCreditApplications).mockReturnValue({
+      data: { items: [ROW], next_cursor: null, total: 1 },
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useCreditApplications>)
   })
 
   it('показывает заявку из модуля', async () => {
@@ -95,7 +90,7 @@ describe('CreditApplicationsPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'credit.status.referred' }))
 
     await waitFor(() => {
-      expect(vi.mocked(creditApi.applications)).toHaveBeenCalledWith(
+      expect(vi.mocked(useCreditApplications)).toHaveBeenCalledWith(
         expect.objectContaining({ status: ['referred'] })
       )
     })

@@ -97,6 +97,30 @@ export function useCreditLoanJournal(loanId: string | undefined) {
 }
 
 /**
+ * Каталог продуктов и реестр параметров — экраны настроек модуля.
+ *
+ * Оба доступны только риск-менеджеру: 403 здесь — не поломка, а рабочее
+ * состояние для остальных ролей, поэтому не ретраим и показываем причину.
+ */
+export function useCreditProducts(enabled = true) {
+  return useQuery({
+    queryKey: [...creditKeys.all, 'products'] as const,
+    queryFn: () => creditApi.products(),
+    enabled,
+    retry: false,
+  })
+}
+
+export function useCreditParameters(enabled = true) {
+  return useQuery({
+    queryKey: [...creditKeys.all, 'parameters'] as const,
+    queryFn: () => creditApi.parameters(),
+    enabled,
+    retry: false,
+  })
+}
+
+/**
  * Ручное решение андеррайтера. После успеха инвалидируем карточку, списки и
  * сводку: статус заявки изменился, и счётчики в шапке обязаны это показать.
  */

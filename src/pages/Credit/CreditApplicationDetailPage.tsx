@@ -20,6 +20,7 @@ import {
   useCreditOverview,
 } from '@/features/credit/hooks/useCredit'
 import { creditApi, CreditApiError } from '@/features/credit/api/creditApi'
+import { normalizeDraft } from '@/features/credit/api/draft'
 import type {
   CreditApplicationDetail,
   CreditDecisionOutcome,
@@ -125,48 +126,57 @@ export function CreditApplicationDetailPage() {
 
 function ApplicationForm({ application }: { application: CreditApplicationDetail }) {
   const { t } = useTranslation('common')
-  const draft = application.draft ?? {}
-  const applicant = draft.applicant ?? {}
-  const address = draft.address ?? {}
-  const income = draft.income ?? {}
+  // Анкету присылает сайт блоками (personal/phones/address/income/params);
+  // разбор форматов — в normalizeDraft, здесь только показ.
+  const applicant = normalizeDraft(application.draft, application.client_email)
 
   return (
     <>
-      {draft.demo_note && (
+      {applicant.note && (
         <Alert variant="warning" className="mb-4">
-          {String(draft.demo_note)}
+          {applicant.note}
         </Alert>
       )}
       <Panel title={t('credit.card.applicant')}>
-        <Field label={t('credit.fields.name')}>
-          {[applicant.first_name, applicant.last_name].filter(Boolean).join(' ') || '—'}
-        </Field>
-        <Field label={t('credit.fields.email')}>
-          {applicant.email ?? application.client_email ?? '—'}
-        </Field>
+        <Field label={t('credit.fields.name')}>{applicant.fullName || '—'}</Field>
+        <Field label={t('credit.fields.email')}>{applicant.email ?? '—'}</Field>
         <Field label={t('credit.fields.phone')}>{applicant.phone ?? '—'}</Field>
-        <Field label={t('credit.fields.birthDate')}>{applicant.date_of_birth ?? '—'}</Field>
-        <Field label={t('credit.fields.address')}>
-          {[address.line1, address.city, address.province, address.postal_code]
-            .filter(Boolean)
-            .join(', ') || '—'}
-        </Field>
+        <Field label={t('credit.fields.birthDate')}>{applicant.birthDate ?? '—'}</Field>
+        <Field label={t('credit.fields.address')}>{applicant.address ?? '—'}</Field>
       </Panel>
 
       <Panel title={t('credit.card.incomeAndLoan')}>
-        <Field label={t('credit.fields.employer')}>{income.employer ?? '—'}</Field>
-        <Field label={t('credit.fields.income')}>
-          {income.net_amount_minor
-            ? `${money(income.net_amount_minor, application.currency)} / ${income.frequency ?? '—'}`
+        <Field label={t('credit.fields.employmentStatus')}>
+          {applicant.employmentStatus
+            ? t(`credit.employment.${applicant.employmentStatus}`, applicant.employmentStatus)
             : '—'}
         </Field>
-        <Field label={t('credit.fields.nextPayday')}>{formatDate(income.next_payday ?? '')}</Field>
+        <Field label={t('credit.fields.income')}>
+          {applicant.incomeMinor
+            ? `${money(applicant.incomeMinor, application.currency)} / ${
+                applicant.incomeFrequency
+                  ? t(`credit.frequency.${applicant.incomeFrequency}`, applicant.incomeFrequency)
+                  : '—'
+              }`
+            : '—'}
+        </Field>
+        <Field label={t('credit.fields.receiptMethod')}>
+          {applicant.receiptMethod
+            ? t(`credit.receipt.${applicant.receiptMethod}`, applicant.receiptMethod)
+            : '—'}
+        </Field>
         <Field label={t('credit.fields.requested')}>
-          {money(application.requested_amount_minor, application.currency)}
+          {money(
+            applicant.requestedMinor ?? application.requested_amount_minor,
+            application.currency
+          )}
         </Field>
         <Field label={t('credit.fields.paydays')}>
-          {(application.paydays ?? []).map((d) => formatDate(d)).join(', ') || '—'}
+          {(applicant.paydays.length ? applicant.paydays : (application.paydays ?? []))
+            .map((d) => formatDate(d))
+            .join(', ') || '—'}
         </Field>
+        <Field label={t('credit.fields.referralSource')}>{applicant.referralSource ?? '—'}</Field>
         <Field label={t('credit.fields.channel')}>{application.channel}</Field>
         <Field label={t('credit.fields.jurisdiction')}>{application.jurisdiction}</Field>
       </Panel>

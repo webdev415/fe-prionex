@@ -25,6 +25,8 @@ import type {
   CreditLoansParams,
   CreditOverview,
   CreditPage,
+  CreditParameter,
+  CreditProduct,
   CreditQueueItem,
   CreditScheduleVersion,
   ManualDecisionPayload,
@@ -49,17 +51,22 @@ const CREDIT_PREFIX = '/api/v1/credit'
 const STAND_ROLE_STORAGE_KEY = 'credit.stand.role'
 const STAND_KEY_STORAGE_KEY = 'credit.stand.apiKey'
 
-function readStandSetting(key: string): string {
-  if (typeof window === 'undefined' || !window.localStorage) return ''
+function readSetting(storage: Storage | undefined, key: string): string {
+  if (!storage) return ''
   try {
-    return window.localStorage.getItem(key) ?? ''
+    return storage.getItem(key) ?? ''
   } catch {
     return ''
   }
 }
 
+/**
+ * Роль — не секрет: держим её в localStorage, чтобы не выбирать заново
+ * каждую сессию.
+ */
 export function getStandRole(): string {
-  return readStandSetting(STAND_ROLE_STORAGE_KEY) || 'underwriter'
+  if (typeof window === 'undefined') return 'underwriter'
+  return readSetting(window.localStorage, STAND_ROLE_STORAGE_KEY) || 'underwriter'
 }
 
 export function setStandRole(role: string): void {
@@ -70,13 +77,25 @@ export function setStandRole(role: string): void {
   }
 }
 
+/**
+ * Сервисный ключ стенда — ТОЛЬКО sessionStorage.
+ *
+ * В localStorage он пережил бы закрытие вкладки и остался бы лежать на общей
+ * машине, доступный любому same-origin скрипту или расширению. sessionStorage
+ * умирает вместе с вкладкой (SEC L-02, 29.08). На этапе 2 ключа в браузере не
+ * будет вовсе: авторизацию берёт на себя JWT CRM.
+ */
 export function getStandApiKey(): string {
-  return readStandSetting(STAND_KEY_STORAGE_KEY)
+  if (typeof window === 'undefined') return ''
+  return readSetting(window.sessionStorage, STAND_KEY_STORAGE_KEY)
 }
 
 export function setStandApiKey(key: string): void {
   try {
-    window.localStorage.setItem(STAND_KEY_STORAGE_KEY, key)
+    if (key) window.sessionStorage.setItem(STAND_KEY_STORAGE_KEY, key)
+    else window.sessionStorage.removeItem(STAND_KEY_STORAGE_KEY)
+    // Подчищаем ключ, если он остался в localStorage от прежних версий.
+    window.localStorage.removeItem(STAND_KEY_STORAGE_KEY)
   } catch {
     /* см. выше */
   }
@@ -223,6 +242,12 @@ export const creditApi = {
   },
 
   loan: (loanId: string) => get<CreditLoanDetail>(`/loans/${loanId}`),
+
+  /** Каталог продуктов с версиями — право credit.products.read (risk_manager). */
+  products: () => get<CreditPage<CreditProduct>>('/products'),
+
+  /** Реестр параметров decision-engine — право credit.parameters.read. */
+  parameters: () => get<CreditPage<CreditParameter>>('/parameters'),
 
   loanState: (loanId: string, asOf?: string) =>
     get<CreditLoanState>(`/loans/${loanId}/state`, { as_of: asOf }),

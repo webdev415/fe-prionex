@@ -893,6 +893,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             ],
             mode: 'any' as const,
           },
+          {
+            path: '/dashboard/credit/settings',
+            label: t('navigation.creditSettings', 'Settings'),
+            icon: 'setting-07',
+            requiredPermissions: [
+              PERMISSIONS.CREDIT.PARAMETERS_VIEW,
+              PERMISSIONS.CREDIT.PRODUCTS_VIEW,
+              PERMISSIONS.CREDIT.APPLICATIONS_VIEW,
+              PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+            ],
+            mode: 'any' as const,
+          },
         ],
       },
       {

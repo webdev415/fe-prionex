@@ -67,7 +67,8 @@
     "contactTags": "Contact Tags",
     "creditModule": "Credit Module",
     "creditApplications": "Applications",
-    "creditLoans": "Loans"
+    "creditLoans": "Loans",
+    "creditSettings": "Settings"
   },
   "dialer": {
     "phone": {
@@ -11165,7 +11166,10 @@
       "prepaymentMode": "Prepayment mode",
       "asOf": "As of",
       "application": "Application",
-      "debtId": "Debt projection"
+      "debtId": "Debt projection",
+      "employmentStatus": "Employment",
+      "receiptMethod": "Income receipt",
+      "referralSource": "Referral source"
     },
     "tabs": {
       "form": "Application form",
@@ -11238,6 +11242,96 @@
     "stand": {
       "notice": "Stage 1: the module runs outside Kong and does not know CRM roles yet — the role below is a stand mock (WS-20 replaces it with JWT).",
       "role": "Stand role"
+    },
+    "settings": {
+      "title": "Credit module settings",
+      "helper": "Products, decision-engine parameters and the external integrations of the module.",
+      "tabs": {
+        "products": "Credit products",
+        "parameters": "Module settings",
+        "integrations": "Integrations"
+      },
+      "needRiskManager": "This section is available to the risk manager: it holds the thresholds and the product configuration.",
+      "mutationDisabled": "Editing requires a second approver (UW-04) — available once CRM roles land (WS-20).",
+      "createProduct": "New product",
+      "newVersion": "New version",
+      "validateVersion": "Validate",
+      "activateVersion": "Activate",
+      "noProducts": "No products.",
+      "keyParams": "Key parameters of the active version",
+      "otherParams": "Other parameters ({{count}})",
+      "versions": "Versions",
+      "version": "Version",
+      "state": "State",
+      "pricing": "Pricing",
+      "validFrom": "Valid from",
+      "versionsCount": "{{count}} version(s)",
+      "availability": {
+        "available": "available",
+        "showcase": "showcase",
+        "retired": "retired"
+      },
+      "parametersReadonly": "Read-only. Changing a parameter requires a second approver (UW-04) — the approver role appears with CRM roles (WS-20).",
+      "noParameters": "The registry is empty.",
+      "updatedAt": "updated {{at}}",
+      "historyPending": "Value history will appear together with the change process (WS-14).",
+      "providers": "Providers",
+      "platform": "Platform",
+      "integrationName": "Integration",
+      "integrationRole": "Role",
+      "stage": "Stage",
+      "stageValue": "stage {{stage}}",
+      "source": "Source",
+      "integrationState": {
+        "not_connected": "not connected",
+        "stand_only": "stand only",
+        "contract_draft": "contract draft"
+      },
+      "integrations": {
+        "flinks": {
+          "name": "Flinks (IBV)",
+          "role": "Bank verification: income, paydays, account for payout and PAD"
+        },
+        "zumRails": {
+          "name": "Zūm Rails",
+          "role": "Disbursement (Interac / EFT) and collection (EFT under PAD)"
+        },
+        "eSignature": {
+          "name": "E-signature",
+          "role": "The module stores signature evidence; the signing itself happens in the web-credit BFF. Provider not selected"
+        },
+        "outbox": {
+          "name": "Domain events",
+          "role": "Outbox table; the publisher to crm_domain_events arrives with stage 2"
+        },
+        "clientService": {
+          "name": "client-service (C-08)",
+          "role": "upsert-by-tin at contracting and the debt projection at disbursement"
+        }
+      },
+      "demoModeNotice": "The stand runs in demo mode: external providers are not called, payments and COB are triggered manually.",
+      "integrationsFootnote": "Statuses reflect what is fixed in the module contract and docs — no provider health checks exist yet. Paths are relative to the credit-module repository."
+    },
+    "employment": {
+      "employment_full_time": "Full-time employment",
+      "employment_part_time": "Part-time employment",
+      "self_employed": "Self-employed",
+      "pension": "Pension",
+      "benefits": "Benefits"
+    },
+    "frequency": {
+      "bi_weekly": "bi-weekly",
+      "biweekly": "bi-weekly",
+      "weekly": "weekly",
+      "semimonthly": "semi-monthly",
+      "semi_monthly": "semi-monthly",
+      "monthly": "monthly",
+      "irregular": "irregular"
+    },
+    "receipt": {
+      "direct_deposit": "Direct deposit",
+      "cheque": "Cheque",
+      "cash": "Cash"
     }
   }
 }

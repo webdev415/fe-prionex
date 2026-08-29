@@ -84,6 +84,9 @@ const CreditLoansPage = lazy(() =>
 const CreditLoanDetailPage = lazy(() =>
   import('@/pages/Credit').then((m) => ({ default: m.CreditLoanDetailPage }))
 )
+const CreditSettingsPage = lazy(() =>
+  import('@/pages/Credit').then((m) => ({ default: m.CreditSettingsPage }))
+)
 const SmsTemplatesPage = lazy(() =>
   import('@/pages/SmsTemplates').then((m) => ({
     default: m.SmsTemplatesPage,
@@ -373,6 +376,24 @@ export const router = createBrowserRouter([
             mode="any"
           >
             {withSuspense(<CreditLoansPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        // Настройки модуля: продукты и параметры — риск-менеджеру, интеграции
+        // видны всем, кто имеет доступ к разделу (там нет данных клиентов).
+        path: 'credit/settings',
+        element: (
+          <PermissionRoute
+            requiredPermissions={[
+              PERMISSIONS.CREDIT.PARAMETERS_VIEW,
+              PERMISSIONS.CREDIT.PRODUCTS_VIEW,
+              PERMISSIONS.CREDIT.APPLICATIONS_VIEW,
+              PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+            ]}
+            mode="any"
+          >
+            {withSuspense(<CreditSettingsPage />)}
           </PermissionRoute>
         ),
       },

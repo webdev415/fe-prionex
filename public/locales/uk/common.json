@@ -67,7 +67,8 @@
     "contactTags": "Теги контактів",
     "creditModule": "Кредитний модуль",
     "creditApplications": "Заявки",
-    "creditLoans": "Кредити"
+    "creditLoans": "Кредити",
+    "creditSettings": "Налаштування"
   },
   "dialer": {
     "phone": {
@@ -11188,7 +11189,10 @@
       "prepaymentMode": "Режим переплати",
       "asOf": "Зріз на",
       "application": "Заявка",
-      "debtId": "Проєкція боргу"
+      "debtId": "Проєкція боргу",
+      "employmentStatus": "Зайнятість",
+      "receiptMethod": "Спосіб отримання доходу",
+      "referralSource": "Джерело звернення"
     },
     "tabs": {
       "form": "Анкета",
@@ -11261,6 +11265,96 @@
     "stand": {
       "notice": "Етап 1: модуль працює поза Kong і ще не знає ролей CRM — роль нижче є макетом стенда (WS-20 замінить її на JWT).",
       "role": "Роль стенда"
+    },
+    "settings": {
+      "title": "Налаштування кредитного модуля",
+      "helper": "Продукти, параметри рішення та зовнішні інтеграції модуля.",
+      "tabs": {
+        "products": "Кредитні продукти",
+        "parameters": "Налаштування модуля",
+        "integrations": "Інтеграції"
+      },
+      "needRiskManager": "Розділ доступний ризик-менеджеру: тут пороги та конфігурація продукту.",
+      "mutationDisabled": "Зміна потребує другого затверджувача (UW-04) — з’явиться разом із ролями CRM (WS-20).",
+      "createProduct": "Новий продукт",
+      "newVersion": "Нова версія",
+      "validateVersion": "Валідувати",
+      "activateVersion": "Активувати",
+      "noProducts": "Продуктів немає.",
+      "keyParams": "Ключові параметри активної версії",
+      "otherParams": "Інші параметри ({{count}})",
+      "versions": "Версії",
+      "version": "Версія",
+      "state": "Стан",
+      "pricing": "Тариф",
+      "validFrom": "Діє з",
+      "versionsCount": "версій: {{count}}",
+      "availability": {
+        "available": "доступний",
+        "showcase": "вітрина",
+        "retired": "виведений"
+      },
+      "parametersReadonly": "Лише читання. Зміна параметра потребує другого затверджувача (UW-04) — роль з’явиться разом із ролями CRM (WS-20).",
+      "noParameters": "Реєстр порожній.",
+      "updatedAt": "оновлено {{at}}",
+      "historyPending": "Історія значень з’явиться разом із процесом зміни (WS-14).",
+      "providers": "Провайдери",
+      "platform": "Платформа",
+      "integrationName": "Інтеграція",
+      "integrationRole": "Роль",
+      "stage": "Етап",
+      "stageValue": "етап {{stage}}",
+      "source": "Джерело",
+      "integrationState": {
+        "not_connected": "не підключено",
+        "stand_only": "лише стенд",
+        "contract_draft": "чернетка контракту"
+      },
+      "integrations": {
+        "flinks": {
+          "name": "Flinks (IBV)",
+          "role": "Банківська верифікація: дохід, дати зарплат, рахунок для виплати та PAD"
+        },
+        "zumRails": {
+          "name": "Zūm Rails",
+          "role": "Видача (Interac / EFT) і збір платежів (EFT за PAD)"
+        },
+        "eSignature": {
+          "name": "Електронний підпис",
+          "role": "Модуль зберігає доказ підпису; сам підпис — у BFF web-credit. Провайдера не обрано"
+        },
+        "outbox": {
+          "name": "Доменні події",
+          "role": "Таблиця outbox; публікація в crm_domain_events — з етапом 2"
+        },
+        "clientService": {
+          "name": "client-service (C-08)",
+          "role": "upsert-by-tin при укладенні договору і проєкція боргу при видачі"
+        }
+      },
+      "demoModeNotice": "Стенд працює в демо-режимі: зовнішні провайдери не викликаються, платежі та COB запускаються вручну.",
+      "integrationsFootnote": "Статуси відображають те, що зафіксовано в контракті та документації модуля — health-перевірок провайдерів ще немає. Шляхи вказано відносно репозиторію credit-module."
+    },
+    "employment": {
+      "employment_full_time": "Повна зайнятість",
+      "employment_part_time": "Часткова зайнятість",
+      "self_employed": "Самозайнятий",
+      "pension": "Пенсія",
+      "benefits": "Соціальні виплати"
+    },
+    "frequency": {
+      "bi_weekly": "раз на два тижні",
+      "biweekly": "раз на два тижні",
+      "weekly": "щотижня",
+      "semimonthly": "двічі на місяць",
+      "semi_monthly": "двічі на місяць",
+      "monthly": "щомісяця",
+      "irregular": "нерегулярно"
+    },
+    "receipt": {
+      "direct_deposit": "Пряме зарахування",
+      "cheque": "Чек",
+      "cash": "Готівка"
     }
   }
 }

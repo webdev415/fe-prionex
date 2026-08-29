@@ -106,8 +106,47 @@ export interface CreditDocumentMeta {
   replaces_document_id?: string
 }
 
-/** Анкета заявки: словарь блоков ведёт сайт (web-credit), состав растёт. */
+/**
+ * Анкета заявки: блоки ведёт сайт (web-credit `packages/application-flow`),
+ * состав растёт — модуль хранит их как есть.
+ *
+ * Боевые блоки: `personal`, `phones`, `address`, `income`, `params`.
+ * `applicant` — формат демо-заявок стенда, который ещё встречается в базе.
+ * Разбор обоих — в `normalizeDraft` (`features/credit/api/draft.ts`).
+ */
 export interface CreditApplicationDraft {
+  personal?: {
+    first_name?: string
+    last_name?: string
+    birth_date?: string
+    gender?: string
+  }
+  /**
+   * Две живые формы: `{primary: {...}}` (сайт web-credit) и
+   * `{items: [...]}` (операторский/скриптовый вход). Разбор — в normalizeDraft.
+   */
+  phones?: {
+    items?: Array<{ kind?: string; number?: string; is_primary?: boolean }>
+    primary?: { kind?: string; number?: string }
+  }
+  address?: { line1?: string; city?: string; province?: string; postal_code?: string }
+  income?: {
+    net_amount_minor?: number
+    frequency?: string
+    paydays?: string[]
+    receipt_method?: string
+    employment_status?: string
+    /** демо-формат стенда */
+    employer?: string
+    next_payday?: string
+  }
+  params?: {
+    amount_minor?: number
+    referral_source?: string
+    /** демо-формат стенда */
+    requested_amount_minor?: number
+  }
+  /** Демо-заявки стенда: единый блок вместо personal/phones. */
   applicant?: {
     first_name?: string
     last_name?: string
@@ -115,14 +154,6 @@ export interface CreditApplicationDraft {
     phone?: string
     date_of_birth?: string
   }
-  address?: { line1?: string; city?: string; province?: string; postal_code?: string }
-  income?: {
-    employer?: string
-    net_amount_minor?: number
-    frequency?: string
-    next_payday?: string
-  }
-  params?: { requested_amount_minor?: number }
   banking?: { institution?: string; verified?: boolean }
   demo_note?: string
   [block: string]: unknown
@@ -313,4 +344,32 @@ export interface CreditOverview {
   loans: Record<string, number>
   application_statuses: CreditApplicationStatus[]
   demo_mode: boolean
+}
+
+/** Версия продукта (каталог risk-менеджера). */
+export interface CreditProductVersion {
+  version: string
+  state: string
+  pricing_version: string | null
+  valid_from: string | null
+  payload: Record<string, unknown>
+}
+
+/** Продукт с версиями (listInternalProducts). */
+export interface CreditProduct {
+  code: string
+  name: string
+  project: string
+  jurisdiction: string
+  currency: string
+  availability: string
+  versions: CreditProductVersion[]
+}
+
+/** Параметр decision-engine (listParameters). */
+export interface CreditParameter {
+  code: string
+  value: unknown
+  description: string | null
+  updated_at: string
 }
