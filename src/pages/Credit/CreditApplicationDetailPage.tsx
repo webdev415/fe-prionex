@@ -7,12 +7,11 @@
  */
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { SegmentedTabs } from '@/components/ui/SegmentedTabs'
-import { Icons } from '@/lib/icons'
 import { formatDate, formatDateTime } from '@/lib/formatters'
 import {
   useCreditApplication,
@@ -27,18 +26,30 @@ import type {
   CreditDocumentMeta,
 } from '@/features/credit/api/types'
 import { CreditStatusBadge } from './components/CreditStatusBadge'
+import { CreditDraftBlocks } from './components/CreditDraftBlocks'
+import { CreditFlagList } from './components/CreditFlagList'
+import { collectApplicationFlags } from '@/features/credit/api/applicantFlags'
+import {
+  CreditCardHeader,
+  CreditNotice,
+  type CreditHeaderMetric,
+} from './components/CreditCardHeader'
+import { CreditIbvTab } from './components/CreditIbvTab'
+import { CreditDecisionBasis } from './components/CreditDecisionBasis'
+import {
+  formatCreditMoney,
+  formatCreditPercent,
+  formatCreditRate,
+} from '@/features/credit/api/money'
 
 const DECLINE_CODES = ['RC-04', 'RC-08', 'RC-11']
 const DECIDABLE_STATUSES = ['scoring', 'referred']
+/** Заявка отработана — срок годности показывать бессмысленно. */
+const TERMINAL_STATUSES = ['disbursed', 'declined', 'expired', 'abandoned', 'contracted']
+/** Клиент ещё не дошёл до конца — показываем, на каком шаге застрял. */
+const UNFINISHED_STATUSES = ['draft', 'in_progress', 'identity_check', 'data_collection']
 
-function money(minor: number | null | undefined, currency?: string): string {
-  if (minor === null || minor === undefined) return '—'
-  const value = (minor / 100).toLocaleString('ru-RU', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
-  return currency ? `${value} ${currency}` : value
-}
+const money = formatCreditMoney
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -62,7 +73,6 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
 
 export function CreditApplicationDetailPage() {
   const { t } = useTranslation('common')
-  const navigate = useNavigate()
   const { applicationId } = useParams<{ applicationId: string }>()
   const { data: overview } = useCreditOverview()
   const { data: application, isLoading, error } = useCreditApplication(applicationId)
@@ -83,29 +93,108 @@ export function CreditApplicationDetailPage() {
 
   const tabs = [
     { id: 'form', label: t('credit.tabs.form') },
+    { id: 'fullForm', label: t('credit.tabs.fullForm') },
+    { id: 'ibv', label: t('credit.tabs.ibv') },
     { id: 'documents', label: t('credit.tabs.documents') },
     { id: 'decision', label: t('credit.tabs.decision') },
     { id: 'history', label: t('credit.tabs.history') },
   ]
 
+  // Плитки шапки заявки — зеркало кредитных: сколько просят, сколько одобрено,
+  // на что опирается решение и можно ли верить личности. Один визуальный язык
+  // на обе сущности: оператор не переучивается, переходя между карточками.
+  const snapshot = application.decision?.input_snapshot
+  const verifiedIncome = application.ibv?.income?.net_amount_minor
+  const identityRate = application.ibv?.identity_match_rate
+  const headerMetrics: CreditHeaderMetric[] = [
+    {
+      key: 'requested',
+      label: t('credit.fields.requested'),
+      value: money(application.requested_amount_minor, application.currency),
+    },
+    {
+      key: 'approved',
+      label: t('credit.fields.finalAmount'),
+      value:
+        application.decision?.final_amount_minor != null
+          ? money(application.decision.final_amount_minor, application.currency)
+          : '—',
+      tone: application.decision?.outcome === 'approved' ? 'ok' : 'default',
+    },
+    {
+      key: 'income',
+      label: t('credit.fields.incomeVerified'),
+      value: verifiedIncome !== undefined ? money(verifiedIncome, application.currency) : '—',
+      hint:
+        snapshot?.affordability_cap_minor !== undefined
+          ? `${t('credit.fields.affordabilityCap')} ${money(snapshot.affordability_cap_minor, application.currency)}`
+          : undefined,
+    },
+    {
+      key: 'identity',
+      label: t('credit.fields.identityMatch'),
+      value: identityRate !== undefined ? formatCreditRate(identityRate) : '—',
+      tone: identityRate !== undefined && identityRate < 0.9 ? 'warn' : 'ok',
+    },
+  ]
+
+  const stuck =
+    UNFINISHED_STATUSES.includes(application.status) &&
+    (application.resume_step || (application.missing_fields ?? []).length > 0)
+  // «Что-то не так» — требование CEO. Два вида признаков держим раздельно:
+  // противоречия и нехватка требуют от оператора разных действий.
+  const flags = collectApplicationFlags(application)
+
   return (
     <div className="p-6">
-      <button
-        type="button"
-        onClick={() => navigate('/dashboard/credit/applications')}
-        className="text-muted-foreground hover:text-foreground mb-3 flex items-center gap-1.5 text-sm"
-      >
-        <Icons.ArrowLeft size={16} />
-        {t('credit.actions.backToList')}
-      </button>
-
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <h1 className="text-foreground text-xl font-semibold">
-          {t('credit.card.applicationTitle', { number: application.number })}
-        </h1>
-        <CreditStatusBadge status={application.status} />
-        <span className="text-muted-foreground text-sm">{application.product_code}</span>
-      </div>
+      <CreditCardHeader
+        backTo="/dashboard/credit/applications"
+        backLabel={t('credit.actions.backToList')}
+        title={t('credit.card.applicationTitle', { number: application.number })}
+        copyValue={application.number}
+        badge={<CreditStatusBadge status={application.status} />}
+        subtitle={`${application.product_code} · ${application.jurisdiction}`}
+        identity={
+          <>
+            <span>
+              {t('credit.fields.createdAt')}: {formatDateTime(application.created_at)}
+            </span>
+            <span>
+              {t('credit.fields.updatedAt')}: {formatDateTime(application.updated_at)}
+            </span>
+            {application.expires_at && !TERMINAL_STATUSES.includes(application.status) && (
+              <span>
+                {t('credit.fields.expiresAt')}: {formatDateTime(application.expires_at)}
+              </span>
+            )}
+          </>
+        }
+        metrics={headerMetrics}
+        notices={
+          <>
+            <CreditFlagList flags={flags} />
+            {stuck && (
+              <CreditNotice>
+                {t('credit.card.stuckAt', {
+                  step: t(
+                    `credit.blocks.${application.resume_step}`,
+                    application.resume_step ?? '—'
+                  ),
+                })}
+                {(application.missing_fields ?? []).length > 0 && (
+                  <>
+                    {' · '}
+                    {t('credit.card.missingBlocks')}:{' '}
+                    {(application.missing_fields ?? [])
+                      .map((field) => t(`credit.blocks.${field}`, field))
+                      .join(', ')}
+                  </>
+                )}
+              </CreditNotice>
+            )}
+          </>
+        }
+      />
 
       <SegmentedTabs
         items={tabs}
@@ -115,6 +204,10 @@ export function CreditApplicationDetailPage() {
       />
 
       {tab === 'form' && <ApplicationForm application={application} />}
+      {tab === 'fullForm' && (
+        <CreditDraftBlocks draft={application.draft} currency={application.currency} />
+      )}
+      {tab === 'ibv' && <CreditIbvTab ibv={application.ibv} currency={application.currency} />}
       {tab === 'documents' && <ApplicationDocuments application={application} />}
       {tab === 'decision' && (
         <ApplicationDecision application={application} canDecide={canDecide} />
@@ -130,6 +223,17 @@ function ApplicationForm({ application }: { application: CreditApplicationDetail
   // разбор форматов — в normalizeDraft, здесь только показ.
   const applicant = normalizeDraft(application.draft, application.client_email)
 
+  const ibv = application.ibv
+  const ibvIncome = ibv?.income
+  const identityMatch = ibv?.identity_match_rate
+  const holderName = ibv?.accounts?.find(
+    (account) => account.account_id === ibv?.payout_account_id
+  )?.holder_name
+  const observedPaydays = ibvIncome?.observed_paydays ?? []
+  const reconciliation = application.decision?.input_snapshot?.income_reconciliation
+  const divergencePct = formatCreditPercent(reconciliation?.divergence_pct)
+  const needsIncomeReview = Boolean(reconciliation?.needs_review)
+
   return (
     <>
       {applicant.note && (
@@ -143,6 +247,14 @@ function ApplicationForm({ application }: { application: CreditApplicationDetail
         <Field label={t('credit.fields.phone')}>{applicant.phone ?? '—'}</Field>
         <Field label={t('credit.fields.birthDate')}>{applicant.birthDate ?? '—'}</Field>
         <Field label={t('credit.fields.address')}>{applicant.address ?? '—'}</Field>
+        {identityMatch !== undefined && (
+          <Field label={t('credit.fields.identityMatch')}>
+            <span className={identityMatch >= 0.9 ? 'text-success-700' : 'text-warning-800'}>
+              {formatCreditRate(identityMatch)}
+            </span>
+            {holderName && <span className="text-muted-foreground"> · {holderName}</span>}
+          </Field>
+        )}
       </Panel>
 
       <Panel title={t('credit.card.incomeAndLoan')}>
@@ -151,6 +263,18 @@ function ApplicationForm({ application }: { application: CreditApplicationDetail
             ? t(`credit.employment.${applicant.employmentStatus}`, applicant.employmentStatus)
             : '—'}
         </Field>
+        {(ibvIncome?.employer_name || applicant.employer) && (
+          <Field label={t('credit.fields.employer')}>
+            {ibvIncome?.employer_name ?? applicant.employer}
+            {ibvIncome?.employer_name &&
+              applicant.employer &&
+              ibvIncome.employer_name !== applicant.employer && (
+                <span className="text-warning-800 ml-2 text-xs">
+                  {t('credit.card.declaredDiffers', { value: applicant.employer })}
+                </span>
+              )}
+          </Field>
+        )}
         <Field label={t('credit.fields.income')}>
           {applicant.incomeMinor
             ? `${money(applicant.incomeMinor, application.currency)} / ${
@@ -159,7 +283,24 @@ function ApplicationForm({ application }: { application: CreditApplicationDetail
                   : '—'
               }`
             : '—'}
+          <span className="text-muted-foreground"> ({t('credit.fields.declaredByClient')})</span>
         </Field>
+        {/* Подтверждённый банком доход — то, на что опирается решение.
+            Без него заявленная клиентом сумма читается как проверенная. */}
+        {ibvIncome?.net_amount_minor !== undefined && (
+          <Field label={t('credit.fields.incomeVerified')}>
+            <strong>{money(ibvIncome.net_amount_minor, application.currency)}</strong>
+            {divergencePct !== null && (
+              <span
+                className={
+                  needsIncomeReview ? 'text-warning-800 ml-2' : 'text-muted-foreground ml-2'
+                }
+              >
+                {t('credit.fields.divergence')} {divergencePct} %
+              </span>
+            )}
+          </Field>
+        )}
         <Field label={t('credit.fields.receiptMethod')}>
           {applicant.receiptMethod
             ? t(`credit.receipt.${applicant.receiptMethod}`, applicant.receiptMethod)
@@ -171,13 +312,18 @@ function ApplicationForm({ application }: { application: CreditApplicationDetail
             application.currency
           )}
         </Field>
-        <Field label={t('credit.fields.paydays')}>
-          {(applicant.paydays.length ? applicant.paydays : (application.paydays ?? []))
-            .map((d) => formatDate(d))
-            .join(', ') || '—'}
+        <Field label={t('credit.fields.paydaysDeclared')}>
+          {(application.paydays ?? applicant.paydays).map((d) => formatDate(d)).join(', ') || '—'}
         </Field>
+        {observedPaydays.length > 0 && (
+          <Field label={t('credit.fields.paydaysObserved')}>
+            {observedPaydays.map((d) => formatDate(d)).join(', ')}
+          </Field>
+        )}
         <Field label={t('credit.fields.referralSource')}>{applicant.referralSource ?? '—'}</Field>
-        <Field label={t('credit.fields.channel')}>{application.channel}</Field>
+        <Field label={t('credit.fields.channel')}>
+          {t(`credit.channel.${application.channel}`, application.channel)}
+        </Field>
         <Field label={t('credit.fields.jurisdiction')}>{application.jurisdiction}</Field>
       </Panel>
 
@@ -265,7 +411,7 @@ function ApplicationDocuments({ application }: { application: CreditApplicationD
           <tbody>
             {documents.map((doc) => (
               <tr key={doc.document_id} className="border-border border-b last:border-0">
-                <td className="py-2">{doc.kind}</td>
+                <td className="py-2">{t(`credit.documentKind.${doc.kind}`, doc.kind)}</td>
                 <td className="py-2 font-mono text-xs">{doc.title ?? doc.document_id}</td>
                 <td className="text-muted-foreground py-2 text-xs">
                   {formatDateTime(doc.generated_at)}
@@ -333,22 +479,51 @@ function ApplicationDecision({
             {t(`credit.decision.${decision.decision_mode}`, decision.decision_mode)}
           </Field>
           <Field label={t('credit.fields.finalAmount')}>
-            {money(decision.final_amount_minor, decision.currency)}
+            {money(application.requested_amount_minor, application.currency)}
+            {decision.final_amount_minor !== null && (
+              <>
+                {' → '}
+                <strong>{money(decision.final_amount_minor, decision.currency)}</strong>
+              </>
+            )}
           </Field>
           <Field label={t('credit.fields.declineCodes')}>
-            {decision.decline_codes.join(', ') || '—'}
+            {decision.decline_codes.length
+              ? decision.decline_codes
+                  .map((code) => `${code} — ${t(`credit.declineCode.${code}`, code)}`)
+                  .join('; ')
+              : '—'}
           </Field>
+          {decision.outcome === 'declined' && decision.cooldown_until && (
+            <Field label={t('credit.fields.retryAfter')}>
+              {formatDate(decision.cooldown_until)}
+            </Field>
+          )}
           <Field label={t('credit.fields.underwriter')}>{decision.underwriter_id ?? '—'}</Field>
           <Field label={t('credit.fields.rationale')}>{decision.rationale ?? '—'}</Field>
           <Field label={t('credit.fields.rules')}>
             {decision.ruleset_version} / {decision.model_version}
           </Field>
           <Field label={t('credit.fields.decidedAt')}>{formatDateTime(decision.decided_at)}</Field>
-          <p className="text-muted-foreground mt-3 mb-1 text-xs">{t('credit.card.snapshot')}</p>
-          <pre className="bg-secondary-900 max-h-72 overflow-auto rounded-md p-3 font-mono text-[11px] text-white">
+        </Panel>
+      )}
+
+      {decision && (
+        <CreditDecisionBasis
+          snapshot={decision.input_snapshot}
+          currency={decision.currency ?? application.currency}
+        />
+      )}
+
+      {decision && (
+        <details className="border-border bg-card mb-4 rounded-xl border p-4 shadow-sm">
+          <summary className="text-muted-foreground cursor-pointer text-xs">
+            {t('credit.card.snapshot')}
+          </summary>
+          <pre className="bg-secondary-900 mt-2 max-h-72 overflow-auto rounded-md p-3 font-mono text-[11px] text-white">
             {snapshot}
           </pre>
-        </Panel>
+        </details>
       )}
 
       {decidable && canDecide && (
@@ -481,19 +656,56 @@ function ApplicationHistory({ application }: { application: CreditApplicationDet
                 ? `${t(`credit.status.${entry.from_status}`, entry.from_status)} → `
                 : ''}
               <strong>{t(`credit.status.${entry.to_status}`, entry.to_status)}</strong>
-              <span className="text-muted-foreground ml-2 text-xs">({entry.actor})</span>
+              <span className="text-muted-foreground ml-2 text-xs">
+                ({t(`credit.actor.${entry.actor}`, entry.actor)})
+              </span>
             </span>
           </li>
         ))}
       </ul>
+      {application.sign_evidence && (
+        <div className="mt-4">
+          <div className="text-muted-foreground mb-2 text-xs">{t('credit.card.signEvidence')}</div>
+          <dl className="grid grid-cols-[max-content_minmax(0,1fr)] gap-x-5 gap-y-1 text-sm">
+            <dt className="text-muted-foreground">{t('credit.fields.signMethod')}</dt>
+            <dd className="m-0">
+              {t(
+                `credit.signMethod.${application.sign_evidence.method}`,
+                application.sign_evidence.method ?? '—'
+              )}
+              {application.sign_evidence.typed_name
+                ? ` · ${application.sign_evidence.typed_name}`
+                : ''}
+            </dd>
+            <dt className="text-muted-foreground">{t('credit.fields.signedAt')}</dt>
+            <dd className="m-0">{formatDateTime(application.sign_evidence.signed_at)}</dd>
+            <dt className="text-muted-foreground">{t('credit.fields.signHash')}</dt>
+            <dd className="m-0 overflow-hidden font-mono text-xs text-ellipsis whitespace-nowrap">
+              {application.sign_evidence.pdf_sha256 ?? '—'}
+            </dd>
+            <dt className="text-muted-foreground">{t('credit.fields.signSession')}</dt>
+            <dd className="m-0 font-mono text-xs">
+              {application.sign_evidence.session_id ?? '—'}
+              {application.sign_evidence.ip ? ` · ${application.sign_evidence.ip}` : ''}
+            </dd>
+          </dl>
+        </div>
+      )}
+
       {(application.consents ?? []).length > 0 && (
         <>
           <p className="text-muted-foreground mt-4 mb-1 text-xs">{t('credit.card.consents')}</p>
           <ul className="text-sm">
             {application.consents.map((consent, index) => (
-              <li key={`${consent.kind}-${index}`} className="py-1">
-                {consent.kind} · {consent.text_version} ·{' '}
-                {consent.granted ? t('credit.card.granted') : t('credit.card.notGranted')}
+              <li key={`${consent.kind}-${index}`} className="flex flex-wrap gap-x-2 py-1">
+                <span>{t(`credit.consent.${consent.kind}`, consent.kind)}</span>
+                <span className={consent.granted ? 'text-success-700' : 'text-error-700'}>
+                  {consent.granted ? t('credit.card.granted') : t('credit.card.notGranted')}
+                </span>
+                <span className="text-muted-foreground text-xs">
+                  {consent.text_version}
+                  {consent.granted_at ? ` · ${formatDateTime(consent.granted_at)}` : ''}
+                </span>
               </li>
             ))}
           </ul>

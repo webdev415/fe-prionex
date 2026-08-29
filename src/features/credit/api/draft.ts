@@ -27,6 +27,7 @@ export interface NormalizedApplicant {
   incomeMinor: number | null
   incomeFrequency: string | null
   employmentStatus: string | null
+  employer: string | null
   receiptMethod: string | null
   paydays: string[]
   requestedMinor: number | null
@@ -89,11 +90,11 @@ export function normalizeDraft(
         .join(', ') || null,
     incomeMinor: typeof income.net_amount_minor === 'number' ? income.net_amount_minor : null,
     incomeFrequency: income.frequency ? String(income.frequency) : null,
-    employmentStatus: income.employment_status
-      ? String(income.employment_status)
-      : income.employer
-        ? String(income.employer)
-        : null,
+    // Статус занятости и работодатель — РАЗНЫЕ вещи. Фолбэк на employer
+    // подставлял в графу «Занятость» название компании и прогонял его через
+    // словарь статусов: оператор видел неверные данные, а это хуже пустоты.
+    employmentStatus: income.employment_status ? String(income.employment_status) : null,
+    employer: income.employer ? String(income.employer) : null,
     receiptMethod: income.receipt_method ? String(income.receipt_method) : null,
     paydays,
     requestedMinor:

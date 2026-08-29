@@ -80,11 +80,12 @@ export function useCreditLoanState(loanId: string | undefined) {
 }
 
 export function useCreditLoanSchedule(loanId: string | undefined) {
+  // retry не отключаем: раньше отказ молча превращался в «графіка ще немає».
+  // Теперь ошибка показывается честно, и обычный ретрай уместен.
   return useQuery({
     queryKey: creditKeys.loanSchedule(loanId ?? ''),
     queryFn: () => creditApi.loanSchedule(loanId as string),
     enabled: Boolean(loanId),
-    retry: false,
   })
 }
 

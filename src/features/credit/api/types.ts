@@ -68,7 +68,7 @@ export interface CreditDecision {
   ruleset_version: string
   model_version: string
   input_snapshot_id: string
-  input_snapshot?: Record<string, unknown>
+  input_snapshot?: CreditDecisionSnapshot
   underwriter_id: number | null
   rationale: string | null
   overrides_decision_id: string | null
@@ -162,6 +162,8 @@ export interface CreditApplicationDraft {
 /** Карточка заявки целиком (InternalApplication + анкета и документы). */
 export interface CreditApplicationDetail extends CreditApplicationSummary {
   project_id: number
+  /** Телефон клиента приходит на самой заявке: анкета его не дублирует. */
+  client_phone?: string | null
   /** null до перехода approved → contracted (upsert клиента, C-08). */
   client_id: number | null
   decision_id: string | null
@@ -175,17 +177,140 @@ export interface CreditApplicationDetail extends CreditApplicationSummary {
   draft: CreditApplicationDraft
   documents?: CreditDocumentMeta[]
   decision?: CreditDecision
-  ibv?: Record<string, unknown>
-  sign_evidence?: Record<string, unknown>
+  ibv?: CreditIbv
+  sign_evidence?: CreditSignEvidence
 }
 
+/**
+ * Результат банковской верификации (IBV).
+ *
+ * Ради этого блока верификатор и открывает заявку: здесь ПОДТВЕРЖДЁННЫЙ банком
+ * доход против заявленного, счёт для выплаты, совпадение личности и риск-
+ * атрибуты. Поля объявлены опциональными: состав зависит от провайдера, а на
+ * стенде работает `mock` — верить его цифрам как боевым нельзя.
+ */
+export interface CreditIbv {
+  status?: string
+  callback_status?: string
+  provider?: string
+  received_at?: string
+  session_id?: string
+  ibv_session_id?: string
+  parser_version?: string
+  /** Доля совпадения ФИО заявителя с держателем счёта, 0..1. */
+  identity_match_rate?: number
+  payout_account_id?: string
+  selected_account_id?: string
+  eft_capable_account_ids?: string[]
+  payout_account_ambiguous?: boolean
+  projected_paydays?: string[]
+  accounts?: CreditIbvAccount[]
+  income?: {
+    employer_name?: string
+    net_amount_minor?: number
+    employer_income_frequency?: string
+    paydays_source?: string
+    observed_paydays?: string[]
+  }
+  risk?: {
+    count_nsf_90_days?: number
+    balance_trend_simple?: string
+    count_distinct_micro_lenders?: number
+    extra?: Record<string, number | boolean>
+  }
+  payday_reconciliation?: {
+    dates_match?: boolean
+    needs_review?: boolean
+    frequency_matches?: boolean
+    detected_frequency?: string
+    application_frequency?: string
+    projected_paydays?: string[]
+    application_paydays?: string[]
+  }
+}
+
+export interface CreditIbvAccount {
+  account_id: string
+  title?: string
+  category?: string
+  currency?: string
+  account_type?: string
+  account_number?: string
+  transit_number?: string
+  institution_number?: string
+  holder_name?: string
+  holder_address?: string
+  eft_capable?: boolean
+  balance_current_minor?: number
+}
+
+/** Доказательство подписи (DOC-06): чем именно клиент подписал договор. */
+export interface CreditSignEvidence {
+  method?: string
+  typed_name?: string
+  signed_at?: string
+  received_at?: string
+  session_id?: string
+  pdf_sha256?: string
+  ip?: string | null
+  user_agent?: string | null
+  otp_ref?: string | null
+}
+
+/**
+ * Снимок входов решения (DAT-02) — цифры, на которых построен исход.
+ * Хранится в решении неизменяемым: через год именно он объясняет, почему
+ * выдали или отказали.
+ */
+export interface CreditDecisionSnapshot {
+  requested_amount_minor?: number
+  net_amount_minor_per_period?: number
+  effective_net_amount_minor_per_period?: number
+  monthly_equivalent_minor?: number
+  affordability_cap_minor?: number
+  active_loans?: number
+  frequency?: string
+  prior_decline_cooldown_until?: string | null
+  product_bounds_minor?: { min?: number; max?: number; step?: number }
+  /**
+   * Сверка заявленного дохода с подтверждённым банком.
+   * Имена полей и типы — по фактическому ответу сервиса: проценты приходят
+   * decimal-СТРОКОЙ («0.70»), суммы — целыми minor units.
+   */
+  income_reconciliation?: {
+    declared_net_amount_minor?: number
+    verified_net_amount_minor?: number
+    effective_net_amount_minor_per_period?: number
+    monthly_declared_minor?: number
+    monthly_verified_minor?: number
+    monthly_effective_minor?: number
+    divergence_pct?: string | number
+    tolerance_pct?: string | number
+    needs_review?: boolean
+    review_reason?: string | null
+    frequency_source?: string
+    frequency_matches?: boolean
+    declared_frequency?: string
+    detected_frequency?: string
+  }
+  rules?: { decline_codes?: Record<string, string> } & Record<string, unknown>
+  ibv?: Record<string, unknown>
+}
+
+/** Полный enum LoanStatus контракта — НЕ сокращать до встреченного в БД. */
 export type CreditLoanStatus =
+  | 'pending_disbursement'
   | 'active'
   | 'delinquent'
-  | 'closed'
-  | 'cancelled'
-  | 'written_off'
+  | 'forbearance'
+  | 'protected'
   | 'charged_off'
+  | 'closed'
+  | 'written_off'
+  | 'withdrawn'
+  | 'cancelled'
+  | 'disbursement_failed'
+  | 'funding_exception'
 
 /** Строка списка кредитов. */
 export interface CreditLoanSummary {
@@ -225,6 +350,7 @@ export interface CreditLoanDetail {
   regulatory_package_version?: string
   prepayment_mode?: string
   close_reason?: string
+  paid_minor?: number
   disbursed_at: string
   maturity_date: string
   next_payment?: { due_date: string; amount_minor: number }
@@ -264,33 +390,99 @@ export interface CreditJournalEntry {
   rule_version?: string
 }
 
-/** Состояние кредита на срез as_of — истина ядра (совпадает с replay). */
+/**
+ * Разбивка долга по корзинам.
+ *
+ * Поля перечислены явно и БЕЗ индексной сигнатуры: раньше `[bucket: string]`
+ * глушила опечатки — код читал `fees_minor`/`penalties_minor`, которых ядро
+ * не отдаёт (там `fee_minor`/`penalty_minor`), и вместо цифры молча выходил
+ * прочерк. `*_charged_minor` — начислено за всё время, без суффикса — осталось
+ * к уплате; их разность и есть «уплачено».
+ */
+export interface CreditBalances {
+  total_due_minor: number
+  overdue_minor: number
+  principal_minor: number
+  interest_minor: number
+  fee_minor: number
+  commission_minor: number
+  penalty_minor: number
+  fine_minor: number
+  overpayment_minor: number
+  principal_charged_minor: number
+  interest_charged_minor: number
+  fee_charged_minor: number
+  commission_charged_minor: number
+  penalty_charged_minor: number
+  fine_charged_minor: number
+  total_charged_minor: number
+  default_interest_minor: number
+  nsf_fees_minor: number
+}
+
+/** Регуляторные проверки продукта: любое false — кредит вне рамок. */
+export interface CreditCaps {
+  term_window_42_62_ok: boolean
+  instalment_spread_ok: boolean
+  min_instalments_ok: boolean
+  instalments_on_paydays_ok: boolean
+  cost_of_borrowing_cap_ok: boolean
+  federal_s347_1_exemption_ok: boolean
+}
+
+/**
+ * Разнесение платежа по корзинам — МАССИВ (контракт: POR-02), а не словарь.
+ * Чтение через `Object.entries` давало ключ «0» и объект вместо суммы: на
+ * экране получалось «0 NaN» вместо «Комісія 10,00».
+ */
+export interface CreditPaymentAllocation {
+  bucket: string
+  amount_minor: number
+  installment_seq?: number
+}
+
+export interface CreditPayment {
+  payment_id: string
+  effective_date: string
+  amount_minor: number
+  allocation?: CreditPaymentAllocation[]
+  receipt_document_id?: string
+}
+
+/**
+ * Состояние кредита на срез as_of — истина ядра (совпадает с replay).
+ * Надмножество паспорта: те же паспортные поля плюс балансы и проверки.
+ */
 export interface CreditLoanState {
   loan_id: string
+  contract_number: string
+  product_code: string
+  product_version: string
+  jurisdiction: string
   status: CreditLoanStatus
   currency: string
   as_of: string
-  balances: {
-    total_due_minor: number
-    principal_minor?: number
-    interest_minor?: number
-    fees_minor?: number
-    penalties_minor?: number
-    [bucket: string]: number | undefined
-  }
+  principal_minor: number
+  balance_total_minor: number
+  paid_minor: number
+  maturity_date: string
+  disbursed_at: string
+  next_payment?: { due_date: string; amount_minor: number }
+  cancellation_window_until?: string
+  regulatory_package_version?: string
+  origin?: string
+  project_id?: number
+  balances: CreditBalances
   delinquency: {
     delinquency_days: number
     arrears_flag?: boolean
     no_contact_flag?: boolean
     default_reported_at?: string
   }
+  caps?: CreditCaps
+  flags?: { validation_valid: boolean; delinquency_bucket: string }
   schedule?: CreditScheduleVersion
-  payments?: Array<{
-    payment_id: string
-    effective_date: string
-    amount_minor: number
-    allocation?: Record<string, number>
-  }>
+  payments?: CreditPayment[]
 }
 
 /** Позиция очереди ручного разбора (UnderwritingQueueItem). */
