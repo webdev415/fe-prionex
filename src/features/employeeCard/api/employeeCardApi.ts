@@ -8,6 +8,7 @@ import type {
   RelativeInput,
   SurveyImportReport,
   SurveyInput,
+  TerminationInput,
   WorkInformationUpdate,
 } from '../types.card'
 
@@ -126,6 +127,26 @@ export async function updateSurvey(
 
 export async function removeSurvey(userId: number, surveyId: number): Promise<EmployeeCard> {
   const response = await api.delete<EmployeeCard>(`${base(userId)}/surveys/${surveyId}`)
+  return response.data
+}
+
+/**
+ * Record that somebody has left, or correct what was recorded.
+ *
+ * A PUT rather than a POST: there is one termination per person, so sending it
+ * twice corrects the first rather than adding a second.
+ */
+export async function recordTermination(
+  userId: number,
+  termination: TerminationInput
+): Promise<EmployeeCard> {
+  const response = await api.put<EmployeeCard>(`${base(userId)}/termination`, termination)
+  return response.data
+}
+
+/** Take it off, which is what rehiring looks like here. */
+export async function reinstate(userId: number): Promise<EmployeeCard> {
+  const response = await api.delete<EmployeeCard>(`${base(userId)}/termination`)
   return response.data
 }
 

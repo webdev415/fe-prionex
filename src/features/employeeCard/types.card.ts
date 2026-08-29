@@ -105,6 +105,12 @@ export interface EmployeeCard {
   documents: EmployeeDocument[]
   surveys: EmployeeSurvey[]
   interview_comment: string | null
+  /**
+   * Present only once somebody has left. Its presence is what makes the card
+   * read-only - the page does not infer that from a status, and the server
+   * refuses the writes regardless.
+   */
+  termination: Termination | null
   can_edit: boolean
 }
 
@@ -182,4 +188,27 @@ export interface SurveyInput {
   max_score?: number | null
   status: 'completed' | 'pending'
   details_url?: string | null
+}
+
+/** Why somebody left, in the words the card offers. */
+export const TERMINATION_REASONS = [
+  'personal_desire',
+  'dismissed',
+  'end_of_contract',
+  'redundancy',
+  'other',
+] as const
+
+export type TerminationReason = (typeof TERMINATION_REASONS)[number]
+
+export interface Termination {
+  terminated_on: string
+  reason: string
+  comment: string | null
+}
+
+export interface TerminationInput {
+  terminated_on: string
+  reason: TerminationReason
+  comment?: string | null
 }

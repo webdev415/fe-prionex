@@ -55,6 +55,7 @@ function card(overrides: Partial<EmployeeCard> = {}): EmployeeCard {
     documents: [],
     surveys: [],
     interview_comment: null,
+    termination: null,
     can_edit: false,
     ...overrides,
   }
