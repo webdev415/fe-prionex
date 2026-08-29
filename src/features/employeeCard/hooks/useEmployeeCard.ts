@@ -50,31 +50,61 @@ function useSectionMutation<TChanges>(
 }
 
 /**
- * The personal section writes the employee's own record as well as the profile
- * beside it, so the employees list can go stale on a save: name, phone, email
- * and work format are all columns in it. The card's own answer is authoritative
- * and goes straight into its cache; the list is only marked for refetching,
- * because the page behind the dialog may not even be showing it.
+ * Wrap a section mutation so what it changes elsewhere is refreshed too.
+ *
+ * The card's own answer is authoritative and goes straight into its cache.
+ * The others are only marked for refetching, because the page behind the
+ * dialog may not be showing them at all.
+ *
+ * Written once rather than per section: the two that need it needed the same
+ * thing, and the second was missed for exactly as long as it was a habit
+ * rather than a helper.
  */
-export function useUpdatePersonal(userId: number, projectId?: number | null) {
-  const queryClient = useQueryClient()
-  const mutation = useSectionMutation<PersonalInformationUpdate>(
-    userId,
-    projectId,
-    employeeCardApi.updatePersonal
-  )
+function alsoRefreshing<TChanges>(
+  mutation: ReturnType<typeof useSectionMutation<TChanges>>,
+  queryClient: ReturnType<typeof useQueryClient>,
+  keys: readonly (readonly unknown[])[]
+) {
   return {
     ...mutation,
-    mutateAsync: async (changes: PersonalInformationUpdate) => {
+    mutateAsync: async (changes: TChanges) => {
       const card = await mutation.mutateAsync(changes)
-      await queryClient.invalidateQueries({ queryKey: usersKeys.lists() })
+      await Promise.all(keys.map((queryKey) => queryClient.invalidateQueries({ queryKey })))
       return card
     },
   }
 }
 
+/**
+ * The personal section writes the employee's own record as well as the profile
+ * beside it, so the employees list can go stale on a save: name, phone, email
+ * and work format are all columns in it.
+ */
+export function useUpdatePersonal(userId: number, projectId?: number | null) {
+  const queryClient = useQueryClient()
+  return alsoRefreshing<PersonalInformationUpdate>(
+    useSectionMutation<PersonalInformationUpdate>(
+      userId,
+      projectId,
+      employeeCardApi.updatePersonal
+    ),
+    queryClient,
+    [usersKeys.lists()]
+  )
+}
+
+/**
+ * Two things go stale here. Position, manager and hire date are columns in the
+ * employees list - and changing a role or a department writes a chronology
+ * line, so the history below the form is a page behind until it is refetched.
+ */
 export function useUpdateWork(userId: number, projectId?: number | null) {
-  return useSectionMutation<WorkInformationUpdate>(userId, projectId, employeeCardApi.updateWork)
+  const queryClient = useQueryClient()
+  return alsoRefreshing<WorkInformationUpdate>(
+    useSectionMutation<WorkInformationUpdate>(userId, projectId, employeeCardApi.updateWork),
+    queryClient,
+    [usersKeys.lists(), employeeEventKeys.all]
+  )
 }
 
 export function useUpdateAdditional(userId: number, projectId?: number | null) {

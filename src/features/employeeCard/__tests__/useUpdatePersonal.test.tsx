@@ -15,10 +15,11 @@ import { usersKeys } from '@/features/users/hooks/useUsers'
 
 const updatePersonal = vi.hoisted(() => vi.fn())
 const removeSurvey = vi.hoisted(() => vi.fn())
+const updateWork = vi.hoisted(() => vi.fn())
 
-vi.mock('../api/employeeCardApi', () => ({ updatePersonal, removeSurvey }))
+vi.mock('../api/employeeCardApi', () => ({ updatePersonal, updateWork, removeSurvey }))
 
-const { useUpdatePersonal, useRemoveSurvey, employeeCardKeys } =
+const { useUpdatePersonal, useUpdateWork, useRemoveSurvey, employeeCardKeys } =
   await import('../hooks/useEmployeeCard')
 
 function harness() {
@@ -79,6 +80,49 @@ describe('useRemoveSurvey', () => {
 
     const { result } = renderHook(() => useRemoveSurvey(7, null), { wrapper })
     await result.current.mutateAsync(11)
+
+    expect(client.getQueryData(employeeCardKeys.one(7, null))).toEqual(saved)
+  })
+})
+
+/*
+ * Saving the work section changes two things elsewhere. Position, manager and
+ * hire date are columns in the employees list - and changing a role or a
+ * department writes a chronology line, because the write goes through the same
+ * path the user-management screen uses.
+ */
+describe('useUpdateWork', () => {
+  it('marks the employees list stale', async () => {
+    const { client, wrapper } = harness()
+    // Seeded first: a key with nothing cached under it has no state to read,
+    // so the assertion would pass on undefined rather than on invalidation.
+    client.setQueryData(usersKeys.lists(), { users: [] })
+    updateWork.mockResolvedValue({ header: { id: 7 } })
+
+    const { result } = renderHook(() => useUpdateWork(7, null), { wrapper })
+    await result.current.mutateAsync({ role_id: 3 })
+
+    await waitFor(() => expect(client.getQueryState(usersKeys.lists())?.isInvalidated).toBe(true))
+  })
+
+  it('refreshes the chronology the change was written into', async () => {
+    const { client, wrapper } = harness()
+    updateWork.mockResolvedValue({ header: { id: 7 } })
+    const invalidate = vi.spyOn(client, 'invalidateQueries')
+
+    const { result } = renderHook(() => useUpdateWork(7, null), { wrapper })
+    await result.current.mutateAsync({ role_id: 3 })
+
+    await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ['employee-events'] }))
+  })
+
+  it('puts the card it answers with straight into the cache', async () => {
+    const { client, wrapper } = harness()
+    const saved = { header: { id: 7, full_name: 'Kovalchuk Olena' } }
+    updateWork.mockResolvedValue(saved)
+
+    const { result } = renderHook(() => useUpdateWork(7, null), { wrapper })
+    await result.current.mutateAsync({ role_id: 3 })
 
     expect(client.getQueryData(employeeCardKeys.one(7, null))).toEqual(saved)
   })
