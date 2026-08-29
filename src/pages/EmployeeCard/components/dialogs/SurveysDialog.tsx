@@ -154,6 +154,17 @@ export function SurveysDialog({ card, projectId, surveyId, open, onClose }: Surv
               allowManualInput
               placeholder={t('pages.employeeCard.surveys.completedOn')}
             />
+            {/*
+              Said here, while the field is empty, rather than in the note at
+              the top of the dialog. The consequence belongs where the decision
+              is made - by the time it has been saved without a date, the line
+              is missing from a history nobody thinks to check.
+            */}
+            {!values.completed_on && (
+              <p className="text-muted-foreground text-xs">
+                {t('pages.employeeCard.surveys.noDateHint')}
+              </p>
+            )}
           </div>
 
           <Input

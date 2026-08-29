@@ -249,6 +249,31 @@ describe('SurveysDialog', () => {
     await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ['employee-events'] }))
   })
 
+  /*
+   * An answer with no date gets no chronology line - the timeline places
+   * things by date and will not invent one. Said beside the empty field
+   * rather than in the note at the top: by the time it has been saved, the
+   * line is missing from a history nobody thinks to check.
+   */
+  it('says what a missing date costs, while the date is missing', async () => {
+    show()
+
+    expect(screen.getByText('pages.employeeCard.surveys.noDateHint')).toBeInTheDocument()
+
+    await userEvent.type(
+      screen.getByPlaceholderText('pages.employeeCard.surveys.completedOn'),
+      '15.06.2024'
+    )
+
+    expect(screen.queryByText('pages.employeeCard.surveys.noDateHint')).toBeNull()
+  })
+
+  it('says nothing about it when correcting an answer that has a date', () => {
+    show(card({ surveys: [SURVEY] as never }), 11)
+
+    expect(screen.queryByText('pages.employeeCard.surveys.noDateHint')).toBeNull()
+  })
+
   it('closes once the answer is saved', async () => {
     const { onClose } = show()
 

@@ -11060,7 +11060,8 @@
         "edit": "Correct {{name}}",
         "remove": "Remove {{name}}",
         "removeTitle": "Remove this survey?",
-        "removeMessage": "“{{name}}” and its line in the chronology will both be removed. The answers themselves live in the form this was recorded from."
+        "removeMessage": "“{{name}}” and its line in the chronology will both be removed. The answers themselves live in the form this was recorded from.",
+        "noDateHint": "Without a date this answer will not appear in the chronology."
       },
       "saveFailed": "That could not be saved.",
       "dialogs": {
