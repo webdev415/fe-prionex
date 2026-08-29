@@ -64,7 +64,10 @@
     "actionAnalysis": "Аналіз дій",
     "ubkiIntegration": "Інтеграція з UBKI",
     "dialer": "Дайлер",
-    "contactTags": "Теги контактів"
+    "contactTags": "Теги контактів",
+    "creditModule": "Кредитний модуль",
+    "creditApplications": "Заявки",
+    "creditLoans": "Кредити"
   },
   "dialer": {
     "phone": {
@@ -11082,6 +11085,182 @@
     },
     "actions": {
       "restore": "Відновити"
+    }
+  },
+  "credit": {
+    "status": {
+      "in_progress": "Заповнюється",
+      "scoring": "Скоринг",
+      "referred": "Ручний розбір",
+      "approved": "Схвалено",
+      "declined": "Відмова",
+      "contracted": "Договір",
+      "disbursed": "Видано",
+      "expired": "Прострочена",
+      "abandoned": "Покинута"
+    },
+    "loanStatus": {
+      "active": "Активний",
+      "delinquent": "Прострочення",
+      "closed": "Закритий",
+      "cancelled": "Скасований",
+      "written_off": "Списаний",
+      "charged_off": "Списаний з балансу"
+    },
+    "scheduleStatus": {
+      "scheduled": "Попереду",
+      "paid": "Сплачено",
+      "partially_paid": "Частково",
+      "overdue": "Прострочено"
+    },
+    "queueStatus": {
+      "pending": "Очікує",
+      "in_review": "У роботі",
+      "done": "Розібрано"
+    },
+    "decision": {
+      "automatic": "Автоматично",
+      "manual": "Вручну",
+      "override": "Перевизначення",
+      "none": "Немає"
+    },
+    "roles": {
+      "verifier": "Верифікатор",
+      "underwriter": "Андеррайтер",
+      "risk_manager": "Ризик-менеджер"
+    },
+    "columns": {
+      "number": "Номер",
+      "status": "Статус",
+      "product": "Продукт",
+      "requested": "Запитано",
+      "client": "Клієнт",
+      "decision": "Рішення",
+      "created": "Створено",
+      "contract": "Договір",
+      "principal": "Тіло",
+      "payable": "До повернення",
+      "dpd": "Дні прострочення",
+      "maturity": "Погашення",
+      "dueDate": "Дата",
+      "cost": "Вартість",
+      "total": "Разом",
+      "date": "Дата",
+      "entryType": "Тип",
+      "bucket": "Кошик",
+      "amount": "Сума",
+      "rule": "Правило",
+      "documentKind": "Вид",
+      "documentFile": "Файл",
+      "uploaded": "Завантажено"
+    },
+    "fields": {
+      "name": "Клієнт",
+      "email": "Email",
+      "phone": "Телефон",
+      "birthDate": "Дата народження",
+      "address": "Адреса",
+      "employer": "Роботодавець",
+      "income": "Чистий дохід",
+      "nextPayday": "Найближча зарплата",
+      "requested": "Запитана сума",
+      "paydays": "Дати зарплат",
+      "channel": "Канал",
+      "jurisdiction": "Юрисдикція",
+      "clientId": "Клієнт у CRM",
+      "loan": "Кредит",
+      "outcome": "Результат",
+      "mode": "Режим",
+      "finalAmount": "Підсумкова сума",
+      "declineCodes": "Коди відмови",
+      "underwriter": "Андеррайтер",
+      "underwriterId": "ID андеррайтера",
+      "rationale": "Обґрунтування",
+      "rules": "Правила / модель",
+      "decidedAt": "Прийнято",
+      "product": "Продукт",
+      "disbursedAt": "Видано",
+      "maturity": "Дата погашення",
+      "principal": "Тіло",
+      "balance": "Залишок",
+      "dpd": "Днів прострочення",
+      "scheduleVersion": "Версія графіка",
+      "prepaymentMode": "Режим переплати",
+      "asOf": "Зріз на",
+      "application": "Заявка",
+      "debtId": "Проєкція боргу"
+    },
+    "tabs": {
+      "form": "Анкета",
+      "documents": "Документи",
+      "decision": "Рішення",
+      "history": "Історія",
+      "passport": "Паспорт кредиту",
+      "schedule": "Графік",
+      "journal": "Журнал проводок"
+    },
+    "actions": {
+      "search": "Пошук",
+      "reset": "Скинути",
+      "showAll": "Показати всі",
+      "backToList": "До списку заявок",
+      "backToLoans": "До списку кредитів",
+      "openDocument": "Відкрити",
+      "approve": "Схвалити",
+      "decline": "Відмовити",
+      "refer": "Залишити на розборі",
+      "saveDecision": "Зафіксувати рішення"
+    },
+    "metrics": {
+      "requested": "Запитано (сторінка)",
+      "approved": "Схвалено (сторінка)",
+      "conversion": "Конверсія",
+      "principal": "Тіло (сторінка)",
+      "payable": "До повернення (сторінка)",
+      "averageDpd": "Середнє прострочення"
+    },
+    "applications": {
+      "title": "Кредитні заявки",
+      "total": "усього {{count}}",
+      "searchPlaceholder": "Номер заявки або email",
+      "empty": "За фільтром нічого немає"
+    },
+    "loans": {
+      "title": "Кредити",
+      "total": "усього {{count}}",
+      "empty": "Кредитів немає"
+    },
+    "card": {
+      "applicationTitle": "Заявка {{number}}",
+      "loanTitle": "Договір {{number}}",
+      "applicant": "Заявник",
+      "incomeAndLoan": "Дохід і позика",
+      "links": "Зв’язки",
+      "clientPending": "ще немає — створюється при укладенні договору (C-08)",
+      "projectionPending": "ще немає — з’явиться разом із проєкцією боргу",
+      "openLoan": "відкрити кредит",
+      "openApplication": "відкрити заявку",
+      "currentDecision": "Поточне рішення",
+      "manualDecision": "Ручне рішення",
+      "snapshot": "Знімок вхідних даних рішення (DAT-02)",
+      "declineCodesHint": "Коди відмови обов’язкові при відмові",
+      "rationalePlaceholder": "Що перевірено і чому таке рішення. Залишиться в історії назавжди.",
+      "state01": "Із відмови повернення немає (STATE-01): нове рішення — лише нова заявка.",
+      "decisionSaved": "Рішення зафіксовано.",
+      "noDecisionPermission": "Рішення ухвалює андеррайтер — у вашої ролі немає права credit.decisions.decide.",
+      "notDecidable": "З цього статусу ручне рішення не ухвалюється.",
+      "notFound": "Не знайдено",
+      "noDocuments": "Документів за заявкою немає.",
+      "noSchedule": "Графіка ще немає.",
+      "noJournal": "Проводок немає.",
+      "scheduleVersion": "Графік, версія {{version}}",
+      "consents": "Згоди",
+      "granted": "надано",
+      "notGranted": "не надано"
+    },
+    "stand": {
+      "notice": "Етап 1: модуль працює поза Kong і ще не знає ролей CRM — роль нижче є макетом стенда (WS-20 замінить її на JWT).",
+      "role": "Роль стенда"
     }
   }
 }

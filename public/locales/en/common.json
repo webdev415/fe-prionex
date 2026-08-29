@@ -64,7 +64,10 @@
     "actionAnalysis": "Action Analysis",
     "ubkiIntegration": "UBKI Integration",
     "dialer": "Dialer",
-    "contactTags": "Contact Tags"
+    "contactTags": "Contact Tags",
+    "creditModule": "Credit Module",
+    "creditApplications": "Applications",
+    "creditLoans": "Loans"
   },
   "dialer": {
     "phone": {
@@ -11059,6 +11062,182 @@
     },
     "actions": {
       "restore": "Restore"
+    }
+  },
+  "credit": {
+    "status": {
+      "in_progress": "In progress",
+      "scoring": "Scoring",
+      "referred": "Manual review",
+      "approved": "Approved",
+      "declined": "Declined",
+      "contracted": "Contracted",
+      "disbursed": "Disbursed",
+      "expired": "Expired",
+      "abandoned": "Abandoned"
+    },
+    "loanStatus": {
+      "active": "Active",
+      "delinquent": "Delinquent",
+      "closed": "Closed",
+      "cancelled": "Cancelled",
+      "written_off": "Written off",
+      "charged_off": "Charged off"
+    },
+    "scheduleStatus": {
+      "scheduled": "Scheduled",
+      "paid": "Paid",
+      "partially_paid": "Partially paid",
+      "overdue": "Overdue"
+    },
+    "queueStatus": {
+      "pending": "Pending",
+      "in_review": "In review",
+      "done": "Done"
+    },
+    "decision": {
+      "automatic": "Automatic",
+      "manual": "Manual",
+      "override": "Override",
+      "none": "No decision"
+    },
+    "roles": {
+      "verifier": "Verifier",
+      "underwriter": "Underwriter",
+      "risk_manager": "Risk manager"
+    },
+    "columns": {
+      "number": "Number",
+      "status": "Status",
+      "product": "Product",
+      "requested": "Requested",
+      "client": "Client",
+      "decision": "Decision",
+      "created": "Created",
+      "contract": "Contract",
+      "principal": "Principal",
+      "payable": "Payable",
+      "dpd": "DPD",
+      "maturity": "Maturity",
+      "dueDate": "Due date",
+      "cost": "Cost of borrowing",
+      "total": "Total",
+      "date": "Date",
+      "entryType": "Entry",
+      "bucket": "Bucket",
+      "amount": "Amount",
+      "rule": "Rule",
+      "documentKind": "Kind",
+      "documentFile": "File",
+      "uploaded": "Uploaded"
+    },
+    "fields": {
+      "name": "Name",
+      "email": "Email",
+      "phone": "Phone",
+      "birthDate": "Date of birth",
+      "address": "Address",
+      "employer": "Employer",
+      "income": "Net income",
+      "nextPayday": "Next payday",
+      "requested": "Requested amount",
+      "paydays": "Paydays",
+      "channel": "Channel",
+      "jurisdiction": "Jurisdiction",
+      "clientId": "Client in CRM",
+      "loan": "Loan",
+      "outcome": "Outcome",
+      "mode": "Mode",
+      "finalAmount": "Final amount",
+      "declineCodes": "Decline codes",
+      "underwriter": "Underwriter",
+      "underwriterId": "Underwriter id",
+      "rationale": "Rationale",
+      "rules": "Ruleset / model",
+      "decidedAt": "Decided at",
+      "product": "Product",
+      "disbursedAt": "Disbursed at",
+      "maturity": "Maturity date",
+      "principal": "Principal",
+      "balance": "Outstanding",
+      "dpd": "Days past due",
+      "scheduleVersion": "Schedule version",
+      "prepaymentMode": "Prepayment mode",
+      "asOf": "As of",
+      "application": "Application",
+      "debtId": "Debt projection"
+    },
+    "tabs": {
+      "form": "Application form",
+      "documents": "Documents",
+      "decision": "Decision",
+      "history": "History",
+      "passport": "Loan details",
+      "schedule": "Schedule",
+      "journal": "Ledger"
+    },
+    "actions": {
+      "search": "Search",
+      "reset": "Reset",
+      "showAll": "Show all",
+      "backToList": "Back to applications",
+      "backToLoans": "Back to loans",
+      "openDocument": "Open",
+      "approve": "Approve",
+      "decline": "Decline",
+      "refer": "Keep in review",
+      "saveDecision": "Submit decision"
+    },
+    "metrics": {
+      "requested": "Requested (page)",
+      "approved": "Approved (page)",
+      "conversion": "Conversion",
+      "principal": "Principal (page)",
+      "payable": "Payable (page)",
+      "averageDpd": "Average DPD"
+    },
+    "applications": {
+      "title": "Credit applications",
+      "total": "{{count}} total",
+      "searchPlaceholder": "Application number or email",
+      "empty": "No applications match the filter"
+    },
+    "loans": {
+      "title": "Loans",
+      "total": "{{count}} total",
+      "empty": "No loans"
+    },
+    "card": {
+      "applicationTitle": "Application {{number}}",
+      "loanTitle": "Contract {{number}}",
+      "applicant": "Applicant",
+      "incomeAndLoan": "Income and loan",
+      "links": "Links",
+      "clientPending": "not yet — created at contracting (C-08)",
+      "projectionPending": "not yet — appears with the debt projection",
+      "openLoan": "open loan",
+      "openApplication": "open application",
+      "currentDecision": "Current decision",
+      "manualDecision": "Manual decision",
+      "snapshot": "Decision input snapshot (DAT-02)",
+      "declineCodesHint": "Decline codes are required for a decline",
+      "rationalePlaceholder": "What was checked and why this decision. Stays in history forever.",
+      "state01": "There is no way back from a decline (STATE-01): a new decision means a new application.",
+      "decisionSaved": "Decision recorded.",
+      "noDecisionPermission": "Decisions are made by an underwriter — your role lacks credit.decisions.decide.",
+      "notDecidable": "A manual decision is not available from this status.",
+      "notFound": "Not found",
+      "noDocuments": "No documents for this application.",
+      "noSchedule": "No schedule yet.",
+      "noJournal": "No ledger entries.",
+      "scheduleVersion": "Schedule, version {{version}}",
+      "consents": "Consents",
+      "granted": "granted",
+      "notGranted": "not granted"
+    },
+    "stand": {
+      "notice": "Stage 1: the module runs outside Kong and does not know CRM roles yet — the role below is a stand mock (WS-20 replaces it with JWT).",
+      "role": "Stand role"
     }
   }
 }
