@@ -11255,7 +11255,8 @@
       "signMethod": "Спосіб підпису",
       "signedAt": "Підписано",
       "signHash": "SHA-256 документа",
-      "signSession": "Сесія / IP"
+      "signSession": "Сесія / IP",
+      "templateVersion": "Версія шаблону"
     },
     "tabs": {
       "form": "Анкета",
@@ -11370,7 +11371,13 @@
       "emptyDraft": "Анкета порожня.",
       "blockNotFilled": "Не заповнено",
       "notFilled": "не заповнено",
-      "declaredDiffers": "клієнт заявив: {{value}}"
+      "declaredDiffers": "клієнт заявив: {{value}}",
+      "noLoanDocuments": "Документів за кредитом ще немає.",
+      "documentsCurrentOnly": "Лише актуальні версії — замінені документи модуль не віддає.",
+      "scheduleHistory": "Версії графіка:",
+      "versionShort": "в.{{version}}",
+      "scheduleVersionEmpty": "У версії {{version}} ({{reason}}) немає внесків — вони у версії {{previous}}.",
+      "openPreviousVersion": "Відкрити її"
     },
     "stand": {
       "notice": "Етап 1: модуль працює поза Kong і ще не знає ролей CRM — роль нижче є макетом стенда (WS-20 замінить її на JWT).",
@@ -11601,7 +11608,12 @@
       "noIbv": "Банківську перевірку не виконано",
       "ibvIncomplete": "Банківську перевірку не завершено ({{status}})",
       "noPhone": "Немає номера телефону",
-      "consentsMissing": "Не надано згод: {{count}}"
+      "consentsMissing": "Не надано обов'язкових згод: {{count}} ({{kinds}})",
+      "nsfHistory": "Повернень через нестачу коштів за 90 днів: {{count}}",
+      "microLenders": "Виявлено мікрокредиторів: {{count}}",
+      "employerMismatch": "Роботодавець не збігається: заявлено «{{declared}}», банк бачить «{{verified}}»",
+      "cooldown": "Повторна заявка заблокована до {{until}} ({{codes}})",
+      "noVerifiedIncome": "Банк підключився, але доходу не побачив"
     },
     "phoneKind": {
       "mobile": "Мобільний",

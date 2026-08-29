@@ -11232,7 +11232,8 @@
       "signMethod": "Signature method",
       "signedAt": "Signed at",
       "signHash": "Document SHA-256",
-      "signSession": "Session / IP"
+      "signSession": "Session / IP",
+      "templateVersion": "Template version"
     },
     "tabs": {
       "form": "Application form",
@@ -11347,7 +11348,13 @@
       "emptyDraft": "The form is empty.",
       "blockNotFilled": "Not filled",
       "notFilled": "not filled",
-      "declaredDiffers": "client declared: {{value}}"
+      "declaredDiffers": "client declared: {{value}}",
+      "noLoanDocuments": "No documents for this loan yet.",
+      "documentsCurrentOnly": "Current versions only — the module does not expose replaced documents.",
+      "scheduleHistory": "Schedule versions:",
+      "versionShort": "v{{version}}",
+      "scheduleVersionEmpty": "Version {{version}} ({{reason}}) has no instalments — they are in version {{previous}}.",
+      "openPreviousVersion": "Open it"
     },
     "stand": {
       "notice": "Stage 1: the module runs outside Kong and does not know CRM roles yet — the role below is a stand mock (WS-20 replaces it with JWT).",
@@ -11578,7 +11585,12 @@
       "noIbv": "No bank verification",
       "ibvIncomplete": "Bank verification not completed ({{status}})",
       "noPhone": "No phone number",
-      "consentsMissing": "Consents not granted: {{count}}"
+      "consentsMissing": "Required consents not granted: {{count}} ({{kinds}})",
+      "nsfHistory": "Returns for insufficient funds in 90 days: {{count}}",
+      "microLenders": "Micro lenders detected: {{count}}",
+      "employerMismatch": "Employer differs: declared «{{declared}}», bank sees «{{verified}}»",
+      "cooldown": "Re-application blocked until {{until}} ({{codes}})",
+      "noVerifiedIncome": "Bank connected but saw no income"
     },
     "phoneKind": {
       "mobile": "Mobile",

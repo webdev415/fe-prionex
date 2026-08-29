@@ -39,8 +39,18 @@ const ENUM_NAMESPACE: Record<string, string> = {
   kind: 'credit.phoneKind',
 }
 
-/** Блоки в осмысленном порядке; неизвестные уйдут в конец как есть. */
-const BLOCK_ORDER = ['personal', 'address', 'phones', 'income', 'params', 'banking', 'employment']
+/**
+ * Блоки, которые рисуются ВСЕГДА — даже когда их нет в ответе.
+ *
+ * Блок, которого нет, раньше просто пропадал с экрана, и оператор не отличал
+ * «клиент этого не заполнял» от «мы это не показали». На живых заявках так
+ * исчезали income и params у четырнадцати из сорока пяти, personal и phones —
+ * у тринадцати. Пустой блок с подписью «Не заповнено» честнее отсутствия.
+ */
+const ALWAYS_SHOWN_BLOCKS = ['personal', 'address', 'phones', 'income', 'params']
+
+/** Порядок показа; неизвестные блоки уйдут в конец как есть. */
+const BLOCK_ORDER = [...ALWAYS_SHOWN_BLOCKS, 'banking', 'employment', 'disbursement']
 
 /** Служебное — не поле анкеты, показывать не нужно. */
 const HIDDEN_KEYS = new Set(['demo_note'])
@@ -61,21 +71,13 @@ export function CreditDraftBlocks({
   draft?: CreditApplicationDraft
   currency?: string
 }) {
-  const { t } = useTranslation('common')
   const source = draft ?? {}
-  const keys = Object.keys(source).filter((key) => !HIDDEN_KEYS.has(key))
+  const present = Object.keys(source).filter((key) => !HIDDEN_KEYS.has(key))
+  const keys = [...new Set([...ALWAYS_SHOWN_BLOCKS, ...present])]
   const ordered = [
     ...BLOCK_ORDER.filter((key) => keys.includes(key)),
     ...keys.filter((key) => !BLOCK_ORDER.includes(key)),
   ]
-
-  if (ordered.length === 0) {
-    return (
-      <section className="border-border bg-card mb-4 rounded-xl border p-4 shadow-sm">
-        <p className="text-muted-foreground text-sm">{t('credit.card.emptyDraft')}</p>
-      </section>
-    )
-  }
 
   return (
     <>

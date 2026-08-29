@@ -31,6 +31,9 @@ export interface CreditApplicationFlag {
   severity: 'danger' | 'warn'
 }
 
+/** Согласия, без которых заявку нельзя подписать (контракт C-14). */
+const REQUIRED_CONSENTS = new Set(['terms', 'e_signature', 'pad'])
+
 function toNumber(value?: string | number | null): number | null {
   if (value === null || value === undefined || value === '') return null
   const parsed = typeof value === 'number' ? value : Number.parseFloat(value)
@@ -76,6 +79,12 @@ export function collectApplicationFlags(
     })
   }
 
+  // ВНИМАНИЕ: на стенде этот признак не срабатывал ни разу и сработать не
+  // может — мок IBV строит держателя счёта ИЗ АНКЕТЫ, поэтому совпадение
+  // всегда 1.0 (проверено заявкой с намеренно чужим именем, 29.08). Признак
+  // оставлен: с боевым провайдером расхождение реально, а убрать его значит
+  // выпустить контур без единственной проверки личности. Но считать его
+  // работающим до боевого IBV нельзя.
   const identity = ibv?.identity_match_rate
   if (identity !== undefined && identity < 0.9) {
     flags.push({
@@ -129,6 +138,66 @@ export function collectApplicationFlags(
     })
   }
 
+  // Возвраты за недостатком средств и микрокредиторы — прямой риск невозврата,
+  // а заявка с ними открывалась совершенно спокойной.
+  const risk = ibv?.risk
+  const nsf90 = risk?.count_nsf_90_days ?? 0
+  if (nsf90 > 0) {
+    flags.push({
+      id: 'nsf-history',
+      kind: 'conflict',
+      labelKey: 'credit.flags.nsfHistory',
+      values: { count: nsf90 },
+      severity: nsf90 >= 3 ? 'danger' : 'warn',
+    })
+  }
+  const microLenders = risk?.count_distinct_micro_lenders ?? 0
+  if (microLenders > 0) {
+    flags.push({
+      id: 'micro-lenders',
+      kind: 'conflict',
+      labelKey: 'credit.flags.microLenders',
+      values: { count: microLenders },
+      severity: microLenders >= 3 ? 'danger' : 'warn',
+    })
+  }
+
+  // Работодатель в анкете против работодателя по выписке: расхождение имени
+  // работодателя — классический признак поддельного дохода.
+  const declaredEmployer = (
+    (application.draft?.income as { employer?: string } | undefined)?.employer ?? ''
+  ).trim()
+  const verifiedEmployer = (ibv?.income?.employer_name ?? '').trim()
+  if (
+    declaredEmployer &&
+    verifiedEmployer &&
+    declaredEmployer.toLowerCase() !== verifiedEmployer.toLowerCase()
+  ) {
+    flags.push({
+      id: 'employer-mismatch',
+      kind: 'conflict',
+      labelKey: 'credit.flags.employerMismatch',
+      values: { declared: declaredEmployer, verified: verifiedEmployer },
+      severity: 'warn',
+    })
+  }
+
+  // Запрет на повторную подачу после отказа: без него оператор примет заявку,
+  // которую система всё равно отклонит.
+  const decision = application.decision
+  if (decision?.outcome === 'declined' && decision.cooldown_until) {
+    flags.push({
+      id: 'cooldown',
+      kind: 'conflict',
+      labelKey: 'credit.flags.cooldown',
+      values: {
+        until: decision.cooldown_until,
+        codes: (decision.decline_codes ?? []).join(', '),
+      },
+      severity: 'warn',
+    })
+  }
+
   // --- нехватка ------------------------------------------------------------
 
   const missing = application.missing_fields ?? []
@@ -159,6 +228,19 @@ export function collectApplicationFlags(
     })
   }
 
+  if (
+    ibv?.status === 'completed' &&
+    (ibv.income?.observed_paydays ?? []).length === 0 &&
+    !ibv.income?.net_amount_minor
+  ) {
+    flags.push({
+      id: 'no-verified-income',
+      kind: 'missing',
+      labelKey: 'credit.flags.noVerifiedIncome',
+      severity: 'danger',
+    })
+  }
+
   if (!application.client_phone) {
     flags.push({
       id: 'no-phone',
@@ -168,14 +250,19 @@ export function collectApplicationFlags(
     })
   }
 
+  // Отказ от РЕКЛАМЫ — законный выбор клиента, а не пробел в данных. Красный
+  // на нём приучил бы оператора не смотреть на цвет, и тогда обесценились бы
+  // настоящие красные. Обязательны только terms, e_signature и pad.
   const consents = application.consents ?? []
-  const ungranted = consents.filter((consent) => !consent.granted)
+  const ungranted = consents.filter(
+    (consent) => !consent.granted && REQUIRED_CONSENTS.has(consent.kind)
+  )
   if (ungranted.length > 0) {
     flags.push({
       id: 'consents-missing',
       kind: 'missing',
       labelKey: 'credit.flags.consentsMissing',
-      values: { count: ungranted.length },
+      values: { count: ungranted.length, kinds: ungranted.map((c) => c.kind).join(', ') },
       severity: 'danger',
     })
   }

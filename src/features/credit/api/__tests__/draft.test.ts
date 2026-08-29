@@ -62,6 +62,21 @@ describe('normalizeDraft', () => {
     expect(result.requestedMinor).toBe(90000)
   })
 
+  it('НЕ подставляет работодателя в графу занятости', () => {
+    // Фикстура STAND_DRAFT содержит employer без employment_status — то есть
+    // прогоняет ровно ту ветку, где раньше жил дефект. Но проверки на
+    // employmentStatus не было, и тест оставался зелёным и до фикса, и после.
+    // Неверные данные в поле хуже пустоты: оператор им верит.
+    const result = normalizeDraft(STAND_DRAFT, null)
+    expect(result.employmentStatus).toBeNull()
+    expect(result.employer).toBe('Northern Lights')
+  })
+
+  it('статус занятости берётся из своего поля', () => {
+    const result = normalizeDraft(SITE_DRAFT, null)
+    expect(result.employmentStatus).toBe('employment_full_time')
+  })
+
   it('читает форму телефонов сайта (phones.primary), а не только items', () => {
     // Живое расхождение 29.08: web-credit присылает {primary}, скриптовый
     // вход — {items}. Обе формы лежат в базе; карточка обязана читать обе.

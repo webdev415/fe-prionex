@@ -89,6 +89,29 @@ export function useCreditLoanSchedule(loanId: string | undefined) {
   })
 }
 
+/** Версии графика: селектор нужен, только когда версий больше одной. */
+export function useCreditLoanScheduleVersions(loanId: string | undefined) {
+  return useQuery({
+    queryKey: [...creditKeys.loans(), 'scheduleVersions', loanId ?? ''] as const,
+    queryFn: () => creditApi.loanScheduleVersions(loanId as string),
+    enabled: Boolean(loanId),
+  })
+}
+
+/**
+ * Документы кредита. Модуль отдаёт ТОЛЬКО актуальные версии: заменённые
+ * отфильтрованы на сервере, и истории замен фронту взять неоткуда — правка
+ * заказана в модуль. Поэтому вкладка честно показывает текущие документы и
+ * не изображает историю.
+ */
+export function useCreditLoanDocuments(loanId: string | undefined) {
+  return useQuery({
+    queryKey: [...creditKeys.loans(), 'documents', loanId ?? ''] as const,
+    queryFn: () => creditApi.loanDocuments(loanId as string),
+    enabled: Boolean(loanId),
+  })
+}
+
 export function useCreditLoanJournal(loanId: string | undefined) {
   return useQuery({
     queryKey: creditKeys.loanJournal(loanId ?? ''),

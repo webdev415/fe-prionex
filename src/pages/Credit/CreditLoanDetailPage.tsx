@@ -21,14 +21,17 @@ import { formatDate, formatDateTime } from '@/lib/formatters'
 import {
   useCreditApplication,
   useCreditLoan,
+  useCreditLoanDocuments,
   useCreditLoanJournal,
   useCreditLoanSchedule,
+  useCreditLoanScheduleVersions,
   useCreditLoanState,
 } from '@/features/credit/hooks/useCredit'
 import { formatCreditMoney } from '@/features/credit/api/money'
 import { normalizeDraft } from '@/features/credit/api/draft'
 import type {
   CreditBalances,
+  CreditDocumentMeta,
   CreditJournalEntry,
   CreditLoanDetail as LoanDetail,
   CreditLoanState,
@@ -151,6 +154,9 @@ export function CreditLoanDetailPage() {
   const stateQuery = useCreditLoanState(loanId)
   const scheduleQuery = useCreditLoanSchedule(loanId)
   const journalQuery = useCreditLoanJournal(loanId)
+  const versionsQuery = useCreditLoanScheduleVersions(loanId)
+  const documentsQuery = useCreditLoanDocuments(loanId)
+  const [scheduleVersion, setScheduleVersion] = useState<number | null>(null)
   // Кто заёмщик — знает заявка: в паспорте кредита персональных полей нет
   // вовсе. Пока сервис не отдаёт блок borrower, тянем вторым запросом.
   const applicationQuery = useCreditApplication(loan?.application_id)
@@ -173,6 +179,7 @@ export function CreditLoanDetailPage() {
     { id: 'balances', label: t('credit.tabs.balances') },
     { id: 'schedule', label: t('credit.tabs.schedule') },
     { id: 'payments', label: t('credit.tabs.payments') },
+    { id: 'documents', label: t('credit.tabs.documents') },
     { id: 'journal', label: t('credit.tabs.journal') },
   ]
 
@@ -183,6 +190,13 @@ export function CreditLoanDetailPage() {
   const nextPayment = state?.next_payment ?? loan.next_payment
   const dpd = state?.delinquency.delinquency_days ?? loan.delinquency_days
   const validationFailed = state?.flags?.validation_valid === false
+  // Версии графика приходят отдельным списком со ВСЕМИ взносами, поэтому
+  // выбранную версию берём оттуда, не гоняя лишний запрос за каждой.
+  const scheduleVersions = versionsQuery.data?.items ?? []
+  const selectedSchedule =
+    scheduleVersion !== null
+      ? scheduleVersions.find((version) => version.version === scheduleVersion)
+      : (scheduleQuery.data ?? scheduleVersions[scheduleVersions.length - 1])
 
   // Плитки шапки — главные цифры кредита. Порядок продиктован разговором с
   // клиентом: сколько должен → сколько уже отдал → когда следующий платёж →
@@ -296,8 +310,11 @@ export function CreditLoanDetailPage() {
         {tab === 'schedule' && (
           <LoanSchedule
             loan={loan}
-            schedule={scheduleQuery.data}
-            isLoading={scheduleQuery.isLoading}
+            schedule={selectedSchedule}
+            versions={versionsQuery.data?.items ?? []}
+            selectedVersion={scheduleVersion}
+            onSelectVersion={setScheduleVersion}
+            isLoading={scheduleQuery.isLoading || versionsQuery.isLoading}
             error={scheduleQuery.error}
             onRetry={() => void scheduleQuery.refetch()}
             nextDueDate={nextPayment?.due_date}
@@ -310,6 +327,14 @@ export function CreditLoanDetailPage() {
             isLoading={stateQuery.isLoading}
             error={stateQuery.error}
             onRetry={() => void stateQuery.refetch()}
+          />
+        )}
+        {tab === 'documents' && (
+          <LoanDocuments
+            documents={documentsQuery.data?.items ?? []}
+            isLoading={documentsQuery.isLoading}
+            error={documentsQuery.error}
+            onRetry={() => void documentsQuery.refetch()}
           />
         )}
         {tab === 'journal' && (
@@ -531,6 +556,9 @@ function LoanBalances({
 function LoanSchedule({
   loan,
   schedule,
+  versions,
+  selectedVersion,
+  onSelectVersion,
   isLoading,
   error,
   onRetry,
@@ -538,6 +566,9 @@ function LoanSchedule({
 }: {
   loan: LoanDetail
   schedule?: CreditScheduleVersion
+  versions: CreditScheduleVersion[]
+  selectedVersion: number | null
+  onSelectVersion: (version: number | null) => void
   isLoading: boolean
   error: unknown
   onRetry: () => void
@@ -545,6 +576,11 @@ function LoanSchedule({
 }) {
   const { t } = useTranslation('common')
   const items = schedule?.items ?? []
+  // Актуальная версия может быть ПУСТОЙ (сторнированная выдача), а взносы —
+  // в предыдущей. Показать «графіка немає» здесь значит скрыть, что график был.
+  const lastNonEmpty = [...versions].reverse().find((version) => (version.items ?? []).length > 0)
+  const emptyButHasHistory =
+    items.length === 0 && lastNonEmpty !== undefined && lastNonEmpty.version !== schedule?.version
   // Колонку процентов показываем, только если они где-то ненулевые: у payday
   // проценты всегда 0, и пустой столбец — шум, а не информация.
   const hasInterest = items.some((item) => (item.interest_minor ?? 0) !== 0)
@@ -564,7 +600,7 @@ function LoanSchedule({
       })}
       isLoading={isLoading}
       error={error}
-      isEmpty={items.length === 0}
+      isEmpty={items.length === 0 && !emptyButHasHistory}
       emptyText={t('credit.card.noSchedule')}
       onRetry={onRetry}
       footer={
@@ -576,6 +612,48 @@ function LoanSchedule({
           : undefined
       }
     >
+      {emptyButHasHistory && (
+        <div className="bg-warning-100 text-warning-800 mb-3 rounded-lg px-4 py-3 text-sm">
+          {t('credit.card.scheduleVersionEmpty', {
+            version: schedule?.version ?? '—',
+            reason: t(`credit.scheduleReason.${schedule?.reason}`, schedule?.reason ?? ''),
+            previous: lastNonEmpty?.version ?? '—',
+          })}{' '}
+          <button
+            type="button"
+            className="underline"
+            onClick={() => onSelectVersion(lastNonEmpty?.version ?? null)}
+          >
+            {t('credit.card.openPreviousVersion')}
+          </button>
+        </div>
+      )}
+
+      {versions.length > 1 && (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <span className="text-muted-foreground text-xs">{t('credit.card.scheduleHistory')}</span>
+          {versions.map((version) => {
+            const active = (selectedVersion ?? schedule?.version) === version.version
+            return (
+              <button
+                key={version.version}
+                type="button"
+                aria-pressed={active}
+                onClick={() => onSelectVersion(version.version)}
+                className={`h-8 rounded-full border px-3.5 text-xs font-medium ${
+                  active
+                    ? 'bg-secondary-800 border-secondary-800 text-white'
+                    : 'border-border bg-card text-muted-foreground hover:bg-muted'
+                }`}
+                title={t(`credit.scheduleReason.${version.reason}`, version.reason)}
+              >
+                {t('credit.card.versionShort', { version: version.version })}
+              </button>
+            )
+          })}
+        </div>
+      )}
+
       <table className="w-full text-sm">
         <thead>
           <tr className="border-border text-muted-foreground border-b text-xs">
@@ -670,7 +748,7 @@ function LoanPayments({
         <thead>
           <tr className="border-border text-muted-foreground border-b text-xs">
             <th className="py-2 text-left font-medium">{t('credit.columns.date')}</th>
-            <th className="py-2 text-right font-medium">{t('credit.columns.amount')}</th>
+            <th className="py-2 pr-6 text-right font-medium">{t('credit.columns.amount')}</th>
             <th className="py-2 text-left font-medium">{t('credit.columns.allocation')}</th>
           </tr>
         </thead>
@@ -678,7 +756,7 @@ function LoanPayments({
           {payments.map((payment) => (
             <tr key={payment.payment_id} className="border-border border-b last:border-0">
               <td className="py-2">{formatDate(payment.effective_date)}</td>
-              <td className="py-2 text-right tabular-nums">
+              <td className="py-2 pr-6 text-right tabular-nums">
                 {money(payment.amount_minor, currency)}
               </td>
               <td className="text-muted-foreground py-2 text-xs">
@@ -690,6 +768,58 @@ function LoanPayments({
                       )
                       .join(' · ')
                   : '—'}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </AsyncPanel>
+  )
+}
+
+function LoanDocuments({
+  documents,
+  isLoading,
+  error,
+  onRetry,
+}: {
+  documents: CreditDocumentMeta[]
+  isLoading: boolean
+  error: unknown
+  onRetry: () => void
+}) {
+  const { t } = useTranslation('common')
+  return (
+    <AsyncPanel
+      title={t('credit.tabs.documents')}
+      isLoading={isLoading}
+      error={error}
+      isEmpty={documents.length === 0}
+      emptyText={t('credit.card.noLoanDocuments')}
+      onRetry={onRetry}
+      footer={t('credit.card.documentsCurrentOnly')}
+    >
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-border text-muted-foreground border-b text-xs">
+            <th className="py-2 pr-3 text-left font-medium">{t('credit.columns.documentKind')}</th>
+            <th className="py-2 pr-3 text-left font-medium">{t('credit.columns.documentFile')}</th>
+            <th className="py-2 pr-3 text-left font-medium">
+              {t('credit.fields.templateVersion')}
+            </th>
+            <th className="py-2 text-left font-medium">{t('credit.columns.uploaded')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {documents.map((doc) => (
+            <tr key={doc.document_id} className="border-border border-b last:border-0">
+              <td className="py-2 pr-3">{t(`credit.documentKind.${doc.kind}`, doc.kind)}</td>
+              <td className="py-2 pr-3 font-mono text-xs">{doc.title ?? doc.document_id}</td>
+              <td className="text-muted-foreground py-2 pr-3 text-xs">
+                {doc.template_version ?? '—'}
+              </td>
+              <td className="text-muted-foreground py-2 text-xs">
+                {formatDateTime(doc.generated_at)}
               </td>
             </tr>
           ))}
