@@ -25,7 +25,15 @@ interface ActiveCallPanelProps {
   onToggleAutoConnect: (value: boolean) => void
   onLeave: () => void
   leaving?: boolean
+  /** Wrap-up is over (or was skipped): release the operator for the next call. */
   onHangup: () => void
+  /**
+   * The operator pressed Hang up. Distinct from onHangup, which fires only once
+   * wrap-up finishes — the leg has to drop when the button is pressed, not
+   * after the operator's post-call admin time, or the customer sits on an open
+   * line for the whole countdown.
+   */
+  onEndCall?: () => void
 }
 
 function fmtClock(totalSeconds: number): string {
@@ -53,6 +61,7 @@ export function ActiveCallPanel({
   onLeave,
   leaving,
   onHangup,
+  onEndCall,
 }: ActiveCallPanelProps) {
   const { t } = useTranslation('common')
 
@@ -154,7 +163,10 @@ export function ActiveCallPanel({
           ) : (
             <button
               type="button"
-              onClick={() => setPhase('wrapup')}
+              onClick={() => {
+                onEndCall?.()
+                setPhase('wrapup')
+              }}
               aria-label={t('dialer.call.hangUp', 'Hang up')}
               className="bg-error-500 hover:bg-error-600 flex h-8 w-8 items-center justify-center rounded-md text-white transition-colors"
             >

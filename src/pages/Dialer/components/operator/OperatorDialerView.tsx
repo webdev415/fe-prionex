@@ -155,6 +155,12 @@ export function OperatorDialerView() {
     }
   }
 
+  // The operator pressed Hang up. Drop the leg now; wrap-up is their own admin
+  // time and the customer must not be held on the line for it.
+  const handleEndCall = () => {
+    if (routedCall) hangupCall(routedCall.call_id)
+  }
+
   const handleHangup = () => {
     // The phone owns the SIP session; without this the leg survives into
     // wrap-up and the operator is offered the next call over a live one.
@@ -243,6 +249,7 @@ export function OperatorDialerView() {
                   onLeave={handleLeave}
                   leaving={leaveMutation.isPending}
                   onHangup={handleHangup}
+                  onEndCall={handleEndCall}
                 />
               ) : (
                 <>

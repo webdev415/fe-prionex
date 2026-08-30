@@ -142,6 +142,20 @@ describe('OperatorDialerView call control', () => {
     expect(toggle?.getAttribute('data-active') ?? toggle?.className).toBeTruthy()
   })
 
+  it('drops the leg when Hang up is pressed, not when wrap-up ends', () => {
+    // The button starts wrap-up rather than calling onHangup, so releasing the
+    // leg on onHangup alone would hold the customer on an open line for the
+    // whole post-call countdown.
+    phone.routedCall = ROUTED
+    phone.answeredCallId = 'c-1'
+    render(<OperatorDialerView />)
+
+    const end = screen.getByLabelText('dialer.call.hangUp')
+    end.click()
+
+    expect(phone.hangupCall).toHaveBeenCalledWith('c-1')
+  })
+
   it('answers the specific call the operator was shown', () => {
     phone.routedCall = ROUTED
     render(<OperatorDialerView />)
