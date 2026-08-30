@@ -25,5 +25,18 @@ export function invalidateCallRelatedQueries(queryClient: QueryClient, clientId?
     queryClient.invalidateQueries({
       queryKey: ['clients', 'detail', clientId, 'callSmsHistory'],
     })
+    // KAN-973 §4 — the hotkey phone pre-selection asks "did a call to this
+    // client just end?", and a call ending is the only thing that changes the
+    // answer. Without this the query fetched once on mount and never again:
+    // window-focus refetching is off globally and there is no interval, so in
+    // the ticket's own flow — take the call, hang up, press the hotkey — the
+    // cache still predated the call and the pre-selection silently did nothing.
+    //
+    // Keys are spelled out rather than imported from `clientKeys` to match the
+    // line above; this file is a leaf util and pulling in the clients hooks
+    // module for two strings would be a poor trade.
+    queryClient.invalidateQueries({
+      queryKey: ['clients', 'detail', clientId, 'recentCalls'],
+    })
   }
 }

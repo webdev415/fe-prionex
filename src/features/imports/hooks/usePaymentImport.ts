@@ -41,7 +41,7 @@ export function usePaymentImportExecute() {
       // Cancel the orphaned pending job so it doesn't linger as "Queued" in
       // any banner / history view after a failed execute.
       try {
-        await importsApi.cancelImportJob(jobId)
+        await importsApi.cancelImportJob(jobId, { onlyIfNotStarted: true })
       } catch (cancelError) {
         console.error('Failed to cancel orphaned payment import job:', cancelError)
       }

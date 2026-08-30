@@ -92,6 +92,7 @@ import {
   useClientLoans,
   useClientPaymentsSection,
   useClientCallSmsHistory,
+  useClientRecentCalls,
   useClientTasks,
   useClientOperatorsSection,
   useClientDocuments,
@@ -168,6 +169,10 @@ import { useSubmitDebtToUbki, useBulkSubmitToUbki, ubkiKeys } from '@/features/u
 import { PERMISSIONS } from '@/constants/permissions'
 import { searchClientsByPhoneExact } from '@/api/clientSearchApi'
 import { ChainExecutor, TAInteractionHistory } from './components/taChains'
+import { useTAHotkeyLaunch } from '@/features/taHotkeys/useTAHotkeyLaunch'
+import { TA_EXECUTOR_DIALOG_CLASS } from '@/features/taHotkeys/hotkey'
+import { useTAHotkeyBindings } from '@/features/taHotkeys/hooks/useTAHotkeys'
+import { resolveRecentCallPhone } from '@/features/taHotkeys/recentCallPhone'
 import { RelatedTagsTab } from './components/RelatedTagsTab'
 import type { PhoneMeta } from '@/features/tags/hooks/useLinkedClientsRelatedTags'
 import { formatUkrainePhoneForDisplay } from '@/lib/phone'
@@ -252,6 +257,9 @@ const formatDateAsISO = (d: Date): string => {
 // an earlier release turned both off, so treat any comment claiming they
 // are disabled as out of date. Flip to false to hide the action again.
 const ENABLE_BULK_UBKI_SUBMISSION = true
+
+/** Ties the priority chip's ``aria-controls`` to the panel it discloses. */
+const V3_PANEL_ID = 'v3-priority-panel'
 
 export function ClientDetailPage() {
   const { t, i18n } = useTranslation('common')
@@ -427,6 +435,20 @@ export function ClientDetailPage() {
   const [chainExecutorPrefilledPhone, setChainExecutorPrefilledPhone] = useState<string | null>(
     null
   )
+  // KAN-973 — template the executor should start immediately, set only by a
+  // hotkey launch. Cleared with the other executor context on close so a later
+  // click-open does not re-run the hotkey's template.
+  // KAN-973 §4 — the source of a phone pre-selected by a hotkey. Kept apart
+  // from chainExecutorContactSource, which also narrows the template list: the
+  // hotkey already knows which template it wants, so narrowing could filter it
+  // out and start nothing.
+  const [chainExecutorPrefilledPhoneSource, setChainExecutorPrefilledPhoneSource] = useState<
+    'client' | 'recommender' | null
+  >(null)
+  // KAN-973 — the quick-pick a hotkey asked the executor to start on open.
+  const [chainExecutorInitialTemplateId, setChainExecutorInitialTemplateId] = useState<
+    number | null
+  >(null)
   const chainExecutorMinimizeRef = useRef<(() => void) | null>(null)
 
   // Call origination hook (provides user, call state, handlers)
@@ -485,6 +507,8 @@ export function ClientDetailPage() {
     if (open) {
       setChainExecutorContactSource(null)
       setChainExecutorPrefilledPhone(null)
+      setChainExecutorPrefilledPhoneSource(null)
+      setChainExecutorInitialTemplateId(null)
       setIsChainExecutorOpen(true)
     } else if (disarm) {
       setChainAutoOpenArmed(false)
@@ -682,6 +706,19 @@ export function ClientDetailPage() {
     isValidClientId && activeRightCardTab === 'call-sms-history',
     showAllCalls
   )
+  // KAN-973 §4 — answers "did a call to this client just end?" at the moment a
+  // hotkey is pressed. Separate from the Call/SMS history above, which only
+  // loads while its tab is open and returns display-mapped records.
+  //
+  // Only fetched for operators who actually have a shortcut bound. The answer
+  // is used at one moment — a hotkey press — so for everyone else this would be
+  // a request per client card serving nothing, on the most-visited page in the
+  // app. Reading the bindings here is free: `useTAHotkeyLaunch` below already
+  // subscribes to the same query.
+  const hotkeyBindings = useTAHotkeyBindings()
+  const hasHotkeyBindings = Object.keys(hotkeyBindings).length > 0
+  const { data: recentCalls } = useClientRecentCalls(clientId, isValidClientId && hasHotkeyBindings)
+
   const canAccessMessagingHistory = useHasAnyPermission([
     ...ALL_MESSAGING_SEND_PERMISSIONS,
     PERMISSIONS.MESSAGING.VIEW_CAMPAIGN_ANALYTICS,
@@ -710,6 +747,20 @@ export function ClientDetailPage() {
     profile?.is_deceased ||
     profile?.is_fraudster ||
     profile?.lawsuit_filed
+  )
+  // The priority chip discloses the v3 panel below it. Collapsed by default:
+  // the panel is the detail behind the chip, and the chip already carries the
+  // one thing an operator needs at a glance.
+  const [isV3PanelOpen, setIsV3PanelOpen] = useState(false)
+  // aria-hidden because the button it sits in already announces its state via
+  // aria-expanded — without it a screen reader reads the arrow as content.
+  const v3PanelArrow = (
+    <Icons.ArrowDown
+      size={14}
+      strokeWidth={2}
+      aria-hidden="true"
+      className={cn('transition-transform', isV3PanelOpen && 'rotate-180')}
+    />
   )
 
   const { data: messagingOperators = [] } = useOperators(
@@ -1176,6 +1227,11 @@ export function ClientDetailPage() {
         principalDebt: d.principal_debt != null ? Number(d.principal_debt) : null,
         remainingDebtAmount: Number(d.remaining_debt_amount ?? 0),
         totalToReturn: Number(d.total_to_return ?? 0),
+        // KAN-994 — closing-coefficient band, or null when no tooltip is due
+        // (no principal debt, no matching age range, no purchase date). The
+        // backend does the arithmetic and the date comparison so every viewer
+        // sees the same figures; the card renders the strings verbatim.
+        closingCoefficient: d.closing_coefficient ?? null,
         // KAN-784 AC2: fully-returned loan that fell short of the principal
         // guard — auto-close was blocked, so it needs operator-driven closure.
         needsManualClosureReview: d.needs_manual_closure_review ?? false,
@@ -1387,6 +1443,47 @@ export function ClientDetailPage() {
     () => (client?.activities ?? []).filter((a) => a._raw?.type_code === 'SEARCHING'),
     [client?.activities]
   )
+
+  // KAN-973 — hotkey quick-launch. The guards (typing focus, single modal) live
+  // in the hook and its pure modules; this only says what "launch" means here.
+  //
+  // Declared this far down because it reads `client` and `recentCalls`; a hook
+  // call placed above their `const`s throws on every render.
+  useTAHotkeyLaunch({
+    enabled: isValidClientId,
+    isExecutorOpen: isChainExecutorOpen,
+    onLaunch: (templateId) => {
+      // §4: on a hotkey launch only, pre-select the number of a call that ended
+      // in the last 10 minutes — the operator has just hung up and is logging
+      // that conversation. Resolved here, at the keypress, rather than in a memo
+      // so the 10-minute window is measured against the moment of the press.
+      //
+      // Feeding it through prefilledPhone/contactSource reuses the pre-selection
+      // path the phone-row entry point already uses, in both wizard and instant
+      // mode — no new effect in a component that has had races before.
+      const recentPhone = resolveRecentCallPhone({
+        calls: recentCalls ?? [],
+        phones: client?.phones ?? [],
+        nowMs: Date.now(),
+        // Only THIS operator's calls may drive the pre-selection. A colleague
+        // can have spoken to the same client inside the window, and their
+        // number would otherwise be seeded into this operator's log without
+        // anyone choosing it. Operators with no extension configured keep the
+        // unfiltered behaviour rather than silently losing the feature.
+        agentExtension: user?.asterisk_extension,
+      })
+
+      // Only the prefill source — NOT contactSource, which would filter the
+      // chain list and could hide the very template this hotkey launches.
+      setChainExecutorPrefilledPhoneSource(
+        recentPhone ? classifyContactSource(recentPhone.contactTypeId) : null
+      )
+      setChainExecutorContactSource(null)
+      setChainExecutorPrefilledPhone(recentPhone?.number ?? null)
+      setChainExecutorInitialTemplateId(templateId)
+      setIsChainExecutorOpen(true)
+    },
+  })
 
   const normalizePhoneForLookup = (value: string) => stripPhoneFormat(value)
 
@@ -2768,12 +2865,28 @@ export function ClientDetailPage() {
                   list it was opened from. Compliance is checked FIRST because it
                   needs no model: a deceased debtor is do-not-call whether or not
                   v3 covers them. */}
-              {v3UiEnabled && complianceBlocked ? (
-                <V3BucketBadge bucket="EXIT" />
-              ) : v3ClientBucket ? (
-                <V3BucketBadge bucket={v3ClientBucket} />
-              ) : v3UiEnabled ? (
-                <NotScoredBadge />
+              {/* With v3 on, the chip is also the control for the priority
+                  panel below it — the arrow sits inside the pill. The button
+                  wraps the badge rather than the badge becoming a button, so
+                  the four other places that render these chips are untouched
+                  and stay non-interactive. Without v3 there is no panel, so the
+                  legacy badge keeps its plain form. */}
+              {v3UiEnabled ? (
+                <button
+                  type="button"
+                  onClick={() => setIsV3PanelOpen((open) => !open)}
+                  aria-expanded={isV3PanelOpen}
+                  aria-controls={V3_PANEL_ID}
+                  className="focus-visible:ring-primary-500 rounded-[16px] focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
+                >
+                  {complianceBlocked ? (
+                    <V3BucketBadge bucket="EXIT" trailing={v3PanelArrow} />
+                  ) : v3ClientBucket ? (
+                    <V3BucketBadge bucket={v3ClientBucket} trailing={v3PanelArrow} />
+                  ) : (
+                    <NotScoredBadge trailing={v3PanelArrow} />
+                  )}
+                </button>
               ) : (
                 <PriorityBadge priority={client.priority as Priority} />
               )}
@@ -2797,6 +2910,8 @@ export function ClientDetailPage() {
                 onClick={() => {
                   setChainExecutorContactSource(null)
                   setChainExecutorPrefilledPhone(null)
+                  setChainExecutorPrefilledPhoneSource(null)
+                  setChainExecutorInitialTemplateId(null)
                   setIsChainExecutorOpen(true)
                 }}
               >
@@ -2856,10 +2971,13 @@ export function ClientDetailPage() {
           )} */}
           </div>
         </div>
-        {/* v3 priority (KAN-791) — bucket + "why" per debt, behind the flag */}
+        {/* v3 priority (KAN-791) — bucket + "why" per debt, behind the flag.
+            Disclosed by the priority chip in the header above. */}
         <V3ClientPriorityPanel
           projectId={activeProjectId ? Number(activeProjectId) : undefined}
           clientId={clientId}
+          open={isV3PanelOpen}
+          id={V3_PANEL_ID}
         />
         <div className="flex flex-col items-start gap-4 self-stretch xl:flex-row xl:gap-5">
           {/* Client Card */}
@@ -3225,6 +3343,7 @@ export function ClientDetailPage() {
                               onClick={() => {
                                 setChainExecutorContactSource('client')
                                 setChainExecutorPrefilledPhone(phone.number)
+                                setChainExecutorInitialTemplateId(null)
                                 setIsChainExecutorOpen(true)
                               }}
                               className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
@@ -3382,6 +3501,7 @@ export function ClientDetailPage() {
                     onInteraction={(phone) => {
                       setChainExecutorContactSource('client')
                       setChainExecutorPrefilledPhone(phone)
+                      setChainExecutorInitialTemplateId(null)
                       setIsChainExecutorOpen(true)
                     }}
                   />
@@ -3511,6 +3631,7 @@ export function ClientDetailPage() {
                                 onClick={() => {
                                   setChainExecutorContactSource('client')
                                   setChainExecutorPrefilledPhone(client.work?.workPhone || '')
+                                  setChainExecutorInitialTemplateId(null)
                                   setIsChainExecutorOpen(true)
                                 }}
                                 className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
@@ -4297,6 +4418,7 @@ export function ClientDetailPage() {
                     onStartInteraction={(phone, contactTypeId) => {
                       setChainExecutorContactSource(classifyContactSource(contactTypeId))
                       setChainExecutorPrefilledPhone(phone)
+                      setChainExecutorInitialTemplateId(null)
                       setIsChainExecutorOpen(true)
                     }}
                   />
@@ -5316,9 +5438,15 @@ export function ClientDetailPage() {
               setIsChainExecutorOpen(false)
               setChainExecutorContactSource(null)
               setChainExecutorPrefilledPhone(null)
+              setChainExecutorPrefilledPhoneSource(null)
+              setChainExecutorInitialTemplateId(null)
             }}
             maxWidth="xl"
             showCloseButton={false}
+            /* Marks this dialog as the TA executor's own so a hotkey pressed
+               while it is open reaches the single-modal guard and produces the
+               toast, instead of being swallowed as "the operator is typing". */
+            className={TA_EXECUTOR_DIALOG_CLASS}
           >
             {/* Minimize & Close buttons */}
             <div className="absolute top-2 right-2 flex items-center gap-1 sm:top-4 sm:right-12">
@@ -5334,6 +5462,8 @@ export function ClientDetailPage() {
                   setIsChainExecutorOpen(false)
                   setChainExecutorContactSource(null)
                   setChainExecutorPrefilledPhone(null)
+                  setChainExecutorPrefilledPhoneSource(null)
+                  setChainExecutorInitialTemplateId(null)
                 }}
                 className="hover:bg-muted flex h-8 w-8 items-center justify-center rounded-md transition-colors"
                 aria-label="Close modal"
@@ -5349,15 +5479,21 @@ export function ClientDetailPage() {
                 debts={loans}
                 contactSource={chainExecutorContactSource}
                 prefilledPhone={chainExecutorPrefilledPhone}
+                prefilledPhoneSource={chainExecutorPrefilledPhoneSource}
+                initialTemplateId={chainExecutorInitialTemplateId}
                 onSave={() => {
                   setIsChainExecutorOpen(false)
                   setChainExecutorContactSource(null)
                   setChainExecutorPrefilledPhone(null)
+                  setChainExecutorPrefilledPhoneSource(null)
+                  setChainExecutorInitialTemplateId(null)
                 }}
                 onMinimize={() => {
                   setIsChainExecutorOpen(false)
                   setChainExecutorContactSource(null)
                   setChainExecutorPrefilledPhone(null)
+                  setChainExecutorPrefilledPhoneSource(null)
+                  setChainExecutorInitialTemplateId(null)
                 }}
                 onMinimizeRef={chainExecutorMinimizeRef}
               />
@@ -5382,6 +5518,8 @@ export function ClientDetailPage() {
                   onClick={() => {
                     setChainExecutorContactSource(null)
                     setChainExecutorPrefilledPhone(null)
+                    setChainExecutorPrefilledPhoneSource(null)
+                    setChainExecutorInitialTemplateId(null)
                     setIsChainExecutorOpen(true)
                   }}
                   className="bg-primary flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
@@ -5662,6 +5800,17 @@ export function ClientDetailPage() {
           clientName={client.fullName}
           projectId={1}
           onClose={() => setIsTagModalOpen(false)}
+          onTagsChanged={() => {
+            // A tag change may fire a "Tag change" trigger that launches a chain
+            // asynchronously, exactly as closing a debt does. Snapshot the chains
+            // that already exist so only the NEW one pops, then arm fast-poll +
+            // auto-open for THIS operator (other viewers never arm, so they get
+            // no pop-up).
+            preCloseInstanceIdsRef.current = new Set(
+              (clientChainInstances ?? []).map((inst) => inst.id)
+            )
+            setChainAutoOpenArmed(true)
+          }}
         />
 
         {/* Tag Trace Modal — "Why this tag?" timeline (PR3 commit 3.10) */}

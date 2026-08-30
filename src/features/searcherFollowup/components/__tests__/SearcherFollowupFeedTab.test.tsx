@@ -36,6 +36,12 @@ vi.mock('@/stores/authStore', () => ({
 // `error` is mirrored the same way: the real component renders it as a
 // role="alert" paragraph and marks the field aria-invalid/aria-describedby,
 // so field-level error wiring is assertable here.
+//
+// `min`/`max` are surfaced as `data-min`/`data-max` and ONLY when the tab
+// actually passes them: the real component forwards them to react-datepicker's
+// minDate/maxDate (and adds none of its own), i.e. they are what greys days
+// out. Mirroring them as attributes makes "neither picker bounds the other" an
+// assertable fact rather than a comment.
 vi.mock('@/components/ui/DateSelect', () => ({
   DateSelect: ({
     value,
@@ -44,6 +50,8 @@ vi.mock('@/components/ui/DateSelect', () => ({
     clearLabel,
     label,
     error,
+    min,
+    max,
   }: {
     value?: string | Date | null
     onChange?: (args: { value: Date | null }) => void
@@ -51,6 +59,8 @@ vi.mock('@/components/ui/DateSelect', () => ({
     clearLabel?: string
     label?: string
     error?: string
+    min?: Date | string
+    max?: Date | string
   }) => {
     const errorId = `date-select-error-${label ?? ''}`
     return (
@@ -60,6 +70,8 @@ vi.mock('@/components/ui/DateSelect', () => ({
           aria-label={label}
           aria-invalid={error ? 'true' : undefined}
           aria-describedby={error ? errorId : undefined}
+          data-min={min == null ? undefined : String(min)}
+          data-max={max == null ? undefined : String(max)}
           value={typeof value === 'string' ? value : ''}
           onChange={(e) =>
             // Noon avoids the parsed UTC date rolling into the previous local day
@@ -95,6 +107,10 @@ const paginationFrames = vi.hoisted(() => [] as Array<{ currentPage: number; tot
 vi.mock('@/components/ui/Pagination', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/ui/Pagination')>()
   return {
+    // Spread first: the module also exports DEFAULT_PAGE_SIZE_OPTIONS, which
+    // the paged-feed shell imports to parse `?sps=` against the very set this
+    // dropdown offers. Only the component is wrapped.
+    ...actual,
     Pagination: (props: import('@/components/ui/Pagination').PaginationProps) => {
       paginationFrames.push({ currentPage: props.currentPage, totalPages: props.totalPages })
       return <actual.Pagination {...props} />
@@ -522,6 +538,53 @@ describe('SearcherFollowupFeedTab', () => {
     )
   })
 
+  it('bounds neither picker by the other — no min/max on either field', async () => {
+    // The page-wide calendar policy, shared with the processing and
+    // operator-promises tabs. A mutual bound would not deaden a calendar, but
+    // it would impose an ORDER nothing on screen states: with the today–today
+    // default, «з» would open on days up to today and «по» on days from today,
+    // so a window entirely in the PAST is reachable only by moving «з» first —
+    // reach for «по» first and the whole past is greyed out with no
+    // explanation. So the tab passes no bounds at all and lets the pair-level
+    // guard refuse in words (the test below). This is the regression guard:
+    // reinstating `min={dateStart}` on the «по» field fails here.
+    mockGetFeed.mockResolvedValue(makeResponse([makeRow()]))
+
+    renderTab(['/?if=2026-06-10&it=2026-06-20'])
+    await screen.findByText('Коваленко Іван Петрович')
+
+    for (const field of dateInputs()) {
+      expect(field).not.toHaveAttribute('data-min')
+      expect(field).not.toHaveAttribute('data-max')
+    }
+  })
+
+  it('lets an inverted window be PICKED and answers with the guard, not a dead calendar', async () => {
+    // The counterpart of the bounds test above: since neither picker refuses an
+    // inverted pair, the pair-level guard is what has to, and it does so in
+    // words with no request leaving. Scope note: this drives the picker's
+    // onChange (the same call the calendar makes on a click), so what is
+    // pinned here is the GUARD's behaviour on a freshly PICKED inverted pair —
+    // not merely a hand-edited URL, which the test above already covers.
+    mockGetFeed.mockResolvedValue(makeResponse([makeRow()]))
+
+    renderTab(['/?if=2026-06-10&it=2026-06-20'])
+    await screen.findByText('Коваленко Іван Петрович')
+    expect(mockGetFeed).toHaveBeenCalledTimes(1)
+
+    // «по» pulled BEFORE «з» — the very pick a mutual `min` would have blocked.
+    fireEvent.change(dateInputs()[1], { target: { value: '2026-06-01' } })
+
+    expect(
+      await screen.findByText('pages.reports.searcherFollowup.invalidRange')
+    ).toBeInTheDocument()
+    // The choice is kept (the user can fix either bound), but nothing is sent.
+    await waitFor(() => expect(search()).toContain('it=2026-06-01'))
+    expect(mockGetFeed).toHaveBeenCalledTimes(1)
+    // Neither bound is wrong on its own, so neither field is singled out.
+    for (const field of dateInputs()) expect(field).not.toHaveAttribute('aria-invalid')
+  })
+
   it('pages through the feed with the right skip and keeps the page in the URL', async () => {
     mockGetFeed.mockResolvedValue(
       makeResponse([makeRow()], { total: 130, page: 1, page_size: 50, total_pages: 3 })
@@ -782,6 +845,19 @@ describe('SearcherFollowupFeedTab', () => {
     expect(await screen.findByText('date_start must not be after date_end')).toBeInTheDocument()
   })
 
+  it('falls back to the localized title for a 400 whose body never arrived', async () => {
+    // A proxy that strips the body would otherwise leave axios' own
+    // untranslated "Request failed with status code 400" on screen.
+    mockGetFeed.mockRejectedValue(makeHttpError(400))
+
+    renderTab()
+
+    expect(
+      await screen.findByText('pages.reports.searcherFollowup.error.title')
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/Request failed with status code/)).not.toBeInTheDocument()
+  })
+
   it('shows a permissions message without a retry button on 403', async () => {
     mockGetFeed.mockRejectedValue(makeHttpError(403))
 
@@ -807,6 +883,45 @@ describe('SearcherFollowupFeedTab', () => {
       ).toBeInTheDocument()
     }
   )
+
+  it.each([
+    ['the auth-service directory is down', 'Employee directory (auth-service) is unavailable'],
+    ['the call-service is down', 'Call history (call-service) is unavailable'],
+    ['the call-service is throttling', 'Call history lookup was throttled by the call-service'],
+    [
+      'the fan-out deadline expired',
+      'Internal lookups (employee directory and call history) timed out',
+    ],
+  ])(
+    'keeps the localized message but names the failing dependency when %s',
+    async (_case, detail) => {
+      // The backend words its FOUR 503s distinctly because the remedies differ
+      // (an outage, a second outage, throttling, a timeout). The operator reads
+      // their own language; the server's sentence sits under it so whoever is
+      // asked "what does it say?" can tell the four apart.
+      mockGetFeed.mockRejectedValue(makeHttpError(503, { detail }))
+
+      renderTab()
+
+      expect(
+        await screen.findByText('pages.reports.searcherFollowup.unavailable')
+      ).toBeInTheDocument()
+      expect(screen.getByText(detail)).toBeInTheDocument()
+    }
+  )
+
+  it('shows no detail line for a transient failure that carries no body', async () => {
+    // A 502 from a proxy or a dropped connection has nothing to say — the
+    // localized sentence must stand alone rather than gain axios' own text.
+    mockGetFeed.mockRejectedValue(makeHttpError(502))
+
+    renderTab()
+
+    expect(
+      await screen.findByText('pages.reports.searcherFollowup.unavailable')
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/Request failed with status code/)).not.toBeInTheDocument()
+  })
 
   it('treats network failures as transient unavailability too', async () => {
     mockGetFeed.mockRejectedValue(makeNetworkError('ERR_NETWORK'))

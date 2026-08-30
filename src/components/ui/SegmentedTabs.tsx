@@ -37,6 +37,24 @@ import { cn } from '@/lib/utils'
 export interface SegmentedTabItem<T extends string> {
   id: T
   label: string
+  /**
+   * Native tooltip — hover recovery for a label the tab may constrain
+   * visually, and harmless redundancy when it does not. Purely additive: the
+   * accessible name still comes from the label content.
+   */
+  title?: string
+  /**
+   * Per-item classes, merged after the variant classes. Optional and off by
+   * default, so existing strips render exactly as before.
+   *
+   * Width capping (`max-w-*`) ellipsizes the label in the `segmented` variant
+   * only: there the button is a flex container, so the label span is a flex
+   * item that `min-w-0` lets shrink below its content and `truncate` can then
+   * clip. The `underline` variant's button is not a flex container — its span
+   * stays inline, where `overflow: hidden` has nothing to clip against — so a
+   * cap there would need the span made `inline-block` first.
+   */
+  className?: string
 }
 
 export interface SegmentedTabsProps<T extends string> {
@@ -128,6 +146,7 @@ export function SegmentedTabs<T extends string>({
         aria-controls={idPrefix && isActive ? segmentedTabPanelId(idPrefix, item.id) : undefined}
         aria-selected={isActive}
         tabIndex={index === rovingIndex ? 0 : -1}
+        title={item.title}
         onClick={() => onChange(item.id)}
         onKeyDown={(event) => handleKeyDown(event, index)}
         className={cn(
@@ -138,10 +157,16 @@ export function SegmentedTabs<T extends string>({
               : 'hover:border-border text-muted-foreground hover:text-foreground border-transparent'
             : isActive
               ? 'bg-secondary text-secondary-foreground'
-              : 'bg-card text-muted-foreground hover:bg-muted'
+              : 'bg-card text-muted-foreground hover:bg-muted',
+          item.className
         )}
       >
-        {item.label}
+        {/* The span (not the button itself) is what `text-overflow` can
+            ellipsize when a `segmented` item's className caps its width — the
+            button is a flex container there, so this is a shrinkable flex item.
+            Unconstrained strips render identically to the bare text node this
+            replaced. */}
+        <span className="min-w-0 truncate">{item.label}</span>
       </button>
     )
   })

@@ -39,9 +39,32 @@ type QueueFilter = 'all' | 'active'
 /**
  * Dialer queue status pill (Figma): light-green pill + green dot for active,
  * light-grey pill + grey dot for inactive. All colours are design tokens.
+ *
+ * A queue with no campaign on the external dialer takes precedence over both.
+ * Campaign sync is fail-soft, so such a queue otherwise renders as a perfectly
+ * ordinary Active queue while being unable to place a single call — the only
+ * previous trace was a warning in a container log.
  */
-function QueueStatusBadge({ active }: { active: boolean }) {
+export function QueueStatusBadge({ active, synced }: { active: boolean; synced?: boolean }) {
   const { t } = useTranslation('common')
+
+  // Only `false` means "known unsynced". `undefined` is an older payload (or the
+  // fake driver, which never provisions a campaign) and must not raise an alarm.
+  if (synced === false) {
+    return (
+      <span
+        className="bg-warning-100 text-warning-700 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs leading-[130%] font-medium tracking-[-0.02em]"
+        title={t(
+          'dialer.queueList.notSyncedHint',
+          'This queue has no campaign on the dialer and cannot place calls. Re-save it to retry.'
+        )}
+      >
+        <span className="bg-warning-500 h-2 w-2 shrink-0 rounded-full" />
+        {t('dialer.queueList.notSynced', 'Not synced')}
+      </span>
+    )
+  }
+
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs leading-[130%] font-medium tracking-[-0.02em] ${
@@ -170,7 +193,7 @@ export function QueueListTab() {
         key: 'status',
         header: t('dialer.queueList.status', 'Status'),
         align: 'center',
-        render: (q) => <QueueStatusBadge active={q.is_active} />,
+        render: (q) => <QueueStatusBadge active={q.is_active} synced={q.telephony_synced} />,
       },
       {
         key: 'is_active',

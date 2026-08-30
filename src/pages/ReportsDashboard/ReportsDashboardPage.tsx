@@ -1,12 +1,16 @@
 /**
  * ReportsDashboardPage Component
  *
- * Main page for viewing reports. Hosts five tabs (active tab in the URL via
+ * Main page for viewing reports. Hosts nine tabs (active tab in the URL via
  * `?tab=…`): the reports dashboard with KPIs and agent performance metrics
  * (default), the "Відпрацювання за ЦД" client processing report, the
  * "Верифікація 3-х осіб" third-party verification report, the
- * "Мало верифікацій" client work list, and the "Серчер без відпрацювання"
- * searcher follow-up work list.
+ * "Мало верифікацій" client work list, the "Серчер без відпрацювання"
+ * searcher follow-up work list, the "Вхід без відпрацювання" inbound
+ * follow-up work list (its semantic twin — same source column shape, hence
+ * its neighbour in the strip), the "Контакт/Неконтакт" tagged-client work
+ * list, the "Великий розрив" communication-gap work list, and the
+ * "Обіцянки по операторах" operator promises report.
  */
 
 import { useState, useMemo, useEffect, useCallback } from 'react'
@@ -25,6 +29,7 @@ import {
 } from './components'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
+import { REPORTS_URL_KEYS } from '@/lib/reportsUrlKeys'
 import { useAuthStore } from '@/stores/authStore'
 import { SESSION } from '@/constants'
 import { getDateRangeForPeriod } from '@/lib/dateUtils'
@@ -44,6 +49,10 @@ import { ClientProcessingTab } from '@/features/clientProcessing'
 import { ThirdPartyVerificationTab } from '@/features/thirdPartyVerification'
 import { LowVerificationFeedTab } from '@/features/lowVerificationFeed'
 import { SearcherFollowupFeedTab } from '@/features/searcherFollowup'
+import { InboundFollowupFeedTab } from '@/features/inboundFollowup'
+import { ContactTagFeedTab } from '@/features/contactTag'
+import { CommunicationGapFeedTab } from '@/features/communicationGap'
+import { OperatorPromisesTab } from '@/features/operatorPromises'
 import { SegmentedTabs, segmentedTabId, segmentedTabPanelId } from '@/components/ui/SegmentedTabs'
 
 // ============================================================================
@@ -443,10 +452,22 @@ const REPORT_TABS = [
   'verification',
   'low-verification',
   'searcher-followup',
+  // Right after the searcher feed on purpose: the two migrate the SAME
+  // nine-column source shape and read as a pair to the operators who work them.
+  'inbound-followup',
+  // The tagged-client work list sits after the two follow-up feeds and before
+  // the gap feed: it shares Card 125's client/employee/debt column shape, so
+  // the two read as neighbours, but its date model is its own.
+  'contact-tag',
+  'communication-gap',
+  'operator-promises',
 ] as const
 type ReportsTab = (typeof REPORT_TABS)[number]
 
 const DEFAULT_REPORTS_TAB: ReportsTab = 'dashboard'
+
+/** The host's own slice of the page URL namespace (see the registry). */
+const { tab: TAB_KEY } = REPORTS_URL_KEYS.host
 
 /** Unknown/absent `?tab=` values fall back to the default tab. */
 function resolveReportsTab(rawTab: string | null): ReportsTab {
@@ -460,7 +481,7 @@ export function ReportsDashboardPage() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const user = useAuthStore((state) => state.user)
 
-  const activeTab: ReportsTab = resolveReportsTab(searchParams.get('tab'))
+  const activeTab: ReportsTab = resolveReportsTab(searchParams.get(TAB_KEY))
 
   // DEV-only token expiry check, at the host level so it covers every tab.
   // Kept in useEffect to avoid impure operations during render.
@@ -496,19 +517,17 @@ export function ReportsDashboardPage() {
   // Page-tab switches push a history entry (Back returns to the previous
   // tab); only filter updates inside the tabs use `replace`.
   //
-  // The report tabs' filter params (`?from/?to/?dept` for processing,
-  // `?sf/?st/?cf/?ct` for verification, `?pf/?pt/?mv/?pg/?ps` for the
-  // low-verification feed, `?if/?it/?spg/?sps` for the searcher feed) are
-  // deliberately KEPT when switching tabs: the
-  // filters must survive a round-trip through the dashboard (documented
-  // contract of the tabs, and the key sets don't collide). A slightly "dirty"
-  // dashboard URL is accepted cosmetics.
+  // The report tabs' filter params (every per-tab set declared in
+  // `src/lib/reportsUrlKeys.ts`) are deliberately KEPT when switching tabs:
+  // the filters must survive a round-trip through the dashboard (documented
+  // contract of the tabs, and the registry's test keeps the key sets from
+  // colliding). A slightly "dirty" dashboard URL is accepted cosmetics.
   const handleTabChange = (tab: ReportsTab) => {
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev)
       // Keep the default tab's URL clean — `?tab=` only appears for non-default tabs.
-      if (tab === DEFAULT_REPORTS_TAB) next.delete('tab')
-      else next.set('tab', tab)
+      if (tab === DEFAULT_REPORTS_TAB) next.delete(TAB_KEY)
+      else next.set(TAB_KEY, tab)
       return next
     })
   }
@@ -553,6 +572,14 @@ export function ReportsDashboardPage() {
           <LowVerificationFeedTab />
         ) : activeTab === 'searcher-followup' ? (
           <SearcherFollowupFeedTab />
+        ) : activeTab === 'inbound-followup' ? (
+          <InboundFollowupFeedTab />
+        ) : activeTab === 'contact-tag' ? (
+          <ContactTagFeedTab />
+        ) : activeTab === 'communication-gap' ? (
+          <CommunicationGapFeedTab />
+        ) : activeTab === 'operator-promises' ? (
+          <OperatorPromisesTab />
         ) : (
           <DashboardTab />
         )}

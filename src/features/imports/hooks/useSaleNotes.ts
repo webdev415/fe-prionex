@@ -31,7 +31,7 @@ export function useSaleNotesExecute() {
     onError: async (error, { jobId }) => {
       toast.error(getErrorMessage(error))
       try {
-        await importsApi.cancelImportJob(jobId)
+        await importsApi.cancelImportJob(jobId, { onlyIfNotStarted: true })
       } catch (cancelError) {
         console.error('Failed to cancel orphaned sale notes job:', cancelError)
       }

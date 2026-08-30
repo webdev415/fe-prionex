@@ -91,10 +91,17 @@ export function getErrorMessage(error: unknown): string {
               ) {
                 return item.msg
               }
-              // Fallback: try to stringify if it's an object
-              return typeof item === 'object' ? JSON.stringify(item) : String(item)
+              // Anything else is NOT a sentence, so it is dropped rather than
+              // stringified: `JSON.stringify({})` is "{}", and a number or a
+              // null would arrive as "42" / "null" — text that reads as
+              // gibberish next to the real messages it would be joined with.
+              // This keeps the reader in step with `hasResponseDetail`, which
+              // counts exactly these two shapes as usable: an array of nothing
+              // but unreadable items now means "no detail" to both, so a caller
+              // that gates on the predicate can never be handed "{}".
+              return null
             })
-            .filter((msg) => msg && msg.length > 0)
+            .filter((msg): msg is string => msg !== null && msg.trim().length > 0)
 
           return messages.length > 0 ? messages.join('. ') : 'Validation error occurred'
         }
@@ -147,6 +154,59 @@ export function getErrorMessage(error: unknown): string {
  */
 export function isApiError(error: unknown): error is AxiosError {
   return axios.isAxiosError(error)
+}
+
+/**
+ * True when the failed response actually carries a message of the backend's own.
+ *
+ * `getErrorMessage` has no such thing as "nothing to say": with an empty or
+ * body-less response it degrades to axios' own `error.message` — the
+ * untranslated "Request failed with status code 400" — which is exactly what a
+ * proxy that strips the body produces, and not a sentence to show an operator.
+ * So a caller passes a server detail through only when there IS one and takes
+ * its own localized text otherwise.
+ *
+ * The shapes checked are the ones `getErrorMessage` reads out of the BODY for a
+ * FastAPI endpoint: a bare string body, `detail` (string or the validation
+ * array), and `message`. A blank `detail` string and an empty array are no
+ * detail either — an empty array makes `getErrorMessage` return its hardcoded
+ * English "Validation error occurred", which is as unfit to show as the axios
+ * text this predicate exists to suppress.
+ *
+ * A NON-empty array counts only when at least one item is actually USABLE — a
+ * non-blank string, or a validation object with a non-blank string `msg` (the
+ * two shapes `getErrorMessage` reads; anything else it drops).
+ *
+ * KNOWN ASYMMETRY, deliberately left alone: this predicate stops at `detail`
+ * once the key is present, while `getErrorMessage` falls THROUGH a falsy
+ * `detail` to `message`. So `{ detail: '', message: 'Sell window too wide' }`
+ * reads as "no detail" here even though `getErrorMessage` would return that
+ * perfectly good sentence, and a caller gated on this predicate shows its own
+ * localized text instead. The cost is one needlessly generic message on a body
+ * no backend of ours actually sends (FastAPI writes `detail`, our services
+ * write `detail`; `message` is the messaging microservice's envelope, which
+ * carries no `detail` at all). Widening the check to keep looking past a blank
+ * `detail` would trade that for a second definition of "has a detail" to keep
+ * in step with `getErrorMessage`'s order of reads — the very drift this
+ * predicate exists to prevent.
+ */
+export function hasResponseDetail(error: unknown): boolean {
+  if (!isApiError(error)) return false
+  const data = error.response?.data
+  if (typeof data === 'string') return data.trim() !== ''
+  if (!data || typeof data !== 'object') return false
+  const record = data as Record<string, unknown>
+  const detail = record.detail
+  if (typeof detail === 'string') return detail.trim() !== ''
+  if (Array.isArray(detail)) {
+    return detail.some((item: unknown) =>
+      typeof item === 'string'
+        ? item.trim() !== ''
+        : typeof (item as { msg?: unknown } | null)?.msg === 'string' &&
+          (item as { msg: string }).msg.trim() !== ''
+    )
+  }
+  return typeof record.message === 'string' && record.message.trim() !== ''
 }
 
 /**

@@ -83,6 +83,9 @@ export type DialogueEvaluationViewMode =
 // Week). Drives the chip row above the Kanban board.
 export type TasksSubTabId = 'all' | 'today' | 'tomorrow' | 'this_week'
 
+// URL grammar of `?tab=` — every id the page will honour on a deep link.
+// `settings` is recognised here but only *rendered* for `manage_qa_rules`
+// holders (TrainingPage owns both the strip and the body gate).
 export const TRAINING_TOP_TABS: TrainingTopTabId[] = [
   'inbox',
   'team',
@@ -90,6 +93,7 @@ export const TRAINING_TOP_TABS: TrainingTopTabId[] = [
   'dialogue-evaluation',
   'trainings-and-sessions',
   'tasks',
+  'settings',
 ]
 
 export const ACTION_ANALYSIS_SUB_TABS: ActionAnalysisSubTabId[] = [

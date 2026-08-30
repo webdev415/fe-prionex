@@ -8,7 +8,7 @@
  */
 
 import { describe, expect, it, vi } from 'vitest'
-import { render as rtlRender, screen } from '@testing-library/react'
+import { fireEvent, render as rtlRender, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 
 const render = (ui: React.ReactElement) => rtlRender(<MemoryRouter>{ui}</MemoryRouter>)
@@ -34,6 +34,9 @@ vi.mock('@/pages/ClientManagement/components/CallRecordingModal', () => ({
 }))
 
 const thirdPartyMock = vi.hoisted(() => ({
+  isLoading: false,
+  isError: false,
+  isFetching: false,
   data: {
     kpis: {
       total_calls: 2,
@@ -81,11 +84,24 @@ const thirdPartyMock = vi.hoisted(() => ({
     page: 1,
     page_size: 50,
   },
-  isLoading: false,
-  isError: false,
 }))
+// Filter-aware mock (KAN-1027/KAN-1029 UX follow-up): picking an operator
+// simulates the keepPreviousData window — the PREVIOUS rows are still in
+// `data` while `isFetching` is true; picking a result chip simulates a
+// SETTLED empty response.
 vi.mock('@/features/training/hooks/useThirdParty', () => ({
-  useThirdParty: () => thirdPartyMock,
+  useThirdParty: (filters: { user_ids?: number[]; result_filter?: string }) => {
+    if (filters.user_ids != null) {
+      return { ...thirdPartyMock, isFetching: true }
+    }
+    if (filters.result_filter && filters.result_filter !== 'all') {
+      return {
+        ...thirdPartyMock,
+        data: { ...thirdPartyMock.data, items: [], total: 0 },
+      }
+    }
+    return thirdPartyMock
+  },
 }))
 
 import { ThirdPartiesSubTab } from '../ThirdPartiesSubTab'
@@ -130,5 +146,37 @@ describe('ThirdPartiesSubTab', () => {
     const select = document.querySelector('select') as HTMLSelectElement
     const options = Array.from(select.options).map((o) => o.textContent)
     expect(options).toContain('Kateryna Antonova')
+  })
+
+  it('shows the refetch overlay over the kept rows when the operator filter changes', () => {
+    render(<ThirdPartiesSubTab />)
+    // Settled initial load — no overlay.
+    expect(screen.queryByTestId('analytics-table-overlay')).not.toBeInTheDocument()
+
+    const select = document.querySelector('select') as HTMLSelectElement
+    fireEvent.change(select, { target: { value: '41' } })
+
+    // The refetch is in flight: the kept (previous) rows are still rendered…
+    expect(screen.getByText('0970001122')).toBeInTheDocument()
+    // …but the table is explicitly marked as updating instead of silently
+    // showing the previous manager's data.
+    const overlay = screen.getByTestId('analytics-table-overlay')
+    expect(overlay).toBeInTheDocument()
+    expect(screen.getByText('pages.training.actionAnalysis.updating')).toBeInTheDocument()
+    expect(overlay.closest('[aria-busy="true"]')).not.toBeNull()
+  })
+
+  it('shows the empty state (not the previous rows) when the filtered result is empty', () => {
+    render(<ThirdPartiesSubTab />)
+    expect(screen.getByText('0970001122')).toBeInTheDocument()
+
+    // Result chip → the mock answers with a SETTLED empty page.
+    fireEvent.click(
+      screen.getByRole('button', { name: /pages\.training\.thirdParties\.result\.refusal/ })
+    )
+
+    expect(screen.getByText('pages.training.thirdParties.empty')).toBeInTheDocument()
+    expect(screen.queryByText('0970001122')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('analytics-table-overlay')).not.toBeInTheDocument()
   })
 })

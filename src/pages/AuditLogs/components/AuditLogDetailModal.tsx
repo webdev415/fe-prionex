@@ -295,6 +295,25 @@ export function AuditLogDetailModal({ open, log, onClose }: AuditLogDetailModalP
             </div>
           </div>
 
+          {/* Reason — the free-text explanation behind the event. Kept
+              separate from Details below: that renders a structured payload,
+              this is one sentence, and an event often carries one without the
+              other. Deletions and background jobs typically have no
+              field-level diff at all, so without this the modal showed their
+              header fields and nothing about why. */}
+          {log.reason && (
+            <div className="flex flex-col gap-2 self-stretch">
+              <span className="text-foreground text-base leading-[155%] font-medium tracking-[-0.32px]">
+                {t('pages.auditLogs.detailModal.reason', 'Reason')}
+              </span>
+              <div className="border-border bg-card/50 flex flex-col items-start justify-center gap-1 self-stretch rounded-xl border px-3 py-3 sm:px-6 sm:py-4">
+                <span className="text-foreground text-sm leading-[155%] break-words">
+                  {log.reason}
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Details Section — shown when the event carries a payload rather than
               field-level changes: credit lookups, gateway callbacks, exports.
               Rendered only when `changes` is absent so update events keep their

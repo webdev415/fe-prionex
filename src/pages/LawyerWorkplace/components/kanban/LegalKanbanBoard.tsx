@@ -424,6 +424,15 @@ export function LegalKanbanBoard() {
     [handleMoveTask]
   )
 
+  // The drawer target is a snapshot taken on card click; re-derive the task
+  // from the current board data so edits made inside the open panel are
+  // reflected there once the mutation lands and the kanban query refetches.
+  const liveThreadTarget = useMemo(() => {
+    if (!threadTarget) return null
+    const live = baseTasks.find((item) => item.taskId === threadTarget.task.taskId)
+    return live ? { ...threadTarget, task: live } : threadTarget
+  }, [baseTasks, threadTarget])
+
   const handleExportCsv = useCallback(() => {
     const exported = exportKanbanTasksToCsv(filteredColumns, t, undefined, letterTypes, timezone)
     if (exported === 0) {
@@ -455,9 +464,13 @@ export function LegalKanbanBoard() {
       <CreateKanbanTaskModal open={createTaskOpen} onClose={() => setCreateTaskOpen(false)} />
 
       <ThreadDrawer
-        target={threadTarget}
+        target={liveThreadTarget}
         letterTypes={letterTypes}
+        lawyers={lawyers}
+        editableLetterTypes={activeLetterTypes}
         onClose={() => setThreadTarget(null)}
+        onMoveTask={handleMoveTask}
+        onTaskUpdate={handleTaskUpdate}
       />
 
       {isLoading ? <KanbanTabSkeleton /> : null}

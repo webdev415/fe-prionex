@@ -148,10 +148,35 @@ export function MinimizedCallBubble() {
         ? (callDetails.total_duration ?? liveElapsedTime)
         : minimizedCall.elapsedTime,
     })
-    if (isTerminal) {
-      invalidateCallRelatedQueries(queryClient, minimizedCall.clientId)
-    }
   }, [callDetails]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Everything that has to happen exactly once when a call reaches its end.
+  // Keyed on the state rather than on whoever set it, because three different
+  // things end a call — this poll, the hang-up button, and the socket writing
+  // straight to the store — and hanging this off any one of them leaves the
+  // other two showing a client history missing the call that just happened.
+  // Once per call: `minimizedCall` is a new object on every store write.
+  const settledFor = useRef<string | null>(null)
+  useEffect(() => {
+    if (!minimizedCall || minimizedCall.type !== 'call-dialog') return
+    const state = minimizedCall.callState
+    if (state !== 'ended' && state !== 'failed') return
+    const key = minimizedCall.callId ?? minimizedCall.id
+    if (settledFor.current === key) return
+    settledFor.current = key
+    invalidateCallRelatedQueries(queryClient, minimizedCall.clientId)
+  }, [minimizedCall, queryClient])
+
+  // Once the call is over the backend's total is authoritative. The local tick
+  // is an estimate that has been counting since the window was minimised, and
+  // it is what the bar would otherwise freeze on and present as the duration.
+  const isSettled =
+    minimizedCall?.type === 'call-dialog' &&
+    (minimizedCall.callState === 'ended' || minimizedCall.callState === 'failed')
+  const displayedElapsedTime =
+    isSettled && minimizedCall?.elapsedTime !== undefined
+      ? minimizedCall.elapsedTime
+      : liveElapsedTime
 
   useEffect(() => {
     if (!minimizedCall || !isActiveCall) {
@@ -217,7 +242,6 @@ export function MinimizedCallBubble() {
       onSuccess: () => {
         const total = callDetails?.total_duration ?? minimizedCall.elapsedTime ?? liveElapsedTime
         setMinimizedCall({ ...minimizedCall, callState: 'ended', elapsedTime: total })
-        invalidateCallRelatedQueries(queryClient, minimizedCall.clientId)
       },
       onError: () => {
         // Match the modal: force-end on the FE regardless of AMI errors.
@@ -307,11 +331,12 @@ export function MinimizedCallBubble() {
                   </span>
                 </div>
               )}
-              {liveElapsedTime > 0 && (
+              {displayedElapsedTime > 0 && (
                 <div className="flex items-center gap-2">
                   <Icons.StopWatch size={14} className="text-muted-foreground" strokeWidth={1.5} />
                   <span className="text-muted-foreground text-xs">
-                    {t('pages.clients.modals.callDialog.talkTime')}: {formatTime(liveElapsedTime)}
+                    {t('pages.clients.modals.callDialog.talkTime')}:{' '}
+                    {formatTime(displayedElapsedTime)}
                   </span>
                 </div>
               )}
@@ -410,7 +435,7 @@ export function MinimizedCallBubble() {
         minimizedCall.callState === 'ended') && (
         <span className="text-muted-foreground flex items-center gap-1 text-xs tabular-nums">
           <Icons.StopWatch size={12} strokeWidth={1.5} />
-          {formatTime(liveElapsedTime)}
+          {formatTime(displayedElapsedTime)}
         </span>
       )}
       {lineLabel && (

@@ -11,6 +11,7 @@ function client(overrides: Partial<IncomingCallClient> = {}): IncomingCallClient
     contact_comment: null,
     contact_source: null,
     contact_type_name: null,
+    contact_category: null,
     recent_interactions: [],
     loans: [],
     ...overrides,

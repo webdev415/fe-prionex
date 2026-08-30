@@ -24,4 +24,5 @@ export type {
   SearcherFollowupRow,
   SearcherFollowupResponse,
 } from './types'
-export { resolveCallOutcomeDisplay, type CallOutcomeDisplay } from './utils/callOutcome'
+// The `last_call_*` display resolver used to live here; it is shared with the
+// Card 122 feed and now lives in `@/lib/feedCallOutcome` — import it from there.

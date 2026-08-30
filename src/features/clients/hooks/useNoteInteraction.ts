@@ -188,3 +188,55 @@ export function useUpdateInteraction() {
     },
   })
 }
+
+export interface BulkInteractionData {
+  clientIds: number[]
+  typeId: number
+  subtypeId?: number
+  contactTypeId?: number
+  resultId?: number
+  phoneUsed?: string
+  summary?: string
+  relatedCallUuid?: string
+}
+
+/**
+ * File one interaction against every client a call reached.
+ *
+ * The clients each get their own row — there is no shared record — so each
+ * card's history invalidates independently. They are tied together only by the
+ * call id the backend stamps across them.
+ */
+export function useCreateBulkInteraction() {
+  const queryClient = useQueryClient()
+  const { t } = useTranslation('common')
+
+  return useMutation({
+    mutationFn: async (data: BulkInteractionData) =>
+      interactionApi.createInteractionsBulk({
+        client_ids: data.clientIds,
+        type_id: data.typeId,
+        subtype_id: data.subtypeId,
+        contact_type_id: data.contactTypeId,
+        result_id: data.resultId,
+        phone_used: data.phoneUsed,
+        summary: data.summary,
+        related_call_uuid: data.relatedCallUuid,
+        interaction_date: new Date().toISOString(),
+      }),
+    onSuccess: (_, variables) => {
+      // Every card that received the interaction has to refresh, not just one.
+      for (const clientId of variables.clientIds) {
+        queryClient.invalidateQueries({ queryKey: clientKeys.activities(clientId) })
+      }
+    },
+    onError: (error: AxiosError<{ detail?: string | Array<{ msg: string }> }>) => {
+      const detail = error?.response?.data?.detail
+      let message = t('pages.clients.modals.addNote.errorMessage', 'Failed to add interaction')
+      if (typeof detail === 'string') {
+        message = detail
+      }
+      toast.error(message)
+    },
+  })
+}

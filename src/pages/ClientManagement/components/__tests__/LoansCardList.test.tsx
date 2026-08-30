@@ -28,6 +28,7 @@ const loan = (id: number, status: 'active' | 'closed'): LoanCardLoan => ({
   status,
   sentToCreditBureau: false,
   creditBureauSentDate: null,
+  closingCoefficient: null,
   needsManualClosureReview: false,
 })
 

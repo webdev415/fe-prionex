@@ -11,6 +11,7 @@ import { V3CutoverRoute } from '@/features/scoring/components/V3CutoverRoute'
 import { PERMISSIONS } from '@/constants/permissions'
 import { BulkOperatorAssignmentPageSkeleton } from '@/pages/Operations/BulkOperatorAssignmentPageSkeleton'
 import { BulkTagAssignmentPageSkeleton } from '@/pages/Operations/BulkTagAssignmentPageSkeleton'
+import { BulkContactTagAssignmentPageSkeleton } from '@/pages/Operations/BulkContactTagAssignmentPageSkeleton'
 import { BulkPaymentVerificationPageSkeleton } from '@/pages/Operations/BulkPaymentVerificationPageSkeleton'
 import { BulkSaleNotesImportPageSkeleton } from '@/pages/Operations/BulkSaleNotesImportPageSkeleton'
 import { BulkDocumentImportPageSkeleton } from '@/pages/Operations/BulkDocumentImportPageSkeleton'
@@ -70,6 +71,21 @@ const PaymentHistoryPage = lazy(() =>
   import('@/pages/ClientManagement').then((m) => ({
     default: m.PaymentHistoryPage,
   }))
+)
+const CreditApplicationsPage = lazy(() =>
+  import('@/pages/Credit').then((m) => ({ default: m.CreditApplicationsPage }))
+)
+const CreditApplicationDetailPage = lazy(() =>
+  import('@/pages/Credit').then((m) => ({ default: m.CreditApplicationDetailPage }))
+)
+const CreditLoansPage = lazy(() =>
+  import('@/pages/Credit').then((m) => ({ default: m.CreditLoansPage }))
+)
+const CreditLoanDetailPage = lazy(() =>
+  import('@/pages/Credit').then((m) => ({ default: m.CreditLoanDetailPage }))
+)
+const CreditSettingsPage = lazy(() =>
+  import('@/pages/Credit').then((m) => ({ default: m.CreditSettingsPage }))
 )
 const SmsTemplatesPage = lazy(() =>
   import('@/pages/SmsTemplates').then((m) => ({
@@ -213,6 +229,11 @@ const BulkTagAssignmentPage = lazy(() =>
     default: m.BulkTagAssignmentPage,
   }))
 )
+const BulkContactTagAssignmentPage = lazy(() =>
+  import('@/pages/Operations').then((m) => ({
+    default: m.BulkContactTagAssignmentPage,
+  }))
+)
 const BulkWriteoffImportPage = lazy(() =>
   import('@/pages/Operations').then((m) => ({
     default: m.BulkWriteoffImportPage,
@@ -305,6 +326,88 @@ export const router = createBrowserRouter([
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.USERS.VIEW}>
             {withSuspense(<UserManagementPage />)}
+          </PermissionRoute>
+        ),
+      },
+      // Кредитный модуль — отдельный сервис (credit-service) за собственным
+      // API. Права credit.* появятся в auth-service вместе с ролями WS-20;
+      // до тех пор раздел доступен и по системному праву, иначе его не увидит
+      // никто, включая администратора, который его и принимает.
+      {
+        path: 'credit',
+        element: <Navigate to="/dashboard/credit/applications" replace />,
+      },
+      {
+        path: 'credit/applications',
+        element: (
+          <PermissionRoute
+            requiredPermissions={[
+              PERMISSIONS.CREDIT.APPLICATIONS_VIEW,
+              PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+            ]}
+            mode="any"
+          >
+            {withSuspense(<CreditApplicationsPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'credit/applications/:applicationId',
+        element: (
+          <PermissionRoute
+            requiredPermissions={[
+              PERMISSIONS.CREDIT.APPLICATIONS_VIEW,
+              PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+            ]}
+            mode="any"
+          >
+            {withSuspense(<CreditApplicationDetailPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'credit/loans',
+        element: (
+          <PermissionRoute
+            requiredPermissions={[
+              PERMISSIONS.CREDIT.LOANS_VIEW,
+              PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+            ]}
+            mode="any"
+          >
+            {withSuspense(<CreditLoansPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        // Настройки модуля: продукты и параметры — риск-менеджеру, интеграции
+        // видны всем, кто имеет доступ к разделу (там нет данных клиентов).
+        path: 'credit/settings',
+        element: (
+          <PermissionRoute
+            requiredPermissions={[
+              PERMISSIONS.CREDIT.PARAMETERS_VIEW,
+              PERMISSIONS.CREDIT.PRODUCTS_VIEW,
+              PERMISSIONS.CREDIT.APPLICATIONS_VIEW,
+              PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+            ]}
+            mode="any"
+          >
+            {withSuspense(<CreditSettingsPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'credit/loans/:loanId',
+        element: (
+          <PermissionRoute
+            requiredPermissions={[
+              PERMISSIONS.CREDIT.LOANS_VIEW,
+              PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+            ]}
+            mode="any"
+          >
+            {withSuspense(<CreditLoanDetailPage />)}
           </PermissionRoute>
         ),
       },
@@ -664,6 +767,16 @@ export const router = createBrowserRouter([
           <PermissionRoute requiredPermission={PERMISSIONS.CLIENTS.ASSIGN_TAGS}>
             <Suspense fallback={<BulkTagAssignmentPageSkeleton />}>
               <BulkTagAssignmentPage />
+            </Suspense>
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'import/bulk-contact-tag-assignment',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.CONTACT_TAGS.ASSIGN}>
+            <Suspense fallback={<BulkContactTagAssignmentPageSkeleton />}>
+              <BulkContactTagAssignmentPage />
             </Suspense>
           </PermissionRoute>
         ),

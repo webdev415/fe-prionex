@@ -44,6 +44,11 @@ export function useOperatorPhone(
 
   const postToPhone = useCallback(
     (message: object) => {
+      // No configured origin (a deployed build without VITE_OPERATOR_PHONE_URL):
+      // there is no phone to talk to, and postMessage rejects an empty
+      // targetOrigin outright. The inbound handler fails closed on the same
+      // check, so the phone is simply inert rather than half-wired.
+      if (!OPERATOR_PHONE_ORIGIN) return
       iframeRef.current?.contentWindow?.postMessage(message, OPERATOR_PHONE_ORIGIN)
     },
     [iframeRef]

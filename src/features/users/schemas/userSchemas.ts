@@ -140,6 +140,36 @@ export const updateUserSchema = z.object({
 })
 
 /**
+ * An agent needs a line to be reached on, so Asterisk Extension is required
+ * once Is Agent is checked. Predictive Dialer Extension stays optional.
+ *
+ * Written as a standalone refinement rather than baked into either schema
+ * because the two call sites need it at different moments. Creating a user is
+ * unconditional -- there is no history to respect. Editing one is not: a
+ * handful of accounts predate this rule and are already agents with no
+ * extension, and blocking their form over a field the admin never touched
+ * would make an inherited inconsistency into their problem. The edit path
+ * applies this only once the checkbox or the field has been touched.
+ *
+ * It also cannot live on `createUserSchema` itself: the create form extends
+ * that object, and a refined schema is a ZodEffects, which has no `.extend`.
+ */
+export const AGENT_EXTENSION_REQUIRED_MESSAGE = 'Asterisk Extension is required for agents'
+
+export function requireAgentExtension(
+  data: { is_agent?: boolean; asterisk_extension?: string },
+  ctx: z.RefinementCtx
+): void {
+  if (data.is_agent && !data.asterisk_extension) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['asterisk_extension'],
+      message: AGENT_EXTENSION_REQUIRED_MESSAGE,
+    })
+  }
+}
+
+/**
  * Infer TypeScript types from schemas
  */
 export type CreateUserFormData = z.infer<typeof createUserSchema>

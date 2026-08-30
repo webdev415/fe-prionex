@@ -1,3 +1,7 @@
+/* eslint-disable react-refresh/only-export-components -- the default option set
+   belongs with the component that renders it; consumers parsing a URL page size
+   against it must read the same array, not a copy (same precedent as
+   SegmentedTabs.tsx's id helpers) */
 /**
  * Pagination Component
  *
@@ -34,7 +38,12 @@ export interface PaginationProps {
   className?: string
 }
 
-const DEFAULT_PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
+/**
+ * The sizes the dropdown offers when a consumer names none. Exported because
+ * whoever parses a page size out of the URL has to accept exactly this set —
+ * a second copy would drift into a URL value the dropdown cannot select.
+ */
+export const DEFAULT_PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
 
 export function Pagination({
   currentPage,

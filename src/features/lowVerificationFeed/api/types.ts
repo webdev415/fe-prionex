@@ -49,7 +49,9 @@ export interface LowVerificationFeedParams {
  * `inn` and `assignment_date` are non-NULL for every production row today but
  * are typed optional per the backend schema (`clients.tax_id` is only
  * application-enforced, and a client can predate the assignment log).
- * `last_interaction_date` is null for ~36 % of rows. `body_amount` is an exact
+ * `last_interaction_date` is null for ~36 % of rows (production probe
+ * 2026-08-11, see docs/low-verification-feed.md in api-prionex).
+ * `body_amount` is an exact
  * `Decimal` and therefore serialises as a JSON STRING ("15000.00"); the union
  * with `number` covers a payload that ever ships it unquoted.
  */

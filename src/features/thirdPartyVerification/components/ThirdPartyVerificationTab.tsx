@@ -11,6 +11,12 @@
  * create history entries. Structure, error handling and the busy overlay
  * follow the processing tab (features/clientProcessing).
  *
+ * Unlike the three paged FEED tabs, this report is NOT built on the shared
+ * `useUrlPagedFeedFilters` shell: the endpoint returns the whole per-operator
+ * table (no pagination), so there is no page to reset, clamp or self-heal —
+ * the shell's actual substance. What the tabs do share is the URL key
+ * namespace, declared in `src/lib/reportsUrlKeys.ts`.
+ *
  * Sell defaults to the current month in the profile timezone (backend-default
  * parity caveats in utils/monthRange); both dates are always sent explicitly
  * because the backend rejects one sell bound without the other. The count
@@ -29,6 +35,7 @@ import { isRealCalendarDate } from '@/lib/calendarDate'
 import { getErrorMessage, getErrorStatus } from '@/lib/errors'
 import { Icons } from '@/lib/icons'
 import { formatPickerDateAsYMD } from '@/lib/dateUtils'
+import { REPORTS_URL_KEYS } from '@/lib/reportsUrlKeys'
 import { useAuthStore } from '@/stores/authStore'
 import { useThirdPartyVerificationReport } from '../hooks'
 import { currentMonthRange } from '../utils/monthRange'
@@ -41,11 +48,13 @@ const MAX_RANGE_DAYS = 366
 
 const MS_PER_DAY = 86_400_000
 
-/** URL keys, kept short and distinct from the processing tab's `from/to/dept`. */
-const SELL_FROM_KEY = 'sf'
-const SELL_TO_KEY = 'st'
-const COUNT_FROM_KEY = 'cf'
-const COUNT_TO_KEY = 'ct'
+/** This tab's slice of the Reports page URL namespace (see the registry). */
+const {
+  sellFrom: SELL_FROM_KEY,
+  sellTo: SELL_TO_KEY,
+  countFrom: COUNT_FROM_KEY,
+  countTo: COUNT_TO_KEY,
+} = REPORTS_URL_KEYS.verification
 
 type FilterKey =
   | typeof SELL_FROM_KEY
@@ -91,9 +100,15 @@ export function ThirdPartyVerificationTab() {
   const countFrom = rawCountFrom && isRealCalendarDate(rawCountFrom) ? rawCountFrom : undefined
   const countTo = rawCountTo && isRealCalendarDate(rawCountTo) ? rawCountTo : undefined
 
-  // Functional form only: a clone taken from a render-scoped `searchParams`
-  // would drop a concurrent update from another field.
-  // Filter updates never create history entries (page-tab switches do).
+  // Filter updates never create history entries (page-tab switches do). The
+  // simple functional form is enough here — but NOT for the reason its `prev`
+  // suggests: in react-router 7.9.6 `prev` is itself a clone of the
+  // RENDER-SCOPED params, so two updates fired in the same tick would still
+  // drop one another's keys. Nothing in this tab fires such a burst (each
+  // picker commits its own separate user action), which is the actual
+  // guarantee this relies on; the paged feeds, whose shared Pagination does
+  // emit a same-tick pair, compose through a ref instead — see
+  // useUrlPagedFeedFilters.
   const setUrlParam = (key: FilterKey, value: string | null) => {
     setSearchParams(
       (prev) => {

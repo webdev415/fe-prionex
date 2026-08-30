@@ -52,12 +52,25 @@ export function TagAssignmentProgress({ jobId, onComplete }: Props) {
   // the operation reaches a terminal state — no DB writes have happened yet
   // during pending/in_progress, so showing partial sums there would be
   // misleading.
+  // The contact-tag import counts contacts, not clients, and reports failures
+  // directly rather than by subtraction: one file row can touch several contact
+  // records, so `unique_clients - successful_clients` is meaningless for it and
+  // would render 0 against real work.
+  const isContactTags = job.import_type === 'contact_tag_assignment'
   const appliedClients = isTerminal ? (job.successful_clients ?? 0) : 0
-  const failedClients = isTerminal
-    ? Math.max(0, (job.unique_clients ?? 0) - (job.successful_clients ?? 0))
-    : 0
+  const failedClients = !isTerminal
+    ? 0
+    : isContactTags
+      ? job.errors_count
+      : Math.max(0, (job.unique_clients ?? 0) - (job.successful_clients ?? 0))
 
-  const p = 'pages.imports.tagAssignment.progress'
+  // Headings name the entity being tagged, so they follow the job's own type
+  // rather than the component's origin. Derived from job.import_type rather
+  // than passed in: the caller cannot then hand it a scope that disagrees
+  // with the job it is rendering.
+  const p = isContactTags
+    ? 'pages.imports.contactTagAssignment.progress'
+    : 'pages.imports.tagAssignment.progress'
 
   return (
     <div className="space-y-6">

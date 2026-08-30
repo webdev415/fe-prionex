@@ -1,12 +1,16 @@
-import { useCallback, useRef, useState } from 'react'
+import { useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
 import { useDownloadTagAssignmentTemplate } from '@/features/imports/hooks/useTagAssignment'
+import { useFileDropzone } from '@/features/imports/hooks/useFileDropzone'
 import type { TagAssignmentMode } from '@/features/imports/types/tagAssignment'
-import { toast } from 'sonner'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10 MB
+// Module scope, not an inline literal at the call site: a fresh array
+// each render makes useFileDropzone's useCallback deps change every
+// time, so the memo it wraps never actually holds.
+const ACCEPTED_EXTENSIONS = ['.csv', '.xlsx']
 
 interface Props {
   mode: TagAssignmentMode
@@ -18,71 +22,17 @@ interface Props {
 export function TagAssignmentUpload({ mode, onModeChange, onFileSelected, isUploading }: Props) {
   const { t } = useTranslation('common')
   const p = 'pages.imports.tagAssignment.upload'
-  const [dragActive, setDragActive] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const downloadTemplate = useDownloadTagAssignmentTemplate()
 
-  const validateFile = useCallback(
-    (file: File): string | null => {
-      const lower = file.name.toLowerCase()
-      if (!(lower.endsWith('.csv') || lower.endsWith('.xlsx'))) {
-        return t(`${p}.errors.onlyCsvOrXlsx`, 'Only CSV or Excel (.xlsx) files are accepted.')
-      }
-      if (file.size > MAX_FILE_SIZE) {
-        return t(`${p}.errors.fileTooLarge`, {
-          defaultValue: 'File too large ({{size}} MB). Maximum is 10 MB.',
-          size: (file.size / (1024 * 1024)).toFixed(1),
-        })
-      }
-      return null
-    },
-    [t, p]
-  )
-
-  const handleDrag = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true)
-    } else if (e.type === 'dragleave') {
-      setDragActive(false)
-    }
-  }, [])
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault()
-      e.stopPropagation()
-      setDragActive(false)
-      const file = e.dataTransfer.files?.[0]
-      if (!file) return
-      const error = validateFile(file)
-      if (error) {
-        toast.error(error)
-        return
-      }
-      onFileSelected(file)
-    },
-    [onFileSelected, validateFile]
-  )
-
-  const handleFileChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0]
-      if (file) {
-        const error = validateFile(file)
-        if (error) {
-          toast.error(error)
-        } else {
-          onFileSelected(file)
-        }
-      }
-      if (inputRef.current) {
-        inputRef.current.value = ''
-      }
-    },
-    [onFileSelected, validateFile]
-  )
+  // Shared with the contact-tag upload panel: the accepted extensions and the
+  // size limit are one rule, so they live in one place.
+  const { dragActive, handleDrag, handleDrop, handleFileChange } = useFileDropzone({
+    accept: ACCEPTED_EXTENSIONS,
+    maxBytes: MAX_FILE_SIZE,
+    onFileSelected,
+    errorScope: p,
+  })
 
   return (
     <div className="space-y-4">

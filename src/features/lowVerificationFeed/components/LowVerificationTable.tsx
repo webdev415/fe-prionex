@@ -22,9 +22,9 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { DataTable, type Column } from '@/components/ui/DataTable'
+import { formatCalendarDay } from '@/lib/calendarDay'
 import { formatNumber } from '@/lib/localeFormat'
 import type { LowVerificationFeedRow } from '../types'
-import { formatCalendarDay } from '../utils/calendarDay'
 
 export interface LowVerificationTableProps {
   rows: LowVerificationFeedRow[]

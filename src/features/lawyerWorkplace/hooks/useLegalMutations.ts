@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { isAxiosError } from 'axios'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { taskApi } from '@/features/clients/api/taskApi'
@@ -390,6 +391,7 @@ export function useCreateLegalKanbanTask() {
 }
 
 export function useUploadIncomingLegalDocument() {
+  const { t } = useTranslation('common')
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -404,7 +406,20 @@ export function useUploadIncomingLegalDocument() {
       summary?: string | null
     }) => legalApi.uploadIncomingDocument(payload),
     onSuccess: () => invalidateLegalDocuments(queryClient),
-    onError: (error) => toast.error(getErrorMessage(error)),
+    onError: (error) => {
+      // nginx rejects oversized uploads with a 413 whose body is raw HTML —
+      // getErrorMessage would toast that markup. Translate it for the lawyer.
+      if (isAxiosError(error) && error.response?.status === 413) {
+        toast.error(
+          t(
+            'pages.lawyerWorkplace.documents.modals.incoming.fileTooLarge',
+            'Файл завеликий. Ліміт — 50 МБ'
+          )
+        )
+        return
+      }
+      toast.error(getErrorMessage(error))
+    },
   })
 }
 

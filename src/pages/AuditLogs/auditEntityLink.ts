@@ -108,6 +108,8 @@ const CLIENT_LINK_ACTIONS = new Set<string>([
   'client.rr.disconnected',
   'client.rr.status_changed',
   'client.rr.overpayment_recorded',
+  'client.rr.draft_created',
+  'client.rr.draft_auto_deleted',
   // client.task.* — resource_id = the client
   'client.task.created',
   'client.task.updated',
@@ -307,6 +309,16 @@ const AUDIT_LINK_RULES: LinkRule[] = [
     match: (l) => l.entity_type === 'scoring_config',
     to: () => '/dashboard/system-settings/scoring-configuration/history',
     permission: PERMISSIONS.SCORING_CONFIG.VIEW_HISTORY,
+  },
+  // Loan closing coefficient ranges → the Repayment Configuration page, which
+  // hosts the "Coefficient ranges" section. There is no per-range page, so the
+  // link goes to the section rather than the row. Gated on the route's own
+  // permission (VIEW), not manage_settings: a viewer who can open the page
+  // should get the link even if they cannot edit the ranges.
+  {
+    match: (l) => l.entity_type === 'loan_coefficient_range',
+    to: () => '/dashboard/system-settings/repayment-configuration',
+    permission: PERMISSIONS.REPAYMENT_CONFIG.VIEW,
   },
   // Tag-domain events (tag / segment / tag_rule / tag_settings) → the tabbed
   // Tags page, deep-linked to the matching tab. All gate on TAGS.VIEW (the route
