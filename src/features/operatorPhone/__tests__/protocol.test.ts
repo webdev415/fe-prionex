@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  MSG_CALL_ANSWERED,
+  MSG_CALL_ENDED,
   MSG_READY_FOR_TOKEN,
   MSG_ROUTED_CALL,
   MSG_STATUS,
@@ -80,6 +82,25 @@ describe('parsePhoneMessage', () => {
           campaign_id: null,
         },
       })
+    })
+
+    it('keys the lifecycle messages on call_id', () => {
+      expect(parsePhoneMessage({ type: MSG_CALL_ANSWERED, call_id: 'c-1' })).toEqual({
+        type: MSG_CALL_ANSWERED,
+        call_id: 'c-1',
+      })
+      expect(parsePhoneMessage({ type: MSG_CALL_ENDED, call_id: 'c-1' })).toEqual({
+        type: MSG_CALL_ENDED,
+        call_id: 'c-1',
+      })
+    })
+
+    it('drops a lifecycle message with no call_id rather than guessing', () => {
+      // An unkeyed 'ended' would tear down whichever call is on screen, which
+      // could be the next one already.
+      expect(parsePhoneMessage({ type: MSG_CALL_ENDED })).toBeNull()
+      expect(parsePhoneMessage({ type: MSG_CALL_ENDED, call_id: '' })).toBeNull()
+      expect(parsePhoneMessage({ type: MSG_CALL_ANSWERED, call_id: 3 })).toBeNull()
     })
 
     it('rejects a call with no usable id', () => {

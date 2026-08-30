@@ -4,7 +4,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { OPERATOR_PHONE_ORIGIN } from '../constants'
 import { useOperatorPhone } from '../hooks/useOperatorPhone'
-import { MSG_ANSWER, MSG_ROUTED_CALL, MSG_SET_AUTO_ANSWER } from '../protocol'
+import {
+  MSG_ANSWER,
+  MSG_CALL_ANSWERED,
+  MSG_CALL_ENDED,
+  MSG_HANGUP,
+  MSG_ROUTED_CALL,
+  MSG_SET_AUTO_ANSWER,
+  MSG_STATUS,
+} from '../protocol'
 
 vi.mock('../api/operatorPhoneService', () => ({
   issuePhoneToken: vi.fn(),
@@ -69,31 +77,98 @@ describe('useOperatorPhone call control', () => {
     expect(result.current.routedCall).toBeNull()
   })
 
-  it('answers through the phone, which owns the SIP session', () => {
+  it('answers and hangs up through the phone, which owns the SIP session', () => {
     const { ref, postMessage } = makeRef()
     const { result } = renderHook(() => useOperatorPhone(ref))
 
-    act(() => result.current.answerCall())
-
-    expect(postMessage).toHaveBeenCalledWith({ type: MSG_ANSWER }, OPERATOR_PHONE_ORIGIN)
-  })
-
-  it('pushes the auto-connection preference down in both directions', () => {
-    const { ref, postMessage } = makeRef()
-    const { result } = renderHook(() => useOperatorPhone(ref))
-
-    act(() => result.current.setAutoAnswer(true))
-    act(() => result.current.setAutoAnswer(false))
+    act(() => result.current.answerCall('c-1'))
+    act(() => result.current.hangupCall('c-1'))
 
     expect(postMessage).toHaveBeenNthCalledWith(
       1,
-      { type: MSG_SET_AUTO_ANSWER, enabled: true },
+      { type: MSG_ANSWER, call_id: 'c-1' },
       OPERATOR_PHONE_ORIGIN
     )
+    // Without a hangup the leg outlives the CRM panel and the customer stays
+    // connected to an operator who has moved on to the next call.
     expect(postMessage).toHaveBeenNthCalledWith(
       2,
-      { type: MSG_SET_AUTO_ANSWER, enabled: false },
+      { type: MSG_HANGUP, call_id: 'c-1' },
       OPERATOR_PHONE_ORIGIN
+    )
+  })
+
+  it('confirms an active call only when the phone says the leg is up', async () => {
+    const { ref, contentWindow } = makeRef()
+    const { result } = renderHook(() => useOperatorPhone(ref))
+
+    post(OPERATOR_PHONE_ORIGIN, { type: MSG_ROUTED_CALL, call: CALL }, contentWindow)
+    await waitFor(() => expect(result.current.routedCall).toEqual(CALL))
+    expect(result.current.answeredCallId).toBeNull()
+
+    post(OPERATOR_PHONE_ORIGIN, { type: MSG_CALL_ANSWERED, call_id: 'c-1' }, contentWindow)
+    await waitFor(() => expect(result.current.answeredCallId).toBe('c-1'))
+  })
+
+  it('clears the call when the phone reports it ended', async () => {
+    // The remote party hanging up is the common case and the CRM has no other
+    // source for it — the aggressive dialer publishes nothing to its socket.
+    const { ref, contentWindow } = makeRef()
+    const { result } = renderHook(() => useOperatorPhone(ref))
+
+    post(OPERATOR_PHONE_ORIGIN, { type: MSG_ROUTED_CALL, call: CALL }, contentWindow)
+    await waitFor(() => expect(result.current.routedCall).not.toBeNull())
+
+    post(OPERATOR_PHONE_ORIGIN, { type: MSG_CALL_ENDED, call_id: 'c-1' }, contentWindow)
+    await waitFor(() => expect(result.current.routedCall).toBeNull())
+  })
+
+  it('ignores an end for a call that has already been superseded', async () => {
+    const { ref, contentWindow } = makeRef()
+    const { result } = renderHook(() => useOperatorPhone(ref))
+
+    post(OPERATOR_PHONE_ORIGIN, { type: MSG_ROUTED_CALL, call: CALL }, contentWindow)
+    await waitFor(() => expect(result.current.routedCall).not.toBeNull())
+
+    // A late teardown for the previous call must not close the current one.
+    post(OPERATOR_PHONE_ORIGIN, { type: MSG_CALL_ENDED, call_id: 'c-0' }, contentWindow)
+    expect(result.current.routedCall).toEqual(CALL)
+  })
+
+  it('re-establishes the auto-answer preference every time the phone is ready', async () => {
+    // A reload on either side of the frame otherwise leaves the phone acting on
+    // a stale setting while the CRM displays the current one.
+    const { ref, postMessage, contentWindow } = makeRef()
+    const { rerender } = renderHook(({ autoAnswer }) => useOperatorPhone(ref, { autoAnswer }), {
+      initialProps: { autoAnswer: true },
+    })
+
+    post(OPERATOR_PHONE_ORIGIN, { type: MSG_STATUS, status: 'ready' }, contentWindow)
+    await waitFor(() =>
+      expect(postMessage).toHaveBeenCalledWith(
+        { type: MSG_SET_AUTO_ANSWER, enabled: true },
+        OPERATOR_PHONE_ORIGIN
+      )
+    )
+
+    postMessage.mockClear()
+    rerender({ autoAnswer: false })
+    await waitFor(() =>
+      expect(postMessage).toHaveBeenCalledWith(
+        { type: MSG_SET_AUTO_ANSWER, enabled: false },
+        OPERATOR_PHONE_ORIGIN
+      )
+    )
+
+    // A re-registration re-pushes without the operator touching anything.
+    postMessage.mockClear()
+    post(OPERATOR_PHONE_ORIGIN, { type: MSG_STATUS, status: 'offline' }, contentWindow)
+    post(OPERATOR_PHONE_ORIGIN, { type: MSG_STATUS, status: 'ready' }, contentWindow)
+    await waitFor(() =>
+      expect(postMessage).toHaveBeenCalledWith(
+        { type: MSG_SET_AUTO_ANSWER, enabled: false },
+        OPERATOR_PHONE_ORIGIN
+      )
     )
   })
 })

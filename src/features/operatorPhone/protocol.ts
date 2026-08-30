@@ -18,6 +18,10 @@ export const MSG_LOGOUT = 'crm-operator-phone/logout'
 // auto-answer pill are unreachable — the operator acts here and we send it down.
 export const MSG_ANSWER = 'crm-operator-phone/answer'
 export const MSG_SET_AUTO_ANSWER = 'crm-operator-phone/set-auto-answer'
+// Teardown. The phone's own end-call button is off-screen when embedded, so
+// without this the SIP leg outlives the CRM's active-call panel and the customer
+// stays on a line nobody is attending.
+export const MSG_HANGUP = 'crm-operator-phone/hangup'
 
 // Phone iframe -> parent (CRM)
 export const MSG_READY_FOR_TOKEN = 'crm-operator-phone/ready-for-token'
@@ -27,6 +31,12 @@ export const MSG_TOKEN_EXPIRED = 'crm-operator-phone/token-expired'
 // Relayed up, this is the only way the CRM learns a call has arrived — there is
 // no server-side event for it under the aggressive driver.
 export const MSG_ROUTED_CALL = 'crm-operator-phone/routed-call'
+// The call's lifecycle as the phone observes it. `answered` confirms the leg is
+// actually up, so the CRM shows an active call on fact rather than on the
+// assumption its Accept arrived; `ended` is the only notice the CRM gets when
+// the customer hangs up first.
+export const MSG_CALL_ANSWERED = 'crm-operator-phone/call-answered'
+export const MSG_CALL_ENDED = 'crm-operator-phone/call-ended'
 
 export interface TokenMessage {
   type: typeof MSG_TOKEN
@@ -39,6 +49,13 @@ export interface LogoutMessage {
 
 export interface AnswerMessage {
   type: typeof MSG_ANSWER
+  /** The call the operator accepted; the phone ignores a mismatch. */
+  call_id: string
+}
+
+export interface HangupMessage {
+  type: typeof MSG_HANGUP
+  call_id: string
 }
 
 export interface SetAutoAnswerMessage {
@@ -50,6 +67,7 @@ export type ParentToPhoneMessage =
   | TokenMessage
   | LogoutMessage
   | AnswerMessage
+  | HangupMessage
   | SetAutoAnswerMessage
 
 export interface ReadyForTokenMessage {
@@ -80,11 +98,23 @@ export interface RoutedCallMessage {
   call: RoutedCallPayload
 }
 
+export interface CallAnsweredMessage {
+  type: typeof MSG_CALL_ANSWERED
+  call_id: string
+}
+
+export interface CallEndedMessage {
+  type: typeof MSG_CALL_ENDED
+  call_id: string
+}
+
 export type PhoneToParentMessage =
   | ReadyForTokenMessage
   | StatusMessage
   | TokenExpiredMessage
   | RoutedCallMessage
+  | CallAnsweredMessage
+  | CallEndedMessage
 
 /** Narrow an untrusted postMessage payload to one of our phone->parent messages. */
 export function parsePhoneMessage(data: unknown): PhoneToParentMessage | null {
@@ -110,6 +140,13 @@ export function parsePhoneMessage(data: unknown): PhoneToParentMessage | null {
         campaign_id: num(c.campaign_id),
       },
     }
+  }
+  if (type === MSG_CALL_ANSWERED || type === MSG_CALL_ENDED) {
+    // Both key off call_id so a late message for a superseded call can be
+    // ignored rather than tearing down the call now on screen.
+    const callId = (data as { call_id?: unknown }).call_id
+    if (typeof callId !== 'string' || !callId) return null
+    return { type, call_id: callId }
   }
   if (type === MSG_STATUS) {
     const status = (data as { status?: unknown }).status

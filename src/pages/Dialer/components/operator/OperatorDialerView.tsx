@@ -30,7 +30,11 @@ export function OperatorDialerView() {
 
   const joinedQueueId = session?.queue_id ?? null
   const [selectedId, setSelectedId] = useState<number | null>(null)
-  const [autoConnect, setAutoConnect] = useState(false)
+  // Null means "not touched this session", so the operator's stored preference
+  // shows through. Derived rather than copied into state on load: a reload while
+  // joined must not display "off" while the phone is still answering calls.
+  const [autoConnectOverride, setAutoConnect] = useState<boolean | null>(null)
+  const autoConnect = autoConnectOverride ?? session?.auto_connect ?? false
   const [acceptedCallId, setAcceptedCallId] = useState<string | null>(null)
 
   const {
@@ -44,12 +48,24 @@ export function OperatorDialerView() {
     status: phoneStatus,
     aor: phoneAor,
     routedCall: phoneRoutedCall,
+    answeredCallId,
     answerCall,
-    setAutoAnswer,
+    hangupCall,
     clearRoutedCall: clearPhoneRoutedCall,
-  } = useOperatorPhone(phoneFrameRef)
+  } = useOperatorPhone(phoneFrameRef, { autoAnswer: autoConnect })
 
-  const activeId = selectedId ?? joinedQueueId
+  // The call belongs to the queue the operator joined, never to whichever one
+  // they happen to be browsing.
+  const joinedCampaign = useMemo(
+    () => campaigns?.find((c) => c.id === joinedQueueId) ?? null,
+    [campaigns, joinedQueueId]
+  )
+
+  // A live call pins the view to the joined campaign. With auto-answer pushed
+  // down, the phone can connect the operator to a customer while the CRM is
+  // rendering another campaign's stats and no call UI at all.
+  const hasCall = socketRoutedCall != null || phoneRoutedCall != null
+  const activeId = hasCall && joinedQueueId != null ? joinedQueueId : (selectedId ?? joinedQueueId)
   const activeCampaign = useMemo(
     () => campaigns?.find((c) => c.id === activeId) ?? null,
     [campaigns, activeId]
@@ -69,34 +85,43 @@ export function OperatorDialerView() {
       client_id: phoneRoutedCall.client_id ?? 0,
       client_name: phoneRoutedCall.client_name ?? '',
       phone: phoneRoutedCall.phone ?? '',
-      line_type: activeCampaign?.telephony_type ?? 'white',
+      line_type: joinedCampaign?.telephony_type ?? 'white',
       started_at: new Date().toISOString(),
     }
-  }, [socketRoutedCall, phoneRoutedCall, activeCampaign?.telephony_type])
+  }, [socketRoutedCall, phoneRoutedCall, joinedCampaign?.telephony_type])
 
   const clearRoutedCall = useCallback(() => {
     clearSocketRoutedCall()
     clearPhoneRoutedCall()
   }, [clearSocketRoutedCall, clearPhoneRoutedCall])
 
-  // The operator's preference has to reach the phone, which is what actually
-  // answers the SIP session — local state alone would leave auto-connect on in
-  // the UI and the call ringing unanswered.
-  const applyAutoConnect = useCallback(
-    (enabled: boolean) => {
-      setAutoConnect(enabled)
-      setAutoAnswer(enabled)
-    },
-    [setAutoAnswer]
-  )
+  // True when this call reached us via the phone relay rather than the CRM
+  // socket. The two paths confirm differently: the phone reports when the leg
+  // is actually up, the fake engine reports nothing, so only the former can be
+  // shown as connected on fact rather than on assumption.
+  const isPhoneRoutedCall = socketRoutedCall == null && phoneRoutedCall != null
+
+  // The queue's own accept_mode outranks the operator's preference. On 'auto'
+  // the gateway bridges the customer with no chance to decline, so an Accept
+  // prompt would be shown for a call the customer is already talking into.
+  const queueAutoAnswers = joinedCampaign?.answer_mode === 'auto'
 
   const handleAccept = useCallback(() => {
     if (!routedCall) return
-    setAcceptedCallId(routedCall.call_id)
-    answerCall()
-  }, [routedCall, answerCall])
+    // Optimistic only on the socket path, which has no confirmation to wait for.
+    if (!isPhoneRoutedCall) setAcceptedCallId(routedCall.call_id)
+    answerCall(routedCall.call_id)
+  }, [routedCall, answerCall, isPhoneRoutedCall])
 
-  const isCallActive = routedCall != null && (autoConnect || acceptedCallId === routedCall.call_id)
+  const isCallActive =
+    routedCall != null &&
+    (queueAutoAnswers ||
+      (isPhoneRoutedCall
+        ? // The phone said the leg is up. Accept alone is not enough: the
+          // message can be dropped (frame still loading, no live session) and
+          // the panel would then be timing a call nobody answered.
+          answeredCallId === routedCall.call_id
+        : autoConnect || acceptedCallId === routedCall.call_id))
 
   const queueCompleteNotified = useRef(false)
   useEffect(() => {
@@ -111,7 +136,6 @@ export function OperatorDialerView() {
     if (!activeCampaign) return
     try {
       await joinMutation.mutateAsync({ queueId: activeCampaign.id, autoConnect })
-      setAutoAnswer(autoConnect)
       toast.success(t('dialer.operator.joinedToast', 'Joined the dialer'))
     } catch {
       void 0
@@ -120,6 +144,9 @@ export function OperatorDialerView() {
 
   const handleLeave = async () => {
     try {
+      // Leaving with a live leg would strand the customer on an unattended
+      // line, so drop it first rather than only closing the CRM's view of it.
+      if (routedCall && isCallActive) hangupCall(routedCall.call_id)
       await leaveMutation.mutateAsync()
       setAcceptedCallId(null)
       toast.success(t('dialer.operator.leftToast', 'Left the dialer'))
@@ -129,6 +156,9 @@ export function OperatorDialerView() {
   }
 
   const handleHangup = () => {
+    // The phone owns the SIP session; without this the leg survives into
+    // wrap-up and the operator is offered the next call over a live one.
+    if (routedCall) hangupCall(routedCall.call_id)
     setAcceptedCallId(null)
     clearRoutedCall()
   }
@@ -196,7 +226,7 @@ export function OperatorDialerView() {
                   routedCall={routedCall!}
                   campaignName={activeCampaign.name}
                   autoConnect={autoConnect}
-                  onToggleAutoConnect={applyAutoConnect}
+                  onToggleAutoConnect={setAutoConnect}
                   onAccept={handleAccept}
                   onLeave={handleLeave}
                   leaving={leaveMutation.isPending}
@@ -208,7 +238,8 @@ export function OperatorDialerView() {
                   campaignName={activeCampaign.name}
                   waitTimeSeconds={activeCampaign.wait_time_seconds ?? 8}
                   autoConnect={autoConnect}
-                  onToggleAutoConnect={applyAutoConnect}
+                  hideAutoConnect={queueAutoAnswers}
+                  onToggleAutoConnect={setAutoConnect}
                   onLeave={handleLeave}
                   leaving={leaveMutation.isPending}
                   onHangup={handleHangup}
@@ -234,12 +265,17 @@ export function OperatorDialerView() {
                     </div>
                     {isJoinedHere ? (
                       <div className="flex flex-wrap items-center gap-2">
-                        <ToggleChip
-                          active={autoConnect}
-                          onClick={() => applyAutoConnect(!autoConnect)}
-                        >
-                          {t('dialer.call.autoConnection', 'Auto-connection')}
-                        </ToggleChip>
+                        {/* On an auto-accept queue the gateway bridges the
+                            customer regardless, so the toggle would promise
+                            control the operator does not have. */}
+                        {!queueAutoAnswers && (
+                          <ToggleChip
+                            active={autoConnect}
+                            onClick={() => setAutoConnect(!autoConnect)}
+                          >
+                            {t('dialer.call.autoConnection', 'Auto-connection')}
+                          </ToggleChip>
+                        )}
                         <Button
                           variant="secondary"
                           size="sm"

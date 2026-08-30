@@ -119,7 +119,10 @@
       "chainStepLabel": "Step {{step}} - Collection: {{label}}",
       "chainStepCreditLabel": "Step 9 - Collection: Credit *",
       "chainContinue": "Continue",
-      "chainDemoNotice": "This is a demo chain — no data was saved."
+      "chainDemoNotice": "This is a demo chain — no data was saved.",
+      "noClientInteraction": "This number was dialed without client details, so an interaction cannot be logged against a client record.",
+      "noClientChain": "A TA chain needs a client record. None is attached to this number.",
+      "unknownClient": "Unknown contact"
     },
     "accessGroup": {
       "all_groups": "All groups",

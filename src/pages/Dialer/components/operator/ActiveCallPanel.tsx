@@ -16,6 +16,12 @@ interface ActiveCallPanelProps {
   campaignName: string
   waitTimeSeconds: number
   autoConnect: boolean
+  /**
+   * Hides the per-operator toggle. On an accept_mode 'auto' queue the gateway
+   * bridges the customer regardless, so offering it would promise control the
+   * operator does not have.
+   */
+  hideAutoConnect?: boolean
   onToggleAutoConnect: (value: boolean) => void
   onLeave: () => void
   leaving?: boolean
@@ -28,11 +34,21 @@ function fmtClock(totalSeconds: number): string {
   return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
 }
 
+/** Stands in for a client-bound section when the call has no client record. */
+function NoClientNotice({ text }: { text: string }) {
+  return (
+    <div className="border-border text-muted-foreground rounded-lg border border-dashed p-4 text-sm">
+      {text}
+    </div>
+  )
+}
+
 export function ActiveCallPanel({
   routedCall,
   campaignName,
   waitTimeSeconds,
   autoConnect,
+  hideAutoConnect = false,
   onToggleAutoConnect,
   onLeave,
   leaving,
@@ -44,6 +60,13 @@ export function ActiveCallPanel({
   const [nowMs, setNowMs] = useState(() => Date.now())
   const [wrapRemaining, setWrapRemaining] = useState(waitTimeSeconds)
   const [infoOpen, setInfoOpen] = useState(false)
+
+  // A dial-list number can arrive with no client attached. The client-bound
+  // sections are hidden rather than fed a placeholder id: an interaction saved
+  // against client 0 posts to /clients/0/interactions and fails, which reads to
+  // the operator as a broken Save button rather than as missing data.
+  const clientId = routedCall.client_id
+  const clientName = routedCall.client_name ?? ''
 
   useEffect(() => {
     if (phase !== 'active') return
@@ -93,9 +116,11 @@ export function ActiveCallPanel({
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <ToggleChip active={autoConnect} onClick={() => onToggleAutoConnect(!autoConnect)}>
-            {t('dialer.call.autoConnection', 'Auto-connection')}
-          </ToggleChip>
+          {!hideAutoConnect && (
+            <ToggleChip active={autoConnect} onClick={() => onToggleAutoConnect(!autoConnect)}>
+              {t('dialer.call.autoConnection', 'Auto-connection')}
+            </ToggleChip>
+          )}
           <Button
             variant="secondary"
             size="sm"
@@ -141,11 +166,20 @@ export function ActiveCallPanel({
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[3fr_5fr]">
         <div className="flex flex-col gap-4">
-          <CallInteractionForm
-            clientId={routedCall.client_id}
-            clientName={routedCall.client_name}
-            phone={routedCall.phone}
-          />
+          {clientId != null ? (
+            <CallInteractionForm
+              clientId={clientId}
+              clientName={clientName}
+              phone={routedCall.phone}
+            />
+          ) : (
+            <NoClientNotice
+              text={t(
+                'dialer.call.noClientInteraction',
+                'This number was dialed without client details, so an interaction cannot be logged against a client record.'
+              )}
+            />
+          )}
         </div>
 
         <div className="border-border border-t pt-4 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-4">
@@ -153,32 +187,45 @@ export function ActiveCallPanel({
             <p className="text-foreground text-sm font-semibold">
               {t('dialer.call.taChain', 'TA Chain')}
             </p>
-            <button
-              type="button"
-              onClick={() => setInfoOpen(true)}
-              className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs font-medium transition-colors"
-            >
-              <Icons.User02 size={14} />
-              {t('dialer.call.viewClient', 'View Client')}
-              <Icons.ArrowRight02 size={16} />
-            </button>
+            {clientId != null && (
+              <button
+                type="button"
+                onClick={() => setInfoOpen(true)}
+                className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs font-medium transition-colors"
+              >
+                <Icons.User02 size={14} />
+                {t('dialer.call.viewClient', 'View Client')}
+                <Icons.ArrowRight02 size={16} />
+              </button>
+            )}
           </div>
-          <ChainExecutor
-            clientId={routedCall.client_id}
-            clientName={routedCall.client_name}
-            contactSource="client"
-            prefilledPhone={routedCall.phone}
-          />
+          {clientId != null ? (
+            <ChainExecutor
+              clientId={clientId}
+              clientName={clientName}
+              contactSource="client"
+              prefilledPhone={routedCall.phone}
+            />
+          ) : (
+            <NoClientNotice
+              text={t(
+                'dialer.call.noClientChain',
+                'A TA chain needs a client record. None is attached to this number.'
+              )}
+            />
+          )}
         </div>
       </div>
 
-      <ClientInfoPopup
-        open={infoOpen}
-        onClose={() => setInfoOpen(false)}
-        clientId={routedCall.client_id}
-        clientName={routedCall.client_name}
-        phone={routedCall.phone}
-      />
+      {clientId != null && (
+        <ClientInfoPopup
+          open={infoOpen}
+          onClose={() => setInfoOpen(false)}
+          clientId={clientId}
+          clientName={clientName}
+          phone={routedCall.phone}
+        />
+      )}
     </section>
   )
 }
