@@ -30,6 +30,28 @@ export const PERMISSIONS = {
   },
 
   /**
+   * Credit Module Category (WS-20)
+   * Раздел кредитного модуля: заявки, решения, кредиты, параметры.
+   * Имена совпадают с `x-required-permission` контракта credit-module —
+   * когда роли появятся в auth-service, переименований не потребуется.
+   * До WS-20 бэкенд их ещё не выдаёт: пункт меню и маршруты используют
+   * mode 'any' вместе с системным правом, чтобы раздел был доступен
+   * администратору на этапе интеграции.
+   */
+  CREDIT: {
+    APPLICATIONS_VIEW: 'credit.applications.read',
+    APPLICATIONS_WRITE: 'credit.applications.write',
+    DECISIONS_DECIDE: 'credit.decisions.decide',
+    DOCUMENTS_VIEW: 'credit.documents.read',
+    DOCUMENTS_GENERATE: 'credit.documents.generate',
+    LOANS_VIEW: 'credit.loans.read',
+    PARAMETERS_VIEW: 'credit.parameters.read',
+    PARAMETERS_PROPOSE: 'credit.parameters.propose',
+    PARAMETERS_APPROVE: 'credit.parameters.approve',
+    PRODUCTS_VIEW: 'credit.products.read',
+  },
+
+  /**
    * Write-offs Category (4 permissions, KAN-245)
    * Controls access to the per-accrual-type debt write-off CRUD.
    * Seeded by auth migration 028.
@@ -484,6 +506,18 @@ export const PERMISSION_CATEGORIES = {
  * Permission descriptions for display in UI
  */
 export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
+  // Credit module (WS-20)
+  'credit.applications.read': 'View credit applications and their cards',
+  'credit.applications.write': 'Create and edit credit applications on behalf of a client',
+  'credit.decisions.decide': 'Make a manual underwriting decision on an application',
+  'credit.documents.read': 'View credit application and loan documents',
+  'credit.documents.generate': 'Generate credit documents (agreement, schedule, disclosures)',
+  'credit.loans.read': 'View loans, schedules and the ledger',
+  'credit.parameters.read': 'View the decision-engine parameter registry',
+  'credit.parameters.propose': 'Propose a change to a decision-engine parameter',
+  'credit.parameters.approve': 'Approve a proposed parameter change (second approver, UW-04)',
+  'credit.products.read': 'View the credit product catalogue and versions',
+
   // Clients
   view_clients: 'View client data and information',
   view_full_client_data: 'View unmasked client PII (name, phone, TIN) in dashboards',

@@ -860,6 +860,54 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         badge: legalUnprocessedCount > 0 ? legalUnprocessedCount : undefined,
       },
       {
+        // Кредитный модуль. До ролей WS-20 в auth-service прав credit.* ещё
+        // нет — пускаем и по системному праву, иначе раздел не увидит даже
+        // администратор, который его принимает.
+        path: '/dashboard/credit',
+        icon: 'transaction-history',
+        label: t('navigation.creditModule', 'Credit Module'),
+        requiredPermissions: [
+          PERMISSIONS.CREDIT.APPLICATIONS_VIEW,
+          PERMISSIONS.CREDIT.LOANS_VIEW,
+          PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+        ],
+        mode: 'any' as const,
+        subItems: [
+          {
+            path: '/dashboard/credit/applications',
+            label: t('navigation.creditApplications', 'Applications'),
+            icon: 'file-01',
+            requiredPermissions: [
+              PERMISSIONS.CREDIT.APPLICATIONS_VIEW,
+              PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+            ],
+            mode: 'any' as const,
+          },
+          {
+            path: '/dashboard/credit/loans',
+            label: t('navigation.creditLoans', 'Loans'),
+            icon: 'transaction-history',
+            requiredPermissions: [
+              PERMISSIONS.CREDIT.LOANS_VIEW,
+              PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+            ],
+            mode: 'any' as const,
+          },
+          {
+            path: '/dashboard/credit/settings',
+            label: t('navigation.creditSettings', 'Settings'),
+            icon: 'setting-07',
+            requiredPermissions: [
+              PERMISSIONS.CREDIT.PARAMETERS_VIEW,
+              PERMISSIONS.CREDIT.PRODUCTS_VIEW,
+              PERMISSIONS.CREDIT.APPLICATIONS_VIEW,
+              PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+            ],
+            mode: 'any' as const,
+          },
+        ],
+      },
+      {
         path: '/dashboard/action-analysis',
         icon: 'analytics-01',
         label: t('navigation.actionAnalysis'),
