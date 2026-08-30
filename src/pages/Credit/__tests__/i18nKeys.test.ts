@@ -14,6 +14,7 @@
 import { describe, it, expect } from 'vitest'
 import en from '../../../../public/locales/en/common.json'
 import uk from '../../../../public/locales/uk/common.json'
+import { CREDIT_DYNAMIC_NAMESPACES } from '@/features/credit/api/enums'
 
 // Исходники читаем глобом Vite, а не `node:fs`: сборка проекта идёт без типов
 // Node, и `tsc -b` (то есть CI) на импорт `node:fs` падает.
@@ -56,6 +57,28 @@ describe('словари раздела «Кредитный модуль»', ()
       if (typeof lookup(uk, key) !== 'string') missing.uk.push(key)
     }
     expect(missing).toEqual({ en: [], uk: [] })
+  })
+
+  it('покрывают динамические ключи ЦЕЛИКОМ по перечислениям контракта', () => {
+    // Динамический ключ (`t(`credit.entryType.${entry.entry_type}`)`) статикой
+    // не виден, и полноту нельзя мерить стендом: приёмка нашла шесть типов
+    // проводок без строк — они рождаются командами кредита, а команды отвечают
+    // 501. Оператор увидел бы машинные имена в журнале ровно в день, когда
+    // команды заработают, и ни один прогон по стенду этого бы не поймал.
+    const missing: Record<string, string[]> = {}
+    for (const [namespace, values] of Object.entries(CREDIT_DYNAMIC_NAMESPACES)) {
+      for (const value of values) {
+        for (const [lang, dictionary] of [
+          ['en', en],
+          ['uk', uk],
+        ] as const) {
+          if (typeof lookup(dictionary, `credit.${namespace}.${value}`) !== 'string') {
+            ;(missing[lang] ??= []).push(`credit.${namespace}.${value}`)
+          }
+        }
+      }
+    }
+    expect(missing).toEqual({})
   })
 
   it('симметричны: ключ есть либо в обоих языках, либо ни в одном', () => {

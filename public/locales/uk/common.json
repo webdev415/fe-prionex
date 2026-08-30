@@ -11544,7 +11544,13 @@
       "payment_allocation": "Рознесення платежу",
       "reversal": "Сторнування",
       "cancellation": "Скасування",
-      "close": "Закриття"
+      "close": "Закриття",
+      "waiver": "Прощення",
+      "write_off": "Списання",
+      "interest_stop_shadow": "Нарахування в тіні (у борг не входить)",
+      "interest_stop_catchup": "Донарахування після зупинки",
+      "refund": "Повернення клієнту",
+      "charge_off": "Визнання збитку"
     },
     "caps": {
       "term_window_42_62_ok": "Строк у межах 42–62 днів",

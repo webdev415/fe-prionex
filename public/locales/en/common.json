@@ -11521,7 +11521,13 @@
       "payment_allocation": "Payment allocated",
       "reversal": "Reversal",
       "cancellation": "Cancellation",
-      "close": "Closure"
+      "close": "Closure",
+      "waiver": "Waiver",
+      "write_off": "Write-off",
+      "interest_stop_shadow": "Shadow accrual (not added to debt)",
+      "interest_stop_catchup": "Catch-up accrual after stop",
+      "refund": "Refund to client",
+      "charge_off": "Charge-off"
     },
     "caps": {
       "term_window_42_62_ok": "Term within 42–62 days",
