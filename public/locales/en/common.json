@@ -6621,7 +6621,12 @@
         },
         "email": "E-mail",
         "dateOfBirthWithAge": "{{date}} ({{age}} years)",
-        "closingCoefficientLabel": "Loan closing coefficient"
+        "closingCoefficientLabel": "Loan closing coefficient",
+        "easypayMethods": {
+          "card": "Card",
+          "google_pay": "Google Pay",
+          "apple_pay": "Apple Pay"
+        }
       },
       "debtSummary": {
         "title": "Debt Summary",
@@ -9231,6 +9236,7 @@
         "eventInformation": "Event Information",
         "changes": "Changes",
         "details": "Details",
+        "reason": "Reason",
         "requestInformation": "Request Information",
         "timestamp": "Timestamp",
         "user": "User",

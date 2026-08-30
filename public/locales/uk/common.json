@@ -5931,7 +5931,12 @@
         "connectRRError": "Не вдалося підключити реструктуризацію",
         "email": "Електронна пошта",
         "dateOfBirthWithAge": "{{date}} ({{age}} років)",
-        "closingCoefficientLabel": "Коефіцієнт закриття позики"
+        "closingCoefficientLabel": "Коефіцієнт закриття позики",
+        "easypayMethods": {
+          "card": "Картка",
+          "google_pay": "Google Pay",
+          "apple_pay": "Apple Pay"
+        }
       },
       "modals": {
         "addNote": {
@@ -8578,6 +8583,7 @@
         "eventInformation": "Інформація про подію",
         "changes": "Зміни",
         "details": "Деталі",
+        "reason": "Причина",
         "requestInformation": "Інформація про запит",
         "timestamp": "Часова мітка",
         "user": "Користувач",
