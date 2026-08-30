@@ -243,3 +243,46 @@ describe('CreditLoanDetailPage → платежи', () => {
     expect(screen.queryByText(/paymentsReversedHint/)).not.toBeInTheDocument()
   })
 })
+
+describe('CreditLoanDetailPage → журнал проводок', () => {
+  const entry = (over: Record<string, unknown>) => ({
+    entry_id: `e-${String(over.seq)}`,
+    seq: 1,
+    entry_type: 'reversal',
+    bucket: 'principal',
+    amount_minor: 3_400,
+    currency: 'CAD',
+    business_date: '2026-09-26',
+    posted_at: '2026-09-26T10:00:00Z',
+    ...over,
+  })
+
+  function renderJournal(items: Array<ReturnType<typeof entry>>) {
+    vi.clearAllMocks()
+    mockHooks(PAYMENTS)
+    vi.mocked(hooks.useCreditLoanJournal).mockReturnValue({
+      ...idle,
+      data: { items, total: items.length },
+    } as never)
+    render(
+      <MemoryRouter>
+        <CreditLoanDetailPage />
+      </MemoryRouter>
+    )
+    fireEvent.click(screen.getByRole('tab', { name: /Журнал|Journal/i }))
+  }
+
+  it('не подписывает сторно словом «сторно» дважды', () => {
+    // Тип уже называет проводку сторнированием; пометка рядом давала
+    // «Сторнування (сторно)» — оператор читает это как две разные вещи.
+    renderJournal([entry({ seq: 2, reversal_of_entry_id: 'e-1' })])
+    expect(screen.queryByText(/card\.isReversal/)).not.toBeInTheDocument()
+  })
+
+  it('но помечает компенсирующую проводку, если по типу этого не видно', () => {
+    // `cancellation` со ссылкой на оригинал — тоже компенсирующая, и без
+    // пометки её не отличить от самостоятельной отмены.
+    renderJournal([entry({ seq: 3, entry_type: 'cancellation', reversal_of_entry_id: 'e-1' })])
+    expect(screen.getByText(/card\.isReversal/)).toBeInTheDocument()
+  })
+})

@@ -919,7 +919,11 @@ function LoanJournal({
         <tbody>
           {visible.map((entry) => {
             const isReversed = reversed.has(entry.entry_id)
-            const isReversal = Boolean(entry.reversal_of_entry_id)
+            // Пометка «(сторно)» нужна там, где по типу это не видно:
+            // компенсирующей может быть и `cancellation`. У самого
+            // `reversal` она давала тавтологию «Сторнування (сторно)».
+            const isReversal =
+              Boolean(entry.reversal_of_entry_id) && entry.entry_type !== 'reversal'
             return (
               <tr
                 key={entry.entry_id}
