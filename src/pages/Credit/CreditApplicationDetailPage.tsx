@@ -20,10 +20,7 @@ import {
 } from '@/features/credit/hooks/useCredit'
 import type { CreditApiError } from '@/features/credit/api/creditApi'
 import { normalizeDraft } from '@/features/credit/api/draft'
-import type {
-  CreditApplicationDetail,
-  CreditDecisionOutcome,
-} from '@/features/credit/api/types'
+import type { CreditApplicationDetail, CreditDecisionOutcome } from '@/features/credit/api/types'
 import { CreditStatusBadge } from './components/CreditStatusBadge'
 import { CreditDocumentOpenButton } from './components/CreditDocumentOpenButton'
 import { CreditDraftBlocks } from './components/CreditDraftBlocks'

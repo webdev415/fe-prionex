@@ -11651,6 +11651,10 @@
     "filters": {
       "dpdFrom": "Days past due",
       "any": "Any"
+    },
+    "unavailable": {
+      "title": "The credit module is not deployed on this stand",
+      "hint": "The section is in place, but the credit service is not routed here yet: on stage 1 it runs outside Kong. Locally it is served on localhost:8020; on the dev server the route /api/v1/credit will appear together with the module deployment."
     }
   }
 }

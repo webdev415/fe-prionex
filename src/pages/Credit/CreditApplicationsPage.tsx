@@ -37,6 +37,7 @@ import {
 import { CreditStatusBadge } from './components/CreditStatusBadge'
 import { CreditMetricCards } from './components/CreditMetricCards'
 import { CreditStandBanner } from './components/CreditStandBanner'
+import { CreditModuleUnavailable } from './components/CreditModuleUnavailable'
 import { formatDateTime } from '@/lib/formatters'
 
 /** Строка таблицы = строка контракта + `id`, которого требует DataTable. */
@@ -67,7 +68,7 @@ export function CreditApplicationsPage() {
     [statusParam]
   )
 
-  const { data: overview } = useCreditOverview()
+  const { data: overview, error: overviewError } = useCreditOverview()
   const {
     data: pageData,
     isLoading,
@@ -165,6 +166,11 @@ export function CreditApplicationsPage() {
       ),
     },
   ]
+
+  // Сводка не ответила — модуля на этом стенде нет: списки строить не из
+  // чего, а текст Kong («Request failed with status code 404») оператору
+  // ничего не объясняет.
+  if (overviewError) return <CreditModuleUnavailable error={overviewError} />
 
   return (
     <div className="p-6">
