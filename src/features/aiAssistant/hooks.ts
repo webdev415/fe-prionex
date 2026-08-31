@@ -1,7 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
+  createMemoryItem,
+  deleteMemoryItem,
+  getAssistantCapabilities,
   getConversation,
   getConversations,
+  getMemoryItems,
   markCitationStep,
   sendChatMessage,
   sendFeedback,
@@ -11,9 +15,15 @@ import {
   type AssistantConversationsFilters,
   type AssistantConversationSummary,
   type AssistantFeedbackRequest,
+  type AssistantCapabilities,
+  type AssistantExpertCapability,
+  type AssistantMemoryList,
   type AssistantMarkCitationRequest,
+  type CreateAssistantMemoryRequest,
   type SendChatMessageCallbacks,
 } from './api'
+import { EXPERT_CAPABILITY_OFF } from './api'
+import { useAuthStore } from '@/stores/authStore'
 
 export const aiAssistantKeys = {
   all: ['aiAssistant'] as const,
@@ -22,6 +32,18 @@ export const aiAssistantKeys = {
   conversations: (filters: AssistantConversationsFilters) =>
     [...aiAssistantKeys.all, 'conversations', filters] as const,
   conversation: (id: number) => [...aiAssistantKeys.all, 'conversation', id] as const,
+  /** Персональная память сотрудника («Персоналізація»). */
+  memory: ['aiAssistant', 'memory'] as const,
+  /**
+   * Что доступно сотруднику в окне ассистента (экспертный режим и его бюджет).
+   *
+   * Ключ намеренно ВНЕ префикса `aiAssistant`: каждый ход инвалидирует
+   * {@link aiAssistantKeys.all}, чтобы обновить списки диалогов, и под общим
+   * корнем capabilities перезапрашивались бы после каждого сообщения любого
+   * оператора — при том что меняются они разве что от экспертного хода
+   * (который инвалидирует их явно).
+   */
+  capabilities: ['aiAssistantCapabilities'] as const,
 }
 
 /**
@@ -45,6 +67,37 @@ export function useSendAssistantMessage() {
       queryClient.invalidateQueries({ queryKey: aiAssistantKeys.all })
     },
   })
+}
+
+/**
+ * Что доступно сотруднику в окне ассистента (сейчас — экспертный режим).
+ *
+ * Запрос не ретраится и никогда не «падает» наружу: бэкенд без этого маршрута
+ * (404), отказ по роли (403) или сеть означают одно — экспертного пункта в меню
+ * нет, остальное окно работает как прежде. `staleTime` минута: дневной остаток
+ * бюджета не обязан быть посекундно точным, а точку после хода двигает
+ * инвалидация в {@link useSendAssistantMessage}.
+ */
+export function useAssistantCapabilities() {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+
+  return useQuery<AssistantCapabilities>({
+    queryKey: aiAssistantKeys.capabilities,
+    queryFn: getAssistantCapabilities,
+    enabled: isAuthenticated,
+    retry: false,
+    staleTime: 60_000,
+  })
+}
+
+/**
+ * Экспертный режим текущего сотрудника — всегда конкретная форма, без
+ * `undefined` на стороне UI: пока идёт запрос и при любом отказе это
+ * {@link EXPERT_CAPABILITY_OFF}, то есть «пункта нет».
+ */
+export function useExpertCapability(): AssistantExpertCapability {
+  const { data } = useAssistantCapabilities()
+  return data?.expert ?? EXPERT_CAPABILITY_OFF
 }
 
 export function useAssistantConversations(
@@ -128,5 +181,68 @@ export function useSendFeedback() {
 export function useMarkCitation() {
   return useMutation({
     mutationFn: (payload: AssistantMarkCitationRequest) => markCitationStep(payload),
+  })
+}
+
+/**
+ * Персональная память ассистента для текущего сотрудника.
+ *
+ * `enabled` держит запрос выключенным, пока панель «Персоналізація» закрыта:
+ * сайдбар живёт на странице всегда, и лишний round-trip на каждом заходе в чат
+ * памяти не нужен.
+ */
+export function useAssistantMemory(enabled = true) {
+  return useQuery({
+    queryKey: aiAssistantKeys.memory,
+    queryFn: getMemoryItems,
+    enabled,
+    staleTime: 60_000,
+  })
+}
+
+export function useCreateAssistantMemory() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: CreateAssistantMemoryRequest) => createMemoryItem(payload),
+    onSuccess: () => {
+      // Сервер сам решает title/kind/source — забираем список целиком, а не
+      // дописываем в кеш ответ POST'а.
+      void queryClient.invalidateQueries({ queryKey: aiAssistantKeys.memory })
+    },
+  })
+}
+
+/**
+ * Удаление факта с оптимистичным обновлением и откатом — по образцу архивации
+ * диалогов ({@link useUpdateAssistantConversation}): строка исчезает сразу, а
+ * упавший DELETE возвращает прежний список (вызывающий показывает тост).
+ */
+export function useDeleteAssistantMemory() {
+  const queryClient = useQueryClient()
+  return useMutation<void, unknown, number, { previous?: AssistantMemoryList }>({
+    mutationFn: (id: number) => deleteMemoryItem(id),
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: aiAssistantKeys.memory })
+      const previous = queryClient.getQueryData<AssistantMemoryList>(aiAssistantKeys.memory)
+      if (previous) {
+        const items = previous.items.filter((item) => item.id !== id)
+        queryClient.setQueryData<AssistantMemoryList>(aiAssistantKeys.memory, {
+          // Потолок приходит от сервера и удалением не меняется — сохраняем его,
+          // иначе счётчик «N / потолок» мигает на каждое оптимистичное удаление.
+          ...previous,
+          items,
+          total: Math.max(0, previous.total - (previous.items.length - items.length)),
+        })
+      }
+      return { previous }
+    },
+    onError: (_error, _id, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(aiAssistantKeys.memory, context.previous)
+      }
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: aiAssistantKeys.memory })
+    },
   })
 }

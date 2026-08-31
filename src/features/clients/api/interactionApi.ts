@@ -44,6 +44,33 @@ export async function getClientInteractions(
 }
 
 /**
+ * File one interaction against several clients at once.
+ *
+ * One phone number can sit on several client cards, and a call reaching it is
+ * a single conversation that belongs on all of them. The write is one request
+ * so the operator gets one outcome: a per-client loop would make "saved on two
+ * of three" the normal failure, mid-call, with no way to tell which.
+ */
+export async function createInteractionsBulk(data: {
+  client_ids: number[]
+  type_id: number
+  subtype_id?: number
+  contact_type_id?: number
+  result_id?: number
+  interaction_date?: string
+  phone_used?: string
+  summary?: string
+  notes?: string
+  related_call_uuid?: string
+}): Promise<{ created: InteractionResponse[] }> {
+  const response = await api.post<{ created: InteractionResponse[] }>(
+    '/api/v1/interactions/bulk',
+    data
+  )
+  return response.data
+}
+
+/**
  * Create a new interaction.
  * direction and channel are auto-derived by the backend from type_id and subtype_id.
  */
@@ -171,6 +198,7 @@ export async function updateInteraction(data: {
 export const interactionApi = {
   getClientInteractions,
   createInteraction,
+  createInteractionsBulk,
   updateInteraction,
   getInteractionTypes,
   getInteractionSubtypes,

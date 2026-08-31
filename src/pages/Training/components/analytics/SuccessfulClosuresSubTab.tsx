@@ -12,6 +12,7 @@ import { usePromisesAndCallbacks } from '@/features/training/hooks/usePromisesAn
 import type { CallMonitoringPeriod, ClosureFilters, ClosureItem } from '@/features/training/types'
 import { AnalyticsMockTable } from './AnalyticsMockTable'
 import { AnalyticsKpiTile } from './AnalyticsKpiTile'
+import { AnalyticsTableOverlay } from './AnalyticsTableOverlay'
 import {
   ANALYTICS_TABLE_HEAD,
   ANALYTICS_TABLE_ROW,
@@ -150,12 +151,6 @@ export function SuccessfulClosuresSubTab() {
   const projectIdNum = activeProjectId ? Number(activeProjectId) : null
   const { data: operators = [] } = useOperators(projectIdNum)
 
-  const operatorIdByLabel = useMemo(() => {
-    const m = new Map<string, number>()
-    operators.forEach((op) => m.set(op.full_name, op.id))
-    return m
-  }, [operators])
-
   // The closures endpoint (payment-service) doesn't enrich operator_name, so we
   // resolve it from the project operator list by id — matching how the other
   // sub-tabs surface the operator name + avatar instead of a bare #id.
@@ -166,10 +161,15 @@ export function SuccessfulClosuresSubTab() {
   }, [operators])
 
   const userIds = useMemo<number[] | undefined>(() => {
+    // The select carries the operator id itself. Resolving it from
+    // `full_name` through a Map — as this did — fails silently in two ways: an
+    // unresolvable label yields `undefined`, which the BE reads as "every
+    // operator" rather than as an empty result, and two employees sharing a
+    // name collapse onto whichever id the Map kept last.
     if (operatorFilter === 'all') return undefined
-    const id = operatorIdByLabel.get(operatorFilter)
-    return id != null ? [id] : undefined
-  }, [operatorFilter, operatorIdByLabel])
+    const id = Number(operatorFilter)
+    return Number.isFinite(id) ? [id] : undefined
+  }, [operatorFilter])
 
   const backendPeriod = PERIOD_TO_BACKEND[period]
 
@@ -243,6 +243,10 @@ export function SuccessfulClosuresSubTab() {
   const rows = useMemo(() => closuresQuery.data?.items ?? [], [closuresQuery.data])
   const total = closuresQuery.data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
+  // keepPreviousData keeps the PREVIOUS filter's rows on screen while the new
+  // request is in flight — without an explicit indicator that reads as wrong
+  // data (KAN-1027/KAN-1029 UX follow-up). Dim + spinner until it settles.
+  const isRefetching = closuresQuery.isFetching && !closuresQuery.isLoading
   const statusOptions = useMemo(() => Array.from(new Set(rows.map((r) => r.status))), [rows])
   const filteredRows = useMemo(
     () => (statusFilter === 'all' ? rows : rows.filter((r) => r.status === statusFilter)),
@@ -391,7 +395,7 @@ export function SuccessfulClosuresSubTab() {
               {t('pages.training.closures.filters.allOperators', 'All operators')}
             </option>
             {operators.map((op) => (
-              <option key={op.id} value={op.full_name}>
+              <option key={op.id} value={String(op.id)}>
                 {op.full_name}
               </option>
             ))}
@@ -436,64 +440,77 @@ export function SuccessfulClosuresSubTab() {
         </button>
       </div>
 
-      <AnalyticsMockTable>
-        <thead className={ANALYTICS_TABLE_HEAD}>
-          <tr>
-            <th className={ANALYTICS_TABLE_TH}>
-              {t('pages.training.closures.cols.date', 'Closure Date')}
-            </th>
-            <th className={ANALYTICS_TABLE_TH}>
-              {t('pages.training.closures.cols.operator', 'Operator')}
-            </th>
-            <th className={ANALYTICS_TABLE_TH}>
-              {t('pages.training.closures.cols.client', 'Client')}
-            </th>
-            <th className={ANALYTICS_TABLE_TH}>{t('pages.training.closures.cols.deal', 'Deal')}</th>
-            <th className={ANALYTICS_TABLE_TH}>
-              {t('pages.training.closures.cols.amount', 'Payment Amount')}
-            </th>
-            <th className={ANALYTICS_TABLE_TH}>
-              {t('pages.training.closures.cols.confirmationDate', 'Confirmation Date')}
-            </th>
-            <th className={ANALYTICS_TABLE_TH}>
-              {t('pages.training.closures.cols.status', 'Status in CRM')}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {closuresQuery.isLoading ? (
+      <div className="relative" aria-busy={isRefetching}>
+        <AnalyticsMockTable>
+          <thead className={ANALYTICS_TABLE_HEAD}>
             <tr>
-              <td colSpan={7} className="px-4 py-6 text-center text-[11px] text-[#9CA3AF]">
-                {t('pages.training.closures.loading', 'Loading…')}
-              </td>
+              <th className={ANALYTICS_TABLE_TH}>
+                {t('pages.training.closures.cols.date', 'Closure Date')}
+              </th>
+              <th className={ANALYTICS_TABLE_TH}>
+                {t('pages.training.closures.cols.operator', 'Operator')}
+              </th>
+              <th className={ANALYTICS_TABLE_TH}>
+                {t('pages.training.closures.cols.client', 'Client')}
+              </th>
+              <th className={ANALYTICS_TABLE_TH}>
+                {t('pages.training.closures.cols.deal', 'Deal')}
+              </th>
+              <th className={ANALYTICS_TABLE_TH}>
+                {t('pages.training.closures.cols.amount', 'Payment Amount')}
+              </th>
+              <th className={ANALYTICS_TABLE_TH}>
+                {t('pages.training.closures.cols.confirmationDate', 'Confirmation Date')}
+              </th>
+              <th className={ANALYTICS_TABLE_TH}>
+                {t('pages.training.closures.cols.status', 'Status in CRM')}
+              </th>
             </tr>
-          ) : closuresQuery.isError ? (
-            <tr>
-              <td colSpan={7} className="px-4 py-6 text-center text-[11px] text-[#EF4444]">
-                {t('pages.training.closures.loadFailed', 'Failed to load closures. Please retry.')}
-              </td>
-            </tr>
-          ) : filteredRows.length === 0 ? (
-            <tr>
-              <td colSpan={7} className="px-4 py-6 text-center text-[11px] text-[#9CA3AF]">
-                {t('pages.training.closures.empty', 'No closures match the filters.')}
-              </td>
-            </tr>
-          ) : (
-            filteredRows.map((row, i) => (
-              <ClosureRow
-                key={`${row.client_id}-${row.payment_date}-${i}`}
-                row={row}
-                operatorName={
-                  row.operator_name ??
-                  (row.operator_id != null ? (operatorNameById.get(row.operator_id) ?? null) : null)
-                }
-                onOpenClient={() => navigate(`/dashboard/clients/${row.client_id}`)}
-              />
-            ))
-          )}
-        </tbody>
-      </AnalyticsMockTable>
+          </thead>
+          <tbody>
+            {closuresQuery.isLoading ? (
+              <tr>
+                <td colSpan={7} className="px-4 py-6 text-center text-[11px] text-[#9CA3AF]">
+                  {t('pages.training.closures.loading', 'Loading…')}
+                </td>
+              </tr>
+            ) : closuresQuery.isError ? (
+              <tr>
+                <td colSpan={7} className="px-4 py-6 text-center text-[11px] text-[#EF4444]">
+                  {t(
+                    'pages.training.closures.loadFailed',
+                    'Failed to load closures. Please retry.'
+                  )}
+                </td>
+              </tr>
+            ) : filteredRows.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-4 py-6 text-center text-[11px] text-[#9CA3AF]">
+                  {t(
+                    'pages.training.closures.empty',
+                    'No data for the selected filters in this period.'
+                  )}
+                </td>
+              </tr>
+            ) : (
+              filteredRows.map((row, i) => (
+                <ClosureRow
+                  key={`${row.client_id}-${row.payment_date}-${i}`}
+                  row={row}
+                  operatorName={
+                    row.operator_name ??
+                    (row.operator_id != null
+                      ? (operatorNameById.get(row.operator_id) ?? null)
+                      : null)
+                  }
+                  onOpenClient={() => navigate(`/dashboard/clients/${row.client_id}`)}
+                />
+              ))
+            )}
+          </tbody>
+        </AnalyticsMockTable>
+        <AnalyticsTableOverlay visible={isRefetching} />
+      </div>
 
       {statusFilter === 'all' && total > pageSize ? (
         <Pagination

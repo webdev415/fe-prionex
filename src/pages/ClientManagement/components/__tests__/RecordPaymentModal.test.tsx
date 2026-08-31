@@ -120,12 +120,11 @@ describe('RecordPaymentModal — Payment Type (KAN-507)', () => {
   })
 
   it.each([
-    [2, 'Violated'],
     [3, 'Cancelled'],
     [4, 'Completed'],
     [5, 'CompletedEarly'],
   ])(
-    'does NOT auto-prefill when the only RR has non-Connected status_id=%s (%s)',
+    'does NOT auto-prefill when the only RR has ineligible status_id=%s (%s)',
     (statusId, statusName) => {
       mockRrList.mockReturnValue([
         { id: 1, debt_id: 901, status_id: statusId, status_name: statusName },
@@ -181,7 +180,7 @@ describe('RecordPaymentModal — Payment Type (KAN-507)', () => {
     expect(screen.getByText('pages.training.filters.paymentTypes.full_payment')).toBeInTheDocument()
   })
 
-  it('clears a stale payment_by_rr when the picked debt loses its Connected RR', () => {
+  it('clears a stale payment_by_rr when the picked debt loses its eligible RR', () => {
     mockRrList.mockReturnValue([
       { id: 1, debt_id: 901, status_id: 1, status_name: 'Connected' },
     ] as RestructuringAgreementSummary[])
@@ -200,9 +199,10 @@ describe('RecordPaymentModal — Payment Type (KAN-507)', () => {
       screen.getByText('pages.training.filters.paymentTypes.payment_by_rr')
     ).toBeInTheDocument()
 
-    // RR list now reports the same debt with status_id=2 (Violated).
+    // RR list now reports the same debt with status_id=3 (Cancelled), which
+    // has its own reconnect mechanism and is not payable by RR.
     mockRrList.mockReturnValue([
-      { id: 1, debt_id: 901, status_id: 2, status_name: 'Violated' },
+      { id: 1, debt_id: 901, status_id: 3, status_name: 'Cancelled' },
     ] as RestructuringAgreementSummary[])
     rerender(
       <RecordPaymentModal
@@ -223,6 +223,68 @@ describe('RecordPaymentModal — Payment Type (KAN-507)', () => {
     expect(
       screen.getByText('pages.clients.modals.recordPayment.paymentTypePlaceholder')
     ).toBeInTheDocument()
+  })
+
+  // KAN-1013. A violated plan is exactly the one that needs a catch-up
+  // payment; offering the type only on Connected left it with no way back to
+  // Connected, so it just aged into Cancelled.
+  it('offers payment_by_rr when the picked debt has a Violated RR', () => {
+    mockRrList.mockReturnValue([
+      { id: 7, debt_id: 901, status_id: 2, status_name: 'Violated' },
+    ] as RestructuringAgreementSummary[])
+
+    renderModal()
+
+    expect(
+      screen.getByText('pages.training.filters.paymentTypes.payment_by_rr')
+    ).toBeInTheDocument()
+  })
+
+  it('submits the violated RR id so the backend can re-evaluate it', () => {
+    mockRrList.mockReturnValue([
+      { id: 7, debt_id: 901, status_id: 2, status_name: 'Violated' },
+    ] as RestructuringAgreementSummary[])
+    const { onSave } = renderModal()
+    fillAmount('1000')
+
+    const saveButton = screen
+      .getAllByRole('button')
+      .find((b) => /save/i.test(b.textContent ?? '')) as HTMLButtonElement
+    fireEvent.click(saveButton)
+
+    expect(onSave).toHaveBeenCalledTimes(1)
+    expect(onSave.mock.calls[0][0]).toMatchObject({
+      paymentType: 'payment_by_rr',
+      restructuringAgreementId: 7,
+    })
+  })
+
+  it('keeps a Connected RR winning over a violated one on the same debt', () => {
+    mockRrList.mockReturnValue([
+      { id: 7, debt_id: 901, status_id: 2, status_name: 'Violated' },
+      { id: 8, debt_id: 901, status_id: 1, status_name: 'Connected' },
+    ] as RestructuringAgreementSummary[])
+    const { onSave } = renderModal()
+    fillAmount('1000')
+
+    const saveButton = screen
+      .getAllByRole('button')
+      .find((b) => /save/i.test(b.textContent ?? '')) as HTMLButtonElement
+    fireEvent.click(saveButton)
+
+    expect(onSave.mock.calls[0][0].restructuringAgreementId).toBe(8)
+  })
+
+  it('treats an RR with no status as ineligible rather than payable', () => {
+    mockRrList.mockReturnValue([
+      { id: 9, debt_id: 901, status_id: null, status_name: null },
+    ] as RestructuringAgreementSummary[])
+
+    renderModal()
+
+    expect(
+      screen.queryByText('pages.training.filters.paymentTypes.payment_by_rr')
+    ).not.toBeInTheDocument()
   })
 
   it('blocks submit when Payment Type is empty', () => {

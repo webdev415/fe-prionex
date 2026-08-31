@@ -157,12 +157,12 @@ export function ConfigListEditor({
   return (
     <div className="space-y-3">
       <div>
-        <h4 className="text-sm font-medium text-gray-900">{title}</h4>
-        {description && <p className="mt-0.5 text-xs text-gray-500">{description}</p>}
+        <h4 className="text-foreground text-sm font-medium">{title}</h4>
+        {description && <p className="text-muted-foreground mt-0.5 text-xs">{description}</p>}
       </div>
 
       {/* Add new item */}
-      <div className="space-y-1.5 rounded-md border border-dashed border-gray-200 p-2">
+      <div className="border-border space-y-1.5 rounded-md border border-dashed p-2">
         <div className="flex items-center gap-2">
           <Input
             value={newValue}
@@ -206,9 +206,9 @@ export function ConfigListEditor({
       </div>
 
       {/* Items list */}
-      <div className="divide-y divide-gray-100 rounded-md border border-gray-200">
+      <div className="divide-border border-border divide-y rounded-md border">
         {items.length === 0 && (
-          <p className="px-3 py-4 text-center text-xs text-gray-400">
+          <p className="text-muted-foreground px-3 py-4 text-center text-xs">
             {t('pages.tags.settings.noItems', 'No items')}
           </p>
         )}
@@ -235,13 +235,13 @@ export function ConfigListEditor({
                   )}
                   <button
                     onClick={handleSaveEdit}
-                    className="flex h-6 w-6 items-center justify-center rounded text-green-600 hover:bg-green-50"
+                    className="text-success-600 hover:bg-success-50 flex h-6 w-6 items-center justify-center rounded"
                   >
                     <Icons.CheckmarkBadge02 size={14} strokeWidth={2} />
                   </button>
                   <button
                     onClick={handleCancelEdit}
-                    className="flex h-6 w-6 items-center justify-center rounded text-gray-400 hover:bg-gray-50"
+                    className="text-muted-foreground hover:bg-muted flex h-6 w-6 items-center justify-center rounded"
                   >
                     <Icons.Cancel01 size={14} strokeWidth={2} />
                   </button>
@@ -265,15 +265,15 @@ export function ConfigListEditor({
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <code className="flex-shrink-0 rounded bg-gray-50 px-1.5 py-0.5 text-xs text-gray-700">
+                <code className="bg-muted text-foreground flex-shrink-0 rounded px-1.5 py-0.5 text-xs">
                   {item.value}
                 </code>
-                <span className="min-w-0 flex-1 truncate text-xs text-gray-500">
+                <span className="text-muted-foreground min-w-0 flex-1 truncate text-xs">
                   {getDisplayLabel(item)}
                 </span>
                 <button
                   onClick={() => handleStartEdit(item)}
-                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-gray-400 hover:bg-gray-50 hover:text-gray-600"
+                  className="text-muted-foreground hover:bg-muted hover:text-foreground flex h-6 w-6 shrink-0 items-center justify-center rounded"
                 >
                   <Icons.PencilEdit size={12} strokeWidth={1.5} />
                 </button>
@@ -290,7 +290,7 @@ export function ConfigListEditor({
                       onRemove(item.value)
                     }
                   }}
-                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-500"
+                  className="text-muted-foreground hover:bg-error-50 hover:text-error-500 flex h-6 w-6 shrink-0 items-center justify-center rounded"
                 >
                   <Icons.Cancel01 size={12} strokeWidth={1.5} />
                 </button>

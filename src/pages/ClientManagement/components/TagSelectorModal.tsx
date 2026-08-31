@@ -37,6 +37,15 @@ interface TagSelectorModalProps {
   projectId: number
   open: boolean
   onClose: () => void
+  /**
+   * Called once, after the tag writes succeed, before the modal closes.
+   *
+   * A tag change can fire a "Tag change" chain trigger, which launches a chain
+   * asynchronously. The caller uses this to arm auto-open for THIS operator, the
+   * same way closing a debt does. Not called when nothing changed or the save
+   * failed, so an unchanged save never arms a pointless poll.
+   */
+  onTagsChanged?: () => void
 }
 
 export const TagSelectorModal = memo(function TagSelectorModal({
@@ -45,6 +54,7 @@ export const TagSelectorModal = memo(function TagSelectorModal({
   projectId,
   open,
   onClose,
+  onTagsChanged,
 }: TagSelectorModalProps) {
   const { t } = useTranslation('common')
   const queryClient = useQueryClient()
@@ -168,6 +178,17 @@ export const TagSelectorModal = memo(function TagSelectorModal({
       ])
 
       toast.success(t('pages.clients.modals.tagSelector.tagsUpdated', { name: clientName }))
+      // Only when something was actually written. Promise.all([]) resolves, so
+      // saving an unchanged selection reached here and armed 15s of 1.5s polling
+      // for nothing. The same applied when the only intended change was removing
+      // a protected tag the operator may not remove: allowedToRemove comes back
+      // empty, the error toast above fires, and this armed anyway. Beyond the
+      // wasted requests, every armed window is one in which a chain launched by
+      // someone else -- a colleague, a scheduled trigger -- is attributed to this
+      // operator and pops the executor modal over their work.
+      if (toAdd.length > 0 || allowedToRemove.length > 0) {
+        onTagsChanged?.()
+      }
       onClose()
     } catch {
       toast.error(t('pages.clients.modals.tagSelector.updateFailed'))
@@ -185,6 +206,7 @@ export const TagSelectorModal = memo(function TagSelectorModal({
     removeMutation,
     clientName,
     onClose,
+    onTagsChanged,
     canAssignTags,
     roleName,
     t,
@@ -323,6 +345,17 @@ export const TagSelectorModal = memo(function TagSelectorModal({
           clientName={clientName}
           tagId={pendingPayloadTag.id}
           tagName={pendingPayloadTag.name}
+          onAssigned={() => {
+            // Close this modal too, not just the payload dialog. onAssigned arms
+            // auto-open, and 1.5-3s later the chain executor stacks over whatever
+            // is on screen; leaving the selector open drops it behind the executor
+            // while the operator may still be editing tags. The debt-close path
+            // avoids this by closing its confirm modal before arming, and payload
+            // tags (promise_to_pay) are the likeliest route into the executor.
+            setPendingPayloadTag(null)
+            onTagsChanged?.()
+            onClose()
+          }}
           onClose={() => setPendingPayloadTag(null)}
         />
       )}

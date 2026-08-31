@@ -5,6 +5,15 @@
 
 export type PaymentMethod = 'bank_transfer' | 'online_gateway' | 'cash' | 'card' | 'other'
 
+/**
+ * Which EasyPay service the payer selected on the portal. Kept separate from
+ * PaymentMethod, whose values the backend pins with a CHECK constraint and
+ * which every report already groups by. Null for anything that did not come
+ * through EasyPay, and for EasyPay rows recorded before the per-method
+ * services existed.
+ */
+export type EasyPayMethod = 'card' | 'google_pay' | 'apple_pay'
+
 export type PaymentStatus = 'pending' | 'verified' | 'cancelled'
 
 /**
@@ -37,6 +46,8 @@ export interface Payment {
   penalty_paid: string
   fines_paid: string
   payment_method: PaymentMethod
+  /** EasyPay rows only: which service the payer chose. Null elsewhere. */
+  easypay_method?: EasyPayMethod | null
   payment_method_details?: string
   payment_type?: PaymentType | null
   payment_comment?: string | null
@@ -121,6 +132,8 @@ export interface RecordPaymentRequest {
   amount: number
   payment_date: string // ISO date string (YYYY-MM-DD)
   payment_method: PaymentMethod
+  /** EasyPay rows only: which service the payer chose. Null elsewhere. */
+  easypay_method?: EasyPayMethod | null
   payment_method_details?: string
   bank_reference?: string
   notes?: string

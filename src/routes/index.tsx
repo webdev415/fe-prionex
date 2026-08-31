@@ -7,9 +7,11 @@ import { GuestRoute } from './GuestRoute'
 import { useTabTracker } from '@/features/auth/hooks/useTabTracker'
 import { DashboardLayout } from '@/components/layout'
 import { RouteErrorElement } from '@/components/RouteErrorElement'
+import { V3CutoverRoute } from '@/features/scoring/components/V3CutoverRoute'
 import { PERMISSIONS } from '@/constants/permissions'
 import { BulkOperatorAssignmentPageSkeleton } from '@/pages/Operations/BulkOperatorAssignmentPageSkeleton'
 import { BulkTagAssignmentPageSkeleton } from '@/pages/Operations/BulkTagAssignmentPageSkeleton'
+import { BulkContactTagAssignmentPageSkeleton } from '@/pages/Operations/BulkContactTagAssignmentPageSkeleton'
 import { BulkPaymentVerificationPageSkeleton } from '@/pages/Operations/BulkPaymentVerificationPageSkeleton'
 import { BulkSaleNotesImportPageSkeleton } from '@/pages/Operations/BulkSaleNotesImportPageSkeleton'
 import { BulkDocumentImportPageSkeleton } from '@/pages/Operations/BulkDocumentImportPageSkeleton'
@@ -69,6 +71,21 @@ const PaymentHistoryPage = lazy(() =>
   import('@/pages/ClientManagement').then((m) => ({
     default: m.PaymentHistoryPage,
   }))
+)
+const CreditApplicationsPage = lazy(() =>
+  import('@/pages/Credit').then((m) => ({ default: m.CreditApplicationsPage }))
+)
+const CreditApplicationDetailPage = lazy(() =>
+  import('@/pages/Credit').then((m) => ({ default: m.CreditApplicationDetailPage }))
+)
+const CreditLoansPage = lazy(() =>
+  import('@/pages/Credit').then((m) => ({ default: m.CreditLoansPage }))
+)
+const CreditLoanDetailPage = lazy(() =>
+  import('@/pages/Credit').then((m) => ({ default: m.CreditLoanDetailPage }))
+)
+const CreditSettingsPage = lazy(() =>
+  import('@/pages/Credit').then((m) => ({ default: m.CreditSettingsPage }))
 )
 const SmsTemplatesPage = lazy(() =>
   import('@/pages/SmsTemplates').then((m) => ({
@@ -160,6 +177,21 @@ const ConfigurationHistoryPage = lazy(() =>
     default: m.ConfigurationHistoryPage,
   }))
 )
+const OperatorWorkListPage = lazy(() =>
+  import('@/pages/OperatorWorkList').then((m) => ({
+    default: m.OperatorWorkListPage,
+  }))
+)
+const ScoringV3SettingsPage = lazy(() =>
+  import('@/pages/ScoringV3Settings').then((m) => ({
+    default: m.ScoringV3SettingsPage,
+  }))
+)
+const ScoringV3MonitoringPage = lazy(() =>
+  import('@/pages/ScoringV3Monitoring').then((m) => ({
+    default: m.ScoringV3MonitoringPage,
+  }))
+)
 const AuditLogsPage = lazy(() =>
   import('@/pages/AuditLogs').then((m) => ({ default: m.AuditLogsPage }))
 )
@@ -195,6 +227,11 @@ const BulkPaymentVerificationPage = lazy(() =>
 const BulkTagAssignmentPage = lazy(() =>
   import('@/pages/Operations').then((m) => ({
     default: m.BulkTagAssignmentPage,
+  }))
+)
+const BulkContactTagAssignmentPage = lazy(() =>
+  import('@/pages/Operations').then((m) => ({
+    default: m.BulkContactTagAssignmentPage,
   }))
 )
 const BulkWriteoffImportPage = lazy(() =>
@@ -289,6 +326,88 @@ export const router = createBrowserRouter([
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.USERS.VIEW}>
             {withSuspense(<UserManagementPage />)}
+          </PermissionRoute>
+        ),
+      },
+      // Кредитный модуль — отдельный сервис (credit-service) за собственным
+      // API. Права credit.* появятся в auth-service вместе с ролями WS-20;
+      // до тех пор раздел доступен и по системному праву, иначе его не увидит
+      // никто, включая администратора, который его и принимает.
+      {
+        path: 'credit',
+        element: <Navigate to="/dashboard/credit/applications" replace />,
+      },
+      {
+        path: 'credit/applications',
+        element: (
+          <PermissionRoute
+            requiredPermissions={[
+              PERMISSIONS.CREDIT.APPLICATIONS_VIEW,
+              PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+            ]}
+            mode="any"
+          >
+            {withSuspense(<CreditApplicationsPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'credit/applications/:applicationId',
+        element: (
+          <PermissionRoute
+            requiredPermissions={[
+              PERMISSIONS.CREDIT.APPLICATIONS_VIEW,
+              PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+            ]}
+            mode="any"
+          >
+            {withSuspense(<CreditApplicationDetailPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'credit/loans',
+        element: (
+          <PermissionRoute
+            requiredPermissions={[
+              PERMISSIONS.CREDIT.LOANS_VIEW,
+              PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+            ]}
+            mode="any"
+          >
+            {withSuspense(<CreditLoansPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        // Настройки модуля: продукты и параметры — риск-менеджеру, интеграции
+        // видны всем, кто имеет доступ к разделу (там нет данных клиентов).
+        path: 'credit/settings',
+        element: (
+          <PermissionRoute
+            requiredPermissions={[
+              PERMISSIONS.CREDIT.PARAMETERS_VIEW,
+              PERMISSIONS.CREDIT.PRODUCTS_VIEW,
+              PERMISSIONS.CREDIT.APPLICATIONS_VIEW,
+              PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+            ]}
+            mode="any"
+          >
+            {withSuspense(<CreditSettingsPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'credit/loans/:loanId',
+        element: (
+          <PermissionRoute
+            requiredPermissions={[
+              PERMISSIONS.CREDIT.LOANS_VIEW,
+              PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+            ]}
+            mode="any"
+          >
+            {withSuspense(<CreditLoanDetailPage />)}
           </PermissionRoute>
         ),
       },
@@ -532,6 +651,43 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        // Scoring v3 operator work list (KAN-791). Two gates, both required:
+        // the permission, AND the per-brand cutover switch — the ticket says
+        // "hidden until sub-task 8 sign-off", and hiding only the nav entry left
+        // the URL reachable during the shadow run.
+        //
+        // The permission is VIEW_PRIORITY_SCORES, not SCORING_CONFIG.VIEW: this
+        // is the operators' own work queue, and gating it on the config-read
+        // right would have 403'd every operator (only Admin/Supervisor hold it).
+        path: 'operator-work-list',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.SCORING_CONFIG.VIEW_PRIORITY_SCORES}>
+            <V3CutoverRoute>{withSuspense(<OperatorWorkListPage />)}</V3CutoverRoute>
+          </PermissionRoute>
+        ),
+      },
+      {
+        // Scoring v3 tunables (KAN-792). Admin/Supervisor read, Admin edits.
+        // NOT behind the cutover switch: tau has to be re-picked from the
+        // shadow-run report, i.e. precisely while operators still cannot see v3.
+        path: 'system-settings/scoring-v3-settings',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.SCORING_CONFIG.VIEW}>
+            {withSuspense(<ScoringV3SettingsPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        // Scoring v3 shadow-run report (KAN-794). NOT behind the cutover switch —
+        // it exists to be read while operators still cannot see v3.
+        path: 'system-settings/scoring-v3-monitoring',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.SCORING_CONFIG.VIEW}>
+            {withSuspense(<ScoringV3MonitoringPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
         path: 'system-settings/scoring-configuration/history',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.SCORING_CONFIG.VIEW_HISTORY}>
@@ -611,6 +767,16 @@ export const router = createBrowserRouter([
           <PermissionRoute requiredPermission={PERMISSIONS.CLIENTS.ASSIGN_TAGS}>
             <Suspense fallback={<BulkTagAssignmentPageSkeleton />}>
               <BulkTagAssignmentPage />
+            </Suspense>
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'import/bulk-contact-tag-assignment',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.CONTACT_TAGS.ASSIGN}>
+            <Suspense fallback={<BulkContactTagAssignmentPageSkeleton />}>
+              <BulkContactTagAssignmentPage />
             </Suspense>
           </PermissionRoute>
         ),

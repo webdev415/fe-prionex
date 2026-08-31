@@ -29,17 +29,30 @@ COPY . .
 # Build arguments for environment variables (Vite requires these at build time)
 ARG VITE_API_BASE_URL
 ARG VITE_WS_URL
-# Added 2026-08-17. It was OUTSIDE this contract, so every CI image had it
-# undefined and `src/features/operatorPhone/constants.ts` fell back to
-# `http://localhost:5173` — the origin the CRM posts its JWT to. Verified in the
-# shipped preprod layer, not inferred. Unlike the two above it is NOT a secret,
-# so it arrives from a Forgejo CI variable rather than from OpenBao, and it is
-# legitimately EMPTY where no phone service exists (dev, preprod today): the
-# panel then does not render at all.
+# Assistant report tables (heat map + attention rows). Off unless the build is
+# given "true"/"1" — an unset ARG lands as an empty string, i.e. the feature
+# stays off. Vite inlines the value at build time, so it MUST arrive here.
+ARG VITE_ASSISTANT_REPORT_TABLES_ENABLED
+# Origin serving the hidden WebRTC softphone the CRM embeds as a background
+# iframe. Vite inlines it at build time, so it has to arrive as a build-arg to
+# take effect at all — a runtime env var on the server does nothing.
+#
+# Optional. Left unset, src/features/operatorPhone/constants.ts resolves the
+# origin to "" for a production build (the localhost default is gated on
+# import.meta.env.DEV), which suppresses the phone panel and posts the operator
+# token nowhere. That is the correct state until a softphone is deployed whose
+# VITE_CRM_PARENT_ORIGIN matches the CRM being built here.
 ARG VITE_OPERATOR_PHONE_URL
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 ENV VITE_WS_URL=$VITE_WS_URL
+ENV VITE_ASSISTANT_REPORT_TABLES_ENABLED=$VITE_ASSISTANT_REPORT_TABLES_ENABLED
 ENV VITE_OPERATOR_PHONE_URL=$VITE_OPERATOR_PHONE_URL
+
+# Say so loudly, but do not fail: a bundle with no phone origin is a valid
+# deployment of everything else, and failing here blocks the whole release over
+# one dormant feature.
+RUN test -n "$VITE_OPERATOR_PHONE_URL" || \
+      echo "WARNING: VITE_OPERATOR_PHONE_URL is unset - building without the operator softphone (the phone panel will not mount)"
 
 # Build the application
 RUN npm run build

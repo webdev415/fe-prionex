@@ -40,11 +40,6 @@ export function ViewTemplateForm({ template }: ViewTemplateFormProps) {
         <Label>{t('pages.smsTemplates.forms.status')}</Label>
         <div>
           <StatusBadge status={template.isEnabled ? 'active' : 'disabled'} />
-          {template.isSystem && (
-            <span className="text-muted-foreground ml-2 text-xs">
-              ({t('pages.smsTemplates.forms.systemTemplate')})
-            </span>
-          )}
         </div>
       </div>
 

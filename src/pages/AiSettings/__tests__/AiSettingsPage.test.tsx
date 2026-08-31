@@ -1,7 +1,7 @@
 /**
- * AiSettingsPage smoke test — the four sections are mocked (each has its
+ * AiSettingsPage smoke test — the six sections are mocked (each has its
  * own coverage under src/features/aiSettings and src/features/quality); this
- * only checks the page renders its heading and wires up all four.
+ * only checks the page renders its heading and wires up all six.
  */
 import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
@@ -16,12 +16,18 @@ vi.mock('@/features/aiSettings/components/AssistantAccessSection', () => ({
 vi.mock('@/features/aiSettings/components/AssistantInternalsSection', () => ({
   AssistantInternalsSection: () => <div data-testid="mock-assistant-internals-section" />,
 }))
+vi.mock('@/features/aiSettings/components/AssistantManagementSection', () => ({
+  AssistantManagementSection: () => <div data-testid="mock-assistant-management-section" />,
+}))
+vi.mock('@/features/aiSettings/components/AssistantMemorySection', () => ({
+  AssistantMemorySection: () => <div data-testid="mock-assistant-memory-section" />,
+}))
 vi.mock('@/features/quality/components/CallQaSettingsSection', () => ({
   CallQaSettingsSection: () => <div data-testid="mock-call-qa-settings-section" />,
 }))
 
 describe('AiSettingsPage', () => {
-  it('renders the heading and all four sections', () => {
+  it('renders the heading and all six sections', () => {
     render(<AiSettingsPage />)
 
     expect(screen.getByText('pages.aiSettings.title')).toBeInTheDocument()
@@ -29,6 +35,8 @@ describe('AiSettingsPage', () => {
     expect(screen.getByTestId('mock-assistant-settings-section')).toBeInTheDocument()
     expect(screen.getByTestId('mock-call-qa-settings-section')).toBeInTheDocument()
     expect(screen.getByTestId('mock-assistant-access-section')).toBeInTheDocument()
+    expect(screen.getByTestId('mock-assistant-management-section')).toBeInTheDocument()
+    expect(screen.getByTestId('mock-assistant-memory-section')).toBeInTheDocument()
     expect(screen.getByTestId('mock-assistant-internals-section')).toBeInTheDocument()
   })
 })

@@ -4,6 +4,7 @@ import {
   formatLegalDueMonthDay,
   isLegalDueDateOverdue,
   legalDueDateToIso,
+  legalDueDateToPickerDate,
   parseLegalDueDate,
 } from '../legalDueDate'
 
@@ -53,5 +54,101 @@ describe('legalDueDate', () => {
     expect(isLegalDueDateOverdue(due, 'America/New_York')).toBe(false)
     expect(isLegalDueDateOverdue(due, 'Europe/Kyiv')).toBe(true)
     vi.useRealTimers()
+  })
+})
+
+// Every fixture above carries a Z. The task service does not send one: due_date
+// is a naive DateTime column serialised with .isoformat(), so the wire value is
+// UTC with no designator. That is the whole of KAN-1000 — the tests passed
+// because they were fed a shape the API never produces.
+describe('legalDueDate (offset-less wire values)', () => {
+  it('reads a naive wire value as UTC, not browser local', () => {
+    expect(parseLegalDueDate('2026-08-14T03:00:00')?.toISOString()).toBe('2026-08-14T03:00:00.000Z')
+  })
+
+  it('round-trips the deadline from the ticket', () => {
+    const picked = new Date(2026, 7, 14, 6, 0, 0, 0)
+    const sent = legalDueDateToIso(picked, KYIV)
+    expect(sent).toBe('2026-08-14T03:00:00.000Z')
+
+    const stored = '2026-08-14T03:00:00'
+    expect(formatLegalDueDateTime(stored, KYIV, 'uk')).toBe('14.08 06:00')
+  })
+
+  it('keeps microseconds and the space separator readable', () => {
+    expect(parseLegalDueDate('2026-08-14T03:00:00.123456')?.toISOString()).toBe(
+      '2026-08-14T03:00:00.123Z'
+    )
+    expect(parseLegalDueDate('2026-08-14 03:00:00')?.toISOString()).toBe('2026-08-14T03:00:00.000Z')
+  })
+
+  it('leaves a value that already carries an offset alone', () => {
+    expect(parseLegalDueDate('2026-08-14T03:00:00Z')?.toISOString()).toBe(
+      '2026-08-14T03:00:00.000Z'
+    )
+    expect(parseLegalDueDate('2026-08-14T06:00:00+03:00')?.toISOString()).toBe(
+      '2026-08-14T03:00:00.000Z'
+    )
+  })
+
+  it('leaves a date-only value alone', () => {
+    expect(parseLegalDueDate('2026-08-14')?.toISOString()).toBe('2026-08-14T00:00:00.000Z')
+  })
+
+  it('returns null for a blank or unparseable value', () => {
+    expect(parseLegalDueDate('   ')).toBeNull()
+    expect(parseLegalDueDate('not a date')).toBeNull()
+  })
+
+  // The three hours only move the calendar day for late-evening deadlines, so
+  // this is where the old behaviour put a card in the wrong column.
+  it('routes a late-evening deadline by the right calendar day', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-08-14T09:00:00Z'))
+    const stored = '2026-08-13T22:00:00'
+    expect(formatLegalDueDateTime(stored, KYIV, 'uk')).toBe('14.08 01:00')
+    expect(isLegalDueDateOverdue(stored, KYIV)).toBe(false)
+    vi.useRealTimers()
+  })
+})
+
+// Pickers render a Date on the browser clock and take no timezone, so feeding
+// them the raw instant showed a Kyiv 15:15 deadline as 20:15 to anyone working
+// from UTC+8 — while the card next to it read 15:15.
+describe('legalDueDate (picker round trip)', () => {
+  it('hands the picker the profile wall clock, not the browser one', () => {
+    const picker = legalDueDateToPickerDate('2026-07-23T12:15:00', KYIV)
+    expect(picker?.getHours()).toBe(15)
+    expect(picker?.getMinutes()).toBe(15)
+    expect(picker?.getDate()).toBe(23)
+    expect(picker?.getMonth()).toBe(6)
+    expect(picker?.getFullYear()).toBe(2026)
+  })
+
+  it('survives a reopen without drifting', () => {
+    const stored = '2026-07-23T12:15:00'
+    const shown = legalDueDateToPickerDate(stored, KYIV)
+    expect(legalDueDateToIso(shown!, KYIV)).toBe('2026-07-23T12:15:00.000Z')
+  })
+
+  it('agrees with what the card renders', () => {
+    const stored = '2026-07-23T12:15:00'
+    const picker = legalDueDateToPickerDate(stored, KYIV)
+    const onCard = formatLegalDueDateTime(stored, KYIV, 'uk')
+    const fromPicker = `${String(picker!.getHours()).padStart(2, '0')}:${String(
+      picker!.getMinutes()
+    ).padStart(2, '0')}`
+    expect(onCard.endsWith(fromPicker)).toBe(true)
+  })
+
+  it('follows the profile timezone rather than a fixed offset', () => {
+    const stored = '2026-07-23T12:15:00'
+    expect(legalDueDateToPickerDate(stored, 'America/New_York')?.getHours()).toBe(8)
+    expect(legalDueDateToPickerDate(stored, 'Asia/Singapore')?.getHours()).toBe(20)
+  })
+
+  it('passes a missing deadline straight through', () => {
+    expect(legalDueDateToPickerDate(null, KYIV)).toBeNull()
+    expect(legalDueDateToPickerDate('not a date', KYIV)).toBeNull()
   })
 })

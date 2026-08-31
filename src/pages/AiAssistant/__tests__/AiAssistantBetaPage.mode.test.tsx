@@ -138,7 +138,9 @@ describe('AiAssistantBetaPage response mode + attachment trigger', () => {
     const fileInput = screen.getByTestId('attach-image-input') as HTMLInputElement
     fireEvent.change(fileInput, { target: { files: [makeImageFile()] } })
 
-    await screen.findByTestId('pending-attachments')
+    // Wait for the encoded chip, not the container — the container also holds
+    // the "preparing" placeholder, and sending then leaves the file behind.
+    await screen.findByTestId('pending-attachment-image')
 
     fireEvent.change(getTextarea(), { target: { value: 'что на скрине?' } })
     fireEvent.keyDown(getTextarea(), { key: 'Enter' })

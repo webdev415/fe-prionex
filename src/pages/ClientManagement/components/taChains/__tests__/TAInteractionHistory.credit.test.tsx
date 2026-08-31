@@ -167,7 +167,13 @@ vi.mock('@/components/auth', () => ({
   PermissionGuard: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 vi.mock('../EditTAInteractionModal', () => ({ EditTAInteractionModal: () => null }))
-vi.mock('@/components/ui/Pagination', () => ({ Pagination: () => null }))
+// Spread the real module: it also exports DEFAULT_PAGE_SIZE_OPTIONS, which the
+// shared paged-feed URL shell imports. Only the component itself is stubbed out
+// (this history renders its own pager assertions elsewhere).
+vi.mock('@/components/ui/Pagination', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/components/ui/Pagination')>()),
+  Pagination: () => null,
+}))
 vi.mock('@/components/ui/DateSelect', () => ({ DateSelect: () => null }))
 vi.mock('@/components/ui/Modal', () => ({ Modal: () => null }))
 vi.mock('@/components/ui/Select', () => ({

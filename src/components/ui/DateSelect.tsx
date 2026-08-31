@@ -10,7 +10,6 @@ import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import './DateSelect.theme.css'
 import { format as formatFns } from 'date-fns'
-import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import {
@@ -22,6 +21,26 @@ import {
   parseManualDate,
   parseManualDateTime,
 } from '@/lib/dateUtils'
+import { opaqueFieldName, PASSWORD_MANAGER_OPT_OUT } from './autofill'
+
+/**
+ * Calendar-only counterpart of ``MaskedDateTimeInput``: a faithful pass-through
+ * of everything react-datepicker injects, existing only so the opt-out
+ * attributes from ``./autofill`` reach the DOM node. Typing is still blocked by
+ * the ``onChangeRaw`` handler on <DatePicker>, which is unaffected by rendering
+ * through a custom input.
+ *
+ * That indirection is what forces both modes below through a custom input
+ * rather than only the masked one: react-datepicker builds its built-in input
+ * from a fixed prop list and never forwards ``data-*``, so the ~35
+ * calendar-only call sites (client date of birth, passport issued/expires, …)
+ * would otherwise stay exposed.
+ */
+const PlainDateInput = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
+  function PlainDateInput(props, ref) {
+    return <input type="text" {...props} ref={ref} {...PASSWORD_MANAGER_OPT_OUT} />
+  }
+)
 
 /**
  * Custom input used when ``allowManualInput`` is on. react-datepicker clones
@@ -36,15 +55,27 @@ const MaskedDateTimeInput = forwardRef<
   React.InputHTMLAttributes<HTMLInputElement> & {
     text: string
     onTextChange: (raw: string) => void
+    onTextBlur?: () => void
   }
->(function MaskedDateTimeInput({ value: _v, onChange: _oc, text, onTextChange, ...rest }, ref) {
+>(function MaskedDateTimeInput(
+  { value: _v, onChange: _oc, text, onTextChange, onTextBlur, onBlur, ...rest },
+  ref
+) {
   return (
     <input
+      type="text"
       {...rest}
       ref={ref}
       value={text}
       onChange={(e) => onTextChange(e.target.value)}
+      onBlur={(e) => {
+        // Keep react-datepicker's injected blur handling (popup close etc.),
+        // then let DateSelect resync abandoned text from the committed value.
+        onBlur?.(e)
+        onTextBlur?.()
+      }}
       inputMode="numeric"
+      {...PASSWORD_MANAGER_OPT_OUT}
     />
   )
 })
@@ -59,10 +90,19 @@ export interface DateSelectProps {
   value?: string | Date | null
   onChange?: (args: { value: Date | null }) => void
   disabled?: boolean
+  /**
+   * Applied to the WRAPPER element, not the field. The input itself always
+   * carries a generated opaque id so a semantic value cannot reach Chrome's
+   * autofill classifier (KAN-995). Use ``label`` for association, or query
+   * within the wrapper — an external ``htmlFor``/``#id`` aimed at this value
+   * would target a div.
+   */
   id?: string
   min?: Date | string
   max?: Date | string
   format?: string
+  /** Month-year picker: a grid of months + year navigation, no day grid. */
+  showMonthYearPicker?: boolean
   showTimeSelect?: boolean
   timeFormat?: string
   timeIntervals?: number
@@ -72,6 +112,13 @@ export interface DateSelectProps {
    * DateSelect are unaffected because the × only renders when onClear is set.
    */
   onClear?: () => void
+  /**
+   * Accessible name of that "×" button. Opt-in: the default stays the plain
+   * "Clear" every existing usage renders. Pass a field-specific (localized)
+   * name when a form places SEVERAL clearable date fields side by side — a row
+   * of identical "Clear" buttons is indistinguishable to a screen reader.
+   */
+  clearLabel?: string
   // Restrict the selectable time-of-day inside the time column.
   // ``minTime``/``maxTime`` are react-datepicker's static bounds and
   // apply to **every** selected calendar day, so they're only correct
@@ -115,6 +162,40 @@ export interface DateSelectProps {
    * the input, instead of only on save. Ignored when ``error`` is set.
    */
   invalidText?: string
+  /**
+   * On blur, also resync an INVALID partial entry back to the committed
+   * value (a cleared/empty field always resyncs regardless of this flag).
+   * Off by default: most forms keep the invalid text visible together with
+   * ``invalidText``/``onValidityChange`` so the user can fix it — wiping it
+   * on blur would silently discard the entry and its explanation.
+   * URL-backed filter fields (e.g. the processing report dates) opt in:
+   * there an abandoned invalid entry has nothing to block and should just
+   * snap back to the active filter value.
+   */
+  resyncInvalidOnBlur?: boolean
+  /**
+   * Escape hatch for Chrome's autofill (KAN-995). ``off`` suppresses the
+   * saved-value list everywhere, but Chrome ignores it on fields its classifier
+   * reads as profile data. The rendered ``id`` and ``name`` are both opaque, so
+   * what it can still read is the visible label and the placeholder (manual
+   * mode sets ``DD.MM.YYYY``).
+   *
+   * ``new-password`` is the token Chrome always honours, and it is what the
+   * client date-of-birth and passport fields use. Two costs come with it, and
+   * both need re-checking in Chrome if that set ever grows:
+   *
+   * - it declares a credential purpose, so Chrome may attach password-manager
+   *   UI to the field — a save prompt on submit, or a suggestion dropdown that
+   *   would cover the calendar exactly the way the autofill list does. Chrome
+   *   reserves password generation for ``type="password"`` inputs and these are
+   *   ``type="text"``, so this is unlikely rather than impossible;
+   * - it is not the field's real purpose. WCAG 1.3.5 would want ``bday`` on a
+   *   date of birth, but 1.3.5 covers fields collecting data about *the user*.
+   *   These collect a client's data, so ``bday`` is not merely unhelpful there,
+   *   it is wrong: it invites Chrome to write the operator's own birthday into
+   *   a debtor record.
+   */
+  autoComplete?: string
 }
 
 const parseDate = (date: Date | string | null | undefined): Date | null => {
@@ -151,10 +232,12 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
       min,
       max,
       format = 'MM/dd/yyyy',
+      showMonthYearPicker = false,
       showTimeSelect,
       timeFormat = 'HH:mm',
       timeIntervals = 15,
       onClear,
+      clearLabel = 'Clear',
       minTime,
       maxTime,
       filterTime,
@@ -163,17 +246,38 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
       defaultTimeSkipsToday,
       onValidityChange,
       invalidText,
+      resyncInvalidOnBlur = false,
+      autoComplete = 'off',
     },
     ref
   ) => {
     const generatedId = useId()
-    const inputId = id || generatedId
-    const errorId = `${inputId}-error`
-    const helperId = `${inputId}-helper`
-    const { t } = useTranslation('common')
+    const describedByBase = id || generatedId
+    const errorId = `${describedByBase}-error`
+    const helperId = `${describedByBase}-helper`
+    // The rendered input's id AND name, always derived from the generated id and
+    // never from a caller-supplied one. Chrome ignores autocomplete="off" on
+    // fields it classifies as profile data, and it classifies from id, name,
+    // placeholder and label — so a semantic call site (promise-date,
+    // task-due-date, start_date) must not reach the element it inspects. The
+    // caller's `id` moves to the wrapper instead, where it stays available to
+    // CSS and automation but is not a form field. The visible label and the
+    // placeholder are still readable by the classifier, which is what the
+    // `autoComplete` prop exists to override (KAN-995).
+    //
+    // This is why the default here is still `off` while the shared `Input`
+    // defaults to `new-password` (KAN-1009), even though both now read their
+    // opt-outs from the same module. `Input` leaves the caller's id in place
+    // and has no equivalent of the wrapper trick, so there the id and name are
+    // signals too; here only the label and placeholder are left, and neither
+    // reads as profile data on a standalone date field. The three that do -
+    // date of birth, passport issued and expires - pass `new-password` at the
+    // call site. Aligning the two defaults would let those three props go, but
+    // it changes behaviour for ~35 shipped call sites for no reported bug, so
+    // it is left alone deliberately.
+    const opaqueFieldId = opaqueFieldName('ds', generatedId)
 
     const isDateOnlyManual = allowManualInput && !showTimeSelect
-    const isDatetimeManual = allowManualInput && !!showTimeSelect
     const manualDisplayFormat = isDateOnlyManual ? DATE_DISPLAY_FORMAT : DATETIME_DISPLAY_FORMAT
 
     // ── Manual-input state (only used when allowManualInput) ──────────────
@@ -271,14 +375,42 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
       }
     }
 
+    // Focus left the field with text that no longer matches the committed
+    // value — e.g. the user cleared it (some parents keep the old value on
+    // ``onChange(null)``) or abandoned a partial entry. Restore the text from
+    // the ``value`` prop so the field never sits empty/stale while a filter
+    // is still active. The value-keyed sync effect above can't cover this
+    // case: ``value`` hasn't changed, so it bails on
+    // ``formatted === lastSyncedValue.current``.
+    const handleManualBlur = () => {
+      if (!allowManualInput) return
+      // A complete VALID text is never overwritten — even if it differs from
+      // the `value` prop (e.g. a future consumer debounces the committed
+      // value), the user's entry must not snap back on blur.
+      if (!manualInvalid && text !== '') return
+      // An INVALID partial entry is preserved by default so forms keep the
+      // text + its `invalidText` explanation visible for fixing; only
+      // opted-in fields (resyncInvalidOnBlur) snap it back. A cleared/empty
+      // field always resyncs — that path carries no explanation to lose.
+      if (manualInvalid && !resyncInvalidOnBlur) return
+      const d = parseDate(value)
+      const formatted = d ? formatFns(d, manualDisplayFormat) : ''
+      if (text === formatted) return
+      lastSyncedValue.current = formatted
+      setText(formatted)
+      setManualInvalid(false)
+      onValidityChange?.(false)
+    }
+
     // Red styling for both an explicit error and an in-progress invalid entry.
     const hasError = !!error || manualInvalid
 
-    // TA datetime fields: inline error under the input while typing invalid text.
-    // Date filter fields: border only — no inline message.
-    const manualInlineError =
-      manualInvalid && isDatetimeManual ? t('pages.clientChains.errors.dateInvalid') : undefined
-    const displayedError = error || manualInlineError
+    // Mirrors exactly when the <p id={errorId}> below renders, so
+    // aria-describedby can never reference an element that is not there. The
+    // complement is the helper paragraph's own condition. TA datetime fields
+    // surface their inline message through `invalidText`, which is the second
+    // branch — the component has no separate built-in message of its own.
+    const errorMessageShown = !!error || (manualInvalid && !!invalidText)
 
     const inputClassName = cn(
       'h-[45px] w-full rounded-md border border-input-border bg-input pr-4 pl-10 text-sm font-light text-foreground transition-all outline-none placeholder:text-muted-foreground',
@@ -295,9 +427,12 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
         : placeholder
 
     return (
-      <div className={`w-full ${className || ''}`}>
+      <div id={id} className={`w-full ${className || ''}`}>
         {label && (
-          <label htmlFor={inputId} className="text-foreground mb-1.5 block text-sm font-light">
+          <label
+            htmlFor={opaqueFieldId}
+            className="text-foreground mb-1.5 block text-sm font-light"
+          >
             {label}
             {required && <span className="text-error-500 ml-1">*</span>}
           </label>
@@ -309,7 +444,9 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
           <div className="date-select-wrapper" data-has-error={hasError ? 'true' : 'false'}>
             <DatePicker
               ref={ref}
-              id={inputId}
+              id={opaqueFieldId}
+              name={opaqueFieldId}
+              autoComplete={autoComplete}
               className={inputClassName}
               selected={parseDate(value)}
               onChange={handleChange}
@@ -318,16 +455,27 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
               {...(allowManualInput
                 ? {
                     customInput: (
-                      <MaskedDateTimeInput text={text} onTextChange={handleManualType} />
+                      <MaskedDateTimeInput
+                        text={text}
+                        onTextChange={handleManualType}
+                        onTextBlur={handleManualBlur}
+                      />
                     ),
                   }
-                : { onChangeRaw: (e?: React.SyntheticEvent) => e?.preventDefault() })}
+                : {
+                    customInput: <PlainDateInput />,
+                    onChangeRaw: (e?: React.SyntheticEvent) => e?.preventDefault(),
+                  })}
               dateFormat={format}
               placeholderText={effectivePlaceholder}
               disabled={disabled}
               minDate={parseDate(min) || undefined}
               maxDate={parseDate(max) || undefined}
-              aria-describedby={displayedError ? errorId : helperText ? helperId : undefined}
+              aria-describedby={errorMessageShown ? errorId : helperText ? helperId : undefined}
+              // Same condition as the red border, so the visual invalid state
+              // always has a programmatic counterpart — including the case
+              // where the field is invalid but the caller passed no message.
+              aria-invalid={hasError ? 'true' : undefined}
               showPopperArrow={false}
               popperPlacement="bottom-start"
               popperClassName="date-select-popper"
@@ -344,6 +492,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
               maxTime={maxTime}
               filterTime={filterTime}
               calendarStartDay={1}
+              showMonthYearPicker={showMonthYearPicker}
               showYearDropdown
               scrollableYearDropdown
               yearDropdownItemNumber={10}
@@ -353,7 +502,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
             <button
               type="button"
               onClick={onClear}
-              aria-label="Clear"
+              aria-label={clearLabel}
               className="text-muted-foreground hover:text-foreground absolute inset-y-0 right-0 z-10 flex items-center pr-3"
             >
               <Icons.Cancel01 size={14} />
@@ -362,7 +511,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
         </div>
         {error ? (
           <p id={errorId} className="mt-1.5 text-xs text-red-500" role="alert">
-            {displayedError}
+            {error}
           </p>
         ) : manualInvalid && invalidText ? (
           <p id={errorId} className="mt-1.5 text-xs text-red-500" role="alert">

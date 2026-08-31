@@ -83,9 +83,38 @@ export {
   callQaSettingsKey,
 } from './api/callQaSettingsService'
 export type { CallQaSettings } from './api/callQaSettingsService'
-export { useCallQaSettings, useUpdateCallQaSettings } from './hooks/useCallQaSettings'
+export {
+  useCallQaSettings,
+  useScorecardAssignedOnly,
+  useUpdateCallQaSettings,
+} from './hooks/useCallQaSettings'
+// Call QA listening rules — blocker dictionary + AI rubrics (manage_qa_rules)
+export {
+  listQaBlockers,
+  createQaBlocker,
+  updateQaBlocker,
+  deleteQaBlocker,
+  listQaTemplates,
+  createQaTemplate,
+  updateQaTemplate,
+  archiveQaTemplate,
+  unarchiveQaTemplate,
+} from './api/qaRulesService'
+export {
+  qaRulesKeys,
+  useQaBlockers,
+  useCreateQaBlocker,
+  useUpdateQaBlocker,
+  useDeleteQaBlocker,
+  useQaRubrics,
+  useCreateQaRubric,
+  useUpdateQaRubric,
+  useArchiveQaRubric,
+  useUnarchiveQaRubric,
+} from './hooks/useQaRules'
 
 export { ScorecardPanel } from './components/ScorecardPanel'
+export { ScoreDivergenceBadge } from './components/ScoreDivergenceBadge'
 export { MarkerOverlay } from './components/MarkerOverlay'
 export { AddMarkerButton } from './components/AddMarkerButton'
 export { LeaveFeedbackButton } from './components/LeaveFeedbackButton'
@@ -93,6 +122,10 @@ export { FeedbackThreadView } from './components/FeedbackThreadView'
 export { ScoreDynamicsChart } from './components/ScoreDynamicsChart'
 export { CallTranscriptPanel } from './components/CallTranscriptPanel'
 export { CallQaSettingsSection } from './components/CallQaSettingsSection'
+export { QaListeningSection } from './components/qaRules/QaListeningSection'
+export { QaBlockersTable } from './components/qaRules/QaBlockersTable'
+export { AiRubricsSection } from './components/qaRules/AiRubricsSection'
+export { AiRubricEditor } from './components/qaRules/AiRubricEditor'
 
 export type {
   AggregateFilters,
@@ -152,8 +185,41 @@ export type {
   TranscriptQueryResult,
   ReviewRedFlag,
   ReviewPromise,
+  BlockerCategory,
+  BlockerLang,
+  BlockerSeverity,
+  QaBlocker,
+  QaBlockerCreatePayload,
+  QaBlockerListFilters,
+  QaBlockerUpdatePayload,
+  TemplateCreatePayload,
+  TemplateListFilters,
+  TemplatePurpose,
+  TemplateUpdatePayload,
 } from './types'
 
 export { MARKER_TYPES, MARKER_COLORS, FEEDBACK_TYPES } from './types'
+export {
+  BLOCKER_CATEGORIES,
+  BLOCKER_LANGS,
+  BLOCKER_SEVERITIES,
+  CRITERION_SCALES,
+  normalizeCriterionScale,
+} from './types'
+export {
+  RUBRIC_TOTAL_WEIGHT,
+  RUBRIC_WEIGHT_TOLERANCE,
+  isRubricWeightValid,
+  makeUniqueKey,
+  sumCriteriaWeights,
+} from './lib/rubricWeights'
 
 export { computeWeightedScorePreview } from './lib/scoringPreview'
+
+export {
+  DEFAULT_DISPUTE_THRESHOLD,
+  isDisputeReasonRequested,
+  resolveDisputeThreshold,
+  scoreDivergence,
+  trainerScoreTo100,
+} from './lib/dispute'

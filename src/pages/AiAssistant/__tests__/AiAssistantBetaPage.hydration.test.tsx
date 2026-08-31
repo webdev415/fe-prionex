@@ -7,6 +7,7 @@ import { useAiAssistantStore } from '@/stores/aiAssistantStore'
 import { useAuthStore } from '@/stores/authStore'
 import type { User } from '@/types/api'
 import type { AssistantConversationDetail } from '@/features/aiAssistant/api'
+import { buildContextBlock, buildContextualMessage } from '@/features/onexEmbed/embedContext'
 
 vi.mock('@/features/aiAssistant/api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/features/aiAssistant/api')>()
@@ -104,6 +105,47 @@ describe('AiAssistantBetaPage conversation hydration', () => {
     await waitFor(() => {
       expect(mockedGetConversation).not.toHaveBeenCalled()
     })
+  })
+
+  const ONEX_CONTEXT = {
+    url: 'https://crm/dashboard/clients/42',
+    title: 'Картка Іваненка',
+    clientId: 42,
+    selection: 'борг 12 000',
+    text: 'тіло сторінки клієнта',
+    ts: null,
+  }
+
+  const hydrateStoredUserMessage = (content: string) => {
+    useAiAssistantStore.getState().setActiveConversation('7', 42)
+    mockedGetConversation.mockResolvedValue({
+      ...CONVERSATION_DETAIL,
+      messages: [{ ...CONVERSATION_DETAIL.messages[0], content }],
+    })
+    renderPage()
+  }
+
+  it('hides the OneX context block stored with a message — on the plain page too', async () => {
+    // The dock sends `<what the operator typed>\n\n<дані-сторінки …>…</дані-сторінки>`
+    // and the backend keeps `message` verbatim, so without stripping the machine
+    // block resurfaces inside the operator's own bubble on every reload —
+    // including in a normal CRM tab, which never opted into the dock.
+    hydrateStoredUserMessage(buildContextualMessage('Що йому запропонувати?', ONEX_CONTEXT))
+
+    expect(await screen.findByText('Що йому запропонувати?')).toBeInTheDocument()
+    expect(screen.queryByText(/дані-сторінки/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Текст сторінки/)).not.toBeInTheDocument()
+  })
+
+  it('hides it in the older leading placement too', async () => {
+    // Turns sent while the block still led the message are already in
+    // `ai_assistant_db`; those bubbles must render just as clean.
+    const block = buildContextBlock(ONEX_CONTEXT)!
+    hydrateStoredUserMessage(`${block}\n\nЩо йому запропонувати?`)
+
+    expect(await screen.findByText('Що йому запропонувати?')).toBeInTheDocument()
+    expect(screen.queryByText(/дані-сторінки/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Текст сторінки/)).not.toBeInTheDocument()
   })
 
   it('clears the stored pointer when the conversation is gone on the backend', async () => {

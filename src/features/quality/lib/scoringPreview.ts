@@ -1,3 +1,4 @@
+import { normalizeCriterionScale } from '../types'
 import type { Section, ScoresPayload } from '../types'
 
 /**
@@ -23,7 +24,7 @@ export function computeWeightedScorePreview(
       if (raw == null) continue
 
       let numeric: number
-      if (criterion.scale === 'binary') {
+      if (normalizeCriterionScale(criterion.scale) === 'binary') {
         numeric = raw ? 5 : 0
       } else {
         if (typeof raw !== 'number') continue

@@ -5,6 +5,13 @@ import { legalApi } from '../api/legalApi'
 import type { LegalContractPatchRequest } from '../api/types'
 import { legalWorkplaceKeys } from './useLegalInbox'
 
+/**
+ * Persists an explicit contract pick by the lawyer. Must stay user-initiated
+ * only (no render-driven callers): the error toast below fires on every failed
+ * attempt, and a background loop once buried the confirm button under 409/400
+ * toasts. The single-contract auto-select is display-only in the panel — the
+ * backend resolves it itself on confirm.
+ */
 export function usePatchMessageContract() {
   const queryClient = useQueryClient()
 

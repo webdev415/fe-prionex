@@ -17,6 +17,37 @@ const API_BASE_URL =
     ? import.meta.env.VITE_API_BASE_URL
     : 'http://localhost:8000'
 
+/**
+ * The server answered 200 but the body carried fewer bytes than the
+ * Content-Length it promised — the recording stream was cut mid-transfer
+ * (KAN-1023: call-service sometimes drops the connection while proxying a
+ * large recording). Playing such a blob silently truncates the call for the
+ * trainer, so the fetch surfaces it as an explicit, retryable error instead.
+ */
+export class RecordingTruncatedError extends Error {
+  readonly expectedBytes: number
+  readonly receivedBytes: number
+
+  constructor(expectedBytes: number, receivedBytes: number) {
+    super(`Recording truncated: received ${receivedBytes} of ${expectedBytes} bytes`)
+    this.name = 'RecordingTruncatedError'
+    this.expectedBytes = expectedBytes
+    this.receivedBytes = receivedBytes
+  }
+}
+
+export interface FetchRecordingProgress {
+  loadedBytes: number
+  /** Total from Content-Length when the server sent one; null otherwise. */
+  totalBytes: number | null
+}
+
+export interface FetchRecordingOptions {
+  /** Cancels the download (dialog switched / player unmounted). */
+  signal?: AbortSignal
+  onProgress?: (progress: FetchRecordingProgress) => void
+}
+
 class CallService {
   async originateCall(request: OriginateCallRequest): Promise<OriginateCallResponse> {
     const response = await api.post(`${API_BASE_URL}/api/v1/calls/originate`, request)
@@ -59,13 +90,36 @@ class CallService {
     return `${API_BASE_URL}/api/v1/calls/${callId}/recording`
   }
 
-  /** Fetches recording bytes with auth headers (required — native <audio src> cannot send Bearer tokens). */
-  async fetchRecordingBlob(callId: string): Promise<Blob> {
+  /**
+   * Fetches recording bytes with auth headers (required — native <audio src>
+   * cannot send Bearer tokens).
+   *
+   * Verifies the body against Content-Length: a 200 whose stream was cut short
+   * rejects with {@link RecordingTruncatedError} rather than handing back a
+   * blob that plays as a shorter call. Only `size < expected` counts — with
+   * `Content-Encoding` compression the decoded blob is legitimately larger
+   * than the wire length, never smaller.
+   */
+  async fetchRecordingBlob(callId: string, options: FetchRecordingOptions = {}): Promise<Blob> {
     const response = await api.get(`/api/v1/calls/${callId}/recording`, {
       responseType: 'blob',
       timeout: 120_000,
+      signal: options.signal,
+      onDownloadProgress: options.onProgress
+        ? (event) => {
+            options.onProgress?.({
+              loadedBytes: event.loaded,
+              totalBytes: typeof event.total === 'number' && event.total > 0 ? event.total : null,
+            })
+          }
+        : undefined,
     })
-    return response.data
+    const blob: Blob = response.data
+    const expectedBytes = Number(response.headers?.['content-length'])
+    if (Number.isFinite(expectedBytes) && expectedBytes > 0 && blob.size < expectedBytes) {
+      throw new RecordingTruncatedError(expectedBytes, blob.size)
+    }
+    return blob
   }
 
   async getAMIHealth(): Promise<AMIHealthResponse> {
@@ -88,8 +142,64 @@ class CallService {
    * records the call as rejected by the operator rather than missed, and gates
    * on `receive_calls` so an inbound-only operator can decline.
    */
-  async rejectCall(callId: string): Promise<{ status: string; message: string }> {
-    const response = await api.post(`${API_BASE_URL}/api/v1/calls/${callId}/reject`)
+  /**
+   * @param agentExtension which leg to drop. A queue rings every member at once,
+   *   so without it the backend can only fall back to the extension recorded on
+   *   the call — which is the first operator rung, not necessarily this one.
+   */
+  async rejectCall(
+    callId: string,
+    agentExtension?: string | null
+  ): Promise<{ status: string; message: string }> {
+    const response = await api.post(`${API_BASE_URL}/api/v1/calls/${callId}/reject`, {
+      agent_extension: agentExtension ?? null,
+    })
+    return response.data
+  }
+
+  /**
+   * Take a ringing inbound call.
+   *
+   * The operator's extension identifies which of the queue's ringing legs is
+   * being answered — a queue rings every member at once, so without it the
+   * backend can only fall back to the extension recorded on the call, which is
+   * the first operator rung rather than necessarily this one.
+   */
+  async answerCall(
+    callId: string,
+    agentExtension?: string | null
+  ): Promise<{ status: string; message: string }> {
+    const response = await api.post(`${API_BASE_URL}/api/v1/calls/${callId}/answer`, {
+      agent_extension: agentExtension ?? null,
+    })
+    return response.data
+  }
+
+  /** Park the caller, or take them back off hold. */
+  async holdCall(
+    callId: string,
+    hold: boolean,
+    agentExtension?: string | null
+  ): Promise<{ status: string; message: string }> {
+    const response = await api.post(`${API_BASE_URL}/api/v1/calls/${callId}/hold`, {
+      hold,
+      agent_extension: agentExtension ?? null,
+    })
+    return response.data
+  }
+
+  /**
+   * Record which client this call is about.
+   *
+   * A number can resolve to several clients and the write-up goes to every one
+   * the operator selected, but the call itself belongs on one card. Until this
+   * is sent the record holds whichever match the lookup ranked first — a guess
+   * made before the operator had seen anything.
+   */
+  async setCallPrimaryClient(callId: string, clientId: number): Promise<{ status: string }> {
+    const response = await api.patch(`${API_BASE_URL}/api/v1/calls/${callId}/primary-client`, {
+      client_id: clientId,
+    })
     return response.data
   }
 }

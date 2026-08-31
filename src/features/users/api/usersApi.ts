@@ -28,6 +28,7 @@ import type {
 export async function getUsers(params: UserListParams = {}): Promise<UserListResponse> {
   const response = await api.get<UserListResponse>('/api/v1/admin/users', {
     params,
+    paramsSerializer: { indexes: null },
   })
   return response.data
 }

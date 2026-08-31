@@ -182,6 +182,24 @@ describe('ConversationSidebar — item actions', () => {
     expect(await screen.findByText('Просрочка 90+')).toBeInTheDocument()
   })
 
+  it('seeds the rename input with the title as shown, without the dock context block', async () => {
+    // A chat auto-titled from a dock turn carries the page-context envelope in
+    // its stored title; the operator edits what they see, not the machine text.
+    mockedGetConversations.mockResolvedValue([
+      summary(43, { title: 'Що йому запропонувати? <дані-сторінки джерело=ненадій' }),
+    ])
+    const user = userEvent.setup()
+    renderSidebar()
+
+    await screen.findByTestId('conversation-item-43')
+    await openContextMenu(43, 'pages.aiAssistant.historyRename')
+    await user.click(screen.getByText('pages.aiAssistant.historyRename'))
+
+    expect(await screen.findByTestId('conversation-rename-input')).toHaveValue(
+      'Що йому запропонувати?'
+    )
+  })
+
   it('blocks renaming beyond 120 characters and shows a validation hint', async () => {
     const user = userEvent.setup()
     renderSidebar()

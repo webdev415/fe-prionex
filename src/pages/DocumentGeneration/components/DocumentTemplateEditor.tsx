@@ -72,6 +72,7 @@ const ACCEPT_DOCX = '.docx'
 const GROUP_FALLBACK: Record<string, string> = {
   client: 'Client',
   credit: 'Credit',
+  project: 'Project',
   promise: 'Promise',
   restructuring: 'Restructuring',
   system: 'System',
@@ -83,6 +84,7 @@ const ACTIVATION_RULES: DocumentActivationRule[] = [
   'closed_debt',
   'rr_active',
   'rr_first_payment',
+  'rr_draft',
   'promise_active',
   'tag_active',
 ]
@@ -94,6 +96,7 @@ const ACTIVATION_RULE_FALLBACK: Record<DocumentActivationRule, string> = {
   closed_debt: 'Closed debt',
   rr_active: 'Active restructuring',
   rr_first_payment: 'First restructuring payment',
+  rr_draft: 'Restructuring: Draft',
   promise_active: 'Active payment promise',
   tag_active: 'Active tag',
 }

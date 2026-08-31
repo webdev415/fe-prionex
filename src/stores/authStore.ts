@@ -7,6 +7,7 @@ import {
   registerOnAuthCleared,
   runOnceOnNextAuthSuccess,
   setAccessToken,
+  triggerAuthExpired,
 } from '@/lib/api'
 import { applyPersistedLanguageFromServer } from '@/lib/i18n'
 import { applyPersistedThemeFromServer } from '@/stores/themeStore'
@@ -20,6 +21,14 @@ import {
 } from '@/lib/mapBackendUser'
 
 export { mapBackendUserToUser } from '@/lib/mapBackendUser'
+
+/**
+ * Thrown when exiting impersonation left the client on a token it can no
+ * longer use — the server moved on, but the response did not give us the
+ * admin token to move on with. Distinct from a plain Error so the catch block
+ * can tell "the session is gone" apart from "the call failed, try again".
+ */
+class ImpersonationSessionLostError extends Error {}
 
 interface AuthState {
   user: User | null
@@ -891,7 +900,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         !response.data.data.admin_token ||
         !response.data.data.admin_user
       ) {
-        throw new Error('Invalid response from exit impersonation API')
+        // KAN-941: a 2xx means the server already swapped context and handed
+        // back an admin token we are about to discard, so continuing on the
+        // token in hand would keep rendering as the impersonated user with no
+        // way out. Tagged so the catch below tears the session down rather
+        // than just toasting.
+        throw new ImpersonationSessionLostError('Invalid response from exit impersonation API')
       }
 
       const { admin_token, admin_user } = response.data.data
@@ -918,7 +932,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (error: unknown) {
       let errorMessage = 'Failed to exit impersonation'
 
-      const err = error as { response?: { data?: { detail?: string | { message?: string } } } }
+      const err = error as {
+        response?: { status?: number; data?: { detail?: string | { message?: string } } }
+      }
 
       if (err.response?.data?.detail) {
         const detail = err.response.data.detail
@@ -930,6 +946,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isLoading: false,
       })
 
+      // KAN-941: exit is the one call whose failure can leave the SPA stuck
+      // impersonating. The 401 interceptor cannot rescue it — api.ts skips
+      // /auth/* URLs — so the two cases where the server has already moved on
+      // have to be handled here.
+      //
+      // Allowlist, never a denylist. Only a 401 proves the server rejected the
+      // token: the backend terminates and blacklists the admin session on
+      // every refusal past its is_impersonation check and answers 401 for all
+      // of them. A 5xx, a 429 or a network error means the request most likely
+      // never reached that logic, and the session is still good — logging the
+      // admin out for a gateway blip would be a worse bug than the one this
+      // fixes, and nothing retries this call (shouldRetryTransient bails on
+      // /auth/ and on non-GET).
+      if (isDefinitiveAuthFailure(error) || error instanceof ImpersonationSessionLostError) {
+        triggerAuthExpired()
+      }
+
+      // Only meaningful on the non-teardown branch: triggerAuthExpired
+      // navigates away, so a toast raised from here never becomes readable.
       throw new Error(errorMessage)
     }
   },
@@ -940,6 +975,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 // state so React components don't keep rendering as authenticated until
 // the navigation completes.
 registerOnAuthCleared(() => {
+  // KAN-941: the impersonation keys belong here rather than at each call site.
+  // Every teardown path funnels through this callback, and until now they all
+  // left these two behind — so a session torn down mid-impersonation by the
+  // 401 interceptor, a cross-tab logout or the heartbeat would rehydrate the
+  // impersonation banner on the next login.
+  localStorage.removeItem('impersonation_original_admin')
+  localStorage.removeItem('impersonated_user_profile')
+
   useAuthStore.setState({
     user: null,
     isAuthenticated: false,

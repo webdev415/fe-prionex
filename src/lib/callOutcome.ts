@@ -13,8 +13,43 @@ function normalizeOutcomeStatus(status: string | null | undefined): string {
   return (status ?? '').trim().toUpperCase().replace(/\s+/g, '_')
 }
 
-export function classifyCallOutcome(status: string | null | undefined): CallOutcomeRender {
+/**
+ * Two Asterisk outcomes mean opposite things depending on which way the call
+ * went, so they cannot share a label:
+ *
+ * - `cancel` — inbound, the caller gave up while it was still ringing; outbound,
+ *   the operator hung up before the customer picked up.
+ * - `no_answer` — inbound, nobody in the queue answered; outbound, the customer
+ *   did not answer.
+ *
+ * Callers that don't know the direction get the outbound wording, which is the
+ * long-standing behaviour and reads correctly for a call of unknown provenance.
+ */
+export function classifyCallOutcome(
+  status: string | null | undefined,
+  direction?: string | null
+): CallOutcomeRender {
   const s = normalizeOutcomeStatus(status)
+  const isInbound = (direction ?? '').trim().toLowerCase() === 'inbound'
+
+  if (isInbound) {
+    switch (s) {
+      case 'CANCEL':
+      case 'CANCELLED':
+        return {
+          labelKey: 'pages.clients.statuses.droppedByClient',
+          fallback: 'Dropped by client',
+          palette: 'warning',
+        }
+      case 'NO_ANSWER':
+        return {
+          labelKey: 'pages.clients.statuses.missed',
+          fallback: 'Missed',
+          palette: 'error',
+        }
+    }
+  }
+
   switch (s) {
     case 'COMPLETED':
     case 'ANSWERED':
@@ -28,6 +63,20 @@ export function classifyCallOutcome(status: string | null | undefined): CallOutc
         labelKey: 'pages.clients.statuses.noAnswer',
         fallback: 'No answer',
         palette: 'error',
+      }
+    // Inbound-only, and deliberately distinct: nobody picked up, versus the
+    // operator actively declining. call-service writes both.
+    case 'MISSED':
+      return {
+        labelKey: 'pages.clients.statuses.missed',
+        fallback: 'Missed',
+        palette: 'error',
+      }
+    case 'REJECTED':
+      return {
+        labelKey: 'pages.clients.statuses.rejected',
+        fallback: 'Rejected',
+        palette: 'warning',
       }
     case 'BUSY':
       return {
@@ -118,6 +167,8 @@ export function classifyCallOutcome(status: string | null | undefined): CallOutc
 const NON_ANSWERED_OUTCOMES = new Set([
   'NO_ANSWER',
   'NO ANSWER',
+  'MISSED',
+  'REJECTED',
   'BUSY',
   'CANCEL',
   'UNAVAILABLE',

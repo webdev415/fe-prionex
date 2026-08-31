@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 
-import { OPERATOR_PHONE_ENABLED, OPERATOR_PHONE_URL } from '../constants'
+import { OPERATOR_PHONE_CONFIGURED, OPERATOR_PHONE_URL } from '../constants'
 import { useOperatorPhone } from '../hooks/useOperatorPhone'
 import { OperatorPhoneStatus } from './OperatorPhoneStatus'
 
@@ -13,15 +13,16 @@ import { OperatorPhoneStatus } from './OperatorPhoneStatus'
  * mic access AND lets it play call/ringtone audio without a user gesture inside
  * the frame (autoplay is not delegated to cross-origin iframes by default). The
  * CRM top page must also delegate these features via Permissions-Policy.
+ *
+ * Renders nothing when no phone origin is configured (a deployed build without
+ * VITE_OPERATOR_PHONE_URL). Framing a guessed origin would be worse than
+ * absent: the hook posts the operator's phone JWT to it.
  */
 export function OperatorPhonePanel() {
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const { status, aor } = useOperatorPhone(iframeRef)
 
-  // No phone service configured for this environment. Rendering the iframe
-  // anyway is what put a JWT-receiving origin of `http://localhost:5173` into
-  // production bundles; not rendering is the whole fix.
-  if (!OPERATOR_PHONE_ENABLED || OPERATOR_PHONE_URL === null) return null
+  if (!OPERATOR_PHONE_CONFIGURED) return null
 
   return (
     <>

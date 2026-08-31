@@ -21,6 +21,7 @@ import type {
   CreateClientRequest,
   CreateContactRequest,
   CreateRestructuringAgreementRequest,
+  DebtDetail,
   GetClientsParams,
   ManualPriorityRequest,
   SearchByTinParams,
@@ -43,6 +44,7 @@ export const clientKeys = {
   loans: (id: number) => [...clientKeys.details(), id, 'loans'] as const,
   paymentsSection: (id: number) => [...clientKeys.details(), id, 'payments'] as const,
   callSmsHistory: (id: number) => [...clientKeys.details(), id, 'callSmsHistory'] as const,
+  recentCalls: (id: number) => [...clientKeys.details(), id, 'recentCalls'] as const,
   tasks: (id: number) => [...clientKeys.details(), id, 'tasks'] as const,
   operatorsSection: (id: number) => [...clientKeys.details(), id, 'operators'] as const,
   documents: (id: number) => [...clientKeys.details(), id, 'documents'] as const,
@@ -147,6 +149,33 @@ export function useClientNames(clientIds: number[]): Map<number, string> {
     }
   })
   return names
+}
+
+/**
+ * Resolve a set of client ids to their debts, returning a Map<id, DebtDetail[]>.
+ *
+ * Rides the exact same `clientKeys.detail(id)` queries as `useClientNames`
+ * above (the client detail response already carries `debts[]`), so a list that
+ * shows both names and loan numbers costs the same requests as names alone —
+ * React Query dedupes the identical query definitions into one fetch.
+ */
+export function useClientDebts(clientIds: number[]): Map<number, DebtDetail[]> {
+  const uniqueIds = Array.from(new Set(clientIds))
+  const results = useQueries({
+    queries: uniqueIds.map((id) => ({
+      queryKey: clientKeys.detail(id),
+      queryFn: () => clientApi.getClientById(id),
+      enabled: !!id,
+      staleTime: 5 * 60_000,
+    })),
+  })
+
+  const debtsById = new Map<number, DebtDetail[]>()
+  uniqueIds.forEach((id, i) => {
+    const debts = results[i]?.data?.debts
+    if (debts && debts.length > 0) debtsById.set(id, debts)
+  })
+  return debtsById
 }
 
 /**
@@ -523,6 +552,41 @@ export function useClientCallSmsHistory(clientId: number, enabled = true, showAl
     enabled: enabled && clientId > 0,
     staleTime: 30000,
     refetchOnMount: false,
+  })
+}
+
+/**
+ * The client's most recent calls, in the raw API shape (KAN-973 §4).
+ *
+ * Deliberately separate from `useClientCallSmsHistory`, for two reasons that
+ * both broke the hotkey phone pre-selection:
+ *
+ *  * that query is enabled only while the Call/SMS tab is open — and the
+ *    default tab is Loans — so at the moment a hotkey is pressed it has
+ *    usually never run;
+ *  * it returns records mapped for display, where `customer_number` has been
+ *    renamed to `phone` and unknown numbers replaced with "-", so the number
+ *    the switchboard reported is no longer recoverable.
+ *
+ * Returns `CallRecord` untouched, and is enabled only for operators who
+ * actually have a shortcut bound — for everyone else it would be a request per
+ * client card in service of a feature they have not set up.
+ *
+ * The window is short on purpose: the question is only ever about the last few
+ * minutes, and a stale answer would pre-select the wrong number.
+ */
+export function useClientRecentCalls(clientId: number, enabled = true) {
+  return useQuery({
+    queryKey: clientKeys.recentCalls(clientId),
+    queryFn: async () => {
+      // Ordered newest-first by the API, so a small page still contains the
+      // call that just ended.
+      const res = await callSmsApi.getClientCalls(clientId, { limit: 20 })
+      return res.calls ?? []
+    },
+    enabled: enabled && clientId > 0,
+    staleTime: 15 * 1000,
+    refetchOnMount: true,
   })
 }
 

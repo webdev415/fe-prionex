@@ -1,9 +1,12 @@
 import { useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { formatDateTime } from '@/lib/localeFormat'
+import type { DebtDetail } from '@/features/clients/api/types'
 import {
   AddMarkerButton,
+  CallTranscriptPanel,
   LeaveFeedbackButton,
   MarkerOverlay,
   ScorecardPanel,
@@ -11,6 +14,7 @@ import {
 import { useMarkersForCall } from '@/features/quality/hooks/useMarkers'
 import { CallPlayer, type CallPlayerHandle } from '@/pages/ClientManagement/components/CallPlayer'
 import { CreateCorrectionTaskDialog } from '../inbox/CreateCorrectionTaskDialog'
+import { LoanLink } from './LoanLink'
 
 /**
  * Inline trainer review panel (Scorecard Review Panel redesign) — the right
@@ -38,6 +42,13 @@ export interface CallReviewPanelProps {
   canEdit?: boolean
   /** Known talk time, used to position markers before the audio is fetched. */
   talkDurationSec?: number | null
+  /** The call's client — shown in the header with the loan-number link
+   *  («Навчання» п.8). Absent → the client line is simply not rendered. */
+  clientId?: number | null
+  /** Resolved client display name (falls back to `#id`). */
+  clientName?: string
+  /** The client's loans, for the header loan-number link. */
+  clientDebts?: DebtDetail[]
   /** Emits the editor's unsaved-changes state so the tab can guard row switches. */
   onDirtyChange?: (dirty: boolean) => void
 }
@@ -50,12 +61,18 @@ export function CallReviewPanel({
   scorecardId,
   canEdit = false,
   talkDurationSec,
+  clientId,
+  clientName,
+  clientDebts,
   onDirtyChange,
 }: CallReviewPanelProps) {
   const { t, i18n } = useTranslation('common')
   const playerRef = useRef<CallPlayerHandle>(null)
   const [assignOpen, setAssignOpen] = useState(false)
   const [durationMs, setDurationMs] = useState(0)
+  // Expanded by default — the AI review is the point of opening a dialog now;
+  // trainers can fold it away when they only want the scorecard.
+  const [transcriptOpen, setTranscriptOpen] = useState(true)
 
   const markersQuery = useMarkersForCall(callId ?? null, !!callId)
   const markers = markersQuery.data ?? []
@@ -82,6 +99,21 @@ export function CallReviewPanel({
           </p>
           {createdAt ? (
             <p className="text-[11px] text-[#6B7280]">{formatDateTime(createdAt, i18n.language)}</p>
+          ) : null}
+          {clientId != null ? (
+            <p
+              className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-[#6B7280]"
+              data-testid="review-client-line"
+            >
+              <span>{t('pages.training.dialogue.list.client', 'Client')}:</span>
+              <Link
+                to={`/dashboard/clients/${clientId}`}
+                className="font-medium text-[#204E4D] hover:underline"
+              >
+                {clientName ?? `#${clientId}`}
+              </Link>
+              <LoanLink clientId={clientId} debts={clientDebts} />
+            </p>
           ) : null}
         </div>
 
@@ -123,7 +155,8 @@ export function CallReviewPanel({
         </div>
       </div>
 
-      {/* Scrolling scorecard editor (its own header / score / save controls). */}
+      {/* Scrolling scorecard editor (its own header / score / save controls),
+        with the AI transcript + review card underneath. */}
       <div className="min-h-0 flex-1 overflow-y-auto border-t border-[#EBECE8] p-3">
         <ScorecardPanel
           key={scorecardId ?? callId}
@@ -133,6 +166,32 @@ export function CallReviewPanel({
           canEdit={canEdit}
           onDirtyChange={onDirtyChange}
         />
+
+        {/* Call QA card. CallTranscriptPanel carries its own gates
+          (`view_transcripts` + the global `transcripts_enabled` switch) and
+          renders nothing when either is off — no checks duplicated here. */}
+        <div className="mt-3 border-t border-[#EBECE8] pt-3">
+          <button
+            type="button"
+            onClick={() => setTranscriptOpen((open) => !open)}
+            aria-expanded={transcriptOpen}
+            data-testid="call-review-transcript-toggle"
+            className="flex w-full items-center justify-between gap-2 rounded-md px-1 py-1 text-left text-xs font-medium text-[#05040D] hover:bg-[#F7F7F7]"
+          >
+            <span>
+              {t('pages.training.dialogue.detail.transcript', 'Transcript and AI review')}
+            </span>
+            <Icons.ArrowDown
+              size={14}
+              className={
+                transcriptOpen ? 'rotate-180 transition-transform' : 'transition-transform'
+              }
+            />
+          </button>
+          {transcriptOpen ? (
+            <CallTranscriptPanel callId={callId} active onSeek={seekTo} className="mt-2" />
+          ) : null}
+        </div>
       </div>
 
       <CreateCorrectionTaskDialog

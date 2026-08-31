@@ -5,19 +5,27 @@ import { taskApi } from '@/features/clients/api/taskApi'
 import * as notificationApi from '../api/notificationApi'
 import type { NotificationListResponse } from '../types'
 
-export function useNotifications(params?: {
-  page?: number
-  page_size?: number
-  type?: string | string[]
-  read?: boolean
-  starred?: boolean
-}) {
+export function useNotifications(
+  params?: {
+    page?: number
+    page_size?: number
+    type?: string | string[]
+    read?: boolean
+    starred?: boolean
+  },
+  options?: {
+    // Lets on-demand consumers (e.g. the bell's read-history tab) skip
+    // fetching + the 60s polling until the view is actually shown.
+    enabled?: boolean
+  }
+) {
   return useQuery({
     queryKey: ['notifications', params],
     queryFn: () => notificationApi.getNotifications(params ?? { page: 1, page_size: 50 }),
     staleTime: 15_000,
     refetchInterval: 60_000,
     refetchOnWindowFocus: true,
+    enabled: options?.enabled ?? true,
   })
 }
 

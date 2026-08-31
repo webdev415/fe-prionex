@@ -19,9 +19,13 @@ import {
 import { Icons } from '@/lib/icons'
 import type { SmsTemplate } from './types'
 import { mapTemplateResponseArray } from './utils'
-import { useSMSTemplates } from '@/features/sms'
+import { useDeletedSMSTemplates, useRestoreSMSTemplate, useSMSTemplates } from '@/features/sms'
+import type { TemplateTrashResponse } from '@/features/sms'
 import { useAuthStore } from '@/stores/authStore'
+import { Button } from '@/components/ui/Button'
 import { PermissionGuard } from '@/components/auth'
+import { DeletedItemsSection, useExpiryLabel } from '@/components/softDelete'
+import { formatDateTime } from '@/lib/formatters'
 import { PERMISSIONS } from '@/constants/permissions'
 import {
   CreateTemplateModal,
@@ -80,6 +84,47 @@ export function SmsTemplatesPage() {
   } = useSMSTemplates(
     user?.active_project_id ? { project_id: parseInt(user.active_project_id, 10) } : undefined
   )
+
+  // Scoped by the caller's token server-side, so no project_id is passed here.
+  const deletedTemplates = useDeletedSMSTemplates()
+  const restoreTemplate = useRestoreSMSTemplate()
+  const expiryLabel = useExpiryLabel()
+
+  const deletedColumns: Column<TemplateTrashResponse>[] = [
+    { key: 'name', header: t('pages.smsTemplates.tableHeaders.templateName') },
+    {
+      key: 'category',
+      header: t('pages.smsTemplates.tableHeaders.category'),
+      render: (row) => row.category || '-',
+    },
+    {
+      key: 'deleted_at',
+      header: t('softDelete.columns.deletedAt', 'Deleted'),
+      render: (row) => (row.deleted_at ? formatDateTime(row.deleted_at) : '-'),
+    },
+    {
+      key: 'expires',
+      header: t('softDelete.columns.expires', 'Expires'),
+      render: (row) => expiryLabel(row.deleted_at),
+    },
+    {
+      key: 'actions',
+      header: t('softDelete.columns.actions', 'Actions'),
+      align: 'right',
+      render: (row) => (
+        <PermissionGuard permission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={restoreTemplate.isPending}
+            onClick={() => restoreTemplate.mutate(row.id)}
+          >
+            {t('softDelete.actions.restore', 'Restore')}
+          </Button>
+        </PermissionGuard>
+      ),
+    },
+  ]
 
   // Full-page skeleton: no data yet (keepPreviousData does not apply on first load).
   const showFullPageSkeleton = templatesPending && !templatesData
@@ -264,7 +309,6 @@ export function SmsTemplatesPage() {
               <LinkButton
                 variant="regular-black"
                 size="xs"
-                disabled={template.isSystem}
                 onClick={() => handleDelete(template)}
                 leftIcon={<Icons.Delete size={16} className="text-foreground" strokeWidth={1.5} />}
               >
@@ -309,7 +353,6 @@ export function SmsTemplatesPage() {
                 <PermissionGuard permission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
                   <DropdownMenuItem
                     onClick={() => handleDelete(template)}
-                    disabled={template.isSystem}
                     className="text-foreground flex cursor-pointer items-center gap-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <Icons.Delete size={16} strokeWidth={1.5} />
@@ -378,9 +421,11 @@ export function SmsTemplatesPage() {
             className="flex flex-col items-start gap-8 self-stretch"
           />
 
-          {/* Pagination */}
-          <div className="flex w-full flex-row justify-center gap-3 sm:items-center sm:justify-between">
-            <span className="text-muted-foreground hidden text-xs font-light sm:inline sm:text-sm">
+          {/* Three tracks so the page controls stay optically centred: the count
+              on the left is balanced by an empty track of equal width on the
+              right, whatever the text length. */}
+          <div className="flex w-full flex-row justify-center gap-3 sm:items-center">
+            <span className="text-muted-foreground hidden flex-1 text-xs font-light sm:inline sm:text-sm">
               {t('pages.smsTemplates.showing')} {paginatedTemplates.length}{' '}
               {t('pages.smsTemplates.of')} {filteredTemplates.length}{' '}
               {t('pages.smsTemplates.templates')}
@@ -474,13 +519,14 @@ export function SmsTemplatesPage() {
                 <Icons.ArrowRight size={16} className="text-foreground" strokeWidth={1.5} />
               </button>
             </div>
-            <div className="flex hidden items-center gap-1 sm:flex">
-              <Icons.Info size={14} className="text-muted-foreground sm:size-4" strokeWidth={1.5} />
-              <span className="text-muted-foreground text-[10px] font-light sm:text-xs">
-                {t('pages.smsTemplates.systemTemplatesCannotBeDeleted')}
-              </span>
-            </div>
+            <span className="hidden flex-1 sm:block" aria-hidden="true" />
           </div>
+          <DeletedItemsSection
+            items={deletedTemplates.data?.templates ?? []}
+            total={deletedTemplates.data?.total ?? 0}
+            columns={deletedColumns}
+            title={t('pages.smsTemplates.deleted.title', 'Deleted templates')}
+          />
         </>
       )}
 
