@@ -4,8 +4,9 @@
  * Ключи кэша строятся так же, как у клиентов (`clientKeys`): общий корень →
  * списки → детали, чтобы инвалидация после решения била точечно.
  */
+import { useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { creditApi } from '../api/creditApi'
+import { creditApi, newIdempotencyKey } from '../api/creditApi'
 import type {
   CreditApplicationsParams,
   CreditLoansParams,
@@ -201,10 +202,42 @@ export function useCreditSectionEnabled(canSeeSection: boolean): boolean {
 /** Переключение рубильника. Право `credit.switches.write` — у риск-менеджера. */
 export function useSetCreditSwitch() {
   const queryClient = useQueryClient()
+
+  /**
+   * Ключ идемпотентности живёт на ОДНО ДЕЙСТВИЕ пользователя, а не на один
+   * вызов.
+   *
+   * Раньше ключ минтился внутри клиента при каждой отправке, и защита от
+   * повтора не работала вообще: сеть моргнула на ответе, человек нажал ещё
+   * раз — модуль видел новый ключ, выполнял переключение второй раз и писал в
+   * append-only историю вторую запись. История и есть весь наш аудит
+   * рубильников (отдельного журнала нет намеренно), так что дубль в ней —
+   * навсегда, и разобрать потом, было переключение одно или два, уже нельзя.
+   *
+   * Границу действия задаёт его содержание: рубильник + новое положение +
+   * причина. Ту же тройку модуль кладёт в отпечаток тела, поэтому повтор с
+   * сохранённым ключом гарантированно совпадёт по отпечатку и получит реплей,
+   * а не 409. Сменил причину — это уже другое действие, и ключ обязан быть
+   * другим, иначе модуль ответил бы «ключ использован для другого запроса».
+   *
+   * После успеха ключ сбрасываем: следующее такое же переключение (выключил →
+   * включил → снова выключил с той же причиной) — новое действие, и реплей
+   * старого ответа сделал бы рубильник «залипшим».
+   */
+  const attempt = useRef<{ signature: string; key: string } | null>(null)
+
   return useMutation({
-    mutationFn: ({ name, payload }: { name: CreditSwitchName; payload: CreditSwitchPayload }) =>
-      creditApi.setSwitch(name, payload),
+    mutationFn: ({ name, payload }: { name: CreditSwitchName; payload: CreditSwitchPayload }) => {
+      // `?? null`, а не `?? ''`: пустая причина и её отсутствие дают разные
+      // тела запроса, значит и разные отпечатки на стороне модуля.
+      const signature = JSON.stringify([name, payload.enabled, payload.reason ?? null])
+      if (attempt.current?.signature !== signature) {
+        attempt.current = { signature, key: newIdempotencyKey(`fe-switch:${name}`) }
+      }
+      return creditApi.setSwitch(name, payload, attempt.current.key)
+    },
     onSuccess: (state) => {
+      attempt.current = null
       // Ответ уже содержит новое положение обоих рубильников — кладём его в
       // кэш, чтобы экран не мигал старым значением до перезапроса.
       queryClient.setQueryData(creditKeys.switches(), state)

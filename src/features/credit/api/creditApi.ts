@@ -184,7 +184,17 @@ async function post<T>(path: string, body: unknown, headers?: Record<string, str
   }
 }
 
-function idempotencyKey(prefix: string): string {
+/**
+ * Новый ключ идемпотентности.
+ *
+ * Функция МИНТИТ ключ, а не «выдаёт ключ запроса»: каждый вызов даёт новый.
+ * Поэтому звать её на каждую отправку — значит выключить идемпотентность
+ * совсем: повтор после сетевого таймаута придёт с другим ключом, и модуль
+ * честно выполнит его во второй раз. Решать, сколько живёт ключ, обязан тот,
+ * кто знает границы ДЕЙСТВИЯ пользователя, — то есть слой хуков, а не
+ * транспорт. Отсюда и `export`.
+ */
+export function newIdempotencyKey(prefix: string): string {
   const random =
     typeof crypto !== 'undefined' && 'randomUUID' in crypto
       ? crypto.randomUUID()
@@ -223,15 +233,24 @@ export const creditApi = {
    */
   switches: () => get<CreditSwitchState>('/admin/switches'),
 
-  /** Переключить рубильник. Право есть только у риск-менеджера. */
-  setSwitch: (name: CreditSwitchName, payload: CreditSwitchPayload) =>
+  /**
+   * Переключить рубильник. Право есть только у риск-менеджера.
+   *
+   * Ключ идемпотентности приходит СНАРУЖИ и обязателен — параметра по
+   * умолчанию здесь нет намеренно. История переключений физически append-only
+   * и она же весь наш аудит: повтор после сетевого таймаута с новым ключом
+   * навсегда оставил бы в ней вторую запись о переключении, которого не было.
+   * Раньше ключ минтился прямо здесь, то есть на каждый вызов, — защита от
+   * повтора не работала ни разу.
+   */
+  setSwitch: (name: CreditSwitchName, payload: CreditSwitchPayload, idempotencyKey: string) =>
     post<CreditSwitchState>(`/admin/switches/${name}`, payload, {
-      'Idempotency-Key': idempotencyKey(`fe-switch:${name}`),
+      'Idempotency-Key': idempotencyKey,
     }),
 
   decide: (applicationId: string, payload: ManualDecisionPayload) =>
     post<CreditDecision>(`/applications/${applicationId}/decision`, payload, {
-      'Idempotency-Key': idempotencyKey(`fe-decision:${applicationId}`),
+      'Idempotency-Key': newIdempotencyKey(`fe-decision:${applicationId}`),
     }),
 
   /**

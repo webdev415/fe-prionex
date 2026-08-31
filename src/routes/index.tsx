@@ -8,6 +8,11 @@ import { useTabTracker } from '@/features/auth/hooks/useTabTracker'
 import { DashboardLayout } from '@/components/layout'
 import { RouteErrorElement } from '@/components/RouteErrorElement'
 import { V3CutoverRoute } from '@/features/scoring/components/V3CutoverRoute'
+// Рубильник раздела кредита закрывает и МАРШРУТЫ, а не только пункт меню:
+// прямая ссылка на выключенный раздел обязана объяснить, а не открыть его.
+// Импорт точечный, не через бочку `@/pages/Credit`: та тянет все страницы
+// раздела в главный чанк и убила бы их ленивую загрузку.
+import { CreditSectionGate } from '@/pages/Credit/components/CreditSectionGate'
 import { PERMISSIONS } from '@/constants/permissions'
 import { BulkOperatorAssignmentPageSkeleton } from '@/pages/Operations/BulkOperatorAssignmentPageSkeleton'
 import { BulkTagAssignmentPageSkeleton } from '@/pages/Operations/BulkTagAssignmentPageSkeleton'
@@ -333,6 +338,11 @@ export const router = createBrowserRouter([
       // API. Права credit.* появятся в auth-service вместе с ролями WS-20;
       // до тех пор раздел доступен и по системному праву, иначе его не увидит
       // никто, включая администратора, который его и принимает.
+      //
+      // `CreditSectionGate` стоит ВНУТРИ проверки прав, а не снаружи: у кого
+      // прав нет — тому 403, это про доступ; у кого права есть — тому
+      // объяснение про выключенный рубильник, это про решение риск-менеджера.
+      // Порядок наоборот показывал бы постороннему внутреннюю причину.
       {
         path: 'credit',
         element: <Navigate to="/dashboard/credit/applications" replace />,
@@ -347,7 +357,7 @@ export const router = createBrowserRouter([
             ]}
             mode="any"
           >
-            {withSuspense(<CreditApplicationsPage />)}
+            <CreditSectionGate>{withSuspense(<CreditApplicationsPage />)}</CreditSectionGate>
           </PermissionRoute>
         ),
       },
@@ -361,7 +371,7 @@ export const router = createBrowserRouter([
             ]}
             mode="any"
           >
-            {withSuspense(<CreditApplicationDetailPage />)}
+            <CreditSectionGate>{withSuspense(<CreditApplicationDetailPage />)}</CreditSectionGate>
           </PermissionRoute>
         ),
       },
@@ -375,7 +385,7 @@ export const router = createBrowserRouter([
             ]}
             mode="any"
           >
-            {withSuspense(<CreditLoansPage />)}
+            <CreditSectionGate>{withSuspense(<CreditLoansPage />)}</CreditSectionGate>
           </PermissionRoute>
         ),
       },
@@ -393,7 +403,7 @@ export const router = createBrowserRouter([
             ]}
             mode="any"
           >
-            {withSuspense(<CreditSettingsPage />)}
+            <CreditSectionGate>{withSuspense(<CreditSettingsPage />)}</CreditSectionGate>
           </PermissionRoute>
         ),
       },
@@ -407,7 +417,7 @@ export const router = createBrowserRouter([
             ]}
             mode="any"
           >
-            {withSuspense(<CreditLoanDetailPage />)}
+            <CreditSectionGate>{withSuspense(<CreditLoanDetailPage />)}</CreditSectionGate>
           </PermissionRoute>
         ),
       },
