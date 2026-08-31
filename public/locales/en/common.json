@@ -11651,7 +11651,8 @@
       "interest": "Interest",
       "fee": "Fee",
       "lastActivity": "Last activity",
-      "step": "Step"
+      "step": "Step",
+      "onStep": "On step"
     },
     "fields": {
       "name": "Name",
@@ -12175,7 +12176,8 @@
     "idle": {
       "underHour": "under an hour",
       "hoursShort": "{{value}} h",
-      "daysShort": "{{value}} d"
+      "daysShort": "{{value}} d",
+      "sinceCreated": "since creation"
     }
   }
 }

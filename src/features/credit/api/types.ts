@@ -85,6 +85,13 @@ export interface CreditApplicationSummary {
    * была видна в типах, и включится вместе с признаком.
    */
   step_entered_at?: string | null
+  /**
+   * Откуда взято `step_entered_at`: `step` — измерено по ленте переходов,
+   * `created` — подставлено время создания заявки, потому что лента её не
+   * застала. Признак обязателен для честной подписи: без него «стоит 40 днів»
+   * читается как измерение, хотя это «мы не знаем».
+   */
+  step_entered_at_source?: 'step' | 'created'
 }
 
 export interface CreditDecision {

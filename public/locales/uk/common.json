@@ -11675,7 +11675,8 @@
       "interest": "Проценти",
       "fee": "Комісія",
       "lastActivity": "Останній рух",
-      "step": "Крок"
+      "step": "Крок",
+      "onStep": "На кроці"
     },
     "fields": {
       "name": "Клієнт",
@@ -12199,7 +12200,8 @@
     "idle": {
       "underHour": "менше години",
       "hoursShort": "{{value}} год",
-      "daysShort": "{{value}} дн"
+      "daysShort": "{{value}} дн",
+      "sinceCreated": "з моменту створення"
     }
   }
 }
