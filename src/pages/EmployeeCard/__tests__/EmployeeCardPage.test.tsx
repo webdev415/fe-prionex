@@ -794,16 +794,18 @@ describe('EmployeeCardPage once somebody has left', () => {
   })
 
   /*
-   * The one exception, and the reason it is one: a date recorded wrongly has
-   * to be correctable, or the mistake is permanent.
+   * Once somebody has left, the panel is the only place that writes: it offers
+   * Reinstate and nothing else does anything. A closed card correspondingly
+   * carries no pencil anywhere, the termination section included - correcting
+   * a wrong date means reinstating and recording it again.
    */
-  it('leaves the termination itself editable', async () => {
+  it('leaves the panel as the only way to act on a closed card', () => {
     renderAt('/dashboard/team-management/users/7')
 
-    await userEvent.click(
-      screen.getByRole('button', { name: 'pages.employeeCard.termination.correct' })
-    )
-
-    expect(await screen.findByText('pages.employeeCard.dialogs.termination')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /termination\.reinstate/ })).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'pages.employeeCard.termination.correct' })
+    ).toBeNull()
+    expect(screen.queryByRole('button', { name: 'pages.employeeCard.edit' })).toBeNull()
   })
 })

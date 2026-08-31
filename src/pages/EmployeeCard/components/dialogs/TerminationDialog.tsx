@@ -33,6 +33,9 @@ export interface TerminationDialogProps {
 
 const FORM_ID = 'employee-card-termination'
 
+/** What the service stores. Longer than this is refused with a 422. */
+const COMMENT_LIMIT = 2000
+
 /**
  * Recording that somebody has left, or correcting what was recorded.
  *
@@ -132,9 +135,15 @@ export function TerminationDialog({ card, projectId, open, onClose }: Terminatio
             </Select>
           </div>
 
+          {/*
+            Bounded to what the service accepts. Without it a longer comment is
+            typed, submitted, and refused with a 422 the reader has no way to
+            have predicted.
+          */}
           <Input
             label={t('pages.employeeCard.termination.comment')}
             value={comment}
+            maxLength={COMMENT_LIMIT}
             disabled={busy}
             onChange={(event) => setComment(event.target.value)}
             className="sm:col-span-2"

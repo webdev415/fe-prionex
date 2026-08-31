@@ -4,7 +4,6 @@ import { CardSection } from './CardSection'
 
 export interface TerminationSectionProps {
   card: EmployeeCard
-  onEdit?: () => void
 }
 
 /**
@@ -30,29 +29,30 @@ export interface TerminationSectionProps {
  * section is already the lightest surface any theme has, so the frame is what
  * carries the same separation.
  */
-export function TerminationSection({ card, onEdit }: TerminationSectionProps) {
+export function TerminationSection({ card }: TerminationSectionProps) {
   const { t, i18n } = useTranslation()
   const gone = card.termination
 
   const day = (value: string) => new Date(value).toLocaleDateString(i18n.language)
 
+  /*
+   * ``min-w-0`` and ``break-words`` together, and both are needed. A grid
+   * column is at least as wide as its widest unbreakable word, so a comment
+   * typed as one 500-character run pushes the column - and the card with it -
+   * off the side of the page. ``min-w-0`` lets the column be narrower than its
+   * content, and ``break-words`` then has somewhere to break.
+   */
   const field = (label: string, value: string | null, wide = false) => (
-    <div className={wide ? 'space-y-1 sm:col-span-3' : 'space-y-1'}>
+    <div className={wide ? 'min-w-0 space-y-1 sm:col-span-3' : 'min-w-0 space-y-1'}>
       <dt className="text-muted-foreground text-xs">{label}</dt>
-      <dd className="text-foreground text-sm">
+      <dd className="text-foreground text-sm break-words">
         {value || <span className="text-muted-foreground">—</span>}
       </dd>
     </div>
   )
 
   return (
-    <CardSection
-      id="termination"
-      title={t('pages.employeeCard.sections.termination')}
-      {...(gone && card.can_edit && onEdit
-        ? { editLabel: t('pages.employeeCard.termination.correct'), onEdit }
-        : {})}
-    >
+    <CardSection id="termination" title={t('pages.employeeCard.sections.termination')}>
       <div className="border-border rounded-lg border p-4 sm:p-6">
         {gone ? (
           <div className="space-y-6">

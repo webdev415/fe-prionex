@@ -98,9 +98,7 @@ function card(overrides: Partial<EmployeeCard> = {}): EmployeeCard {
 }
 
 function showSection(given: EmployeeCard = card()) {
-  const onEdit = vi.fn()
-  render(<TerminationSection card={given} onEdit={onEdit} />)
-  return { onEdit }
+  render(<TerminationSection card={given} />)
 }
 
 function showDialog(given: EmployeeCard = card()) {
@@ -193,20 +191,29 @@ describe('TerminationSection', () => {
    * The exception to the freeze, and the reason it is an exception: a date
    * recorded wrongly has to be correctable, or the mistake is permanent.
    */
-  it('keeps its own action after the card is closed', () => {
+  /*
+   * The section only ever displays. Terminating and reinstating are both acted
+   * from the profile panel, so a control here would be a second place to look
+   * for the same thing - and the design draws none.
+   */
+  it('offers nothing to click, terminated or not', () => {
     showSection(card({ termination: GONE }))
 
-    expect(
-      screen.getByRole('button', { name: 'pages.employeeCard.termination.correct' })
-    ).toBeInTheDocument()
+    expect(screen.queryByRole('button')).toBeNull()
   })
 
-  it('offers nothing to somebody who may only read', () => {
-    render(<TerminationSection card={card({ can_edit: false })} onEdit={vi.fn()} />)
+  /*
+   * A grid column is at least as wide as its widest unbreakable word, so a
+   * comment typed as one long run would push the card off the side of the
+   * page instead of wrapping inside it.
+   */
+  it('wraps a long comment rather than stretching the card', () => {
+    const long = '1'.repeat(400)
+    showSection(card({ termination: { ...GONE, comment: long } }))
 
-    expect(
-      screen.queryByRole('button', { name: 'pages.employeeCard.termination.record' })
-    ).toBeNull()
+    const value = screen.getByText(long)
+    expect(value.className).toContain('break-words')
+    expect(value.parentElement?.className).toContain('min-w-0')
   })
 })
 
@@ -258,6 +265,15 @@ describe('TerminationDialog', () => {
       terminated_on: '2025-04-30',
       reason: 'personal_desire',
     })
+  })
+
+  it('stops the comment at what the service will store', () => {
+    showDialog()
+
+    expect(screen.getByLabelText('pages.employeeCard.termination.comment')).toHaveAttribute(
+      'maxlength',
+      '2000'
+    )
   })
 
   it('opens on what was recorded, so a correction starts from it', () => {

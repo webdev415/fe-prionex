@@ -213,7 +213,7 @@ export function EmployeeCardPage() {
               <ChronologySection userId={employeeId} />
             </section>
 
-            <TerminationSection card={data} onEdit={() => setEditing('termination')} />
+            <TerminationSection card={data} />
 
             {/*
               Somewhere for the last section to scroll to. Without it the
