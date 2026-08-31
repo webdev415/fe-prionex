@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { DateSelect } from '../DateSelect'
@@ -589,6 +589,26 @@ describe('DateSelect (selected time slot keeps its selected look) — KAN-992', 
  * again, one grid over.
  */
 describe('DateSelect (a blocked "today" still reads as blocked)', () => {
+  // 🔴 The clock is pinned, and it has to be. Both tests below reason about
+  // where ``today`` sits relative to a ``min`` one day away, and react-datepicker
+  // opens on ``min``'s month when there is no value. Run for real on the LAST DAY
+  // OF A MONTH, ``min`` lands in the next month, the calendar opens there, and
+  // today renders as ``--outside-month`` — a rule that outscores ``--disabled``
+  // and wins the cascade, so the first test failed its selector assertion on
+  // 2026-08-31 while passing every other day of that month. The component was
+  // never wrong; the test was reading a cell the calendar had moved.
+  //
+  // Only ``Date`` is mocked — `vi.setSystemTime` without `vi.useFakeTimers()`
+  // leaves real timers alone, which `userEvent`'s internal delays need.
+  // Mid-month so neither ±1 day crosses a boundary.
+  beforeEach(() => {
+    vi.setSystemTime(new Date(2026, 7, 12, 10, 0, 0))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   // A value on another day matters: with none, react-datepicker marks today
   // ``--keyboard-selected``, which the today rule already excludes — so the
   // accent case would never be exercised.
