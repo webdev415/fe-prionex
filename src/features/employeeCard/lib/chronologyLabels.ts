@@ -13,6 +13,11 @@ function text(value: unknown): string {
   return typeof value === 'string' && value.trim() ? value.trim() : ''
 }
 
+function reasonOf(payload: Record<string, unknown>, t: TFunction): string {
+  const slug = text(payload.reason)
+  return slug ? t(`pages.employeeCard.termination.reasons.${slug}`, slug) : ''
+}
+
 function score(payload: Record<string, unknown>): string {
   const points = payload.score
   const outOf = payload.max_score
@@ -32,6 +37,7 @@ function score(payload: Record<string, unknown>): string {
  */
 function wording(eventType: string, values: Record<string, string>): string | undefined {
   if (eventType === 'hired' && !values.department) return 'noDepartment'
+  if (eventType === 'terminated' && !values.reason) return 'noReason'
   if (eventType.endsWith('_changed') && !values.from) return 'noFrom'
   return undefined
 }
@@ -49,6 +55,11 @@ export function chronologyLabel(event: EmployeeEvent, t: TFunction): string {
     kind: text(payload.kind) || text(payload.feedback_type),
     name: text(payload.name),
     score: score(payload),
+    // The departure carries its reason as the slug the card stores, so it is
+    // spelled here the way the Termination section spells it - a timeline
+    // reading "personal_desire" beside a card reading "Personal Desire" is two
+    // vocabularies for one fact.
+    reason: reasonOf(payload, t),
   }
 
   const rendered = t(key, { ...values, context: wording(event.event_type, values) })

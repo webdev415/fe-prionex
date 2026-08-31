@@ -11,6 +11,9 @@ const PHRASES: Record<string, string> = {
     'Department changed — {{from}} to {{to}}',
   'pages.employeeCard.chronology.events.department_changed_noFrom': 'Department set — {{to}}',
   'pages.employeeCard.chronology.events.evaluation_completed': 'Quality assessment — {{score}}',
+  'pages.employeeCard.chronology.events.terminated': 'Terminated — {{reason}}',
+  'pages.employeeCard.chronology.events.terminated_noReason': 'Terminated',
+  'pages.employeeCard.termination.reasons.personal_desire': 'Personal Desire',
 }
 
 /**
@@ -19,10 +22,16 @@ const PHRASES: Record<string, string> = {
  * the variants entirely and every one of these would pass on the wording the
  * component never actually asks for.
  */
-function translate(key: string, values?: Record<string, string>) {
+function translate(key: string, second?: string | Record<string, string>) {
+  // i18next's other overload: a bare string is a default to fall back on when
+  // the key is missing, which is how a termination reason keeps its slug
+  // rather than printing the whole key path at somebody.
+  const fallback = typeof second === 'string' ? second : undefined
+  const values = typeof second === 'string' ? undefined : second
+
   const context = values?.context
   const phrase = (context && PHRASES[`${key}_${context}`]) || PHRASES[key]
-  if (!phrase) return key
+  if (!phrase) return fallback ?? key
   return phrase.replace(/{{(\w+)}}/g, (_, name: string) => values?.[name] ?? '')
 }
 
@@ -76,6 +85,44 @@ describe('chronologyLabel', () => {
     )
 
     expect(label).toBe('Quality assessment — 87')
+  })
+
+  /*
+   * The other bookend to a hire. It read as a bare "terminated" on the card
+   * until this existed - the label falls back to the raw event type, which is
+   * the one string in the timeline nobody wrote for a reader.
+   */
+  it('reads a departure into the phrase for it', () => {
+    const label = chronologyLabel(
+      event({ event_type: 'terminated', payload: { reason: 'personal_desire' } }),
+      t
+    )
+
+    expect(label).toBe('Terminated — Personal Desire')
+  })
+
+  it('spells the reason the way the card spells it, not as the stored slug', () => {
+    const label = chronologyLabel(
+      event({ event_type: 'terminated', payload: { reason: 'personal_desire' } }),
+      t
+    )
+
+    expect(label).not.toContain('personal_desire')
+  })
+
+  it('keeps an unknown reason readable rather than printing the key at somebody', () => {
+    const label = chronologyLabel(
+      event({ event_type: 'terminated', payload: { reason: 'mutual_agreement' } }),
+      t
+    )
+
+    expect(label).toBe('Terminated — mutual_agreement')
+  })
+
+  it('says only that somebody left when no reason came with it', () => {
+    const label = chronologyLabel(event({ event_type: 'terminated', payload: {} }), t)
+
+    expect(label).toBe('Terminated')
   })
 
   it('still takes up a line for a kind of event it has no phrase for', () => {

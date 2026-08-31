@@ -10966,7 +10966,9 @@
           "feedback_given": "Feedback — {{kind}}",
           "training_assigned": "Course assigned — {{course}}",
           "training_completed": "Completed course — {{course}}",
-          "survey_completed": "Survey — {{name}} ({{score}})"
+          "survey_completed": "Survey — {{name}} ({{score}})",
+          "terminated": "Terminated — {{reason}}",
+          "terminated_noReason": "Terminated"
         },
         "from": "From",
         "to": "To",

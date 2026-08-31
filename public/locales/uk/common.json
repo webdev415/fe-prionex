@@ -10987,7 +10987,9 @@
           "feedback_given": "Зворотний зв'язок — {{kind}}",
           "training_assigned": "Призначено курс — {{course}}",
           "training_completed": "Завершено курс — {{course}}",
-          "survey_completed": "Опитування — {{name}} ({{score}})"
+          "survey_completed": "Опитування — {{name}} ({{score}})",
+          "terminated": "Звільнено — {{reason}}",
+          "terminated_noReason": "Звільнено"
         },
         "from": "Від",
         "to": "До",
