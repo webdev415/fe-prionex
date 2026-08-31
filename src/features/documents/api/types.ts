@@ -72,6 +72,8 @@ export type DocumentTemplateKind = 'text' | 'docx'
  *   - `closed_debt`      — the debt must be closed.
  *   - `rr_active`        — the debt has an active restructuring (RR).
  *   - `rr_first_payment` — the RR's first instalment has been paid.
+ *   - `rr_draft`         — the debt has an RR in Draft status (Draft only; a
+ *                          Connected/Violated RR does NOT satisfy this).
  *   - `promise_active`   — the client has a live promise-to-pay.
  *   - `tag_active`       — the client carries the template's `activation_tag_id`.
  * The server evaluates the rule per debt and returns the verdict in
@@ -83,6 +85,7 @@ export type DocumentActivationRule =
   | 'closed_debt'
   | 'rr_active'
   | 'rr_first_payment'
+  | 'rr_draft'
   | 'promise_active'
   | 'tag_active'
 

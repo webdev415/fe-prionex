@@ -15,16 +15,21 @@
  */
 import { describe, expect, it } from 'vitest'
 import {
+  displayKey,
   formatHotkey,
   hotkeyFromEvent,
   isTypingTarget,
   normalizeKey,
   parseHotkey,
+  physicalKey,
   resolveHotkeyTarget,
 } from '../hotkey'
 
+// `code` is what gets stored, so fixtures carry both halves of a real event:
+// the character the layout produced and the button that produced it.
 const evt = (over: Partial<Parameters<typeof hotkeyFromEvent>[0]> = {}) => ({
   key: '1',
+  code: 'Digit1',
   ctrlKey: false,
   altKey: false,
   shiftKey: false,
@@ -45,12 +50,12 @@ describe('normalizeKey', () => {
 })
 
 describe('hotkeyFromEvent', () => {
-  it('reads a bare key', () => {
-    expect(hotkeyFromEvent(evt({ key: 'p' }))).toEqual({
+  it('reads a bare key as the physical key, not the character', () => {
+    expect(hotkeyFromEvent(evt({ key: 'p', code: 'KeyP' }))).toEqual({
       ctrl: false,
       alt: false,
       shift: false,
-      key: 'P',
+      key: 'KeyP',
     })
   })
 
@@ -59,7 +64,7 @@ describe('hotkeyFromEvent', () => {
       ctrl: true,
       alt: true,
       shift: true,
-      key: '1',
+      key: 'Digit1',
     })
   })
 
@@ -77,8 +82,8 @@ describe('hotkeyFromEvent', () => {
     expect(hotkeyFromEvent(evt({ key: '1', metaKey: true }))).toBeNull()
   })
 
-  it('ignores an empty key', () => {
-    expect(hotkeyFromEvent(evt({ key: '' }))).toBeNull()
+  it('ignores an event that names no key at all', () => {
+    expect(hotkeyFromEvent(evt({ key: '', code: '' }))).toBeNull()
   })
 
   it('refuses keys that already activate the focused control', () => {
@@ -106,12 +111,14 @@ describe('hotkeyFromEvent', () => {
 
 describe('formatHotkey / parseHotkey', () => {
   it('formats in the display order the mockup uses', () => {
-    expect(formatHotkey({ ctrl: true, alt: true, shift: true, key: '1' })).toBe('Ctrl+Alt+Shift+1')
-    expect(formatHotkey({ ctrl: false, alt: false, shift: false, key: 'P' })).toBe('P')
+    expect(formatHotkey({ ctrl: true, alt: true, shift: true, key: 'Digit1' })).toBe(
+      'Ctrl+Alt+Shift+Digit1'
+    )
+    expect(formatHotkey({ ctrl: false, alt: false, shift: false, key: 'KeyP' })).toBe('KeyP')
   })
 
   it('round-trips', () => {
-    for (const s of ['Ctrl+1', 'Alt+Shift+P', 'F5', 'Ctrl+Alt+Shift+ArrowUp']) {
+    for (const s of ['Ctrl+Digit1', 'Alt+Shift+KeyP', 'F5', 'Ctrl+Alt+Shift+ArrowUp']) {
       expect(formatHotkey(parseHotkey(s)!)).toBe(s)
     }
   })
@@ -178,26 +185,28 @@ describe('isTypingTarget', () => {
 })
 
 describe('resolveHotkeyTarget', () => {
-  const bindings = { 'Ctrl+1': 101, P: 202 }
+  const bindings = { 'Ctrl+Digit1': 101, KeyP: 202 }
 
   it('resolves an assigned combination', () => {
     expect(resolveHotkeyTarget(evt({ key: '1', ctrlKey: true }), bindings)).toBe(101)
-    expect(resolveHotkeyTarget(evt({ key: 'p' }), bindings)).toBe(202)
+    expect(resolveHotkeyTarget(evt({ key: 'p', code: 'KeyP' }), bindings)).toBe(202)
   })
 
   it('returns null for an unassigned combination', () => {
     // Per the ticket: nothing happens. No error, no modal.
-    expect(resolveHotkeyTarget(evt({ key: '9' }), bindings)).toBeNull()
+    expect(resolveHotkeyTarget(evt({ key: '9', code: 'Digit9' }), bindings)).toBeNull()
   })
 
   it('does not confuse a bare key with its modified form', () => {
-    // "P" is bound; "Ctrl+P" is not, and must not fall through to it.
-    expect(resolveHotkeyTarget(evt({ key: 'p', ctrlKey: true }), bindings)).toBeNull()
+    // "KeyP" is bound; "Ctrl+KeyP" is not, and must not fall through to it.
+    expect(resolveHotkeyTarget(evt({ key: 'p', code: 'KeyP', ctrlKey: true }), bindings)).toBeNull()
   })
 
   it('does not fire while the operator is typing', () => {
     const input = document.createElement('input')
-    expect(resolveHotkeyTarget({ ...evt({ key: 'p' }), target: input }, bindings)).toBeNull()
+    expect(
+      resolveHotkeyTarget({ ...evt({ key: 'p', code: 'KeyP' }), target: input }, bindings)
+    ).toBeNull()
   })
 
   it('does not steal a keystroke aimed at an open dropdown', () => {
@@ -206,10 +215,74 @@ describe('resolveHotkeyTarget', () => {
     const host = document.createElement('div')
     host.innerHTML = '<div role="listbox"><div role="option">Phone</div></div>'
     const option = host.querySelector('[role="option"]')!
-    expect(resolveHotkeyTarget({ ...evt({ key: 'p' }), target: option }, bindings)).toBeNull()
+    expect(
+      resolveHotkeyTarget({ ...evt({ key: 'p', code: 'KeyP' }), target: option }, bindings)
+    ).toBeNull()
   })
 
   it('returns null against an empty binding map', () => {
-    expect(resolveHotkeyTarget(evt({ key: 'p' }), {})).toBeNull()
+    expect(resolveHotkeyTarget(evt({ key: 'p', code: 'KeyP' }), {})).toBeNull()
+  })
+})
+
+// ── Layout independence (KAN-975 follow-up) ─────────────────────────────────
+// The bug operators hit: the button labelled D reports `В` on a Ukrainian
+// layout. Storing the character let one button hold two bindings under two
+// spellings, so neither the conflict warning nor the unique constraint caught
+// it. These pin that one button now means one binding, whatever the layout.
+describe('layout independence', () => {
+  const LATIN = { key: 'd', code: 'KeyD' }
+  const CYRILLIC = { key: 'в', code: 'KeyD' }
+
+  it('gives the same binding for one button on either layout', () => {
+    expect(hotkeyFromEvent(evt(LATIN))).toEqual(hotkeyFromEvent(evt(CYRILLIC)))
+    expect(formatHotkey(hotkeyFromEvent(evt(LATIN))!)).toBe('KeyD')
+    expect(formatHotkey(hotkeyFromEvent(evt(CYRILLIC))!)).toBe('KeyD')
+  })
+
+  it('fires a binding recorded on one layout while the other is active', () => {
+    // The half of the bug nobody reported: shortcuts recorded in English
+    // silently stopped working the moment an operator switched to Ukrainian.
+    const bindings = { KeyD: 7 }
+    expect(resolveHotkeyTarget(evt(LATIN), bindings)).toBe(7)
+    expect(resolveHotkeyTarget(evt(CYRILLIC), bindings)).toBe(7)
+  })
+
+  it('still separates two genuinely different buttons', () => {
+    const bindings = { KeyD: 7, KeyF: 8 }
+    expect(resolveHotkeyTarget(evt({ key: 'f', code: 'KeyF' }), bindings)).toBe(8)
+  })
+})
+
+describe('physicalKey', () => {
+  it('prefers the code the browser reports', () => {
+    expect(physicalKey({ key: 'в', code: 'KeyD' })).toBe('KeyD')
+  })
+
+  it('falls back to the character when an event carries no code', () => {
+    // Synthetic events, on-screen keyboards and some IME paths omit `code`.
+    // Producing a different spelling from the same button would create a
+    // second, unmatchable row — the exact bug this change removes.
+    expect(physicalKey({ key: 's' })).toBe('KeyS')
+    expect(physicalKey({ key: '1' })).toBe('Digit1')
+  })
+
+  it('leaves named keys alone, which is why they needed no migration', () => {
+    expect(physicalKey({ key: 'F2' })).toBe('F2')
+    expect(physicalKey({ key: 'ArrowUp' })).toBe('ArrowUp')
+  })
+})
+
+describe('displayKey', () => {
+  it('shows the legend on the keycap, not the stored position', () => {
+    expect(displayKey('KeyD')).toBe('D')
+    expect(displayKey('Digit1')).toBe('1')
+    expect(displayKey('Numpad4')).toBe('Num 4')
+  })
+
+  it('passes through anything already readable', () => {
+    expect(displayKey('F2')).toBe('F2')
+    expect(displayKey('ArrowUp')).toBe('ArrowUp')
+    expect(displayKey('Ctrl')).toBe('Ctrl')
   })
 })

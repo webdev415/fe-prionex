@@ -62,7 +62,7 @@ function Harness({
 
 beforeEach(() => {
   toastInfo.mockClear()
-  bindings = { 'Ctrl+1': 12 }
+  bindings = { 'Ctrl+Digit1': 12 }
   hasMinimized = false
 })
 
@@ -154,7 +154,7 @@ describe('useTAHotkeyLaunch', () => {
     const onLaunch = vi.fn()
     render(<Harness onLaunch={onLaunch} />)
 
-    const held = { key: '1', ctrlKey: true, bubbles: true }
+    const held = { key: '1', code: 'Digit1', ctrlKey: true, bubbles: true }
     document.dispatchEvent(new KeyboardEvent('keydown', held))
     document.dispatchEvent(new KeyboardEvent('keydown', { ...held, repeat: true }))
     document.dispatchEvent(new KeyboardEvent('keydown', { ...held, repeat: true }))
@@ -170,7 +170,7 @@ describe('useTAHotkeyLaunch', () => {
   it('prevents the browser default on the repeats of a held bound key', () => {
     render(<Harness onLaunch={vi.fn()} />)
 
-    const held = { key: '1', ctrlKey: true, bubbles: true, cancelable: true }
+    const held = { key: '1', code: 'Digit1', ctrlKey: true, bubbles: true, cancelable: true }
     const first = new KeyboardEvent('keydown', held)
     const repeat = new KeyboardEvent('keydown', { ...held, repeat: true })
     document.dispatchEvent(first)
@@ -183,7 +183,7 @@ describe('useTAHotkeyLaunch', () => {
   it('leaves an unbound key alone, repeat or not', () => {
     render(<Harness onLaunch={vi.fn()} />)
 
-    const unbound = { key: '9', ctrlKey: true, bubbles: true, cancelable: true }
+    const unbound = { key: '9', code: 'Digit9', ctrlKey: true, bubbles: true, cancelable: true }
     const first = new KeyboardEvent('keydown', unbound)
     const repeat = new KeyboardEvent('keydown', { ...unbound, repeat: true })
     document.dispatchEvent(first)
@@ -197,7 +197,7 @@ describe('useTAHotkeyLaunch', () => {
     const onLaunch = vi.fn()
     render(<Harness isExecutorOpen onLaunch={onLaunch} />)
 
-    const held = { key: '1', ctrlKey: true, bubbles: true }
+    const held = { key: '1', code: 'Digit1', ctrlKey: true, bubbles: true }
     document.dispatchEvent(new KeyboardEvent('keydown', held))
     document.dispatchEvent(new KeyboardEvent('keydown', { ...held, repeat: true }))
     document.dispatchEvent(new KeyboardEvent('keydown', { ...held, repeat: true }))
@@ -219,7 +219,7 @@ describe('useTAHotkeyLaunch', () => {
     const user = userEvent.setup()
     const { rerender } = render(<Harness onLaunch={onLaunch} />)
 
-    bindings = { 'Ctrl+1': 99 }
+    bindings = { 'Ctrl+Digit1': 99 }
     rerender(<Harness onLaunch={onLaunch} />)
 
     await user.keyboard('{Control>}1{/Control}')

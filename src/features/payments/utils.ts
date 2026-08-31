@@ -149,3 +149,47 @@ export function isPaymentLessThan7DaysOld(dateString: string): boolean {
     return false
   }
 }
+
+/**
+ * Display label for a payment, refining "Online Gateway" with the EasyPay
+ * service the payer chose. Every EasyPay service also offers the card form and
+ * the callback reports no instrument, so this is the method SELECTED — not
+ * provably the one used.
+ */
+export function paymentMethodLabel(
+  method: BackendPaymentMethod,
+  easypayMethod?: string | null
+): string {
+  const base = backendToFrontendPaymentMethod(method)
+  const wallet: Record<string, string> = {
+    card: 'Card',
+    google_pay: 'Google Pay',
+    apple_pay: 'Apple Pay',
+  }
+  const suffix = easypayMethod ? wallet[easypayMethod] : undefined
+  return suffix ? `${base} — ${suffix}` : base
+}
+
+/**
+ * Append the chosen EasyPay service to an already-localised method label.
+ *
+ * Split out from paymentMethodLabel so callers that localise the base label
+ * themselves (the payment tables translate it via i18n) can still show the
+ * wallet, without re-deriving the base from the raw backend value.
+ */
+export function easypayMethodSuffix(
+  baseLabel: string,
+  easypayMethod: string | null | undefined,
+  t: (key: string, options?: { defaultValue?: string }) => string
+): string {
+  if (!easypayMethod) return baseLabel
+  const fallback: Record<string, string> = {
+    card: 'Card',
+    google_pay: 'Google Pay',
+    apple_pay: 'Apple Pay',
+  }
+  const label = t(`pages.clients.detail.easypayMethods.${easypayMethod}`, {
+    defaultValue: fallback[easypayMethod] ?? easypayMethod,
+  })
+  return `${baseLabel} — ${label}`
+}

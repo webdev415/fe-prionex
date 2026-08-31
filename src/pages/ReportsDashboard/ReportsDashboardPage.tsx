@@ -1,15 +1,16 @@
 /**
  * ReportsDashboardPage Component
  *
- * Main page for viewing reports. Hosts eight tabs (active tab in the URL via
+ * Main page for viewing reports. Hosts nine tabs (active tab in the URL via
  * `?tab=…`): the reports dashboard with KPIs and agent performance metrics
  * (default), the "Відпрацювання за ЦД" client processing report, the
  * "Верифікація 3-х осіб" third-party verification report, the
  * "Мало верифікацій" client work list, the "Серчер без відпрацювання"
  * searcher follow-up work list, the "Вхід без відпрацювання" inbound
  * follow-up work list (its semantic twin — same source column shape, hence
- * its neighbour in the strip), the "Великий розрив" communication-gap
- * work list, and the "Обіцянки по операторах" operator promises report.
+ * its neighbour in the strip), the "Контакт/Неконтакт" tagged-client work
+ * list, the "Великий розрив" communication-gap work list, and the
+ * "Обіцянки по операторах" operator promises report.
  */
 
 import { useState, useMemo, useEffect, useCallback } from 'react'
@@ -49,6 +50,7 @@ import { ThirdPartyVerificationTab } from '@/features/thirdPartyVerification'
 import { LowVerificationFeedTab } from '@/features/lowVerificationFeed'
 import { SearcherFollowupFeedTab } from '@/features/searcherFollowup'
 import { InboundFollowupFeedTab } from '@/features/inboundFollowup'
+import { ContactTagFeedTab } from '@/features/contactTag'
 import { CommunicationGapFeedTab } from '@/features/communicationGap'
 import { OperatorPromisesTab } from '@/features/operatorPromises'
 import { SegmentedTabs, segmentedTabId, segmentedTabPanelId } from '@/components/ui/SegmentedTabs'
@@ -453,6 +455,10 @@ const REPORT_TABS = [
   // Right after the searcher feed on purpose: the two migrate the SAME
   // nine-column source shape and read as a pair to the operators who work them.
   'inbound-followup',
+  // The tagged-client work list sits after the two follow-up feeds and before
+  // the gap feed: it shares Card 125's client/employee/debt column shape, so
+  // the two read as neighbours, but its date model is its own.
+  'contact-tag',
   'communication-gap',
   'operator-promises',
 ] as const
@@ -568,6 +574,8 @@ export function ReportsDashboardPage() {
           <SearcherFollowupFeedTab />
         ) : activeTab === 'inbound-followup' ? (
           <InboundFollowupFeedTab />
+        ) : activeTab === 'contact-tag' ? (
+          <ContactTagFeedTab />
         ) : activeTab === 'communication-gap' ? (
           <CommunicationGapFeedTab />
         ) : activeTab === 'operator-promises' ? (
