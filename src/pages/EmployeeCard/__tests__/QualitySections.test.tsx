@@ -159,7 +159,19 @@ describe('GradesSection', () => {
   it('asks only for the employee whose card this is', () => {
     render(<GradesSection employeeId={7} />)
 
-    expect(quality.askedScorecards).toEqual({ operator_id: [7] })
+    expect(quality.askedScorecards).toMatchObject({ operator_id: [7] })
+  })
+
+  /*
+   * A draft is a trainer's working copy. The timeline already refuses to
+   * announce one, and showing it here would put through the side door what
+   * the history is careful to leave out - reading, against somebody's name,
+   * as though the EMPLOYEE went unscored.
+   */
+  it('asks for finished assessments only, never drafts', () => {
+    render(<GradesSection employeeId={7} />)
+
+    expect(quality.askedScorecards).toMatchObject({ status: ['completed', 'sent'] })
   })
 
   /*

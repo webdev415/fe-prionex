@@ -30,7 +30,18 @@ const NEWEST_FIRST = (left: Scorecard, right: Scorecard) =>
 export function GradesSection({ employeeId }: GradesSectionProps) {
   const { t, i18n } = useTranslation()
 
-  const { data, isLoading, isError } = useScorecards({ operator_id: [employeeId] })
+  // Finished assessments only. A draft is the trainer's working copy, and
+  // nobody has stood behind its score yet - the timeline already refuses to
+  // announce one for that reason, and the card should not show through the
+  // side door what the history is careful to leave out.
+  //
+  // It also reads wrong: "Not scored" against somebody's name says the
+  // EMPLOYEE was not scored, when what happened is that a trainer has not
+  // finished writing.
+  const { data, isLoading, isError } = useScorecards({
+    operator_id: [employeeId],
+    status: ['completed', 'sent'],
+  })
   const items = [...(data?.data ?? [])].sort(NEWEST_FIRST)
 
   const scoreOf = (card: Scorecard) =>
