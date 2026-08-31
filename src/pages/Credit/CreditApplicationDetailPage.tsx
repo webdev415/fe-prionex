@@ -26,6 +26,8 @@ import { CreditDocumentOpenButton } from './components/CreditDocumentOpenButton'
 import { CreditDraftBlocks } from './components/CreditDraftBlocks'
 import { CreditFlagList } from './components/CreditFlagList'
 import { collectApplicationFlags } from '@/features/credit/api/applicantFlags'
+import { formatIdle, idleMinutes } from '@/features/credit/api/idle'
+import { useNowTick } from '@/features/credit/hooks/useNowTick'
 import {
   CreditCardHeader,
   CreditNotice,
@@ -75,6 +77,9 @@ export function CreditApplicationDetailPage() {
   const { data: overview } = useCreditOverview()
   const { data: application, isLoading, error } = useCreditApplication(applicationId)
   const [tab, setTab] = useState('form')
+  // Своим тиком, а не по приходу данных: карточку держат открытой часами,
+  // а запрос может не повториться ни разу — «5 хвилин тому» замёрзло бы.
+  const now = useNowTick()
 
   const canDecide = Boolean(overview?.permissions.includes('credit.decisions.decide'))
 
@@ -139,6 +144,13 @@ export function CreditApplicationDetailPage() {
   const stuck =
     UNFINISHED_STATUSES.includes(application.status) &&
     (application.resume_step || (application.missing_fields ?? []).length > 0)
+  // Сколько заявка стоит без движения. Модуль не пишет время входа в каждый
+  // шаг анкеты, поэтому «сколько он там стоит» строим от `updated_at` —
+  // единственной метки, которая уже есть (см. `api/idle.ts`).
+  const idle = idleMinutes(application.updated_at, now)
+  const standing = application.client_standing
+  const cooldownActive =
+    !!standing?.cooldown_until && new Date(standing.cooldown_until).getTime() > now.getTime()
   // «Что-то не так» — требование CEO. Два вида признаков держим раздельно:
   // противоречия и нехватка требуют от оператора разных действий.
   const flags = collectApplicationFlags(application)
@@ -186,6 +198,38 @@ export function CreditApplicationDetailPage() {
                     {(application.missing_fields ?? [])
                       .map((field) => t(`credit.blocks.${field}`, field))
                       .join(', ')}
+                  </>
+                )}
+                {idle !== null && (
+                  <>
+                    {' · '}
+                    {t('credit.card.idleFor', { duration: formatIdle(idle, t) })}
+                  </>
+                )}
+              </CreditNotice>
+            )}
+            {/* Основания, на которых машина откажет: непогашенный заём и
+                остывание после прошлого отказа. Оператор решает здесь же —
+                значит и предъявлять их надо здесь. */}
+            {(cooldownActive || (standing?.outstanding_loans ?? []).length > 0) && (
+              <CreditNotice>
+                {(standing?.outstanding_loans ?? []).length > 0 && (
+                  <>
+                    {t('credit.card.outstandingLoans')}:{' '}
+                    {(standing?.outstanding_loans ?? [])
+                      .map(
+                        (loan) =>
+                          `${loan.contract_number} (${t(`credit.loanStatus.${loan.status}`, loan.status)})`
+                      )
+                      .join(', ')}
+                  </>
+                )}
+                {cooldownActive && (standing?.outstanding_loans ?? []).length > 0 && ' · '}
+                {cooldownActive && (
+                  <>
+                    {t('credit.card.cooldownUntil', {
+                      date: formatDate(standing?.cooldown_until ?? ''),
+                    })}
                   </>
                 )}
               </CreditNotice>

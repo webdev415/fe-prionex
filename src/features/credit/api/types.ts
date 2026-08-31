@@ -169,6 +169,34 @@ export interface CreditApplicationDraft {
   [block: string]: unknown
 }
 
+/**
+ * Положение клиента — ровно те факты, на которых машина отказывает.
+ *
+ * `outstanding_loans` — непогашенные займы того же клиента (правило «один
+ * активный заём»), `cooldown_until` — остывание после предыдущего отказа
+ * (30 дней, код отказа RC-08). Оператор решает на этом же экране, поэтому
+ * основания машинного отказа должны лежать здесь, а не в соседней системе.
+ *
+ * ⚠️ Поле НЕОБЯЗАТЕЛЬНОЕ, и это не перестраховка: в `main` модуля его нет —
+ * оно живёт в ветке `ws06/n1-refund-overpayment-obligation`, а на dev развёрнут
+ * третий образ (`fix/review4-quarantine-blockers`), где оно есть. Переразвернут
+ * стенд из `main` — поле исчезнет, и обязательное объявление сделало бы карточку
+ * лживой, а не сломанной. Станет частью `main` — снять `?` и завести утверждение
+ * в `contractAssumptions.ts`.
+ */
+export interface CreditClientStanding {
+  /** Непогашенные займы. Показываем номер договора и статус. */
+  outstanding_loans: CreditOutstandingLoan[]
+  /** Дата окончания остывания после отказа; `null` — остывания нет. */
+  cooldown_until: string | null
+}
+
+/** Строка непогашенного займа в положении клиента. */
+export interface CreditOutstandingLoan {
+  contract_number: string
+  status: string
+}
+
 /** Карточка заявки целиком (InternalApplication + анкета и документы). */
 export interface CreditApplicationDetail extends CreditApplicationSummary {
   project_id: number
@@ -180,6 +208,7 @@ export interface CreditApplicationDetail extends CreditApplicationSummary {
   loan_id: string | null
   resume_step?: string
   missing_fields?: string[]
+  client_standing?: CreditClientStanding | null
   expires_at?: string | null
   paydays: string[]
   consents: CreditConsent[]
