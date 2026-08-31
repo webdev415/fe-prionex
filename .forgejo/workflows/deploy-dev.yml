@@ -1,0 +1,89 @@
+name: Deploy DEV Stand
+
+# Story 4.3 built this pipeline; Story 4.4 added the lock; Story 4.8 factored its own mechanics into
+# a shared `workflow_call` definition (`.forgejo/workflows/deploy-stand.yml`) so Stories 5.3/6.4 can
+# consume the same proven path for PRE-PROD/PROD rather than copying it. This file is now a THIN
+# caller — its own name, its own three dispatch inputs, and its own `concurrency:` block are
+# UNCHANGED (Dev Notes §9 — `dev-reset.yml` dispatches by this exact file name and reads the run
+# list back by this exact `name:`, both silently, so neither may ever change). Everything else lives
+# in the shared definition; see that file's own header for the mechanism, the D21 caller/callee
+# concurrency trap, and the full parameterization surface.
+#
+# ── What stays here, and why (Prohibition 1, Dev Notes §9) ──────────────────────────────────────
+# 1. This exact file NAME (`deploy-dev.yml`) — `dev-reset.yml` dispatches through the API by name.
+# 2. This exact workflow `name:` (`Deploy DEV Stand`) — `dev-reset.yml`'s own non-blocking read-back
+#    greps the runs API response for the literal byte adjacency `"id":NNN,"title":"Deploy DEV
+#    Stand"`, arrived at after four failed live attempts (runs 1080/1089/1094/1099). Both invariants
+#    fail SILENTLY if broken — the dispatch step never waits for the deploy's own outcome.
+# 3. `workflow_dispatch` with a REQUIRED `ref` input of the same name/type — a dispatch missing a
+#    required input returns HTTP 400 and consumes no run row; the weekly reset would report a
+#    failure it cannot explain.
+# 4. The literal `concurrency:` group `deploy-dev-fe-prionex-dev` — `dev-reset.yml` carries the SAME
+#    literal, deliberately, so the sweep cannot run inside a deploy's own pull->up -d window. A
+#    callee's own `concurrency:` block is silently VOID (D21) — this is why the group lives here,
+#    in the caller, not in the shared definition. The conservative choice is not to change it.
+#
+# ── D21's own caller-side traps (verify, do not assume — the shared file's own header repeats these) ──
+# - No `if:` on this job's own `uses:` — it would be copied DOWN into the callee and re-evaluated
+#   there (`github.event_name` = `workflow_call`). The hold_lock_seconds gate lives inside the
+#   callee's own `hold-lock` job, where `inputs` are in scope.
+# - `secrets: inherit` is all-or-nothing — the callee receives every org secret this repository
+#   holds and references only the two it needs (`REGISTRY_USER_RO`/`REGISTRY_TOKEN_RO`).
+#
+# ── Verification, mandatory after the first refactored dispatch (Task 6.2) ──────────────────────
+# Read `concurrency_group`/`concurrency_type` from `action_run` for THIS caller's own run. `type=1`
+# and the literal group above means the block survived expansion; `type=0` means it did not.
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref to deploy (branch, tag, or SHA). The image tag is derived from this the same way build.yml derives its own branch tag; refs/heads/ and refs/tags/ prefixes are stripped, and a bare commit SHA maps to build.yml's own sha-<12hex>-dev form."
+        required: true
+        type: string
+      simulate_bad_credential:
+        description: 'TESTING ONLY (Task 8.3/AC7 discriminating row, kept as a permanent regression hook — see the comment block above this input) — if true, the digest-resolve step uses a deliberately WRONG credential value, to exercise the unauthorized fail-closed path on demand instead of waiting for a real credential outage. Never reads, modifies, or exposes the real REGISTRY_USER_RO/REGISTRY_TOKEN_RO org secrets — only a local copy used by that one step is overwritten, and only for the request that asks for it. Leave false (the default) for every normal deploy. The 401 message this produces is marked as simulated so it is never mistaken for a real credential outage.'
+        required: false
+        type: boolean
+        default: false
+      hold_lock_seconds:
+        description: "TESTING ONLY (Story 4.4, Task 5 — AC3/AC4/AC5's permanent regression hook, same shape as simulate_bad_credential above) — if greater than 0, this dispatch does NOT deploy at all: it starts the stand lock's holder container for this many seconds and exits. Use it to stage real contention for a following dispatch on this capacity-1 runner, where two deploy JOBS can never overlap. Bounded to the holder TTL constant (720s) and rejected if non-numeric. Leave 0 (the default) for every normal deploy."
+        required: false
+        type: number
+        default: 0
+
+# ── `simulate_bad_credential` / `hold_lock_seconds`, kept deliberately ──────────────────────────
+# Permanent, minimal regression hooks (Task 8.3/AC7, Story 4.4 Task 5) forwarded byte-for-byte into
+# the shared definition's own inputs (Prohibition 9 — this story does not delete either). Full
+# safety argument for both lives in the shared definition's own `hold-lock` job comment and its
+# digest-resolve step's own comment; unchanged by this refactor.
+
+# ── `concurrency:` — unchanged from Story 4.4/4.7, moved nowhere (D21, Dev Notes §5) ────────────
+# `group:` is a LITERAL CONSTANT, not an expression — a workflow this instance cannot parse fails
+# BEFORE any job exists, with the error visible only in `action_run.pre_execution_error_details` (no
+# job, no log, no API route for it, D21); a constant string cannot fail that way. Full argument:
+# `docs/migration-decisions.md` D30/D33.
+concurrency:
+  group: deploy-dev-fe-prionex-dev
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: "Deploy DEV via the shared definition"
+    uses: ./.forgejo/workflows/deploy-stand.yml
+    with:
+      runner_label: deploy-dev-preprod
+      compose_project_name: fe-prionex-dev
+      container_name: fe-prionex-dev
+      frontend_port: 127.0.0.1:8082
+      frontend_network: crm-dev-network
+      stand_dir: /root/crm-prionex/fe-prionex-dev
+      image_env: dev
+      ref: ${{ inputs.ref }}
+      lock_wait_seconds: "240"
+      lock_ttl_seconds: "720"
+      health_timeout_seconds: "120"
+      expect_unrouted_api: "true"
+      simulate_bad_credential: ${{ inputs.simulate_bad_credential }}
+      hold_lock_seconds: ${{ inputs.hold_lock_seconds }}
+    secrets: inherit

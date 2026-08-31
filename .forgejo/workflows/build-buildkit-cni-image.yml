@@ -1,0 +1,375 @@
+name: Build the CNI-enabled buildkit image
+
+# Epic 3 retro action item A1 (2026-08-18/19). Maintenance workflow for
+# `git.crm-prionex.com/crm/fe-prionex:v1.0.0-buildkit-cni` — the custom
+# builder image `build.yml` depends on, via a digest pin, for every build
+# (see Dockerfile.buildkit-cni and D26 in docs/migration-decisions.md for
+# the full history: probe branch `probe/a1-cni-netns-isolation`, local
+# validation, runs 739/741/743/744).
+#
+# ── Why this is a SEPARATE workflow ──────────────────────────────────────
+# `build.yml` PULLS this image (by digest); it does not build it — building
+# it inline on every application build would mean every `dev`/`preprod`/
+# `prod` push rebuilds a builder image that changes only when
+# CNI_PLUGINS_VERSION or the base `moby/buildkit` digest is deliberately
+# bumped, which is rare. A rare, separate, dispatchable workflow — not a
+# manual "build it on a laptop and push" step, which this project has
+# already criticized elsewhere as an untrustworthy, unrepeatable path for
+# exactly this class of artifact.
+#
+# 🔴 Tag is now PERMANENT, and this is a change in kind, not degree: this
+# workflow used to also carry a weekly `schedule:` trigger to re-push the
+# tag before it aged out of the retention rule's 14-day window, because the
+# original tag (`buildkit-cni-v1`) matched none of the DB-only
+# `keep_pattern`'s alternatives. `v1.0.0-buildkit-cni` DOES match the
+# semver alternative already present in that pattern (`v?\d+\.\d+\.\d+.*`,
+# confirmed against build.yml's own compiled copy of it) — no database
+# change needed, and no re-push-to-reset-the-clock mechanism needed either.
+# This workflow is `workflow_dispatch`-only now: dispatch it deliberately
+# for a real version bump (a reviewed PR changing CNI_PLUGINS_VERSION
+# and/or the pinned base-image digest, per Dockerfile.buildkit-cni's own
+# header comment), never on a schedule, never "to keep something alive."
+# If you are reading this because you are about to add a `schedule:`
+# trigger back — stop: that mechanism existed only to solve a problem
+# (a non-matching tag) that no longer exists.
+#
+# 🚨 Requirement for the NEXT real version bump, not debt on this one: the
+# control/CNI/internet outcome matrix this workflow runs below has been
+# proven CORRECT exactly once, on the version this file currently pins. The next
+# deliberate bump (a new CNI_PLUGINS_VERSION and/or base-image digest) MUST
+# produce its own live run of this matrix on the real host before the
+# resulting image is trusted as the new `v1.0.0-buildkit-cni` — a green run
+# of THIS version's matrix is not evidence about a DIFFERENT version's
+# behavior.
+#
+# ── Bootstrap exception to the main-only guard (2026-08-19, found by a run,
+# not by reasoning) ──────────────────────────────────────────────────────
+# 🔴 A real deadlock hit this PR's own CI (runs 755/756, red): build.yml on
+# THIS branch already references `v1.0.0-buildkit-cni`, which cannot exist
+# in the registry until this workflow publishes it — but the ordinary
+# main-only guard below refuses to run this workflow until the branch is
+# merged, and required checks (Story 2.6) refuse to let a red PR merge.
+# Chicken-and-egg, confirmed live rather than spotted by inspection.
+#
+# The property the guard actually protects is narrower than "only main may
+# ever run this": it is **only main may REPOINT the tag once it exists**. A
+# first creation of an ABSENT tag overwrites nothing, so it is not the
+# threat the guard exists for. The guard below therefore queries the
+# registry first (`docker buildx imagetools inspect`, the same tool and the
+# same absent/ambiguous split build.yml's own `predigest` step (AC2, Story
+# 3.6) already uses and this file already cites as precedent):
+#   - tag EXISTS   -> main-only, exactly as before (a repoint is possible,
+#     protect it).
+#   - tag ABSENT   -> allow any ref, loudly logged as a bootstrap creation
+#     (nothing to repoint).
+#   - AMBIGUOUS read (anything that is not a clean "absent" or a resolved
+#     digest — auth failure, network failure, a wedged registry, an
+#     unrecognised response shape) -> fail closed, same reasoning as
+#     `predigest`: a tool failure silently read as "absent" would let a
+#     bootstrap run publish over the top of a read failure that only LOOKS
+#     like absence.
+#
+# Decision recorded, not left open: once this bootstrap creates the tag,
+# the coordinator will additionally dispatch this workflow once more from a
+# non-main ref specifically to prove the OTHER branch of this same guard —
+# that an EXISTING tag still refuses a non-main dispatch. One cheap
+# expected-red job, not left unproven — "a guard that cannot fail proves
+# nothing" applies to both branches of this guard, not just the one the
+# real rollout happens to exercise. See D26 for the run ledger entry this
+# produces.
+
+on:
+  workflow_dispatch:
+    inputs:
+      cni_plugins_version:
+        description: 'containernetworking/plugins release tag to bake in (see Dockerfile.buildkit-cni; must match v<major>.<minor>.<patch> and have a matching CNI_PLUGINS_SHA256 in that file — this input does not override the checksum)'
+        required: false
+        type: string
+        default: 'v1.5.1'
+
+concurrency:
+  group: build-buildkit-cni-image
+  cancel-in-progress: false
+
+env:
+  # Single source of truth for the image reference — every step below
+  # reads these instead of repeating the literal string (review round 1
+  # item 4). build.yml's own digest pin is necessarily a SEPARATE literal
+  # in a separate file (Forgejo Actions workflows do not share env across
+  # files) — that pin is updated by hand, deliberately, as part of the same
+  # reviewed PR that bumps CNI_PLUGINS_VERSION here, per the header note
+  # above.
+  IMAGE_REPO: git.crm-prionex.com/crm/fe-prionex
+  PERMANENT_TAG: v1.0.0-buildkit-cni
+  STAGING_TAG: buildkit-cni-staging
+  BUILD_NETWORK: fe-prionex-build
+
+jobs:
+  build-and-push:
+    name: Build, verify isolation, then push v1.0.0-buildkit-cni
+    runs-on: node-20
+    timeout-minutes: 25
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      # Fail-closed BEFORE spending any build minutes — same shape check
+      # Dockerfile.buildkit-cni's own RUN step applies at build time; this
+      # is an earlier, cheaper rejection of an obviously malformed input,
+      # not a replacement for that build-time check (both exist; belt and
+      # suspenders on a value that becomes a URL component). Kept early —
+      # cheap, no registry needed, independent of the guard below.
+      - name: Validate cni_plugins_version format
+        env:
+          CNI_PLUGINS_VERSION: ${{ inputs.cni_plugins_version }}
+        run: |
+          set -euo pipefail
+          case "$CNI_PLUGINS_VERSION" in
+            v[0-9]*.[0-9]*.[0-9]*) ;;
+            *)
+              echo "FAIL: cni_plugins_version '${CNI_PLUGINS_VERSION}' is not shaped like v<major>.<minor>.<patch>. Refusing to dispatch a build from it."
+              exit 1
+              ;;
+          esac
+          echo "OK: cni_plugins_version is well-formed."
+
+      - name: Install docker CLI
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends docker.io
+
+      - name: Create the build network
+        run: |
+          set -euo pipefail
+          if docker network inspect "$BUILD_NETWORK" >/dev/null 2>&1; then
+            echo "network ${BUILD_NETWORK} already exists"
+          else
+            docker network create "$BUILD_NETWORK"
+            echo "network ${BUILD_NETWORK} created"
+          fi
+
+      - name: Log in to git.crm-prionex.com
+        uses: docker/login-action@v3
+        with:
+          registry: git.crm-prionex.com
+          username: ${{ secrets.REGISTRY_USER }}
+          password: ${{ secrets.REGISTRY_TOKEN_RW }}
+
+      # 🚨 Ordering matters, same reason as build.yml and the verify
+      # harness: `driver-opts: image=` (used later, for the CNI-enabled
+      # builder in step 8) PULLS from our own private registry as part of
+      # builder creation — login must already be in place before that
+      # builder is created. This first builder (baseline, no image=
+      # override) does not strictly need it, but login happens once, here,
+      # before either builder exists, so the ordering is correct by
+      # construction rather than by remembering to repeat it. It is also
+      # what the guard step immediately below needs: `docker buildx
+      # imagetools inspect` requires the buildx CLI plugin this action
+      # installs, and a login already in place to read a private tag.
+      - name: Set up Docker Buildx (baseline builder, used for the control checks below)
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
+          driver-opts: network=${{ env.BUILD_NETWORK }}
+
+      # 🔴 Bootstrap-aware branch guard — see the header comment above for
+      # the deadlock (runs 755/756) this responds to and the full
+      # rationale. Query the registry FIRST; the guard's own behavior
+      # depends on what it finds, not just on the ref.
+      - name: "Guard: main-only once the tag exists, bootstrap-exempt while it doesn't"
+        env:
+          CURRENT_REF: ${{ github.ref }}
+          PERMANENT_IMAGE: ${{ env.IMAGE_REPO }}:${{ env.PERMANENT_TAG }}
+        run: |
+          set -euo pipefail
+          ERR_FILE="$(mktemp)"
+          if OUT="$(docker buildx imagetools inspect --format '{{.Manifest.Digest}}' "$PERMANENT_IMAGE" 2>"$ERR_FILE")"; then
+            rm -f "$ERR_FILE"
+            # Same exact-shape check as build.yml's predigest step — a parse
+            # failure is not the same as absence, and this decision is not
+            # allowed to guess which one it is looking at.
+            if [ "${#OUT}" -ne 71 ] || ! printf '%s' "${OUT#sha256:}" | grep -q '^[0-9a-f]\{64\}$'; then
+              echo "FAIL: imagetools resolved ${PERMANENT_IMAGE}, but '${OUT}' is not sha256: plus 64 hex. A parse failure is not the same as absence -- refusing to guess which one this is, and refusing to run."
+              exit 1
+            fi
+            echo "${PERMANENT_IMAGE} already exists at ${OUT} -- this dispatch would REPOINT it, not create it."
+            if [ "$CURRENT_REF" != "refs/heads/main" ]; then
+              echo "FAIL: this workflow publishes the SHARED production tag ${PERMANENT_TAG}, which every build.yml run pulls by digest. The tag already exists, so this dispatch would repoint it -- refusing to run against ref '${CURRENT_REF}'. Dispatch this only against main, after any change to Dockerfile.buildkit-cni has been merged."
+              exit 1
+            fi
+            echo "OK: running against main, repointing an existing tag -- as designed."
+          else
+            ERR="$(cat "$ERR_FILE")"; rm -f "$ERR_FILE"
+            # Same absent/ambiguous split as build.yml's own predigest step
+            # (AC2, Story 3.6) -- same tool, same registry, same reasoning:
+            # `": not found"` is the exact suffix this registry's 404 folds
+            # to (errdefs.NotFound), confirmed empirically there, not
+            # assumed here by inference alone.
+            case "$ERR" in
+              *MANIFEST_UNKNOWN*|*": not found"*)
+                echo "bootstrap: first creation of ${PERMANENT_IMAGE} -- nothing to repoint yet, no main-only restriction applies to this dispatch."
+                echo "  (imagetools said: ${ERR})"
+                echo "OK: running against '${CURRENT_REF}' under the bootstrap exception." ;;
+              *)
+                echo "FAIL: could not determine whether ${PERMANENT_IMAGE} already exists."
+                echo "  imagetools said: ${ERR}"
+                echo "  Refusing to proceed on an ambiguous read -- an unrecognised failure is" \
+                     "not treated as absence. A tool failure misread as absence would let a" \
+                     "bootstrap run publish over the top of a read failure that only looks" \
+                     "like absence."
+                exit 1 ;;
+            esac
+          fi
+
+      # ── Step 1 of "build, verify, THEN push": build now, but push only to
+      # a STAGING tag — outside keep_pattern, expires in 14 days, and
+      # deliberately never the value build.yml or anyone else references.
+      # The permanent (production) tag is only ever written by the last
+      # step below, after the isolation matrix has proven this exact image
+      # closed. A push to SOME registry-resolvable location is
+      # architecturally unavoidable even under "verify before push": the
+      # CNI-enabled builder below is created via `driver-opts: image=`,
+      # exactly like build.yml's own real builder, and that mechanism PULLS
+      # over the network as part of builder creation — it cannot point at
+      # an image that exists only in this job's local docker daemon. "Push
+      # only after verify" therefore means the PRODUCTION tag specifically,
+      # not the absence of any registry write at all — the same shape the
+      # already-reviewed verify harness (verify-cni-netns-isolation.yml)
+      # uses for the identical reason.
+      # `docker/build-push-action` — same action build.yml's own real
+      # application build already uses, for the same reason: it surfaces
+      # `steps.build.outputs.digest` natively, which is the documented,
+      # reliable way to learn the digest of what was just pushed. Re-
+      # parsing `imagetools inspect`'s own template output (whose exact
+      # field names are not a stable contract to depend on) would be a
+      # needless, less-proven alternative to a mechanism this project
+      # already trusts elsewhere.
+      - name: Build and push the candidate image to the staging tag
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile.buildkit-cni
+          push: true
+          tags: ${{ env.IMAGE_REPO }}:${{ env.STAGING_TAG }}
+          build-args: |
+            CNI_PLUGINS_VERSION=${{ inputs.cni_plugins_version }}
+
+      - name: Record what was pushed
+        env:
+          STAGING_DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          set -euo pipefail
+          case "${STAGING_DIGEST}" in
+            sha256:[0-9a-f]*) ;;
+            *) echo "FAIL: build-push-action reported no usable digest ('${STAGING_DIGEST}')."; exit 1 ;;
+          esac
+          echo "Pushed staging image: ${IMAGE_REPO}:${STAGING_TAG}@${STAGING_DIGEST}"
+
+      # Sanity check on the staging image's own contents — a clearly
+      # separate step from the isolation matrix below, so a red step here
+      # means specifically "the built image is missing an expected file",
+      # never conflated with "an isolation check failed" or "the builder
+      # never started" (review round 2 item 5 — those three are different
+      # root causes and must produce three different red steps, not one
+      # step with an ambiguous message).
+      - name: "Sanity: CNI binaries, conflist, and firewall entrypoint are present in the staging image"
+        env:
+          STAGING_IMAGE_REF: ${{ env.IMAGE_REPO }}:${{ env.STAGING_TAG }}
+        run: |
+          set -euo pipefail
+          docker pull "$STAGING_IMAGE_REF" >/dev/null
+          docker run --rm --entrypoint sh "$STAGING_IMAGE_REF" -c \
+            'test -x /opt/cni/bin/bridge && test -x /opt/cni/bin/loopback && test -x /opt/cni/bin/host-local && test -f /etc/buildkit/cni.conflist && test -x /usr/local/bin/entrypoint-with-firewall.sh' \
+            && echo "OK: CNI binaries, conflist, and entrypoint wrapper all present in the staging image." \
+            || { echo "FAIL: the STAGING image (not yet the production tag — nothing has been promoted) is missing one of the expected CNI artifacts. Investigate Dockerfile.buildkit-cni; the isolation matrix below has not run yet."; exit 1; }
+
+      # ── Control checks, using the BASELINE (no CNI) builder — proves the
+      # check mechanism itself can fail, before trusting it in the CNI case
+      # below. Mirrors verify-cni-netns-isolation.yml's own baseline job.
+      - name: "Control: dind gateway must be reachable WITHOUT CNI (a guard that can fail)"
+        run: |
+          set -euo pipefail
+          docker buildx build --no-cache \
+            --file Dockerfile.netns-isolation-check \
+            --build-arg PROBE_HOST=172.17.0.1 \
+            --build-arg PROBE_PORT=2375 \
+            --build-arg EXPECT_REACHABLE=yes \
+            --build-arg PROBE_LABEL=image-build-baseline-dind-gateway \
+            .
+
+      - name: "Control: OpenBao must be reachable WITHOUT CNI (reproduces D22's known gap)"
+        run: |
+          set -euo pipefail
+          docker buildx build --no-cache \
+            --file Dockerfile.netns-isolation-check \
+            --build-arg PROBE_HOST=172.20.0.5 \
+            --build-arg PROBE_PORT=8200 \
+            --build-arg EXPECT_REACHABLE=yes \
+            --build-arg PROBE_LABEL=image-build-baseline-openbao \
+            .
+
+      # ── The actual proof: a second builder, pointed at the staging image
+      # just built, with CNI turned on exactly as build.yml turns it on.
+      - name: Set up Docker Buildx (CNI-enabled, staging image)
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
+          driver-opts: |
+            network=${{ env.BUILD_NETWORK }}
+            image=${{ env.IMAGE_REPO }}:${{ env.STAGING_TAG }}
+          buildkitd-config-inline: |
+            [worker.oci]
+              networkMode = "cni"
+              cniConfigPath = "/etc/buildkit/cni.conflist"
+              cniBinaryDir = "/opt/cni/bin"
+
+      - name: "Prove: dind gateway is UNREACHABLE under CNI (before this image is trusted as production)"
+        run: |
+          set -euo pipefail
+          docker buildx build --no-cache \
+            --file Dockerfile.netns-isolation-check \
+            --build-arg PROBE_HOST=172.17.0.1 \
+            --build-arg PROBE_PORT=2375 \
+            --build-arg EXPECT_REACHABLE=no \
+            --build-arg PROBE_LABEL=image-build-cni-dind-gateway \
+            .
+
+      - name: "Prove: OpenBao is UNREACHABLE under CNI (before this image is trusted as production)"
+        run: |
+          set -euo pipefail
+          docker buildx build --no-cache \
+            --file Dockerfile.netns-isolation-check \
+            --build-arg PROBE_HOST=172.20.0.5 \
+            --build-arg PROBE_PORT=8200 \
+            --build-arg EXPECT_REACHABLE=no \
+            --build-arg PROBE_LABEL=image-build-cni-openbao \
+            .
+
+      - name: "Prove: public internet SURVIVES CNI isolation (before this image is trusted as production)"
+        run: |
+          set -euo pipefail
+          docker buildx build --no-cache \
+            --file Dockerfile.netns-isolation-check \
+            --build-arg PROBE_HOST=registry.npmjs.org \
+            --build-arg PROBE_PORT=443 \
+            --build-arg EXPECT_REACHABLE=yes \
+            --build-arg PROBE_LABEL=image-build-cni-internet \
+            .
+
+      # ── Only now, with every check above green, promote the staging
+      # digest to the permanent tag. `imagetools create` retags an existing
+      # manifest by digest — it does not rebuild anything, so the bits
+      # this matrix just proved are exactly the bits that end up behind
+      # v1.0.0-buildkit-cni; there is no window where a different build
+      # could sneak in between "verified" and "published".
+      - name: Promote the verified staging digest to the permanent tag
+        env:
+          STAGING_DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          set -euo pipefail
+          SOURCE_REF="${IMAGE_REPO}@${STAGING_DIGEST}"
+          TARGET_REF="${IMAGE_REPO}:${PERMANENT_TAG}"
+          docker buildx imagetools create --tag "$TARGET_REF" "$SOURCE_REF"
+          echo "Promoted: ${SOURCE_REF} -> ${TARGET_REF}"
+          echo "Update build.yml's own digest pin to: ${SOURCE_REF}"

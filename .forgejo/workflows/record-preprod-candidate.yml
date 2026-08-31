@@ -1,0 +1,1224 @@
+name: Record the PRE-PROD candidate
+
+# Story 5.4. Story 5.3 made PRE-PROD a real deploy target; this file makes the registry remember
+# what was validated there. It creates no image and deploys nothing: `docker buildx imagetools
+# create --prefer-index=false` is a registry-side retag — it points a second name at a manifest
+# that is already there (build.yml's own "Enforce AC2" step is the exact pattern this file's write
+# steps copy -- cited by search string, not line number, per Dev Notes §8/code review M11). Two
+# jobs: `verify-on-stand` (read-only, no lock, no compose) confirms the candidate is what PRE-PROD
+# is demonstrably serving right now; `record` (holding REGISTRY_TOKEN_RW) then points
+# `preprod-<12hex>` (permanent, one per validated commit) and `preprod-current` (moving) at its
+# manifest, each write read back before it is reported.
+#
+# ── 🔴 THE VERDICT IS GONE. `preprod-<sha>` MEANS "REACHED PRE-PROD", NOT "VALIDATED" ──────────
+# Story 6.11, 2026-08-27, Oleg's decision recorded as `#d51`. Until that date this file was a
+# `workflow_dispatch`-only recorder with a required `validated: pass|fail` input, and `#d38` §2
+# argued — here, at length — that this was the only shape in which the marker could carry the
+# meaning FR16 reads out of it: the marker exists ⟺ a human asserted validation passed AND the
+# stand was demonstrably serving exactly that artifact (G5). It also observed, correctly, that
+# this was the only shape in which retro-E5's discriminating row — the marker does NOT move on a
+# failed validation — could exist at all.
+#
+# THAT ARGUMENT WAS NEVER REFUTED. IT WAS ACCEPTED, AND ITS PRICE WAS PAID:
+#   • the `validated` input is gone from both paths;
+#   • G1 is retired — its matrix rows (1215 pass, 1218 refusal) are STRUCK, NOT DELETED, in
+#     `#d38` §6, because deleting them would erase the evidence that the guard was ever real;
+#   • FR16 and `#d2` were narrowed in the same change: the promotion gate now proves the commit
+#     was BUILT FOR PRE-PROD AND DEPLOYED THERE, and no longer that anyone looked at the result;
+#   • `RVC-v1.1` and its waiver keep their authority and lose their only MACHINE consumer
+#     (`#d41`) — nothing in any workflow reads a verdict any more.
+# Do not re-argue it in this file. The record is `#d51`.
+#
+# ⚠️ AND G5 IS NOW TRIVIALLY TRUE ON THE AUTOMATIC PATH. It is kept — it costs almost nothing and
+# it still catches a concurrent overwrite between the deploy and the read — but the deploy that
+# just succeeded is what put that digest on the stand, so on the `workflow_call` path G5 is a
+# restatement of the caller's own precondition, NOT independent evidence. It remains genuinely
+# independent on the backfill dispatch path, where an arbitrary amount of time has passed.
+#
+# ── What this record covers, and what it does not (AC6) — printed by the workflow itself ────────
+# This marker asserts: this exact digest resolves in the registry under an immutable,
+# commit-bearing tag; the PRE-PROD container was running that digest and reported healthy at
+# record time. It does NOT assert: 🔴 THAT ANYONE VALIDATED IT — no workflow reads a verdict
+# (`#d51`); that a rebuild of the same commit would reproduce it (vite.config.ts bakes Date.now()
+# -- see deferred-work.md's "the build is not reproducible at source level" entry); that `healthy`
+# means anything about the backend (the healthcheck probes itself, 5.1's finding); that any
+# particular checklist was followed (`RVC-v1.1` exists and is still the rule, enforced by
+# docs/preprod-candidates.md and the approval regulation alone).
+# 🟢 REMOVED FROM THAT LIST 2026-08-27, because it stopped being true: "a BROWSER cannot call the
+# API — CORS is broken and was never exercised." PRE-PROD's Kong was fixed by CRM/api-prionex;
+# recorded in docs/preprod-candidates.md on 2026-08-25 and re-measured 2026-08-27 with GET (an
+# earlier `curl -I` measurement of the same thing was WRONG and is superseded — if you re-measure,
+# use GET). This file asserted the opposite for two days after it was fixed.
+# 🔴 Code review H3 (still in force): this paragraph must not live ONLY as this YAML comment,
+# which no execution ever emits. See the "Print AC6's boundary" step in the `record` job.
+#
+# ── The commit-sha derivation, spelled out for Story 6.5 — it must implement the exact inverse ──
+#   input   sha-<12hex>-preprod
+#   strip   leading "sha-" and trailing "-preprod"
+#   assert  ^[0-9a-f]{12}$   -- exactly 12, hard FAIL otherwise (build.yml's own tags step uses
+#                                `cut -c1-12`; a length mismatch here fails every legitimate release
+#                                at 6.5 -- search build.yml for "Stories 5.4 and 6.5" for the source
+#                                comment addressing this story by name)
+#   emit    preprod-<12hex>
+# 🔴 Code review H2/M1, corrected: G6 below narrows this gap against a FOREIGN artifact (one pushed
+# outside build.yml); it does NOT establish the deployed image's commit for a build.yml-produced
+# artifact, because build.yml itself writes org.opencontainers.image.version and the tag's own short
+# SHA from the SAME shell variable, and org.prionex.environment from the same ${ENVIRONMENT} the tag
+# suffix comes from — all three of G6's clauses are IDENTITIES on that path, not independent
+# evidence. D33 §6(b) — nothing on the deploy path itself ever establishes a deployed image's
+# commit — remains genuinely open for a build.yml artifact; G6 only closes the narrower case of a
+# hand-crafted or foreign image being passed off as a build.yml one.
+#
+# ── Write order: preprod-<sha> FIRST, then preprod-current (§6) ─────────────────────────────────
+# If this run dies between the two writes, the history tag exists and the pointer is stale —
+# recoverable by re-running, and Story 6.5 (which reads preprod-<sha>, never preprod-current) is
+# still correct. The reverse order would leave preprod-current naming a candidate with no history
+# entry, which is exactly the state 6.5 would misread.
+#
+# ── --prefer-index=false is not optional, for two reasons ────────────────────────────────────────
+# (1) build.yml: without it, `imagetools create` silently wraps the source manifest in an OCI index
+# whose digest can never equal the source manifest's — build-buildkit-cni-image.yml's own promote
+# step is the recorded counter-example (D26) and is not copied here. (2) This instance runs a
+# SEPARATE sweeper, cleanup_sha256, independent of package_cleanup_rule: it deletes any sha256:*
+# version no index manifest references, >=24h old (deferred-work.md's "cleanup_sha256, the second
+# sweeper" entry). Writing an index would create a second sha256: row governed by a rule this
+# project has never exercised, and the retention clause that would have covered it is recorded as
+# inert on this Forgejo version. Writing the source manifest verbatim keeps the marker inside the
+# model this project has actually reasoned about.
+# 🔴 Live-tested, measured fact (code review fix-pass, 2026-08-24): `--annotation` is REJECTED
+# outright by this instance's buildx — `github.com/docker/buildx v0.33.0
+# f7897eba028583e0071642db3c011e860444f8cf` — on a plain `imagetools create` retag, with or without
+# `--prefer-index`, error `"" annotations are not supported yet`. Confirmed by direct probe on s1;
+# no tag was left behind by the failed probe. OCI annotations are therefore NOT an available
+# channel for `validation_note` on THIS instance's exact tool version, on this write shape.
+#
+# ── D1 (Oleg's veto open): three evidence tiers, none of them alone "the record" ─────────────────
+# 🔴 Corrected, code review D1: this file used to claim `validation_note` is "echoed into the log —
+# it is the record" (single sink, and this instance's own logs have failed to archive five
+# consecutive times across this story alone). Restated as three tiers, none overstated:
+#   (1) THE REGISTRY (preprod-<sha>/preprod-current themselves) — identity and permanence. What
+#       artifact, at what digest, protected by keep_pattern. This is the only tier Story 6.5 reads.
+#   (2) docs/preprod-candidates.md, IN THIS REPOSITORY — the human-readable verdict record: date,
+#       candidate tag, digest, verdict, note, run id. Append-only, one line per recording. THIS
+#       WORKFLOW DOES NOT WRITE IT — giving this job a repository-write credential is a new class of
+#       permission this story does not open (a separate decision, if ever). The dev session appends
+#       the line as part of the recording PROCEDURE itself, immediately after a green run: "record a
+#       candidate" is now "dispatch, then commit one ledger line" — both halves, not either alone.
+#       This file's own last step prints exactly the line to append, so the procedure has no
+#       transcription step of its own.
+#   (3) `$GITHUB_STEP_SUMMARY` and the job log — BEST-EFFORT. Cheap, rendered on the run's own page
+#       when it works, but this instance's own persistence for either is not proven reliable (no
+#       summary-shaped row or file was found anywhere in Forgejo's own data directory or database
+#       for any prior run on this repository before this fix-pass's own live test).
+#
+# ── The check-to-write window is real and is not closed here ────────────────────────────────────
+# 🔴 Code review M6, corrected: `imagetools create` offers no compare-and-swap. The PREVIOUS wording
+# here claimed the shared concurrency group "serializes recorder runs against each other AND against
+# PRE-PROD deploys" while ALSO saying two concurrent runs "could both read absent and both attach" —
+# both cannot be true at once, and only the recorder-vs-recorder half has a live run behind it
+# (1217/1229); no dispatch ever exercised a recorder racing an actual deploy. Stated precisely: the
+# shared group serializes this file's own recorder runs against each other (proven live) and is
+# DESIGNED to also serialize against a concurrent `deploy-preprod.yml` run via the same literal
+# group (not yet exercised by any dispatch this story ran). The window that remains genuinely open,
+# with no live proof against it, is a WRITER OUTSIDE THIS GROUP ENTIRELY — a manual
+# `docker buildx imagetools create` run by hand from a host, or an operator `DELETE` followed by a
+# rebuild — neither of which any `concurrency:` block can ever serialize against. The mandatory
+# read-back after every write is real mitigation (it fails the run if the tag does not carry THIS
+# run's own candidate digest), but it compares against this run's own value, so it cannot
+# distinguish "our write landed" from "a different actor wrote the identical digest" — it only ever
+# catches a DIFFERENT digest landing first.
+#
+# ── `concurrency:` — the SAME literal group deploy-preprod.yml uses, deliberately ────────────────
+# D30 keys the group on the stand's own identity, and this file reads that stand's live state (G5).
+# A deploy running concurrently would move the digest under the read. This is the one case where
+# Story 5.3's Prohibition 7 ("never copy DEV's group") does not apply — that forbade sharing a group
+# with an INDEPENDENT stand; this file reads the SAME stand deploy-preprod.yml deploys to.
+# Autonomous, subject to Oleg's veto. If vetoed: own literal group
+# `record-preprod-fe-prionex-preprod`; a concurrent deploy can then make G5 fail spuriously (safe,
+# confusing, not corrupting).
+#
+# ── The two jobs deliberately do not pass the digest to each other ───────────────────────────────
+# Each resolves it independently from the same immutable tag (sha-<12hex>-preprod is refused a
+# repoint by build.yml's own AC2 guard, so the two resolutions must agree). This avoids the only
+# cross-job outputs dependency this file could have had, on an instance where workflow_call/output
+# plumbing has surprised this project four times (D8, D21). 🔴 Code review H3, disclosed: this means
+# the two jobs' digests are never actually cross-checked against each other by any assertion — only
+# argued to agree structurally. See deferred-work.md's own entry on this residual.
+#
+# ── driver: docker, not build.yml's docker-container block ───────────────────────────────────────
+# build.yml's driver-opts/private-builder/build-network exist for BUILDING with a registry cache;
+# this job builds nothing, it only retags. `imagetools` is a registry client that runs in the job
+# container under either driver.
+#
+# ── Naming invariants — NOT claimed for this file ────────────────────────────────────────────────
+# Nothing dispatches or reads this file back by name today (unlike deploy-dev.yml, which
+# dev-reset.yml both dispatches and reads back by both file name and workflow `name:`). If a future
+# story starts doing so, this header should be upgraded then, the same way deploy-dev.yml's is.
+#
+# ── `preprod-current`/`preprod-<sha>` are NOT deployable through `deploy-preprod.yml` ────────────
+# 🔴 Code review L5(a), corrected: this belonged in the file, not only in the story's own Open
+# Question 6. Neither marker ends in `-preprod` — `deploy-stand.yml`'s own tag<->environment guard
+# (which `deploy-preprod.yml` inherits) refuses both. This is correct and intended (a moving
+# pointer is exactly the wrong thing to hand a deploy, and `preprod-<sha>` is history, not a live
+# artifact reference) but would read as a bug to whoever tries it without this sentence.
+#
+# ── What this file does NOT do (Story 5.5's and Story 6.5's territory) ──────────────────────────
+# It does not define what "validation" consists of — `validation_note` is free text on purpose,
+# until Story 5.5 ships a checklist. It does not gate PRODUCTION on this tag's presence — that is
+# Story 6.5's `deploy-prod.yml`/promotion check, not built here. It implies no technical approval
+# gate beyond repository write access (NFR9) — this is a deliberate human act, and that is the
+# entire access control, stated rather than implied otherwise.
+#
+# ── preprod-current can move BACKWARDS, deliberately allowed — a WARNING, not a refusal ──────────
+# 🔴 Code review D2, decided autonomously by the coordinator (Oleg's veto open, literal instruction:
+# "not a prohibition — rollback is legitimate, but must be intentional"). Re-recording an OLDER
+# candidate that has since been redeployed (G5 permits this the moment that older candidate is
+# serving again) moves `preprod-current` in either direction with no special-casing otherwise — the
+# write logic treats a move exactly the same regardless of direction.
+# 🔴 Honesty constraint this design runs into: this job takes NO repository checkout (Task 3.5's own
+# reading of §5.1), so it has no `git log`/`git merge-base` to determine whether the new candidate's
+# commit is actually older or newer than the one `preprod-current` already names — the same
+# limitation AC5 already discloses ("the order comes from git, not the registry"). Rather than
+# invent an unreliable heuristic that could misclassify a real backwards move as forward (defeating
+# the guard silently, the worst possible failure mode for a WARNING that exists to be noticed), the
+# `G-backwards` step below WARNS, loudly, on every move to a genuinely different candidate — it
+# never blocks the write (`allow_backwards_move` changes the message, not the exit code): the write
+# proceeds either way, exactly matching "not a prohibition". Setting `allow_backwards_move=true`
+# turns the loud warning into a quiet, explicit confirmation line instead — useful for a genuinely
+# routine forward move (the common case) once an operator has confirmed direction by hand, and
+# required reading either way for a deliberate rollback. `preprod-<sha>`'s own write is never
+# affected — only the moving pointer's own log output changes.
+#
+# ── An already-recorded commit whose artifact must be rebuilt has exactly one exit ───────────────
+# 🔴 Code review D3, decided autonomously (Oleg's veto open). The build is not reproducible at
+# source level (Date.now() baked at build time), so a rebuild of an already-recorded commit X
+# produces a DIFFERENT digest under the SAME derived tag preprod-X — refused by this file's own AC8
+# repoint guard, and Prohibition 14 forbids deleting the marker to make room. There is exactly one
+# way out, and it is manual, deliberate, and outside this file entirely:
+#   docker buildx imagetools inspect --format '{{.Manifest.Digest}}' \
+#     git.crm-prionex.com/crm/fe-prionex:preprod-<hex>          # confirm what it currently is
+#   # Oleg, personally, write:package credential:
+#   #   DELETE the preprod-<hex> package version via the Forgejo package UI/API (D24's own
+#   #   recovery policy: authorised manual DELETE + rebuild from scratch, never automated)
+#   # then re-dispatch this workflow for the SAME image_tag to re-attach preprod-<hex> to the new
+#   # digest.
+# Meanwhile the stand may already be serving the new digest and Story 6.5 gates only on the
+# marker's EXISTENCE for a commit — a widened AC8 disclosure, not a code change: this operational
+# dead end is real and has no automated mitigation.
+
+on:
+  # ── The BACKFILL / REPAIR path. Story 6.11 (`#d51`) demoted it from "the way a candidate is
+  # ── recorded" to "the way a MISSED record is repaired". The normal path is `workflow_call`
+  # ── below, fired by `deploy-preprod.yml` on a successful deploy.
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "The candidate image tag to record, e.g. sha-00ef3be4743d-preprod. Must be an existing sha-<hex>-preprod tag; this workflow creates no image. BACKFILL/REPAIR ONLY -- a successful deploy-preprod.yml run records itself (Story 6.11)."
+        required: true
+        type: string
+      acknowledgement:
+        description: "Type exactly RECORD-PREPROD-CANDIDATE to confirm. This dispatch writes a PERMANENT registry tag that only an authorised DELETE with a write:package token can remove."
+        required: true
+        type: string
+      validation_note:
+        description: "OPTIONAL free text: who is backfilling this, against what, when. 🔴 It is NOT a verdict and nothing gates on it (Story 6.11 removed the `validated` input entirely; `preprod-<sha>` now means the commit REACHED pre-prod, not that it was validated). The AUTHORITATIVE human record is docs/preprod-candidates.md in this repository. Also echoed into the job log and $GITHUB_STEP_SUMMARY, both best-effort only."
+        required: false
+        type: string
+        default: ""
+      allow_backwards_move:
+        description: "TESTING/ROLLBACK ONLY. Set true to acknowledge that preprod-current may move to a commit OLDER than what it currently points to. Changes the WARNING's wording, never the exit code (code review D2 -- 'not a prohibition'). Defaults false here and TRUE on the workflow_call path."
+        required: false
+        type: boolean
+        default: false
+
+  # ── Story 6.11: the AUTOMATIC path. `deploy-preprod.yml` calls this after a successful deploy ──
+  # This block is the withdrawal of `#d38` §2 being consumed. That section argued -- in this file's
+  # own header, at length, and it was never refuted -- that a dispatch-with-verdict recorder is the
+  # only shape in which `preprod-<sha>` can mean "validated". Oleg's decision of 2026-08-27
+  # (`#d51`) ACCEPTS that argument and pays its price: the verdict is gone, `G1` is gone, and the
+  # marker now means "this commit reached PRE-PROD". See the header section above.
+  #
+  # 🔴 THE INPUT IS `candidate_tag`, NOT `image_tag`, AND THAT IS A FIX, NOT A PREFERENCE.
+  # `#d47`(3), measured on runs 637/640: a CALLER's `workflow_dispatch` input SHADOWS a callee
+  # input of the same name. `deploy-preprod.yml`'s dispatch input is already `image_tag` and
+  # cannot be renamed -- it is written into every recorded PRE-PROD procedure and into the
+  # `with:` block it hands `deploy-stand.yml`. `deploy-prod.yml` solved the same collision from
+  # the other end by naming ITS dispatch input `tag`; that option is closed here. Naming this one
+  # `image_tag` too would leave the `with:` mapping PERMANENTLY UNPROVABLE -- the two values
+  # coincide by construction, so no observation could distinguish "the mapping works" from "the
+  # shadow supplied it". `#d47` records that this is exactly why the defect was invisible in both
+  # shipped callers. A third invisible instance is not shipped here.
+  workflow_call:
+    inputs:
+      candidate_tag:
+        description: "The candidate image tag to record, in sha-<12hex>-preprod form -- the same value the caller was dispatched with. 🔴 NOTE THE NAME: deliberately NOT `image_tag`, so the caller's own dispatch input cannot shadow it (#d47(3))."
+        required: true
+        type: string
+      allow_backwards_move:
+        description: "Defaults TRUE on this path. A deploy has just succeeded, so the move is intentional by construction and there is no operator present to acknowledge it. This flag only ever changes the WARNING's wording -- it never changes the exit code."
+        required: false
+        type: boolean
+        default: true
+    outputs:
+      history_written:
+        description: "attached | noop -- what happened to preprod-<12hex>."
+        value: ${{ jobs.record.outputs.history_written }}
+      current_written:
+        description: "created | moved | noop -- what happened to preprod-current."
+        value: ${{ jobs.record.outputs.current_written }}
+      candidate_digest:
+        description: "The digest both markers were pointed at, as this workflow independently resolved it."
+        value: ${{ jobs.record.outputs.candidate_digest }}
+
+concurrency:
+  group: deploy-preprod-fe-prionex-preprod
+  cancel-in-progress: false
+
+env:
+  IMAGE_REPO: git.crm-prionex.com/crm/fe-prionex
+
+jobs:
+  verify-on-stand:
+    name: "Verify the candidate is what PRE-PROD is demonstrably serving"
+    runs-on: deploy-dev-preprod
+    timeout-minutes: 5
+    env:
+      # ── AC5 / `#d47`(3): resolved ONCE per job, never scattered across steps ──────────────
+      # `candidate_tag` on the workflow_call path; `image_tag` on the dispatch path. Job-level
+      # `env:` is exported into every step's SHELL, so the steps below read $CANDIDATE_TAG
+      # directly and no step depends on the `env` expression context resolving inside a
+      # step-level `env:` block -- an assumption this project has not measured and does not
+      # need to make.
+      CANDIDATE_TAG: ${{ inputs.candidate_tag || inputs.image_tag }}
+    steps:
+      # ── G1 IS GONE. G1' IS NOT ITS REPLACEMENT IN MEANING, ONLY IN POSITION. ──────────────
+      # The old G1 asked "did a human say this passed?" -- it read the `validated` input, and
+      # `#d38` §6's matrix records both of its live rows: 1215 (pass) and 1218 (refusal on the
+      # first line, zero network calls). `#d51` removed the input, so that question can no
+      # longer be asked and the guard is retired. Its matrix row is STRUCK, NOT DELETED, in
+      # `#d38` §6 -- deleting it would erase the evidence that the guard was ever real, which is
+      # the opposite of what `retro-E5` asks for.
+      #
+      # G1' asks a DIFFERENT and much weaker question: "is this a deliberate dispatch rather
+      # than a stray one?" It exists because removing G1 would otherwise leave the dispatch
+      # path with no guard at all in this slot. It is the same guard, for the same reason, that
+      # `record-prod-image.yml` already carries -- and, exactly as there, it lives on the
+      # DISPATCH path only: "a caller that always passes the literal proves nothing -- it turns
+      # a guard into a constant". On the call path the authorisation is the deploy that already
+      # succeeded.
+      #
+      # 🔴 THE GATE EXPRESSION IS MEASURED, NOT ASSUMED, AND THE OBJECTION TO IT HAS BEEN RAISED
+      # ONCE ALREADY. A reviewer will object that `github.event_name` inside a called workflow
+      # is the CALLER's, which would leave G1' armed and fail every automatic record. That
+      # objection is WRONG and this project measured it: `#d21`, run 631 -- «`if:` у `uses:`-
+      # джобы копируется ВНИЗ… и вычисляется там, где `github.event_name` равен
+      # `workflow_call`». The rebuttal lives here so the next reader does not re-raise it.
+      #
+      # Coordinator's decision, announced to Oleg rather than asked, veto open (the convention
+      # `#d38` §7 used). If vetoed: delete this step and say IN THIS FILE that the dispatch path
+      # ships with no guard in this slot and that `retro-E5`'s discriminating row for it is
+      # genuinely unavailable -- do not leave the gap silent.
+      - name: G1' -- a hand dispatch must be deliberate (dispatch path only)
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        env:
+          ACK: ${{ inputs.acknowledgement }}
+        run: |
+          set -euo pipefail
+          if [ "${ACK:-}" != "RECORD-PREPROD-CANDIDATE" ]; then
+            echo "FAIL(G1'): acknowledgement='${ACK:-<empty>}' is not the exact literal"\
+                 "RECORD-PREPROD-CANDIDATE. This is a real refusal, not a bug."
+            echo
+            echo "  This dispatch writes preprod-<12hex>, a PERMANENT registry tag that only an"
+            echo "  authorised DELETE with a write:package token can remove. Nothing after this"
+            echo "  step runs, and NO CREDENTIAL HAS BEEN LOADED -- the write job has not started."
+            echo
+            echo "  If you are trying to record a candidate on the NORMAL path, you do not want"
+            echo "  this workflow at all: a successful deploy-preprod.yml run records itself"
+            echo "  (Story 6.11). This dispatch is for BACKFILL and REPAIR only."
+            exit 1
+          fi
+          echo "OK(G1'): acknowledgement accepted -- this is a deliberate backfill/repair dispatch."
+
+      # AC5's proof: the resolved tag, and WHICH input supplied it. On the call path
+      # `candidate_tag` must be non-empty and `event_name` must read `workflow_call` -- together
+      # those two lines are the only available evidence that the `with:` mapping is what fed
+      # this run, rather than the caller's shadowing dispatch input (`#d47`(3)).
+      - name: Print the resolved candidate tag and which path supplied it (AC5)
+        env:
+          # NO `${{ }}` IN THE BODY BELOW -- house rule, and it is not stylistic. This instance
+          # substitutes inside shell COMMENTS too, and one empty token has rejected an entire
+          # workflow with no diagnostic beyond `action_run.pre_execution_error_details` (`#d21`).
+          # The original file carried zero `${{ }}` in any run body; that stays true.
+          EVENT_NAME: ${{ github.event_name }}
+          FROM_CALL: ${{ inputs.candidate_tag }}
+          FROM_DISPATCH: ${{ inputs.image_tag }}
+        run: |
+          set -euo pipefail
+          echo "event_name             : ${EVENT_NAME}"
+          echo "inputs.candidate_tag   : '${FROM_CALL:-<unset>}'   <- workflow_call, via with:"
+          echo "inputs.image_tag       : '${FROM_DISPATCH:-<unset>}'   <- workflow_dispatch"
+          echo "resolved CANDIDATE_TAG : '${CANDIDATE_TAG}'"
+          if [ -z "${CANDIDATE_TAG:-}" ]; then
+            echo "FAIL: neither input supplied a tag. Refusing to continue."
+            exit 1
+          fi
+
+      - name: G2 -- the tag must name the PRE-PROD environment
+        run: |
+          set -euo pipefail
+          # Code review M2: reject a multi-line value before either shape guard runs -- `grep -E
+          # '^...$'` anchors per LINE, not per string, so a newline-containing input could satisfy
+          # both this guard and G3 with a corrupted derived_hex. No live write is reachable through
+          # that path today (the digest-resolve step's own URL breaks first), but the guard should
+          # not silently accept a shape it was never meant to.
+          case "${CANDIDATE_TAG}" in
+            *$'\n'*)
+              echo "FAIL(G2): image_tag contains a newline. Refusing before any shape check."
+              exit 1
+              ;;
+          esac
+          # Code review L7: G2's own reject set is a strict SUBSET of G3's (anything G2 rejects, G3
+          # rejects too) -- it exists for a clearer, earlier message, not as an independent
+          # discriminator. Counted as one guard for messaging purposes, not for coverage.
+          case "${CANDIDATE_TAG}" in
+            *-preprod) : ;;
+            *)
+              echo "FAIL(G2): tag='${CANDIDATE_TAG}' does not end in '-preprod'. Mirrors"\
+                   "deploy-stand.yml's own tag<->environment guard: build.yml bakes environment"\
+                   "configuration into the image at build time, so a wrong-suffix tag names a"\
+                   "genuinely different artifact, not a naming nitpick."
+              exit 1
+              ;;
+          esac
+          echo "OK: '${CANDIDATE_TAG}' ends in '-preprod'."
+
+      - name: G3 -- the tag must be commit-extractable, exactly 12 hex
+        id: derive
+        run: |
+          set -euo pipefail
+          if ! printf '%s' "${CANDIDATE_TAG}" | grep -qE '^sha-[0-9a-f]{7,64}-preprod$'; then
+            echo "FAIL(G3): tag='${CANDIDATE_TAG}' does not match ^sha-[0-9a-f]{7,64}-preprod\$."\
+                 "A branch-shaped tag (e.g. main-preprod) carries no commit and is mutable --"\
+                 "Story 5.3's own instruction was not to let a later story generalise"\
+                 "'image_tag mode is safe' past the sha- shape."
+            exit 1
+          fi
+          HEX="${CANDIDATE_TAG#sha-}"
+          HEX="${HEX%-preprod}"
+          if ! printf '%s' "${HEX}" | grep -qE '^[0-9a-f]{12}$'; then
+            echo "FAIL(G3): the hex part of '${CANDIDATE_TAG}' is '${HEX}' (${#HEX} characters),"\
+                 "not exactly 12. Stories 5.4 and 6.5 must agree on this exact length, or a"\
+                 "length mismatch fails every legitimate release."
+            exit 1
+          fi
+          echo "derived_hex=${HEX}" >> "$GITHUB_OUTPUT"
+          echo "OK: '${CANDIDATE_TAG}' -> commit hex '${HEX}'."
+
+      - name: Resolve the candidate's digest from the registry (read-only pair)
+        id: digest
+        env:
+          REG_USER: ${{ secrets.REGISTRY_USER_RO }}
+          REG_TOKEN: ${{ secrets.REGISTRY_TOKEN_RO }}
+        run: |
+          set -euo pipefail
+          HEADERS_FILE="$(mktemp)"
+          BODY_FILE="$(mktemp)"
+          trap 'rm -f "$HEADERS_FILE" "$BODY_FILE"' EXIT
+
+          if [ -z "${REG_USER:-}" ] || [ -z "${REG_TOKEN:-}" ]; then
+            echo "FAIL: REGISTRY_USER_RO / REGISTRY_TOKEN_RO is empty or unset. ORG-level"\
+                 "secrets -- an empty value means the org secret was removed, renamed, or this"\
+                 "repository lost access to it, not a code defect."
+            exit 1
+          fi
+
+          HTTP_CODE="$(printf 'user = "%s:%s"\n' "$REG_USER" "$REG_TOKEN" \
+            | curl -sS -L --retry 2 --retry-delay 2 --retry-connrefused --max-time 30 \
+                -D "$HEADERS_FILE" -o "$BODY_FILE" -w '%{http_code}' --config - \
+                -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
+                -H "Accept: application/vnd.docker.distribution.manifest.list.v2+json" \
+                -H "Accept: application/vnd.oci.image.manifest.v1+json" \
+                -H "Accept: application/vnd.oci.image.index.v1+json" \
+                "https://${IMAGE_REPO%%/*}/v2/${IMAGE_REPO#*/}/manifests/${CANDIDATE_TAG}" || true)"
+
+          case "$HTTP_CODE" in
+            200)
+              DIGEST="$(grep -i '^docker-content-digest:' "$HEADERS_FILE" | tail -n1 | tr -d '\r' | awk '{print $2}' || true)"
+              if ! printf '%s' "$DIGEST" | grep -qE '^sha256:[0-9a-f]{64}$'; then
+                echo "FAIL: registry answered 200 for ${CANDIDATE_TAG} but the Docker-Content-Digest"\
+                     "header was missing or not a well-formed sha256 digest ('${DIGEST}')."\
+                     "Refusing to guess."
+                exit 1
+              fi
+              echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+              echo "OK: resolved ${CANDIDATE_TAG} -> ${DIGEST}"
+              ;;
+            401)
+              echo "FAIL: registry returned 401 Unauthorized resolving ${CANDIDATE_TAG}. This means"\
+                   "the job's OWN registry credential (REGISTRY_USER_RO/REGISTRY_TOKEN_RO) is"\
+                   "missing, wrong, or revoked -- NOT that the image is missing. Check the org"\
+                   "secrets."
+              exit 1
+              ;;
+            404)
+              echo "FAIL: registry returned 404 Not Found resolving ${CANDIDATE_TAG}. No image"\
+                   "exists under this exact tag -- confirm it was actually built and pushed"\
+                   "(this workflow builds nothing and cannot fix that)."
+              exit 1
+              ;;
+            000)
+              echo "FAIL: transport-level failure resolving ${CANDIDATE_TAG} -- not an HTTP response"\
+                   "at all (DNS, TLS, connection refused, or timeout). Not a credential or"\
+                   "missing-image problem; a network/registry-availability one."
+              exit 1
+              ;;
+            *)
+              echo "FAIL: registry returned unexpected HTTP ${HTTP_CODE} resolving ${CANDIDATE_TAG}."\
+                   "Raw status only -- not classified as a known cause."
+              cat "$BODY_FILE" 2>/dev/null || true
+              exit 1
+              ;;
+          esac
+
+      - name: G5 -- the stand must be healthy and demonstrably serving this exact digest
+        id: g5
+        env:
+          CANDIDATE_DIGEST: ${{ steps.digest.outputs.digest }}
+        run: |
+          set -euo pipefail
+          # Code review H1 (CRITICAL), fixed: CANDIDATE_DIGEST was never shape-checked before use.
+          # `grep -qF "$CANDIDATE_DIGEST"` with an EMPTY needle matches any input -- an empty value
+          # (e.g. from a plumbing surprise on this instance, D8/D21) previously made this guard pass
+          # OPEN, the one guard in the file that failed in the unsafe direction. Both operands are
+          # now shape-checked before any comparison, and the comparison is exact string equality
+          # against each parsed entry, never a substring grep.
+          if ! printf '%s' "${CANDIDATE_DIGEST}" | grep -qE '^sha256:[0-9a-f]{64}$'; then
+            echo "FAIL(G5, tool failure): CANDIDATE_DIGEST='${CANDIDATE_DIGEST}' is empty or not a"\
+                 "well-formed sha256 digest. This is a plumbing failure, not a verdict about the"\
+                 "stand -- refusing to guess."
+            exit 1
+          fi
+
+          # Code review M3(2): {{.State.Health.Status}} template-errors when .State.Health is nil
+          # (no healthcheck defined, or the container does not exist) -- guarded the same way
+          # deploy-stand.yml's own code review fixed this exact pattern.
+          HEALTH="$(docker inspect fe-prionex-preprod --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' 2>/dev/null || true)"
+          if [ -z "$HEALTH" ]; then
+            echo "FAIL(G5, tool failure): could not read fe-prionex-preprod's own state at all"\
+                 "-- container may not exist. Tool failure, not a verdict."
+            exit 1
+          fi
+          if [ "$HEALTH" = "none" ]; then
+            echo "FAIL(G5, tool failure): fe-prionex-preprod exists but reports no healthcheck at"\
+                 "all ('.State.Health' is nil) -- a different condition from 'unhealthy', and not"\
+                 "a verdict about the candidate."
+            exit 1
+          fi
+          if [ "$HEALTH" != "healthy" ]; then
+            echo "FAIL(G5): fe-prionex-preprod's own health status is '${HEALTH}', not 'healthy'."\
+                 "Refusing to record a candidate against a stand that is not demonstrably up."
+            exit 1
+          fi
+
+          CONFIG_DIGEST="$(docker inspect fe-prionex-preprod --format '{{.Image}}' 2>/dev/null || true)"
+          if [ -z "$CONFIG_DIGEST" ]; then
+            echo "FAIL(G5, tool failure): could not read fe-prionex-preprod's own config digest"\
+                 "via 'docker inspect'. Tool failure, not a verdict -- refusing to guess."
+            exit 1
+          fi
+
+          # Code review M3(1): {{.RepoDigests}} renders an empty slice as the literal string "[]",
+          # which is NON-empty, so the old -z guard was dead for an image with no registry
+          # provenance -- deploy-stand.yml's own code review found and fixed this exact
+          # misattribution. {{range .RepoDigests}}{{.}} {{end}} yields a plain space-separated list
+          # (empty string when the slice is empty), which -z now correctly detects.
+          RUNNING_DIGESTS="$(docker image inspect "$CONFIG_DIGEST" --format '{{range .RepoDigests}}{{.}} {{end}}' 2>/dev/null || true)"
+          if [ -z "$RUNNING_DIGESTS" ]; then
+            echo "FAIL(G5, tool failure): the running image has no .RepoDigests at all (no"\
+                 "registry provenance recorded for it -- never pulled by digest, or the image"\
+                 "was built locally). Tool/provenance failure, not a verdict."
+            exit 1
+          fi
+
+          # Each entry is "repo@sha256:<hex>" (the range template's own {{.}} form); compare only
+          # the digest portion after the last "@", by exact equality, never a substring grep.
+          MATCH=0
+          for ENTRY in $RUNNING_DIGESTS; do
+            D="${ENTRY##*@}"
+            if [ "$D" = "$CANDIDATE_DIGEST" ]; then
+              MATCH=1
+              break
+            fi
+          done
+          if [ "$MATCH" -ne 1 ]; then
+            echo "FAIL(G5): the stand is healthy but is NOT demonstrably serving the candidate."
+            echo "  candidate's own registry digest: ${CANDIDATE_DIGEST}"
+            echo "  stand's own running .RepoDigests: ${RUNNING_DIGESTS}"
+            echo "  Recording this candidate now would be a claim, not evidence -- refusing."
+            exit 1
+          fi
+          echo "digest=${CANDIDATE_DIGEST}" >> "$GITHUB_OUTPUT"
+          echo "OK: fe-prionex-preprod is healthy and its running .RepoDigests contains"\
+               "${CANDIDATE_DIGEST}."
+
+      # 🔴 Story 6.11: this step USED TO FAIL a run on a blank note (code review L3), on the
+      # grounds that "the marker asserts a human named what they checked". THAT GROUND IS GONE.
+      # `#d51` removed the verdict; the marker asserts that the commit reached PRE-PROD, and on
+      # the automatic path there is no human present to write anything. The note is now optional
+      # metadata, and on the call path it is GENERATED so the ledger line the last step prints is
+      # still complete.
+      - name: Resolve the note (generated on the automatic path, optional on the dispatch path)
+        id: note
+        env:
+          # No `${{ }}` in the body -- see the AC5 print step above for why (`#d21`).
+          SUPPLIED: ${{ inputs.validation_note }}
+          EVENT_NAME: ${{ github.event_name }}
+          REPO: ${{ github.repository }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          set -euo pipefail
+          TRIMMED="$(printf '%s' "${SUPPLIED:-}" | tr -d '[:space:]')"
+          if [ -n "$TRIMMED" ]; then
+            NOTE="${SUPPLIED}"
+          elif [ "${EVENT_NAME}" = "workflow_dispatch" ]; then
+            NOTE="backfill/repair dispatch; no note supplied. NOT a verdict."
+          else
+            NOTE="automatic record on a successful PRE-PROD deploy (${REPO} run ${RUN_NUMBER}); no human verdict -- see #d51."
+          fi
+          # One line only: a newline here would shift every later column of the ledger row the
+          # last step prints, the same rule `RVC-v1.1`'s own note format states for itself.
+          NOTE="$(printf '%s' "${NOTE}" | tr '\n\r|' '   ')"
+          echo "note=${NOTE}" >> "$GITHUB_OUTPUT"
+          echo "note: ${NOTE}"
+
+  record:
+    name: "Write preprod-<sha> then preprod-current, each read back before it is reported"
+    runs-on: node-20
+    needs: verify-on-stand
+    timeout-minutes: 10
+    # 🔴 A callee that declares no `outputs:` hands the caller NOTHING. Both halves are required:
+    # these job-level outputs AND the `on.workflow_call.outputs` block at the top that maps them.
+    # This is the plumbing area `#d48` records as having surprised this project (D8, D21), and
+    # Story 6.6 shipped an AC demanding an output its own prescribed block could not produce.
+    # `deploy-preprod.yml`'s `record-outcome` job reads these -- not a log line.
+    outputs:
+      history_written: ${{ steps.write-history.outputs.history_written }}
+      current_written: ${{ steps.write-current.outputs.current_written }}
+      candidate_digest: ${{ steps.candidate.outputs.digest }}
+    env:
+      # ── AC5 / `#d47`(3): resolved ONCE per job, never scattered across steps ──────────────
+      # `candidate_tag` on the workflow_call path; `image_tag` on the dispatch path. Job-level
+      # `env:` is exported into every step's SHELL, so the steps below read $CANDIDATE_TAG
+      # directly and no step depends on the `env` expression context resolving inside a
+      # step-level `env:` block -- an assumption this project has not measured and does not
+      # need to make.
+      CANDIDATE_TAG: ${{ inputs.candidate_tag || inputs.image_tag }}
+    steps:
+      # No checkout: this job reads nothing from the repository (Task 3.5's own reading of §5.1).
+
+      - name: Install docker CLI
+        run: |
+          set -euo pipefail
+          apt-get update
+          apt-get install -y --no-install-recommends docker.io jq
+
+      - name: Log in to git.crm-prionex.com (write pair, before buildx setup)
+        uses: docker/login-action@v3
+        with:
+          registry: git.crm-prionex.com
+          username: ${{ secrets.REGISTRY_USER }}
+          password: ${{ secrets.REGISTRY_TOKEN_RW }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker
+
+      # Resolved INDEPENDENTLY of verify-on-stand's copy, on purpose. This file's header states
+      # the rule for the digest and the marker names -- "the two jobs deliberately do not pass
+      # values to each other" -- and the reason (workflow_call/output plumbing has surprised this
+      # project four times: D8, D21). Six duplicated lines are cheaper than a cross-job dependency
+      # this file has spent a paragraph explaining it does not want.
+      - name: Resolve the note independently (see the header -- no cross-job outputs)
+        id: note
+        env:
+          # No `${{ }}` in the body -- see the AC5 print step above for why (`#d21`).
+          SUPPLIED: ${{ inputs.validation_note }}
+          EVENT_NAME: ${{ github.event_name }}
+          REPO: ${{ github.repository }}
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          set -euo pipefail
+          TRIMMED="$(printf '%s' "${SUPPLIED:-}" | tr -d '[:space:]')"
+          if [ -n "$TRIMMED" ]; then
+            NOTE="${SUPPLIED}"
+          elif [ "${EVENT_NAME}" = "workflow_dispatch" ]; then
+            NOTE="backfill/repair dispatch; no note supplied. NOT a verdict."
+          else
+            NOTE="automatic record on a successful PRE-PROD deploy (${REPO} run ${RUN_NUMBER}); no human verdict -- see #d51."
+          fi
+          # One line only: a newline or a pipe here would shift every later column of the ledger
+          # row the last step prints, the same rule RVC-v1.1's own note format states for itself.
+          NOTE="$(printf '%s' "${NOTE}" | tr '\n\r|' '   ')"
+          echo "note=${NOTE}" >> "$GITHUB_OUTPUT"
+          echo "note: ${NOTE}"
+
+      - name: Print AC6's boundary -- what this record does and does not assert
+        env:
+          NOTE: ${{ steps.note.outputs.note }}
+        run: |
+          set -euo pipefail
+          # Code review H3: this table previously lived ONLY as a YAML comment at the top of this
+          # file, which no execution ever emits -- AC6 requires the WORKFLOW to print it. This step
+          # is the fix; the header comment above stays as authoring documentation, not a substitute.
+          echo "=== AC6: what this recording supports, and what it does not ==="
+          echo "SUPPORTS: this exact digest resolved in the registry under an immutable,"
+          echo "  commit-bearing tag; the PRE-PROD container was running that digest and"
+          echo "  reported healthy at record time."
+          echo "DOES NOT SUPPORT:"
+          echo "  THAT ANYONE VALIDATED IT. Story 6.11 removed the verdict input; this marker"
+          echo "     means the commit REACHED PRE-PROD. No workflow reads a verdict any more."
+          echo "     RVC-v1.1 still applies -- enforced by docs/preprod-candidates.md and the"
+          echo "     PRODUCTION approval regulation, and by no machinery at all. (#d51, #d41.)"
+          echo "  that a rebuild of the same commit would reproduce this exact artifact (the"
+          echo "     build is not reproducible at source level -- Date.now() is baked in);"
+          echo "  that 'healthy' means anything about the backend (the healthcheck probes only"
+          echo "     itself -- Story 5.1's finding);"
+          echo "  that any particular checklist was actually executed."
+          echo "NO LONGER CLAIMED (removed 2026-08-27, it had stopped being true): that a browser"
+          echo "  cannot call the API. PRE-PROD's Kong CORS was fixed by CRM/api-prionex -- see"
+          echo "  docs/preprod-candidates.md, 2026-08-25, re-measured 2026-08-27."
+          echo "note (metadata only, NOT a verdict): ${NOTE}"
+
+      - name: Re-derive the marker names independently (does not trust the other job's outputs)
+        id: derive
+        run: |
+          set -euo pipefail
+          case "${CANDIDATE_TAG}" in
+            *$'\n'*)
+              echo "FAIL: image_tag contains a newline. Refusing before any shape check."
+              exit 1
+              ;;
+          esac
+          case "${CANDIDATE_TAG}" in
+            *-preprod) : ;;
+            *)
+              echo "FAIL: tag='${CANDIDATE_TAG}' does not end in '-preprod'. This job resolves"\
+                   "everything independently from verify-on-stand (no cross-job outputs) -- this"\
+                   "is the same G2 shape, re-checked."
+              exit 1
+              ;;
+          esac
+          if ! printf '%s' "${CANDIDATE_TAG}" | grep -qE '^sha-[0-9a-f]{7,64}-preprod$'; then
+            echo "FAIL: tag='${CANDIDATE_TAG}' does not match ^sha-[0-9a-f]{7,64}-preprod\$."\
+                 "Same G3 shape, re-checked independently."
+            exit 1
+          fi
+          HEX="${CANDIDATE_TAG#sha-}"
+          HEX="${HEX%-preprod}"
+          if ! printf '%s' "${HEX}" | grep -qE '^[0-9a-f]{12}$'; then
+            echo "FAIL: the hex part of '${CANDIDATE_TAG}' is '${HEX}' (${#HEX} characters), not"\
+                 "exactly 12."
+            exit 1
+          fi
+          echo "derived_hex=${HEX}" >> "$GITHUB_OUTPUT"
+          echo "sha_tag=${IMAGE_REPO}:${CANDIDATE_TAG}" >> "$GITHUB_OUTPUT"
+          echo "history_tag=${IMAGE_REPO}:preprod-${HEX}" >> "$GITHUB_OUTPUT"
+          echo "current_tag=${IMAGE_REPO}:preprod-current" >> "$GITHUB_OUTPUT"
+          echo "OK: derived hex '${HEX}', history tag '${IMAGE_REPO}:preprod-${HEX}',"\
+               "current tag '${IMAGE_REPO}:preprod-current'."
+
+      - name: Re-resolve the candidate's digest independently (also the buildx/imagetools smoke test)
+        id: candidate
+        env:
+          SHA_TAG: ${{ steps.derive.outputs.sha_tag }}
+        run: |
+          set -euo pipefail
+          DIGEST="$(docker buildx imagetools inspect --format '{{.Manifest.Digest}}' "$SHA_TAG")"
+          if [ "${#DIGEST}" -ne 71 ] || ! printf '%s' "${DIGEST#sha256:}" | grep -q '^[0-9a-f]\{64\}$'; then
+            echo "FAIL: imagetools resolved ${SHA_TAG}, but '${DIGEST}' is not sha256: plus 64"\
+                 "hex. A parse failure is not the same as absence -- refusing to guess which"\
+                 "one this is. If this is the FIRST dispatch, this is also the buildx/login"\
+                 "smoke test: a wrong driver, a bad login, or a DNS miss fails HERE, before any"\
+                 "registry write."
+            exit 1
+          fi
+          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+          echo "OK: ${SHA_TAG} -> ${DIGEST} (independently re-resolved; must agree with"\
+               "verify-on-stand's own resolution of the same immutable tag -- code review H3:"\
+               "this agreement is argued structurally, not asserted by any step; see"\
+               "deferred-work.md)."
+
+      - name: G6 -- the artifact's own labels must agree with the derived commit and environment
+        env:
+          SHA_TAG: ${{ steps.derive.outputs.sha_tag }}
+          DERIVED_HEX: ${{ steps.derive.outputs.derived_hex }}
+        run: |
+          set -euo pipefail
+          # Code review M5: stderr is now captured SEPARATELY (never merged with 2>&1 into the
+          # value jq parses), and every jq call is guarded with || true so a genuine parse failure
+          # reaches the PARSE-failure branch below instead of aborting the step silently under
+          # set -e before that branch's own message can print.
+          ERR_FILE="$(mktemp)"
+          trap 'rm -f "$ERR_FILE"' EXIT
+          IMAGE_JSON="$(docker buildx imagetools inspect --format '{{json .Image}}' "$SHA_TAG" 2>"$ERR_FILE")" \
+            || { ERR="$(cat "$ERR_FILE")"; \
+                 echo "FAIL(G6, tool failure): 'imagetools inspect --format {{json .Image}}'"\
+                      "itself failed for ${SHA_TAG}. Not a label-mismatch verdict -- a command"\
+                      "failure. stderr: ${ERR}"; exit 1; }
+
+          VERSION_LABEL="$(printf '%s' "$IMAGE_JSON" | jq -r '.config.Labels["org.opencontainers.image.version"] // empty' 2>/dev/null || true)"
+          REVISION_LABEL="$(printf '%s' "$IMAGE_JSON" | jq -r '.config.Labels["org.opencontainers.image.revision"] // empty' 2>/dev/null || true)"
+          ENV_LABEL="$(printf '%s' "$IMAGE_JSON" | jq -r '.config.Labels["org.prionex.environment"] // empty' 2>/dev/null || true)"
+
+          if [ -z "$VERSION_LABEL" ] || [ -z "$REVISION_LABEL" ] || [ -z "$ENV_LABEL" ]; then
+            echo "FAIL(G6, tool failure): could not read one or more of"\
+                 "org.opencontainers.image.version / .revision / org.prionex.environment from"\
+                 "${SHA_TAG}'s own config via jq '.config.Labels'. This is a PARSE failure, not"\
+                 "a label-mismatch verdict -- the field path in this step may be wrong and"\
+                 "needs fixing, not the guard weakened to a substring grep. Raw image config:"
+            printf '%s\n' "$IMAGE_JSON"
+            exit 1
+          fi
+
+          # Code review H2/M1: this guard NARROWS the gap against a FOREIGN artifact; for a
+          # build.yml-produced image, all three clauses below are identities (build.yml derives the
+          # label and the tag suffix from the same shell variables it derives these from) -- it does
+          # NOT establish the deployed commit for that path, and D33 §6(b) remains genuinely open
+          # there. See the header comment above for the full correction.
+          FAIL=0
+          if [ "$VERSION_LABEL" != "$DERIVED_HEX" ]; then
+            echo "FAIL(G6): org.opencontainers.image.version='${VERSION_LABEL}' does not EQUAL"\
+                 "the derived hex '${DERIVED_HEX}'."
+            FAIL=1
+          fi
+          case "$REVISION_LABEL" in
+            "${DERIVED_HEX}"*) : ;;
+            *)
+              echo "FAIL(G6): org.opencontainers.image.revision='${REVISION_LABEL}' does not"\
+                   "START WITH the derived hex '${DERIVED_HEX}'."
+              FAIL=1
+              ;;
+          esac
+          if [ "$ENV_LABEL" != "preprod" ]; then
+            echo "FAIL(G6): org.prionex.environment='${ENV_LABEL}', not 'preprod'. The tag says"\
+                 "-preprod but the artifact's own build-time label disagrees."
+            FAIL=1
+          fi
+          if [ "$FAIL" -eq 1 ]; then
+            echo "Refusing to record: the tag's name disagrees with the image it points at."
+            exit 1
+          fi
+          echo "OK(G6): version='${VERSION_LABEL}' equals derived hex; revision='${REVISION_LABEL}'"\
+               "starts with it; environment='${ENV_LABEL}'."
+
+      - name: G4 -- both marker names must be protected by this project's own retention rule
+        env:
+          HISTORY_TAG: ${{ steps.derive.outputs.history_tag }}
+          CURRENT_TAG: ${{ steps.derive.outputs.current_tag }}
+        run: |
+          set -euo pipefail
+          # Literal copy of build.yml's own KEEP_RE -- this workflow cannot query the Forgejo
+          # instance's live cleanup rule at runtime; Task 2.5 separately re-reads the STORED rule
+          # from the database and confirms it still matches this literal, closing the gap between
+          # the copy and the authority (5-4-…md §11, AC4). Code review L6: build.yml's own copy uses
+          # `-i` (case-insensitive) -- named as a deliberate divergence there, kept here for
+          # consistency; no functional gap for either lowercase marker this file writes.
+          KEEP_RE='^(prod-current|preprod-current|latest|buildcache|v?[0-9]+\.[0-9]+\.[0-9]+.*|(pre)?prod-[0-9a-f]{7,64}|sha-[0-9a-f]{7,64}-(pre)?prod)$'
+          for FULL_TAG in "$HISTORY_TAG" "$CURRENT_TAG"; do
+            MARKER="${FULL_TAG#*:}"
+            if ! printf '%s' "$MARKER" | grep -Eqi "$KEEP_RE"; then
+              echo "FAIL(G4): marker '${MARKER}' does not match this project's own retention"\
+                   "keep_pattern. Writing it would create a tag the 14-day retention rule can"\
+                   "expire out from under Story 6.5's gate -- refusing before any write, not"\
+                   "after."
+              exit 1
+            fi
+          done
+          echo "OK(G4): both '${HISTORY_TAG#*:}' and '${CURRENT_TAG#*:}' match keep_pattern."
+
+      - name: Assert every write target is this literal repository (Prohibition 3)
+        env:
+          HISTORY_TAG: ${{ steps.derive.outputs.history_tag }}
+          CURRENT_TAG: ${{ steps.derive.outputs.current_tag }}
+        run: |
+          set -euo pipefail
+          for FULL_TAG in "$HISTORY_TAG" "$CURRENT_TAG"; do
+            case "$FULL_TAG" in
+              "${IMAGE_REPO}:"*) : ;;
+              *)
+                echo "FAIL: write target '${FULL_TAG}' does not begin with the literal"\
+                     "'${IMAGE_REPO}:'. REGISTRY_TOKEN_RW is org-scope write:package over 87"\
+                     "packages -- refusing anything not composed from this file's own literal"\
+                     "constant."
+                exit 1
+                ;;
+            esac
+          done
+          echo "OK: both write targets begin with '${IMAGE_REPO}:'."
+
+      - name: Probe whether preprod-<sha> already exists, over HTTP (not stderr text)
+        id: probe-history
+        env:
+          REG_USER: ${{ secrets.REGISTRY_USER_RO }}
+          REG_TOKEN: ${{ secrets.REGISTRY_TOKEN_RO }}
+          HISTORY_TAG: ${{ steps.derive.outputs.history_tag }}
+        run: |
+          set -euo pipefail
+          # Code review M4: absence used to be inferred from `imagetools` STDERR TEXT
+          # (MANIFEST_UNKNOWN / ": not found"). A false positive there would skip the pre-digest
+          # comparison entirely and attach over an existing, different digest -- the read-back would
+          # still catch a WRONG resulting digest, but not a wrongly-skipped comparison landing on
+          # the RIGHT digest by coincidence. Probed over HTTP instead, the same classified pattern
+          # verify-on-stand's own digest-resolve step already uses, so absence is a status code, not
+          # a string match.
+          MARKER="${HISTORY_TAG#*:}"
+          HEADERS_FILE="$(mktemp)"
+          trap 'rm -f "$HEADERS_FILE"' EXIT
+          HTTP_CODE="$(printf 'user = "%s:%s"\n' "$REG_USER" "$REG_TOKEN" \
+            | curl -sS -L --retry 2 --retry-delay 2 --retry-connrefused --max-time 30 \
+                -D "$HEADERS_FILE" -o /dev/null -w '%{http_code}' --config - \
+                -H "Accept: application/vnd.oci.image.manifest.v1+json" \
+                "https://${IMAGE_REPO%%/*}/v2/${IMAGE_REPO#*/}/manifests/${MARKER}" || true)"
+          case "$HTTP_CODE" in
+            200) echo "exists=true" >> "$GITHUB_OUTPUT" ;;
+            404) echo "exists=false" >> "$GITHUB_OUTPUT" ;;
+            *)
+              echo "FAIL: probing ${HISTORY_TAG} for existence returned HTTP ${HTTP_CODE},"\
+                   "neither 200 nor 404. Refusing to guess whether it exists."
+              exit 1
+              ;;
+          esac
+          echo "OK: existence probe for ${HISTORY_TAG} -> HTTP ${HTTP_CODE}."
+
+      - name: Write preprod-<sha> -- attach if absent, no-op if identical, REFUSE if different (AC8)
+        id: write-history
+        env:
+          HISTORY_TAG: ${{ steps.derive.outputs.history_tag }}
+          CANDIDATE_DIGEST: ${{ steps.candidate.outputs.digest }}
+          EXISTS: ${{ steps.probe-history.outputs.exists }}
+        run: |
+          set -euo pipefail
+          # ── AC11 / `#d48`'s FOURTEENTH DEFECT, closed here before it can arm ────────────────
+          # The probe step that produced $EXISTS classifies STRICTLY and fails CLOSED: 200 ->
+          # true, 404 -> false, anything else `exit 1`. So the tri-state defect `#d48` found in
+          # `record-prod-image.yml` is genuinely ABSENT from this file -- measured by reading the
+          # probe, not inferred from the sibling.
+          # What survives is narrower and is the reason this block exists: the probe step
+          # SUCCEEDING while its `$GITHUB_OUTPUT` write does not reach this consumer. $EXISTS is
+          # then EMPTY, `[ "$EXISTS" = "true" ]` is false, and this step takes its "did not exist"
+          # branch -- attaching or creating with no PRE_DIGEST protection at all, while the log
+          # says "for the first time". `#d48` names the triggers verbatim, and one of them is
+          # "a `workflow_call` refactor of exactly the kind this story performs".
+          # Absence here unlocks a permanent registry write. It is not guessed at.
+          case "${EXISTS:-}" in
+            true|false) : ;;
+            *)
+              echo "FAIL: the existence probe reported '${EXISTS:-<empty>}', which is neither"
+              echo "  'true' nor 'false'. That is a BROKEN PROBE, not an absent tag -- and"
+              echo "  absence here is what unlocks a permanent registry write. Refusing to guess."
+              echo "  NOTHING WAS WRITTEN by this step."
+              exit 1 ;;
+          esac
+          PRE_DIGEST=""
+          if [ "$EXISTS" = "true" ]; then
+            OUT="$(docker buildx imagetools inspect --format '{{.Manifest.Digest}}' "$HISTORY_TAG")"
+            if [ "${#OUT}" -ne 71 ] || ! printf '%s' "${OUT#sha256:}" | grep -q '^[0-9a-f]\{64\}$'; then
+              echo "FAIL: HTTP probe confirmed ${HISTORY_TAG} exists, but imagetools resolved"\
+                   "'${OUT}', not sha256: plus 64 hex. Refusing to guess."
+              exit 1
+            fi
+            PRE_DIGEST="$OUT"
+            echo "${HISTORY_TAG} already exists at ${OUT}."
+          else
+            echo "${HISTORY_TAG} does not exist yet (HTTP probe) -- nothing to protect."
+          fi
+
+          if [ -z "$PRE_DIGEST" ]; then
+            echo "${HISTORY_TAG} did not exist before this run -- attaching."
+          elif [ "$PRE_DIGEST" = "$CANDIDATE_DIGEST" ]; then
+            echo "${HISTORY_TAG} already points at ${CANDIDATE_DIGEST} -- nothing to do."
+            echo "history_written=noop" >> "$GITHUB_OUTPUT"
+            exit 0
+          else
+            echo "FAIL(AC8): refusing to repoint ${HISTORY_TAG}."
+            echo "  existing digest (before this run): ${PRE_DIGEST}"
+            echo "  this run's candidate digest:        ${CANDIDATE_DIGEST}"
+            echo "  ${HISTORY_TAG} is UNCHANGED -- this step exits before touching it. Two"\
+                 "artifacts cannot both be 'the validated build of this commit'. If this commit"\
+                 "genuinely needs a new artifact, the only exit is Oleg's own manual DELETE of"\
+                 "this exact tag's package version, followed by a re-dispatch -- see this file's"\
+                 "own header for the exact command. This is not something this workflow can do"\
+                 "for itself."
+            exit 1
+          fi
+
+          IMAGE="${HISTORY_TAG%%:*}"
+          docker buildx imagetools create --prefer-index=false --tag "${HISTORY_TAG}" "${IMAGE}@${CANDIDATE_DIGEST}"
+
+          if ! ATTACHED="$(docker buildx imagetools inspect --format '{{.Manifest.Digest}}' "${HISTORY_TAG}")"; then
+            echo "FAIL: the read-back read of ${HISTORY_TAG} itself failed after 'create'"\
+                 "reported success. Refusing to claim success on an unread tag -- re-dispatching"\
+                 "this same input is safe (idempotent) if this happens."
+            exit 1
+          fi
+          if [ "$ATTACHED" != "$CANDIDATE_DIGEST" ]; then
+            echo "FAIL: attached ${HISTORY_TAG} but reading it back gives '${ATTACHED}', not"\
+                 "this run's '${CANDIDATE_DIGEST}'. The attach did not do what it claimed --"\
+                 "refusing to report success."
+            exit 1
+          fi
+          echo "history_written=attached" >> "$GITHUB_OUTPUT"
+          echo "OK: ${HISTORY_TAG} -> ${CANDIDATE_DIGEST} (verified by read-back)."
+
+      - name: Probe whether preprod-current already exists, over HTTP (not stderr text)
+        id: probe-current
+        env:
+          REG_USER: ${{ secrets.REGISTRY_USER_RO }}
+          REG_TOKEN: ${{ secrets.REGISTRY_TOKEN_RO }}
+          CURRENT_TAG: ${{ steps.derive.outputs.current_tag }}
+        run: |
+          set -euo pipefail
+          MARKER="${CURRENT_TAG#*:}"
+          HEADERS_FILE="$(mktemp)"
+          trap 'rm -f "$HEADERS_FILE"' EXIT
+          HTTP_CODE="$(printf 'user = "%s:%s"\n' "$REG_USER" "$REG_TOKEN" \
+            | curl -sS -L --retry 2 --retry-delay 2 --retry-connrefused --max-time 30 \
+                -D "$HEADERS_FILE" -o /dev/null -w '%{http_code}' --config - \
+                -H "Accept: application/vnd.oci.image.manifest.v1+json" \
+                "https://${IMAGE_REPO%%/*}/v2/${IMAGE_REPO#*/}/manifests/${MARKER}" || true)"
+          case "$HTTP_CODE" in
+            200) echo "exists=true" >> "$GITHUB_OUTPUT" ;;
+            404) echo "exists=false" >> "$GITHUB_OUTPUT" ;;
+            *)
+              echo "FAIL: probing ${CURRENT_TAG} for existence returned HTTP ${HTTP_CODE},"\
+                   "neither 200 nor 404. Refusing to guess whether it exists."
+              exit 1
+              ;;
+          esac
+          echo "OK: existence probe for ${CURRENT_TAG} -> HTTP ${HTTP_CODE}."
+
+      - name: G-backwards -- WARN, never block, on a move whose direction cannot be confirmed
+        id: g-backwards
+        env:
+          CURRENT_TAG: ${{ steps.derive.outputs.current_tag }}
+          EXISTS: ${{ steps.probe-current.outputs.exists }}
+          DERIVED_HEX: ${{ steps.derive.outputs.derived_hex }}
+          CANDIDATE_DIGEST: ${{ steps.candidate.outputs.digest }}
+          ALLOW_BACKWARDS: ${{ inputs.allow_backwards_move }}
+        run: |
+          set -euo pipefail
+          # Code review D2 (Oleg's veto open, literal instruction: "not a prohibition"): this step
+          # NEVER fails the run over move direction -- see the header's own "preprod-current can
+          # move BACKWARDS" section for why true direction detection is unavailable here (no git
+          # checkout) and why a WARNING, not a refusal, is the honest shape for that limitation. The
+          # only `exit 1` in this step is a genuine tool failure reading the current label, which is
+          # a different class of problem than "direction unconfirmed".
+          # 🔴 THIRD CONSUMPTION OF $EXISTS. AC11 enumerated only two (the two write steps);
+          # this one was found while applying them. Guarded for the same reason and it is not
+          # cosmetic: an empty $EXISTS here means this step silently reports "nothing to compare
+          # against" and skips the ONLY warning the operator gets about a pointer move.
+          case "${EXISTS:-}" in
+            true|false) : ;;
+            *)
+              echo "FAIL: the existence probe reported '${EXISTS:-<empty>}', which is neither"
+              echo "  'true' nor 'false'. A broken probe here would silently suppress the move"
+              echo "  warning this step exists to emit. Refusing to guess. Nothing is written by"
+              echo "  this step in any case -- it never writes."
+              exit 1 ;;
+          esac
+          if [ "$EXISTS" != "true" ]; then
+            echo "OK: preprod-current does not exist yet -- nothing to compare against."
+            exit 0
+          fi
+          CURRENT_DIGEST="$(docker buildx imagetools inspect --format '{{.Manifest.Digest}}' "$CURRENT_TAG")"
+          if [ "$CURRENT_DIGEST" = "$CANDIDATE_DIGEST" ]; then
+            echo "OK: preprod-current already points at this candidate's own digest -- no move at"\
+                 "all."
+            exit 0
+          fi
+          CURRENT_JSON="$(docker buildx imagetools inspect --format '{{json .Image}}' "$CURRENT_TAG" 2>/dev/null || true)"
+          CURRENT_HEX="$(printf '%s' "$CURRENT_JSON" | jq -r '.config.Labels["org.opencontainers.image.version"] // empty' 2>/dev/null || true)"
+          if [ -z "$CURRENT_HEX" ]; then
+            echo "FAIL(G-backwards, tool failure): could not read preprod-current's own"\
+                 "org.opencontainers.image.version label. This is a read failure, distinct from"\
+                 "an unconfirmed direction -- refusing to guess at either."
+            exit 1
+          fi
+          if [ "$ALLOW_BACKWARDS" = "true" ]; then
+            echo "OK: preprod-current will move from commit hex ${CURRENT_HEX} to"\
+                 "${DERIVED_HEX} -- allow_backwards_move=true, direction explicitly confirmed by"\
+                 "the dispatcher. Proceeding."
+          else
+            echo "⚠️⚠️⚠️ WARNING, not a refusal: preprod-current is about to move from commit hex"
+            echo "  ${CURRENT_HEX} to ${DERIVED_HEX}. This step cannot confirm the new commit is"
+            echo "  chronologically NEWER -- this job takes no repository checkout (by design,"
+            echo "  Task 3.5's own reading of §5.1), so it has no git ancestry to check. If this"
+            echo "  is a normal forward move, this warning is expected and harmless. If it is"
+            echo "  NOT -- if you did not intend to roll preprod-current backwards -- STOP and"
+            echo "  re-check before trusting the write below. Set allow_backwards_move=true on a"
+            echo "  future dispatch to make this an explicit confirmation instead of a warning."
+            echo "  The write proceeds regardless (Code review D2: not a prohibition)."
+          fi
+
+      - name: Write preprod-current -- create if absent, no-op if identical, MOVE if different (AC3)
+        id: write-current
+        env:
+          CURRENT_TAG: ${{ steps.derive.outputs.current_tag }}
+          CANDIDATE_DIGEST: ${{ steps.candidate.outputs.digest }}
+          EXISTS: ${{ steps.probe-current.outputs.exists }}
+        run: |
+          set -euo pipefail
+          # ── AC11 / `#d48`'s FOURTEENTH DEFECT, closed here before it can arm ────────────────
+          # The probe step that produced $EXISTS classifies STRICTLY and fails CLOSED: 200 ->
+          # true, 404 -> false, anything else `exit 1`. So the tri-state defect `#d48` found in
+          # `record-prod-image.yml` is genuinely ABSENT from this file -- measured by reading the
+          # probe, not inferred from the sibling.
+          # What survives is narrower and is the reason this block exists: the probe step
+          # SUCCEEDING while its `$GITHUB_OUTPUT` write does not reach this consumer. $EXISTS is
+          # then EMPTY, `[ "$EXISTS" = "true" ]` is false, and this step takes its "did not exist"
+          # branch -- attaching or creating with no PRE_DIGEST protection at all, while the log
+          # says "for the first time". `#d48` names the triggers verbatim, and one of them is
+          # "a `workflow_call` refactor of exactly the kind this story performs".
+          # Absence here unlocks a permanent registry write. It is not guessed at.
+          case "${EXISTS:-}" in
+            true|false) : ;;
+            *)
+              echo "FAIL: the existence probe reported '${EXISTS:-<empty>}', which is neither"
+              echo "  'true' nor 'false'. That is a BROKEN PROBE, not an absent tag -- and"
+              echo "  absence here is what unlocks a permanent registry write. Refusing to guess."
+              echo "  NOTHING WAS WRITTEN by this step."
+              exit 1 ;;
+          esac
+          PRE_DIGEST=""
+          if [ "$EXISTS" = "true" ]; then
+            OUT="$(docker buildx imagetools inspect --format '{{.Manifest.Digest}}' "$CURRENT_TAG")"
+            if [ "${#OUT}" -ne 71 ] || ! printf '%s' "${OUT#sha256:}" | grep -q '^[0-9a-f]\{64\}$'; then
+              echo "FAIL: HTTP probe confirmed ${CURRENT_TAG} exists, but imagetools resolved"\
+                   "'${OUT}', not sha256: plus 64 hex. Refusing to guess."
+              exit 1
+            fi
+            PRE_DIGEST="$OUT"
+            echo "${CURRENT_TAG} currently points at ${OUT}."
+          else
+            echo "${CURRENT_TAG} does not exist yet (HTTP probe)."
+          fi
+
+          if [ -z "$PRE_DIGEST" ]; then
+            echo "${CURRENT_TAG} did not exist before this run -- creating."
+            echo "current_written=created" >> "$GITHUB_OUTPUT"
+          elif [ "$PRE_DIGEST" = "$CANDIDATE_DIGEST" ]; then
+            echo "${CURRENT_TAG} already points at ${CANDIDATE_DIGEST} -- nothing to do."
+            echo "current_written=noop" >> "$GITHUB_OUTPUT"
+            exit 0
+          else
+            echo "${CURRENT_TAG} MOVES: ${PRE_DIGEST} -> ${CANDIDATE_DIGEST}. This is AC3's"\
+                 "intended path (or an explicitly-authorized backwards move, see the"\
+                 "G-backwards step above) -- preprod-current is the one tag this workflow"\
+                 "exists to move."
+            echo "current_written=moved" >> "$GITHUB_OUTPUT"
+          fi
+
+          IMAGE="${CURRENT_TAG%%:*}"
+          docker buildx imagetools create --prefer-index=false --tag "${CURRENT_TAG}" "${IMAGE}@${CANDIDATE_DIGEST}"
+
+          if ! ATTACHED="$(docker buildx imagetools inspect --format '{{.Manifest.Digest}}' "${CURRENT_TAG}")"; then
+            echo "FAIL: the read-back read of ${CURRENT_TAG} itself failed after 'create'"\
+                 "reported success. Refusing to claim success on an unread tag -- re-dispatching"\
+                 "this same input is safe (idempotent) if this happens."
+            exit 1
+          fi
+          if [ "$ATTACHED" != "$CANDIDATE_DIGEST" ]; then
+            echo "FAIL: wrote ${CURRENT_TAG} but reading it back gives '${ATTACHED}', not this"\
+                 "run's '${CANDIDATE_DIGEST}'. Refusing to report success."
+            exit 1
+          fi
+          echo "OK: ${CURRENT_TAG} -> ${CANDIDATE_DIGEST} (verified by read-back)."
+
+      - name: List every preprod-* tag with its digest (AC5 -- the registry's own set)
+        env:
+          REG_USER: ${{ secrets.REGISTRY_USER_RO }}
+          REG_TOKEN: ${{ secrets.REGISTRY_TOKEN_RO }}
+        run: |
+          set -euo pipefail
+          # Code review L1: empty-credential precheck added, matching the pattern used in every
+          # other step that reads the registry -- previously this step alone had none.
+          if [ -z "${REG_USER:-}" ] || [ -z "${REG_TOKEN:-}" ]; then
+            echo "FAIL: REGISTRY_USER_RO / REGISTRY_TOKEN_RO is empty or unset -- cannot list"\
+                 "tags. Both writes above already succeeded; this step only discharges AC5's own"\
+                 "listing, so a re-dispatch is not required to fix a write, only to re-print the"\
+                 "list."
+            exit 1
+          fi
+          HTTP_CODE="$(printf 'user = "%s:%s"\n' "$REG_USER" "$REG_TOKEN" \
+            | curl -sS -L --retry 2 --retry-delay 2 --retry-connrefused --max-time 30 \
+                -o /tmp/tags_list.json -w '%{http_code}' --config - \
+                "https://${IMAGE_REPO%%/*}/v2/${IMAGE_REPO#*/}/tags/list" || true)"
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "FAIL: GET /tags/list returned HTTP ${HTTP_CODE}, not 200. Both writes above"\
+                 "already succeeded -- this is a listing failure, not a write failure."
+            exit 1
+          fi
+          echo "Raw tags/list response:"
+          cat /tmp/tags_list.json
+          echo "preprod-* subset:"
+          jq -r '.tags[]? | select(startswith("preprod-"))' /tmp/tags_list.json
+
+      - name: Write the run's own outcome to the job summary (cheap, second sink -- see D1)
+        env:
+          # No `${{ }}` in the body -- see the AC5 print step above for why (`#d21`).
+          NOTE: ${{ steps.note.outputs.note }}
+          HOW_RECORDED: ${{ github.event_name == 'workflow_call' && 'AUTOMATIC, on a successful PRE-PROD deploy' || 'BACKFILL/REPAIR dispatch' }}
+          DERIVED_HEX: ${{ steps.derive.outputs.derived_hex }}
+          CANDIDATE_DIGEST: ${{ steps.candidate.outputs.digest }}
+          HISTORY_WRITTEN: ${{ steps.write-history.outputs.history_written }}
+          CURRENT_WRITTEN: ${{ steps.write-current.outputs.current_written }}
+        run: |
+          set -euo pipefail
+          # Code review D1 (Oleg's veto open, decided by the coordinator): OCI annotations were
+          # tested live and rejected outright by this instance's buildx (v0.33.0, error `""
+          # annotations are not supported yet`, both --prefer-index settings) -- not an available
+          # channel. This is the cheap second sink: $GITHUB_STEP_SUMMARY, rendered on the run's own
+          # page, cheap to write. Whether this instance actually PERSISTS step summaries anywhere
+          # retrievable is itself unverified as of this fix-pass -- no summary-shaped row or file
+          # was found anywhere on s1's own Forgejo data directory or database for ANY prior run on
+          # this repository, which is either "nobody has used it yet" or "unsupported here"; this
+          # step is the live test. The AUTHORITATIVE, permanent sink is
+          # docs/preprod-candidates.md in this repository (append-only, one line per recording,
+          # written by the dev session as part of the recording procedure -- NOT by this workflow,
+          # which holds no repository-write credential and is not getting one for this). This
+          # step's own summary is best-effort, exactly like the job log it supplements, never the
+          # sole record.
+          {
+            echo "## Recorded: ${CANDIDATE_TAG}"
+            echo ""
+            echo "| Field | Value |"
+            echo "|---|---|"
+            echo "| How recorded | ${HOW_RECORDED} |"
+            echo "| Verdict | **none -- this marker is not a verdict.** Story 6.11 (\`#d51\`) removed the input; it means the commit REACHED PRE-PROD |"
+            echo "| Candidate digest | \`${CANDIDATE_DIGEST}\` |"
+            echo "| Derived commit hex | \`${DERIVED_HEX}\` |"
+            echo "| preprod-<sha> write | \`${HISTORY_WRITTEN}\` |"
+            echo "| preprod-current write | \`${CURRENT_WRITTEN}\` |"
+            echo "| note (metadata, NOT a verdict) | ${NOTE} |"
+            echo ""
+            echo "This summary is best-effort (see D1) -- the authoritative human-readable record"
+            echo "is \`docs/preprod-candidates.md\` in this repository, appended by the dev session"
+            echo "as part of the recording procedure, not by this workflow."
+          } >> "$GITHUB_STEP_SUMMARY"
+          # The recording procedure's own copy-paste step: this line matches
+          # docs/preprod-candidates.md's own table format exactly, so appending it is mechanical,
+          # not a re-derivation.
+          echo "=== docs/preprod-candidates.md row to append (STILL NOT AUTOMATED -- see below) ==="
+          echo "| $(date -u +%Y-%m-%d) | \`${CANDIDATE_TAG}\` | \`${CANDIDATE_DIGEST}\` | n/a | ${NOTE} | ${GITHUB_RUN_ID:-unknown} |"
+          echo
+          echo "🔴 READ THIS BEFORE COPYING THE ROW ABOVE. Until Story 6.11 the marker and the"
+          echo "   ledger row were minted by the SAME human act -- 'record a candidate' meant"
+          echo "   'dispatch, then commit one line'. The marker is now automatic and the line is"
+          echo "   NOT: no workflow writes this file, and none is getting a repository-write"
+          echo "   credential (\`#d51\` measured that main refuses a direct push from every account"
+          echo "   anyway). The row is appended AFTER THE FACT, by a person, or it is not appended."
+          echo "   The Verdict cell reads 'n/a' because this workflow no longer takes a verdict;"
+          echo "   RVC-v1.1 still applies and is now carried by that file and by the PRODUCTION"
+          echo "   approval regulation alone."
+          echo "OK: wrote job summary."

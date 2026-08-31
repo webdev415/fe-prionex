@@ -3,8 +3,6 @@ name: CD
 on:
   push:
     branches: [main, development]
-    tags:
-      - 'v*'
   workflow_dispatch:
     inputs:
       environment:
@@ -52,15 +50,18 @@ jobs:
             if [ -z "$WS_URL" ]; then
               WS_URL="wss://api.crm-prionex.online"
             fi
-            # No default on purpose. The one softphone deployment
-            # (webrtc.crm-prionex.online) is currently built with
-            # VITE_CRM_PARENT_ORIGIN pointing at the dev CRM, so it rejects
-            # postMessage from production. Defaulting to it would ship a phone
-            # that silently never leaves "Connecting".
+            # No prod softphone deployment yet. When the secret is unset, build with the
+            # operator-phone feature DISABLED (empty URL) rather than failing the release.
+            # Do NOT fall back to the dev softphone (webrtc.crm-prionex.online): it is built
+            # with VITE_CRM_PARENT_ORIGIN pointing at the dev CRM, so it rejects prod
+            # postMessage and would ship a phone stuck on "Connecting". constants.ts treats
+            # an empty URL as OPERATOR_PHONE_CONFIGURED=false — the panel renders nothing and
+            # the hook no-ops. Set VITE_OPERATOR_PHONE_URL_PROD (a real prod softphone) to
+            # enable it, no code change needed.
             PHONE_URL="${{ secrets.VITE_OPERATOR_PHONE_URL_PROD }}"
             if [ -z "$PHONE_URL" ]; then
-              echo "::error::VITE_OPERATOR_PHONE_URL_PROD is not set and there is no production softphone deployment yet"
-              exit 1
+              echo "⚠️  VITE_OPERATOR_PHONE_URL_PROD not set — building prod with operator phone disabled"
+              PHONE_URL=""
             fi
           elif [ "${{ github.ref }}" == "refs/heads/development" ]; then
             # Development environment
@@ -90,15 +91,18 @@ jobs:
             if [ -z "$WS_URL" ]; then
               WS_URL="wss://api.crm-prionex.online"
             fi
-            # No default on purpose. The one softphone deployment
-            # (webrtc.crm-prionex.online) is currently built with
-            # VITE_CRM_PARENT_ORIGIN pointing at the dev CRM, so it rejects
-            # postMessage from production. Defaulting to it would ship a phone
-            # that silently never leaves "Connecting".
+            # No prod softphone deployment yet. When the secret is unset, build with the
+            # operator-phone feature DISABLED (empty URL) rather than failing the release.
+            # Do NOT fall back to the dev softphone (webrtc.crm-prionex.online): it is built
+            # with VITE_CRM_PARENT_ORIGIN pointing at the dev CRM, so it rejects prod
+            # postMessage and would ship a phone stuck on "Connecting". constants.ts treats
+            # an empty URL as OPERATOR_PHONE_CONFIGURED=false — the panel renders nothing and
+            # the hook no-ops. Set VITE_OPERATOR_PHONE_URL_PROD (a real prod softphone) to
+            # enable it, no code change needed.
             PHONE_URL="${{ secrets.VITE_OPERATOR_PHONE_URL_PROD }}"
             if [ -z "$PHONE_URL" ]; then
-              echo "::error::VITE_OPERATOR_PHONE_URL_PROD is not set and there is no production softphone deployment yet"
-              exit 1
+              echo "⚠️  VITE_OPERATOR_PHONE_URL_PROD not set — building prod with operator phone disabled"
+              PHONE_URL=""
             fi
           fi
           echo "API_URL=$API_URL" >> $GITHUB_OUTPUT
@@ -156,9 +160,9 @@ jobs:
     name: Deploy Frontend
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development' || startsWith(github.ref, 'refs/tags/v')
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/development'
     environment:
-      name: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production' || 'dev') }}
+      name: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/development' && 'dev' || 'production') }}
 
     steps:
       - name: Notify Slack - Deployment Started
@@ -168,7 +172,7 @@ jobs:
           webhook: ${{ secrets.SLACK_CD_WEBHOOK_URL }}
           webhook-type: incoming-webhook
           payload: |
-            {"text": ":rocket: *Deployment Started*\nRepo: fe-prionex\nEnvironment: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production' || 'dev') }}\nBranch: ${{ github.ref_name }}\nCommit: ${{ github.sha }}"}
+            {"text": ":rocket: *Deployment Started*\nRepo: fe-prionex\nEnvironment: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/development' && 'dev' || 'production') }}\nBranch: ${{ github.ref_name }}\nCommit: ${{ github.sha }}"}
         continue-on-error: true
 
       - name: Checkout code
@@ -177,10 +181,11 @@ jobs:
       - name: Determine deployment environment
         id: set-env
         run: |
+          # Mirrors the `environment:` expression on this job exactly — same first
+          # condition, same single discriminator, same default. Keep them in step:
+          # if they diverge, the approval gate and the deploy target disagree.
           if [ -n "${{ github.event.inputs.environment }}" ]; then
             DEPLOY_ENV="${{ github.event.inputs.environment }}"
-          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
-            DEPLOY_ENV="production"
           elif [ "${{ github.ref }}" == "refs/heads/development" ]; then
             DEPLOY_ENV="dev"
           else

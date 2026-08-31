@@ -594,20 +594,24 @@ describe('DateSelect (a blocked "today" still reads as blocked)', () => {
    * the day the suite happens to run on. Only Date is faked - real timers keep
    * userEvent flowing - which is how the rest of the suite pins a date.
    *
-   * It was left to the real clock, and so failed one day in every month: on
-   * the last of one, ``min`` falls in the NEXT month, the picker opens there,
-   * and today arrives wearing ``--outside-month`` on top of ``--disabled``.
+   * Left to the real clock it failed one day in every month: on the last of
+   * one, ``min`` falls in the NEXT month, the picker opens there, and today
+   * arrives wearing ``--outside-month`` on top of ``--disabled`` (first seen
+   * 31.08, from two directions at once).
    *
    * The colour was never at risk. Both classes are comma-branches of the SAME
    * rule, so they tie on importance, specificity and source order - and the
    * cascade helper breaks an exact tie by taking the last match, which is the
    * branch listed second. The assertion naming ``--disabled`` was pinning
    * which branch the helper happens to report, not which rule paints the cell.
-   * So the date is pinned here, and the month-end case says what it is worth
-   * asserting there instead: still blocked, still not the accent.
+   *
+   * A mid-month default here so a test added later is safe without thinking
+   * about it; the cases below still pin their own day where the day is the
+   * point of the assertion.
    */
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 7, 5, 12, 0))
   })
   afterEach(() => {
     vi.useRealTimers()
