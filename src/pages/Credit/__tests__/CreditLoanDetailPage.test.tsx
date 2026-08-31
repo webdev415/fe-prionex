@@ -286,3 +286,59 @@ describe('CreditLoanDetailPage → журнал проводок', () => {
     expect(screen.getByText(/card\.isReversal/)).toBeInTheDocument()
   })
 })
+
+/**
+ * Паспорт кредита: идентификаторы и возраст.
+ *
+ * CEO считал, что «идентификатор кредита» оператору уже виден. Виден был
+ * только номер договора (FB-000074) — а разработчик в логах модуля ищет по
+ * `loan_id`, и UUID существовал единственно в адресной строке. Возраст же
+ * («сколько дней кредит живёт») модуль не отдаёт вообще: единственный счётчик
+ * дней в контракте — просрочка.
+ */
+describe('CreditLoanDetailPage → паспорт', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockHooks(PAYMENTS)
+  })
+
+  function openPassport() {
+    render(
+      <MemoryRouter>
+        <CreditLoanDetailPage />
+      </MemoryRouter>
+    )
+  }
+
+  it('показывает UUID кредита и заявки — их диктуют, а не кликают', () => {
+    openPassport()
+    expect(screen.getByText('e2a959c4-c151-402a-b533-c17b90420c78')).toBeInTheDocument()
+    expect(screen.getByText('a1111111-2222-3333-4444-555555555555')).toBeInTheDocument()
+  })
+
+  it('даёт кнопку копирования на каждый идентификатор', () => {
+    const writeText = vi.fn(() => Promise.resolve())
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+    openPassport()
+    const rows = screen.getByText('credit.card.identifiers').closest('section')
+    const buttons = rows ? [...rows.querySelectorAll('button')] : []
+    expect(buttons).toHaveLength(2)
+    fireEvent.click(buttons[0])
+    expect(writeText).toHaveBeenCalledWith('e2a959c4-c151-402a-b533-c17b90420c78')
+  })
+
+  it('считает дни с выдачи до среза сервиса, а не до «сегодня»', () => {
+    // Срез `as_of` — тот же день, на который посчитана просрочка в шапке.
+    // Возьми страница «сегодня», число менялось бы каждые сутки, и два
+    // счётчика на одной карточке разъехались бы.
+    vi.mocked(hooks.useCreditLoanState).mockReturnValue({
+      ...idle,
+      data: { ...STATE, as_of: '2026-09-12' } as unknown as CreditLoanState,
+    } as unknown as ReturnType<typeof hooks.useCreditLoanState>)
+    openPassport()
+    // Выдача 29.08 → срез 12.09 = 14 дней.
+    expect(screen.getByText('credit.fields.loanAgeDays')).toBeInTheDocument()
+    const row = screen.getByText('credit.fields.loanAgeDays').parentElement
+    expect(row?.textContent).toContain('14')
+  })
+})
