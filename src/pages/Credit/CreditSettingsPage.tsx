@@ -7,6 +7,7 @@
  */
 import { useTranslation } from 'react-i18next'
 import { SegmentedTabs } from '@/components/ui/SegmentedTabs'
+import { CreditApiKeyPanel } from './components/CreditApiKeyPanel'
 import { TooltipProvider } from '@/components/ui/Tooltip'
 import { useURLState } from '@/hooks/useURLState'
 import { useCreditOverview } from '@/features/credit/hooks/useCredit'
@@ -58,7 +59,14 @@ export function CreditSettingsPage() {
         <div className="mt-4">
           {current === 'products' && <CreditProductsSection canRead={canReadProducts} />}
           {current === 'parameters' && <CreditParametersSection canRead={canReadParameters} />}
-          {current === 'integrations' && <CreditIntegrationsSection overview={overview} />}
+          {current === 'integrations' && (
+            <div className="space-y-4">
+              {/* Ключ стенда — здесь же, где интеграции: это ровно интеграция
+                  с модулем на этапе 1. Раньше вписать его было негде вовсе. */}
+              <CreditApiKeyPanel />
+              <CreditIntegrationsSection overview={overview} />
+            </div>
+          )}
         </div>
       </div>
     </TooltipProvider>
