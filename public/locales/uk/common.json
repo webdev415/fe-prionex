@@ -11171,7 +11171,8 @@
       "allocation": "Рознесення",
       "totalRow": "Разом",
       "interest": "Проценти",
-      "fee": "Комісія"
+      "fee": "Комісія",
+      "lastActivity": "Останній рух"
     },
     "fields": {
       "name": "Клієнт",
@@ -11382,7 +11383,10 @@
       "scheduleVersionEmpty": "У версії {{version}} ({{reason}}) немає внесків — вони у версії {{previous}}.",
       "openPreviousVersion": "Відкрити її",
       "paymentReversedOn": "Сторновано {{date}}",
-      "paymentsReversedHint": "Зі списку платежів сторновано {{count}} на {{amount}} — ця сума в борг не зарахована, гроші повернулися банку."
+      "paymentsReversedHint": "Зі списку платежів сторновано {{count}} на {{amount}} — ця сума в борг не зарахована, гроші повернулися банку.",
+      "idleFor": "останній рух: {{duration}} тому",
+      "outstandingLoans": "Непогашені позики",
+      "cooldownUntil": "Остигання після відмови до {{date}}"
     },
     "stand": {
       "notice": "Етап 1: модуль працює поза Kong і ще не знає ролей CRM — роль нижче є макетом стенда (WS-20 замінить її на JWT).",
@@ -11688,6 +11692,11 @@
       "clear": "Очистити",
       "present": "Ключ збережено для цієї вкладки.",
       "absent": "Ключа немає: модуль відповідає 401."
+    },
+    "idle": {
+      "underHour": "менше години",
+      "hoursShort": "{{value}} год",
+      "daysShort": "{{value}} дн"
     }
   }
 }

@@ -39,6 +39,8 @@ import { CreditMetricCards } from './components/CreditMetricCards'
 import { CreditStandBanner } from './components/CreditStandBanner'
 import { CreditModuleUnavailable } from './components/CreditModuleUnavailable'
 import { formatDateTime } from '@/lib/formatters'
+import { formatIdle, idleMinutes } from '@/features/credit/api/idle'
+import { useNowTick } from '@/features/credit/hooks/useNowTick'
 
 /** Строка таблицы = строка контракта + `id`, которого требует DataTable. */
 type ApplicationRow = CreditApplicationSummary & { id: string }
@@ -101,6 +103,9 @@ export function CreditApplicationsPage() {
   // DataTable требует у строки поле `id` (на нём держится выделение и ключи).
   // У модуля идентификатор называется application_id — добавляем алиас, а не
   // переименовываем поле контракта.
+  // Тик минуты: список держат открытым — без него простой замрёт.
+  const now = useNowTick()
+
   const rows: ApplicationRow[] = useMemo(
     () => items.map((row) => ({ ...row, id: row.application_id })),
     [items]
@@ -164,6 +169,23 @@ export function CreditApplicationsPage() {
       render: (row) => (
         <span className="text-muted-foreground text-xs">{formatDateTime(row.created_at)}</span>
       ),
+    },
+    {
+      // «Кто висит дольше всех» — вопрос очереди, а не отдельной карточки.
+      // Сортировка серверная: `updated_at` есть в APPLICATION_SORT_FIELDS
+      // модуля, иначе колонка врала бы порядком в пределах страницы.
+      key: 'idle',
+      sortable: true,
+      sortKey: 'updated_at',
+      header: t('credit.columns.lastActivity'),
+      render: (row) => {
+        const minutes = idleMinutes(row.updated_at, now)
+        return (
+          <span className="text-muted-foreground text-xs" title={formatDateTime(row.updated_at)}>
+            {minutes === null ? '—' : formatIdle(minutes, t)}
+          </span>
+        )
+      },
     },
   ]
 
