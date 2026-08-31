@@ -11002,6 +11002,8 @@
         "additional-data": "Additional Data",
         "documents-and-hiring": "Documents and Hiring",
         "surveys": "Surveys",
+        "feedback": "Feedback",
+        "grades": "Grades and History",
         "termination": "Termination",
         "chronology": "Chronology"
       },
@@ -11065,6 +11067,28 @@
         "removeTitle": "Remove this survey?",
         "removeMessage": "“{{name}}” and its line in the chronology will both be removed. The answers themselves live in the form this was recorded from.",
         "noDateHint": "Without a date this answer will not appear in the chronology."
+      },
+      "feedback": {
+        "none": "No feedback recorded.",
+        "types": {
+          "praise": "Praise",
+          "note": "Note",
+          "correction_task": "Correction task"
+        },
+        "statuses": {
+          "unread": "Unread",
+          "read": "Read",
+          "completed": "Done"
+        }
+      },
+      "grades": {
+        "none": "No assessments recorded.",
+        "assessment": "Assessment",
+        "disputed": "Disputed",
+        "notScored": "Not scored"
+      },
+      "quality": {
+        "unavailable": "This could not be loaded. The rest of the card is unaffected."
       },
       "termination": {
         "terminate": "Terminate",

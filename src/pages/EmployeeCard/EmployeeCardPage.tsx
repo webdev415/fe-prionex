@@ -8,6 +8,8 @@ import { CardSections } from './components/CardSections'
 import { CardTabs } from './components/CardTabs'
 import { EmployeeCardSkeleton } from './components/EmployeeCardSkeleton'
 import { DocumentsSection } from './components/DocumentsSection'
+import { FeedbackSection } from './components/FeedbackSection'
+import { GradesSection } from './components/GradesSection'
 import { ProfilePanel } from './components/ProfilePanel'
 import { SurveysSection } from './components/SurveysSection'
 import { TerminationSection } from './components/TerminationSection'
@@ -30,6 +32,10 @@ const SECTION_IDS = [
   'additional-data',
   'documents-and-hiring',
   'surveys',
+  // Both read the quality service rather than this card's own response, so
+  // either can be empty or unreachable while the rest of the page is fine.
+  'feedback',
+  'grades',
   'chronology',
   // Last, because it is where the record stops: the history runs up to the
   // day somebody left, and the leaving is what closes the card behind it.
@@ -195,6 +201,9 @@ export function EmployeeCardPage() {
               }}
               onRemoveSurvey={(surveyId) => void confirmRemoval(surveyId)}
             />
+
+            <FeedbackSection employeeId={employeeId} />
+            <GradesSection employeeId={employeeId} />
 
             <section
               id="chronology"

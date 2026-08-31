@@ -213,6 +213,8 @@ describe('EmployeeCardPage', () => {
       'pages.employeeCard.sections.additional-data',
       'pages.employeeCard.sections.documents-and-hiring',
       'pages.employeeCard.sections.surveys',
+      'pages.employeeCard.sections.feedback',
+      'pages.employeeCard.sections.grades',
       'pages.employeeCard.sections.chronology',
       'pages.employeeCard.sections.termination',
     ])
@@ -634,8 +636,8 @@ describe('EmployeeCardPage: while it is still loading', () => {
     const { container } = renderAt('/dashboard/team-management/users/7')
 
     expect(screen.getByRole('status')).toHaveTextContent('common.loading')
-    expect(container.querySelector('[aria-hidden]')).not.toBeNull()
-    expect(container.querySelector('[aria-hidden] .animate-pulse')).not.toBeNull()
+    expect(screen.getByTestId('card-skeleton')).toHaveAttribute('aria-hidden')
+    expect(container.querySelector('[data-testid="card-skeleton"] .animate-pulse')).not.toBeNull()
   })
 
   it('does not offer controls for a card that is not there yet', () => {
@@ -648,9 +650,17 @@ describe('EmployeeCardPage: while it is still loading', () => {
   it('gets out of the way once the card arrives', () => {
     state.card = card()
     state.isLoading = false
-    const { container } = renderAt('/dashboard/team-management/users/7')
+    renderAt('/dashboard/team-management/users/7')
 
-    expect(container.querySelector('.animate-pulse')).toBeNull()
+    /*
+     * The CARD's skeleton, not every pulse on the page. Feedback and grades
+     * read the quality service on their own and are still fetching at this
+     * point - that they keep loading after the card has arrived is the whole
+     * reason they are separate requests, so asserting nothing anywhere is
+     * still animating would pin the opposite of the intended behaviour.
+     */
+    expect(screen.queryByTestId('card-skeleton')).toBeNull()
+    expect(screen.queryByRole('status')).toBeNull()
     expect(screen.getByRole('tablist')).toBeInTheDocument()
   })
 })

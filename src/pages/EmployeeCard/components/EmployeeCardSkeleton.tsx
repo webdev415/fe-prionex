@@ -42,7 +42,11 @@ export function EmployeeCardSkeleton({ label }: EmployeeCardSkeletonProps) {
         {label}
       </p>
 
-      <div aria-hidden className="grid items-start gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+      <div
+        aria-hidden
+        data-testid="card-skeleton"
+        className="grid items-start gap-6 lg:grid-cols-[280px_minmax(0,1fr)]"
+      >
         <div className="space-y-4 pt-4 md:pt-6">
           <div className={`${bar} h-4 w-24`} />
           <div className="border-border bg-card flex flex-col items-center gap-4 rounded-xl border p-6">
