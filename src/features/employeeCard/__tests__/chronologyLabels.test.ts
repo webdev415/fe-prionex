@@ -14,6 +14,8 @@ const PHRASES: Record<string, string> = {
   'pages.employeeCard.chronology.events.terminated': 'Terminated — {{reason}}',
   'pages.employeeCard.chronology.events.terminated_noReason': 'Terminated',
   'pages.employeeCard.termination.reasons.personal_desire': 'Personal Desire',
+  'pages.employeeCard.chronology.events.feedback_given': 'Feedback — {{kind}}',
+  'pages.employeeCard.feedback.types.correction_task': 'Correction task',
 }
 
 /**
@@ -123,6 +125,34 @@ describe('chronologyLabel', () => {
     const label = chronologyLabel(event({ event_type: 'terminated', payload: {} }), t)
 
     expect(label).toBe('Terminated')
+  })
+
+  /*
+   * The service sends the stored slug. Without translating it the timeline
+   * reads "Feedback - correction_task" directly beneath a section calling the
+   * same thing a "Correction task".
+   */
+  it('spells a feedback kind the way the Feedback section spells it', () => {
+    const label = chronologyLabel(
+      event({ event_type: 'feedback_given', payload: { kind: 'correction_task' } }),
+      t
+    )
+
+    expect(label).toBe('Feedback — Correction task')
+  })
+
+  /*
+   * Events seeded before the publisher existed carry prose here rather than a
+   * slug, and prose has no translation to look up - it has to survive as it
+   * was written.
+   */
+  it('leaves a kind that is already prose alone', () => {
+    const label = chronologyLabel(
+      event({ event_type: 'feedback_given', payload: { kind: 'Customer Complaint' } }),
+      t
+    )
+
+    expect(label).toBe('Feedback — Customer Complaint')
   })
 
   it('still takes up a line for a kind of event it has no phrase for', () => {

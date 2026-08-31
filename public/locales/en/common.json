@@ -10972,7 +10972,6 @@
           "department_changed": "Department changed — {{from}} to {{to}}",
           "department_changed_noFrom": "Department set — {{to}}",
           "evaluation_completed": "Quality assessment — {{score}}",
-          "evaluation_updated": "Quality assessment revised — {{score}}",
           "feedback_given": "Feedback — {{kind}}",
           "training_assigned": "Course assigned — {{course}}",
           "training_completed": "Completed course — {{course}}",

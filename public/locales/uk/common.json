@@ -10993,7 +10993,6 @@
           "department_changed": "Відділ змінено — {{from}} на {{to}}",
           "department_changed_noFrom": "Відділ призначено — {{to}}",
           "evaluation_completed": "Оцінка якості — {{score}}",
-          "evaluation_updated": "Оцінку якості переглянуто — {{score}}",
           "feedback_given": "Зворотний зв'язок — {{kind}}",
           "training_assigned": "Призначено курс — {{course}}",
           "training_completed": "Завершено курс — {{course}}",

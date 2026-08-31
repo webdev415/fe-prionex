@@ -18,6 +18,22 @@ function reasonOf(payload: Record<string, unknown>, t: TFunction): string {
   return slug ? t(`pages.employeeCard.termination.reasons.${slug}`, slug) : ''
 }
 
+function kindOf(payload: Record<string, unknown>, t: TFunction): string {
+  const slug = text(payload.kind) || text(payload.feedback_type)
+  if (!slug) return ''
+  /*
+   * Spelled the way the Feedback section spells it. The service sends the
+   * stored slug, so without this the timeline reads "Feedback -
+   * correction_task" directly under a section calling the same thing a
+   * "Correction task".
+   *
+   * The slug is the fallback, not the key's path: an older seeded event
+   * carries prose here rather than a slug, and prose has no translation to
+   * find - it has to survive as written.
+   */
+  return t(`pages.employeeCard.feedback.types.${slug}`, slug)
+}
+
 function score(payload: Record<string, unknown>): string {
   const points = payload.score
   const outOf = payload.max_score
@@ -52,7 +68,7 @@ export function chronologyLabel(event: EmployeeEvent, t: TFunction): string {
     from: text(payload.from),
     to: text(payload.to),
     course: text(payload.course),
-    kind: text(payload.kind) || text(payload.feedback_type),
+    kind: kindOf(payload, t),
     name: text(payload.name),
     score: score(payload),
     // The departure carries its reason as the slug the card stores, so it is
