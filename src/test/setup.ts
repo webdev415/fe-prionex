@@ -1,11 +1,54 @@
 /* eslint-disable no-console */
 import '@testing-library/jest-dom'
 import { configure } from '@testing-library/react'
-import { vi, beforeAll, beforeEach, afterAll } from 'vitest'
+import { vi, beforeAll, beforeEach, afterEach, afterAll } from 'vitest'
 import './mocks/callQaSettings'
 import './mocks/aiAssistantSettings'
 import './mocks/assistantOverview'
 import './mocks/assistantAdmin'
+
+/**
+ * Даём догореть отложенным задачам, пока окно ещё живо.
+ *
+ * `@radix-ui/react-focus-scope` при размонтировании ставит `setTimeout` на
+ * возврат фокуса. Если файл тестов успевает закончиться раньше, таймер
+ * срабатывает уже ПОСЛЕ сноса jsdom, `dispatchEvent` получает Event от мёртвого
+ * окна и падает с TypeError. Vitest считает это unhandled error и роняет ВЕСЬ
+ * прогон — при том что ни один тест не сломан: 4548 из 4548 зелёные, а код
+ * возврата 1.
+ *
+ * За вечер 31.08 это трижды подряд отклонило коммит в разных файлах
+ * (`KanbanTaskDetailPanel`, `AddTaskModal`, `AiAssistantBetaPage.composerHub`) —
+ * то есть виноват не тест, а порядок сноса. Один такт реального таймера после
+ * каждого теста даёт таймеру Radix сработать в живом окружении.
+ *
+ * Ошибки при этом НЕ глушатся: если задача упадёт по-настоящему, она упадёт
+ * здесь же и будет видна как обычный отказ.
+ *
+ * `isFakeTimers()` обязателен: под подменёнными таймерами `setTimeout` не
+ * пойдёт сам, и ожидание повисло бы навсегда.
+ */
+afterEach(async () => {
+  if (vi.isFakeTimers()) return
+  await new Promise((resolve) => setTimeout(resolve, 0))
+})
+
+/**
+ * `scrollIntoView` в jsdom не реализован вовсе.
+ *
+ * Нужен `@radix-ui/react-select`: при открытии он прокручивает список к
+ * выбранному пункту. Без заглушки эффект падает `TypeError: candidate?.
+ * scrollIntoView is not a function` — и падает НЕ в тесте, а в отложенном
+ * эффекте, поэтому виден как unhandled error, роняющий весь прогон при
+ * зелёных тестах.
+ *
+ * До такта выше дефект прятался: файл успевал закончиться раньше, чем эффект
+ * доходил до прокрутки. То есть это не новая поломка, а старая, которую
+ * теперь видно.
+ */
+if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = function scrollIntoView() {}
+}
 
 // Testing Library's own async budget, which `testTimeout` does NOT cover:
 // every `findBy*` and bare `waitFor` gives up after 1s regardless of the 20s

@@ -10,8 +10,18 @@ import { useTranslation } from 'react-i18next'
 type Tone = 'default' | 'ok' | 'warn' | 'danger' | 'accent'
 
 const TONES: Record<string, Tone> = {
+  // Тона взяты из макета Figma «Techno-Finance» (fileKey yiiOBaBswSaXYF61nBuPnj,
+  // фрейм «Credit status» 4255:36203) — там девять состояний с цветом и знаком:
+  // зелёное «Схвалено»/«Гроші видані», красное «Відхилено»/«Прострочено»,
+  // нейтральное с часами «Очікує рішення»/«Очікує на відправку коштів».
+  // Язык цвета оттуда, набор значений — наш: продукт другой, а правило
+  // «ждём — нейтральное, сделано — зелёное, беда — красное» общее.
+  //
   // заявки
+  draft: 'default',
   in_progress: 'default',
+  identity_check: 'accent',
+  data_collection: 'accent',
   scoring: 'accent',
   referred: 'warn',
   approved: 'ok',
@@ -22,8 +32,19 @@ const TONES: Record<string, Tone> = {
   abandoned: 'default',
   // кредиты
   active: 'ok',
+  // Деньги ещё не ушли — это ожидание, а не готовность: в макете отдельное
+  // состояние «Очікує на відправку коштів» с часами.
+  pending_disbursement: 'accent',
+  // ⚠️ Обе беды с деньгами были СЕРЫМИ — теми же, что «закрыт». Оператор не
+  // отличал кредит, где деньги не дошли до клиента, от завершённого.
+  disbursement_failed: 'danger',
+  funding_exception: 'danger',
   delinquent: 'danger',
+  // Особые режимы обслуживания: не беда и не норма — требуют внимания.
+  forbearance: 'warn',
+  protected: 'warn',
   closed: 'default',
+  withdrawn: 'default',
   cancelled: 'danger',
   written_off: 'danger',
   charged_off: 'danger',
