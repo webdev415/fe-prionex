@@ -839,7 +839,13 @@
         "errorNotFound": "The file is no longer available",
         "errorTooLarge": "The file is too large to open here — ask for a smaller export",
         "errorBrainUnavailable": "The assistant is unavailable — try again in a moment"
-      }
+      },
+      "contextUsageTitle": "Dialog context: {{used}} / {{max}} tokens ({{percent}}%). Longer conversations answer slower — start a new chat once the ring turns yellow.",
+      "slashMenuAria": "Assistant commands",
+      "slashStatus": "session and model",
+      "slashReset": "clear the brain context (conversation stays)",
+      "slashHelp": "what the assistant can do",
+      "slashNewChat": "start a new chat"
     },
     "lawyerWorkplace": {
       "navAria": "Lawyer Workplace navigation",

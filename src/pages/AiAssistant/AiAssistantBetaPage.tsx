@@ -82,6 +82,10 @@ import type { AssistantMode } from '@/features/aiAssistant/api'
 import { isAxiosError } from 'axios'
 import { parseConversationParam, writeConversationParam } from './conversationUrl'
 import { ConversationSidebar } from './ConversationSidebar'
+import { ContextUsageRing } from './ContextUsageRing'
+import { extractContextUsage, type ContextUsageSnapshot } from './contextUsage'
+import { SlashCommandMenu } from './SlashCommandMenu'
+import { exactSlashCommand, matchSlashCommands, type SlashCommand } from './slashCommands'
 import { getDockDesktopBoxClasses, getDockRightOffset } from './dockGeometry'
 import { MarkdownMessage, type MarkdownCitation } from './MarkdownMessage'
 import {
@@ -954,6 +958,14 @@ export function AiAssistantBetaPage() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [isAssistantResponding, setIsAssistantResponding] = useState(false)
   const [conversationId, setConversationId] = useState<number | null>(null)
+  // Заполненность контекстного окна мозга по последнему ходу (usage из
+  // терминального `done`-кадра). Кружок у композера — см. ContextUsageRing.
+  const [contextUsage, setContextUsage] = useState<ContextUsageSnapshot | null>(null)
+  // Меню слеш-команд: индекс подсвеченной строки и «закрыто по Esc» (сбрасывается
+  // ЛЮБЫМ ручным вводом в onChange, а не эффектом по message — программная
+  // подстановка команды не должна тут же переоткрывать меню).
+  const [slashActiveIndex, setSlashActiveIndex] = useState(0)
+  const [slashDismissed, setSlashDismissed] = useState(false)
   const [feedbackByMessage, setFeedbackByMessage] = useState<Record<number, MessageFeedback>>({})
   // Пометки источников «верно/неверно» (Слой 5), keyed by серверный message_id →
   // (номер сноски → вердикт). Оптимистичны: применяются сразу, откатываются при
@@ -1549,6 +1561,7 @@ export function AiAssistantBetaPage() {
     responseTokenRef.current += 1
     setChatMessages((current) => (current.length > 0 ? [] : current))
     setConversationId(null)
+    setContextUsage(null)
     setFeedbackByMessage({})
     setCitationMarksByMessage((current) => (Object.keys(current).length > 0 ? {} : current))
     setReasoningOpenByMessage((current) => (Object.keys(current).length > 0 ? {} : current))
@@ -1882,9 +1895,35 @@ export function AiAssistantBetaPage() {
     if (!isEmbedded) writeConversationParam(null)
   }, [clearStoredConversation, isEmbedded, resetChatState])
 
+  // Меню слеш-команд (как в Claude Code): «/» в начале поля открывает список,
+  // сами команды исполняет мозг — кроме /новий, который чистит диалог локально.
+  const slashItems = slashDismissed ? [] : matchSlashCommands(message)
+  const applySlashCommand = useCallback(
+    (cmd: SlashCommand) => {
+      setSlashDismissed(true)
+      setSlashActiveIndex(0)
+      if (cmd.clientAction === 'newChat') {
+        setMessage('')
+        handleNewChat()
+        return
+      }
+      // Подстановка канона; отправка — вторым Enter (меню уже закрыто).
+      setMessage(cmd.command)
+      textareaRef.current?.focus()
+    },
+    [handleNewChat]
+  )
+
   const submitPrompt = useCallback(
     async (rawPrompt: string, attachments?: PendingAttachment[]) => {
       const prompt = rawPrompt.trim()
+      // Клиентская слеш-команда (/новий) — локальное действие, в мозг не уходит.
+      const clientCommand = exactSlashCommand(prompt)
+      if (clientCommand?.clientAction === 'newChat') {
+        setMessage('')
+        handleNewChat()
+        return
+      }
       const attachmentList = attachments ?? []
       const hasAudio = attachmentList.some((item) => item.type === 'audio')
       if (isAssistantResponding || respondingRef.current) return
@@ -2055,6 +2094,13 @@ export function AiAssistantBetaPage() {
               if (questions.length > 0) patchLoadingMessage({ followups: questions })
             },
             onExpert: (usage) => patchLoadingMessage({ expert: usage }),
+            onDone: (done) => {
+              // Обновляем кружок контекста только по ходам с реальным usage:
+              // слеш-команды и уточнения роутера завершаются без него — там
+              // показание не менялось, затирать прежнее нечем.
+              const snapshot = extractContextUsage(done)
+              if (snapshot) setContextUsage(snapshot)
+            },
           },
         })
         // The turn reached the brain, so the page context it carried is spent —
@@ -2203,6 +2249,7 @@ export function AiAssistantBetaPage() {
       assistantSettings.responseMode,
       consumeOnexContext,
       conversationId,
+      handleNewChat,
       isAssistantResponding,
       isEmbedded,
       onexContext,
@@ -3223,12 +3270,46 @@ export function AiAssistantBetaPage() {
             )}
 
             <div className="relative">
+              <SlashCommandMenu
+                items={slashItems}
+                activeIndex={Math.min(slashActiveIndex, Math.max(slashItems.length - 1, 0))}
+                onSelect={applySlashCommand}
+              />
               <Textarea
                 ref={textareaRef}
                 value={message}
-                onChange={(e) => setMessage(e.target.value)}
+                onChange={(e) => {
+                  setMessage(e.target.value)
+                  // Ручной ввод снимает «закрыто по Esc» — меню слеш-команд
+                  // снова следует за содержимым поля.
+                  setSlashDismissed(false)
+                }}
                 onPaste={handlePaste}
                 onKeyDown={(e) => {
+                  if (slashItems.length > 0) {
+                    if (e.key === 'ArrowDown') {
+                      e.preventDefault()
+                      setSlashActiveIndex((i) => (i + 1) % slashItems.length)
+                      return
+                    }
+                    if (e.key === 'ArrowUp') {
+                      e.preventDefault()
+                      setSlashActiveIndex((i) => (i - 1 + slashItems.length) % slashItems.length)
+                      return
+                    }
+                    if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey)) {
+                      e.preventDefault()
+                      applySlashCommand(
+                        slashItems[Math.min(slashActiveIndex, slashItems.length - 1)]
+                      )
+                      return
+                    }
+                    if (e.key === 'Escape') {
+                      e.preventDefault()
+                      setSlashDismissed(true)
+                      return
+                    }
+                  }
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault()
                     // Sending now would leave the still-encoding files behind.
@@ -3375,6 +3456,9 @@ export function AiAssistantBetaPage() {
                     </div>
                   )}
                 </div>
+
+                {/* Заполненность контекста мозга — как кружок в Claude Code. */}
+                <ContextUsageRing usage={contextUsage} />
               </div>
 
               <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
