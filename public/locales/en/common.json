@@ -839,7 +839,14 @@
         "errorNotFound": "The file is no longer available",
         "errorTooLarge": "The file is too large to open here — ask for a smaller export",
         "errorBrainUnavailable": "The assistant is unavailable — try again in a moment"
-      }
+      },
+      "contextUsageTitle": "Dialog context: {{used}} / {{max}} tokens ({{percent}}%). Longer conversations answer slower — start a new chat once the ring turns yellow.",
+      "slashMenuAria": "Assistant commands",
+      "slashStatus": "session and model",
+      "slashReset": "clear the brain context (conversation stays)",
+      "slashHelp": "what the assistant can do",
+      "slashNewChat": "start a new chat",
+      "answerInProgress": "The answer is still being prepared — it will appear here when ready"
     },
     "lawyerWorkplace": {
       "navAria": "Lawyer Workplace navigation",
@@ -11661,6 +11668,16 @@
     "unavailable": {
       "title": "The credit module is not deployed on this stand",
       "hint": "The section is in place, but the credit service is not routed here yet: on stage 1 it runs outside Kong. Locally it is served on localhost:8020; on the dev server the route /api/v1/credit will appear together with the module deployment."
+    },
+    "standKey": {
+      "title": "Stand service key",
+      "where": "Ask DevOps for INTERNAL_API_KEY of the credit module on this stand (deploy/.env on the server), and paste it here.",
+      "lifetime": "The key lives until this tab is closed — being asked again after reopening the tab is normal, not a fault.",
+      "placeholder": "X-Internal-Api-Key",
+      "save": "Save key",
+      "clear": "Clear",
+      "present": "A key is saved for this tab.",
+      "absent": "No key saved: the module answers 401."
     }
   }
 }

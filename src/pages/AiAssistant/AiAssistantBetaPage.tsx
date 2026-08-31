@@ -78,9 +78,15 @@ import {
   type AssistantVoiceMaxDuration,
   type AssistantVoiceSilenceTimeout,
 } from '@/stores/aiAssistantStore'
-import type { AssistantMode } from '@/features/aiAssistant/api'
+import type { AssistantConversationDetail, AssistantMode } from '@/features/aiAssistant/api'
 import { isAxiosError } from 'axios'
+import { parseConversationParam, writeConversationParam } from './conversationUrl'
+import { ANSWER_POLL_INTERVAL_MS, ANSWER_POLL_MAX_MS } from './answerPolling'
 import { ConversationSidebar } from './ConversationSidebar'
+import { ContextUsageRing } from './ContextUsageRing'
+import { extractContextUsage, type ContextUsageSnapshot } from './contextUsage'
+import { SlashCommandMenu } from './SlashCommandMenu'
+import { exactSlashCommand, matchSlashCommands, type SlashCommand } from './slashCommands'
 import { getDockDesktopBoxClasses, getDockRightOffset } from './dockGeometry'
 import { MarkdownMessage, type MarkdownCitation } from './MarkdownMessage'
 import {
@@ -953,6 +959,17 @@ export function AiAssistantBetaPage() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [isAssistantResponding, setIsAssistantResponding] = useState(false)
   const [conversationId, setConversationId] = useState<number | null>(null)
+  // Диалог открыт с незавершённым ходом (последнее сообщение — вопрос без
+  // ответа): ответ дописывается на сервере, страница ждёт его опросом.
+  const [awaitingServerAnswer, setAwaitingServerAnswer] = useState(false)
+  // Заполненность контекстного окна мозга по последнему ходу (usage из
+  // терминального `done`-кадра). Кружок у композера — см. ContextUsageRing.
+  const [contextUsage, setContextUsage] = useState<ContextUsageSnapshot | null>(null)
+  // Меню слеш-команд: индекс подсвеченной строки и «закрыто по Esc» (сбрасывается
+  // ЛЮБЫМ ручным вводом в onChange, а не эффектом по message — программная
+  // подстановка команды не должна тут же переоткрывать меню).
+  const [slashActiveIndex, setSlashActiveIndex] = useState(0)
+  const [slashDismissed, setSlashDismissed] = useState(false)
   const [feedbackByMessage, setFeedbackByMessage] = useState<Record<number, MessageFeedback>>({})
   // Пометки источников «верно/неверно» (Слой 5), keyed by серверный message_id →
   // (номер сноски → вердикт). Оптимистичны: применяются сразу, откатываются при
@@ -1063,6 +1080,32 @@ export function AiAssistantBetaPage() {
   // skipped as soon as the user starts a conversation in this mount.
   // Switching a conversation from the history panel resets the local chat
   // state and re-arms this flag, so the same mechanism loads the new dialog.
+  // Deep-link: ?conversation=<id> в адресе — явный выбор диалога, как клик в
+  // истории. Читается один раз при появлении userId (до этого гидратация всё
+  // равно невозможна) и перекрывает сохранённый указатель. Явность важна:
+  // ссылка обязана открыть диалог даже при выключенном «помнить контекст».
+  // RBAC не обходится — чужой id бэкенд ответит 404, указатель и параметр
+  // будут сброшены эффектом ниже. В OneX-доке адрес не пользовательский —
+  // там deep-link не читается и не пишется.
+  const urlConversationConsumedRef = useRef(false)
+  useEffect(() => {
+    if (urlConversationConsumedRef.current || isEmbedded || userId == null) return
+    urlConversationConsumedRef.current = true
+    const fromUrl = parseConversationParam(window.location.search)
+    if (fromUrl == null) return
+    setIsExplicitSelection(true)
+    setActiveConversation(userId, fromUrl)
+  }, [isEmbedded, setActiveConversation, userId])
+
+  // Обратная сторона deep-link: активный диалог всегда отражён в адресе, так
+  // что «поделиться разговором» = скопировать URL из адресной строки. Пишем
+  // только ненулевой id (null на маунте — ещё не гидратировано, затирать
+  // параметр рано); снятие параметра — явное, в «Новий чат» и при 404.
+  useEffect(() => {
+    if (isEmbedded || conversationId == null) return
+    writeConversationParam(conversationId)
+  }, [conversationId, isEmbedded])
+
   const shouldHydrateConversation =
     storedConversationId != null &&
     conversationId == null &&
@@ -1410,11 +1453,8 @@ export function AiAssistantBetaPage() {
     })
   }, [])
 
-  useEffect(() => {
-    const detail = conversationQuery.data
-    if (!detail || !shouldHydrateConversation) return
-    setConversationId(detail.id)
-    setChatMessages(
+  const mapServerMessages = useCallback(
+    (detail: AssistantConversationDetail): ChatMessage[] =>
       detail.messages.map((item) => {
         const isAssistant = item.role === 'assistant'
         // Слой 5: источники приходят сырым конвертом `{items:[...]}` (как и во
@@ -1442,11 +1482,74 @@ export function AiAssistantBetaPage() {
           reasoning: isAssistant ? item.reasoning : undefined,
           citations: citations.length > 0 ? citations : undefined,
         }
-      })
+      }),
+    []
+  )
+
+  useEffect(() => {
+    const detail = conversationQuery.data
+    if (!detail || !shouldHydrateConversation) return
+    setConversationId(detail.id)
+    const mapped = mapServerMessages(detail)
+    const last = detail.messages[detail.messages.length - 1]
+    // Последний ход — вопрос без ответа: ответ ещё дописывается на сервере
+    // (обрыв соединения при обновлении страницы). Показываем «печатает…» и
+    // ждём его опросом, а не оставляем оператора с висящим вопросом.
+    const pending = last?.role === 'user'
+    setChatMessages(
+      pending
+        ? [
+            ...mapped,
+            {
+              id: 'pending-server-answer',
+              role: 'assistant',
+              content: '',
+              isLoading: true,
+              loadingLabel: t('pages.aiAssistant.answerInProgress'),
+            },
+          ]
+        : mapped
     )
+    setAwaitingServerAnswer(pending)
     setIsExplicitSelection(false)
     window.setTimeout(() => scrollToConversationBottom('auto'), 0)
-  }, [conversationQuery.data, shouldHydrateConversation, scrollToConversationBottom])
+  }, [
+    conversationQuery.data,
+    shouldHydrateConversation,
+    scrollToConversationBottom,
+    mapServerMessages,
+    t,
+  ])
+
+  // Опрос диалога с незавершённым ходом: refetch работает и у выключенного
+  // запроса. Ответ появился — подменяем «печатает…» настоящими сообщениями;
+  // потолок ожидания — дедлайн thinking-хода с запасом.
+  useEffect(() => {
+    if (!awaitingServerAnswer) return
+    const startedAt = Date.now()
+    const timer = window.setInterval(() => {
+      if (Date.now() - startedAt > ANSWER_POLL_MAX_MS) {
+        setAwaitingServerAnswer(false)
+        setChatMessages((current) => current.filter((m) => m.id !== 'pending-server-answer'))
+        return
+      }
+      void conversationQuery.refetch()
+    }, ANSWER_POLL_INTERVAL_MS)
+    return () => window.clearInterval(timer)
+    // refetch стабилен на время жизни запроса; сам объект запроса меняется
+    // каждый рендер и не должен перезапускать таймер.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [awaitingServerAnswer])
+
+  useEffect(() => {
+    if (!awaitingServerAnswer) return
+    const detail = conversationQuery.data
+    const last = detail?.messages[detail.messages.length - 1]
+    if (!detail || last?.role !== 'assistant') return
+    setChatMessages(mapServerMessages(detail))
+    setAwaitingServerAnswer(false)
+    window.setTimeout(() => scrollToConversationBottom('auto'), 0)
+  }, [awaitingServerAnswer, conversationQuery.data, mapServerMessages, scrollToConversationBottom])
 
   useEffect(() => {
     if (!conversationQuery.isError) return
@@ -1454,8 +1557,11 @@ export function AiAssistantBetaPage() {
     // Transient errors (network, 5xx) keep it so a later visit can retry.
     if (isAxiosError(conversationQuery.error) && conversationQuery.error.response?.status === 404) {
       clearStoredConversation()
+      // Мёртвый (или чужой) указатель мог прийти из deep-link — убираем и его,
+      // чтобы F5 не долбил бэкенд тем же 404.
+      if (!isEmbedded) writeConversationParam(null)
     }
-  }, [conversationQuery.isError, conversationQuery.error, clearStoredConversation])
+  }, [conversationQuery.isError, conversationQuery.error, clearStoredConversation, isEmbedded])
 
   const updateScrollToLatestVisibility = useCallback(() => {
     const scrollContainer = scrollContainerRef.current
@@ -1519,6 +1625,8 @@ export function AiAssistantBetaPage() {
     responseTokenRef.current += 1
     setChatMessages((current) => (current.length > 0 ? [] : current))
     setConversationId(null)
+    setContextUsage(null)
+    setAwaitingServerAnswer(false)
     setFeedbackByMessage({})
     setCitationMarksByMessage((current) => (Object.keys(current).length > 0 ? {} : current))
     setReasoningOpenByMessage((current) => (Object.keys(current).length > 0 ? {} : current))
@@ -1836,8 +1944,11 @@ export function AiAssistantBetaPage() {
       resetChatState()
       setIsExplicitSelection(true)
       setActiveConversation(userId, id)
+      // Адрес обновляется сразу по клику, не дожидаясь гидратации: ссылка
+      // должна быть копируемой в момент выбора.
+      if (!isEmbedded) writeConversationParam(id)
     },
-    [conversationId, resetChatState, setActiveConversation, userId]
+    [conversationId, isEmbedded, resetChatState, setActiveConversation, userId]
   )
 
   const handleNewChat = useCallback(() => {
@@ -1846,11 +1957,38 @@ export function AiAssistantBetaPage() {
     setMessage('')
     setIsExplicitSelection(false)
     clearStoredConversation()
-  }, [clearStoredConversation, resetChatState])
+    if (!isEmbedded) writeConversationParam(null)
+  }, [clearStoredConversation, isEmbedded, resetChatState])
+
+  // Меню слеш-команд (как в Claude Code): «/» в начале поля открывает список,
+  // сами команды исполняет мозг — кроме /новий, который чистит диалог локально.
+  const slashItems = slashDismissed ? [] : matchSlashCommands(message)
+  const applySlashCommand = useCallback(
+    (cmd: SlashCommand) => {
+      setSlashDismissed(true)
+      setSlashActiveIndex(0)
+      if (cmd.clientAction === 'newChat') {
+        setMessage('')
+        handleNewChat()
+        return
+      }
+      // Подстановка канона; отправка — вторым Enter (меню уже закрыто).
+      setMessage(cmd.command)
+      textareaRef.current?.focus()
+    },
+    [handleNewChat]
+  )
 
   const submitPrompt = useCallback(
     async (rawPrompt: string, attachments?: PendingAttachment[]) => {
       const prompt = rawPrompt.trim()
+      // Клиентская слеш-команда (/новий) — локальное действие, в мозг не уходит.
+      const clientCommand = exactSlashCommand(prompt)
+      if (clientCommand?.clientAction === 'newChat') {
+        setMessage('')
+        handleNewChat()
+        return
+      }
       const attachmentList = attachments ?? []
       const hasAudio = attachmentList.some((item) => item.type === 'audio')
       if (isAssistantResponding || respondingRef.current) return
@@ -1966,6 +2104,20 @@ export function AiAssistantBetaPage() {
             expert: expertModel ? { model: expertModel } : undefined,
           },
           callbacks: {
+            onMeta: (meta) => {
+              // Указатель диалога — сразу, не после done: обновление страницы
+              // посреди ответа возвращает оператора в ЭТОТ диалог, где ответ
+              // дописывается сервером и подтягивается опросом.
+              const id = meta.conversation_id
+              if (
+                typeof id === 'number' &&
+                id > 0 &&
+                userId != null &&
+                assistantSettings.rememberConversationContext
+              ) {
+                setActiveConversation(userId, id)
+              }
+            },
             onText: (delta) => {
               streamedText += delta
               receivedDelta = true
@@ -2021,6 +2173,13 @@ export function AiAssistantBetaPage() {
               if (questions.length > 0) patchLoadingMessage({ followups: questions })
             },
             onExpert: (usage) => patchLoadingMessage({ expert: usage }),
+            onDone: (done) => {
+              // Обновляем кружок контекста только по ходам с реальным usage:
+              // слеш-команды и уточнения роутера завершаются без него — там
+              // показание не менялось, затирать прежнее нечем.
+              const snapshot = extractContextUsage(done)
+              if (snapshot) setContextUsage(snapshot)
+            },
           },
         })
         // The turn reached the brain, so the page context it carried is spent —
@@ -2169,6 +2328,7 @@ export function AiAssistantBetaPage() {
       assistantSettings.responseMode,
       consumeOnexContext,
       conversationId,
+      handleNewChat,
       isAssistantResponding,
       isEmbedded,
       onexContext,
@@ -3189,12 +3349,46 @@ export function AiAssistantBetaPage() {
             )}
 
             <div className="relative">
+              <SlashCommandMenu
+                items={slashItems}
+                activeIndex={Math.min(slashActiveIndex, Math.max(slashItems.length - 1, 0))}
+                onSelect={applySlashCommand}
+              />
               <Textarea
                 ref={textareaRef}
                 value={message}
-                onChange={(e) => setMessage(e.target.value)}
+                onChange={(e) => {
+                  setMessage(e.target.value)
+                  // Ручной ввод снимает «закрыто по Esc» — меню слеш-команд
+                  // снова следует за содержимым поля.
+                  setSlashDismissed(false)
+                }}
                 onPaste={handlePaste}
                 onKeyDown={(e) => {
+                  if (slashItems.length > 0) {
+                    if (e.key === 'ArrowDown') {
+                      e.preventDefault()
+                      setSlashActiveIndex((i) => (i + 1) % slashItems.length)
+                      return
+                    }
+                    if (e.key === 'ArrowUp') {
+                      e.preventDefault()
+                      setSlashActiveIndex((i) => (i - 1 + slashItems.length) % slashItems.length)
+                      return
+                    }
+                    if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey)) {
+                      e.preventDefault()
+                      applySlashCommand(
+                        slashItems[Math.min(slashActiveIndex, slashItems.length - 1)]
+                      )
+                      return
+                    }
+                    if (e.key === 'Escape') {
+                      e.preventDefault()
+                      setSlashDismissed(true)
+                      return
+                    }
+                  }
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault()
                     // Sending now would leave the still-encoding files behind.
@@ -3341,6 +3535,9 @@ export function AiAssistantBetaPage() {
                     </div>
                   )}
                 </div>
+
+                {/* Заполненность контекста мозга — как кружок в Claude Code. */}
+                <ContextUsageRing usage={contextUsage} />
               </div>
 
               <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
