@@ -9,6 +9,8 @@ import { creditApi } from '../api/creditApi'
 import type {
   CreditApplicationsParams,
   CreditLoansParams,
+  CreditSwitchName,
+  CreditSwitchPayload,
   ManualDecisionPayload,
 } from '../api/types'
 
@@ -26,6 +28,7 @@ export const creditKeys = {
   loanState: (id: string) => [...creditKeys.loans(), 'state', id] as const,
   loanSchedule: (id: string) => [...creditKeys.loans(), 'schedule', id] as const,
   loanJournal: (id: string) => [...creditKeys.loans(), 'journal', id] as const,
+  switches: () => [...creditKeys.all, 'switches'] as const,
 }
 
 /** Доступность модуля и права роли; молчит об ошибке — раздел просто пуст. */
@@ -156,6 +159,55 @@ export function useCreditManualDecision(applicationId: string) {
       void queryClient.invalidateQueries({ queryKey: creditKeys.application(applicationId) })
       void queryClient.invalidateQueries({ queryKey: creditKeys.applications() })
       void queryClient.invalidateQueries({ queryKey: creditKeys.overview() })
+    },
+  })
+}
+
+/**
+ * Положение рубильников продукта.
+ *
+ * `retry: false` и короткий `staleTime`: рубильник дёргает риск-менеджер в
+ * рабочее время, и раздел должен узнать об этом в пределах минуты, а не после
+ * перезагрузки страницы. Повторов нет намеренно — раздел обязан пережить
+ * недоступность модуля, а не висеть на ретраях.
+ */
+export function useCreditSwitches(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: creditKeys.switches(),
+    queryFn: () => creditApi.switches(),
+    staleTime: 30_000,
+    retry: false,
+    enabled: options?.enabled ?? true,
+  })
+}
+
+/**
+ * Показывать ли раздел кредита в CRM.
+ *
+ * Спрашиваем модуль ТОЛЬКО у тех, кто раздел и так видит по правам: иначе
+ * каждый пользователь CRM ходил бы за положением рубильника в чужой сервис,
+ * которым не пользуется.
+ *
+ * **Отвечаем «показывать» на всё, кроме явного `false`.** Ошибка сети, недоступный
+ * модуль, ещё не пришедший ответ — не повод убирать раздел из меню: пропавший
+ * пункт читается как поломка CRM, а не как решение риск-менеджера. Скрываем
+ * только тогда, когда модуль прямо сказал, что раздел выключен.
+ */
+export function useCreditSectionEnabled(canSeeSection: boolean): boolean {
+  const { data } = useCreditSwitches({ enabled: canSeeSection })
+  return data?.switches.crm_section !== false
+}
+
+/** Переключение рубильника. Право `credit.switches.write` — у риск-менеджера. */
+export function useSetCreditSwitch() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ name, payload }: { name: CreditSwitchName; payload: CreditSwitchPayload }) =>
+      creditApi.setSwitch(name, payload),
+    onSuccess: (state) => {
+      // Ответ уже содержит новое положение обоих рубильников — кладём его в
+      // кэш, чтобы экран не мигал старым значением до перезапроса.
+      queryClient.setQueryData(creditKeys.switches(), state)
     },
   })
 }

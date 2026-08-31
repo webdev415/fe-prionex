@@ -18,7 +18,8 @@ import { NotificationBell } from './NotificationBell'
 import { ThemeModeToggle } from './ThemeModeToggle'
 import { PERMISSIONS } from '@/constants/permissions'
 import type { Permission } from '@/constants/permissions'
-import { useHasPermission } from '@/hooks/usePermissions'
+import { useHasPermission, useHasAnyPermission } from '@/hooks/usePermissions'
+import { useCreditSectionEnabled } from '@/features/credit/hooks/useCredit'
 import { SearchResults, type SearchResult } from '@/components/ui/SearchResults'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
@@ -476,6 +477,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const { logout, isImpersonating, impersonatedUser, exitImpersonation } = useAuth()
+
+  // Рубильник раздела кредита. Модуль его ХРАНИТ И ОТДАЁТ, но сам ничего по
+  // нему не запрещает — намеренно: раздел это витрина оператора, а оператор
+  // обслуживает уже выданные кредиты, и закрывать ему API нельзя. Прячет
+  // раздел та сторона, которой он принадлежит, то есть CRM. Вот она.
+  // Спрашиваем только у тех, кто раздел и так видит по правам.
+  const canSeeCreditSection = useHasAnyPermission([
+    PERMISSIONS.CREDIT.APPLICATIONS_VIEW,
+    PERMISSIONS.CREDIT.LOANS_VIEW,
+    PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+  ])
+  const creditSectionEnabled = useCreditSectionEnabled(canSeeCreditSection)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [isExitingImpersonation, setIsExitingImpersonation] = useState(false)
@@ -1147,6 +1160,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       .filter((item) => {
         if (item.disabled) return true
 
+        // Раздел выключен риск-менеджером — пункта в меню нет. Проверка стоит
+        // ДО прав: выключенный раздел скрыт и от того, у кого права есть.
+        if (item.path === '/dashboard/credit' && !creditSectionEnabled) return false
+
         // If item has sub-items, show parent when at least one sub-item is visible
         if (item.subItems) {
           return item.subItems.length > 0
@@ -1168,7 +1185,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     return { navItems: regularItems, bottomNavItems: bottomItems }
     // i18n.language is needed to recalculate navigation items when language changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.permissions, t, i18n.language, legalUnprocessedCount, v3UiEnabled])
+  }, [
+    user?.permissions,
+    t,
+    i18n.language,
+    legalUnprocessedCount,
+    v3UiEnabled,
+    creditSectionEnabled,
+  ])
 
   const { navItems, bottomNavItems } = navItemsResult
   const { toggleSidebar } = useSidebarStore()

@@ -28,6 +28,9 @@ import type {
   CreditParameter,
   CreditProduct,
   CreditQueueItem,
+  CreditSwitchName,
+  CreditSwitchPayload,
+  CreditSwitchState,
   CreditScheduleVersion,
   ManualDecisionPayload,
 } from './types'
@@ -210,6 +213,21 @@ export const creditApi = {
 
   underwritingQueue: (status?: 'pending' | 'in_review' | 'done') =>
     get<CreditPage<CreditQueueItem>>('/underwriting/queue', { status }),
+
+  /**
+   * Положение рубильников и история переключений.
+   *
+   * Читаем именно эту ручку, а не демо-сводку: та отвечает 403 при выключенном
+   * демо-режиме, и раздел, который в бою обязан знать, выключен ли он, узнавал
+   * бы это только на стенде.
+   */
+  switches: () => get<CreditSwitchState>('/admin/switches'),
+
+  /** Переключить рубильник. Право есть только у риск-менеджера. */
+  setSwitch: (name: CreditSwitchName, payload: CreditSwitchPayload) =>
+    post<CreditSwitchState>(`/admin/switches/${name}`, payload, {
+      'Idempotency-Key': idempotencyKey(`fe-switch:${name}`),
+    }),
 
   decide: (applicationId: string, payload: ManualDecisionPayload) =>
     post<CreditDecision>(`/applications/${applicationId}/decision`, payload, {
