@@ -16,6 +16,7 @@ const PHRASES: Record<string, string> = {
   'pages.employeeCard.termination.reasons.personal_desire': 'Personal Desire',
   'pages.employeeCard.chronology.events.feedback_given': 'Feedback — {{kind}}',
   'pages.employeeCard.feedback.types.correction_task': 'Correction task',
+  'pages.employeeCard.feedback.types.praise': 'Praise',
 }
 
 /**
@@ -139,6 +140,20 @@ describe('chronologyLabel', () => {
     )
 
     expect(label).toBe('Feedback — Correction task')
+  })
+
+  /*
+   * Praise and notes reach the timeline too now, not correction tasks alone -
+   * so the lookup has to spell every kind, not just the one it was written
+   * against.
+   */
+  it('spells praise as readily as a correction task', () => {
+    const label = chronologyLabel(
+      event({ event_type: 'feedback_given', payload: { kind: 'praise' } }),
+      t
+    )
+
+    expect(label).toBe('Feedback — Praise')
   })
 
   /*
