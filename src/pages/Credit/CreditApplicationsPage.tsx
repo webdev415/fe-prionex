@@ -116,6 +116,10 @@ export function CreditApplicationsPage() {
   // лентой переходов (коммит модуля 452cc71) и на стенде пока не развёрнуто —
   // колонка включится сама, без правки кода, как только данные придут.
   const hasStep = rows.some((row) => Boolean(row.resume_step))
+  // Время на шаге показываем отдельно от «останнього руху» и НЕ вместо него:
+  // «клиент стоит здесь» и «строку не трогали» — разные факты, и оператор,
+  // привыкший к первому, молча прочитал бы второе как первое.
+  const hasStepTime = rows.some((row) => Boolean(row.step_entered_at))
 
   const columns: Column<ApplicationRow>[] = [
     {
@@ -169,6 +173,30 @@ export function CreditApplicationsPage() {
               ) : (
                 <span className="text-muted-foreground">—</span>
               ),
+          } as Column<ApplicationRow>,
+        ]
+      : []),
+    ...(hasStepTime
+      ? [
+          {
+            key: 'onStep',
+            sortable: true,
+            sortKey: 'step_entered_at',
+            header: t('credit.columns.onStep'),
+            render: (row: ApplicationRow) => {
+              const minutes = idleMinutes(row.step_entered_at ?? undefined, now)
+              if (minutes === null) return <span className="text-muted-foreground text-xs">—</span>
+              // Подстановка времени создания — не измерение. Подписываем её
+              // прямо в ячейке: без подписи «40 дн» читается как «клиент стоит
+              // сорок дней», хотя правда — «ленты переходов тогда не было».
+              const guessed = row.step_entered_at_source === 'created'
+              return (
+                <span className="text-muted-foreground text-xs">
+                  {formatIdle(minutes, t)}
+                  {guessed && <> ({t('credit.idle.sinceCreated')})</>}
+                </span>
+              )
+            },
           } as Column<ApplicationRow>,
         ]
       : []),
