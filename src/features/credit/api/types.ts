@@ -562,11 +562,20 @@ export interface CreditLoanState {
   payments?: CreditPayment[]
 }
 
+/**
+ * Статус позиции очереди ручного разбора.
+ *
+ * Вынесен из `CreditQueueItem` отдельным типом: тем же перечнем ограничен
+ * единственный серверный фильтр очереди, и общий тип не даёт им разойтись —
+ * значение вне перечня модуль встречает 422, а не молчаливым «показал всё».
+ */
+export type CreditQueueStatus = 'pending' | 'in_review' | 'done'
+
 /** Позиция очереди ручного разбора (UnderwritingQueueItem). */
 export interface CreditQueueItem {
   application_id: string
   decision_id?: string
-  status: 'pending' | 'in_review' | 'done'
+  status: CreditQueueStatus
   assigned_to: number | null
   referred_at: string
   requested_amount_minor?: number

@@ -9,6 +9,7 @@ import { creditApi } from '../api/creditApi'
 import type {
   CreditApplicationsParams,
   CreditLoansParams,
+  CreditQueueStatus,
   CreditSwitchName,
   CreditSwitchPayload,
   ManualDecisionPayload,
@@ -54,6 +55,26 @@ export function useCreditApplication(applicationId: string | undefined) {
     queryKey: creditKeys.application(applicationId ?? ''),
     queryFn: () => creditApi.application(applicationId as string),
     enabled: Boolean(applicationId),
+  })
+}
+
+/**
+ * Очередь ручного разбора.
+ *
+ * `status` уходит В ЗАПРОС, а не режет уже полученный список: очередь — это
+ * все referred-решения за всё время, без окна и без границы, и локальный
+ * фильтр показывал бы андеррайтеру подмножество того, что модуль уже успел
+ * прислать. Ручка отдаёт всё одним ответом (`next_cursor` захардкожен `null`),
+ * так что страницы здесь не подключаются — нечего листать.
+ *
+ * `placeholderData` намеренно нет: между «в очереди» и «разобрано» состав
+ * меняется целиком, и придержанный прежний список выглядел бы как ответ на
+ * новый фильтр.
+ */
+export function useCreditUnderwritingQueue(status?: CreditQueueStatus) {
+  return useQuery({
+    queryKey: creditKeys.queue(status),
+    queryFn: () => creditApi.underwritingQueue(status),
   })
 }
 

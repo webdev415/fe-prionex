@@ -78,6 +78,9 @@ const CreditApplicationsPage = lazy(() =>
 const CreditApplicationDetailPage = lazy(() =>
   import('@/pages/Credit').then((m) => ({ default: m.CreditApplicationDetailPage }))
 )
+const CreditUnderwritingQueuePage = lazy(() =>
+  import('@/pages/Credit').then((m) => ({ default: m.CreditUnderwritingQueuePage }))
+)
 const CreditLoansPage = lazy(() =>
   import('@/pages/Credit').then((m) => ({ default: m.CreditLoansPage }))
 )
@@ -362,6 +365,24 @@ export const router = createBrowserRouter([
             mode="any"
           >
             {withSuspense(<CreditApplicationDetailPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        // Очередь ручного разбора — та же выборка заявок, что и список, только
+        // отобранная по решению «referred». Право то же, что у списка заявок
+        // (`credit.applications.read`): очередь читают все три операторские
+        // роли модуля, отдельной проверки на фронте быть не должно.
+        path: 'credit/underwriting',
+        element: (
+          <PermissionRoute
+            requiredPermissions={[
+              PERMISSIONS.CREDIT.APPLICATIONS_VIEW,
+              PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+            ]}
+            mode="any"
+          >
+            {withSuspense(<CreditUnderwritingQueuePage />)}
           </PermissionRoute>
         ),
       },

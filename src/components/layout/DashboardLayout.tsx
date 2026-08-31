@@ -897,6 +897,19 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             mode: 'any' as const,
           },
           {
+            // Рядом с «Заявками» и сразу после них: это подмножество тех же
+            // заявок, отобранное по решению «ручной разбор», и оператор ищет
+            // его там же, где список.
+            path: '/dashboard/credit/underwriting',
+            label: t('navigation.creditUnderwriting', 'Manual review queue'),
+            icon: 'work',
+            requiredPermissions: [
+              PERMISSIONS.CREDIT.APPLICATIONS_VIEW,
+              PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+            ],
+            mode: 'any' as const,
+          },
+          {
             path: '/dashboard/credit/loans',
             label: t('navigation.creditLoans', 'Loans'),
             icon: 'transaction-history',
