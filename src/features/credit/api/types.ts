@@ -650,3 +650,44 @@ export interface CreditParameter {
   description: string | null
   updated_at: string
 }
+
+/* ─── Рубильники продукта ──────────────────────────────────────────────── */
+
+/**
+ * Три независимых рубильника модуля.
+ *
+ * Доменное правило одно и оно денежное: **выключение = запрет НОВОГО**.
+ * Обслуживание выданных кредитов не останавливается никогда — платежи
+ * принимаются, график и документы отдаются, двухдневное право на отказ
+ * действует. Иначе клиента наказывают за наш рубильник: платить он не может,
+ * а проценты идут.
+ *
+ * `crm_section` модуль ХРАНИТ И ОТДАЁТ, но сам по нему ничего не запрещает:
+ * раздел в CRM — витрина оператора, а оператор обслуживает выданные кредиты.
+ * Скрывает раздел та сторона, которой он принадлежит, — то есть мы.
+ */
+export type CreditSwitchName = 'applications_intake' | 'client_cabinet' | 'crm_section'
+
+export type CreditSwitches = Record<CreditSwitchName, boolean>
+
+/** Строка истории переключений. Она же аудит: отдельного журнала нет намеренно. */
+export interface CreditSwitchChange {
+  switch: CreditSwitchName
+  enabled: boolean
+  /** Роль оператора (этап 1); идентификатор из JWT появится с WS-20. */
+  actor: string
+  reason: string | null
+  occurred_at: string
+}
+
+export interface CreditSwitchState {
+  switches: CreditSwitches
+  /** Новые сверху. */
+  history: CreditSwitchChange[]
+}
+
+/** Тело переключения. `reason` не обязателен контрактом, но обязателен по делу. */
+export interface CreditSwitchPayload {
+  enabled: boolean
+  reason?: string | null
+}

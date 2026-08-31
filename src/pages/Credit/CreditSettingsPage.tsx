@@ -14,9 +14,10 @@ import { useCreditOverview } from '@/features/credit/hooks/useCredit'
 import { CreditProductsSection } from './components/CreditProductsSection'
 import { CreditParametersSection } from './components/CreditParametersSection'
 import { CreditIntegrationsSection } from './components/CreditIntegrationsSection'
+import { CreditSwitchesSection } from './components/CreditSwitchesSection'
 import { CreditStandBanner } from './components/CreditStandBanner'
 
-type SettingsTab = 'products' | 'parameters' | 'integrations'
+type SettingsTab = 'products' | 'parameters' | 'integrations' | 'switches'
 
 export function CreditSettingsPage() {
   const { t } = useTranslation('common')
@@ -28,11 +29,18 @@ export function CreditSettingsPage() {
   // с сервера (403), даже если кто-то откроет вкладку напрямую по ссылке.
   const canReadProducts = Boolean(overview?.permissions.includes('credit.products.read'))
   const canReadParameters = Boolean(overview?.permissions.includes('credit.parameters.read'))
+  const canReadSwitches = Boolean(overview?.permissions.includes('credit.switches.read'))
 
   const tabs = [
     { id: 'products' as const, label: t('credit.settings.tabs.products') },
     { id: 'parameters' as const, label: t('credit.settings.tabs.parameters') },
     { id: 'integrations' as const, label: t('credit.settings.tabs.integrations') },
+    // Рубильники видят все операторские роли: оператор обязан понимать,
+    // почему нет новых заявок. Переключает только риск-менеджер — это решает
+    // право `credit.switches.write` внутри самой секции.
+    ...(canReadSwitches
+      ? [{ id: 'switches' as const, label: t('credit.settings.tabs.switches') }]
+      : []),
   ]
 
   const current = (tabs.find((item) => item.id === tab)?.id ?? 'products') as SettingsTab
@@ -67,6 +75,7 @@ export function CreditSettingsPage() {
               <CreditIntegrationsSection overview={overview} />
             </div>
           )}
+          {current === 'switches' && <CreditSwitchesSection overview={overview} />}
         </div>
       </div>
     </TooltipProvider>
