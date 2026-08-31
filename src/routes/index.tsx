@@ -75,6 +75,21 @@ const PaymentHistoryPage = lazy(() =>
     default: m.PaymentHistoryPage,
   }))
 )
+const CreditApplicationsPage = lazy(() =>
+  import('@/pages/Credit').then((m) => ({ default: m.CreditApplicationsPage }))
+)
+const CreditApplicationDetailPage = lazy(() =>
+  import('@/pages/Credit').then((m) => ({ default: m.CreditApplicationDetailPage }))
+)
+const CreditLoansPage = lazy(() =>
+  import('@/pages/Credit').then((m) => ({ default: m.CreditLoansPage }))
+)
+const CreditLoanDetailPage = lazy(() =>
+  import('@/pages/Credit').then((m) => ({ default: m.CreditLoanDetailPage }))
+)
+const CreditSettingsPage = lazy(() =>
+  import('@/pages/Credit').then((m) => ({ default: m.CreditSettingsPage }))
+)
 const SmsTemplatesPage = lazy(() =>
   import('@/pages/SmsTemplates').then((m) => ({
     default: m.SmsTemplatesPage,
@@ -314,6 +329,88 @@ export const router = createBrowserRouter([
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.USERS.VIEW}>
             {withSuspense(<UserManagementPage />)}
+          </PermissionRoute>
+        ),
+      },
+      // Кредитный модуль — отдельный сервис (credit-service) за собственным
+      // API. Права credit.* появятся в auth-service вместе с ролями WS-20;
+      // до тех пор раздел доступен и по системному праву, иначе его не увидит
+      // никто, включая администратора, который его и принимает.
+      {
+        path: 'credit',
+        element: <Navigate to="/dashboard/credit/applications" replace />,
+      },
+      {
+        path: 'credit/applications',
+        element: (
+          <PermissionRoute
+            requiredPermissions={[
+              PERMISSIONS.CREDIT.APPLICATIONS_VIEW,
+              PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+            ]}
+            mode="any"
+          >
+            {withSuspense(<CreditApplicationsPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'credit/applications/:applicationId',
+        element: (
+          <PermissionRoute
+            requiredPermissions={[
+              PERMISSIONS.CREDIT.APPLICATIONS_VIEW,
+              PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+            ]}
+            mode="any"
+          >
+            {withSuspense(<CreditApplicationDetailPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'credit/loans',
+        element: (
+          <PermissionRoute
+            requiredPermissions={[
+              PERMISSIONS.CREDIT.LOANS_VIEW,
+              PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+            ]}
+            mode="any"
+          >
+            {withSuspense(<CreditLoansPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        // Настройки модуля: продукты и параметры — риск-менеджеру, интеграции
+        // видны всем, кто имеет доступ к разделу (там нет данных клиентов).
+        path: 'credit/settings',
+        element: (
+          <PermissionRoute
+            requiredPermissions={[
+              PERMISSIONS.CREDIT.PARAMETERS_VIEW,
+              PERMISSIONS.CREDIT.PRODUCTS_VIEW,
+              PERMISSIONS.CREDIT.APPLICATIONS_VIEW,
+              PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+            ]}
+            mode="any"
+          >
+            {withSuspense(<CreditSettingsPage />)}
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'credit/loans/:loanId',
+        element: (
+          <PermissionRoute
+            requiredPermissions={[
+              PERMISSIONS.CREDIT.LOANS_VIEW,
+              PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+            ]}
+            mode="any"
+          >
+            {withSuspense(<CreditLoanDetailPage />)}
           </PermissionRoute>
         ),
       },

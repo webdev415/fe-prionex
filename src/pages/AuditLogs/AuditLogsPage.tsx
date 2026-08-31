@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { SearchFiltersBar } from './components/SearchFiltersBar'
 import { AuditLogDetailModal } from './components/AuditLogDetailModal'
+import { summarizeDetails } from './summarizeDetails'
 import { CSVExportDialog, type CSVExportOptions } from './components/CSVExportDialog'
 import {
   AuditLogsPageSkeleton,
@@ -69,6 +70,10 @@ export interface AuditLog {
   project_id?: number
   // For detail modal - changes array
   changes?: AuditLogChange[]
+  // For detail modal - free-form payload. Events that record an action rather
+  // than a field edit (credit lookups, gateway callbacks, exports) send this
+  // instead of `changes`, and the modal rendered nothing at all for them.
+  details?: Record<string, unknown>
   // Request information
   http_method?: string // PUT, POST, GET, etc.
   api_path?: string // /api/clients/5678
@@ -376,6 +381,10 @@ export function AuditLogsPage() {
       session_id: log.session_id ?? undefined,
       project_id: log.project_id ?? undefined,
       changes: changes.length > 0 ? changes : undefined,
+      details:
+        log.details && Object.keys(log.details).length > 0
+          ? (log.details as Record<string, unknown>)
+          : undefined,
       http_method: log.request_method ?? undefined,
       api_path: log.request_path ?? undefined,
       response_status: log.response_status
@@ -532,7 +541,10 @@ export function AuditLogsPage() {
       ) {
         return log.reason
       }
-      return log.reason || '—'
+      // Events that carry a details payload instead of a reason: credit
+      // lookups, gateway callbacks, exports. Without this they all showed
+      // an em dash while the data sat unused in the response.
+      return log.reason || summarizeDetails(log.details) || '—'
     },
     [formatCurrency]
   )

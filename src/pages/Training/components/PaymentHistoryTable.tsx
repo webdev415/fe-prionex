@@ -8,6 +8,7 @@ import {
   SelectValue,
 } from '@/components/ui/Select'
 import { DataTable, type Column } from '@/components/ui/DataTable'
+import { easypayMethodSuffix } from '@/features/payments/utils'
 import { formatDateTime, formatDate } from '@/lib/formatters'
 import { formatMoneyAmount } from '@/lib/localeFormat'
 import type { PaymentMonitoringItem, PaymentMonitoringSort } from '@/features/training'
@@ -136,7 +137,11 @@ export function PaymentHistoryTable({ data, userTimezone, sort, onSortChange }: 
         const cls = METHOD_BADGE[r.payment_method] ?? 'bg-gray-100 text-gray-600'
         return (
           <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}>
-            {t(`pages.training.filters.paymentMethods.${r.payment_method}`, r.payment_method)}
+            {easypayMethodSuffix(
+              t(`pages.training.filters.paymentMethods.${r.payment_method}`, r.payment_method),
+              r.easypay_method,
+              t
+            )}
           </span>
         )
       },
