@@ -11667,6 +11667,16 @@
     "unavailable": {
       "title": "The credit module is not deployed on this stand",
       "hint": "The section is in place, but the credit service is not routed here yet: on stage 1 it runs outside Kong. Locally it is served on localhost:8020; on the dev server the route /api/v1/credit will appear together with the module deployment."
+    },
+    "standKey": {
+      "title": "Stand service key",
+      "where": "Ask DevOps for INTERNAL_API_KEY of the credit module on this stand (deploy/.env on the server), and paste it here.",
+      "lifetime": "The key lives until this tab is closed — being asked again after reopening the tab is normal, not a fault.",
+      "placeholder": "X-Internal-Api-Key",
+      "save": "Save key",
+      "clear": "Clear",
+      "present": "A key is saved for this tab.",
+      "absent": "No key saved: the module answers 401."
     }
   }
 }
