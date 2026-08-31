@@ -29,6 +29,7 @@ import type {
   CreditParameter,
   CreditProduct,
   CreditQueueItem,
+  CreditQueueStatus,
   CreditSwitchName,
   CreditSwitchPayload,
   CreditSwitchState,
@@ -223,7 +224,17 @@ export const creditApi = {
   applicationDocuments: (applicationId: string) =>
     get<CreditPage<CreditDocumentMeta>>(`/applications/${applicationId}/documents`),
 
-  underwritingQueue: (status?: 'pending' | 'in_review' | 'done') =>
+  /**
+   * Очередь ручного разбора.
+   *
+   * Кроме `status` ручка не принимает НИЧЕГО: `limit`, `cursor` и `sort` в её
+   * сигнатуре отсутствуют и молча отбрасываются FastAPI (проверено живьём
+   * 31.08.2026: `?limit=5` и `?sort=bogus` — оба 200 и все 31 строка, тогда
+   * как `/applications?sort=bogus` честно отвечает 422). Поэтому здесь не
+   * появляется параметров «на будущее»: объявленный параметр, который сервер
+   * игнорирует, читается вызывающим как работающий.
+   */
+  underwritingQueue: (status?: CreditQueueStatus) =>
     get<CreditPage<CreditQueueItem>>('/underwriting/queue', { status }),
 
   /**

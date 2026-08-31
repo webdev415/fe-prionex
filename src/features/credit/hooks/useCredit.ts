@@ -10,6 +10,7 @@ import { creditApi, newIdempotencyKey } from '../api/creditApi'
 import type {
   CreditApplicationsParams,
   CreditLoansParams,
+  CreditQueueStatus,
   CreditSwitchName,
   CreditSwitchPayload,
   ManualDecisionPayload,
@@ -55,6 +56,26 @@ export function useCreditApplication(applicationId: string | undefined) {
     queryKey: creditKeys.application(applicationId ?? ''),
     queryFn: () => creditApi.application(applicationId as string),
     enabled: Boolean(applicationId),
+  })
+}
+
+/**
+ * Очередь ручного разбора.
+ *
+ * `status` уходит В ЗАПРОС, а не режет уже полученный список: очередь — это
+ * все referred-решения за всё время, без окна и без границы, и локальный
+ * фильтр показывал бы андеррайтеру подмножество того, что модуль уже успел
+ * прислать. Ручка отдаёт всё одним ответом (`next_cursor` захардкожен `null`),
+ * так что страницы здесь не подключаются — нечего листать.
+ *
+ * `placeholderData` намеренно нет: между «в очереди» и «разобрано» состав
+ * меняется целиком, и придержанный прежний список выглядел бы как ответ на
+ * новый фильтр.
+ */
+export function useCreditUnderwritingQueue(status?: CreditQueueStatus) {
+  return useQuery({
+    queryKey: creditKeys.queue(status),
+    queryFn: () => creditApi.underwritingQueue(status),
   })
 }
 
@@ -224,20 +245,32 @@ export function useSetCreditSwitch() {
    * включил → снова выключил с той же причиной) — новое действие, и реплей
    * старого ответа сделал бы рубильник «залипшим».
    */
-  const attempt = useRef<{ signature: string; key: string } | null>(null)
+  // КАРТА по имени рубильника, а не одна ячейка. Один вызов хука обслуживает
+  // все три переключателя сразу, и одной ячейки хватало ровно до такого
+  // сценария: A отказал → человек тронул B → повторил A. Ячейка к этому
+  // моменту принадлежит B, повтор A уходит с НОВЫМ ключом, и модуль пишет
+  // вторую строку в append-only историю о переключении, которого не было.
+  // История — весь наш аудит рубильников, дубли в ней и есть то, ради чего
+  // ключ заводился.
+  const attempts = useRef(new Map<CreditSwitchName, { signature: string; key: string }>())
 
   return useMutation({
     mutationFn: ({ name, payload }: { name: CreditSwitchName; payload: CreditSwitchPayload }) => {
       // `?? null`, а не `?? ''`: пустая причина и её отсутствие дают разные
       // тела запроса, значит и разные отпечатки на стороне модуля.
       const signature = JSON.stringify([name, payload.enabled, payload.reason ?? null])
-      if (attempt.current?.signature !== signature) {
-        attempt.current = { signature, key: newIdempotencyKey(`fe-switch:${name}`) }
-      }
-      return creditApi.setSwitch(name, payload, attempt.current.key)
+      const previous = attempts.current.get(name)
+      const attempt =
+        previous?.signature === signature
+          ? previous
+          : { signature, key: newIdempotencyKey(`fe-switch:${name}`) }
+      attempts.current.set(name, attempt)
+      return creditApi.setSwitch(name, payload, attempt.key)
     },
-    onSuccess: (state) => {
-      attempt.current = null
+    onSuccess: (state, variables) => {
+      // Сбрасываем ключ ТОЛЬКО того рубильника, что переключили: соседний мог
+      // в этот момент ждать своего повтора.
+      attempts.current.delete(variables.name)
       // Ответ уже содержит новое положение обоих рубильников — кладём его в
       // кэш, чтобы экран не мигал старым значением до перезапроса.
       queryClient.setQueryData(creditKeys.switches(), state)
