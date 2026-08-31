@@ -1,15 +1,16 @@
 name: mirror-github
 
 # GitHub — РЕЗЕРВНАЯ копия (решение CEO 31.08.2026): источник правды — этот Forgejo.
-# Каждый пуш в интеграционные ветки и теги досылается на GitHub ТОЛЬКО fast-forward:
+# До дня переключения зеркалится ТОЛЬКО development: на GitHub в main стоит CD с
+# автодеплоем прода, и зеркало main запустило бы его мимо PRE-PROD. main и теги —
+# после отключения GitHub Actions. Пуш на GitHub ТОЛЬКО fast-forward:
 # без --force. Если GitHub разошёлся (кто-то запушил туда напрямую) — job краснеет,
 # ничего не перетирается; разбирать руками. Секрет GH_MIRROR_TOKEN — репо-уровень
 # (имя GITHUB_* Forgejo не принимает).
 
 on:
   push:
-    branches: [main, development]
-    tags: ['*']
+    branches: [development]
 
 concurrency:
   group: mirror-github-${{ github.ref }}
