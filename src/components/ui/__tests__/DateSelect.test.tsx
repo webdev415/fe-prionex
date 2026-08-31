@@ -589,22 +589,16 @@ describe('DateSelect (selected time slot keeps its selected look) — KAN-992', 
  * again, one grid over.
  */
 describe('DateSelect (a blocked "today" still reads as blocked)', () => {
-  // 🔴 The clock is pinned, and it has to be. Both tests below reason about
-  // where ``today`` sits relative to a ``min`` one day away, and react-datepicker
-  // opens on ``min``'s month when there is no value. Run for real on the LAST DAY
-  // OF A MONTH, ``min`` lands in the next month, the calendar opens there, and
-  // today renders as ``--outside-month`` — a rule that outscores ``--disabled``
-  // and wins the cascade, so the first test failed its selector assertion on
-  // 2026-08-31 while passing every other day of that month. The component was
-  // never wrong; the test was reading a cell the calendar had moved.
-  //
-  // Only ``Date`` is mocked — `vi.setSystemTime` without `vi.useFakeTimers()`
-  // leaves real timers alone, which `userEvent`'s internal delays need.
-  // Mid-month so neither ±1 day crosses a boundary.
+  // These tests build dates relative to the REAL today, and that made them
+  // month-boundary flaky: on the last day of a month "tomorrow" lands in the
+  // next month, the calendar opens there, and today's cell renders as
+  // ``--outside-month`` instead of ``--disabled`` (first observed 31.08).
+  // Pin the clock to a mid-month day; only Date is faked — real timers keep
+  // userEvent working without an advanceTimers shim.
   beforeEach(() => {
-    vi.setSystemTime(new Date(2026, 7, 12, 10, 0, 0))
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 7, 5, 12, 0))
   })
-
   afterEach(() => {
     vi.useRealTimers()
   })

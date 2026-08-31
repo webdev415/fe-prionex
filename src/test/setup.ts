@@ -86,6 +86,16 @@ const installNetworkBlock = () => {
 installNetworkBlock()
 beforeEach(installNetworkBlock)
 
+// jsdom's URL persists across tests within a file. Pages that mirror state into
+// the address bar (AiAssistant deep-link ?conversation=, tabs with
+// useSearchParams) would otherwise leak query params from one test into the
+// mount of the next — e.g. a hydrated dialog id resurfacing as a deep-link in a
+// test that expects a pristine page. Reset to a bare path before every test; a
+// test that needs its own URL sets it after this hook runs.
+beforeEach(() => {
+  window.history.replaceState(null, '', window.location.pathname)
+})
+
 // Suppress console warnings in tests
 const originalError = console.error
 const originalWarn = console.warn
