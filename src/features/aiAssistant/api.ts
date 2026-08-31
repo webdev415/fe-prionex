@@ -3,6 +3,7 @@ import type { ChatAttachmentPayload } from './attachments'
 import {
   consumeSseStream,
   type AssistantCitation,
+  type AssistantExpertUsage,
   type AssistantSources,
   type AssistantToolEnd,
   type AssistantToolStart,
@@ -21,6 +22,19 @@ export type AssistantOutputFormat = 'text' | 'tableFirst' | 'mixed'
  * unavailable (503) — callers then fall back to `fast`.
  */
 export type AssistantMode = 'fast' | 'thinking'
+
+/**
+ * Экспертный ход: вопрос уходит НЕ на наш бокс, а во внешний сервис (Claude от
+ * Anthropic) — на наших данных. Доступен только руководителю; у оператора
+ * пункта меню нет вовсе (см. {@link getAssistantCapabilities}).
+ *
+ * `model` намеренно строка, а не объединение литералов: список моделей приходит
+ * с бэкенда (`capabilities.models`), и добавление новой модели там не должно
+ * требовать релиза фронта.
+ */
+export interface AssistantExpertRequest {
+  model: string
+}
 
 export interface AssistantChatRequest {
   /** May be empty when an `audio` attachment carries the message (PR #638). */
@@ -41,6 +55,12 @@ export interface AssistantChatRequest {
    * note; at most {@link MAX_ATTACHMENTS} in total.
    */
   attachments?: ChatAttachmentPayload[]
+  /**
+   * Экспертный ход через внешний Claude. Поле шлётся ТОЛЬКО когда руководитель
+   * выбрал экспертный режим и бэкенд подтвердил доступ; обычный ход уходит без
+   * него, как раньше.
+   */
+  expert?: AssistantExpertRequest
 }
 
 export interface AssistantToolCall {
@@ -56,6 +76,11 @@ export interface AssistantChatResponse {
   tool_calls: AssistantToolCall[]
   /** Per-fact citations streamed in the `citations` frame (empty if none). */
   citations?: AssistantCitation[]
+  /**
+   * Расход экспертного хода (модель + стоимость + токены) — блок `expert` в
+   * `done`. Есть только у экспертных ходов; обычный возвращает `undefined`.
+   */
+  expert?: AssistantExpertUsage
 }
 
 export interface AssistantConversationSummary {
@@ -146,6 +171,8 @@ export interface SendChatMessageCallbacks {
   onFollowups?: (questions: string[]) => void
   onToolStart?: (tool: AssistantToolStart) => void
   onToolEnd?: (tool: AssistantToolEnd) => void
+  /** Расход экспертного хода (блок `expert` в `done`) — модель, деньги, токены. */
+  onExpert?: (usage: AssistantExpertUsage) => void
   onError?: (error: SseErrorPayload) => void
   onDone?: (payload: SseDonePayload) => void
 }
@@ -274,6 +301,7 @@ export async function sendChatMessage(
   let conversationId = payload.conversation_id ?? 0
   const toolCalls: AssistantToolCall[] = []
   let citations: AssistantCitation[] = []
+  let expert: AssistantExpertUsage | undefined
   let streamError: SseErrorPayload | null = null
 
   const applySessionId = (value: number | string | undefined) => {
@@ -285,6 +313,14 @@ export async function sendChatMessage(
   }
 
   const outcome = await consumeSseStream(response.body, {
+    // CRM `meta` — авторитетный id строки диалога. Читать его ОБЯЗАТЕЛЬНО:
+    // `session.session_id` ниже приходит от «мозга» и содержит его внутренний
+    // ключ (hex-строка вида `06a76d1f72744d79`), а не id записи. Number() от
+    // такой строки — NaN, поэтому id оставался 0, следующий ход уходил с
+    // `conversation_id: 0`, прокси такой диалог не находил и отвечал 404
+    // «Асистент зараз недоступний» (живой баг прода 20.08.2026: воспроизводился
+    // на ЛЮБОМ втором сообщении и при клике по кнопке-уточнению).
+    onMeta: (meta) => applySessionId(meta.conversation_id),
     onSession: (session) => {
       applySessionId(session.session_id)
       callbacks.onSession?.(session)
@@ -313,6 +349,10 @@ export async function sendChatMessage(
       if (pending) pending.success = tool.ok
       callbacks.onToolEnd?.(tool)
     },
+    onExpert: (usage) => {
+      expert = usage
+      callbacks.onExpert?.(usage)
+    },
     onError: (error) => {
       streamError = error
       callbacks.onError?.(error)
@@ -337,7 +377,127 @@ export async function sendChatMessage(
     coverage_flag: null,
     tool_calls: toolCalls,
     citations,
+    expert,
   }
+}
+
+/* -------------------------------------------------------------------------
+ * Экспертный режим: что доступно этому сотруднику
+ * ------------------------------------------------------------------------- */
+
+/**
+ * Разрешения и бюджет экспертного режима для текущего сотрудника.
+ *
+ * `enabled` — включён ли режим вообще (флаг на бэкенде), `allowed` — можно ли
+ * ИМЕННО этому пользователю (роль). Пункт меню показывается только когда обе
+ * истинны: у оператора его быть не должно вовсе.
+ *
+ * `dailyLimitUsd` / `spentTodayUsd` — `null`, когда бэкенд их не прислал (или
+ * прислал мусор): счётчик остатка тогда просто не рисуем, а не показываем «$0».
+ */
+/**
+ * Машинный код причины отказа (`reason_code`). Приходит парой с текстом
+ * `reason` и только при `allowed=false`.
+ *
+ * Прятать пункт правильно лишь при `role`/`disabled`; при `limit` и
+ * `unavailable` он обязан остаться на виду с объяснением — иначе у
+ * руководителя, исчерпавшего дневной бюджет, режим молча исчезает.
+ *
+ * Тип намеренно шире четырёх известных значений: новый код на бэкенде не
+ * должен ломать сборку, а трактуется он консервативно — как «прятать».
+ */
+export type AssistantExpertReasonCode = 'role' | 'limit' | 'unavailable' | 'disabled'
+
+export interface AssistantExpertCapability {
+  enabled: boolean
+  allowed: boolean
+  /** Модели, которые бэкенд готов принять в `expert.model` (порядок сохраняем). */
+  models: string[]
+  dailyLimitUsd: number | null
+  spentTodayUsd: number | null
+  /** Текст причины отказа для человека (украинский); `null` при `allowed=true`. */
+  reason: string | null
+  /** Код причины отказа для кода; `null` при `allowed=true` или у старого бэкенда. */
+  reasonCode: AssistantExpertReasonCode | string | null
+}
+
+/**
+ * Причины, при которых пункт остаётся видимым (погашенным) с объяснением.
+ * Всё остальное — включая незнакомый код — прячем: показать пункт, смысла
+ * которого мы не понимаем, хуже, чем не показать.
+ */
+export const SOFT_DENIED_REASON_CODES: readonly string[] = ['limit', 'unavailable']
+
+export interface AssistantCapabilities {
+  expert: AssistantExpertCapability
+}
+
+/** Экспертный режим выключен — безопасный ответ на любой отказ/мусор. */
+export const EXPERT_CAPABILITY_OFF: AssistantExpertCapability = {
+  enabled: false,
+  allowed: false,
+  models: [],
+  dailyLimitUsd: null,
+  spentTodayUsd: null,
+  reason: null,
+  reasonCode: null,
+}
+
+/** Деньги из ответа: число (или числовая строка) ≥ 0, иначе «поля нет». */
+function normalizeUsdAmount(value: unknown): number | null {
+  const amount = typeof value === 'string' ? Number(value) : value
+  return typeof amount === 'number' && Number.isFinite(amount) && amount >= 0 ? amount : null
+}
+
+/**
+ * Привести ответ `GET /capabilities` к {@link AssistantCapabilities}.
+ *
+ * Разбор намеренно недоверчивый: доступ к платному внешнему сервису включается
+ * ТОЛЬКО явным `true` в обоих флагах и непустым списком моделей. Любая другая
+ * форма ответа (старый бэкенд без этого раздела, `null`, строка «true», пустой
+ * `models`) означает «режима нет» — пункт меню не появляется, а не появляется
+ * сломанным.
+ *
+ * Ключ раздела читается и как `expert_mode` (контракт), и как `expert` — чтобы
+ * расхождение в имени не выглядело как «фронт не показывает пункт».
+ */
+export function normalizeCapabilities(payload: unknown): AssistantCapabilities {
+  const root = (payload ?? {}) as Record<string, unknown>
+  const raw = (root.expert_mode ?? root.expert) as Record<string, unknown> | undefined
+  if (!raw || typeof raw !== 'object') return { expert: EXPERT_CAPABILITY_OFF }
+
+  const models = Array.isArray(raw.models)
+    ? raw.models.filter(
+        (model): model is string => typeof model === 'string' && model.trim() !== ''
+      )
+    : []
+
+  const cleanText = (value: unknown): string | null =>
+    typeof value === 'string' && value.trim() ? value.trim() : null
+
+  return {
+    expert: {
+      enabled: raw.enabled === true,
+      allowed: raw.allowed === true,
+      models,
+      dailyLimitUsd: normalizeUsdAmount(raw.daily_limit_usd),
+      spentTodayUsd: normalizeUsdAmount(raw.spent_today_usd),
+      reason: cleanText(raw.reason),
+      reasonCode: cleanText(raw.reason_code),
+    },
+  }
+}
+
+/**
+ * `GET /capabilities` — что доступно сотруднику в окне ассистента.
+ *
+ * Отказ (403/404 у бэкенда без этого маршрута, сеть) обрабатывает вызывающий
+ * хук: экран ассистента обязан работать и без capabilities — просто без
+ * экспертного пункта.
+ */
+export async function getAssistantCapabilities(): Promise<AssistantCapabilities> {
+  const response = await api.get<unknown>(`${BASE}/capabilities`)
+  return normalizeCapabilities(response.data)
 }
 
 export async function getConversations(
@@ -399,4 +559,146 @@ export async function markCitationStep({
   verdict,
 }: AssistantMarkCitationRequest): Promise<void> {
   await api.post(`${BASE}/messages/${message_id}/step-mark`, { citation_id, verdict })
+}
+
+/* -------------------------------------------------------------------------
+ * Персональная память ассистента («Персоналізація»)
+ * ------------------------------------------------------------------------- */
+
+/**
+ * Происхождение факта памяти:
+ * `user` — сотрудник добавил руками, `agent` — мозг вывел из диалога,
+ * `seed`/`profile` — наблюдение, засеянное при инициализации памяти,
+ * `consolidated` — сводный факт, которым мозг схлопнул несколько похожих
+ * записей при вытеснении по потолку.
+ */
+export type AssistantMemorySource = 'user' | 'agent' | 'seed' | 'profile' | 'consolidated'
+
+/**
+ * Факт, который ассистент помнит о сотруднике. Влияет на ответы, поэтому
+ * оператор обязан видеть список целиком и уметь удалить лишнее.
+ *
+ * `source` намеренно шире {@link AssistantMemorySource}: бэкенд заводит новые
+ * виды раньше фронта, и неизвестное значение должно давать нейтральный бейдж,
+ * а не ломать рендер строки.
+ */
+export interface AssistantMemoryItem {
+  id: number
+  kind: string
+  /** Подзаголовок; у старых записей может быть пустым. */
+  title: string | null
+  content: string
+  source: AssistantMemorySource | string
+  created_at: string
+}
+
+export interface AssistantMemoryList {
+  items: AssistantMemoryItem[]
+  total: number
+  /**
+   * Потолок активных записей скоупа. `null` — потолка нет: либо он выключен на
+   * мозге, либо бэкенд ещё старый и поля не присылает. Для UI оба случая
+   * означают одно — счётчик не рисуем.
+   */
+  limit: number | null
+}
+
+/**
+ * Привести потолок из ответа к `number | null`.
+ *
+ * Потолком считается только положительное конечное число: `null`, отсутствие
+ * поля и мусор одинаково означают «предела нет». Один разбор на оба экрана —
+ * пользовательский список и админскую сводку по скоупам.
+ */
+export function normalizeMemoryLimit(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null
+}
+
+/**
+ * Привести ответ списка к {@link AssistantMemoryList}.
+ *
+ * Контракт — конверт `{items, total, limit}`, но урок `citations` повторять не
+ * хочется: голый массив (или пустое тело) от промежуточной версии бэкенда не
+ * должен ронять панель на `.map is not a function`, а отсутствующий `limit` —
+ * прятать список за счётчиком, которого нет.
+ */
+export function normalizeMemoryList(payload: unknown): AssistantMemoryList {
+  if (Array.isArray(payload)) {
+    return { items: payload as AssistantMemoryItem[], total: payload.length, limit: null }
+  }
+  const items = (payload as { items?: unknown } | null)?.items
+  if (!Array.isArray(items)) return { items: [], total: 0, limit: null }
+  const total = (payload as { total?: unknown }).total
+  return {
+    items: items as AssistantMemoryItem[],
+    total: typeof total === 'number' ? total : items.length,
+    limit: normalizeMemoryLimit((payload as { limit?: unknown }).limit),
+  }
+}
+
+/** `GET /memory` — вся память текущего сотрудника (скоуп берётся из JWT). */
+export async function getMemoryItems(): Promise<AssistantMemoryList> {
+  const response = await api.get<unknown>(`${BASE}/memory`)
+  return normalizeMemoryList(response.data)
+}
+
+export interface CreateAssistantMemoryRequest {
+  title: string
+  content: string
+}
+
+/**
+ * `POST /memory` — добавить факт руками.
+ *
+ * Отказы, которые обязан прочитать оператор: **409** — похожая запись уже есть,
+ * **422** — пусто либо персональные данные. Текст лежит в `detail`; достаётся
+ * через {@link extractErrorDetail} (см. {@link classifyMemoryError}).
+ *
+ * Ответ — конверт `{item}`; голый объект тоже принимается по тем же
+ * соображениям, что и в {@link normalizeMemoryList}.
+ */
+export async function createMemoryItem(
+  payload: CreateAssistantMemoryRequest
+): Promise<AssistantMemoryItem> {
+  const response = await api.post<{ item?: AssistantMemoryItem } | AssistantMemoryItem>(
+    `${BASE}/memory`,
+    payload
+  )
+  const body = response.data as { item?: AssistantMemoryItem }
+  return body?.item ?? (response.data as AssistantMemoryItem)
+}
+
+/** `DELETE /memory/{id}` — убрать факт из памяти ассистента. */
+export async function deleteMemoryItem(id: number): Promise<void> {
+  await api.delete(`${BASE}/memory/${id}`)
+}
+
+/** Классы отказов при добавлении факта — на каждый своя формулировка в UI. */
+export type AssistantMemoryErrorKind = 'duplicate' | 'validation' | 'forbidden' | 'unknown'
+
+export interface AssistantMemoryError {
+  kind: AssistantMemoryErrorKind
+  /** Текст сервера — есть у `duplicate`/`validation`, где он несёт причину. */
+  message?: string
+}
+
+/**
+ * Разобрать отказ `POST /memory`.
+ *
+ * 409 и 422 нельзя схлопывать в общее «что-то пошло не так»: в первом случае
+ * оператор должен понять, что факт уже записан, во втором — что именно сервер
+ * забраковал (PII), и переписать текст.
+ */
+export function classifyMemoryError(error: unknown): AssistantMemoryError {
+  const response =
+    error && typeof error === 'object' && 'response' in error
+      ? (error as { response?: { status?: unknown; data?: unknown } }).response
+      : undefined
+  const status = typeof response?.status === 'number' ? response.status : undefined
+  const { message } = extractErrorDetail(response?.data)
+
+  if (status === 409) return { kind: 'duplicate', message }
+  if (status === 422 || status === 400) return { kind: 'validation', message }
+  if (status === 403) return { kind: 'forbidden' }
+  return { kind: 'unknown' }
 }

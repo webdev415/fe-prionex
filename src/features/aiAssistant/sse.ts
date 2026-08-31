@@ -106,8 +106,23 @@ export function parseSseChunk(text: string): SseFrame[] {
   return [...parser.push(text), ...parser.flush()]
 }
 
+/** CRM-side frame: the id of the dialog row this stream is persisted into. */
+export interface SseMetaPayload {
+  conversation_id?: number
+}
+
 /** Callbacks invoked as the assistant stream is consumed. */
 export interface SseStreamCallbacks {
+  /**
+   * CRM `meta` frame — the ONLY authoritative source of `conversation_id`.
+   *
+   * The brain's own `session` frame carries its internal gw key (a hex string
+   * like `06a76d1f72744d79`), NOT a row id: parsing it as a number yields NaN,
+   * the front keeps `conversation_id = 0`, and the next turn 404s with
+   * «Асистент зараз недоступний» (live prod bug, 20.08.2026). The proxy emits
+   * this frame right before relaying the brain — read the id from here.
+   */
+  onMeta?: (payload: SseMetaPayload) => void
   /** First frame: identifies the session the stream belongs to. */
   onSession?: (payload: SseSessionPayload) => void
   /** A text delta — accumulate to build the streamed answer. */
@@ -132,6 +147,12 @@ export interface SseStreamCallbacks {
   onToolStart?: (tool: AssistantToolStart) => void
   /** A tool finished executing. */
   onToolEnd?: (tool: AssistantToolEnd) => void
+  /**
+   * Расход экспертного хода: модель внешнего Claude, деньги и токены. Приходит
+   * фреймом `result` (и/или внутри `done` — см. {@link dispatchSseEvent}), так
+   * что вызывается не более одного раза за ход и только у экспертных ходов.
+   */
+  onExpert?: (usage: AssistantExpertUsage) => void
   /** Terminal error frame (e.g. 503 surfaced inside the stream). */
   onError?: (error: SseErrorPayload) => void
   /** Terminal success frame. */
@@ -196,6 +217,73 @@ export interface AssistantToolEnd {
   /** Legacy field still emitted by older backends. */
   summary?: string
   [key: string]: unknown
+}
+
+/**
+ * Расход одного экспертного хода — то, что показывается бейджем «Sonnet · $0.05»
+ * под ответом.
+ *
+ * Источник — блок `expert` внутри `done` (ASSISTANT_MODES.md §2.4/§4). Брать
+ * надо ИМЕННО `expert.cost_usd`: у самого `done` есть своё поле `cost_usd`,
+ * посчитанное CLI по его таблице ставок, и для свежих моделей оно занижено.
+ *
+ * `costUsd` / `inputTokens` / `outputTokens` могут быть `null`: бэкенд вправе
+ * прислать модель без цифр (например, ход не тарифицировался). Бейдж тогда
+ * показывает только модель, а не «$NaN».
+ *
+ * `cacheReadTokens` / `cacheWriteTokens` — вход, взятый из кэша и записанный в
+ * него. Без них «токены на вход» врут: на живом ходе 27.08 `input_tokens` был
+ * **4** при реальном входе 32 442 из кэша, и подпись «4 токена на вхід» читалась
+ * бы как ошибка.
+ *
+ * `spentTodayUsd` / `dailyLimitUsd` — свежий остаток дневного бюджета после
+ * хода, если бэкенд его пришлёт; сегодня их в контракте нет, и счётчик в меню
+ * обновляется перезапросом capabilities.
+ */
+export interface AssistantExpertUsage {
+  model: string
+  costUsd: number | null
+  inputTokens: number | null
+  outputTokens: number | null
+  cacheReadTokens: number | null
+  cacheWriteTokens: number | null
+  spentTodayUsd: number | null
+  dailyLimitUsd: number | null
+}
+
+/** Число (или числовая строка) ≥ 0, иначе null — деньги и токены приходят по-разному. */
+function toNonNegativeNumber(value: unknown): number | null {
+  const num = typeof value === 'string' ? Number(value) : value
+  return typeof num === 'number' && Number.isFinite(num) && num >= 0 ? num : null
+}
+
+/**
+ * Достать расход экспертного хода из полезной нагрузки фрейма.
+ *
+ * Принимаются обе формы: конверт `{expert: {...}}` (боевая — блок внутри
+ * `done`) и «плоский» объект с `model` на верхнем уровне (для отдельного
+ * фрейма `result`, если шлюз когда-нибудь начнёт слать расход им). Без имени
+ * модели это не отчёт о расходе — возвращается `null`, и бейдж не рисуется.
+ */
+export function normalizeExpertUsage(payload: unknown): AssistantExpertUsage | null {
+  if (!payload || typeof payload !== 'object') return null
+  const root = payload as Record<string, unknown>
+  const nested = root.expert
+  const raw = (nested && typeof nested === 'object' ? nested : root) as Record<string, unknown>
+
+  const model = typeof raw.model === 'string' ? raw.model.trim() : ''
+  if (!model) return null
+
+  return {
+    model,
+    costUsd: toNonNegativeNumber(raw.cost_usd),
+    inputTokens: toNonNegativeNumber(raw.input_tokens),
+    outputTokens: toNonNegativeNumber(raw.output_tokens),
+    cacheReadTokens: toNonNegativeNumber(raw.cache_read_tokens),
+    cacheWriteTokens: toNonNegativeNumber(raw.cache_write_tokens),
+    spentTodayUsd: toNonNegativeNumber(raw.spent_today_usd),
+    dailyLimitUsd: toNonNegativeNumber(raw.daily_limit_usd),
+  }
 }
 
 export interface SseErrorPayload {
@@ -351,6 +439,9 @@ export function dispatchSseEvent(
   callbacks: SseStreamCallbacks
 ): 'done' | 'error' | undefined {
   switch (frame.event) {
+    case 'meta':
+      callbacks.onMeta?.(parseFrameData<SseMetaPayload>(frame) ?? {})
+      return undefined
     case 'session':
       callbacks.onSession?.(parseFrameData<SseSessionPayload>(frame) ?? {})
       return undefined
@@ -390,12 +481,29 @@ export function dispatchSseEvent(
       }
       return undefined
     }
+    case 'result': {
+      // Экспертный ход: модель, деньги, токены. Не терминатор — за ним всё
+      // равно приходит `done`, как у обычного хода.
+      const usage = normalizeExpertUsage(parseFrameData(frame))
+      if (usage) callbacks.onExpert?.(usage)
+      return undefined
+    }
     case 'error':
       callbacks.onError?.(parseFrameData<SseErrorPayload>(frame) ?? {})
       return 'error'
-    case 'done':
-      callbacks.onDone?.(parseFrameData<SseDonePayload>(frame) ?? {})
+    case 'done': {
+      const payload = parseFrameData<SseDonePayload>(frame) ?? {}
+      // Расход экспертного хода может приехать и внутри `done` — читаем ТОЛЬКО
+      // вложенный конверт `{expert: {...}}`: плоский разбор здесь принял бы за
+      // отчёт о расходе любой `done` с полем `model` (обычный ход возвращает в
+      // нём имя модели мозга) и повесил бы ценник на бесплатный ответ.
+      if (payload.expert) {
+        const usage = normalizeExpertUsage({ expert: payload.expert })
+        if (usage) callbacks.onExpert?.(usage)
+      }
+      callbacks.onDone?.(payload)
       return 'done'
+    }
     default:
       // Unknown / future event (todo, subagent_*) — ignore (forward-compat).
       return undefined

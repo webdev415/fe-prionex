@@ -10,7 +10,12 @@ import { Button } from '@/components/ui/Button'
 interface Props {
   importType: Extract<
     ImportType,
-    'tag_assignment' | 'operator_assignment' | 'payment_import' | 'sale_notes' | 'document'
+    | 'tag_assignment'
+    | 'contact_tag_assignment'
+    | 'operator_assignment'
+    | 'payment_import'
+    | 'sale_notes'
+    | 'document'
   >
   label: string
   onViewHistory: () => void

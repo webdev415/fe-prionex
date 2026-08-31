@@ -1,10 +1,16 @@
 import {
+  cloneElement,
+  createContext,
+  isValidElement,
   useCallback,
+  useContext,
   useMemo,
   useState,
   type ComponentProps,
   type ComponentPropsWithoutRef,
+  type CSSProperties,
   type KeyboardEvent,
+  type ReactElement,
   type ReactNode,
 } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -33,6 +39,19 @@ import {
   rehypeAssistantMarkers,
 } from './assistantMarkers'
 import { resolveAssistantSource } from './assistantFiles'
+import {
+  buildTableHighlightPlan,
+  cellHeatRatio,
+  heatBackground,
+  isAssistantReportTablesEnabled,
+  isConclusionParagraph,
+  markerBackground,
+  parseNumericCell,
+  type NumericColumn,
+  type TableHighlightPlan,
+  isMarkerCell,
+  stripRowMarker,
+} from './reportTableHighlight'
 import {
   AssistantBlockedRef,
   AssistantExternalRef,
@@ -63,6 +82,21 @@ SyntaxHighlighter.registerLanguage('yml', yaml)
 
 /** Default rows shown before a long table/list is folded behind a toggle. */
 export const TABLE_PREVIEW_ROWS = 10
+
+/**
+ * Признак «рендерим внутри ячейки таблицы ассистента»: его выставляет
+ * {@link TableRenderer}, а читает {@link FactFootnote}, чтобы приглушить
+ * факт-сноски прямо в `<td>` (в тексте они остаются полноценными).
+ */
+const AssistantTableCellContext = createContext(false)
+
+/**
+ * Класс приглушённой факт-сноски в ячейке таблицы (мельче, полупрозрачна, полная
+ * видимость при hover строки). Сами стили — в `src/index.css`; здесь только
+ * хук-класс, чтобы приглушение жило исключительно в контексте `<td>`, а источники
+ * вне таблиц оставались обычными.
+ */
+export const MUTED_CITATION_CLASS = 'assistant-cite-muted'
 
 /** Pull plain text out of a React node tree (for the copy-to-clipboard value). */
 function nodeToText(node: ReactNode): string {
@@ -175,10 +209,143 @@ function CodeRenderer({ className, children, ...props }: ComponentPropsWithoutRe
   )
 }
 
+/** Собственные пропсы `<tr>`/`<td>`, которые доклеивает раскраска отчёта. */
+type DecoratedCellProps = {
+  children?: ReactNode
+  className?: string
+  style?: CSSProperties
+}
+
+/** Прямые дети строки таблицы (может быть один элемент, а не массив). */
+function rowChildren(row: ReactElement): ReactNode[] {
+  const { children } = row.props as DecoratedCellProps
+  if (Array.isArray(children)) return children
+  return children == null ? [] : [children]
+}
+
+/**
+ * Ячейка помеченной строки без ведущего маркера-«светофора» в отображении.
+ * Маркер — служебный префикс для подсветки: строку красит фон, повторять его
+ * значком в тексте не нужно. Вырезаем только ведущую строковую ноду; ячейка
+ * без маркера (или с не-строковым началом) возвращается той же ссылкой.
+ */
+function stripCellMarker(cell: ReactNode): ReactNode {
+  if (!isValidElement(cell)) return cell
+  const props = cell.props as DecoratedCellProps
+  const { children } = props
+  const strip = (value: ReactNode): ReactNode =>
+    typeof value === 'string' && isMarkerCell(value) ? stripRowMarker(value) : value
+  if (typeof children === 'string') {
+    const stripped = strip(children)
+    if (stripped === children) return cell
+    return cloneElement(cell as ReactElement<Record<string, unknown>>, { children: stripped })
+  }
+  if (Array.isArray(children) && children.length > 0) {
+    const first = strip(children[0])
+    if (first === children[0]) return cell
+    return cloneElement(cell as ReactElement<Record<string, unknown>>, {
+      children: [first, ...children.slice(1)],
+    })
+  }
+  return cell
+}
+
+/** Тексты ячеек строки — вход для {@link buildTableHighlightPlan}. */
+function rowCellTexts(row: ReactNode): string[] {
+  if (!isValidElement(row)) return []
+  return rowChildren(row).filter(isValidElement).map(nodeToText)
+}
+
+/**
+ * Ячейка числовой колонки: зелёный градиент по величине (больше = насыщеннее) и
+ * полужирный максимум. Направление метрики градиент не знает — его задаёт маркер
+ * строки, который перекрывает эту заливку (см. {@link decorateRow}). Нечисловая
+ * ячейка внутри числовой колонки (прочерк, «—») остаётся нетронутой — заливать
+ * её нечем.
+ */
+function decorateCell(cell: ReactNode, column: NumericColumn | undefined): ReactNode {
+  if (!isValidElement(cell) || !column) return cell
+  const props = cell.props as DecoratedCellProps
+  const value = parseNumericCell(nodeToText(props.children))
+  if (value == null) return cell
+
+  const heat = cellHeatRatio(value, column)
+  const isMax = value >= column.max
+
+  return cloneElement(cell as ReactElement<Record<string, unknown>>, {
+    className: cn(props.className, isMax && 'font-semibold') || undefined,
+    style: { ...props.style, backgroundColor: heatBackground(heat) },
+    'data-heat': heat.toFixed(2),
+    ...(isMax ? { 'data-heat-max': 'true' } : {}),
+  })
+}
+
+/**
+ * Строка тела таблицы. «Светофор»: маркер строки от модели (⚠️/🔴/🟢)
+ * ПЕРЕКРЫВАЕТ авто-градиент — помеченную строку красим целиком (жёлтый/красный/
+ * зелёный) и числовые ячейки не трогаем, иначе зелёный градиент проступил бы
+ * сквозь красную строку «больше = хуже». Строка без маркера получает обычный
+ * зелёный градиент по числовым ячейкам. Сам маркер — СЛУЖЕБНЫЙ символ для этой
+ * подсветки: из отображения он вырезается (решение CEO 24.08 «смайлики не
+ * нужны» — фон строки говорит сам), в markdown-исходнике ответа он остаётся.
+ *
+ * Если красить нечего (нечисловая строка без маркера), возвращаем ту же строку,
+ * а не её клон: у отчёта без чисел дерево обязано остаться прежним.
+ *
+ * ИТОГОВАЯ строка («Разом/Усього/Итого/Total…») — барьер: промпт-правило
+ * запрещает модели ставить маркер на итоге, но она нарушает. Здесь маркер на
+ * итоге игнорируется (строку НЕ красим и авто-градиент к ней не применяем — итог
+ * не сравнивается со строками данных), но из отображения его всё равно вырезаем,
+ * как у обычных помеченных строк.
+ */
+function decorateRow(row: ReactNode, rowIndex: number, plan: TableHighlightPlan): ReactNode {
+  if (!isValidElement(row)) return row
+
+  if (plan.totalRows.has(rowIndex)) {
+    const children = rowChildren(row)
+    const stripped = children.map(stripCellMarker)
+    if (stripped.every((cell, index) => cell === children[index])) return row
+    return cloneElement(row as ReactElement<Record<string, unknown>>, { children: stripped })
+  }
+
+  const marker = plan.markerRows.get(rowIndex)
+  if (marker) {
+    const element = row as ReactElement<Record<string, unknown>>
+    const props = row.props as DecoratedCellProps
+    return cloneElement(element, {
+      className: cn(props.className, `assistant-${marker}-row`),
+      style: { ...props.style, backgroundColor: markerBackground(marker) },
+      'data-row-marker': marker,
+      children: rowChildren(row).map(stripCellMarker),
+    })
+  }
+
+  if (plan.columns.size === 0) return row
+
+  let columnIndex = 0
+  let touched = false
+  const cells = rowChildren(row).map((cell) => {
+    if (!isValidElement(cell)) return cell
+    const decorated = decorateCell(cell, plan.columns.get(columnIndex))
+    columnIndex += 1
+    if (decorated !== cell) touched = true
+    return decorated
+  })
+
+  if (!touched) return row
+
+  const element = row as ReactElement<Record<string, unknown>>
+  return cloneElement(element, { children: cells })
+}
+
 /**
  * Long markdown tables (e.g. an employee/client listing) collapse to the first
  * {@link TABLE_PREVIEW_ROWS} body rows behind a "show all (N) / collapse"
  * toggle. Each table folds independently (state is local to this wrapper).
+ *
+ * За флагом `VITE_ASSISTANT_REPORT_TABLES_ENABLED` таблица дополнительно
+ * получает тепловую карту числовых колонок и подсветку строк с «⚠️»; при
+ * выключенном флаге разметка та же, что и до доработки.
  */
 function TableRenderer({ children, ...props }: ComponentPropsWithoutRef<'table'>) {
   const { t } = useTranslation('common')
@@ -201,35 +368,53 @@ function TableRenderer({ children, ...props }: ComponentPropsWithoutRef<'table'>
   const overflows = total > TABLE_PREVIEW_ROWS
   const visibleRows = overflows && !expanded ? rows.slice(0, TABLE_PREVIEW_ROWS) : rows
 
+  // План считаем по ВСЕМ строкам, а не по видимым: шкала колонки не должна
+  // прыгать, когда оператор разворачивает таблицу. Разбор текста ячеек не
+  // зависит от свёртки, поэтому переживает переключение `expanded`.
+  const plan = useMemo(
+    () =>
+      isAssistantReportTablesEnabled() ? buildTableHighlightPlan(rows.map(rowCellTexts)) : null,
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `rows` — новый массив на каждый рендер markdown; ключ пересчёта — сам текст таблицы
+    [children]
+  )
+  const renderedRows = plan
+    ? visibleRows.map((row, rowIndex) => decorateRow(row, rowIndex, plan))
+    : visibleRows
+
+  // Провайдер оборачивает всю таблицу (DOM не добавляет): факт-сноски в любой
+  // ячейке узнают, что они внутри `<td>`, и приглушаются. Разметка без сносок —
+  // как была, поэтому байт-в-байт деградация таблиц не ломается.
   return (
-    <div data-testid="markdown-table" className="my-2">
-      <div className="overflow-x-auto">
-        <table {...props}>
-          {head}
-          <tbody>{visibleRows}</tbody>
-        </table>
+    <AssistantTableCellContext.Provider value={true}>
+      <div data-testid="markdown-table" className="my-2">
+        <div className="overflow-x-auto">
+          <table {...props}>
+            {head}
+            <tbody>{renderedRows}</tbody>
+          </table>
+        </div>
+        {overflows && (
+          <button
+            type="button"
+            data-testid="markdown-table-toggle"
+            onClick={() => setExpanded((value) => !value)}
+            className="text-primary-600 hover:text-primary-700 mt-1 inline-flex items-center gap-1 text-[11px] font-medium transition-colors"
+          >
+            {expanded ? (
+              <>
+                <Icons.ArrowUp size={13} strokeWidth={1.5} className="shrink-0" />
+                {t('pages.aiAssistant.collapseRows')}
+              </>
+            ) : (
+              <>
+                <Icons.ArrowDown size={13} strokeWidth={1.5} className="shrink-0" />
+                {t('pages.aiAssistant.showAllRows', { count: total })}
+              </>
+            )}
+          </button>
+        )}
       </div>
-      {overflows && (
-        <button
-          type="button"
-          data-testid="markdown-table-toggle"
-          onClick={() => setExpanded((value) => !value)}
-          className="text-primary-600 hover:text-primary-700 mt-1 inline-flex items-center gap-1 text-[11px] font-medium transition-colors"
-        >
-          {expanded ? (
-            <>
-              <Icons.ArrowUp size={13} strokeWidth={1.5} className="shrink-0" />
-              {t('pages.aiAssistant.collapseRows')}
-            </>
-          ) : (
-            <>
-              <Icons.ArrowDown size={13} strokeWidth={1.5} className="shrink-0" />
-              {t('pages.aiAssistant.showAllRows', { count: total })}
-            </>
-          )}
-        </button>
-      )}
-    </div>
+    </AssistantTableCellContext.Provider>
   )
 }
 
@@ -280,6 +465,9 @@ function FactFootnote({ n, citation, onFactClick }: FactFootnoteProps) {
   const label = citation?.label
   const title = label ?? `Источник ${n}`
   const interactive = typeof onFactClick === 'function'
+  // В ячейке таблицы сноска рядом с числом («46①») — визуальный шум: приглушаем.
+  // Вне таблиц (default `false`) источник остаётся обычным — это часть доверия.
+  const muted = useContext(AssistantTableCellContext)
 
   const activate = useCallback(() => {
     onFactClick?.(n)
@@ -303,7 +491,8 @@ function FactFootnote({ n, citation, onFactClick }: FactFootnoteProps) {
         title={title}
         className={cn(
           FACT_BASE_CLASS,
-          'text-primary-600 underline decoration-dotted underline-offset-2'
+          'text-primary-600 underline decoration-dotted underline-offset-2',
+          muted && MUTED_CITATION_CLASS
         )}
       >
         {glyph}
@@ -312,7 +501,7 @@ function FactFootnote({ n, citation, onFactClick }: FactFootnoteProps) {
   }
 
   return (
-    <sup className={FACT_BASE_CLASS}>
+    <sup className={cn(FACT_BASE_CLASS, muted && MUTED_CITATION_CLASS)}>
       <span
         role="button"
         tabIndex={0}
@@ -393,6 +582,39 @@ function LinkRenderer({ href, children }: ComponentPropsWithoutRef<'a'>) {
   }
 }
 
+/**
+ * Абзац ответа. Если он начинается с «Висновок:» (модель ставит его после
+ * таблицы), это лид-вывод: чуть крупнее и полужирнее остального текста, без
+ * рамок и заливок — вывод должен читаться первым, а не кричать.
+ *
+ * Регистрируется только при включённом флаге отчётных таблиц; иначе `p`
+ * рендерится штатным рендерером react-markdown.
+ */
+function ParagraphRenderer({
+  children,
+  className,
+  node: _node,
+  ...props
+}: ComponentPropsWithoutRef<'p'> & { node?: unknown }) {
+  if (!isConclusionParagraph(nodeToText(children))) {
+    return (
+      <p className={className} {...props}>
+        {children}
+      </p>
+    )
+  }
+
+  return (
+    <p
+      data-testid="markdown-conclusion"
+      className={cn(className, 'text-[1.05em] font-medium')}
+      {...props}
+    >
+      {children}
+    </p>
+  )
+}
+
 /** Инлайн-ссылка на карточку клиента `/dashboard/clients/:id` с иконкой. */
 function ClientRef({ id, label }: { id: number; label: string }) {
   return (
@@ -466,6 +688,13 @@ export function MarkdownMessage({
       table: TableRenderer,
       img: ImageRenderer,
       a: LinkRenderer,
+    }
+
+    // Лид-вывод — часть отчётной подачи, поэтому за тем же флагом. При
+    // выключенном флаге `p` не переопределяем вовсе: абзац остаётся ровно тем
+    // же узлом, что и до доработки.
+    if (isAssistantReportTablesEnabled()) {
+      map.p = ParagraphRenderer
     }
 
     // Кастомные теги (`fact-ref`/`client-ref`) не входят в тип Components

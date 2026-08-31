@@ -13,6 +13,37 @@ To add the next release:
   3. Group them below under Added / Changed / Fixed, newest version on top.
 -->
 
+## [v1.6] — 2026-08-16
+
+Production build (development → main, PR #903; diff from the previous release, PR #817).
+
+### Added
+- **KAN-993** — Client profile: Loans tab redesign.
+- **KAN-1007** — Client Panel: sidebar redesign (tags, responsible block, personal fields, Work-tab removal).
+- **KAN-1008** — Lawyer Workplace: create a kanban task without a client link.
+- **KAN-874** — Contact Tags: inline dropdown (category flyout picker) replacing the assignment modal.
+- **KAN-977** — TA modal: auto-select the phone when only one candidate number exists.
+- **KAN-821** — Client List: "Only last TA chain" checkbox in the chain filter.
+- **KAN-858** — Tag Definitions: "Skip Weekends" option for TTL-based expiration.
+- **KAN-970** — Project add/edit modal: company legal/banking details fields.
+- **KAN-971** — Document Template Variables: PROJECT section (company/banking variables).
+- **KAN-379** — Aggressive Dialer UI: operator/queue controls (continued from v1.5; engine off by default).
+- **KAN-978** — Incoming-call modal refinements: call-outcome labels, reject agent leg, dismiss on colleague answer, call-window suppression.
+- Operator verification scoring, low-verification feed, and searcher follow-up feed UIs (disabled by default).
+
+### Changed
+- **KAN-777** — Theming: dark / colored theme-mode refinements.
+- **KAN-1000** — Lawyer Workplace kanban: correct card timezone + toast notifications.
+- **KAN-835** — Rule builder: "interaction.created" trigger field options.
+- **KAN-941** — Role read filters aligned to the JWT/session path.
+
+### Fixed
+- **KAN-989** — Severe main-thread freezes across the UI when switching to the "Neutral Dim" theme.
+- **KAN-995** — Chrome native autofill overlapped the calendar picker on date-input fields.
+- **KAN-1009** — Chrome native autofill appeared on text/number fields (Client-List filters, Edit Client, Log Interaction).
+- **KAN-997** — Clearing a contact's comment field did not persist as empty.
+- **KAN-1013** — Could not select payment type `payment_by_rr` when the Restructuring (RR) status was Violated.
+
 ## [v1.5] — 2026-08-02
 
 Production build (development → main, PR #817; diff from the previous release, PR #735).

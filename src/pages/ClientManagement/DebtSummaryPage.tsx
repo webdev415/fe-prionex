@@ -40,6 +40,7 @@ import {
   buildVerifiedPaymentsByContract,
 } from '@/features/payments'
 import { useRecordPaymentFlow } from '@/features/payments/hooks/useRecordPaymentFlow'
+import { PaymentMethodCell } from '@/features/payments/components/PaymentMethodCell'
 import { VerifiedPaymentsByContract } from './components/VerifiedPaymentsByContract'
 import { useUser } from '@/features/users/hooks/useUser'
 import type {
@@ -57,6 +58,8 @@ interface Payment {
   amount: number
   contractNumber?: string
   method: BackendPaymentMethod
+  /** EasyPay rows only: which service the payer picked on the portal. */
+  easypayMethod?: string | null
   status: BackendPaymentStatus
   receipt?: string
   reference?: string
@@ -355,6 +358,7 @@ export function DebtSummaryPage() {
         amount: Number(p.amount),
         contractNumber: p.debt_contract_number || undefined,
         method: p.payment_method,
+        easypayMethod: p.easypay_method,
         status: p.status,
         receipt: p.receipt_url ? 'PDF' : undefined,
         reference: p.bank_reference || p.payment_number,
@@ -1239,9 +1243,14 @@ export function DebtSummaryPage() {
                               {payment.contractNumber || '-'}
                             </td>
                             <td className="text-foreground border-border h-[49px] border-r px-3 text-xs font-medium sm:px-6">
-                              {t(`pages.clients.detail.paymentMethods.${payment.method}`, {
-                                defaultValue: payment.method,
-                              })}
+                              <PaymentMethodCell
+                                baseLabel={t(
+                                  `pages.clients.detail.paymentMethods.${payment.method}`,
+                                  { defaultValue: payment.method }
+                                )}
+                                easypayMethod={payment.easypayMethod}
+                                t={t}
+                              />
                             </td>
                             <td className="text-foreground border-border h-[49px] border-r px-3 text-xs font-medium sm:px-6">
                               <div className="flex items-center gap-2">

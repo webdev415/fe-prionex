@@ -1,5 +1,9 @@
 import type { TFunction } from 'i18next'
 import { formatDate, formatMonthDay } from '@/lib/localeFormat'
+import {
+  parseLegalDueDate,
+  resolveLegalTimezone,
+} from '@/features/lawyerWorkplace/utils/legalDueDate'
 
 export function formatLetterTime(iso: string, t: TFunction, language: string): string {
   const d = new Date(iso)
@@ -39,6 +43,48 @@ export function formatDateSeparator(iso: string, language: string): string {
 
 export function formatDueDate(iso: string, language: string): string {
   return new Date(iso).toLocaleString(language, {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+}
+
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/
+
+/**
+ * A legal deadline, on the profile clock, in `dd.MM.yyyy HH:mm` (KAN-1000).
+ *
+ * `formatDueDate` above gets both of its shapes wrong and stays put because it
+ * also renders `receivedAt`, which belongs on the browser clock alongside the
+ * rest of the thread timestamps.
+ *
+ * Deadlines arrive in two shapes and each fails its own way. Kanban due dates
+ * are naive UTC, which `new Date` reads as local — the card said 06:00 while
+ * the drawer beside it said 03:00. SLA due dates are date-only, which `new
+ * Date` reads as UTC midnight and then renders with a fabricated local time,
+ * dropping to the previous day anywhere west of UTC.
+ */
+export function formatLegalDeadline(
+  iso: string,
+  language: string,
+  timezone?: string | null
+): string {
+  const trimmed = iso.trim()
+  if (DATE_ONLY.test(trimmed)) {
+    const [year, month, day] = trimmed.split('-').map(Number)
+    return new Date(year, month - 1, day).toLocaleDateString(language, {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    })
+  }
+  const parsed = parseLegalDueDate(trimmed)
+  if (!parsed) return iso
+  return parsed.toLocaleString(language, {
+    timeZone: resolveLegalTimezone(timezone),
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',

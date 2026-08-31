@@ -14,6 +14,13 @@ import { api } from '@/lib/api'
 
 export interface CallQaSettings {
   transcripts_enabled: boolean
+  /**
+   * «Оцінювати лише закріплених» — when true, trainers may score only the
+   * operators assigned to them (legacy behaviour). Optional: backends that
+   * predate the switch don't return it, which callers must read as `true`.
+   * On PUT the field is optional too — omitted means "leave unchanged".
+   */
+  scorecard_assigned_only?: boolean
 }
 
 export async function getCallQaSettings(): Promise<CallQaSettings> {

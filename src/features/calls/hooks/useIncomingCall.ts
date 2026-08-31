@@ -46,7 +46,7 @@ const EXTENSION_PATTERN = /^(?:[A-Za-z0-9]+\/)?(\d+)/
 // Matches the extension the app itself enforces on users (userSchemas.ts).
 const EXTENSION_LENGTH = { min: 3, max: 10 }
 
-function extensionOf(value: unknown): string | null {
+export function extensionOf(value: unknown): string | null {
   if (typeof value !== 'string') return null
   const extension = EXTENSION_PATTERN.exec(value)?.[1]
   if (!extension) return null
@@ -55,9 +55,42 @@ function extensionOf(value: unknown): string | null {
     : null
 }
 
-export function useIncomingCall(agentExtension: string | null) {
+export interface UseIncomingCallOptions {
+  /**
+   * A call this operator can see has reached a terminal state.
+   *
+   * The socket carries state for every call in the agent's room, which makes
+   * this the one place that learns a call is over without waiting for a poll to
+   * notice. Consumers holding their own call window use it to settle that
+   * window; the callee is responsible for checking the id names *their* call.
+   *
+   * `totalDuration` is passed on because it is the last chance to get it: a
+   * window told the call is over stops polling, so nothing else will ever
+   * supply the final talk time.
+   */
+  onCallSettled?: (
+    callId: string,
+    settled: { state: 'ended' | 'failed'; totalDuration?: number }
+  ) => void
+}
+
+export function useIncomingCall(
+  agentExtension: string | null,
+  { onCallSettled }: UseIncomingCallOptions = {}
+) {
   const socketRef = useRef<Socket | null>(null)
   const [incomingCall, setIncomingCall] = useState<IncomingCallData | null>(null)
+  // When this operator took the call, as a timestamp so a consumer can run the
+  // conversation clock. Null while it is only ringing.
+  const [answeredAt, setAnsweredAt] = useState<number | null>(null)
+  // The call is over but the window stays: see the terminal branch below.
+  const [callEnded, setCallEnded] = useState(false)
+  // The state handler is registered once per connection, so it cannot read
+  // `answeredAt` directly without closing over the first render's value.
+  const answeredRef = useRef(false)
+  // Held in a ref so a caller passing an inline function does not tear down and
+  // rebuild the socket on every render.
+  const onCallSettledRef = useRef(onCallSettled)
   const settledCallsRef = useRef<Map<string, number>>(new Map())
   const shownCallRef = useRef<string | null>(null)
   const loggedMissingAnswererRef = useRef<string | null>(null)
@@ -68,8 +101,18 @@ export function useIncomingCall(agentExtension: string | null) {
     shownCallRef.current = incomingCall?.call_id ?? null
   }, [incomingCall])
 
+  useEffect(() => {
+    answeredRef.current = answeredAt !== null
+  }, [answeredAt])
+
+  useEffect(() => {
+    onCallSettledRef.current = onCallSettled
+  })
+
   const dismissIncomingCall = useCallback(() => {
     setIncomingCall(null)
+    setAnsweredAt(null)
+    setCallEnded(false)
   }, [])
 
   useEffect(() => {
@@ -152,6 +195,10 @@ export function useIncomingCall(agentExtension: string | null) {
       // now would strand it: the events that would have closed it have been and
       // gone.
       if (wasSettled(event.data?.call_id)) return
+      // A fresh offer starts unanswered and unfinished, even if the last one
+      // was taken and ended.
+      setAnsweredAt(null)
+      setCallEnded(false)
       setIncomingCall(event.data)
     }
 
@@ -169,7 +216,26 @@ export function useIncomingCall(agentExtension: string | null) {
         // client lookup, and the pop then opens a window for a call that is
         // already over with nothing left to close it.
         rememberSettled(callId)
-        dismissIfSameCall(callId)
+        // A call this operator was connected to leaves an interaction half
+        // written; the window has to survive the hangup or that work is gone,
+        // and there is no way back to it — the form only exists here. A call
+        // that merely rang has nothing to keep, so it still goes.
+        if (callId && shownCallRef.current === callId && answeredRef.current) {
+          setCallEnded(true)
+        } else {
+          dismissIfSameCall(callId)
+        }
+        // Deliberately not fired for a colleague answering: that settles the
+        // call for the queue, not for whoever is now holding it.
+        if (callId) {
+          onCallSettledRef.current?.(callId, {
+            // Only FAILED is a failure. A caller who hangs up mid-ring arrives
+            // as COMPLETED, and so does 'CANCELLED' — neither is an error to
+            // put in front of the operator in red.
+            state: state === CallState.FAILED ? 'failed' : 'ended',
+            totalDuration: event.data?.total_duration,
+          })
+        }
         return
       }
 
@@ -201,6 +267,15 @@ export function useIncomingCall(agentExtension: string | null) {
         if (someoneElseAnswered) {
           rememberSettled(callId)
           dismissIfSameCall(callId)
+        } else if (answeredBy !== null && mine !== null && answeredBy === mine) {
+          // Named as the answerer, so this operator is holding the call. Only
+          // an explicit match counts: a missing answered_by could equally mean
+          // a colleague took it, and showing this operator a connected window
+          // would invite them to file an interaction for a conversation
+          // somebody else is having.
+          if (callId && shownCallRef.current === callId) {
+            setAnsweredAt((current) => current ?? Date.now())
+          }
         } else if (
           answeredBy === null &&
           callId &&
@@ -247,6 +322,11 @@ export function useIncomingCall(agentExtension: string | null) {
   return {
     incomingCall,
     hasIncomingCall: incomingCall !== null,
+    answeredAt,
+    /** The call is over, but the operator has not finished with the window. */
+    callEnded,
+    /** For the operator who presses Accept: the answer is known locally first. */
+    markAnswered: () => setAnsweredAt((current) => current ?? Date.now()),
     dismissIncomingCall,
   }
 }

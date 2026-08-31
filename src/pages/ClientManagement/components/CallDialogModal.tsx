@@ -17,6 +17,8 @@ import { Button } from '../../../components/ui/Button'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { RadioGroup, RadioItem } from '../../../components/ui/Radio'
 import { Icons } from '@/lib/icons'
+import { formatDate } from '@/lib/localeFormat'
+import { formatCallDuration } from '@/features/calls/utils/duration'
 import { cn } from '@/lib/utils'
 import { useCallStore } from '@/stores/callStore'
 import type { IncomingModalLoan } from '@/stores/callStore'
@@ -75,12 +77,6 @@ export interface CallDialogModalProps {
   onSearchByPhone?: () => void
   /** Answering has no backend path yet, so the control stays hidden by default. */
   answerEnabled?: boolean
-}
-
-const formatTime = (seconds: number): string => {
-  const mins = Math.floor(seconds / 60)
-  const secs = seconds % 60
-  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
 }
 
 /** Manual entry: only digits, length 12, prefix 380 (Ukraine). */
@@ -648,7 +644,7 @@ export function CallDialogModal({
         open={open}
         onClose={isCallActive ? handleMinimize : handleClose}
         maxWidth="xl"
-        className="p-4 sm:p-6"
+        className="flex max-h-[90vh] flex-col overflow-hidden p-4 sm:p-6"
         showCloseButton={false}
         preventOutsideClose={isCallActive}
       >
@@ -660,105 +656,122 @@ export function CallDialogModal({
         >
           <Icons.Remove02 size={20} className="text-foreground" strokeWidth={1.5} />
         </button>
-        <div className="flex flex-col gap-4 sm:gap-6">
-          {telephonyUnavailable && (
-            <div
-              role="alert"
-              className="border-warning-500/40 bg-warning-50 text-warning-500 rounded-lg border px-3 py-2 text-sm font-medium"
-            >
-              Telephony is temporarily unavailable
-            </div>
-          )}
+        <div className="flex min-h-0 flex-1 flex-col gap-4 sm:gap-6">
+          {/* Pinned: the number and its status. The operator reads these for
+              the whole time the phone is ringing. */}
+          <div className="flex shrink-0 flex-col gap-4 sm:gap-6">
+            {telephonyUnavailable && (
+              <div
+                role="alert"
+                className="border-warning-500/40 bg-warning-50 text-warning-500 rounded-lg border px-3 py-2 text-sm font-medium"
+              >
+                Telephony is temporarily unavailable
+              </div>
+            )}
 
-          {/* Call Info */}
-          <div className="flex flex-col items-center gap-2 sm:gap-3">
-            <div className="border-border bg-muted flex h-16 w-16 items-center justify-center rounded-full border-2 sm:h-20 sm:w-20">
-              <Icons.Headset size={32} className="text-foreground sm:size-10" strokeWidth={1.5} />
-            </div>
-            <div className="text-foreground text-center text-xl font-semibold sm:text-2xl">
-              {phoneNumber}
-            </div>
-            <div className="bg-primary flex items-center gap-2 rounded-full px-3 py-1 sm:px-4 sm:py-1.5">
-              <div className="bg-primary-foreground h-2 w-2 rounded-full" />
-              <span className="text-primary-foreground text-xs font-medium sm:text-sm">
-                {t('pages.clients.modals.callDialog.incomingCall')}
-              </span>
+            {/* Call Info */}
+            <div className="flex flex-col items-center gap-2 sm:gap-3">
+              <div className="border-border bg-muted flex h-16 w-16 items-center justify-center rounded-full border-2 sm:h-20 sm:w-20">
+                <Icons.Headset size={32} className="text-foreground sm:size-10" strokeWidth={1.5} />
+              </div>
+              <div className="text-foreground text-center text-xl font-semibold sm:text-2xl">
+                {phoneNumber}
+              </div>
+              <div className="bg-primary flex items-center gap-2 rounded-full px-3 py-1 sm:px-4 sm:py-1.5">
+                <div className="bg-primary-foreground h-2 w-2 rounded-full" />
+                <span className="text-primary-foreground text-xs font-medium sm:text-sm">
+                  {t('pages.clients.modals.callDialog.incomingCall')}
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* Guard on the context too: a call restored from minimized carries the
+          {/* Everything below the number scrolls together. Pinning the client
+              card too left the loan list a sliver on a normal window — and what
+              has to stay on screen is the caller's number and the Reject
+              button, not the whole card. */}
+          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto sm:gap-6">
+            {/* Guard on the context too: a call restored from minimized carries the
               resolved client but not the full candidate list, and must not be
               mistaken for an unresolved caller. */}
-          {incomingClients.length === 0 && !incomingContext ? (
-            <IncomingCallerNotFound onSearchByPhone={onSearchByPhone} t={t} />
-          ) : (
-            <>
-              {incomingClients.length > 1 && (
-                <IncomingClientPicker
-                  clients={incomingClients}
-                  selectedClientId={incomingContext?.client_id ?? selectedIncomingClientId}
-                  onSelect={onSelectIncomingClient}
-                  t={t}
-                />
-              )}
-              <IncomingCallContext context={incomingContext} clientId={clientId} t={t} />
-            </>
-          )}
+            {incomingClients.length === 0 && !incomingContext ? (
+              <IncomingCallerNotFound onSearchByPhone={onSearchByPhone} t={t} />
+            ) : (
+              <>
+                {incomingClients.length > 1 && (
+                  <IncomingClientPicker
+                    clients={incomingClients}
+                    selectedClientId={incomingContext?.client_id ?? selectedIncomingClientId}
+                    onSelect={onSelectIncomingClient}
+                    t={t}
+                  />
+                )}
+                <IncomingCallContext context={incomingContext} clientId={clientId} t={t} />
+              </>
+            )}
 
-          {/* Loans Information */}
-          {loans.length > 0 && (
-            <div className="flex flex-col gap-3 sm:gap-4">
-              {/* Primary loans */}
-              {loans.filter((loan) => loan.priority === 'Critical').length > 0 && (
-                <div className="flex flex-col gap-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="bg-error-500 text-primary-foreground rounded-full px-2 py-1 text-xs font-medium sm:px-3">
-                      {t('pages.clients.modals.callDialog.primary')}
-                    </span>
-                    <span className="text-foreground text-xs font-medium sm:text-sm">
-                      {t('pages.clients.modals.callDialog.primaryLoans')}
-                    </span>
+            {/* Loans Information */}
+            {loans.length > 0 && (
+              <div className="flex flex-col gap-3 sm:gap-4">
+                {/* Primary loans */}
+                {loans.filter((loan) => loan.priority === 'Critical').length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="bg-error-500 text-primary-foreground rounded-full px-2 py-1 text-xs font-medium sm:px-3">
+                        {t('pages.clients.modals.callDialog.primary')}
+                      </span>
+                      <span className="text-foreground text-xs font-medium sm:text-sm">
+                        {t('pages.clients.modals.callDialog.primaryLoans')}
+                      </span>
+                    </div>
+                    {loans
+                      .filter((loan) => loan.priority === 'Critical')
+                      .map((loan) => (
+                        <LoanCard key={loan.id} loan={loan} />
+                      ))}
                   </div>
-                  {loans
-                    .filter((loan) => loan.priority === 'Critical')
-                    .map((loan) => (
-                      <LoanCard key={loan.id} loan={loan} />
-                    ))}
-                </div>
-              )}
+                )}
 
-              {/* Third-party loans */}
-              {loans.filter((loan) => loan.priority !== 'Critical').length > 0 && (
-                <div className="flex flex-col gap-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="bg-warning-500 text-primary-foreground rounded-full px-2 py-1 text-xs font-medium sm:px-3">
-                      {t('pages.clients.priorities.high')}
-                    </span>
-                    <span className="text-foreground text-xs font-medium sm:text-sm">
-                      {t('pages.clients.modals.callDialog.thirdPartyLoans')}
-                    </span>
+                {/* Third-party loans */}
+                {loans.filter((loan) => loan.priority !== 'Critical').length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="bg-warning-500 text-primary-foreground rounded-full px-2 py-1 text-xs font-medium sm:px-3">
+                        {t('pages.clients.priorities.high')}
+                      </span>
+                      <span className="text-foreground text-xs font-medium sm:text-sm">
+                        {t('pages.clients.modals.callDialog.thirdPartyLoans')}
+                      </span>
+                    </div>
+                    {loans
+                      .filter((loan) => loan.priority !== 'Critical')
+                      .map((loan) => (
+                        <LoanCard key={loan.id} loan={loan} />
+                      ))}
                   </div>
-                  {loans
-                    .filter((loan) => loan.priority !== 'Critical')
-                    .map((loan) => (
-                      <LoanCard key={loan.id} loan={loan} />
-                    ))}
-                </div>
-              )}
+                )}
 
-              <button className="text-primary-700 flex items-center justify-center gap-1 text-xs font-medium sm:text-sm">
-                {t('pages.clients.modals.callDialog.viewAllLoans')}{' '}
-                <Icons.ArrowDown size={14} className="sm:size-4" />
-              </button>
-            </div>
-          )}
+                {(incomingContext?.client_id ?? clientId) != null ? (
+                  <a
+                    href={`/dashboard/clients/${incomingContext?.client_id ?? clientId}/debt-summary`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary-700 flex items-center justify-center gap-1 text-xs font-medium sm:text-sm"
+                  >
+                    {t('pages.clients.modals.callDialog.viewAllLoans', 'View all loans')}{' '}
+                    <Icons.ArrowDown size={14} className="sm:size-4" />
+                  </a>
+                ) : null}
+              </div>
+            )}
+          </div>
 
           {/* Call Actions */}
-          <div className="flex flex-col gap-2 sm:gap-3">
+          <div className="flex shrink-0 flex-col gap-2 sm:gap-3">
             <div className="bg-muted flex items-center gap-2 rounded-lg px-3 py-2 sm:px-4">
               <Icons.StopWatch size={14} className="text-muted-foreground sm:size-4" />
               <span className="text-muted-foreground text-xs sm:text-sm">
-                {t('pages.clients.modals.callDialog.ringing')} {formatTime(elapsedTime)}
+                {t('pages.clients.modals.callDialog.ringing')} {formatCallDuration(elapsedTime)}
               </span>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
@@ -1074,7 +1087,7 @@ export function CallDialogModal({
                     {callState === 'dialing'
                       ? t('pages.clients.modals.callDialog.elapsedTime')
                       : t('pages.clients.modals.callDialog.talkTime')}
-                    : <span className="font-semibold">{formatTime(elapsedTime)}</span>
+                    : <span className="font-semibold">{formatCallDuration(elapsedTime)}</span>
                   </span>
                 </div>
                 <div className="text-muted-foreground mt-1 text-sm">
@@ -1098,7 +1111,7 @@ export function CallDialogModal({
                     <Icons.StopWatch size={16} className="text-muted-foreground" />
                     <span className="text-foreground text-sm font-medium">
                       {t('pages.clients.modals.callDialog.duration')}:{' '}
-                      <span className="font-semibold">{formatTime(elapsedTime)}</span>
+                      <span className="font-semibold">{formatCallDuration(elapsedTime)}</span>
                     </span>
                   </div>
                   <div className="text-success-500 mt-1 text-sm font-medium">
@@ -1410,24 +1423,15 @@ function IncomingCallContext({
   )
 }
 
-function LoanCard({
-  loan,
-}: {
-  loan: {
-    id: string
-    clientName: string
-    loanNumber: string
-    counterparty: string
-    loanPrincipal: number
-    debt: number
-    status: string
-    saleDate: string
-    lastContact: string
-    priority: 'Critical' | 'High' | 'Medium' | 'Low'
-    score: number
-  }
-}) {
-  const { t } = useTranslation('common')
+// The shape is `IncomingModalLoan`, not a copy of it: the local duplicate this
+// replaces had silently fallen behind the real one, which is why the card had
+// no client to link to.
+function LoanCard({ loan }: { loan: IncomingModalLoan }) {
+  const { t, i18n } = useTranslation('common')
+  // Both loan dates arrive as raw backend strings. `formatDate` follows the UI
+  // language and already renders a placeholder for an unparseable value, which
+  // a bare toLocaleDateString() would print as the literal "Invalid Date".
+  const asDate = (value?: string | null) => (value ? formatDate(value, i18n.language) : '—')
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -1463,9 +1467,16 @@ function LoanCard({
             </div>
           </div>
         </div>
-        <button className="text-primary-700 text-xs font-medium sm:text-sm">
-          {t('pages.clients.modals.callDialog.viewClient')} &gt;
-        </button>
+        {loan.clientId != null ? (
+          <a
+            href={`/dashboard/clients/${loan.clientId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary-700 shrink-0 text-xs font-medium sm:text-sm"
+          >
+            {t('pages.clients.modals.callDialog.viewClient', 'View Client')} &gt;
+          </a>
+        ) : null}
       </div>
       <div className="mt-2 grid grid-cols-1 gap-2 sm:mt-3 sm:grid-cols-2 sm:gap-3">
         <div className="flex flex-col gap-1">
@@ -1478,7 +1489,7 @@ function LoanCard({
           <span className="text-muted-foreground text-xs">
             {t('pages.clients.detail.tableHeaders.saleDate')}:
           </span>
-          <span className="text-foreground text-sm font-medium">{loan.saleDate}</span>
+          <span className="text-foreground text-sm font-medium">{asDate(loan.saleDate)}</span>
         </div>
         <div className="flex flex-col gap-1">
           <span className="text-muted-foreground text-xs">
@@ -1492,11 +1503,11 @@ function LoanCard({
           <span className="text-muted-foreground text-xs">
             {t('pages.clients.modals.callDialog.lastContact')}:
           </span>
-          <span className="text-foreground text-sm font-medium">{loan.lastContact}</span>
+          <span className="text-foreground text-sm font-medium">{asDate(loan.lastContact)}</span>
         </div>
         <div className="flex flex-col gap-1">
           <span className="text-muted-foreground text-xs">
-            {t('pages.clients.detail.tableHeaders.debt')}:
+            {t('pages.clients.detail.tableHeaders.debt', 'Debt')}:
           </span>
           <span className="text-foreground text-sm font-medium">
             {formatMoneyUAHTwoDecimals(loan.debt)}

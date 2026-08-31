@@ -21,14 +21,25 @@ import type { Permission } from '@/constants/permissions'
 import { useHasPermission } from '@/hooks/usePermissions'
 import { SearchResults, type SearchResult } from '@/components/ui/SearchResults'
 import { useNavigate, useLocation } from 'react-router-dom'
+import {
+  isOnexDockSoloSurface,
+  shouldStripDashboardChrome,
+  shouldSuppressIncomingCallPopup,
+} from '@/features/onexEmbed/embedContext'
 import { cn } from '@/lib/utils'
 import { formatClientFullName } from '@/lib/formatters'
 import { Icons } from '@/lib/icons'
 import { useCallStore } from '@/stores/callStore'
 import { CallDialogModal } from '@/pages/ClientManagement/components/CallDialogModal'
 import { CallRecordingModal } from '@/pages/ClientManagement/components/CallRecordingModal'
-import { useIncomingCall } from '@/features/calls/hooks/useIncomingCall'
-import { buildIncomingCallLoans, resolvePrimaryClient } from '@/features/calls/utils/incomingCall'
+import {
+  useIncomingCall,
+  type UseIncomingCallOptions,
+} from '@/features/calls/hooks/useIncomingCall'
+import { useCanShowIncomingPopup } from '@/features/calls/hooks/useCanShowIncomingPopup'
+import { useUnfiledWriteUpWarning } from '@/features/calls/hooks/useUnfiledWriteUpWarning'
+import { IncomingCallWindowContainer } from '@/features/calls/components/IncomingCallWindowContainer'
+import { MinimizedCallPill } from '@/features/calls/components/MinimizedCallPill'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -496,51 +507,45 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user: authUser } = useAuth()
   const agentExtension = authUser?.asterisk_extension || null
 
+  // The call-service is the only authority on a call being over. Without this,
+  // a window whose call ended is cleared solely by the bubble's own polling —
+  // which needs the bubble mounted and the lookup to succeed, and leaves the
+  // window suppressing the incoming popup whenever either fails.
+  const handleCallSettled = useCallback<NonNullable<UseIncomingCallOptions['onCallSettled']>>(
+    (callId, settled) => {
+      useCallStore.getState().settleWindowForCall(callId, settled)
+    },
+    []
+  )
+
   // Handle incoming calls
-  const { incomingCall, dismissIncomingCall } = useIncomingCall(agentExtension)
+  const { incomingCall, answeredAt, callEnded, markAnswered, dismissIncomingCall } =
+    useIncomingCall(agentExtension, {
+      onCallSettled: handleCallSettled,
+    })
 
-  // One call window at a time: if a call modal is already open or minimized when
-  // the call arrives, the operator keeps only the bell. The decision is latched
-  // per call rather than subscribed, because the popup itself sets openCallModal
-  // on mount and a live read would make it suppress itself on the next render.
-  const [popupSuppressed, setPopupSuppressed] = useState(false)
-  const suppressionDecidedFor = useRef<string | null>(null)
+  // One call window at a time. False until the answer is known — see the hook
+  // for why the popup may not render before then.
+  const canShowIncomingPopup = useCanShowIncomingPopup(incomingCall?.call_id)
 
+  // A new call always arrives expanded, never inheriting the last one's state.
+  const [callMinimized, setCallMinimized] = useState(false)
   useEffect(() => {
-    if (!incomingCall) {
-      suppressionDecidedFor.current = null
-      setPopupSuppressed(false)
-      return
-    }
-    if (suppressionDecidedFor.current === incomingCall.call_id) return
-    suppressionDecidedFor.current = incomingCall.call_id
-    const { openCallModal, minimizedCall: existing } = useCallStore.getState()
-    setPopupSuppressed(openCallModal !== null || existing !== null)
-  }, [incomingCall])
-
-  // Which client the operator picked when the number is shared. Reset per call
-  // so a previous choice never leaks onto the next caller.
-  const [selectedIncomingClientId, setSelectedIncomingClientId] = useState<number | null>(null)
-  useEffect(() => {
-    setSelectedIncomingClientId(null)
+    setCallMinimized(false)
   }, [incomingCall?.call_id])
 
-  const primaryIncomingClient = useMemo(
-    () => resolvePrimaryClient(incomingCall, selectedIncomingClientId),
-    [incomingCall, selectedIncomingClientId]
-  )
-  const incomingCallLoans = useMemo(
-    () => buildIncomingCallLoans(incomingCall, selectedIncomingClientId),
-    [incomingCall, selectedIncomingClientId]
-  )
+  const reportUnfiledWriteUp = useUnfiledWriteUpWarning(incomingCall?.call_id)
 
-  const handleSearchIncomingByPhone = useCallback(() => {
-    if (!incomingCall) return
-    // Mirrors the header search: the client list reads these off the store.
-    useSearchStore.getState().setSearchType('phone')
-    useSearchStore.getState().setSearchQuery(incomingCall.customer_phone)
-    navigate('/dashboard')
-  }, [incomingCall, navigate])
+  // Last in the header, after the user menu, per the design. Defined once
+  // because the desktop and mobile header variants render the same pill.
+  const minimizedCallPill = incomingCall && callMinimized && (
+    <MinimizedCallPill
+      phoneNumber={incomingCall.customer_phone}
+      clientName={incomingCall.clients?.length === 1 ? incomingCall.client_name : null}
+      answeredAt={answeredAt}
+      onRestore={() => setCallMinimized(false)}
+    />
+  )
 
   const handleLogoutClick = useCallback(() => {
     setShowLogoutModal(true)
@@ -776,6 +781,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             requiredPermission: PERMISSIONS.CLIENTS.ASSIGN_TAGS,
           },
           {
+            path: '/dashboard/import/bulk-contact-tag-assignment',
+            label: t('navigation.bulkContactTagAssignment', 'Bulk Contact Tag Assignment'),
+            // `user-multiple` rather than `tag-01`: these tag a client's
+            // contacts, not the client, and the two entries sit next to
+            // each other in this menu.
+            icon: 'user-multiple',
+            requiredPermission: PERMISSIONS.CONTACT_TAGS.ASSIGN,
+          },
+          {
             path: '/dashboard/import/bulk-payment-import',
             label: t('navigation.bulkPaymentVerification'),
             icon: 'transaction-history',
@@ -844,6 +858,54 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         requiredPermissions: [PERMISSIONS.LEGAL_WORKPLACE.VIEW, PERMISSIONS.SYSTEM.MANAGE_SETTINGS],
         mode: 'any' as const,
         badge: legalUnprocessedCount > 0 ? legalUnprocessedCount : undefined,
+      },
+      {
+        // Кредитный модуль. До ролей WS-20 в auth-service прав credit.* ещё
+        // нет — пускаем и по системному праву, иначе раздел не увидит даже
+        // администратор, который его принимает.
+        path: '/dashboard/credit',
+        icon: 'transaction-history',
+        label: t('navigation.creditModule', 'Credit Module'),
+        requiredPermissions: [
+          PERMISSIONS.CREDIT.APPLICATIONS_VIEW,
+          PERMISSIONS.CREDIT.LOANS_VIEW,
+          PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+        ],
+        mode: 'any' as const,
+        subItems: [
+          {
+            path: '/dashboard/credit/applications',
+            label: t('navigation.creditApplications', 'Applications'),
+            icon: 'file-01',
+            requiredPermissions: [
+              PERMISSIONS.CREDIT.APPLICATIONS_VIEW,
+              PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+            ],
+            mode: 'any' as const,
+          },
+          {
+            path: '/dashboard/credit/loans',
+            label: t('navigation.creditLoans', 'Loans'),
+            icon: 'transaction-history',
+            requiredPermissions: [
+              PERMISSIONS.CREDIT.LOANS_VIEW,
+              PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+            ],
+            mode: 'any' as const,
+          },
+          {
+            path: '/dashboard/credit/settings',
+            label: t('navigation.creditSettings', 'Settings'),
+            icon: 'setting-07',
+            requiredPermissions: [
+              PERMISSIONS.CREDIT.PARAMETERS_VIEW,
+              PERMISSIONS.CREDIT.PRODUCTS_VIEW,
+              PERMISSIONS.CREDIT.APPLICATIONS_VIEW,
+              PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+            ],
+            mode: 'any' as const,
+          },
+        ],
       },
       {
         path: '/dashboard/action-analysis',
@@ -1115,6 +1177,29 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     location.pathname === '/dashboard/ai-assistant' ||
     location.pathname === '/dashboard/ai-assistant/'
 
+  /**
+   * OneX dock (`/dashboard/ai-assistant?embed=dock`): the page is hosted in a
+   * ~420px sidebar of the operators' browser, which already provides the
+   * navigation. The rail, the header and the header-only surfaces (search,
+   * notifications, call bubble) would eat most of that width, so the layout
+   * collapses to a bare full-bleed shell. Route-gated inside
+   * `shouldStripDashboardChrome` — a stray `?embed=dock` on another screen must
+   * never leave an operator without navigation.
+   */
+  const isOnexDock = shouldStripDashboardChrome(location.pathname, location.search)
+
+  /**
+   * The incoming-call popup is the one piece of chrome whose absence can cost a
+   * call, so it is gated separately: suppressed in the dock because the CRM
+   * window in the main pane raises its own, unless the host declares the dock
+   * its only CRM surface (`window.__onexDockSoloSurface`).
+   */
+  const suppressIncomingCallPopup = shouldSuppressIncomingCallPopup(
+    location.pathname,
+    location.search,
+    isOnexDockSoloSurface()
+  )
+
   const isLawyerWorkplaceRoute =
     location.pathname === '/dashboard/lawyer-workplace' ||
     location.pathname.startsWith('/dashboard/lawyer-workplace/')
@@ -1129,105 +1214,116 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         )}
       >
         {/* Sidebar */}
-        <Sidebar items={navItems} bottomItems={bottomNavItems} />
+        {!isOnexDock && <Sidebar items={navItems} bottomItems={bottomNavItems} />}
 
         {/* Main Content Area with left margin for sidebar - no margin below xl */}
         <div
           className={cn(
             'min-w-0 transition-all duration-300',
-            'xl:ml-18', // Desktop: always has margin for collapsed sidebar
-            isOpenSideBar && 'xl:ml-60' // Desktop: expanded sidebar
+            // The dock has no rail to clear — any margin here would be dead
+            // space inside an already narrow sidebar.
+            !isOnexDock && 'xl:ml-18', // Desktop: always has margin for collapsed sidebar
+            !isOnexDock && isOpenSideBar && 'xl:ml-60' // Desktop: expanded sidebar
           )}
         >
           {/* Fixed Header */}
-          <header
-            className={cn(
-              'bg-elevated border-border/40 fixed top-0 right-0 z-20 flex h-[60px] justify-between border-l px-3 shadow-sm transition-all duration-300 sm:px-4 lg:px-6',
-              isLawyerWorkplaceRoute ? 'items-stretch' : 'items-center',
-              'left-0 xl:left-18',
-              isOpenSideBar && 'xl:left-60'
-            )}
-          >
-            {/* Left side: Menu button (mobile) + Search Bar or Lawyer Workplace nav */}
-            <div
+          {!isOnexDock && (
+            <header
               className={cn(
-                'relative flex gap-2 lg:gap-3',
-                isLawyerWorkplaceRoute
-                  ? 'min-w-0 flex-1 items-stretch self-stretch overflow-hidden'
-                  : 'items-center'
+                'bg-elevated border-border/40 fixed top-0 right-0 z-20 flex h-[60px] justify-between border-l px-3 shadow-sm transition-all duration-300 sm:px-4 lg:px-6',
+                isLawyerWorkplaceRoute ? 'items-stretch' : 'items-center',
+                'left-0 xl:left-18',
+                isOpenSideBar && 'xl:left-60'
               )}
             >
-              {/* Mobile menu button */}
-              <button
-                onClick={toggleSidebar}
+              {/* Left side: Menu button (mobile) + Search Bar or Lawyer Workplace nav */}
+              <div
                 className={cn(
-                  'focus:ring-primary-500 focus:ring-offset-background group border-border bg-card hover:bg-muted active:bg-muted flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow-md focus:ring-2 focus:ring-offset-2 focus:outline-none active:shadow-sm disabled:cursor-not-allowed disabled:opacity-50 xl:hidden',
-                  isLawyerWorkplaceRoute && 'self-center'
+                  'relative flex gap-2 lg:gap-3',
+                  isLawyerWorkplaceRoute
+                    ? 'min-w-0 flex-1 items-stretch self-stretch overflow-hidden'
+                    : 'items-center'
                 )}
-                aria-label="Toggle menu"
               >
-                <Icons.Menu11
-                  size={20}
-                  className="text-foreground transition-transform duration-200 group-hover:scale-110"
-                  strokeWidth={1.5}
-                />
-              </button>
-
-              {isLawyerWorkplaceRoute ? (
-                <LawyerWorkplaceHeaderNav />
-              ) : (
-                <div className="relative flex items-center gap-2" ref={searchContainerRef}>
-                  <SearchBar
-                    placeholder={t('search.placeholder')}
-                    searchOptions={searchOptions}
-                    defaultSearchType="phone"
-                    onSearch={handleSearch}
-                    onSearchChange={handleSearchChange}
-                    isLoading={isSearching}
-                    value={localSearchQuery}
-                    searchTypeValue={localSearchType}
-                  />
-                  {showSearchDropdown && (
-                    <SearchResults
-                      query={localSearchQuery}
-                      searchType={localSearchType}
-                      results={searchResults}
-                      isLoading={isSearching}
-                      error={searchError}
-                      hint={searchHint}
-                      onViewAll={handleViewAllResults}
-                      onResultClick={handleResultClick}
-                    />
+                {/* Mobile menu button */}
+                <button
+                  onClick={toggleSidebar}
+                  className={cn(
+                    'focus:ring-primary-500 focus:ring-offset-background group border-border bg-card hover:bg-muted active:bg-muted flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow-md focus:ring-2 focus:ring-offset-2 focus:outline-none active:shadow-sm disabled:cursor-not-allowed disabled:opacity-50 xl:hidden',
+                    isLawyerWorkplaceRoute && 'self-center'
                   )}
-                </div>
-              )}
-            </div>
+                  aria-label="Toggle menu"
+                >
+                  <Icons.Menu11
+                    size={20}
+                    className="text-foreground transition-transform duration-200 group-hover:scale-110"
+                    strokeWidth={1.5}
+                  />
+                </button>
 
-            {/* Right side: Desktop - individual buttons, Mobile - grouped dropdown */}
-            {/* Desktop: Project Selector, Language Switcher and User Profile */}
-            <div className="hidden shrink-0 items-center gap-3 self-center lg:flex">
-              <MinimizedCallBubble />
-              <MinimizedChainExecutorBubble />
-              <NotificationBell />
-              <ThemeModeToggle />
-              <AiAssistantHeaderButton />
-              <UserProfile onLogoutClick={handleLogoutClick} />
-            </div>
+                {isLawyerWorkplaceRoute ? (
+                  <LawyerWorkplaceHeaderNav />
+                ) : (
+                  <div className="relative flex items-center gap-2" ref={searchContainerRef}>
+                    <SearchBar
+                      placeholder={t('search.placeholder')}
+                      searchOptions={searchOptions}
+                      defaultSearchType="phone"
+                      onSearch={handleSearch}
+                      onSearchChange={handleSearchChange}
+                      isLoading={isSearching}
+                      value={localSearchQuery}
+                      searchTypeValue={localSearchType}
+                    />
+                    {showSearchDropdown && (
+                      <SearchResults
+                        query={localSearchQuery}
+                        searchType={localSearchType}
+                        results={searchResults}
+                        isLoading={isSearching}
+                        error={searchError}
+                        hint={searchHint}
+                        onViewAll={handleViewAllResults}
+                        onResultClick={handleResultClick}
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
 
-            <div className="flex shrink-0 items-center gap-1.5 self-center sm:gap-2 lg:hidden">
-              <MinimizedCallBubble />
-              <MinimizedChainExecutorBubble />
-              <NotificationBell />
-              <ThemeModeToggle />
-              <AiAssistantHeaderButton />
-              <MobileHeaderMenu onLogoutClick={handleLogoutClick} />
-            </div>
-          </header>
+              {/* Right side: Desktop - individual buttons, Mobile - grouped dropdown */}
+              {/* Desktop: Project Selector, Language Switcher and User Profile */}
+              <div className="hidden shrink-0 items-center gap-3 self-center lg:flex">
+                <MinimizedCallBubble />
+                <MinimizedChainExecutorBubble />
+                <NotificationBell />
+                <ThemeModeToggle />
+                <AiAssistantHeaderButton />
+                <UserProfile onLogoutClick={handleLogoutClick} />
+                {minimizedCallPill}
+              </div>
+
+              <div className="flex shrink-0 items-center gap-1.5 self-center sm:gap-2 lg:hidden">
+                <MinimizedCallBubble />
+                <MinimizedChainExecutorBubble />
+                <NotificationBell />
+                <ThemeModeToggle />
+                <AiAssistantHeaderButton />
+                <MobileHeaderMenu onLogoutClick={handleLogoutClick} />
+                {minimizedCallPill}
+              </div>
+            </header>
+          )}
 
           {/* Scrollable Page Content with top padding for fixed header */}
           <main
             className={cn(
-              'min-h-screen overflow-y-auto px-4 pt-[80px] pb-4 sm:px-6 sm:pb-6 lg:px-[28px] lg:pb-[20px]',
+              'min-h-screen overflow-y-auto',
+              // Dock: no fixed header above and no room to spare — the chat
+              // fills the sidebar edge to edge and owns its own padding.
+              isOnexDock
+                ? 'overflow-x-hidden p-0'
+                : 'px-4 pt-[80px] pb-4 sm:px-6 sm:pb-6 lg:px-[28px] lg:pb-[20px]',
               isLawyerWorkplaceRoute && 'overflow-x-hidden'
             )}
           >
@@ -1255,23 +1351,27 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           isLoading={isLoggingOut}
         />
 
-        {/* Incoming Call Modal — suppressed while another call window is up */}
-        {incomingCall && !popupSuppressed && (
-          <CallDialogModal
-            open={true}
-            onClose={dismissIncomingCall}
-            initialState="incoming"
-            clientId={incomingCall.client_id ?? null}
-            clientName={incomingCall.client_name || 'Unknown Caller'}
-            phoneNumber={incomingCall.customer_phone}
-            callId={incomingCall.call_id}
-            loans={incomingCallLoans}
-            incomingContext={primaryIncomingClient}
-            incomingClients={incomingCall.clients ?? []}
-            selectedIncomingClientId={selectedIncomingClientId}
-            onSelectIncomingClient={setSelectedIncomingClientId}
-            onSearchByPhone={handleSearchIncomingByPhone}
-            onReject={dismissIncomingCall}
+        {/* Incoming Call Modal — suppressed while another call window is up.
+            Also suppressed in the OneX dock: the operator's CRM window in the
+            main pane raises its own popup, and a second one inside a ~420px
+            sidebar would both duplicate it and be unusable there. A host that
+            runs the dock as its only CRM surface opts out — see
+            `shouldSuppressIncomingCallPopup`. */}
+        {incomingCall && canShowIncomingPopup && !suppressIncomingCallPopup && (
+          <IncomingCallWindowContainer
+            // A queue can replace one ringing call with another without the
+            // window ever unmounting; a per-call identity keeps the second
+            // call from inheriting the first one's timer and form state.
+            key={incomingCall.call_id}
+            ended={callEnded}
+            incomingCall={incomingCall}
+            answeredAt={answeredAt}
+            onAnswered={markAnswered}
+            agentExtension={agentExtension}
+            minimized={callMinimized}
+            onMinimize={() => setCallMinimized(true)}
+            onUnsavedChange={reportUnfiledWriteUp}
+            onDismiss={dismissIncomingCall}
           />
         )}
       </div>

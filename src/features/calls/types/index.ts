@@ -164,6 +164,8 @@ export interface LoanInfo {
   status: string
   seller_name?: string | null
   purchase_date?: string | null
+  /** Latest restructuring status for this debt, whatever it is. */
+  restructuring_status?: string | null
 }
 
 export interface IncomingCallInteraction {
@@ -189,6 +191,14 @@ export interface IncomingCallClient {
   contact_comment: string | null
   contact_source: string | null
   contact_type_name: string | null
+  /**
+   * Whose number this is, classified by the client-service. `contact_source`
+   * cannot stand in for it: guarantors, third parties and referrers are all
+   * stored as 'recommender'. Null where the contact type is one nobody has
+   * classified — deliberately not a category, because every value here that is
+   * not third_party or guarantor renders the caller as the debtor.
+   */
+  contact_category: 'client' | 'guarantor' | 'third_party' | 'other' | null
   recent_interactions: IncomingCallInteraction[]
   loans: LoanInfo[]
 }

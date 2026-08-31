@@ -8,7 +8,7 @@
 
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useForm, Controller } from 'react-hook-form'
+import { useForm, Controller, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useCreateUser } from '../hooks/useCreateUser'
@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/Select'
-import { createUserSchema } from '../schemas/userSchemas'
+import { createUserSchema, requireAgentExtension } from '../schemas/userSchemas'
 import { ProjectRoleGroupRow } from './ProjectRoleGroupRow'
 
 interface Project {
@@ -64,6 +64,9 @@ const createUserFormSchema = createUserSchema
       path: ['projectRoles'],
     }
   )
+  // Unconditional here: a user being created has no prior state to respect,
+  // so an agent without an extension is always the admin's own doing.
+  .superRefine(requireAgentExtension)
 
 type CreateUserFormData = z.infer<typeof createUserFormSchema>
 
@@ -93,6 +96,21 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
       projectRoles: {} as Record<string, number>,
     },
   })
+
+  const isAgent = useWatch({ control, name: 'is_agent' }) === true
+
+  /**
+   * Nothing is at stake here that is at stake on the edit form: a user being
+   * created has no stored extension to lose and no prior state to preserve, so
+   * clearing is only ever undoing what the admin typed a moment ago.
+   *
+   * It stays on the toggle rather than an effect for consistency with the edit
+   * form, where the difference does matter.
+   */
+  const clearAgentExtensions = () => {
+    setValue('asterisk_extension', '', { shouldDirty: true, shouldValidate: true })
+    setValue('dialer_extension', '', { shouldDirty: true, shouldValidate: true })
+  }
 
   const handleProjectToggle = async (projectId: number, checked: boolean) => {
     const newSelected = checked
@@ -171,6 +189,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
         timezone: formData.timezone || 'Europe/Kyiv',
         must_change_password: formData.must_change_password || false,
         asterisk_extension: formData.asterisk_extension || undefined,
+        dialer_extension: formData.dialer_extension || undefined,
         is_agent: formData.is_agent || false,
         project_assignments,
       },
@@ -420,6 +439,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
             <Input
               id="asterisk_extension"
               placeholder="1001"
+              disabled={!isAgent}
               {...register('asterisk_extension')}
               aria-invalid={!!errors.asterisk_extension}
               variant={errors.asterisk_extension ? 'error' : 'default'}
@@ -433,7 +453,26 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
             </p>
           </div>
 
-          <div className="flex items-center gap-2 pt-7">
+          <div>
+            <Label htmlFor="dialer_extension">{t('pages.users.forms.dialerExtension')}</Label>
+            <Input
+              id="dialer_extension"
+              placeholder="9001"
+              disabled={!isAgent}
+              {...register('dialer_extension')}
+              aria-invalid={!!errors.dialer_extension}
+              variant={errors.dialer_extension ? 'error' : 'default'}
+              className="mt-1"
+            />
+            {errors.dialer_extension && (
+              <p className="mt-1 text-sm text-red-500">{errors.dialer_extension.message}</p>
+            )}
+            <p className="text-muted-foreground mt-1 text-xs">
+              {t('pages.users.forms.helpers.dialerExtension')}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 sm:pt-1">
             <Controller
               name="is_agent"
               control={control}
@@ -441,7 +480,11 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
                 <Checkbox
                   id="is_agent"
                   checked={field.value || false}
-                  onCheckedChange={(checked) => field.onChange(checked === true)}
+                  onCheckedChange={(checked) => {
+                    const next = checked === true
+                    field.onChange(next)
+                    if (!next) clearAgentExtensions()
+                  }}
                 />
               )}
             />

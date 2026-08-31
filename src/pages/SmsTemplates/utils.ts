@@ -27,7 +27,6 @@ export function mapTemplateResponseToSmsTemplate(apiTemplate: TemplateResponse):
     category: apiTemplate.category || 'General',
     variables,
     usageCount: apiTemplate.times_used,
-    isSystem: false, // System templates not implemented in backend
     isEnabled: apiTemplate.is_active,
   }
 }

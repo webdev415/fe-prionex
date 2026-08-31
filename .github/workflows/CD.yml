@@ -39,7 +39,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Determine API and WebSocket URLs for build
+      - name: Determine API, WebSocket and operator-phone URLs for build
         id: set-api-url
         run: |
           if [ "${{ github.ref }}" == "refs/heads/main" ]; then
@@ -52,6 +52,16 @@ jobs:
             if [ -z "$WS_URL" ]; then
               WS_URL="wss://api.crm-prionex.online"
             fi
+            # No default on purpose. The one softphone deployment
+            # (webrtc.crm-prionex.online) is currently built with
+            # VITE_CRM_PARENT_ORIGIN pointing at the dev CRM, so it rejects
+            # postMessage from production. Defaulting to it would ship a phone
+            # that silently never leaves "Connecting".
+            PHONE_URL="${{ secrets.VITE_OPERATOR_PHONE_URL_PROD }}"
+            if [ -z "$PHONE_URL" ]; then
+              echo "::error::VITE_OPERATOR_PHONE_URL_PROD is not set and there is no production softphone deployment yet"
+              exit 1
+            fi
           elif [ "${{ github.ref }}" == "refs/heads/development" ]; then
             # Development environment
             API_URL="${{ secrets.VITE_API_BASE_URL_DEV }}"
@@ -61,6 +71,14 @@ jobs:
             WS_URL="${{ secrets.VITE_WS_URL_DEV }}"
             if [ -z "$WS_URL" ]; then
               WS_URL="wss://api.dev.crm-prionex.online"
+            fi
+            # There is no separate dev softphone host; the single deployment at
+            # webrtc.crm-prionex.online is built with VITE_CRM_PARENT_ORIGIN set
+            # to the dev CRM, so it is the correct target here. The secret exists
+            # to repoint dev once a second deployment lands.
+            PHONE_URL="${{ secrets.VITE_OPERATOR_PHONE_URL_DEV }}"
+            if [ -z "$PHONE_URL" ]; then
+              PHONE_URL="https://webrtc.crm-prionex.online"
             fi
           else
             # Default to production for tags or other branches
@@ -72,11 +90,23 @@ jobs:
             if [ -z "$WS_URL" ]; then
               WS_URL="wss://api.crm-prionex.online"
             fi
+            # No default on purpose. The one softphone deployment
+            # (webrtc.crm-prionex.online) is currently built with
+            # VITE_CRM_PARENT_ORIGIN pointing at the dev CRM, so it rejects
+            # postMessage from production. Defaulting to it would ship a phone
+            # that silently never leaves "Connecting".
+            PHONE_URL="${{ secrets.VITE_OPERATOR_PHONE_URL_PROD }}"
+            if [ -z "$PHONE_URL" ]; then
+              echo "::error::VITE_OPERATOR_PHONE_URL_PROD is not set and there is no production softphone deployment yet"
+              exit 1
+            fi
           fi
           echo "API_URL=$API_URL" >> $GITHUB_OUTPUT
           echo "WS_URL=$WS_URL" >> $GITHUB_OUTPUT
+          echo "PHONE_URL=$PHONE_URL" >> $GITHUB_OUTPUT
           echo "📋 Building with API URL: $API_URL"
           echo "📋 Building with WS URL: $WS_URL"
+          echo "📋 Building with operator phone URL: $PHONE_URL"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -101,6 +131,11 @@ jobs:
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
 
+      # VITE_ASSISTANT_REPORT_TABLES_ENABLED — feature flag for the assistant's
+      # report tables (heat map + attention rows). Vite inlines it at build
+      # time, so it has to be a build-arg. The repository variable is normally
+      # unset: it then expands to an empty string and the feature stays off;
+      # set it to "true" to ship the feature.
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
@@ -112,6 +147,8 @@ jobs:
           build-args: |
             VITE_API_BASE_URL=${{ steps.set-api-url.outputs.API_URL }}
             VITE_WS_URL=${{ steps.set-api-url.outputs.WS_URL }}
+            VITE_ASSISTANT_REPORT_TABLES_ENABLED=${{ vars.VITE_ASSISTANT_REPORT_TABLES_ENABLED }}
+            VITE_OPERATOR_PHONE_URL=${{ steps.set-api-url.outputs.PHONE_URL }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

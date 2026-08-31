@@ -170,7 +170,7 @@ export function AddIncomingDocumentModal({
               ref={fileInputRef}
               type="file"
               className="hidden"
-              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+              accept=".pdf,.doc,.docx,.zip,.jpg,.jpeg,.png"
               onChange={(e) => handleFileSelect(e.target.files?.[0] ?? null)}
             />
             {file ? (
@@ -190,7 +190,7 @@ export function AddIncomingDocumentModal({
                 <p className="text-foreground text-[13px]">
                   {t(
                     'pages.lawyerWorkplace.documents.modals.incoming.dropHint',
-                    'Drag & drop or click to upload PDF, DOC, or image'
+                    'Drag & drop or click to upload PDF, DOC, ZIP, or image'
                   )}
                 </p>
               </div>

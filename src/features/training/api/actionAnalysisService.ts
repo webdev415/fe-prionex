@@ -17,6 +17,9 @@ function buildCallParams(filters: CallMonitoringFilters): URLSearchParams {
   filters.agent_extensions?.forEach((ext) => {
     if (ext) params.append('agent_extensions', ext)
   })
+  // Repeated `?key=val` — FastAPI's `Optional[List[int]] = Query(None)` rejects
+  // Axios's default `[]` suffix (same reason as the list params below).
+  filters.department_ids?.forEach((id) => params.append('department_ids', String(id)))
   if (filters.phone_number) params.set('phone_number', filters.phone_number)
   if (filters.outcome_filter) params.set('outcome_filter', filters.outcome_filter)
   if (filters.min_duration != null) params.set('min_duration', String(filters.min_duration))
@@ -29,6 +32,9 @@ function buildCallParams(filters: CallMonitoringFilters): URLSearchParams {
     if (t) params.append('telephony_types', t)
   })
   if (filters.category) params.set('category', filters.category)
+  // Only sent when narrowing to disputes: `disputed=false` and an omitted
+  // param mean the same thing (every call), and the backend gates the param.
+  if (filters.disputed) params.set('disputed', 'true')
   if (filters.sort) params.set('sort', filters.sort)
   if (filters.limit != null) params.set('limit', String(filters.limit))
   if (filters.offset != null) params.set('offset', String(filters.offset))

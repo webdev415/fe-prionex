@@ -3,7 +3,7 @@
  *
  * Full page view for displaying detailed client information.
  */
-import React, { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQueries, useQueryClient } from '@tanstack/react-query'
@@ -11,8 +11,9 @@ import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
 import { DocumentsAccordion } from './components/DocumentsAccordion'
 import { DocumentUploadModal } from './components/DocumentUploadModal'
-import { LoanFactoringInfo } from './components/LoanFactoringInfo'
 import { LoanCalculationModal } from './components/LoanCalculationModal'
+import { LoanCard, type LoanCardAction } from './components/LoanCard'
+import { LoansCardList } from './components/LoansCardList'
 import { UbkiSubmissionHistory } from './components/UbkiSubmissionHistory'
 import { SaleNotesSection } from './components/SaleNotesSection'
 import {
@@ -74,8 +75,7 @@ import {
   MessagingTabSkeleton,
 } from './components/MessagingHistorySkeleton'
 import { CallLogCard } from './components/CallLogCard'
-import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
-import { useUpdateClient, clientKeys } from '@/features/clients/hooks/useClients'
+import { clientKeys } from '@/features/clients/hooks/useClients'
 import { cn } from '@/lib/utils'
 import { decideChainAutoOpen } from '@/lib/taChainAutoOpen'
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/Tooltip'
@@ -92,6 +92,7 @@ import {
   useClientLoans,
   useClientPaymentsSection,
   useClientCallSmsHistory,
+  useClientRecentCalls,
   useClientTasks,
   useClientOperatorsSection,
   useClientDocuments,
@@ -146,6 +147,7 @@ import {
   PERIODICITY_MONTHLY_NTH_DAY,
   type PeriodicityType,
 } from '@/features/clients/utils/rrSchedule'
+import { buildContactPayload } from '@/features/clients/utils/contactPayload'
 import type { RestructuringPaymentEntry } from '@/features/clients/api/types'
 import type { OverpaymentResponse, RRStatusHistoryEntry } from '@/features/clients/api/clientApi'
 import { useUpdateInteraction } from '@/features/clients/hooks/useNoteInteraction'
@@ -159,6 +161,7 @@ import { TagSelectorModal } from './components/TagSelectorModal'
 import { useCallOrigination } from '@/features/calls/hooks/useCallOrigination'
 import { useAuthStore } from '@/stores/authStore'
 import { backendToFrontendPaymentMethod } from '@/features/payments/utils'
+import { PaymentMethodCell } from '@/features/payments/components/PaymentMethodCell'
 import { useUserDepartment } from '@/features/users'
 import { PermissionGuard } from '@/components/auth'
 import { useHasAnyPermission, useHasPermission } from '@/hooks/usePermissions'
@@ -166,6 +169,10 @@ import { useSubmitDebtToUbki, useBulkSubmitToUbki, ubkiKeys } from '@/features/u
 import { PERMISSIONS } from '@/constants/permissions'
 import { searchClientsByPhoneExact } from '@/api/clientSearchApi'
 import { ChainExecutor, TAInteractionHistory } from './components/taChains'
+import { useTAHotkeyLaunch } from '@/features/taHotkeys/useTAHotkeyLaunch'
+import { TA_EXECUTOR_DIALOG_CLASS } from '@/features/taHotkeys/hotkey'
+import { useTAHotkeyBindings } from '@/features/taHotkeys/hooks/useTAHotkeys'
+import { resolveRecentCallPhone } from '@/features/taHotkeys/recentCallPhone'
 import { RelatedTagsTab } from './components/RelatedTagsTab'
 import type { PhoneMeta } from '@/features/tags/hooks/useLinkedClientsRelatedTags'
 import { formatUkrainePhoneForDisplay } from '@/lib/phone'
@@ -245,11 +252,14 @@ const formatDateAsISO = (d: Date): string => {
   return `${y}-${m}-${day}`
 }
 
-// DISABLED for the release (client requirement): bulk "Send all loans to UBKI"
-// must stay OFF; only the per-loan manual "Send to UBKI" button stays active.
-// The backend /submit/bulk endpoint is also disabled. Re-enable by flipping
-// this flag to true.
+// Gates the bulk "Send all loans to UBKI" action. Currently ON, and the
+// backing routes (/ubki/submit/bulk, /ubki/submit/by-clients) are live —
+// an earlier release turned both off, so treat any comment claiming they
+// are disabled as out of date. Flip to false to hide the action again.
 const ENABLE_BULK_UBKI_SUBMISSION = true
+
+/** Ties the priority chip's ``aria-controls`` to the panel it discloses. */
+const V3_PANEL_ID = 'v3-priority-panel'
 
 export function ClientDetailPage() {
   const { t, i18n } = useTranslation('common')
@@ -291,6 +301,9 @@ export function ClientDetailPage() {
   const [selectedLoanId, setSelectedLoanId] = useState<number | null>(null)
   const [isConnectRrOpen, setIsConnectRrOpen] = useState(false)
   const [isWriteoffOpen, setIsWriteoffOpen] = useState(false)
+  // Loan the write-off modal opens on, so the per-card menu acts on that card's
+  // loan instead of falling back to the modal's first eligible debt.
+  const [writeoffInitialDebtId, setWriteoffInitialDebtId] = useState<number | null>(null)
   // KAN-334 — Reversal (storno) modal open state + optional row preselect.
   const [isReversalOpen, setIsReversalOpen] = useState(false)
   const [reversalInitialPaymentId, setReversalInitialPaymentId] = useState<number | null>(null)
@@ -363,9 +376,11 @@ export function ClientDetailPage() {
   const [editClosureDateError, setEditClosureDateError] = useState<string | null>(null)
   // Row IDs whose factoring-agreement info panel is currently expanded.
   // Multi-row expand is allowed — Set lets parent track an arbitrary subset.
-  const [expandedDebtIds, setExpandedDebtIds] = useState<Set<number>>(new Set())
-  const toggleDebtExpand = (id: number) =>
-    setExpandedDebtIds((prev) => {
+  // KAN-993: RR panels are collapsed by default and expand on chip click
+  // (KAN-339 kept them always visible). Tracks which loans' RR panel is open.
+  const [rrExpandedIds, setRrExpandedIds] = useState<Set<number>>(new Set())
+  const toggleRrExpand = (id: number) =>
+    setRrExpandedIds((prev) => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
       else next.add(id)
@@ -420,6 +435,20 @@ export function ClientDetailPage() {
   const [chainExecutorPrefilledPhone, setChainExecutorPrefilledPhone] = useState<string | null>(
     null
   )
+  // KAN-973 — template the executor should start immediately, set only by a
+  // hotkey launch. Cleared with the other executor context on close so a later
+  // click-open does not re-run the hotkey's template.
+  // KAN-973 §4 — the source of a phone pre-selected by a hotkey. Kept apart
+  // from chainExecutorContactSource, which also narrows the template list: the
+  // hotkey already knows which template it wants, so narrowing could filter it
+  // out and start nothing.
+  const [chainExecutorPrefilledPhoneSource, setChainExecutorPrefilledPhoneSource] = useState<
+    'client' | 'recommender' | null
+  >(null)
+  // KAN-973 — the quick-pick a hotkey asked the executor to start on open.
+  const [chainExecutorInitialTemplateId, setChainExecutorInitialTemplateId] = useState<
+    number | null
+  >(null)
   const chainExecutorMinimizeRef = useRef<(() => void) | null>(null)
 
   // Call origination hook (provides user, call state, handlers)
@@ -478,6 +507,8 @@ export function ClientDetailPage() {
     if (open) {
       setChainExecutorContactSource(null)
       setChainExecutorPrefilledPhone(null)
+      setChainExecutorPrefilledPhoneSource(null)
+      setChainExecutorInitialTemplateId(null)
       setIsChainExecutorOpen(true)
     } else if (disarm) {
       setChainAutoOpenArmed(false)
@@ -646,35 +677,11 @@ export function ClientDetailPage() {
 
   // --- UBKI (credit bureau) outbound submission ---
   const ubkiQueryClient = useQueryClient()
-  const { mutate: updateClientMutate, isPending: isUpdatingUbkiOptOut } = useUpdateClient()
   // Client opt-out flag (backend exposes it on the client detail response).
   const canSubmitToUbki = useHasPermission(PERMISSIONS.UBKI.SUBMIT)
   const { mutate: submitDebtToUbki, isPending: isSubmittingToUbki } = useSubmitDebtToUbki()
   const { mutate: bulkSubmitToUbki, isPending: isBulkSubmittingToUbki } = useBulkSubmitToUbki()
   const doNotSendToUbki = clientDetail?.do_not_send_to_ubki ?? false
-  const handleToggleUbkiOptOut = (checked: boolean) => {
-    updateClientMutate(
-      { id: clientId, data: { do_not_send_to_ubki: checked } },
-      {
-        onSuccess: () => {
-          // Refresh the full client record so the toggle reflects persisted state.
-          ubkiQueryClient.invalidateQueries({ queryKey: clientKeys.detail(clientId), exact: true })
-          toast.success(
-            t(
-              'pages.clients.detail.ubki.toasts.optOutSuccess',
-              checked ? 'Client opted out of UBKI' : 'Client re-enabled for UBKI',
-              { count: 1 }
-            )
-          )
-        },
-        onError: () => {
-          toast.error(
-            t('pages.clients.detail.ubki.toasts.submitError', 'Failed to update UBKI opt-out')
-          )
-        },
-      }
-    )
-  }
   const { mutate: completeRa, isPending: isCompletingRa } = useCompleteRestructuringAgreement()
   const { mutate: transitionRr, isPending: isTransitioningRr } = useTransitionRRStatus()
   const { mutate: disconnectRr, isPending: isDisconnectingRr } = useDisconnectRR()
@@ -699,6 +706,19 @@ export function ClientDetailPage() {
     isValidClientId && activeRightCardTab === 'call-sms-history',
     showAllCalls
   )
+  // KAN-973 §4 — answers "did a call to this client just end?" at the moment a
+  // hotkey is pressed. Separate from the Call/SMS history above, which only
+  // loads while its tab is open and returns display-mapped records.
+  //
+  // Only fetched for operators who actually have a shortcut bound. The answer
+  // is used at one moment — a hotkey press — so for everyone else this would be
+  // a request per client card serving nothing, on the most-visited page in the
+  // app. Reading the bindings here is free: `useTAHotkeyLaunch` below already
+  // subscribes to the same query.
+  const hotkeyBindings = useTAHotkeyBindings()
+  const hasHotkeyBindings = Object.keys(hotkeyBindings).length > 0
+  const { data: recentCalls } = useClientRecentCalls(clientId, isValidClientId && hasHotkeyBindings)
+
   const canAccessMessagingHistory = useHasAnyPermission([
     ...ALL_MESSAGING_SEND_PERMISSIONS,
     PERMISSIONS.MESSAGING.VIEW_CAMPAIGN_ANALYTICS,
@@ -727,6 +747,20 @@ export function ClientDetailPage() {
     profile?.is_deceased ||
     profile?.is_fraudster ||
     profile?.lawsuit_filed
+  )
+  // The priority chip discloses the v3 panel below it. Collapsed by default:
+  // the panel is the detail behind the chip, and the chip already carries the
+  // one thing an operator needs at a glance.
+  const [isV3PanelOpen, setIsV3PanelOpen] = useState(false)
+  // aria-hidden because the button it sits in already announces its state via
+  // aria-expanded — without it a screen reader reads the arrow as content.
+  const v3PanelArrow = (
+    <Icons.ArrowDown
+      size={14}
+      strokeWidth={2}
+      aria-hidden="true"
+      className={cn('transition-transform', isV3PanelOpen && 'rotate-180')}
+    />
   )
 
   const { data: messagingOperators = [] } = useOperators(
@@ -817,6 +851,9 @@ export function ClientDetailPage() {
 
   const canCreateTasks = useHasPermission(PERMISSIONS.CLIENTS.CREATE_TASKS)
   const canEditClient = useHasPermission(PERMISSIONS.CLIENTS.EDIT)
+  // KAN-993 — close/reopen/edit-closure live in the per-card "..." dropdown now,
+  // so we need the permission as a boolean (was a <PermissionGuard> wrapper).
+  const canCloseDebt = useHasPermission(PERMISSIONS.CLIENTS.CLOSE_DEBT)
   // KAN-245 — gate the Loans-tab "Write-off" button on create_writeoffs.
   const canCreateWriteoff = useHasPermission(PERMISSIONS.WRITEOFFS.CREATE)
   // KAN-245 — gate the Payments → "Writes-off" sub-tab's per-loan list.
@@ -1059,6 +1096,7 @@ export function ClientDetailPage() {
       // Personal details (nested for compatibility)
       personalDetails: {
         tin: profile.tax_id,
+        email: profile.email ?? '',
         dateOfBirth: profile.date_of_birth ?? '',
         age: profile.age ?? '',
         documentType: profile.passport?.document_type ?? '',
@@ -1155,6 +1193,10 @@ export function ClientDetailPage() {
         id: a.id,
         addressType: a.address_type,
         fullAddress: a.full_address ?? '-',
+        // Carried so the panel can pick the primary address when a client
+        // holds more than one of a type, rather than whatever the API
+        // happened to return first.
+        isPrimary: a.is_primary ?? false,
       })),
       // Comments mapped
       comments: (profile.comments ?? []).map((c) => ({
@@ -1185,6 +1227,11 @@ export function ClientDetailPage() {
         principalDebt: d.principal_debt != null ? Number(d.principal_debt) : null,
         remainingDebtAmount: Number(d.remaining_debt_amount ?? 0),
         totalToReturn: Number(d.total_to_return ?? 0),
+        // KAN-994 — closing-coefficient band, or null when no tooltip is due
+        // (no principal debt, no matching age range, no purchase date). The
+        // backend does the arithmetic and the date comparison so every viewer
+        // sees the same figures; the card renders the strings verbatim.
+        closingCoefficient: d.closing_coefficient ?? null,
         // KAN-784 AC2: fully-returned loan that fell short of the principal
         // guard — auto-close was blocked, so it needs operator-driven closure.
         needsManualClosureReview: d.needs_manual_closure_review ?? false,
@@ -1196,6 +1243,9 @@ export function ClientDetailPage() {
         // the sale. Surfaced as its own column only when at least one loan row
         // has it and it diverges from remainingDebtAmount (see loanColumns).
         eligibleForReturn: d.legacy_f53 != null ? Number(d.legacy_f53) : null,
+        // KAN-993 — "Debt term (days)" card field (credit_term_days already
+        // populated on the backend; surfaced on the redesigned Loans card).
+        creditTermDays: d.credit_term_days ?? null,
         status: d.status,
         // UBKI outbound submission state (credit bureau)
         sentToCreditBureau: d.sent_to_credit_bureau ?? false,
@@ -1223,6 +1273,7 @@ export function ClientDetailPage() {
           paymentDate: string
           amount: number
           paymentMethod: string
+          easypayMethod?: string | null
           status: string
           paymentDistribution: string
           employee: string
@@ -1260,6 +1311,7 @@ export function ClientDetailPage() {
             systemPayments.push({
               ...mapped,
               paymentMethod: p.payment_method,
+              easypayMethod: p.easypay_method,
               status: p.status,
               paymentDistribution: p.payment_type ?? '-',
               employee: p.assigned_user_full_name ?? '-',
@@ -1391,6 +1443,47 @@ export function ClientDetailPage() {
     () => (client?.activities ?? []).filter((a) => a._raw?.type_code === 'SEARCHING'),
     [client?.activities]
   )
+
+  // KAN-973 — hotkey quick-launch. The guards (typing focus, single modal) live
+  // in the hook and its pure modules; this only says what "launch" means here.
+  //
+  // Declared this far down because it reads `client` and `recentCalls`; a hook
+  // call placed above their `const`s throws on every render.
+  useTAHotkeyLaunch({
+    enabled: isValidClientId,
+    isExecutorOpen: isChainExecutorOpen,
+    onLaunch: (templateId) => {
+      // §4: on a hotkey launch only, pre-select the number of a call that ended
+      // in the last 10 minutes — the operator has just hung up and is logging
+      // that conversation. Resolved here, at the keypress, rather than in a memo
+      // so the 10-minute window is measured against the moment of the press.
+      //
+      // Feeding it through prefilledPhone/contactSource reuses the pre-selection
+      // path the phone-row entry point already uses, in both wizard and instant
+      // mode — no new effect in a component that has had races before.
+      const recentPhone = resolveRecentCallPhone({
+        calls: recentCalls ?? [],
+        phones: client?.phones ?? [],
+        nowMs: Date.now(),
+        // Only THIS operator's calls may drive the pre-selection. A colleague
+        // can have spoken to the same client inside the window, and their
+        // number would otherwise be seeded into this operator's log without
+        // anyone choosing it. Operators with no extension configured keep the
+        // unfiltered behaviour rather than silently losing the feature.
+        agentExtension: user?.asterisk_extension,
+      })
+
+      // Only the prefill source — NOT contactSource, which would filter the
+      // chain list and could hide the very template this hotkey launches.
+      setChainExecutorPrefilledPhoneSource(
+        recentPhone ? classifyContactSource(recentPhone.contactTypeId) : null
+      )
+      setChainExecutorContactSource(null)
+      setChainExecutorPrefilledPhone(recentPhone?.number ?? null)
+      setChainExecutorInitialTemplateId(templateId)
+      setIsChainExecutorOpen(true)
+    },
+  })
 
   const normalizePhoneForLookup = (value: string) => stripPhoneFormat(value)
 
@@ -1597,7 +1690,7 @@ export function ClientDetailPage() {
     comment: '',
   })
   const [activeClientCardTab, setActiveClientCardTab] = useState<
-    'related' | 'personal' | 'passport' | 'work'
+    'related' | 'personal' | 'passport'
   >('related')
   // KAN-610: activeRightCardTab moved up (near activeCommentTab) so the data
   // hooks can gate on it for lazy loading.
@@ -1703,11 +1796,7 @@ export function ClientDetailPage() {
   }
 
   const handleSaveContact = () => {
-    const payload = {
-      contact_value: contactFormData.contact_value.trim(),
-      contact_type_id: contactFormData.contact_type_id,
-      comment: contactFormData.comment.trim() || undefined,
-    }
+    const payload = buildContactPayload(contactFormData)
     if (!payload.contact_value) return
 
     // Requirement 1 — digits-only for Client/Recommender (phone) contact sources.
@@ -1939,10 +2028,6 @@ export function ClientDetailPage() {
     )
   }
 
-  // Show the Closure Date column whenever the table contains at least one
-  // closed loan — otherwise it would be a column full of dashes.
-  const hasClosedLoan = client.loans.some((loan) => loan.status === 'closed')
-
   // KAN-339: RR is NOT a Debt.status value — debt.status stays active/closed.
   // Restructuring lives in the separate restructuring_agreements list, keyed by
   // debt_id, with its own status lookup (1 Connected · 2 Violated · 3 Cancelled ·
@@ -1953,6 +2038,42 @@ export function ClientDetailPage() {
   //                        status badge turns yellow.
   //   • activeRrDebtIds  — has a Connected (1) or Violated (2) agreement →
   //                        already-on-active-RR, so Connect RR is disabled.
+  // ── Sidebar panel values ───────────────────────────────────────────────
+  // Department is a qualifier on the responsible employee's name rather than
+  // its own row; drop the bracket entirely when either half is missing.
+  const responsibleEmployeeWithDepartment =
+    client.responsibleEmployee && client.department && client.department !== '-'
+      ? `${client.responsibleEmployee} (${client.department})`
+      : client.responsibleEmployee
+  // Date of birth carries the age inline. The model keeps the raw ISO value —
+  // other consumers parse it — so format for display here. `age` is computed
+  // server-side per request, so it is always current.
+  const dateOfBirthWithAge = !client.personalDetails.dateOfBirth
+    ? '-'
+    : client.personalDetails.age
+      ? t('pages.clients.detail.dateOfBirthWithAge', '{{date}} ({{age}} years)', {
+          date: formatDate(client.personalDetails.dateOfBirth),
+          age: client.personalDetails.age,
+        })
+      : formatDate(client.personalDetails.dateOfBirth)
+  // Addresses are grouped by type and every one is rendered, which keeps the
+  // previous display logic intact while still giving the panel its required
+  // order: personal group, then registration group, then the divider. Types
+  // are matched exactly rather than by negation: address_type is an
+  // unconstrained varchar, so an unexpected value should read as absent rather
+  // than be silently labelled "personal". Only 'registration' and 'actual' are
+  // ever written — the importer accepts no other prefix (import-service
+  // validator, _ADDRESS_TYPE_PREFIXES) and both are the only values present in
+  // the data. Within a group the primary address leads. An empty group still
+  // renders one placeholder row so the order and both dividers stay put for
+  // clients missing a type.
+  const addressesOfType = (type: string) =>
+    client.addresses
+      .filter((a) => a.addressType === type)
+      .sort((a, b) => Number(b.isPrimary) - Number(a.isPrimary))
+  const personalAddresses = addressesOfType('actual')
+  const registrationAddresses = addressesOfType('registration')
+
   // Plain consts (not useMemo) because this sits below the component's early
   // returns; the list is small so recomputing per render is negligible.
   const rrDebtIds = new Set<number>()
@@ -1970,212 +2091,10 @@ export function ClientDetailPage() {
     ? draftRrDebtIds.has(parseInt(connectRrForm.debtId))
     : false
 
-  // The single loan row currently selected in the grid (drives the bottom
-  // action panel). Null if nothing is selected or the id is no longer present.
-  const selectedLoan = client.loans.find((loan) => loan.id === selectedLoanId) ?? null
-  const selectedLoanOnRr = selectedLoan ? activeRrDebtIds.has(selectedLoan.id) : false
-
-  // Show the "Eligible for Return" column (TABLE460.f53) only when at least
-  // one loan has a populated value AND it diverges from the live Remaining
-  // Debt. If every row matches, the column would carry no information beyond
-  // what Remaining Debt already shows, so we omit it entirely.
-  const showEligibleForReturnColumn = client.loans.some(
-    (loan) => loan.eligibleForReturn != null && loan.eligibleForReturn !== loan.remainingDebtAmount
-  )
-
-  const loanColumns: Column<(typeof client.loans)[0]>[] = [
-    {
-      // KAN-339: status is the first column. The badge shows the loan lifecycle
-      // (Open / Closed) and its COLOR encodes state:
-      //   • closed                     → green
-      //   • open + Connected RR        → yellow
-      //   • open (otherwise)           → red
-      // A separate always-purple "RR" tag marks any loan that has a
-      // restructuring agreement of ANY status (its details render inline below
-      // the row). So an open+violated loan is a red badge WITH a purple RR tag.
-      key: 'status',
-      header: t('pages.clients.detail.tableHeaders.status', 'Status'),
-      align: 'center',
-      render: (loan) => {
-        const isClosed = loan.status === 'closed'
-        const isConnectedRr = !isClosed && connectedRrDebtIds.has(loan.id)
-        return (
-          <div className="flex items-center justify-center gap-1.5">
-            <span
-              className={cn(
-                'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-                isClosed
-                  ? 'bg-green-100 text-green-800'
-                  : isConnectedRr
-                    ? 'bg-amber-100 text-amber-800'
-                    : 'bg-red-100 text-red-800'
-              )}
-            >
-              {isClosed
-                ? t('pages.clients.detail.loanStatusBadge.closed', 'Closed')
-                : t('pages.clients.detail.loanStatusBadge.open', 'Open')}
-            </span>
-            {rrDebtIds.has(loan.id) && (
-              <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800">
-                {t('pages.clients.detail.rrTag', 'RR')}
-              </span>
-            )}
-          </div>
-        )
-      },
-    },
-    { key: 'loanNumber', header: t('pages.clients.detail.tableHeaders.loanNumber'), align: 'left' },
-    { key: 'issueDate', header: t('pages.clients.detail.tableHeaders.issueDate'), align: 'left' },
-    {
-      key: 'counterparty',
-      header: t('pages.clients.detail.tableHeaders.counterparty'),
-      align: 'left',
-    },
-    { key: 'saleDate', header: t('pages.clients.detail.tableHeaders.saleDate'), align: 'left' },
-    ...(hasClosedLoan
-      ? [
-          {
-            key: 'creditClosedDate' as const,
-            header: t('pages.clients.detail.closureDate', 'Closure date'),
-            align: 'left' as const,
-            render: (loan: (typeof client.loans)[0]) =>
-              loan.status === 'closed' && loan.creditClosedDate
-                ? formatDate(loan.creditClosedDate)
-                : '-',
-          },
-        ]
-      : []),
-    {
-      key: 'principalAmount',
-      header: t('pages.clients.detail.tableHeaders.principalAmount'),
-      align: 'right',
-      render: (loan) => formatMoneyUAHTwoDecimals(loan.principalAmount),
-    },
-    {
-      key: 'principalDebt',
-      header: t('pages.clients.detail.tableHeaders.principalDebt'),
-      align: 'right',
-      render: (loan) =>
-        loan.principalDebt != null ? formatMoneyUAHTwoDecimals(loan.principalDebt) : '-',
-    },
-    ...(showEligibleForReturnColumn
-      ? [
-          {
-            key: 'eligibleForReturn' as const,
-            header: t('pages.clients.detail.tableHeaders.eligibleForReturn'),
-            align: 'right' as const,
-            render: (loan: (typeof client.loans)[0]) =>
-              loan.eligibleForReturn != null
-                ? formatMoneyUAHTwoDecimals(loan.eligibleForReturn)
-                : '-',
-          },
-        ]
-      : []),
-    {
-      key: 'remainingDebtAmount',
-      header: t('pages.clients.detail.tableHeaders.remainingDebtAmount'),
-      align: 'right',
-      render: (loan) => formatMoneyUAHTwoDecimals(loan.remainingDebtAmount),
-    },
-    {
-      key: 'totalToReturn',
-      header: t('pages.clients.detail.tableHeaders.totalToReturn'),
-      align: 'right',
-      render: (loan) => (
-        <div className="flex flex-col items-end gap-1">
-          <span>{formatMoneyUAHTwoDecimals(loan.totalToReturn)}</span>
-          {loan.needsManualClosureReview && (
-            <span
-              className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800"
-              title={t(
-                'pages.clients.detail.needsManualClosureReviewTooltip',
-                'Fully repaid, but payments to us fell short of the principal. Auto-close is blocked — review and close manually.'
-              )}
-            >
-              <Icons.Warning size={12} strokeWidth={2} />
-              {t('pages.clients.detail.needsManualClosureReview', 'Needs manual closure review')}
-            </span>
-          )}
-        </div>
-      ),
-    },
-    {
-      // KAN-339: the former "Actions" column is now "Info". It carries only
-      // informational / non-mutating controls — the agreement-info expansion,
-      // the detailed-calculation (*dc) modal (replacing the old green-check
-      // close icon), and the per-loan UBKI submit (whose sent-state indicator
-      // is inherently row-level). All status-changing actions (close / reopen /
-      // edit closure date / connect RR) live in the selection-driven bottom
-      // action panel below the grid.
-      key: 'info',
-      header: t('pages.clients.detail.tableHeaders.info', 'Info'),
-      align: 'center',
-      render: (loan) => {
-        // Tooltip for the UBKI send button (disabled when the client opted out).
-        const ubkiSendTitle = doNotSendToUbki
-          ? t(
-              'pages.clients.detail.ubki.optedOutTooltip',
-              'Client is opted out of UBKI; submission is disabled.'
-            )
-          : loan.sentToCreditBureau && loan.creditBureauSentDate
-            ? t('pages.clients.detail.ubki.sentOn', 'Sent on {{date}}', {
-                date: formatDate(loan.creditBureauSentDate),
-              })
-            : t('pages.clients.detail.ubki.send', 'Send to UBKI')
-
-        return (
-          <div className="flex items-center justify-center gap-2">
-            <button
-              onClick={(e) => {
-                // Don't let an action click toggle the row selection.
-                e.stopPropagation()
-                toggleDebtExpand(loan.id)
-              }}
-              className="text-muted-foreground hover:text-foreground p-1"
-              title={t('pages.clients.detail.loanInfo', 'Agreement info')}
-              aria-label={t('pages.clients.detail.loanInfo', 'Agreement info')}
-            >
-              <Icons.Info size={18} />
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                setCalcLoan({ id: loan.id, loanNumber: loan.loanNumber })
-              }}
-              className="text-muted-foreground hover:text-foreground p-1"
-              title={t('pages.clients.detail.loanCalculation.trigger', 'Detailed calculation')}
-              aria-label={t('pages.clients.detail.loanCalculation.trigger', 'Detailed calculation')}
-            >
-              <Icons.Calculate size={18} />
-            </button>
-            {canSubmitToUbki && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  submitDebtToUbki({ debtId: loan.id, clientId })
-                }}
-                disabled={doNotSendToUbki || isSubmittingToUbki}
-                className={cn(
-                  'p-1 disabled:opacity-50',
-                  loan.sentToCreditBureau
-                    ? 'text-primary-700 hover:text-foreground'
-                    : 'text-muted-foreground hover:text-foreground',
-                  doNotSendToUbki ? 'cursor-not-allowed' : ''
-                )}
-                title={ubkiSendTitle}
-              >
-                {loan.sentToCreditBureau ? (
-                  <Icons.Checkmark size={18} strokeWidth={1.5} />
-                ) : (
-                  <Icons.MailSend01 size={18} strokeWidth={1.5} />
-                )}
-              </button>
-            )}
-          </div>
-        )
-      },
-    },
-  ]
+  // KAN-993: the KAN-339 loanColumns grid definition was removed — loans now
+  // render as cards (see LoanCard / LoansCardList). Per-loan actions moved into
+  // each card's "..." dropdown; the RR/factoring info moved to the card's
+  // counterparty tooltip and collapsible RR panel.
 
   type RrRow = (typeof restructuringAgreements)[0]
   // KAN-339: the standalone "Loans on RR" grid was removed; RR details now
@@ -2535,10 +2454,15 @@ export function ClientDetailPage() {
       key: 'paymentMethod',
       header: t('pages.clients.detail.tableHeaders.paymentMethod'),
       align: 'left',
-      render: (payment) =>
-        backendToFrontendPaymentMethod(
-          payment.paymentMethod as Parameters<typeof backendToFrontendPaymentMethod>[0]
-        ),
+      render: (payment) => (
+        <PaymentMethodCell
+          baseLabel={backendToFrontendPaymentMethod(
+            payment.paymentMethod as Parameters<typeof backendToFrontendPaymentMethod>[0]
+          )}
+          easypayMethod={payment.easypayMethod}
+          t={t}
+        />
+      ),
     },
     {
       key: 'status',
@@ -2941,12 +2865,28 @@ export function ClientDetailPage() {
                   list it was opened from. Compliance is checked FIRST because it
                   needs no model: a deceased debtor is do-not-call whether or not
                   v3 covers them. */}
-              {v3UiEnabled && complianceBlocked ? (
-                <V3BucketBadge bucket="EXIT" />
-              ) : v3ClientBucket ? (
-                <V3BucketBadge bucket={v3ClientBucket} />
-              ) : v3UiEnabled ? (
-                <NotScoredBadge />
+              {/* With v3 on, the chip is also the control for the priority
+                  panel below it — the arrow sits inside the pill. The button
+                  wraps the badge rather than the badge becoming a button, so
+                  the four other places that render these chips are untouched
+                  and stay non-interactive. Without v3 there is no panel, so the
+                  legacy badge keeps its plain form. */}
+              {v3UiEnabled ? (
+                <button
+                  type="button"
+                  onClick={() => setIsV3PanelOpen((open) => !open)}
+                  aria-expanded={isV3PanelOpen}
+                  aria-controls={V3_PANEL_ID}
+                  className="focus-visible:ring-primary-500 rounded-[16px] focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
+                >
+                  {complianceBlocked ? (
+                    <V3BucketBadge bucket="EXIT" trailing={v3PanelArrow} />
+                  ) : v3ClientBucket ? (
+                    <V3BucketBadge bucket={v3ClientBucket} trailing={v3PanelArrow} />
+                  ) : (
+                    <NotScoredBadge trailing={v3PanelArrow} />
+                  )}
+                </button>
               ) : (
                 <PriorityBadge priority={client.priority as Priority} />
               )}
@@ -2970,6 +2910,8 @@ export function ClientDetailPage() {
                 onClick={() => {
                   setChainExecutorContactSource(null)
                   setChainExecutorPrefilledPhone(null)
+                  setChainExecutorPrefilledPhoneSource(null)
+                  setChainExecutorInitialTemplateId(null)
                   setIsChainExecutorOpen(true)
                 }}
               >
@@ -3029,10 +2971,13 @@ export function ClientDetailPage() {
           )} */}
           </div>
         </div>
-        {/* v3 priority (KAN-791) — bucket + "why" per debt, behind the flag */}
+        {/* v3 priority (KAN-791) — bucket + "why" per debt, behind the flag.
+            Disclosed by the priority chip in the header above. */}
         <V3ClientPriorityPanel
           projectId={activeProjectId ? Number(activeProjectId) : undefined}
           clientId={clientId}
+          open={isV3PanelOpen}
+          id={V3_PANEL_ID}
         />
         <div className="flex flex-col items-start gap-4 self-stretch xl:flex-row xl:gap-5">
           {/* Client Card */}
@@ -3046,7 +2991,7 @@ export function ClientDetailPage() {
                       <span className="bg-muted-foreground/25 inline-block h-5 w-24 animate-pulse rounded-full" />
                     ) : clientTags && clientTags.length > 0 ? (
                       <>
-                        {clientTags.slice(0, 3).map((tag) => (
+                        {clientTags.map((tag) => (
                           <button
                             key={tag.id}
                             type="button"
@@ -3069,17 +3014,6 @@ export function ClientDetailPage() {
                             />
                           </button>
                         ))}
-                        {clientTags.length > 3 && (
-                          <button
-                            type="button"
-                            onClick={() => setIsTagModalOpen(true)}
-                            className="bg-muted text-muted-foreground hover:bg-muted rounded-full px-2 py-0.5 text-xs font-medium transition-colors"
-                          >
-                            {t('pages.tags.showMore', '+{{count}} more', {
-                              count: clientTags.length - 3,
-                            })}
-                          </button>
-                        )}
                         <button
                           type="button"
                           onClick={() => setTraceModal({ open: true })}
@@ -3113,20 +3047,16 @@ export function ClientDetailPage() {
               <div className="flex flex-col gap-1 self-stretch">
                 <div className="flex min-h-8 items-center self-stretch p-0">
                   <label className="text-foreground flex-1 text-xs leading-[140%] font-light tracking-[-0.24px]">
-                    {t('pages.clients.detail.department')}
-                  </label>
-                  <p className="text-foreground ml-2 flex-1 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                    {client.department || '-'}
-                  </p>
-                </div>
-                <div className="flex min-h-8 items-center self-stretch p-0">
-                  <label className="text-foreground flex-1 text-xs leading-[140%] font-light tracking-[-0.24px]">
                     {t('pages.clients.filters.responsibleEmployee')}
                   </label>
                   <div className="ml-2 flex flex-1 items-center justify-end gap-1">
                     {profile?.responsible_employee_id && (
                       <p className="text-foreground truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                        {client.responsibleEmployee}
+                        {/* Department no longer has its own row — it is the
+                            responsible employee's department, so it reads as a
+                            qualifier on the name. Omitted when either side is
+                            missing rather than rendering an empty bracket. */}
+                        {responsibleEmployeeWithDepartment}
                       </p>
                     )}
                     {/* Reassign trigger is always visible; warn-on-click happens on
@@ -3163,29 +3093,58 @@ export function ClientDetailPage() {
                     </button>
                   </div>
                 </div>
-                {/* UBKI opt-out toggle — persisted via PUT /clients/{id} */}
+                {/* The UBKI opt-out toggle moved into the Edit Client form —
+                    it is a client-record edit, gated by edit_clients. */}
+
+                <div className="bg-border h-px w-full self-stretch" />
+
                 <div className="flex min-h-8 items-center self-stretch p-0">
-                  <label
-                    className="text-foreground flex-1 text-xs leading-[140%] font-light tracking-[-0.24px]"
-                    title={t(
-                      'pages.clients.detail.ubki.doNotSendHint',
-                      'When enabled, this client is excluded from all UBKI submissions.'
-                    )}
-                  >
-                    {t('pages.clients.detail.ubki.doNotSendLabel', 'Do not send data to UBKI')}
+                  <label className="text-foreground flex-1 text-xs leading-[140%] font-light tracking-[-0.24px]">
+                    {t('pages.clients.detail.tin')}
                   </label>
-                  <div className="ml-2 flex items-center justify-end">
-                    <ToggleSwitch
-                      checked={doNotSendToUbki}
-                      onChange={handleToggleUbkiOptOut}
-                      disabled={!canEditClient || isUpdatingUbkiOptOut}
-                      ariaLabel={t(
-                        'pages.clients.detail.ubki.doNotSendLabel',
-                        'Do not send data to UBKI'
-                      )}
-                    />
-                  </div>
+                  <p className="text-foreground ml-2 flex-1 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                    {client.personalDetails.tin}
+                  </p>
                 </div>
+                <div className="flex min-h-8 items-center self-stretch p-0">
+                  <label className="text-foreground flex-1 text-xs leading-[140%] font-light tracking-[-0.24px]">
+                    {t('pages.clients.detail.dateOfBirth')}
+                  </label>
+                  <p className="text-foreground ml-2 flex-1 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                    {dateOfBirthWithAge}
+                  </p>
+                </div>
+                {/* Address rows differ from the rows above by design: a fixed
+                    label column so the label always fits on one line, top
+                    alignment, and no truncation — the value wraps instead. */}
+                {(personalAddresses.length ? personalAddresses : [null]).map((address) => (
+                  <div
+                    key={address?.id ?? 'personal-empty'}
+                    className="flex items-start self-stretch p-0"
+                  >
+                    <label className="text-foreground w-[110px] shrink-0 text-xs leading-[140%] font-light tracking-[-0.24px]">
+                      {t('pages.clients.detail.personalAddress')}
+                    </label>
+                    <p className="text-foreground ml-2 min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
+                      {address?.fullAddress || '-'}
+                    </p>
+                  </div>
+                ))}
+                {(registrationAddresses.length ? registrationAddresses : [null]).map((address) => (
+                  <div
+                    key={address?.id ?? 'registration-empty'}
+                    className="flex items-start self-stretch p-0"
+                  >
+                    <label className="text-foreground w-[110px] shrink-0 text-xs leading-[140%] font-light tracking-[-0.24px]">
+                      {t('pages.clients.detail.registrationAddress')}
+                    </label>
+                    <p className="text-foreground ml-2 min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
+                      {address?.fullAddress || '-'}
+                    </p>
+                  </div>
+                ))}
+
+                <div className="bg-border h-px w-full self-stretch" />
               </div>
               <div className="flex flex-row items-center justify-between gap-2 self-stretch p-0">
                 <div className="flex flex-1 shrink-0 items-center gap-2.5">
@@ -3384,6 +3343,7 @@ export function ClientDetailPage() {
                               onClick={() => {
                                 setChainExecutorContactSource('client')
                                 setChainExecutorPrefilledPhone(phone.number)
+                                setChainExecutorInitialTemplateId(null)
                                 setIsChainExecutorOpen(true)
                               }}
                               className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
@@ -3495,26 +3455,7 @@ export function ClientDetailPage() {
                       )}
                     />
                   </button>
-                  <button
-                    type="button"
-                    data-tab="work"
-                    onClick={() => setActiveClientCardTab('work')}
-                    title={t('pages.clients.detail.tabs.work')}
-                    className={cn(
-                      'md:hover:bg-primary-200/10 hover:bg-primary/20 flex shrink-0 cursor-pointer flex-row items-center justify-center self-stretch rounded-md p-2 md:justify-start md:rounded-none md:border-b-0 md:border-l-2 md:p-2.5',
-                      activeClientCardTab === 'work'
-                        ? 'md:border-primary-300 md:bg-primary-200/10 bg-primary/10'
-                        : 'md:border-transparent'
-                    )}
-                  >
-                    <Icons.Briefcase01
-                      size={24}
-                      className={cn(
-                        'shrink-0',
-                        activeClientCardTab === 'work' ? 'text-primary-700' : 'text-foreground'
-                      )}
-                    />
-                  </button>
+                  {/* The Work tab is gone; its fields live in Personal. */}
                   <button
                     type="button"
                     data-tab="passport"
@@ -3560,173 +3501,26 @@ export function ClientDetailPage() {
                     onInteraction={(phone) => {
                       setChainExecutorContactSource('client')
                       setChainExecutorPrefilledPhone(phone)
+                      setChainExecutorInitialTemplateId(null)
                       setIsChainExecutorOpen(true)
                     }}
                   />
                 )}
                 {activeClientCardTab === 'personal' && (
                   <>
+                    {/* TIN, date of birth and both addresses now live in the
+                        sidebar panel. The work fields below arrived from the
+                        removed Work tab. */}
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
                         <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
-                          {t('pages.clients.detail.tin')}
+                          {t('pages.clients.detail.email', 'E-mail')}
                         </label>
                       </div>
-                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                        {client.personalDetails.tin}
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
+                        {client.personalDetails.email || '-'}
                       </p>
                     </div>
-                    <div className="flex items-center self-stretch p-0">
-                      <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
-                          {t('pages.clients.detail.dateOfBirth')}
-                        </label>
-                      </div>
-                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                        {client.personalDetails.dateOfBirth}
-                      </p>
-                    </div>
-                    <div className="flex items-center self-stretch p-0">
-                      <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
-                          {t('pages.clients.detail.age')}
-                        </label>
-                      </div>
-                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                        {client.personalDetails.age}
-                      </p>
-                    </div>
-                    <div className="bg-muted mx-2 h-px self-stretch"></div>
-                    {client.addresses.map((address) => (
-                      <React.Fragment key={address.id}>
-                        <div className="flex items-start self-stretch p-0">
-                          <div className="flex shrink-0 items-start gap-2.5">
-                            <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
-                              {address.addressType === 'registration'
-                                ? t('pages.clients.detail.registrationAddress')
-                                : t('pages.clients.detail.personalAddress')}
-                            </label>
-                          </div>
-                          <p className="text-foreground min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
-                            {address.fullAddress}
-                          </p>
-                        </div>
-                      </React.Fragment>
-                    ))}
-                    {client.addresses.length === 0 && (
-                      <p className="text-muted-foreground text-xs">-</p>
-                    )}
-                    <div className="bg-muted mx-2 h-px self-stretch"></div>
-                    <div className="flex items-center self-stretch p-0">
-                      <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
-                          {t('pages.clients.detail.maritalStatus')}
-                        </label>
-                      </div>
-                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                        {client.personalDetails.maritalStatus}
-                      </p>
-                    </div>
-                    <div className="flex items-center self-stretch p-0">
-                      <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
-                          {t('pages.clients.detail.numberOfFamilyMembers')}
-                        </label>
-                      </div>
-                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                        {client.personalDetails.familyMembers}
-                      </p>
-                    </div>
-                    <div className="flex items-center self-stretch p-0">
-                      <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
-                          {t('pages.clients.detail.incomeLevel')}
-                        </label>
-                      </div>
-                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                        {client.personalDetails.incomeLevel}
-                      </p>
-                    </div>
-                  </>
-                )}
-
-                {activeClientCardTab === 'passport' && (
-                  <>
-                    <div className="flex items-center self-stretch p-0">
-                      <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
-                          {t('pages.clients.detail.documentType')}
-                        </label>
-                      </div>
-                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                        {client.personalDetails.documentType}
-                      </p>
-                    </div>
-                    <div className="flex items-center self-stretch p-0">
-                      <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
-                          {t('pages.clients.detail.passportSeries')}
-                        </label>
-                      </div>
-                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                        {client.personalDetails.passportSeries}
-                      </p>
-                    </div>
-                    <div className="flex items-center self-stretch p-0">
-                      <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
-                          {t('pages.clients.detail.passportNumber')}
-                        </label>
-                      </div>
-                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                        {client.personalDetails.passportNumber}
-                      </p>
-                    </div>
-                    <div className="flex items-center self-stretch p-0">
-                      <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
-                          {t('pages.clients.detail.issuedBy')}
-                        </label>
-                      </div>
-                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                        {client.personalDetails.issuedBy}
-                      </p>
-                    </div>
-                    <div className="flex items-center self-stretch p-0">
-                      <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
-                          {t('pages.clients.detail.issuedDate')}
-                        </label>
-                      </div>
-                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                        {client.personalDetails.issuedDate}
-                      </p>
-                    </div>
-                    <div className="flex items-center self-stretch p-0">
-                      <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
-                          {t('pages.clients.detail.expiresDate')}
-                        </label>
-                      </div>
-                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                        {client.personalDetails.expiresDate}
-                      </p>
-                    </div>
-                    <div className="flex items-center self-stretch p-0">
-                      <div className="flex flex-1 items-center gap-2.5">
-                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
-                          {t('pages.clients.detail.gender')}
-                        </label>
-                      </div>
-                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                        {client.personalDetails.gender}
-                      </p>
-                    </div>
-                  </>
-                )}
-
-                {activeClientCardTab === 'work' && (
-                  <>
                     <div className="flex items-center self-stretch p-0">
                       <div className="flex flex-1 items-center gap-2.5">
                         <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
@@ -3837,6 +3631,7 @@ export function ClientDetailPage() {
                                 onClick={() => {
                                   setChainExecutorContactSource('client')
                                   setChainExecutorPrefilledPhone(client.work?.workPhone || '')
+                                  setChainExecutorInitialTemplateId(null)
                                   setIsChainExecutorOpen(true)
                                 }}
                                 className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
@@ -3847,6 +3642,111 @@ export function ClientDetailPage() {
                           </div>
                         )}
                       </div>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
+                          {t('pages.clients.detail.maritalStatus')}
+                        </label>
+                      </div>
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.maritalStatus}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
+                          {t('pages.clients.detail.numberOfFamilyMembers')}
+                        </label>
+                      </div>
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.familyMembers}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
+                          {t('pages.clients.detail.incomeLevel')}
+                        </label>
+                      </div>
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.incomeLevel}
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                {activeClientCardTab === 'passport' && (
+                  <>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
+                          {t('pages.clients.detail.documentType')}
+                        </label>
+                      </div>
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.documentType}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
+                          {t('pages.clients.detail.passportSeries')}
+                        </label>
+                      </div>
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.passportSeries}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
+                          {t('pages.clients.detail.passportNumber')}
+                        </label>
+                      </div>
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.passportNumber}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
+                          {t('pages.clients.detail.issuedBy')}
+                        </label>
+                      </div>
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.issuedBy}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
+                          {t('pages.clients.detail.issuedDate')}
+                        </label>
+                      </div>
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.issuedDate}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
+                          {t('pages.clients.detail.expiresDate')}
+                        </label>
+                      </div>
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.expiresDate}
+                      </p>
+                    </div>
+                    <div className="flex items-center self-stretch p-0">
+                      <div className="flex flex-1 items-center gap-2.5">
+                        <label className="text-foreground text-xs leading-[140%] font-light tracking-[-0.24px]">
+                          {t('pages.clients.detail.gender')}
+                        </label>
+                      </div>
+                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                        {client.personalDetails.gender}
+                      </p>
                     </div>
                   </>
                 )}
@@ -4116,276 +4016,234 @@ export function ClientDetailPage() {
                 {/* Tab 1: Loans */}
                 {activeRightCardTab === 'loans' && (
                   <div className="flex w-full flex-col gap-0">
-                    {/* KAN-339: single unified loans grid — no sub-tabs. Status
-                        is the first column (Open/Closed badge + purple RR tag).
-                        Open loans sort before closed ones. Clicking a row selects
-                        (highlights) it, driving the bottom action panel; clicking
-                        it again clears the selection. Every loan that has a
-                        restructuring agreement shows an always-visible RR detail
-                        line beneath its row; the Info button additionally toggles
-                        the factoring-agreement panel. */}
-                    <div className="flex flex-col items-start gap-2.5 self-stretch px-3 py-4 md:px-6">
-                      {isLoansLoading ? (
+                    {/* KAN-993: card-based loan list (supersedes the KAN-339
+                        grid). Open loans (always expanded) + Closed loans
+                        (collapsible, collapsed by default), each with a count
+                        badge. Every per-loan action lives in that card's "..."
+                        dropdown (status-dependent); the RR panel is collapsed and
+                        expands on the chip. "Send all to UBKI" stays standalone. */}
+                    {isLoansLoading ? (
+                      <div className="px-3 py-4 md:px-6">
                         <TableSkeleton columns={7} rows={3} />
-                      ) : (
-                        <DataTable
-                          columns={loanColumns}
-                          data={[...client.loans].sort(
-                            (a, b) =>
-                              (a.status === 'closed' ? 1 : 0) - (b.status === 'closed' ? 1 : 0)
-                          )}
-                          className="w-full"
-                          onRowClick={(loan) =>
-                            setSelectedLoanId((prev) => (prev === loan.id ? null : loan.id))
-                          }
-                          rowClassName={(loan) =>
-                            selectedLoanId === loan.id
-                              ? 'ring-information-400 !bg-information-50 ring-1 ring-inset'
-                              : undefined
-                          }
-                          expandedIds={new Set<number>([...rrDebtIds, ...expandedDebtIds])}
-                          renderExpanded={(loan) => (
-                            <div className="flex flex-col gap-3">
-                              {rrDebtIds.has(loan.id) && renderRrInlineDetails(loan.id)}
-                              {expandedDebtIds.has(loan.id) && (
-                                <LoanFactoringInfo
-                                  legalName={loan.sellerLegalName}
-                                  previousLender={loan.factoringAgreementPreviousLender}
-                                  purchaseDate={loan.factoringAgreementPurchaseDate}
-                                />
-                              )}
-                            </div>
-                          )}
-                        />
-                      )}
-                    </div>
-                    {/* KAN-339: selection-driven action panel. Row-scoped
-                        actions (Close / Reopen / Edit closure date / Connect RR)
-                        enable only when a single loan row is selected AND its
-                        status permits the action; otherwise they are disabled with
-                        an explanatory tooltip. Write-off / Reversal remain
-                        client-scoped (their own modals carry a picker). */}
-                    <div className="flex flex-col gap-2 self-stretch px-3 py-4 md:px-6">
-                      {!selectedLoan && (
-                        <p className="text-muted-foreground text-xs">
-                          {t(
-                            'pages.clients.detail.selectLoanHint',
-                            'Select a loan row to enable actions.'
-                          )}
-                        </p>
-                      )}
-                      <div className="flex flex-wrap items-center gap-2 md:gap-3">
-                        {/* Close loan — only for a selected active (open/rr) loan. */}
-                        <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
-                          <Button
-                            variant="secondary"
-                            leftIcon={<Icons.Success size={20} />}
-                            className="rounded text-xs md:text-sm"
-                            size="sm"
-                            disabled={
-                              !selectedLoan || selectedLoan.status !== 'active' || isClosingDebt
-                            }
-                            title={
-                              !selectedLoan
-                                ? t(
-                                    'pages.clients.detail.selectLoanHint',
-                                    'Select a loan row to enable actions.'
-                                  )
-                                : selectedLoan.status !== 'active'
-                                  ? t(
-                                      'pages.clients.detail.closeLoanDisabledHint',
-                                      'Only an open loan can be closed.'
-                                    )
-                                  : t('pages.clients.detail.closeLoan')
-                            }
-                            onClick={() => {
-                              if (!selectedLoan) return
-                              setCloseLoanConfirm(selectedLoan.id)
-                              setCloseLoanClosureDate(getTodayAtMidnight())
-                              setCloseLoanDateError(null)
-                              setCloseLoanReason('')
-                            }}
-                          >
-                            {t('pages.clients.detail.closeLoan')}
-                          </Button>
-                        </PermissionGuard>
-                        {/* Reopen loan — only for a selected closed loan. */}
-                        <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
-                          <Button
-                            variant="secondary"
-                            leftIcon={<Icons.Reload size={20} />}
-                            className="rounded text-xs md:text-sm"
-                            size="sm"
-                            disabled={
-                              !selectedLoan || selectedLoan.status !== 'closed' || isReopeningDebt
-                            }
-                            title={
-                              !selectedLoan
-                                ? t(
-                                    'pages.clients.detail.selectLoanHint',
-                                    'Select a loan row to enable actions.'
-                                  )
-                                : selectedLoan.status !== 'closed'
-                                  ? t(
-                                      'pages.clients.detail.reopenLoanDisabledHint',
-                                      'Only a closed loan can be reopened.'
-                                    )
-                                  : t('pages.clients.detail.reopenLoan', 'Reopen loan')
-                            }
-                            onClick={() => selectedLoan && setReopenLoanConfirm(selectedLoan.id)}
-                          >
-                            {t('pages.clients.detail.reopenLoan', 'Reopen loan')}
-                          </Button>
-                        </PermissionGuard>
-                        {/* Edit closure date — only for a selected closed loan. */}
-                        <PermissionGuard permission={PERMISSIONS.CLIENTS.CLOSE_DEBT}>
-                          <Button
-                            variant="secondary"
-                            leftIcon={<Icons.Edit size={20} />}
-                            className="rounded text-xs md:text-sm"
-                            size="sm"
-                            disabled={
-                              !selectedLoan ||
-                              selectedLoan.status !== 'closed' ||
-                              isUpdatingClosureDate
-                            }
-                            title={
-                              !selectedLoan
-                                ? t(
-                                    'pages.clients.detail.selectLoanHint',
-                                    'Select a loan row to enable actions.'
-                                  )
-                                : selectedLoan.status !== 'closed'
-                                  ? t(
-                                      'pages.clients.detail.editClosureDateDisabledHint',
-                                      'Only a closed loan has a closure date to edit.'
-                                    )
-                                  : t('pages.clients.detail.editClosureDate', 'Edit closure date')
-                            }
-                            onClick={() => {
-                              if (!selectedLoan) return
-                              setEditClosureDateDebtId(selectedLoan.id)
-                              setEditClosureDateValue(
-                                selectedLoan.creditClosedDate
-                                  ? parseISODateAtMidnight(selectedLoan.creditClosedDate)
-                                  : getTodayAtMidnight()
-                              )
-                              setEditClosureDateError(null)
-                            }}
-                          >
-                            {t('pages.clients.detail.editClosureDate', 'Edit closure date')}
-                          </Button>
-                        </PermissionGuard>
-                        {/* Connect RR — for a selected non-closed loan that is not
-                            already on an active restructuring agreement. */}
-                        <Button
-                          variant="secondary"
-                          leftIcon={<Icons.Calculate size={20} />}
-                          className="rounded text-xs md:text-sm"
-                          size="sm"
-                          disabled={
-                            !selectedLoan || selectedLoan.status === 'closed' || selectedLoanOnRr
-                          }
-                          title={
-                            !selectedLoan
-                              ? t(
-                                  'pages.clients.detail.selectLoanHint',
-                                  'Select a loan row to enable actions.'
-                                )
-                              : selectedLoan.status === 'closed'
-                                ? t(
-                                    'pages.clients.detail.connectRRClosedHint',
-                                    'A closed loan cannot be restructured.'
-                                  )
-                                : selectedLoanOnRr
-                                  ? t(
-                                      'pages.clients.detail.connectRROnRrHint',
-                                      'This loan is already on an active restructuring.'
-                                    )
-                                  : t('pages.clients.detail.connectRR')
-                          }
-                          onClick={() => {
-                            if (!selectedLoan) return
-                            setConnectRrForm({
-                              debtId: String(selectedLoan.id),
-                              connectionDate: null,
-                              totalAmount: '',
-                              numPayments: 1,
-                              frequency: '',
-                              intervalDays: '',
-                              dayOfMonth: '',
-                              clampedRows: [],
-                              penaltyAmount: '',
-                              payments: [{ date: null, amount: '' }],
-                            })
-                            setConnectRrError(null)
-                            setIsConnectRrOpen(true)
-                          }}
-                        >
-                          {t('pages.clients.detail.connectRR')}
-                        </Button>
-                        {/* KAN-245 — Write-off button, client-scoped per Screenshot_1.png */}
-                        {canCreateWriteoff && hasEligibleLoanForWriteoff && (
-                          <Button
-                            variant="secondary"
-                            leftIcon={<Icons.MoneyRemove01 size={20} />}
-                            className="rounded text-xs md:text-sm"
-                            size="sm"
-                            onClick={() => setIsWriteoffOpen(true)}
-                          >
-                            {t('pages.clients.detail.writeOff')}
-                          </Button>
-                        )}
-                        {/* KAN-334 — Reversal (storno) button, right of Write-off
-                          per Screenshot_14.png. Opens the reallocation modal. */}
-                        {canCreateReversal && (
-                          <Button
-                            variant="secondary"
-                            leftIcon={<Icons.Reload size={20} />}
-                            className="rounded text-xs md:text-sm"
-                            size="sm"
-                            onClick={() => setIsReversalOpen(true)}
-                          >
-                            {t('pages.clients.detail.reversal')}
-                          </Button>
-                        )}
-                        {/* Bulk "Send all loans to UBKI" — gated by the same
-                          submit_to_ubki permission as the per-loan send button.
-                          Disabled for the release via ENABLE_BULK_UBKI_SUBMISSION
-                          (see the flag definition above). */}
-                        {ENABLE_BULK_UBKI_SUBMISSION && canSubmitToUbki && (
-                          <Button
-                            variant="secondary"
-                            leftIcon={<Icons.MailSend01 size={20} />}
-                            className="rounded text-xs md:text-sm"
-                            size="sm"
-                            onClick={handleBulkSubmitToUbki}
-                            disabled={
-                              doNotSendToUbki || ubkiLoanIds.length === 0 || isBulkSubmittingToUbki
-                            }
-                            title={
-                              doNotSendToUbki
-                                ? t(
-                                    'pages.clients.detail.ubki.optedOutTooltip',
-                                    'Client is opted out of UBKI; submission is disabled.'
-                                  )
-                                : ubkiLoanIds.length === 0
-                                  ? t(
-                                      'pages.clients.detail.ubki.noLoansTooltip',
-                                      'This client has no loans to submit.'
-                                    )
-                                  : t('pages.clients.detail.ubki.sendAll', 'Send all loans to UBKI')
-                            }
-                          >
-                            {t('pages.clients.detail.ubki.sendAll', 'Send all loans to UBKI')}
-                          </Button>
-                        )}
                       </div>
-                    </div>
-                    {/* UBKI submission history — scoped to this client's loans. */}
-                    <div className="px-3 pb-4 md:px-6">
-                      <UbkiSubmissionHistory clientId={clientId} loans={ubkiLoans} />
-                    </div>
+                    ) : (
+                      <LoansCardList
+                        loans={client.loans}
+                        renderLoan={(loan, isClosed) => {
+                          const hasRr = rrDebtIds.has(loan.id)
+                          // A loan can carry several agreements; the inline panel
+                          // lists them all, the chip summarises one. Prefer the
+                          // agreement still in force (Connected/Violated, same
+                          // pair `activeRrDebtIds` uses), else the most recently
+                          // created — highest id, since API order isn't defined.
+                          const loanAgreements = restructuringAgreements
+                            .filter((ra) => ra.debt_id === loan.id)
+                            .sort((a, b) => b.id - a.id)
+                          const agreement =
+                            loanAgreements.find(
+                              (ra) =>
+                                ra.status_id === RR_STATUS.Connected ||
+                                ra.status_id === RR_STATUS.Violated
+                            ) ?? loanAgreements[0]
+                          // Tone comes from status_id, never from status_name:
+                          // that string is a `restructuring_statuses` lookup value
+                          // ("Connected"/"Violated"/…), so substring matching on
+                          // "active" never hits and is brittle besides.
+                          const rrStatus = agreement
+                            ? {
+                                label: agreement.status_name ?? '',
+                                tone:
+                                  agreement.status_id === RR_STATUS.Violated
+                                    ? ('violated' as const)
+                                    : agreement.status_id === RR_STATUS.Cancelled
+                                      ? ('cancelled' as const)
+                                      : agreement.status_id === RR_STATUS.Connected
+                                        ? ('active' as const)
+                                        : ('default' as const),
+                              }
+                            : undefined
+                          const onRr = activeRrDebtIds.has(loan.id)
+                          const actions: LoanCardAction[] = [
+                            {
+                              key: 'calc',
+                              label: t(
+                                'pages.clients.detail.detailedCalculation',
+                                'Detailed calculation'
+                              ),
+                              icon: <Icons.Calculate size={16} />,
+                              onSelect: () =>
+                                setCalcLoan({ id: loan.id, loanNumber: loan.loanNumber }),
+                            },
+                            {
+                              key: 'ubki',
+                              // Keep the per-loan sent-state visible: the old
+                              // button showed a check + "Sent on {date}", and a
+                              // bare greyed-out item gives no reason why.
+                              label:
+                                loan.sentToCreditBureau && loan.creditBureauSentDate
+                                  ? t('pages.clients.detail.ubki.sentOn', 'Sent on {{date}}', {
+                                      date: formatDate(loan.creditBureauSentDate),
+                                    })
+                                  : loan.sentToCreditBureau
+                                    ? t('pages.clients.detail.ubki.sent', 'Sent')
+                                    : t('pages.clients.detail.ubki.send', 'Send to UBKI'),
+                              icon: loan.sentToCreditBureau ? (
+                                <Icons.Success size={16} />
+                              ) : (
+                                <Icons.MailSend01 size={16} />
+                              ),
+                              hidden: !canSubmitToUbki,
+                              // Already-sent loans stay submittable, as before the
+                              // redesign: the check icon and "Sent on {date}" are
+                              // the state indicator, not a lock. A debt whose data
+                              // was corrected after submission has to be resendable,
+                              // and the only alternative is the bulk action, which
+                              // resends every loan on the client.
+                              disabled: doNotSendToUbki || isSubmittingToUbki,
+                              onSelect: () => submitDebtToUbki({ debtId: loan.id, clientId }),
+                            },
+                            {
+                              key: 'close',
+                              label: t('pages.clients.detail.closeLoan'),
+                              icon: <Icons.Success size={16} />,
+                              hidden: isClosed || !canCloseDebt,
+                              disabled: loan.status !== 'active' || isClosingDebt,
+                              onSelect: () => {
+                                setCloseLoanConfirm(loan.id)
+                                setCloseLoanClosureDate(getTodayAtMidnight())
+                                setCloseLoanDateError(null)
+                                setCloseLoanReason('')
+                              },
+                            },
+                            {
+                              key: 'connectRr',
+                              label: t('pages.clients.detail.connectRR'),
+                              icon: <Icons.Calculate size={16} />,
+                              hidden: isClosed,
+                              disabled: onRr,
+                              onSelect: () => {
+                                setConnectRrForm({
+                                  debtId: String(loan.id),
+                                  connectionDate: null,
+                                  totalAmount: '',
+                                  numPayments: 1,
+                                  frequency: '',
+                                  intervalDays: '',
+                                  dayOfMonth: '',
+                                  clampedRows: [],
+                                  penaltyAmount: '',
+                                  payments: [{ date: null, amount: '' }],
+                                })
+                                setConnectRrError(null)
+                                setIsConnectRrOpen(true)
+                              },
+                            },
+                            {
+                              key: 'reopen',
+                              label: t('pages.clients.detail.reopenLoan', 'Reopen loan'),
+                              icon: <Icons.Reload size={16} />,
+                              hidden: !isClosed || !canCloseDebt,
+                              disabled: isReopeningDebt,
+                              onSelect: () => setReopenLoanConfirm(loan.id),
+                            },
+                            {
+                              key: 'editClosure',
+                              label: t('pages.clients.detail.editClosureDate', 'Edit closure date'),
+                              icon: <Icons.Edit size={16} />,
+                              hidden: !isClosed || !canCloseDebt,
+                              disabled: isUpdatingClosureDate,
+                              onSelect: () => {
+                                setEditClosureDateDebtId(loan.id)
+                                setEditClosureDateValue(
+                                  loan.creditClosedDate
+                                    ? parseISODateAtMidnight(loan.creditClosedDate)
+                                    : getTodayAtMidnight()
+                                )
+                                setEditClosureDateError(null)
+                              },
+                            },
+                            {
+                              key: 'writeoff',
+                              label: t('pages.clients.detail.writeOff'),
+                              icon: <Icons.MoneyRemove01 size={16} />,
+                              // Hidden on closed loans: the backend rejects a
+                              // write-off against a non-active debt (409
+                              // DEBT_NOT_OPEN), so the action cannot apply here.
+                              // Without this the item renders on a closed card
+                              // and opens the modal on an unrelated active loan,
+                              // because the modal only accepts active debts.
+                              hidden: isClosed || !canCreateWriteoff || !hasEligibleLoanForWriteoff,
+                              onSelect: () => {
+                                setWriteoffInitialDebtId(loan.id)
+                                setIsWriteoffOpen(true)
+                              },
+                            },
+                            {
+                              key: 'reversal',
+                              label: t('pages.clients.detail.reversal'),
+                              icon: <Icons.Reload size={16} />,
+                              hidden: !canCreateReversal,
+                              onSelect: () => setIsReversalOpen(true),
+                            },
+                          ]
+                          return (
+                            <LoanCard
+                              key={loan.id}
+                              loan={loan}
+                              isClosed={isClosed}
+                              hasRr={hasRr}
+                              rrStatus={rrStatus}
+                              rrExpanded={rrExpandedIds.has(loan.id)}
+                              onToggleRr={() => toggleRrExpand(loan.id)}
+                              rrPanel={renderRrInlineDetails(loan.id)}
+                              focused={selectedLoanId === loan.id}
+                              dimmed={selectedLoanId !== null && selectedLoanId !== loan.id}
+                              onFocus={() =>
+                                setSelectedLoanId((prev) => (prev === loan.id ? null : loan.id))
+                              }
+                              actions={actions}
+                            />
+                          )
+                        }}
+                        sendAllButton={
+                          ENABLE_BULK_UBKI_SUBMISSION && canSubmitToUbki ? (
+                            <Button
+                              variant="secondary"
+                              leftIcon={<Icons.MailSend01 size={20} />}
+                              className="w-fit rounded text-xs md:text-sm"
+                              size="sm"
+                              onClick={handleBulkSubmitToUbki}
+                              disabled={
+                                doNotSendToUbki ||
+                                ubkiLoanIds.length === 0 ||
+                                isBulkSubmittingToUbki
+                              }
+                              title={
+                                doNotSendToUbki
+                                  ? t(
+                                      'pages.clients.detail.ubki.optedOutTooltip',
+                                      'Client is opted out of UBKI; submission is disabled.'
+                                    )
+                                  : ubkiLoanIds.length === 0
+                                    ? t(
+                                        'pages.clients.detail.ubki.noLoansTooltip',
+                                        'This client has no loans to submit.'
+                                      )
+                                    : t(
+                                        'pages.clients.detail.ubki.sendAll',
+                                        'Send all loans to UBKI'
+                                      )
+                              }
+                            >
+                              {t('pages.clients.detail.ubki.sendAll', 'Send all loans to UBKI')}
+                            </Button>
+                          ) : undefined
+                        }
+                        ubkiHistory={
+                          <UbkiSubmissionHistory clientId={clientId} loans={ubkiLoans} />
+                        }
+                      />
+                    )}
                   </div>
                 )}
 
@@ -4560,6 +4418,7 @@ export function ClientDetailPage() {
                     onStartInteraction={(phone, contactTypeId) => {
                       setChainExecutorContactSource(classifyContactSource(contactTypeId))
                       setChainExecutorPrefilledPhone(phone)
+                      setChainExecutorInitialTemplateId(null)
                       setIsChainExecutorOpen(true)
                     }}
                   />
@@ -5579,9 +5438,15 @@ export function ClientDetailPage() {
               setIsChainExecutorOpen(false)
               setChainExecutorContactSource(null)
               setChainExecutorPrefilledPhone(null)
+              setChainExecutorPrefilledPhoneSource(null)
+              setChainExecutorInitialTemplateId(null)
             }}
             maxWidth="xl"
             showCloseButton={false}
+            /* Marks this dialog as the TA executor's own so a hotkey pressed
+               while it is open reaches the single-modal guard and produces the
+               toast, instead of being swallowed as "the operator is typing". */
+            className={TA_EXECUTOR_DIALOG_CLASS}
           >
             {/* Minimize & Close buttons */}
             <div className="absolute top-2 right-2 flex items-center gap-1 sm:top-4 sm:right-12">
@@ -5597,6 +5462,8 @@ export function ClientDetailPage() {
                   setIsChainExecutorOpen(false)
                   setChainExecutorContactSource(null)
                   setChainExecutorPrefilledPhone(null)
+                  setChainExecutorPrefilledPhoneSource(null)
+                  setChainExecutorInitialTemplateId(null)
                 }}
                 className="hover:bg-muted flex h-8 w-8 items-center justify-center rounded-md transition-colors"
                 aria-label="Close modal"
@@ -5612,15 +5479,21 @@ export function ClientDetailPage() {
                 debts={loans}
                 contactSource={chainExecutorContactSource}
                 prefilledPhone={chainExecutorPrefilledPhone}
+                prefilledPhoneSource={chainExecutorPrefilledPhoneSource}
+                initialTemplateId={chainExecutorInitialTemplateId}
                 onSave={() => {
                   setIsChainExecutorOpen(false)
                   setChainExecutorContactSource(null)
                   setChainExecutorPrefilledPhone(null)
+                  setChainExecutorPrefilledPhoneSource(null)
+                  setChainExecutorInitialTemplateId(null)
                 }}
                 onMinimize={() => {
                   setIsChainExecutorOpen(false)
                   setChainExecutorContactSource(null)
                   setChainExecutorPrefilledPhone(null)
+                  setChainExecutorPrefilledPhoneSource(null)
+                  setChainExecutorInitialTemplateId(null)
                 }}
                 onMinimizeRef={chainExecutorMinimizeRef}
               />
@@ -5645,6 +5518,8 @@ export function ClientDetailPage() {
                   onClick={() => {
                     setChainExecutorContactSource(null)
                     setChainExecutorPrefilledPhone(null)
+                    setChainExecutorPrefilledPhoneSource(null)
+                    setChainExecutorInitialTemplateId(null)
                     setIsChainExecutorOpen(true)
                   }}
                   className="bg-primary flex items-center rounded-full shadow-md transition-all duration-200 hover:shadow-lg"
@@ -5925,6 +5800,17 @@ export function ClientDetailPage() {
           clientName={client.fullName}
           projectId={1}
           onClose={() => setIsTagModalOpen(false)}
+          onTagsChanged={() => {
+            // A tag change may fire a "Tag change" trigger that launches a chain
+            // asynchronously, exactly as closing a debt does. Snapshot the chains
+            // that already exist so only the NEW one pops, then arm fast-poll +
+            // auto-open for THIS operator (other viewers never arm, so they get
+            // no pop-up).
+            preCloseInstanceIdsRef.current = new Set(
+              (clientChainInstances ?? []).map((inst) => inst.id)
+            )
+            setChainAutoOpenArmed(true)
+          }}
         />
 
         {/* Tag Trace Modal — "Why this tag?" timeline (PR3 commit 3.10) */}
@@ -6952,8 +6838,12 @@ export function ClientDetailPage() {
         {/* KAN-245 — Write-off Create Modal (client-scoped per Screenshot_1.png) */}
         <WriteoffCreateModal
           open={isWriteoffOpen}
-          onClose={() => setIsWriteoffOpen(false)}
+          onClose={() => {
+            setIsWriteoffOpen(false)
+            setWriteoffInitialDebtId(null)
+          }}
           debts={loans ?? []}
+          initialDebtId={writeoffInitialDebtId}
         />
 
         {/* KAN-334 — Reversal (storno) Create Modal (per Screenshot_14.png) */}

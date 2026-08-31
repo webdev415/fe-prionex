@@ -63,6 +63,7 @@ import {
   frontendToBackendPaymentMethod,
   frontendToBackendPaymentStatus,
 } from '@/features/payments/utils'
+import { PaymentMethodCell } from '@/features/payments/components/PaymentMethodCell'
 import { getPaymentHistoryPagination } from '@/features/payments/utils/paymentHistoryPagination'
 import type {
   Payment as BackendPayment,
@@ -77,6 +78,8 @@ interface Payment {
   amount: number
   contractNumber?: string
   method: BackendPaymentMethod
+  /** EasyPay rows only: which service the payer picked on the portal. */
+  easypayMethod?: string | null
   status: BackendPaymentStatus
   receipt?: string
   reference?: string
@@ -357,6 +360,7 @@ export function PaymentHistoryPage() {
       amount: Number(backendPayment.amount),
       contractNumber: backendPayment.debt_contract_number || undefined,
       method: backendPayment.payment_method,
+      easypayMethod: backendPayment.easypay_method,
       status: backendPayment.status,
       receipt: backendPayment.receipt_url,
       reference: backendPayment.bank_reference || backendPayment.payment_number,
@@ -1552,9 +1556,14 @@ export function PaymentHistoryPage() {
                               {formatCurrency(payment.amount)}
                             </td>
                             <td className="text-foreground border-border h-[49px] border-r px-3 text-xs font-medium sm:px-6">
-                              {t(`pages.clients.detail.paymentMethods.${payment.method}`, {
-                                defaultValue: payment.method,
-                              })}
+                              <PaymentMethodCell
+                                baseLabel={t(
+                                  `pages.clients.detail.paymentMethods.${payment.method}`,
+                                  { defaultValue: payment.method }
+                                )}
+                                easypayMethod={payment.easypayMethod}
+                                t={t}
+                              />
                             </td>
                             <td className="text-foreground border-border h-[49px] border-r px-3 text-xs font-medium sm:px-6">
                               {payment.reference || '-'}

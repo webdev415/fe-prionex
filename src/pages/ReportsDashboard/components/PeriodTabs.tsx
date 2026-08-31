@@ -2,6 +2,10 @@
  * PeriodTabs Component
  *
  * Tab selector for choosing time period (Today, This Week, This Month).
+ *
+ * NOTE: visually identical to the shared SegmentedTabs
+ * (src/components/ui/SegmentedTabs.tsx); can migrate onto it in a separate
+ * PR — kept as-is here to hold the scope of the processing-report change.
  */
 
 import { useTranslation } from 'react-i18next'

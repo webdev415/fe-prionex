@@ -292,7 +292,13 @@ export function getDateTimeStringInTimezone(
         day: '2-digit',
         hour: '2-digit',
         minute: '2-digit',
-        hour12: false,
+        // NOT ``hour12: false`` — that resolves to the h24 cycle on some
+        // engines, which renders midnight as "24:17" instead of "00:17". The
+        // string this builds is then unparseable, and any caller that reads it
+        // back silently falls through to whatever its fallback is. ``h23``
+        // pins the 00–23 cycle. (``legalDueDate.ts`` hit the same engine
+        // behaviour and normalises 24 → 0 by hand.)
+        hourCycle: 'h23',
       }).formatToParts(date)
 
       const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '00'
@@ -304,6 +310,75 @@ export function getDateTimeStringInTimezone(
 
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+/**
+ * "Now", expressed as a wall time in ``timezone`` and returned as a Date whose
+ * **browser-local** parts read as that wall time.
+ *
+ * The date pickers hand react-datepicker plain ``Date`` objects, which it can
+ * only ever render in the browser's zone — so the wall time an operator sees
+ * and clicks is browser-local. What that wall time *means* is decided later:
+ * ``toUtcIsoIfDate`` re-reads it as profile-timezone wall time before saving.
+ * Comparing those slots against a raw ``new Date()`` therefore measures "past"
+ * on a different clock from the one that stores the value, and the two only
+ * agree while the browser and the profile share a zone.
+ *
+ * This returns the reference the slots should actually be compared against:
+ * the current moment as the profile timezone spells it, in the same
+ * browser-local Date space the slots live in. Seconds are carried over from the
+ * real clock — ``getDateTimeStringInTimezone`` is minute-precision, and
+ * rounding down would make the slot covering the current minute selectable
+ * here while the save-time check still rejects it.
+ *
+ * Falls back to the real ``now`` when no timezone is configured.
+ */
+export function nowAsWallTimeInTimezone(timezone?: string | null): Date {
+  const now = new Date()
+  if (!timezone) return now
+  const parsed = new Date(getDateTimeStringInTimezone(now, timezone))
+  if (isNaN(parsed.getTime())) return now
+  // IANA offsets are whole minutes, so sub-minute precision transfers exactly.
+  parsed.setSeconds(now.getSeconds(), now.getMilliseconds())
+  return parsed
+}
+
+const timeFilterCache = new Map<string, (time: Date) => boolean>()
+
+/**
+ * react-datepicker ``filterTime`` predicate that blocks times already past,
+ * measured in ``timezone`` (see {@link nowAsWallTimeInTimezone}).
+ *
+ * Only the selected day is constrained: a future day keeps every slot. The
+ * predicate recomputes "now" on each call, so it never goes stale while the
+ * picker sits open.
+ *
+ * Cached per timezone because react-datepicker re-renders the whole time list
+ * whenever ``filterTime`` changes identity — a fresh closure per render made
+ * the list thrash, which is why the pre-timezone version was a module-level
+ * constant. One stable function per zone keeps that property.
+ */
+export function notInPastTimeFilter(timezone?: string | null): (time: Date) => boolean {
+  const key = timezone ?? ''
+  const cached = timeFilterCache.get(key)
+  if (cached) return cached
+
+  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+
+  const predicate = (time: Date): boolean => {
+    const now = nowAsWallTimeInTimezone(timezone)
+    // Only a LATER day is open wholesale. The earlier version asked "is this
+    // the same day?" and returned true for everything else, which let a day
+    // already in the past offer all of its slots — reachable once the browser
+    // and profile zones disagreed about which day today is. The timestamp
+    // comparison below covers both remaining cases on its own: on today it
+    // discriminates by time, and on an earlier day every slot is necessarily
+    // before ``now``, so no separate past-day branch is needed.
+    if (startOfDay(time) > startOfDay(now)) return true
+    return time.getTime() >= now.getTime()
+  }
+  timeFilterCache.set(key, predicate)
+  return predicate
 }
 
 /**
@@ -327,7 +402,11 @@ export function wallTimeAsTimezoneToUtcIso(naive: string, timezone: string): str
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
-      hour12: false,
+      // Same h24 hazard as above, and worse here: an hour of 24 fed into
+      // ``Date.UTC`` rolls the day forward, so the computed offset came out 24
+      // hours off. For a UTC+3 profile that hit every wall time from 21:00 to
+      // 21:59 — those saved one calendar day early.
+      hourCycle: 'h23',
     })
     const parts = fmt.formatToParts(new Date(wallUtcMs))
     const get = (t: string) => Number(parts.find((p) => p.type === t)?.value ?? '0')

@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/Select'
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/Alert'
+import { Alert, AlertTitle } from '@/components/ui/Alert'
 import { Icons } from '@/lib/icons'
 import type { SmsTemplate } from '../types'
 import { useUpdateTemplate } from '@/features/sms'
@@ -252,14 +252,6 @@ export function EditTemplateForm({ template, onSuccess }: EditTemplateFormProps)
       </div>
 
       {/* System Template Warning */}
-      {template.isSystem && (
-        <Alert variant="warning">
-          <AlertTitle>{t('pages.smsTemplates.forms.systemTemplate')}</AlertTitle>
-          <AlertDescription>
-            {t('pages.smsTemplates.forms.systemTemplateDescription')}
-          </AlertDescription>
-        </Alert>
-      )}
 
       {/* Error Alert */}
       {Object.keys(errors).length > 0 && (

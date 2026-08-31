@@ -49,6 +49,7 @@ import {
   Archive02Icon,
   Unarchive03Icon,
   MoreVerticalIcon,
+  FloppyDiskIcon,
   StarIcon,
   EyeIcon,
   ViewIcon,
@@ -278,6 +279,7 @@ export const Icons = {
   MoreVertical: (props: Omit<IconProps, 'icon'>) => <Icon icon={MoreVerticalIcon} {...props} />,
   // Star — outlined (unstarred state).
   Star: (props: Omit<IconProps, 'icon'>) => <Icon icon={StarIcon} {...props} />,
+  Save: (props: Omit<IconProps, 'icon'>) => <Icon icon={FloppyDiskIcon} {...props} />,
   // StarFilled — same StarIcon path, but the path is filled with
   // currentColor via a Tailwind arbitrary variant. hugeicons-free has
   // no native solid star, so this fakes the filled glyph using the

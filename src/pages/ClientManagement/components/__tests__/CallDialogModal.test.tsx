@@ -453,6 +453,60 @@ describe('CallDialogModal', () => {
       expect(screen.getByText('Incoming Call')).toBeInTheDocument()
     })
 
+    // Asserted on href rather than on label text: the i18n mock supplies keys,
+    // so a text assertion would pass against a control that goes nowhere —
+    // which is how both of these shipped as dead buttons.
+    describe('the links out of the popup', () => {
+      it('points each loan card at the client that owns that loan', () => {
+        render(
+          <CallDialogModal
+            {...defaultProps}
+            initialState="incoming"
+            loans={[
+              { ...mockLoans[0], id: '1', clientId: 1 },
+              { ...mockLoans[0], id: '2', clientId: 2, priority: 'High' as const },
+            ]}
+          />,
+          { wrapper: createWrapper() }
+        )
+
+        // A third-party loan belongs to someone other than the anchored client,
+        // so the two cards must not resolve to the same person.
+        const hrefs = screen.getAllByRole('link').map((a) => a.getAttribute('href'))
+        expect(hrefs).toContain('/dashboard/clients/1')
+        expect(hrefs).toContain('/dashboard/clients/2')
+      })
+
+      it('renders nothing to click when the loan names no client', () => {
+        render(
+          <CallDialogModal
+            {...defaultProps}
+            initialState="incoming"
+            loans={[{ ...mockLoans[0], clientId: null }]}
+          />,
+          { wrapper: createWrapper() }
+        )
+
+        // Better no control than one that looks live and goes nowhere.
+        expect(screen.queryAllByRole('link')).toHaveLength(0)
+      })
+
+      it('points "view all loans" at the client debt summary', () => {
+        render(
+          <CallDialogModal
+            {...defaultProps}
+            initialState="incoming"
+            clientId={7}
+            loans={mockLoans}
+          />,
+          { wrapper: createWrapper() }
+        )
+
+        const hrefs = screen.getAllByRole('link').map((a) => a.getAttribute('href'))
+        expect(hrefs).toContain('/dashboard/clients/7/debt-summary')
+      })
+    })
+
     it('hides Answer by default, because nothing reaches the softphone yet', () => {
       render(<CallDialogModal {...defaultProps} initialState="incoming" />, {
         wrapper: createWrapper(),
@@ -503,6 +557,7 @@ describe('CallDialogModal', () => {
       contact_comment: null,
       contact_source: null,
       contact_type_name: null,
+      contact_category: null,
       recent_interactions: [],
       loans: [],
     })
@@ -585,6 +640,7 @@ describe('CallDialogModal', () => {
             contact_comment: 'робочий номер',
             contact_source: 'employer',
             contact_type_name: 'Work phone',
+            contact_category: null,
             recent_interactions: [
               {
                 id: 1,

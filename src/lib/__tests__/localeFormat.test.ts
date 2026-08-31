@@ -7,6 +7,7 @@ import {
   formatMonthDay,
   formatNumber,
   formatTimeShort,
+  getNumberFormat,
 } from '../localeFormat'
 
 // Local-component construction keeps browser-TZ formatting deterministic
@@ -28,6 +29,51 @@ describe('localeFormat', () => {
       expect(formatMoneyAmount('12345.6', 'en')).toBe('12,345.60')
       expect(formatNumber(2500, 'en')).toBe('2,500')
       expect(formatNumber('1234567', 'en')).toBe('1,234,567')
+    })
+
+    it('renders "—" for missing or non-finite values, never "NaN"', () => {
+      expect(formatNumber(null, 'en')).toBe('—')
+      expect(formatNumber(undefined, 'en')).toBe('—')
+      expect(formatNumber(Number.NaN, 'en')).toBe('—')
+      expect(formatNumber(Number.POSITIVE_INFINITY, 'en')).toBe('—')
+      expect(formatNumber('not-a-number', 'en')).toBe('—')
+    })
+
+    it('formatMoneyAmount carries that guard to nullable money columns too', () => {
+      // A report whose amount is legitimately absent (no promise, no payment)
+      // hands the null straight to this helper instead of keeping a private
+      // formatter to null-check it first.
+      expect(formatMoneyAmount(null, 'en')).toBe('—')
+      expect(formatMoneyAmount(undefined, 'en')).toBe('—')
+      expect(formatMoneyAmount('not-a-number', 'en')).toBe('—')
+      expect(formatMoneyAmount(Number.NaN, 'en')).toBe('—')
+      // A real zero is a value, not a gap.
+      expect(formatMoneyAmount(0, 'en')).toBe('0.00')
+    })
+
+    it('formatMoneyAmount rounds to the hundredth and keeps a negative negative', () => {
+      // Production money really does arrive over-precise ("34508717.5067"), and
+      // a negative amount is a real state (more collected than was due).
+      expect(formatMoneyAmount('34508717.5067', 'en')).toBe('34,508,717.51')
+      expect(formatMoneyAmount('-7400.00', 'en')).toBe('-7,400.00')
+    })
+
+    it('reuses cached Intl.NumberFormat instances per locale+options', () => {
+      // Same input twice must format identically through the cache path.
+      expect(formatNumber(1234.5, 'en', { maximumFractionDigits: 1 })).toBe('1,234.5')
+      expect(formatNumber(1234.5, 'en', { maximumFractionDigits: 1 })).toBe('1,234.5')
+    })
+
+    it('cache key is option-order independent — one instance for {a,b} vs {b,a}', () => {
+      const first = getNumberFormat('en-US', {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 3,
+      })
+      const reversed = getNumberFormat('en-US', {
+        maximumFractionDigits: 3,
+        minimumFractionDigits: 1,
+      })
+      expect(reversed).toBe(first)
     })
 
     it('uk-UA: matches the same-locale Intl output (ICU-version safe)', () => {
@@ -93,6 +139,24 @@ describe('localeFormat', () => {
 
     it('invalid input → em dash', () => {
       expect(formatDateTime('nope', 'en')).toBe('—')
+    })
+
+    it('renders the instant in the requested IANA zone, not the browser one', () => {
+      // A backend-stamped instant belongs in the profile zone: 13:20 UTC is
+      // 16:20 in Kyiv and 09:20 in New York, and the reader's machine clock has
+      // no say in which one the report shows.
+      const instant = '2026-08-18T13:20:31.400543Z'
+
+      expect(formatDateTime(instant, 'en', 'Europe/Kyiv')).toContain('16:20')
+      expect(formatDateTime(instant, 'en', 'America/New_York')).toContain('09:20')
+    })
+
+    it('degrades to the browser zone for an unusable zone rather than throwing', () => {
+      // Intl throws RangeError on an unknown zone; a stamp in the wrong zone is
+      // a lesser failure than a blank block (same policy as dateUtils).
+      expect(formatDateTime(SAMPLE, 'en', 'Not/AZone')).toBe(
+        new Intl.DateTimeFormat('en-US', DATETIME_OPTS).format(SAMPLE)
+      )
     })
   })
 
