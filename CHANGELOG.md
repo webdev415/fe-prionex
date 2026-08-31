@@ -13,6 +13,32 @@ To add the next release:
   3. Group them below under Added / Changed / Fixed, newest version on top.
 -->
 
+## [v1.7] — 2026-08-30
+
+Production build (development → main, PR #972, plus direct-to-main CD / softphone hotfix
+PRs #973 / #974; diff from the previous release, v1.6 / PR #903).
+
+### Added
+- **KAN-786** — v3 priority-scoring surfaced in the client UI.
+- **KAN-847** — Contact Tags: bulk assign/remove via CSV/Excel file upload.
+- **KAN-973 / KAN-975** — Client-card hotkey quick-launch for Target-Action templates +
+  the Profile Settings keyboard-shortcuts configuration UI.
+- **KAN-994** — Loans tab: loan closing coefficient (debt-age based) in the Principal-Debt
+  tooltip.
+- **KAN-1025** — Team Management: Users page reworked to the new Employees List design.
+- **KAN-1024** — Cross-project SMS-template protection, campaign-counter integrity, trash UX.
+- **KAN-1039** — RR Draft: auto-deletion 7 days past the first payment date (draft status UX).
+- **KAN-1052** — Document Templates: new "Restructuring: Draft" activation-rule condition.
+
+### Changed
+- **KAN-1053** — User modal: Asterisk / Predictive-Dialer extension fields validated against
+  the "Is Agent" flag.
+
+### Fixed
+- **KAN-992** — TA date picker: past time slots are now visually disabled ("Date cannot be
+  in the past" regression).
+- **KAN-1015** — Tag Rules: `replace_tag` action now executes (old tag removed, new added).
+
 ## [v1.6] — 2026-08-16
 
 Production build (development → main, PR #903; diff from the previous release, PR #817).
