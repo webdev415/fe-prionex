@@ -12,6 +12,8 @@ interface IncomingCallPromptProps {
   autoConnect: boolean
   onToggleAutoConnect: (value: boolean) => void
   onAccept: () => void
+  /** The Accept is sent and the phone has not confirmed yet. */
+  accepting?: boolean
   onLeave: () => void
   leaving?: boolean
 }
@@ -22,6 +24,7 @@ export function IncomingCallPrompt({
   autoConnect,
   onToggleAutoConnect,
   onAccept,
+  accepting = false,
   onLeave,
   leaving,
 }: IncomingCallPromptProps) {
@@ -71,7 +74,14 @@ export function IncomingCallPrompt({
             {lineLabel}
           </span>
         </div>
-        <Button variant="primary" size="lg" leftIcon={<Icons.Phone size={18} />} onClick={onAccept}>
+        <Button
+          variant="primary"
+          size="lg"
+          leftIcon={<Icons.Phone size={18} />}
+          onClick={onAccept}
+          disabled={accepting}
+          isLoading={accepting}
+        >
           {t('dialer.call.acceptCall', 'Accept call')}
         </Button>
       </div>

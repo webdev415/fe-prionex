@@ -251,6 +251,21 @@ describe('OperatorDialerView call control', () => {
     expect(phone.hangupCall).toHaveBeenCalledWith('c-1')
   })
 
+  it('sends the accept once, however often the operator clicks', () => {
+    // The prompt stays up until the phone confirms, so a second click is easy —
+    // and a repeat accept reaches a call that is already up, which the phone
+    // cannot apply.
+    phone.routedCall = ROUTED
+    render(<OperatorDialerView />)
+
+    const accept = screen.getByText('dialer.call.acceptCall')
+    accept.click()
+    rerenderView()
+    accept.click()
+
+    expect(phone.answerCall).toHaveBeenCalledTimes(1)
+  })
+
   it('does not carry a finished call into the next session', async () => {
     // Neither call source is tied to the session, and answeredCallId is what
     // makes the phone path show a call as connected — so a call left behind

@@ -118,10 +118,14 @@ export function OperatorDialerView() {
 
   const handleAccept = useCallback(() => {
     if (!routedCall) return
-    // Optimistic only on the socket path, which has no confirmation to wait for.
-    if (!isPhoneRoutedCall) setAcceptedCallId(routedCall.call_id)
+    // Recorded on both paths now. The socket path uses it to show the call as
+    // connected; the phone path uses it only to stop a second Accept going out
+    // while the first is still being confirmed — a repeat accept reaches a call
+    // that is already up, which the phone cannot apply.
+    if (acceptedCallId === routedCall.call_id) return
+    setAcceptedCallId(routedCall.call_id)
     answerCall(routedCall.call_id)
-  }, [routedCall, answerCall, isPhoneRoutedCall])
+  }, [routedCall, answerCall, acceptedCallId])
 
   // The phone path always waits for confirmation, whatever the queue's mode:
   // an 'auto' queue means the gateway will bridge the call, not that it already
@@ -132,6 +136,9 @@ export function OperatorDialerView() {
     (isPhoneRoutedCall
       ? answeredCallId === routedCall.call_id
       : queueAutoAnswers || autoConnect || acceptedCallId === routedCall.call_id)
+
+  // The Accept has gone to the phone and we are waiting for it to confirm.
+  const acceptPending = routedCall != null && acceptedCallId === routedCall.call_id && !isCallActive
 
   // Ended before it was ever answered — an abandoned ring, which is routine on
   // an outbound dialer. There is no conversation to wrap up and no note to
@@ -284,6 +291,7 @@ export function OperatorDialerView() {
                   autoConnect={autoConnect}
                   onToggleAutoConnect={setAutoConnect}
                   onAccept={handleAccept}
+                  accepting={acceptPending}
                   onLeave={handleLeave}
                   leaving={leaveMutation.isPending}
                 />
