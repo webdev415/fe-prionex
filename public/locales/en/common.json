@@ -11650,7 +11650,8 @@
       "totalRow": "Total",
       "interest": "Interest",
       "fee": "Fee",
-      "lastActivity": "Last activity"
+      "lastActivity": "Last activity",
+      "step": "Step"
     },
     "fields": {
       "name": "Name",
