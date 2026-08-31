@@ -117,4 +117,40 @@ describe('useSetCreditSwitch — ключ идемпотентности', () =>
 
     expect(keyOfCall(1)).not.toBe(keyOfCall(0))
   })
+
+  it('повтор после чужого переключения сохраняет ключ — иначе дубль в истории', async () => {
+    // Сценарий из приёмки: A отказал → человек тронул B → повторил A.
+    // С одной ячейкой на весь экран ключ к этому моменту принадлежал бы B,
+    // повтор A ушёл бы с новым ключом, и модуль записал бы в append-only
+    // историю второе переключение, которого не было. История рубильников —
+    // весь наш аудит; дубль в ней и есть та беда, ради которой ключ заводился.
+    setSwitch.mockRejectedValueOnce(new Error('таймаут'))
+    const { result } = renderHook(() => useSetCreditSwitch(), { wrapper })
+
+    await act(async () => {
+      result.current.mutate({
+        name: 'applications_intake',
+        payload: { enabled: false, reason: 'r' },
+      })
+      await Promise.resolve()
+    })
+    const firstKey = setSwitch.mock.calls[0][2]
+
+    setSwitch.mockRejectedValueOnce(new Error('таймаут'))
+    await act(async () => {
+      result.current.mutate({ name: 'client_cabinet', payload: { enabled: false, reason: 'q' } })
+      await Promise.resolve()
+    })
+
+    await act(async () => {
+      result.current.mutate({
+        name: 'applications_intake',
+        payload: { enabled: false, reason: 'r' },
+      })
+      await Promise.resolve()
+    })
+    const retryKey = setSwitch.mock.calls[2][2]
+
+    expect(retryKey).toBe(firstKey)
+  })
 })

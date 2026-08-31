@@ -41,9 +41,23 @@ describe('маршруты раздела «Кредитный модуль»', 
       // Редирект `credit` → `credit/applications` калитки не требует: он никого
       // никуда не пускает, а ведёт на маршрут, который ею закрыт.
       .filter((route) => !route.body.includes('<Navigate'))
+      // Настройки — намеренное исключение, см. следующий тест.
+      .filter((route) => route.path !== 'credit/settings')
       .filter((route) => !route.body.includes('<CreditSectionGate>'))
       .map((route) => route.path)
 
     expect(unguarded).toEqual([])
+  })
+
+  it('НАСТРОЙКИ калиткой не закрыты — иначе рубильник становится односторонним', () => {
+    // Единственная страница, где живёт сам рубильник. Закрыв её, риск-менеджер
+    // запирает себя снаружи: выключил раздел — и включить обратно нечем, кроме
+    // прямого запроса к модулю с внутренним ключом. Проверка нужна именно
+    // «наоборот»: без неё следующий, увидев незакрытый маршрут, добавит калитку
+    // «для единообразия» и вернёт дефект, ничего не заметив.
+    const settings = routeBlocks().find((route) => route.path === 'credit/settings')
+
+    expect(settings).toBeDefined()
+    expect(settings?.body).not.toContain('<CreditSectionGate>')
   })
 })

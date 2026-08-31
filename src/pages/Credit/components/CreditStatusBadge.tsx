@@ -27,6 +27,13 @@ const TONES: Record<string, Tone> = {
   cancelled: 'danger',
   written_off: 'danger',
   charged_off: 'danger',
+  // очередь ручного разбора: та же шкала «ждёт → в работе → закрыто», что у
+  // заявок. Без этих трёх строк все позиции очереди рисовались серым
+  // `default`, и «Очікує» ничем не отличалось от «Розібрано» — бейдж переставал
+  // быть бейджем.
+  pending: 'warn',
+  in_review: 'accent',
+  done: 'ok',
   // взносы графика
   scheduled: 'default',
   paid: 'ok',

@@ -140,7 +140,11 @@ const idle = { data: undefined, isLoading: false, error: null, refetch: vi.fn() 
 
 function openPassport(
   disbursement: CreditDisbursement | undefined,
-  loanOverrides: Partial<CreditLoanDetail> = {}
+  loanOverrides: Partial<CreditLoanDetail> = {},
+  // Состояние ЗАПРОСА состояния ядра: панель обязана отличать «попытки не
+  // было» от «мы не знаем», а по одному только пустому `disbursement` эти
+  // случаи неразличимы.
+  stateQuery?: { isLoading?: boolean; error?: unknown }
 ) {
   const loan = { ...LOAN, ...loanOverrides }
   const state = {
@@ -157,7 +161,12 @@ function openPassport(
   } as unknown as CreditLoanState
 
   vi.mocked(hooks.useCreditLoan).mockReturnValue({ ...idle, data: loan } as never)
-  vi.mocked(hooks.useCreditLoanState).mockReturnValue({ ...idle, data: state } as never)
+  vi.mocked(hooks.useCreditLoanState).mockReturnValue({
+    ...idle,
+    data: stateQuery?.error || stateQuery?.isLoading ? undefined : state,
+    isLoading: stateQuery?.isLoading ?? false,
+    error: stateQuery?.error ?? null,
+  } as never)
   for (const hook of [
     hooks.useCreditLoanSchedule,
     hooks.useCreditLoanJournal,
@@ -237,7 +246,9 @@ describe('CreditLoanDetailPage → блок «Хід видачі грошей»
     // Причина разбора уходит в строку уже ПЕРЕВЕДЁННОЙ: в подстановке стоит
     // ключ словаря, а не сырой `payout_account_not_pinned`.
     expect(
-      screen.getByText(/disbursementReview reason=credit\.reviewReason\.payout_account_not_pinned/)
+      screen.getByText(
+        /disbursementReview reason=credit\.railReviewReason\.payout_account_not_pinned/
+      )
     ).toBeInTheDocument()
     // Машинных имён на экране быть не должно ни в каком виде.
     expect(screen.queryByText(/^payout_account_not_pinned$/)).not.toBeInTheDocument()
@@ -288,5 +299,22 @@ describe('CreditLoanDetailPage → блок «Хід видачі грошей»
   it('а у живого кредита без блока выплаты панель не рисует', () => {
     openPassport(undefined, { status: 'active' })
     expect(screen.queryByText('credit.card.disbursement')).not.toBeInTheDocument()
+  })
+
+  it('пока состояние ядра грузится — не утверждает, что попытки не было', () => {
+    // Раньше панель говорила категоричное «виплату ще не відправляли» и во
+    // время загрузки, и на упавшем запросе. Оператор передавал это клиенту,
+    // тогда как перевод мог уйти и провалиться. Тот же дефект уже был у
+    // графика («Графіка ще немає» на упавшем запросе).
+    openPassport(undefined, { status: 'disbursement_failed' }, { isLoading: true })
+
+    expect(screen.queryByText(/credit\.card\.disbursementNotSent/)).not.toBeInTheDocument()
+  })
+
+  it('запрос упал — говорит «не знаем», а не «переказу не було»', () => {
+    openPassport(undefined, { status: 'disbursement_failed' }, { error: new Error('502') })
+
+    expect(screen.getByText(/credit\.card\.disbursementUnknown/)).toBeInTheDocument()
+    expect(screen.queryByText(/credit\.card\.disbursementNotSent/)).not.toBeInTheDocument()
   })
 })

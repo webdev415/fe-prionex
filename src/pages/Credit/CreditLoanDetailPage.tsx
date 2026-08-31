@@ -304,7 +304,14 @@ export function CreditLoanDetailPage() {
       />
 
       <div className="mt-4">
-        {tab === 'passport' && <LoanPassport loan={loan} state={state} />}
+        {tab === 'passport' && (
+          <LoanPassport
+            loan={loan}
+            state={state}
+            stateLoading={stateQuery.isLoading}
+            stateError={stateQuery.error}
+          />
+        )}
         {tab === 'balances' && (
           <LoanBalances
             currency={loan.currency}
@@ -439,10 +446,43 @@ function isRoutineDisbursement(disbursement: CreditDisbursement): boolean {
  * там, где команда ответит 409, хуже, чем не показать ничего, — оператор жмёт
  * и делает вывод, что сломана система, а не что расходятся два предиката.
  */
-function LoanDisbursement({ loan, state }: { loan: LoanDetail; state?: CreditLoanState }) {
+function LoanDisbursement({
+  loan,
+  state,
+  isLoading,
+  error,
+}: {
+  loan: LoanDetail
+  state?: CreditLoanState
+  isLoading: boolean
+  error: unknown
+}) {
   const { t } = useTranslation('common')
   const timezone = JURISDICTION_TIMEZONE[loan.jurisdiction]
   const disbursement = state?.disbursement
+
+  // «Попытки не было» и «мы не знаем» — РАЗНЫЕ ответы на вопрос «почему клиент
+  // без денег», и путать их дороже всего именно здесь. Пока состояние ядра
+  // грузится или запрос упал, `disbursement` тоже пуст — и панель раньше
+  // говорила категоричное «спроби переказу не було жодної». Оператор передавал
+  // это клиенту, тогда как перевод мог уйти и провалиться.
+  //
+  // Это ровно тот дефект, что уже был у графика («Графіка ще немає» на упавшем
+  // запросе), поэтому лечим тем же способом, что и соседние панели.
+  if (isLoading) {
+    return (
+      <Panel title={t('credit.card.disbursement')}>
+        <TableSkeleton columns={2} rows={3} />
+      </Panel>
+    )
+  }
+  if (error) {
+    return (
+      <Panel title={t('credit.card.disbursement')}>
+        <p className="text-muted-foreground text-sm">{t('credit.card.disbursementUnknown')}</p>
+      </Panel>
+    )
+  }
 
   if (!disbursement) {
     if (!AWAITING_MONEY.has(loan.status)) return null
@@ -467,7 +507,7 @@ function LoanDisbursement({ loan, state }: { loan: LoanDetail; state?: CreditLoa
     disbursement.review_reason === null
       ? null
       : (CREDIT_RAIL_REVIEW_REASONS as readonly string[]).includes(disbursement.review_reason)
-        ? t(`credit.reviewReason.${disbursement.review_reason}`)
+        ? t(`credit.railReviewReason.${disbursement.review_reason}`)
         : t('credit.card.disbursementUnknownCode', { code: disbursement.review_reason })
 
   return (
@@ -561,7 +601,19 @@ function LoanDisbursement({ loan, state }: { loan: LoanDetail; state?: CreditLoa
   )
 }
 
-function LoanPassport({ loan, state }: { loan: LoanDetail; state?: CreditLoanState }) {
+function LoanPassport({
+  loan,
+  state,
+  stateLoading,
+  stateError,
+}: {
+  loan: LoanDetail
+  state?: CreditLoanState
+  // Состояние запроса тянем сюда только ради панели выдачи: она обязана
+  // отличать «попытки не было» от «мы не знаем».
+  stateLoading: boolean
+  stateError: unknown
+}) {
   const { t } = useTranslation('common')
   const caps = state?.caps
   const capEntries = caps ? Object.entries(caps) : []
@@ -592,7 +644,7 @@ function LoanPassport({ loan, state }: { loan: LoanDetail; state?: CreditLoanSta
         )}
       </Panel>
 
-      <LoanDisbursement loan={loan} state={state} />
+      <LoanDisbursement loan={loan} state={state} isLoading={stateLoading} error={stateError} />
 
       {caps && (
         <Panel

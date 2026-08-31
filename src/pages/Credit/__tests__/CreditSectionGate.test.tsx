@@ -19,10 +19,9 @@ import { CreditSectionGate } from '../components/CreditSectionGate'
 import { creditApi } from '@/features/credit/api/creditApi'
 
 vi.mock('@/features/credit/api/creditApi', async () => {
-  const actual =
-    await vi.importActual<typeof import('@/features/credit/api/creditApi')>(
-      '@/features/credit/api/creditApi'
-    )
+  const actual = await vi.importActual<typeof import('@/features/credit/api/creditApi')>(
+    '@/features/credit/api/creditApi'
+  )
   return { ...actual, creditApi: { switches: vi.fn() } }
 })
 

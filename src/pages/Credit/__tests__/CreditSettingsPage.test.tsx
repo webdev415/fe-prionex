@@ -25,6 +25,12 @@ vi.mock('@/features/credit/hooks/useCredit', () => ({
   useCreditOverview: vi.fn(),
   useCreditProducts: vi.fn(),
   useCreditParameters: vi.fn(),
+  // Страница читает положение рубильника, чтобы объяснить выключенный раздел:
+  // сама она калиткой НЕ закрыта — иначе выключивший себя риск-менеджер не
+  // смог бы включить раздел обратно.
+  useCreditSectionEnabled: () => true,
+  useCreditSwitches: () => ({ data: undefined, isLoading: false, error: null }),
+  useSetCreditSwitch: () => ({ mutate: vi.fn(), isPending: false, isError: false }),
 }))
 
 const PRODUCT: CreditProduct = {
