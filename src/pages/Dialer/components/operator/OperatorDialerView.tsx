@@ -49,6 +49,7 @@ export function OperatorDialerView() {
     aor: phoneAor,
     routedCall: phoneRoutedCall,
     answeredCallId,
+    endedCallId,
     answerCall,
     hangupCall,
     clearRoutedCall: clearPhoneRoutedCall,
@@ -77,18 +78,30 @@ export function OperatorDialerView() {
   // publishes it only to the phone's presence socket, which the phone relays up
   // over postMessage. Without this second source the CRM shows nothing at all
   // while the operator's handset is ringing.
+  // Pinned to the call, not to the memo: any other dependency changing mid-call
+  // would otherwise restart the elapsed timer the operator is reading.
+  const phoneCallStartedAt = useMemo(
+    () => new Date().toISOString(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [phoneRoutedCall?.call_id]
+  )
+
   const routedCall = useMemo(() => {
     if (socketRoutedCall) return socketRoutedCall
     if (!phoneRoutedCall) return null
     return {
       call_id: phoneRoutedCall.call_id,
-      client_id: phoneRoutedCall.client_id ?? 0,
-      client_name: phoneRoutedCall.client_name ?? '',
+      // Passed through as-is. A dial-list number can carry no client, and
+      // substituting 0 here would make every downstream guard unreachable on
+      // exactly the path where the absence occurs — an interaction saved
+      // against client 0 posts to /clients/0/interactions and fails.
+      client_id: phoneRoutedCall.client_id,
+      client_name: phoneRoutedCall.client_name,
       phone: phoneRoutedCall.phone ?? '',
       line_type: joinedCampaign?.telephony_type ?? 'white',
-      started_at: new Date().toISOString(),
+      started_at: phoneCallStartedAt,
     }
-  }, [socketRoutedCall, phoneRoutedCall, joinedCampaign?.telephony_type])
+  }, [socketRoutedCall, phoneRoutedCall, joinedCampaign?.telephony_type, phoneCallStartedAt])
 
   const clearRoutedCall = useCallback(() => {
     clearSocketRoutedCall()
@@ -105,6 +118,10 @@ export function OperatorDialerView() {
   // the gateway bridges the customer with no chance to decline, so an Accept
   // prompt would be shown for a call the customer is already talking into.
   const queueAutoAnswers = joinedCampaign?.answer_mode === 'auto'
+
+  // The leg has dropped but the call is still on screen for wrap-up. Compared
+  // by id so a late 'ended' for a superseded call cannot close the current one.
+  const callEnded = routedCall != null && endedCallId === routedCall.call_id
 
   const handleAccept = useCallback(() => {
     if (!routedCall) return
@@ -146,7 +163,7 @@ export function OperatorDialerView() {
     try {
       // Leaving with a live leg would strand the customer on an unattended
       // line, so drop it first rather than only closing the CRM's view of it.
-      if (routedCall && isCallActive) hangupCall(routedCall.call_id)
+      if (routedCall && isCallActive && !callEnded) hangupCall(routedCall.call_id)
       await leaveMutation.mutateAsync()
       setAcceptedCallId(null)
       toast.success(t('dialer.operator.leftToast', 'Left the dialer'))
@@ -158,13 +175,14 @@ export function OperatorDialerView() {
   // The operator pressed Hang up. Drop the leg now; wrap-up is their own admin
   // time and the customer must not be held on the line for it.
   const handleEndCall = () => {
-    if (routedCall) hangupCall(routedCall.call_id)
+    if (routedCall && !callEnded) hangupCall(routedCall.call_id)
   }
 
+  // Wrap-up is over (or was skipped): release the operator for the next call.
+  // The leg is normally already down by now — either the customer ended it or
+  // handleEndCall did — so only hang up if something is somehow still up.
   const handleHangup = () => {
-    // The phone owns the SIP session; without this the leg survives into
-    // wrap-up and the operator is offered the next call over a live one.
-    if (routedCall) hangupCall(routedCall.call_id)
+    if (routedCall && !callEnded) hangupCall(routedCall.call_id)
     setAcceptedCallId(null)
     clearRoutedCall()
   }
@@ -250,6 +268,7 @@ export function OperatorDialerView() {
                   leaving={leaveMutation.isPending}
                   onHangup={handleHangup}
                   onEndCall={handleEndCall}
+                  callEnded={callEnded}
                 />
               ) : (
                 <>

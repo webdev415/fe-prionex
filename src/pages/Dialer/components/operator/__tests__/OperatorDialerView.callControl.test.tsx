@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render as rtlRender, screen } from '@testing-library/react'
-import type { ReactElement } from 'react'
+import { cloneElement, type ReactElement } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { DialerQueue, RoutedCall } from '@/features/dialer'
@@ -21,6 +21,7 @@ const phone = {
     campaign_id: number | null
   },
   answeredCallId: null as string | null,
+  endedCallId: null as string | null,
   answerCall: vi.fn<(callId: string) => void>(),
   hangupCall: vi.fn<(callId: string) => void>(),
   clearRoutedCall: vi.fn(),
@@ -76,7 +77,17 @@ function render(ui: ReactElement) {
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   )
   const result = rtlRender(ui, { wrapper })
-  return { ...result, rerender: (next: ReactElement) => result.rerender(next) }
+  // cloneElement, not `ui`: React bails out of a re-render when handed the
+  // referentially identical element, so the mutated mock would never be read.
+  lastRerender = () => result.rerender(cloneElement(ui))
+  return result
+}
+
+// The phone hook is mocked with a mutable object, so a state change is made by
+// reassigning a field and re-rendering.
+let lastRerender: (() => void) | null = null
+function rerenderView() {
+  lastRerender?.()
 }
 
 const ROUTED = {
@@ -91,6 +102,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   phone.routedCall = null
   phone.answeredCallId = null
+  phone.endedCallId = null
   socket.routedCall = null
   socket.queueComplete = false
   campaigns = [campaign()]
@@ -102,11 +114,11 @@ describe('OperatorDialerView call control', () => {
     // Accept can be dropped — the frame may still be loading, or hold no live
     // session — and an optimistic panel would time a call nobody answered.
     phone.routedCall = ROUTED
-    const { rerender } = render(<OperatorDialerView />)
+    render(<OperatorDialerView />)
     expect(screen.getByText('dialer.call.acceptCall')).toBeTruthy()
 
     phone.answeredCallId = 'c-1'
-    rerender(<OperatorDialerView />)
+    rerenderView()
     expect(screen.queryByText('dialer.call.acceptCall')).toBeNull()
   })
 
@@ -124,10 +136,15 @@ describe('OperatorDialerView call control', () => {
 
   it('shows the call even when the operator is browsing another campaign', () => {
     // With auto-answer pushed down, the phone can connect a customer while the
-    // CRM renders some other campaign and no call UI at all.
+    // CRM renders some other campaign and no call UI at all. The operator has
+    // to actually select the other campaign for this to mean anything.
     campaigns = [campaign(), campaign({ id: 9, name: 'Another queue' })]
-    phone.routedCall = ROUTED
     render(<OperatorDialerView />)
+    screen.getByText('Another queue').click()
+    expect(screen.queryByText('dialer.call.acceptCall')).toBeNull()
+
+    phone.routedCall = ROUTED
+    rerenderView()
 
     expect(screen.getByText('dialer.call.acceptCall')).toBeTruthy()
   })
@@ -135,11 +152,58 @@ describe('OperatorDialerView call control', () => {
   it('seeds the auto-connection toggle from the session, not from off', () => {
     // After a reload while joined, showing "off" while the phone keeps
     // answering puts the display and the thing answering calls in disagreement.
+    // Compared against the same toggle rendered from auto_connect: false, so
+    // the assertion cannot pass on markup that is identical either way.
+    session = { queue_id: 7, status: 'active', auto_connect: false }
+    const off = render(<OperatorDialerView />)
+    const offClass = off.container.querySelector('button.bg-muted, button')?.className ?? ''
+    off.unmount()
+
     session = { queue_id: 7, status: 'active', auto_connect: true }
     render(<OperatorDialerView />)
+    const on = screen.getByText('dialer.call.autoConnection').closest('button')
 
-    const toggle = screen.getByText('dialer.call.autoConnection').closest('button')
-    expect(toggle?.getAttribute('data-active') ?? toggle?.className).toBeTruthy()
+    expect(on?.className).not.toBe('')
+    expect(on?.className).not.toBe(offClass)
+  })
+
+  it('keeps a null client out of the client-bound sections', () => {
+    // parsePhoneMessage normalises a missing client to null and the panel
+    // guards on it — but only if the view stops substituting id 0, which would
+    // otherwise post an interaction to /clients/0/interactions.
+    phone.routedCall = { ...ROUTED, client_id: null, client_name: null }
+    phone.answeredCallId = 'c-1'
+    render(<OperatorDialerView />)
+
+    expect(screen.getByText('dialer.call.noClientInteraction')).toBeTruthy()
+    expect(screen.getByText('dialer.call.noClientChain')).toBeTruthy()
+    expect(screen.queryByText('dialer.call.viewClient')).toBeNull()
+  })
+
+  it('keeps the call on screen for wrap-up after the customer hangs up', () => {
+    // The interaction note lives in component state with no draft persistence,
+    // so unmounting the panel on call-ended discards whatever was typed — on
+    // the most common way a call ends.
+    phone.routedCall = ROUTED
+    phone.answeredCallId = 'c-1'
+    render(<OperatorDialerView />)
+    expect(screen.getByText('dialer.call.taChain')).toBeTruthy()
+
+    phone.endedCallId = 'c-1'
+    rerenderView()
+
+    expect(screen.getByText('dialer.call.taChain')).toBeTruthy()
+    // In wrap-up, so the operator can still save before moving on.
+    expect(screen.getByText('dialer.call.skip')).toBeTruthy()
+  })
+
+  it('ignores an end reported for a call that has been superseded', () => {
+    phone.routedCall = ROUTED
+    phone.answeredCallId = 'c-1'
+    phone.endedCallId = 'c-0'
+    render(<OperatorDialerView />)
+
+    expect(screen.queryByText('dialer.call.skip')).toBeNull()
   })
 
   it('drops the leg when Hang up is pressed, not when wrap-up ends', () => {

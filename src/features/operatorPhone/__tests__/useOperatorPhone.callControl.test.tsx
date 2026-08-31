@@ -110,9 +110,11 @@ describe('useOperatorPhone call control', () => {
     await waitFor(() => expect(result.current.answeredCallId).toBe('c-1'))
   })
 
-  it('clears the call when the phone reports it ended', async () => {
+  it('reports the end without dropping the call', async () => {
     // The remote party hanging up is the common case and the CRM has no other
-    // source for it — the aggressive dialer publishes nothing to its socket.
+    // source for it. The call stays put: dropping it here would unmount the
+    // active-call panel and discard the operator's unsaved interaction note
+    // before wrap-up ever ran.
     const { ref, contentWindow } = makeRef()
     const { result } = renderHook(() => useOperatorPhone(ref))
 
@@ -120,19 +122,28 @@ describe('useOperatorPhone call control', () => {
     await waitFor(() => expect(result.current.routedCall).not.toBeNull())
 
     post(OPERATOR_PHONE_ORIGIN, { type: MSG_CALL_ENDED, call_id: 'c-1' }, contentWindow)
+    await waitFor(() => expect(result.current.endedCallId).toBe('c-1'))
+    expect(result.current.routedCall).toEqual(CALL)
+
+    // The view clears it once wrap-up is done.
+    act(() => result.current.clearRoutedCall())
     await waitFor(() => expect(result.current.routedCall).toBeNull())
+    expect(result.current.endedCallId).toBeNull()
   })
 
-  it('ignores an end for a call that has already been superseded', async () => {
+  it('drops a stale end when the next call arrives', async () => {
     const { ref, contentWindow } = makeRef()
     const { result } = renderHook(() => useOperatorPhone(ref))
 
     post(OPERATOR_PHONE_ORIGIN, { type: MSG_ROUTED_CALL, call: CALL }, contentWindow)
-    await waitFor(() => expect(result.current.routedCall).not.toBeNull())
+    post(OPERATOR_PHONE_ORIGIN, { type: MSG_CALL_ENDED, call_id: 'c-1' }, contentWindow)
+    await waitFor(() => expect(result.current.endedCallId).toBe('c-1'))
 
-    // A late teardown for the previous call must not close the current one.
-    post(OPERATOR_PHONE_ORIGIN, { type: MSG_CALL_ENDED, call_id: 'c-0' }, contentWindow)
-    expect(result.current.routedCall).toEqual(CALL)
+    // The next call must not inherit the previous call's ended state.
+    const next = { ...CALL, call_id: 'c-2' }
+    post(OPERATOR_PHONE_ORIGIN, { type: MSG_ROUTED_CALL, call: next }, contentWindow)
+    await waitFor(() => expect(result.current.routedCall).toEqual(next))
+    expect(result.current.endedCallId).toBeNull()
   })
 
   it('re-establishes the auto-answer preference every time the phone is ready', async () => {

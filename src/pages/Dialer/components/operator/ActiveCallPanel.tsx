@@ -34,6 +34,12 @@ interface ActiveCallPanelProps {
    * line for the whole countdown.
    */
   onEndCall?: () => void
+  /**
+   * The leg is already down — the customer hung up, or the operator's own end
+   * has been carried out. Wrap-up still runs: the panel stays mounted so the
+   * interaction note can be saved rather than discarded with the call.
+   */
+  callEnded?: boolean
 }
 
 function fmtClock(totalSeconds: number): string {
@@ -62,6 +68,7 @@ export function ActiveCallPanel({
   leaving,
   onHangup,
   onEndCall,
+  callEnded = false,
 }: ActiveCallPanelProps) {
   const { t } = useTranslation('common')
 
@@ -77,21 +84,26 @@ export function ActiveCallPanel({
   const clientId = routedCall.client_id
   const clientName = routedCall.client_name ?? ''
 
-  useEffect(() => {
-    if (phase !== 'active') return
-    const id = setInterval(() => setNowMs(Date.now()), 1000)
-    return () => clearInterval(id)
-  }, [phase])
+  // A leg that has already dropped puts the panel straight into wrap-up: there
+  // is no live call left to time, but the operator still needs their window to
+  // record the interaction.
+  const isWrapup = phase === 'wrapup' || callEnded
 
   useEffect(() => {
-    if (phase !== 'wrapup') return
+    if (isWrapup) return
+    const id = setInterval(() => setNowMs(Date.now()), 1000)
+    return () => clearInterval(id)
+  }, [isWrapup])
+
+  useEffect(() => {
+    if (!isWrapup) return
     if (wrapRemaining <= 0) {
       onHangup()
       return
     }
     const id = setTimeout(() => setWrapRemaining((r) => r - 1), 1000)
     return () => clearTimeout(id)
-  }, [phase, wrapRemaining, onHangup])
+  }, [isWrapup, wrapRemaining, onHangup])
 
   const elapsed = Math.max(
     0,
@@ -102,8 +114,6 @@ export function ActiveCallPanel({
     routedCall.line_type === 'white'
       ? t('dialer.call.white', 'WHITE')
       : t('dialer.call.grey', 'GREY')
-
-  const isWrapup = phase === 'wrapup'
 
   return (
     <section className="flex flex-col gap-4">

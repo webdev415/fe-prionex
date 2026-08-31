@@ -36,6 +36,14 @@ export interface OperatorPhoneState {
    * would then be counting up on a call nobody answered.
    */
   answeredCallId: string | null
+  /**
+   * The call the phone has reported as over. The routed call is deliberately
+   * NOT dropped on this: unmounting the active-call panel the moment the leg
+   * drops would skip wrap-up and discard whatever the operator had typed into
+   * the interaction form — on the most common way a call ends, the customer
+   * hanging up first.
+   */
+  endedCallId: string | null
   /** Accept the offered call — sends the SIP answer via the phone. */
   answerCall: (callId: string) => void
   /** End the call from the CRM. The phone owns the SIP leg; nothing else can. */
@@ -81,6 +89,7 @@ export function useOperatorPhone(
   const [aor, setAor] = useState<string | null>(null)
   const [routedCall, setRoutedCall] = useState<RoutedCallPayload | null>(null)
   const [answeredCallId, setAnsweredCallId] = useState<string | null>(null)
+  const [endedCallId, setEndedCallId] = useState<string | null>(null)
   const mintingRef = useRef(false)
 
   const postToPhone = useCallback(
@@ -136,16 +145,16 @@ export function useOperatorPhone(
         case MSG_ROUTED_CALL:
           setRoutedCall(message.call)
           setAnsweredCallId(null)
+          setEndedCallId(null)
           break
         case MSG_CALL_ANSWERED:
           setAnsweredCallId(message.call_id)
           break
         case MSG_CALL_ENDED:
-          // Ignore a late 'ended' for a call already replaced by the next one.
-          setRoutedCall((current) =>
-            current === null || current.call_id === message.call_id ? null : current
-          )
-          setAnsweredCallId((current) => (current === message.call_id ? null : current))
+          // Recorded, not acted on: the view keeps the call on screen for
+          // wrap-up and clears it when the operator is done. A late 'ended' for
+          // a superseded call is filtered by the id comparison there.
+          setEndedCallId(message.call_id)
           break
         case MSG_STATUS:
           setStatus(message.status)
@@ -189,6 +198,7 @@ export function useOperatorPhone(
   const clearRoutedCall = useCallback(() => {
     setRoutedCall(null)
     setAnsweredCallId(null)
+    setEndedCallId(null)
   }, [])
 
   return {
@@ -196,6 +206,7 @@ export function useOperatorPhone(
     aor,
     routedCall,
     answeredCallId,
+    endedCallId,
     answerCall,
     hangupCall,
     clearRoutedCall,
