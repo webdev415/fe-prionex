@@ -78,9 +78,10 @@ import {
   type AssistantVoiceMaxDuration,
   type AssistantVoiceSilenceTimeout,
 } from '@/stores/aiAssistantStore'
-import type { AssistantMode } from '@/features/aiAssistant/api'
+import type { AssistantConversationDetail, AssistantMode } from '@/features/aiAssistant/api'
 import { isAxiosError } from 'axios'
 import { parseConversationParam, writeConversationParam } from './conversationUrl'
+import { ANSWER_POLL_INTERVAL_MS, ANSWER_POLL_MAX_MS } from './answerPolling'
 import { ConversationSidebar } from './ConversationSidebar'
 import { ContextUsageRing } from './ContextUsageRing'
 import { extractContextUsage, type ContextUsageSnapshot } from './contextUsage'
@@ -958,6 +959,9 @@ export function AiAssistantBetaPage() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [isAssistantResponding, setIsAssistantResponding] = useState(false)
   const [conversationId, setConversationId] = useState<number | null>(null)
+  // Диалог открыт с незавершённым ходом (последнее сообщение — вопрос без
+  // ответа): ответ дописывается на сервере, страница ждёт его опросом.
+  const [awaitingServerAnswer, setAwaitingServerAnswer] = useState(false)
   // Заполненность контекстного окна мозга по последнему ходу (usage из
   // терминального `done`-кадра). Кружок у композера — см. ContextUsageRing.
   const [contextUsage, setContextUsage] = useState<ContextUsageSnapshot | null>(null)
@@ -1449,11 +1453,8 @@ export function AiAssistantBetaPage() {
     })
   }, [])
 
-  useEffect(() => {
-    const detail = conversationQuery.data
-    if (!detail || !shouldHydrateConversation) return
-    setConversationId(detail.id)
-    setChatMessages(
+  const mapServerMessages = useCallback(
+    (detail: AssistantConversationDetail): ChatMessage[] =>
       detail.messages.map((item) => {
         const isAssistant = item.role === 'assistant'
         // Слой 5: источники приходят сырым конвертом `{items:[...]}` (как и во
@@ -1481,11 +1482,74 @@ export function AiAssistantBetaPage() {
           reasoning: isAssistant ? item.reasoning : undefined,
           citations: citations.length > 0 ? citations : undefined,
         }
-      })
+      }),
+    []
+  )
+
+  useEffect(() => {
+    const detail = conversationQuery.data
+    if (!detail || !shouldHydrateConversation) return
+    setConversationId(detail.id)
+    const mapped = mapServerMessages(detail)
+    const last = detail.messages[detail.messages.length - 1]
+    // Последний ход — вопрос без ответа: ответ ещё дописывается на сервере
+    // (обрыв соединения при обновлении страницы). Показываем «печатает…» и
+    // ждём его опросом, а не оставляем оператора с висящим вопросом.
+    const pending = last?.role === 'user'
+    setChatMessages(
+      pending
+        ? [
+            ...mapped,
+            {
+              id: 'pending-server-answer',
+              role: 'assistant',
+              content: '',
+              isLoading: true,
+              loadingLabel: t('pages.aiAssistant.answerInProgress'),
+            },
+          ]
+        : mapped
     )
+    setAwaitingServerAnswer(pending)
     setIsExplicitSelection(false)
     window.setTimeout(() => scrollToConversationBottom('auto'), 0)
-  }, [conversationQuery.data, shouldHydrateConversation, scrollToConversationBottom])
+  }, [
+    conversationQuery.data,
+    shouldHydrateConversation,
+    scrollToConversationBottom,
+    mapServerMessages,
+    t,
+  ])
+
+  // Опрос диалога с незавершённым ходом: refetch работает и у выключенного
+  // запроса. Ответ появился — подменяем «печатает…» настоящими сообщениями;
+  // потолок ожидания — дедлайн thinking-хода с запасом.
+  useEffect(() => {
+    if (!awaitingServerAnswer) return
+    const startedAt = Date.now()
+    const timer = window.setInterval(() => {
+      if (Date.now() - startedAt > ANSWER_POLL_MAX_MS) {
+        setAwaitingServerAnswer(false)
+        setChatMessages((current) => current.filter((m) => m.id !== 'pending-server-answer'))
+        return
+      }
+      void conversationQuery.refetch()
+    }, ANSWER_POLL_INTERVAL_MS)
+    return () => window.clearInterval(timer)
+    // refetch стабилен на время жизни запроса; сам объект запроса меняется
+    // каждый рендер и не должен перезапускать таймер.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [awaitingServerAnswer])
+
+  useEffect(() => {
+    if (!awaitingServerAnswer) return
+    const detail = conversationQuery.data
+    const last = detail?.messages[detail.messages.length - 1]
+    if (!detail || last?.role !== 'assistant') return
+    setChatMessages(mapServerMessages(detail))
+    setAwaitingServerAnswer(false)
+    window.setTimeout(() => scrollToConversationBottom('auto'), 0)
+  }, [awaitingServerAnswer, conversationQuery.data, mapServerMessages, scrollToConversationBottom])
 
   useEffect(() => {
     if (!conversationQuery.isError) return
@@ -1562,6 +1626,7 @@ export function AiAssistantBetaPage() {
     setChatMessages((current) => (current.length > 0 ? [] : current))
     setConversationId(null)
     setContextUsage(null)
+    setAwaitingServerAnswer(false)
     setFeedbackByMessage({})
     setCitationMarksByMessage((current) => (Object.keys(current).length > 0 ? {} : current))
     setReasoningOpenByMessage((current) => (Object.keys(current).length > 0 ? {} : current))
@@ -2039,6 +2104,20 @@ export function AiAssistantBetaPage() {
             expert: expertModel ? { model: expertModel } : undefined,
           },
           callbacks: {
+            onMeta: (meta) => {
+              // Указатель диалога — сразу, не после done: обновление страницы
+              // посреди ответа возвращает оператора в ЭТОТ диалог, где ответ
+              // дописывается сервером и подтягивается опросом.
+              const id = meta.conversation_id
+              if (
+                typeof id === 'number' &&
+                id > 0 &&
+                userId != null &&
+                assistantSettings.rememberConversationContext
+              ) {
+                setActiveConversation(userId, id)
+              }
+            },
             onText: (delta) => {
               streamedText += delta
               receivedDelta = true
