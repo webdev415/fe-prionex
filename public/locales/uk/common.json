@@ -11172,7 +11172,8 @@
       "totalRow": "Разом",
       "interest": "Проценти",
       "fee": "Комісія",
-      "lastActivity": "Останній рух"
+      "lastActivity": "Останній рух",
+      "step": "Крок"
     },
     "fields": {
       "name": "Клієнт",

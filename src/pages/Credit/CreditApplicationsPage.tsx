@@ -111,6 +111,12 @@ export function CreditApplicationsPage() {
     [items]
   )
 
+  // Колонку «Крок» показываем, только когда модуль реально отдаёт шаг:
+  // столбец из одних прочерков хуже отсутствующего. Поле приезжает вместе с
+  // лентой переходов (коммит модуля 452cc71) и на стенде пока не развёрнуто —
+  // колонка включится сама, без правки кода, как только данные придут.
+  const hasStep = rows.some((row) => Boolean(row.resume_step))
+
   const columns: Column<ApplicationRow>[] = [
     {
       key: 'number',
@@ -146,6 +152,26 @@ export function CreditApplicationsPage() {
       header: t('credit.columns.client'),
       render: (row) => row.client_email ?? '—',
     },
+    ...(hasStep
+      ? [
+          {
+            // Лекарство от очереди из неразличимых «Заповнюється»: статус
+            // говорит, что заявка не дошла, шаг — где именно она встала.
+            // Несортируемая осознанно: `step_entered_at` в сортировке модуля
+            // нет (APPLICATION_SORT_FIELDS — created_at, updated_at,
+            // requested_amount_minor), а сортировка на клиенте соврала бы
+            // порядком в пределах страницы.
+            key: 'step',
+            header: t('credit.columns.step'),
+            render: (row: ApplicationRow) =>
+              row.resume_step ? (
+                t(`credit.blocks.${row.resume_step}`, row.resume_step)
+              ) : (
+                <span className="text-muted-foreground">—</span>
+              ),
+          } as Column<ApplicationRow>,
+        ]
+      : []),
     {
       key: 'decision',
       header: t('credit.columns.decision'),

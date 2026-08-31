@@ -107,4 +107,30 @@ describe('CreditApplicationsPage', () => {
     renderPage()
     expect(await screen.findByText('credit.stand.notice')).toBeInTheDocument()
   })
+
+  // Колонка шага. Модуль начал отдавать `resume_step` в сводке позже самого
+  // раздела, поэтому колонка обязана появляться ПО ДАННЫМ, а не по релизу
+  // фронта: столбец из одних прочерков хуже отсутствующего.
+  it('колонки шага нет, пока модуль шаг не отдаёт', async () => {
+    renderPage()
+    await screen.findByText('DEMO-202608-03A17C')
+    expect(screen.queryByText('credit.columns.step')).not.toBeInTheDocument()
+  })
+
+  it('колонка шага появляется сама, как только шаг приходит', async () => {
+    vi.mocked(useCreditApplications).mockReturnValue({
+      data: {
+        items: [{ ...ROW, status: 'in_progress', resume_step: 'bank_verification' }],
+        next_cursor: null,
+        total: 1,
+      },
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useCreditApplications>)
+
+    renderPage()
+    expect(await screen.findByText('credit.columns.step')).toBeInTheDocument()
+    // Название шага — из словаря блоков анкеты, а не машинным именем.
+    expect(screen.getByText('credit.blocks.bank_verification')).toBeInTheDocument()
+  })
 })
