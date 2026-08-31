@@ -57,10 +57,15 @@ jobs:
             # VITE_CRM_PARENT_ORIGIN pointing at the dev CRM, so it rejects
             # postMessage from production. Defaulting to it would ship a phone
             # that silently never leaves "Connecting".
+            #
+            # Unset is a supported state, not a failure: with no URL the build
+            # resolves OPERATOR_PHONE_CONFIGURED to false, the phone panel never
+            # mounts and no token is posted anywhere (see
+            # src/features/operatorPhone/constants.ts). Failing the job here
+            # would block every production release over one dormant feature.
             PHONE_URL="${{ secrets.VITE_OPERATOR_PHONE_URL_PROD }}"
             if [ -z "$PHONE_URL" ]; then
-              echo "::error::VITE_OPERATOR_PHONE_URL_PROD is not set and there is no production softphone deployment yet"
-              exit 1
+              echo "::warning::VITE_OPERATOR_PHONE_URL_PROD is not set - building without the operator softphone. The phone panel will not mount; the rest of the dialer is unaffected."
             fi
           elif [ "${{ github.ref }}" == "refs/heads/development" ]; then
             # Development environment
@@ -95,10 +100,15 @@ jobs:
             # VITE_CRM_PARENT_ORIGIN pointing at the dev CRM, so it rejects
             # postMessage from production. Defaulting to it would ship a phone
             # that silently never leaves "Connecting".
+            #
+            # Unset is a supported state, not a failure: with no URL the build
+            # resolves OPERATOR_PHONE_CONFIGURED to false, the phone panel never
+            # mounts and no token is posted anywhere (see
+            # src/features/operatorPhone/constants.ts). Failing the job here
+            # would block every production release over one dormant feature.
             PHONE_URL="${{ secrets.VITE_OPERATOR_PHONE_URL_PROD }}"
             if [ -z "$PHONE_URL" ]; then
-              echo "::error::VITE_OPERATOR_PHONE_URL_PROD is not set and there is no production softphone deployment yet"
-              exit 1
+              echo "::warning::VITE_OPERATOR_PHONE_URL_PROD is not set - building without the operator softphone. The phone panel will not mount; the rest of the dialer is unaffected."
             fi
           fi
           echo "API_URL=$API_URL" >> $GITHUB_OUTPUT
