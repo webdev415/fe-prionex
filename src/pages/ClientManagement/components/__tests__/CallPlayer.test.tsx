@@ -21,6 +21,7 @@ import {
   type MockInstance,
 } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { AxiosError } from 'axios'
 import { CallPlayer } from '../CallPlayer'
 import {
   callService,
@@ -30,6 +31,7 @@ import {
 
 const TRUNCATED_KEY = 'pages.clients.modals.callRecording.loadTruncated'
 const FAILED_KEY = 'pages.clients.modals.callRecording.loadFailed'
+const NO_RECORDING_KEY = 'pages.clients.modals.callRecording.noRecording'
 // The global i18n test mock maps these two keys to readable text.
 const PLAY_TEXT = 'Play'
 const PAUSE_TEXT = 'Pause'
@@ -154,5 +156,38 @@ describe('CallPlayer — successful load', () => {
 
     expect(playMock).toHaveBeenCalled()
     expect(screen.getByText(PAUSE_TEXT)).toBeInTheDocument()
+  })
+})
+
+// A call whose row carries no recording_path is answered 404 by call-service
+// ("No recording available for call …"). That is permanent: the trainer must be
+// told so plainly, and never offered a Retry that cannot succeed (KAN-1030).
+const notFound = () =>
+  new AxiosError('Not Found', 'ERR_BAD_REQUEST', undefined, null, {
+    status: 404,
+    statusText: 'Not Found',
+    data: { detail: 'No recording available for call CALL-1' },
+    headers: {},
+    config: {} as never,
+  })
+
+describe('CallPlayer — the call has no recording', () => {
+  it('says so and never asks the server when has_recording is false', async () => {
+    render(<CallPlayer callId="CALL-1" hasRecording={false} />)
+
+    expect(await screen.findByText(NO_RECORDING_KEY)).toBeInTheDocument()
+    // The absence is known up front — requesting the blob can only 404.
+    expect(fetchSpy).not.toHaveBeenCalled()
+    expect(screen.queryByTestId('call-player-retry')).not.toBeInTheDocument()
+  })
+
+  it('says so, without a Retry button, when the server answers 404', async () => {
+    fetchSpy.mockRejectedValue(notFound())
+
+    render(<CallPlayer callId="CALL-1" />)
+
+    expect(await screen.findByText(NO_RECORDING_KEY)).toBeInTheDocument()
+    expect(screen.queryByText(FAILED_KEY)).not.toBeInTheDocument()
+    expect(screen.queryByTestId('call-player-retry')).not.toBeInTheDocument()
   })
 })
