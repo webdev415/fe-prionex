@@ -31,6 +31,7 @@ import { formatCreditMoney } from '@/features/credit/api/money'
 import { normalizeDraft } from '@/features/credit/api/draft'
 import type {
   CreditBalances,
+  CreditDisbursement,
   CreditDocumentMeta,
   CreditJournalEntry,
   CreditLoanDetail as LoanDetail,
@@ -38,9 +39,14 @@ import type {
   CreditPayment,
   CreditScheduleVersion,
 } from '@/features/credit/api/types'
+import {
+  CREDIT_DISBURSEMENT_FAILURE_CODES,
+  CREDIT_RAIL_REVIEW_REASONS,
+} from '@/features/credit/api/enums'
 import { CreditStatusBadge } from './components/CreditStatusBadge'
 import { CreditDocumentOpenButton } from './components/CreditDocumentOpenButton'
 import {
+  CopyButton,
   CreditCardHeader,
   CreditNotice,
   type CreditHeaderMetric,
@@ -351,6 +357,210 @@ export function CreditLoanDetailPage() {
   )
 }
 
+/**
+ * Статусы кредита, при которых деньги ОБЯЗАНЫ были двинуться.
+ *
+ * Нужны для единственного случая: попытки отправки нет вовсе. У живого
+ * кредита отсутствие блока ничего не значит и лишняя панель только отвлекает,
+ * а у застрявшего — это и есть ответ на вопрос «почему клиент без денег».
+ */
+const AWAITING_MONEY = new Set(['pending_disbursement', 'disbursement_failed', 'funding_exception'])
+
+/** Тона выплаты — своим словарём, а не через `CreditStatusBadge`.
+ *  Там `cancelled` уже занят статусом кредита и покрашен красным, а отозванная
+ *  выплата — предупреждение: общий словарь дал бы одному слову два смысла. */
+const DISBURSEMENT_TONE: Record<CreditDisbursement['state'], string> = {
+  pending: 'bg-muted text-muted-foreground',
+  settled: 'bg-success-100 text-success-700',
+  failed: 'bg-error-100 text-error-700',
+  reversed: 'bg-error-100 text-error-700',
+  cancelled: 'bg-warning-100 text-warning-800',
+  unknown: 'bg-error-100 text-error-700',
+}
+
+type RetryVerdict =
+  | 'available'
+  | 'reviewOpen'
+  | 'notFailed'
+  | 'settled'
+  | 'inFlight'
+  | 'unknownState'
+
+/**
+ * Можно ли повторить отправку — ПО УСЛОВИЮ КОМАНДЫ, а не по флагу модуля.
+ *
+ * `retry_allowed` модуль считает как `state ∈ {failed, cancelled, reversed}`
+ * (`app/loans.py:229,281`), а команда возобновления
+ * `POST /rails/loans/{id}/resume-disbursement` отвечает 409, если последняя
+ * попытка не `failed` (`disbursement_not_failed`) либо по ней открыт разбор
+ * (`disbursement_review_not_resolved`). Предикаты разъехались, и на стенде
+ * 31.08.2026 из-за этого отказ получили бы ВСЕ 16 «разрешённых» повторов:
+ * шесть `reversed` — по первому охраннику, десять `failed` с открытым
+ * разбором — по второму. Пока модуль не свёл флаг к условию команды, читать
+ * флаг как разрешение нельзя — повторяем условие команды здесь.
+ */
+function retryVerdict(disbursement: CreditDisbursement): RetryVerdict {
+  if (disbursement.state === 'failed') {
+    return disbursement.review_reason === null ? 'available' : 'reviewOpen'
+  }
+  if (disbursement.state === 'settled') return 'settled'
+  if (disbursement.state === 'pending') return 'inFlight'
+  if (disbursement.state === 'unknown') return 'unknownState'
+  return 'notFailed'
+}
+
+/**
+ * Выплата прошла ровно: деньги зачислены, отказа не было, человека не ждёт и
+ * дата зачисления известна от провайдера, а не выведена нами.
+ *
+ * Такому кредиту блок не нужен — дата выдачи уже стоит в паспорте, и вторая
+ * панель об одном и том же добавляет шума, а не смысла. Показывать блок стоит
+ * ровно тогда, когда в нём есть что прочитать.
+ */
+function isRoutineDisbursement(disbursement: CreditDisbursement): boolean {
+  return (
+    disbursement.state === 'settled' &&
+    disbursement.failure_code === null &&
+    disbursement.failed_at === null &&
+    disbursement.review_reason === null &&
+    disbursement.provider_time_source !== 'observed'
+  )
+}
+
+/**
+ * Ход выдачи денег.
+ *
+ * Заводится потому, что до сих пор оператор у кредита с неудавшейся выдачей
+ * видел один бейдж «Видача не пройшла» и ничего больше — при том что причина,
+ * даты и признак ожидания разбора уже лежали в `/loans/{id}/state`, который
+ * карточка и так запрашивает.
+ *
+ * Кнопки повтора здесь нет НАМЕРЕННО (см. `retryVerdict`): показать «повторити»
+ * там, где команда ответит 409, хуже, чем не показать ничего, — оператор жмёт
+ * и делает вывод, что сломана система, а не что расходятся два предиката.
+ */
+function LoanDisbursement({ loan, state }: { loan: LoanDetail; state?: CreditLoanState }) {
+  const { t } = useTranslation('common')
+  const timezone = JURISDICTION_TIMEZONE[loan.jurisdiction]
+  const disbursement = state?.disbursement
+
+  if (!disbursement) {
+    if (!AWAITING_MONEY.has(loan.status)) return null
+    return (
+      <Panel title={t('credit.card.disbursement')}>
+        <p className="text-muted-foreground text-sm">{t('credit.card.disbursementNotSent')}</p>
+      </Panel>
+    )
+  }
+  if (isRoutineDisbursement(disbursement)) return null
+
+  const verdict = retryVerdict(disbursement)
+  // Код провайдера, которого мы не знаем, — это не пропущенный перевод, а
+  // чужой словарь. Показываем его как чужое слово, а не как голое имя ключа.
+  const failureText =
+    disbursement.failure_code === null
+      ? '—'
+      : (CREDIT_DISBURSEMENT_FAILURE_CODES as readonly string[]).includes(disbursement.failure_code)
+        ? t(`credit.disbursementFailure.${disbursement.failure_code}`)
+        : t('credit.card.disbursementUnknownCode', { code: disbursement.failure_code })
+  const reviewText =
+    disbursement.review_reason === null
+      ? null
+      : (CREDIT_RAIL_REVIEW_REASONS as readonly string[]).includes(disbursement.review_reason)
+        ? t(`credit.reviewReason.${disbursement.review_reason}`)
+        : t('credit.card.disbursementUnknownCode', { code: disbursement.review_reason })
+
+  return (
+    <Panel
+      title={t('credit.card.disbursement')}
+      footer={t('credit.card.disbursementNoRetryButton')}
+    >
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <span
+          className={`inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-medium ${DISBURSEMENT_TONE[disbursement.state]}`}
+        >
+          <span className="h-2 w-2 rounded-full bg-current opacity-70" />
+          {t(`credit.disbursementState.${disbursement.state}`)}
+        </span>
+        <span className="text-muted-foreground text-sm">
+          {t('credit.card.disbursementUpdated', {
+            when: formatDateTime(disbursement.updated_at, timezone),
+          })}
+        </span>
+      </div>
+
+      {reviewText && (
+        <CreditNotice className="mb-3">
+          {disbursement.review_raised_at
+            ? t('credit.card.disbursementReview', {
+                reason: reviewText,
+                since: formatDateTime(disbursement.review_raised_at, timezone),
+              })
+            : t('credit.card.disbursementReviewNoDate', { reason: reviewText })}
+        </CreditNotice>
+      )}
+
+      {/* Дата зачисления, выведенная нами, и дата от провайдера — разные вещи:
+          от неё считается регуляторное окно отказа, и «оценено» надо сказать
+          вслух, иначе срок клиента выглядит посчитанным. */}
+      {disbursement.provider_time_source === 'observed' && (
+        <CreditNotice className="mb-3">{t('credit.card.disbursementObservedTime')}</CreditNotice>
+      )}
+
+      <Field label={t('credit.fields.disbursementAmount')}>
+        {money(disbursement.amount_minor, disbursement.currency)}
+      </Field>
+      <Field label={t('credit.fields.disbursementMethod')}>
+        {t(`credit.disbursementMethod.${disbursement.method}`)}
+      </Field>
+      <Field label={t('credit.fields.settledAt')}>
+        {formatDateTime(disbursement.settled_at ?? undefined, timezone)}
+      </Field>
+      <Field label={t('credit.fields.failedAt')}>
+        {formatDateTime(disbursement.failed_at ?? undefined, timezone)}
+      </Field>
+      <Field label={t('credit.fields.failureCode')}>{failureText}</Field>
+      <Field label={t('credit.fields.timeSource')}>
+        {disbursement.provider_time_source
+          ? t(`credit.providerTimeSource.${disbursement.provider_time_source}`)
+          : '—'}
+      </Field>
+      <Field label={t('credit.fields.provider')}>{disbursement.provider}</Field>
+      <Field label={t('credit.fields.providerTxId')}>
+        {disbursement.provider_tx_id ? (
+          <span className="inline-flex items-center gap-1.5">
+            <span className="font-mono text-xs">{disbursement.provider_tx_id}</span>
+            <CopyButton value={disbursement.provider_tx_id} label={t('credit.actions.copy')} />
+          </span>
+        ) : (
+          '—'
+        )}
+      </Field>
+      {/* Слово провайдера как есть: перевод чужого статуса — это уже наша
+          трактовка, а по нему сверяются с поддержкой рельса дословно. */}
+      <Field label={t('credit.fields.providerStatus')}>{disbursement.provider_status ?? '—'}</Field>
+      <Field label={t('credit.fields.clientTransactionId')}>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="font-mono text-xs">{disbursement.client_transaction_id}</span>
+          <CopyButton value={disbursement.client_transaction_id} label={t('credit.actions.copy')} />
+        </span>
+      </Field>
+      <Field label={t('credit.fields.retry')}>{t(`credit.disbursementRetry.${verdict}`)}</Field>
+
+      {disbursement.retry_allowed && verdict !== 'available' && (
+        <CreditNotice className="mt-3">
+          {t('credit.card.disbursementRetryContradiction')}
+        </CreditNotice>
+      )}
+      {disbursement.provider === 'mock' && (
+        <CreditNotice className="mt-3" tone="info">
+          {t('credit.card.mockProviderWarning', { provider: disbursement.provider })}
+        </CreditNotice>
+      )}
+    </Panel>
+  )
+}
+
 function LoanPassport({ loan, state }: { loan: LoanDetail; state?: CreditLoanState }) {
   const { t } = useTranslation('common')
   const caps = state?.caps
@@ -381,6 +591,8 @@ function LoanPassport({ loan, state }: { loan: LoanDetail; state?: CreditLoanSta
           </Field>
         )}
       </Panel>
+
+      <LoanDisbursement loan={loan} state={state} />
 
       {caps && (
         <Panel
