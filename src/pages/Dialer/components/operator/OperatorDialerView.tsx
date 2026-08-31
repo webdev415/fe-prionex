@@ -39,9 +39,23 @@ export function OperatorDialerView() {
 
   const {
     routedCall: socketRoutedCall,
+    endedCallId: socketEndedCallId,
     queueComplete,
     clearRoutedCall: clearSocketRoutedCall,
   } = useDialerSocket(joinedQueueId != null)
+
+  // The call belongs to the queue the operator joined, never to whichever one
+  // they happen to be browsing.
+  const joinedCampaign = useMemo(
+    () => campaigns?.find((c) => c.id === joinedQueueId) ?? null,
+    [campaigns, joinedQueueId]
+  )
+
+  // The queue's own accept_mode outranks the operator's preference: on 'auto'
+  // the gateway bridges the customer with no chance to decline, so the phone
+  // must be armed to answer even if the operator's own toggle is off — the
+  // toggle is hidden on such a queue and could not be turned on.
+  const queueAutoAnswers = joinedCampaign?.answer_mode === 'auto'
 
   const phoneFrameRef = useRef<HTMLIFrameElement>(null)
   const {
@@ -53,25 +67,7 @@ export function OperatorDialerView() {
     answerCall,
     hangupCall,
     clearRoutedCall: clearPhoneRoutedCall,
-  } = useOperatorPhone(phoneFrameRef, { autoAnswer: autoConnect })
-
-  // The call belongs to the queue the operator joined, never to whichever one
-  // they happen to be browsing.
-  const joinedCampaign = useMemo(
-    () => campaigns?.find((c) => c.id === joinedQueueId) ?? null,
-    [campaigns, joinedQueueId]
-  )
-
-  // A live call pins the view to the joined campaign. With auto-answer pushed
-  // down, the phone can connect the operator to a customer while the CRM is
-  // rendering another campaign's stats and no call UI at all.
-  const hasCall = socketRoutedCall != null || phoneRoutedCall != null
-  const activeId = hasCall && joinedQueueId != null ? joinedQueueId : (selectedId ?? joinedQueueId)
-  const activeCampaign = useMemo(
-    () => campaigns?.find((c) => c.id === activeId) ?? null,
-    [campaigns, activeId]
-  )
-  const isJoinedHere = activeCampaign != null && activeCampaign.id === joinedQueueId
+  } = useOperatorPhone(phoneFrameRef, { autoAnswer: autoConnect || queueAutoAnswers })
 
   // Two drivers announce a routed call by different routes. The fake engine
   // emits `dialer.call_routed` on the CRM's own socket; the Aggressive Dialer
@@ -114,14 +110,11 @@ export function OperatorDialerView() {
   // shown as connected on fact rather than on assumption.
   const isPhoneRoutedCall = socketRoutedCall == null && phoneRoutedCall != null
 
-  // The queue's own accept_mode outranks the operator's preference. On 'auto'
-  // the gateway bridges the customer with no chance to decline, so an Accept
-  // prompt would be shown for a call the customer is already talking into.
-  const queueAutoAnswers = joinedCampaign?.answer_mode === 'auto'
-
   // The leg has dropped but the call is still on screen for wrap-up. Compared
   // by id so a late 'ended' for a superseded call cannot close the current one.
-  const callEnded = routedCall != null && endedCallId === routedCall.call_id
+  const callEnded =
+    routedCall != null &&
+    (isPhoneRoutedCall ? endedCallId : socketEndedCallId) === routedCall.call_id
 
   const handleAccept = useCallback(() => {
     if (!routedCall) return
@@ -130,15 +123,33 @@ export function OperatorDialerView() {
     answerCall(routedCall.call_id)
   }, [routedCall, answerCall, isPhoneRoutedCall])
 
+  // The phone path always waits for confirmation, whatever the queue's mode:
+  // an 'auto' queue means the gateway will bridge the call, not that it already
+  // has, and claiming a connected call before the leg is up shows the operator a
+  // running clock over silence.
   const isCallActive =
     routedCall != null &&
-    (queueAutoAnswers ||
-      (isPhoneRoutedCall
-        ? // The phone said the leg is up. Accept alone is not enough: the
-          // message can be dropped (frame still loading, no live session) and
-          // the panel would then be timing a call nobody answered.
-          answeredCallId === routedCall.call_id
-        : autoConnect || acceptedCallId === routedCall.call_id))
+    (isPhoneRoutedCall
+      ? answeredCallId === routedCall.call_id
+      : queueAutoAnswers || autoConnect || acceptedCallId === routedCall.call_id)
+
+  // Ended before it was ever answered — an abandoned ring, which is routine on
+  // an outbound dialer. There is no conversation to wrap up and no note to
+  // save, so the offer is simply withdrawn rather than left as an Accept button
+  // over a dead leg that nothing can dismiss.
+  const callAbandoned = callEnded && !isCallActive
+
+  // A live call pins the view to the joined campaign. With auto-answer pushed
+  // down, the phone can connect the operator to a customer while the CRM is
+  // rendering another campaign's stats and no call UI at all. An abandoned ring
+  // must not pin it, or campaign navigation stays locked to a dead call.
+  const hasCall = (socketRoutedCall != null || phoneRoutedCall != null) && !callAbandoned
+  const activeId = hasCall && joinedQueueId != null ? joinedQueueId : (selectedId ?? joinedQueueId)
+  const activeCampaign = useMemo(
+    () => campaigns?.find((c) => c.id === activeId) ?? null,
+    [campaigns, activeId]
+  )
+  const isJoinedHere = activeCampaign != null && activeCampaign.id === joinedQueueId
 
   const queueCompleteNotified = useRef(false)
   useEffect(() => {
@@ -163,7 +174,9 @@ export function OperatorDialerView() {
     try {
       // Leaving with a live leg would strand the customer on an unattended
       // line, so drop it first rather than only closing the CRM's view of it.
-      if (routedCall && isCallActive && !callEnded) hangupCall(routedCall.call_id)
+      // Not just an active call: a still-ringing offer left behind keeps the
+      // customer waiting on a leg no one will answer.
+      if (routedCall && !callEnded) hangupCall(routedCall.call_id)
       await leaveMutation.mutateAsync()
       setAcceptedCallId(null)
       toast.success(t('dialer.operator.leftToast', 'Left the dialer'))
@@ -204,7 +217,18 @@ export function OperatorDialerView() {
     }
   })()
 
-  const showIncoming = isJoinedHere && routedCall != null && !queueComplete && !isCallActive
+  // No Accept on an 'auto' queue: the gateway bridges the customer with no
+  // chance to decline, so a prompt there offers a choice the operator does not
+  // have — over audio that may already be live. The panel still waits for the
+  // phone's confirmation before claiming the call is connected, so there is a
+  // brief moment with neither, which is the honest state.
+  const showIncoming =
+    isJoinedHere &&
+    routedCall != null &&
+    !queueComplete &&
+    !isCallActive &&
+    !callAbandoned &&
+    !queueAutoAnswers
   const showActiveCall = isJoinedHere && routedCall != null && !queueComplete && isCallActive
 
   return (

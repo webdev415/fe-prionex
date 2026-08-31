@@ -131,6 +131,45 @@ describe('useOperatorPhone call control', () => {
     expect(result.current.endedCallId).toBeNull()
   })
 
+  it('queues the next offer behind an unfinished wrap-up', async () => {
+    // Overwriting the call being wrapped up unmounts the panel and takes the
+    // operator's unsaved interaction note with it — the same loss the wrap-up
+    // handling exists to prevent, reached from the other side.
+    const { ref, contentWindow } = makeRef()
+    const { result } = renderHook(() => useOperatorPhone(ref))
+
+    post(OPERATOR_PHONE_ORIGIN, { type: MSG_ROUTED_CALL, call: CALL }, contentWindow)
+    post(OPERATOR_PHONE_ORIGIN, { type: MSG_CALL_ANSWERED, call_id: 'c-1' }, contentWindow)
+    post(OPERATOR_PHONE_ORIGIN, { type: MSG_CALL_ENDED, call_id: 'c-1' }, contentWindow)
+    await waitFor(() => expect(result.current.endedCallId).toBe('c-1'))
+
+    const next = { ...CALL, call_id: 'c-2' }
+    post(OPERATOR_PHONE_ORIGIN, { type: MSG_ROUTED_CALL, call: next }, contentWindow)
+
+    // Still the call being wrapped up.
+    expect(result.current.routedCall).toEqual(CALL)
+
+    // Wrap-up done — the held offer takes over, with its own clean state.
+    act(() => result.current.clearRoutedCall())
+    await waitFor(() => expect(result.current.routedCall).toEqual(next))
+    expect(result.current.answeredCallId).toBeNull()
+    expect(result.current.endedCallId).toBeNull()
+  })
+
+  it('replaces an unanswered offer rather than queueing behind it', async () => {
+    // Nothing to wrap up when the operator never took the call.
+    const { ref, contentWindow } = makeRef()
+    const { result } = renderHook(() => useOperatorPhone(ref))
+
+    post(OPERATOR_PHONE_ORIGIN, { type: MSG_ROUTED_CALL, call: CALL }, contentWindow)
+    post(OPERATOR_PHONE_ORIGIN, { type: MSG_CALL_ENDED, call_id: 'c-1' }, contentWindow)
+
+    const next = { ...CALL, call_id: 'c-2' }
+    post(OPERATOR_PHONE_ORIGIN, { type: MSG_ROUTED_CALL, call: next }, contentWindow)
+
+    await waitFor(() => expect(result.current.routedCall).toEqual(next))
+  })
+
   it('drops a stale end when the next call arrives', async () => {
     const { ref, contentWindow } = makeRef()
     const { result } = renderHook(() => useOperatorPhone(ref))

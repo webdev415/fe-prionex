@@ -61,8 +61,12 @@ vi.mock('@/features/dialer', async (importOriginal) => {
   }
 })
 
+let lastPhoneOptions: { autoAnswer?: boolean } | undefined
 vi.mock('@/features/operatorPhone', () => ({
-  useOperatorPhone: () => phone,
+  useOperatorPhone: (_ref: unknown, options?: { autoAnswer?: boolean }) => {
+    lastPhoneOptions = options
+    return phone
+  },
   OperatorPhonePanel: () => null,
 }))
 
@@ -103,6 +107,7 @@ beforeEach(() => {
   phone.routedCall = null
   phone.answeredCallId = null
   phone.endedCallId = null
+  lastPhoneOptions = undefined
   socket.routedCall = null
   socket.queueComplete = false
   campaigns = [campaign()]
@@ -132,6 +137,14 @@ describe('OperatorDialerView call control', () => {
     expect(screen.queryByText('dialer.call.acceptCall')).toBeNull()
     // The per-operator toggle cannot change that outcome, so it is not offered.
     expect(screen.queryByText('dialer.call.autoConnection')).toBeNull()
+
+    // Nor is it claimed connected before the phone says the leg is up: an
+    // 'auto' queue means the gateway will bridge the call, not that it has.
+    expect(screen.queryByText('dialer.call.taChain')).toBeNull()
+
+    phone.answeredCallId = 'c-1'
+    rerenderView()
+    expect(screen.getByText('dialer.call.taChain')).toBeTruthy()
   })
 
   it('shows the call even when the operator is browsing another campaign', () => {
@@ -152,19 +165,37 @@ describe('OperatorDialerView call control', () => {
   it('seeds the auto-connection toggle from the session, not from off', () => {
     // After a reload while joined, showing "off" while the phone keeps
     // answering puts the display and the thing answering calls in disagreement.
-    // Compared against the same toggle rendered from auto_connect: false, so
-    // the assertion cannot pass on markup that is identical either way.
-    session = { queue_id: 7, status: 'active', auto_connect: false }
-    const off = render(<OperatorDialerView />)
-    const offClass = off.container.querySelector('button.bg-muted, button')?.className ?? ''
-    off.unmount()
-
+    // Asserted through the phone rather than through markup: what matters is
+    // the value reaching the thing that actually answers calls.
     session = { queue_id: 7, status: 'active', auto_connect: true }
     render(<OperatorDialerView />)
-    const on = screen.getByText('dialer.call.autoConnection').closest('button')
 
-    expect(on?.className).not.toBe('')
-    expect(on?.className).not.toBe(offClass)
+    expect(lastPhoneOptions?.autoAnswer).toBe(true)
+  })
+
+  it('arms the phone on an auto-accept queue even with the toggle off', () => {
+    // The toggle is hidden on such a queue, so if its stored value were the only
+    // input the operator would have no way to make the phone answer at all.
+    campaigns = [campaign({ answer_mode: 'auto' })]
+    session = { queue_id: 7, status: 'active', auto_connect: false }
+    render(<OperatorDialerView />)
+
+    expect(lastPhoneOptions?.autoAnswer).toBe(true)
+  })
+
+  it('withdraws an offer that is abandoned before it is answered', () => {
+    // A customer hanging up while the phone rings is routine on an outbound
+    // dialer. Leaving the prompt up strands an Accept button over a dead leg
+    // with no way to dismiss it, and pins campaign navigation to it.
+    phone.routedCall = ROUTED
+    render(<OperatorDialerView />)
+    expect(screen.getByText('dialer.call.acceptCall')).toBeTruthy()
+
+    phone.endedCallId = 'c-1'
+    rerenderView()
+
+    expect(screen.queryByText('dialer.call.acceptCall')).toBeNull()
+    expect(screen.queryByText('dialer.call.taChain')).toBeNull()
   })
 
   it('keeps a null client out of the client-bound sections', () => {
