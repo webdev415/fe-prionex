@@ -80,6 +80,7 @@ import {
 } from '@/stores/aiAssistantStore'
 import type { AssistantMode } from '@/features/aiAssistant/api'
 import { isAxiosError } from 'axios'
+import { parseConversationParam, writeConversationParam } from './conversationUrl'
 import { ConversationSidebar } from './ConversationSidebar'
 import { getDockDesktopBoxClasses, getDockRightOffset } from './dockGeometry'
 import { MarkdownMessage, type MarkdownCitation } from './MarkdownMessage'
@@ -1063,6 +1064,32 @@ export function AiAssistantBetaPage() {
   // skipped as soon as the user starts a conversation in this mount.
   // Switching a conversation from the history panel resets the local chat
   // state and re-arms this flag, so the same mechanism loads the new dialog.
+  // Deep-link: ?conversation=<id> в адресе — явный выбор диалога, как клик в
+  // истории. Читается один раз при появлении userId (до этого гидратация всё
+  // равно невозможна) и перекрывает сохранённый указатель. Явность важна:
+  // ссылка обязана открыть диалог даже при выключенном «помнить контекст».
+  // RBAC не обходится — чужой id бэкенд ответит 404, указатель и параметр
+  // будут сброшены эффектом ниже. В OneX-доке адрес не пользовательский —
+  // там deep-link не читается и не пишется.
+  const urlConversationConsumedRef = useRef(false)
+  useEffect(() => {
+    if (urlConversationConsumedRef.current || isEmbedded || userId == null) return
+    urlConversationConsumedRef.current = true
+    const fromUrl = parseConversationParam(window.location.search)
+    if (fromUrl == null) return
+    setIsExplicitSelection(true)
+    setActiveConversation(userId, fromUrl)
+  }, [isEmbedded, setActiveConversation, userId])
+
+  // Обратная сторона deep-link: активный диалог всегда отражён в адресе, так
+  // что «поделиться разговором» = скопировать URL из адресной строки. Пишем
+  // только ненулевой id (null на маунте — ещё не гидратировано, затирать
+  // параметр рано); снятие параметра — явное, в «Новий чат» и при 404.
+  useEffect(() => {
+    if (isEmbedded || conversationId == null) return
+    writeConversationParam(conversationId)
+  }, [conversationId, isEmbedded])
+
   const shouldHydrateConversation =
     storedConversationId != null &&
     conversationId == null &&
@@ -1454,8 +1481,11 @@ export function AiAssistantBetaPage() {
     // Transient errors (network, 5xx) keep it so a later visit can retry.
     if (isAxiosError(conversationQuery.error) && conversationQuery.error.response?.status === 404) {
       clearStoredConversation()
+      // Мёртвый (или чужой) указатель мог прийти из deep-link — убираем и его,
+      // чтобы F5 не долбил бэкенд тем же 404.
+      if (!isEmbedded) writeConversationParam(null)
     }
-  }, [conversationQuery.isError, conversationQuery.error, clearStoredConversation])
+  }, [conversationQuery.isError, conversationQuery.error, clearStoredConversation, isEmbedded])
 
   const updateScrollToLatestVisibility = useCallback(() => {
     const scrollContainer = scrollContainerRef.current
@@ -1836,8 +1866,11 @@ export function AiAssistantBetaPage() {
       resetChatState()
       setIsExplicitSelection(true)
       setActiveConversation(userId, id)
+      // Адрес обновляется сразу по клику, не дожидаясь гидратации: ссылка
+      // должна быть копируемой в момент выбора.
+      if (!isEmbedded) writeConversationParam(id)
     },
-    [conversationId, resetChatState, setActiveConversation, userId]
+    [conversationId, isEmbedded, resetChatState, setActiveConversation, userId]
   )
 
   const handleNewChat = useCallback(() => {
@@ -1846,7 +1879,8 @@ export function AiAssistantBetaPage() {
     setMessage('')
     setIsExplicitSelection(false)
     clearStoredConversation()
-  }, [clearStoredConversation, resetChatState])
+    if (!isEmbedded) writeConversationParam(null)
+  }, [clearStoredConversation, isEmbedded, resetChatState])
 
   const submitPrompt = useCallback(
     async (rawPrompt: string, attachments?: PendingAttachment[]) => {
