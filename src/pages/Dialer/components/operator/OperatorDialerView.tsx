@@ -179,6 +179,10 @@ export function OperatorDialerView() {
       if (routedCall && !callEnded) hangupCall(routedCall.call_id)
       await leaveMutation.mutateAsync()
       setAcceptedCallId(null)
+      // Neither call source is tied to the session, so anything left here
+      // survives to the next join — and an already-answered call would come
+      // back as a live call panel for a customer who hung up long ago.
+      clearRoutedCall()
       toast.success(t('dialer.operator.leftToast', 'Left the dialer'))
     } catch {
       void 0
@@ -187,18 +191,22 @@ export function OperatorDialerView() {
 
   // The operator pressed Hang up. Drop the leg now; wrap-up is their own admin
   // time and the customer must not be held on the line for it.
-  const handleEndCall = () => {
+  const handleEndCall = useCallback(() => {
     if (routedCall && !callEnded) hangupCall(routedCall.call_id)
-  }
+  }, [routedCall, callEnded, hangupCall])
 
   // Wrap-up is over (or was skipped): release the operator for the next call.
   // The leg is normally already down by now — either the customer ended it or
   // handleEndCall did — so only hang up if something is somehow still up.
-  const handleHangup = () => {
+  // Memoised deliberately: ActiveCallPanel's wrap-up countdown lists this in its
+  // effect deps, and a fresh reference each render restarts the one-second timer.
+  // Wrap-up finishing is what clears the call and promotes a queued one, so an
+  // unstable reference here can stall both.
+  const handleHangup = useCallback(() => {
     if (routedCall && !callEnded) hangupCall(routedCall.call_id)
     setAcceptedCallId(null)
     clearRoutedCall()
-  }
+  }, [routedCall, callEnded, hangupCall, clearRoutedCall])
 
   // `session.status` is the operator's *global* dialer connection — it only
   // describes the campaign they're actually joined to. Showing it verbatim

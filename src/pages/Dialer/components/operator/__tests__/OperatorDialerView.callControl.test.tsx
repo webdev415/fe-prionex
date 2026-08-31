@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render as rtlRender, screen } from '@testing-library/react'
+import { render as rtlRender, screen, waitFor } from '@testing-library/react'
 import { cloneElement, type ReactElement } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -249,6 +249,20 @@ describe('OperatorDialerView call control', () => {
     end.click()
 
     expect(phone.hangupCall).toHaveBeenCalledWith('c-1')
+  })
+
+  it('does not carry a finished call into the next session', async () => {
+    // Neither call source is tied to the session, and answeredCallId is what
+    // makes the phone path show a call as connected — so a call left behind
+    // returns as a live panel for a customer who hung up long ago.
+    phone.routedCall = ROUTED
+    phone.answeredCallId = 'c-1'
+    render(<OperatorDialerView />)
+    expect(screen.getByText('dialer.call.taChain')).toBeTruthy()
+
+    screen.getByText('dialer.operator.leaveDialer').click()
+
+    await waitFor(() => expect(phone.clearRoutedCall).toHaveBeenCalled())
   })
 
   it('answers the specific call the operator was shown', () => {
