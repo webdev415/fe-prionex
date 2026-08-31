@@ -16,7 +16,7 @@
  * preserving per-step effects.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
@@ -25,6 +25,8 @@ import { DateSelect } from '@/components/ui/DateSelect'
 import {
   getDateTimeStringInTimezone,
   isWallTimeInPast,
+  nowAsWallTimeInTimezone,
+  notInPastTimeFilter,
   wallTimeAsTimezoneToUtcIso,
 } from '@/lib/dateUtils'
 import { Label } from '@/components/ui/Label'
@@ -64,12 +66,21 @@ import {
 } from '@/features/taInteractions/hooks/useTAInteractions'
 import type { TAChainStep } from '@/features/taChains/api/types'
 import { useQuickPicks } from '@/features/quickPicks/hooks/useQuickPicks'
+import type { QuickPick } from '@/features/quickPicks/api/types'
+import { decideHotkeyAutoStart } from '@/features/taHotkeys/decideHotkeyAutoStart'
 import { getErrorMessage } from '@/lib/errors'
 import { useChainExecutorStore } from '@/stores/chainExecutorStore'
 import { formatMoneyKopeckTight } from '@/lib/formatters'
 import { useClientEmails } from '@/features/clients/hooks/useClientEmails'
 import { useClientPhones } from '@/features/clients/hooks/useClientPhones'
+import { pickSingleContactCandidate } from './taChainAutoSelect'
 import { applyStepEdits, collectFromSnapshot, type StepEdit } from './taChainSaveData'
+import {
+  decideEnterSave,
+  isPressForPanel,
+  NOTES_FIELD_ATTR,
+  resolveEnterSaveMode,
+} from './decideEnterSave'
 
 interface Props {
   clientId: number
@@ -97,6 +108,34 @@ interface Props {
    * the phone manually. Empty value = no auto-fill (general entry).
    */
   prefilledPhone?: string | null
+  /**
+   * Which contact source ``prefilledPhone`` belongs to, when it must NOT also
+   * narrow the chain list.
+   *
+   * The two were one prop, and that quietly broke hotkey launches: a phone
+   * resolved from a recent call always has a source, and setting
+   * ``contactSource`` filters the chain list — and with it the quick picks —
+   * to chains touching that source. A template bound to a chain that does not
+   * match simply vanished, so the modal opened and started nothing, which
+   * looks exactly like a broken shortcut.
+   *
+   * Entry points that mean "show me only this phone's chains" keep passing
+   * ``contactSource``. The hotkey path passes this instead: pre-select the
+   * phone, leave the template list alone. Falls back to ``contactSource`` so
+   * existing callers are unaffected.
+   */
+  prefilledPhoneSource?: 'client' | 'recommender' | null
+  /**
+   * Quick-pick template to start immediately on open, instead of making the
+   * operator find it in the picker (KAN-973 hotkey quick-launch).
+   *
+   * Ignored when the client already has an active instance — that instance is
+   * what the modal shows, and starting a second one would 409 on the server.
+   * Ignored too when the id is not among the operator's accessible templates:
+   * the ticket says a mapping to a template that became inaccessible behaves as
+   * unassigned, so this quietly does nothing rather than reporting an error.
+   */
+  initialTemplateId?: number | null
   onSave?: () => void
   onMinimize?: () => void
   onMinimizeRef?: React.MutableRefObject<(() => void) | null>
@@ -156,27 +195,25 @@ function stepDateIsPast(
   return isWallTimeInPast(value, timezone)
 }
 
-// Stable, module-level time-slot predicate: keep future slots; for *today*
-// grey out slots already in the past. Hoisted so react-datepicker sees a
-// stable ``filterTime`` identity across renders (a fresh closure per render
-// thrashes the time list). It recomputes "now" itself, so it never goes stale.
-const filterFromNow = (time: Date): boolean => {
-  const now = new Date()
-  const isSameDay =
-    time.getFullYear() === now.getFullYear() &&
-    time.getMonth() === now.getMonth() &&
-    time.getDate() === now.getDate()
-  return isSameDay ? time.getTime() >= now.getTime() : true
-}
-
 // Calendar bounds for a step that forbids past dates: block past days via
 // ``min`` and past time-of-day (today only) via ``filterTime``. Returns {} for
-// unconstrained steps so the picker is unrestricted. Browser-local "now" is
-// the right reference because the picker displays in browser-local; the
-// timezone-aware save path handles the stored value separately.
-function notInPastBounds(notInPast: boolean | undefined) {
+// unconstrained steps so the picker is unrestricted.
+//
+// "Now" is measured in the operator's PROFILE timezone, not the browser's
+// (KAN-992 AC5). The wall time a slot shows is browser-local — that is all
+// react-datepicker can render — but ``toUtcIsoIfDate`` below re-reads that
+// same wall time as profile-timezone before saving. Measuring "past" on the
+// browser clock therefore used a different reference from the one that stores
+// the value: with the two zones apart, the picker offered a slot that
+// ``stepDateIsPast`` then rejected on save, which is the confusion this ticket
+// exists to remove rather than relocate. The helpers keep a stable identity
+// per zone, so the time list does not thrash on re-render.
+function notInPastBounds(notInPast: boolean | undefined, timezone: string | null | undefined) {
   if (!notInPast) return {}
-  return { min: new Date(), filterTime: filterFromNow }
+  return {
+    min: nowAsWallTimeInTimezone(timezone),
+    filterTime: notInPastTimeFilter(timezone),
+  }
 }
 
 // Date-type steps store the picker output as a naive browser-local string
@@ -206,7 +243,9 @@ export function ChainExecutor({
   responsibleEmployeeId,
   debts = [],
   contactSource = null,
+  prefilledPhoneSource = null,
   prefilledPhone = null,
+  initialTemplateId = null,
   onSave,
   onMinimize,
   onMinimizeRef,
@@ -245,6 +284,10 @@ export function ChainExecutor({
     if (!contactSource) return all
     return all.filter((c) => (c.steps ?? []).some((s) => s.contact_source === contactSource))
   }, [chainsData, contactSource])
+
+  // The source the prefilled phone belongs to. Distinct from `contactSource`,
+  // which additionally narrows the chain list — see the prop docs.
+  const prefillSource = prefilledPhoneSource ?? contactSource
 
   // Full TA data (for dropdown values + flags)
   const { data: tasData } = useTargetActions({ include_hidden: false })
@@ -285,6 +328,13 @@ export function ChainExecutor({
   const activeInstance = instances?.find((i) => i.status === 'active') ?? null
 
   const [selectedChainId, setSelectedChainId] = useState<string>('')
+
+  // Identifies "which selection do the all-at-once values belong to". Derived
+  // once: the selection-reset effect writes it to lastInstantSelectionRef, and
+  // the cards compare against it to know whether that reset has run yet. Both
+  // sites must format it identically, and the JSX branch below has
+  // ``activeInstance`` narrowed to never, so it cannot rebuild the string there.
+  const instantSelectionKey = `${selectedChainId}|${activeInstance?.id ?? ''}`
 
   // Chain selector dropdown — search-enabled to handle many chains.
   const [chainOpen, setChainOpen] = useState(false)
@@ -345,23 +395,6 @@ export function ChainExecutor({
     () => quickPicks.find((qp) => qp.id === selectedTemplateId) ?? null,
     [quickPicks, selectedTemplateId]
   )
-
-  const handleStartTemplate = async () => {
-    if (!selectedTemplate) return
-    try {
-      presetValuesRef.current = selectedTemplate.preset_values ?? {}
-      await startMut.mutateAsync({
-        chain_id: selectedTemplate.chain_id,
-        client_id: clientId,
-      })
-      toast.success(t('pages.clientChains.toasts.started'))
-      setSelectedTemplateId(null)
-      setTemplateSearch('')
-    } catch (err) {
-      presetValuesRef.current = {}
-      toast.error(getErrorMessage(err))
-    }
-  }
 
   // The active instance's chain may be missing from `chainsData` — that list
   // is filtered by department and only used to populate the manual-chain
@@ -461,6 +494,10 @@ export function ChainExecutor({
 
   // Template preset values (from quick pick)
   const presetValuesRef = useRef<Record<string, string>>({})
+
+  // Step id whose lone contact candidate was already auto-selected (KAN-977),
+  // so unticking that radio is not immediately undone. Cleared on step change.
+  const autoSelectedContactStepRef = useRef<number | null>(null)
 
   // Accumulated data across steps — refs for synchronous access (no React batching issues)
   const collectedStepDataRef = useRef<Record<string, string>>({})
@@ -645,6 +682,77 @@ export function ChainExecutor({
   const cancelMut = useCancelChainInstance()
   const rewindMut = useRewindChainInstance()
 
+  // Shared by the picker and by hotkey quick-launch (KAN-973). The template is
+  // passed in rather than read from `selectedTemplateId`, so the hotkey path
+  // does not have to set picker state and wait a render to start.
+  const startTemplate = useCallback(
+    async (template: QuickPick) => {
+      try {
+        presetValuesRef.current = template.preset_values ?? {}
+        await startMut.mutateAsync({
+          chain_id: template.chain_id,
+          client_id: clientId,
+        })
+        toast.success(t('pages.clientChains.toasts.started'))
+        setSelectedTemplateId(null)
+        setTemplateSearch('')
+      } catch (err) {
+        presetValuesRef.current = {}
+        toast.error(getErrorMessage(err))
+      }
+    },
+    [startMut, clientId, t]
+  )
+
+  const handleStartTemplate = async () => {
+    if (!selectedTemplate) return
+    await startTemplate(selectedTemplate)
+  }
+
+  // KAN-973 — hotkey quick-launch. The gating rule (and the loading-vs-empty
+  // trap behind it) lives in decideHotkeyAutoStart, where it is unit-tested;
+  // the ref latches so a started chain is never started twice.
+  // Latched on the first SETTLED decision, not only on a successful start.
+  //
+  // Latching only when it started left a deferred decision alive: press the
+  // hotkey while the client has an active instance and the launch is correctly
+  // skipped, but `initialTemplateId` stays set and the modal stays open. The
+  // operator then cancels that instance — which does not close the modal —
+  // `activeInstance` flips to null, this effect re-runs, and the hotkey's chain
+  // starts by itself, with a success toast, from an action nobody took.
+  //
+  // "Settled" means the instances query has answered. Before that, skipping is
+  // provisional and the effect must be allowed to run again.
+  const autoStartDecidedRef = useRef(false)
+  useEffect(() => {
+    if (autoStartDecidedRef.current) return
+
+    const instancesLoaded = instances !== undefined
+    const { start } = decideHotkeyAutoStart({
+      initialTemplateId,
+      instancesLoaded,
+      hasActiveInstance: activeInstance !== null,
+      templates: quickPicks,
+    })
+
+    if (start) {
+      autoStartDecidedRef.current = true
+      void startTemplate(start)
+      return
+    }
+
+    // No start, and the data it depends on has arrived — the answer is "no",
+    // for this opening of the modal. Anything that changes later is the
+    // operator's doing, not the hotkey's.
+    //
+    // `templates` is excluded from "settled": an empty quick-pick list is
+    // indistinguishable from one still loading, and latching on it would drop
+    // a launch whose template simply had not arrived yet.
+    if (instancesLoaded && initialTemplateId !== null && quickPicks.length > 0) {
+      autoStartDecidedRef.current = true
+    }
+  }, [initialTemplateId, instances, activeInstance, quickPicks, startTemplate])
+
   // Reset on chain change
   useEffect(() => {
     // Don't wipe state on the restore mount. When reopening a minimized
@@ -764,16 +872,16 @@ export function ChainExecutor({
     // render is treated as already-settled. Resetting here would wipe them.
     if (restoredRef.current) return
 
-    const selectionKey = `${selectedChainId}|${activeInstance?.id ?? ''}`
+    const selectionKey = instantSelectionKey
     if (lastInstantSelectionRef.current === selectionKey) return
     lastInstantSelectionRef.current = selectionKey
 
-    if (prefilledPhone && contactSource && effectiveChain) {
+    if (prefilledPhone && prefillSource && effectiveChain) {
       const seed: Record<number, InstantStepValue> = {}
       for (const step of effectiveChain.steps ?? []) {
         const ta = taById.get(step.target_action_id)
         const stepSource = step.contact_source ?? 'client'
-        if (ta?.field_type === 'contact' && stepSource === contactSource) {
+        if (ta?.field_type === 'contact' && stepSource === prefillSource) {
           seed[step.id] = { ...EMPTY_INSTANT_VALUE, value: prefilledPhone }
         }
       }
@@ -784,7 +892,20 @@ export function ChainExecutor({
     setInstantNotes('')
     setInstantSubmitting(false)
     setNotifyResponsible(true)
-  }, [selectedChainId, activeInstance?.id, prefilledPhone, contactSource, effectiveChain, taById])
+    // ``instantSelectionKey`` is derived from selectedChainId + activeInstance.id,
+    // both already listed, so naming it changes nothing at runtime — it is here
+    // to satisfy exhaustive-deps now that the body reads it instead of rebuilding
+    // the string.
+  }, [
+    instantSelectionKey,
+    selectedChainId,
+    activeInstance?.id,
+    prefilledPhone,
+    contactSource,
+    prefillSource,
+    effectiveChain,
+    taById,
+  ])
 
   // Reset current step fields on step change + pre-fill from template
   useEffect(() => {
@@ -804,8 +925,13 @@ export function ChainExecutor({
     const isContactStep = currentTA?.field_type === 'contact'
     const stepSource = currentStep?.contact_source ?? 'client'
     const phonePrefill =
-      isContactStep && prefilledPhone && contactSource === stepSource ? prefilledPhone : ''
+      isContactStep && prefilledPhone && prefillSource === stepSource ? prefilledPhone : ''
     setStepValue(preset ?? phonePrefill)
+    // New step, so the single-candidate auto-select (KAN-977, below) is allowed
+    // to run again. Cleared here rather than keyed on step id so returning to a
+    // step via rewind re-arms it, matching what the operator sees: the field
+    // was cleared, so it should refill.
+    autoSelectedContactStepRef.current = null
     setPromiseDate('')
     setPromiseAmount('')
   }, [
@@ -814,9 +940,38 @@ export function ChainExecutor({
     currentStep?.target_action_id,
     currentStep?.contact_source,
     currentTA?.field_type,
-    contactSource,
+    prefillSource,
     prefilledPhone,
   ])
+
+  // KAN-977 — see ``pickSingleContactCandidate`` for the rules.
+  //
+  // Its own effect, after the reset above, because the candidate list is
+  // fetched: on the render where the step becomes current it is still
+  // ``undefined`` and the phones land a moment later. Folding this into the
+  // reset and adding ``contactOptions`` to those deps would re-run the whole
+  // reset when they arrive, wiping anything already entered.
+  useEffect(() => {
+    const pick = pickSingleContactCandidate({
+      fieldType: currentTA?.field_type,
+      isEmailStep: isEmailContactStep,
+      candidates: contactOptions,
+      currentValue: stepValue,
+      alreadyAutoSelected: autoSelectedContactStepRef.current === currentStep?.id,
+    })
+    if (pick === null) return
+
+    autoSelectedContactStepRef.current = currentStep?.id ?? null
+    // Functional, not ``setStepValue(pick)``. This effect and the reset above
+    // run in the SAME commit, and both read the render-time ``stepValue`` —
+    // so on a render where it was still '' (the executor mounting onto an
+    // already-active instance, or a quick-pick start served from a warm
+    // contact cache) the helper sees an empty step and this setter lands
+    // AFTER the reset's ``setStepValue(preset)``, silently discarding an
+    // admin-configured preset. Reading ``prev`` consults the value the reset
+    // just queued, which is what the documented precedence actually requires.
+    setStepValue((prev) => (prev ? prev : pick))
+  }, [contactOptions, currentTA?.field_type, isEmailContactStep, currentStep?.id, stepValue])
 
   // ── Step editing ──────────────────────────────────────────────────────────
 
@@ -1406,9 +1561,91 @@ export function ChainExecutor({
     return branched
   }, [builderData])
 
+  // KAN-974 — Enter saves the interaction, as an alias for clicking Save.
+  //
+  // `canSave` mirrors what actually puts an enabled Save button on screen, in
+  // both modes: the wizard renders one only on the last step and only while
+  // nothing is finalising, auto-advancing or delay-blocked, and both modes
+  // disable it while their save is in flight. Enter must not reach further
+  // than the button, or it would submit from a step that has no Save at all.
+  //
+  // The ticket describes the wizard; instant mode is included because a
+  // hotkey launch lands in whichever mode the chain implies, and an Enter that
+  // worked for one template and silently did nothing for the next would look
+  // like a bug rather than a rule.
+  const enterSaveMode = resolveEnterSaveMode({
+    hasChain: Boolean(effectiveChain),
+    hasActiveInstance: Boolean(activeInstance),
+    isInstantMode,
+  })
+  // The panel body itself is behind two guards — a loading skeleton and a
+  // "no chains" message — and neither is implied by the wizard state below.
+  // `activeChain` can resolve from `activeChainById` while the chain LIST is
+  // still loading, so without this Enter could finalise an interaction from a
+  // screen showing a spinner.
+  const isPanelBodyRendered = !isLoadingChains && manualChains.length > 0
+
+  const canSaveOnEnter = !isPanelBodyRendered
+    ? false
+    : enterSaveMode === 'instant'
+      ? !instantSubmitting
+      : enterSaveMode === 'wizard' &&
+        Boolean(activeChain) &&
+        isLastStep &&
+        // An inline edit on a completed step is uncommitted work held in the
+        // form, not in `editedStepsRef` — only handleSaveEditStep writes
+        // there. Saving now would finalise the interaction with the old
+        // value and discard the edit, with no undo in the UI. Enter inside
+        // that form is exactly what an operator would press to commit it.
+        editingStep === null &&
+        !isFinalizing &&
+        !isAutoAdvancing &&
+        !isDelayBlocked &&
+        !createIntMut.isPending &&
+        !advanceMut.isPending
+
+  // Listens on the document, not on the panel: when the modal opens Radix puts
+  // focus on the dialog's content wrapper, which contains this panel rather
+  // than sitting inside it, so a panel-mounted handler sees nothing until the
+  // operator happens to tab into a field. `isPressForPanel` supplies the scope
+  // — the dialog this panel lives in, or the panel alone when there is no
+  // dialog (the dialer renders this executor inline).
+  //
+  // The listener is attached once and reads current values through a ref.
+  // Re-attaching on every change would be correct but noisy, and a stale
+  // closure over `canSaveOnEnter` would let Enter save from the wrong step.
+  const panelRef = useRef<HTMLDivElement | null>(null)
+  const enterSaveRef = useRef({ canSaveOnEnter, enterSaveMode, handleSave, handleInstantSave })
+  useEffect(() => {
+    enterSaveRef.current = { canSaveOnEnter, enterSaveMode, handleSave, handleInstantSave }
+  })
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      // Cheapest guard first, and not just for tidiness: `isPressForPanel`
+      // reads `offsetParent` and falls back to `getClientRects()`, both of
+      // which force a synchronous layout — and the fallback is the normal path
+      // here, since the modal's content is `position: fixed`. Without this line
+      // every character typed into the notes field would reflow the page.
+      if (event.key !== 'Enter') return
+      if (!isPressForPanel(event.target, panelRef.current)) return
+
+      const current = enterSaveRef.current
+      if (!decideEnterSave({ event, canSave: current.canSaveOnEnter })) return
+
+      event.preventDefault()
+      void (current.enterSaveMode === 'instant'
+        ? current.handleInstantSave()
+        : current.handleSave())
+    }
+
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [])
+
   // --- Unified panel: chain selector at top, body below adapts ---
   return (
-    <div className="flex w-full flex-col gap-4">
+    <div ref={panelRef} className="flex w-full flex-col gap-4">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-foreground text-base font-semibold">
@@ -1879,7 +2116,8 @@ export function ChainExecutor({
                               }
                               {...notInPastBounds(
                                 steps.find((s) => s.step_order === editingStep.stepOrder)
-                                  ?.not_in_the_past
+                                  ?.not_in_the_past,
+                                user?.timezone
                               )}
                             />
                           ) : editingStep.fieldType === 'amount' ? (
@@ -2092,7 +2330,7 @@ export function ChainExecutor({
                               ? t('pages.clientChains.errors.datePast')
                               : undefined
                           }
-                          {...notInPastBounds(currentStep?.not_in_the_past)}
+                          {...notInPastBounds(currentStep?.not_in_the_past, user?.timezone)}
                         />
                       ) : currentTA.field_type === 'amount' ? (
                         <Input
@@ -2274,6 +2512,8 @@ export function ChainExecutor({
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
                       placeholder={t('pages.clientChains.notesPlaceholder')}
+                      // KAN-974: the one field where Enter stays a line break.
+                      {...{ [NOTES_FIELD_ATTR]: true }}
                     />
                   </div>
                 )}
@@ -2465,6 +2705,8 @@ export function ChainExecutor({
                     onChange={(patch) => updateInstantStep(step.id, patch)}
                     debts={debts}
                     clientId={clientId}
+                    hasPriorEntry={Object.prototype.hasOwnProperty.call(instantValues, step.id)}
+                    selectionSettled={lastInstantSelectionRef.current === instantSelectionKey}
                   />
                 )
               })}
@@ -2475,6 +2717,8 @@ export function ChainExecutor({
                   value={instantNotes}
                   onChange={(e) => setInstantNotes(e.target.value)}
                   placeholder={t('pages.clientChains.notesPlaceholder')}
+                  // KAN-974: the one field where Enter stays a line break.
+                  {...{ [NOTES_FIELD_ATTR]: true }}
                 />
               </div>
               {showNotifyResponsibleCheckbox && (
@@ -2590,6 +2834,20 @@ interface InstantStepCardProps {
   ta: TargetAction
   value: InstantStepValue
   onChange: (patch: Partial<InstantStepValue>) => void
+  /**
+   * Whether the parent's ``instantValues`` already holds an entry for this
+   * step. ``value`` alone cannot say: a step the operator cleared and one they
+   * never opened both arrive as ``value: ''``. Only used to seed the KAN-977
+   * auto-select latch — see the effect for why that distinction matters.
+   */
+  hasPriorEntry: boolean
+  /**
+   * Whether the parent's selection-reset effect has already run for the current
+   * ``selectedChainId``/instance — i.e. whether ``instantValues`` describes THIS
+   * selection rather than the previous one. Auto-select waits for it; see the
+   * effect for the race it prevents.
+   */
+  selectionSettled: boolean
   debts: Array<{
     id: number
     contract_number?: string
@@ -2601,7 +2859,7 @@ interface InstantStepCardProps {
   clientId: number
 }
 
-function InstantStepCard({
+export function InstantStepCard({
   index,
   step,
   ta,
@@ -2609,6 +2867,8 @@ function InstantStepCard({
   onChange,
   debts,
   clientId,
+  hasPriorEntry,
+  selectionSettled,
 }: InstantStepCardProps) {
   const { t } = useTranslation('common')
   const cardUser = useAuthStore((s) => s.user)
@@ -2623,6 +2883,64 @@ function InstantStepCard({
     contactSource && isEmailContact ? contactSource : null
   )
   const contactOptions = isEmailContact ? emails : phones
+
+  // KAN-977, all-at-once mode — same rule as the wizard, shared via
+  // ``pickSingleContactCandidate``. The effect is repeated rather than lifted
+  // because this card owns its own contact query: the parent cannot call the
+  // hook per step without calling hooks in a loop (see the note above).
+  //
+  // Two guards beyond the shared rule, each for a race found in review:
+  //
+  // * ``selectionSettled``. This card mounts in the SAME commit where
+  //   ``selectedChainId`` changes, and React flushes child effects before
+  //   parent ones. With a warm contact cache the list is populated on the very
+  //   first render, so without this the card would pick and queue a FUNCTIONAL
+  //   ``setInstantValues`` — and the parent's selection reset would then queue
+  //   a PLAIN ``setInstantValues({})`` that lands last and discards it. Nothing
+  //   would retry: on the next render neither ``value.value`` ('' both times)
+  //   nor ``contactOptions`` (same cached array) changes, so the effect would
+  //   not re-run and the feature would silently no-op after every chain switch.
+  //   Waiting for the reset makes this prop the dependency that DOES flip, so
+  //   the effect runs exactly once, after ``instantValues`` describes this
+  //   selection.
+  //
+  // * ``hasPriorEntry`` seeding the latch. Restoring a minimized session
+  //   remounts these cards with the persisted ``instantValues``. A step the
+  //   operator deliberately unticked comes back as ``value: ''`` —
+  //   indistinguishable from never-touched — so a fresh latch would re-tick it
+  //   and undo an explicit choice. Presence of the step's key in the snapshot
+  //   is what separates "cleared on purpose" from "never visited".
+  const autoSelectedRef = useRef(hasPriorEntry)
+
+  // ``onChange`` is an inline arrow rebuilt on every parent render, so keeping
+  // it in the dep array below would re-run this effect on every parent render.
+  // A ref keeps the dependency list honest about what actually triggers it.
+  const onChangeRef = useRef(onChange)
+  useEffect(() => {
+    onChangeRef.current = onChange
+  })
+
+  useEffect(() => {
+    // Any value present — the pick that landed, a prefill, or operator input —
+    // means there is nothing left to choose for this card.
+    if (value.value) {
+      autoSelectedRef.current = true
+      return
+    }
+    if (!selectionSettled) return
+
+    const pick = pickSingleContactCandidate({
+      fieldType: ta.field_type,
+      isEmailStep: isEmailContact,
+      candidates: contactOptions,
+      currentValue: value.value,
+      alreadyAutoSelected: autoSelectedRef.current,
+    })
+    if (pick === null) return
+
+    autoSelectedRef.current = true
+    onChangeRef.current({ value: pick })
+  }, [contactOptions, ta.field_type, isEmailContact, value.value, selectionSettled])
 
   // Mirror the wizard-mode debt filter: hide closed debts unless the
   // step's show_closed_credits admin flag is set.
@@ -2675,7 +2993,7 @@ function InstantStepCard({
               ? t('pages.clientChains.errors.datePast')
               : undefined
           }
-          {...notInPastBounds(step.not_in_the_past)}
+          {...notInPastBounds(step.not_in_the_past, cardUser?.timezone)}
         />
       ) : ta.field_type === 'amount' ? (
         <Input

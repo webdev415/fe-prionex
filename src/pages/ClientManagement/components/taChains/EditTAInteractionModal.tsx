@@ -17,6 +17,8 @@ import { DateSelect } from '@/components/ui/DateSelect'
 import {
   getDateTimeStringInTimezone,
   isWallTimeInPast,
+  nowAsWallTimeInTimezone,
+  notInPastTimeFilter,
   wallTimeAsTimezoneToUtcIso,
 } from '@/lib/dateUtils'
 import { useAuthStore } from '@/stores/authStore'
@@ -51,28 +53,30 @@ const MANUAL_DATE_DEFAULT_TIME = '09:00'
 
 // "Date cannot be in the past" (KAN-578): the calendar disables past days +
 // past time slots; manual typing can still enter a past value, which is
-// flagged inline and blocked on save. Values here are naive browser-local
-// strings, so the checks use browser-local "now".
-function stepDateIsPast(value: string, notInPast: boolean | undefined): boolean {
+// flagged inline and blocked on save. The value is a naive wall time that
+// ``toUtcIsoIfDate`` below re-reads as PROFILE-timezone before saving, so the
+// check has to measure "past" on that same clock. It used to omit the argument
+// and fall back to browser-local, which meant this file validated on one clock
+// and saved on another (KAN-992 AC5).
+function stepDateIsPast(
+  value: string,
+  notInPast: boolean | undefined,
+  timezone: string | null | undefined
+): boolean {
   if (!notInPast || !value) return false
-  return isWallTimeInPast(value)
+  return isWallTimeInPast(value, timezone)
 }
 
-// Stable, module-level time-slot predicate (keep future slots; grey out past
-// slots for today). Hoisted so react-datepicker sees a stable identity.
-const filterFromNow = (time: Date): boolean => {
-  const now = new Date()
-  const isSameDay =
-    time.getFullYear() === now.getFullYear() &&
-    time.getMonth() === now.getMonth() &&
-    time.getDate() === now.getDate()
-  return isSameDay ? time.getTime() >= now.getTime() : true
-}
-
-// Calendar bounds for a not-in-the-past step: block past days + past times.
-function notInPastBounds(notInPast: boolean | undefined) {
+// Calendar bounds for a not-in-the-past step: block past days + past times,
+// both measured in the operator's profile timezone. Mirrors ChainExecutor's
+// helper of the same name — see the longer note there for why the browser
+// clock is the wrong reference for a wall time that is stored as profile-tz.
+function notInPastBounds(notInPast: boolean | undefined, timezone: string | null | undefined) {
   if (!notInPast) return {}
-  return { min: new Date(), filterTime: filterFromNow }
+  return {
+    min: nowAsWallTimeInTimezone(timezone),
+    filterTime: notInPastTimeFilter(timezone),
+  }
 }
 
 // Mirrors ChainExecutor's helper of the same name. A date-type step value
@@ -312,7 +316,7 @@ export function EditTAInteractionModal({
     for (const step of orderedSteps) {
       const ta = taById.get(step.target_action_id)
       if (ta?.field_type !== 'date') continue
-      if (stepDateIsPast(stepValues[String(step.id)] ?? '', step.not_in_the_past)) {
+      if (stepDateIsPast(stepValues[String(step.id)] ?? '', step.not_in_the_past, user?.timezone)) {
         toast.error(t('pages.clientChains.errors.datePast'))
         return
       }
@@ -440,11 +444,11 @@ export function EditTAInteractionModal({
                             timeIntervals={15}
                             invalidText={t('pages.clientChains.errors.dateInvalid')}
                             error={
-                              stepDateIsPast(value, step.not_in_the_past)
+                              stepDateIsPast(value, step.not_in_the_past, user?.timezone)
                                 ? t('pages.clientChains.errors.datePast')
                                 : undefined
                             }
-                            {...notInPastBounds(step.not_in_the_past)}
+                            {...notInPastBounds(step.not_in_the_past, user?.timezone)}
                           />
                           {value && !isValid && (
                             <span className="text-warning-600 text-xs">

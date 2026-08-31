@@ -50,4 +50,13 @@ describe('getDockDesktopBoxClasses', () => {
     )
     expect(new Set(lefts).size).toBe(4)
   })
+
+  it.each(combos)(
+    'OneX dock keeps the full-width box (open=$isOpenSideBar, collapsed=$isHistoryCollapsed)',
+    ({ isOpenSideBar, isHistoryCollapsed }) => {
+      // No rail and no history panel in the dock — any lg: offset here would
+      // push the composer off a host window wider than the lg breakpoint.
+      expect(getDockDesktopBoxClasses(isOpenSideBar, isHistoryCollapsed, true)).toBe('')
+    }
+  )
 })

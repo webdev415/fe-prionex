@@ -93,10 +93,19 @@
   color: #ffffff !important;
 }
 
+/* ``--disabled`` belongs in this exclusion list for the same reason KAN-992
+   put one in the time-slot rules: this selector scores (0,3,0) and the
+   ``--disabled`` rule below only (0,2,0), so without it a day that is both
+   today AND blocked painted itself accent-green and read as available.
+   Unreachable while the browser and the profile shared a timezone — "today"
+   was never a blocked day — and reachable the moment ``min`` started being
+   measured in the profile zone, where the browser's today can already be
+   yesterday. */
 .date-select-calendar
   .react-datepicker__day--today:not(
     .react-datepicker__day--selected,
-    .react-datepicker__day--keyboard-selected
+    .react-datepicker__day--keyboard-selected,
+    .react-datepicker__day--disabled
   ) {
   font-weight: 600;
   color: var(--color-primary-500) !important;
@@ -105,6 +114,62 @@
 
 .date-select-calendar .react-datepicker__day--disabled,
 .date-select-calendar .react-datepicker__day--outside-month {
+  color: var(--muted-foreground) !important;
+  opacity: 0.5;
+}
+
+/* Month-year picker grid (showMonthYearPicker): operator work list, v3
+   monitoring. react-datepicker renders these cells as __month-text, so none of
+   the __day rules above reach them and its own defaults take over — a blue
+   (#216ba5) selected month that appears nowhere else in the product. Mirrors
+   the day rules so the two grids behave identically. */
+.date-select-calendar .react-datepicker__month-text {
+  color: var(--foreground) !important;
+  border-radius: 0.375rem;
+  padding: 6px 4px;
+  transition: all 0.15s;
+}
+
+.date-select-calendar
+  .react-datepicker__month-text:hover:not(
+    .react-datepicker__month-text--selected,
+    .react-datepicker__month-text--keyboard-selected
+  ) {
+  background-color: var(--muted) !important;
+  color: var(--foreground) !important;
+  border-radius: 0.375rem;
+}
+
+.date-select-calendar .react-datepicker__month-text--selected,
+.date-select-calendar .react-datepicker__month-text--keyboard-selected,
+.date-select-calendar .react-datepicker__month-text--today.react-datepicker__month-text--selected,
+.date-select-calendar
+  .react-datepicker__month-text--today.react-datepicker__month-text--keyboard-selected {
+  background-color: var(--color-primary-500) !important;
+  color: #ffffff !important;
+  border-radius: 0.375rem;
+}
+
+.date-select-calendar .react-datepicker__month-text--selected:not([aria-disabled='true']):hover,
+.date-select-calendar
+  .react-datepicker__month-text--keyboard-selected:not([aria-disabled='true']):hover {
+  background-color: var(--color-primary-600, var(--color-primary-500)) !important;
+  color: #ffffff !important;
+}
+
+/* Mirrors the day rule above, same specificity hazard. */
+.date-select-calendar
+  .react-datepicker__month-text--today:not(
+    .react-datepicker__month-text--selected,
+    .react-datepicker__month-text--keyboard-selected,
+    .react-datepicker__month-text--disabled
+  ) {
+  font-weight: 600;
+  color: var(--color-primary-500) !important;
+  background-color: transparent;
+}
+
+.date-select-calendar .react-datepicker__month-text--disabled {
   color: var(--muted-foreground) !important;
   opacity: 0.5;
 }
@@ -169,13 +234,53 @@
   background-color: var(--card) !important;
 }
 
-.date-select-calendar .react-datepicker__time-list-item {
+/* Both arguments to the ``:not()`` on the next two rules are load-bearing
+   (KAN-992), for different reasons.
+
+   ``[aria-disabled='true']`` — these rules paint every slot with
+   ``!important``, which outranks react-datepicker's own greying of a blocked
+   slot however specific the library selector is. Excluding blocked slots is
+   what lets the greying rule below apply at all, and hands their hover
+   background back to the library's ``--disabled:hover``.
+
+   ``--selected`` — here the problem is specificity, not matching. Adding
+   ``[aria-disabled]`` lifts these rules above the ``--selected`` pair below
+   rather than tying it, so the operator's current value would lose its
+   white-on-primary look. The ``__day:hover:not(--selected,
+   --keyboard-selected)`` rule above spells out the same exclusion against the
+   same hazard. */
+.date-select-calendar
+  .react-datepicker__time-list-item:not(
+    [aria-disabled='true'],
+    .react-datepicker__time-list-item--selected
+  ) {
   color: var(--foreground) !important;
 }
 
-.date-select-calendar .react-datepicker__time-list-item:hover {
+.date-select-calendar
+  .react-datepicker__time-list-item:not(
+    [aria-disabled='true'],
+    .react-datepicker__time-list-item--selected
+  ):hover {
   background-color: var(--muted) !important;
   color: var(--foreground) !important;
+}
+
+/* Blocked slot. Mirrors ``__day--disabled`` above so a disabled time reads
+   like a disabled day, in theme tokens rather than the library's hardcoded
+   #ccc — near-invisible on the dark themes.
+
+   Skips ``--selected``: a saved value that has since fallen into the past is
+   both, and greying it would put muted text on the accent background. The
+   selected look wins, so there the refused click is the only cue unless the
+   caller supplies its own message — ChainExecutor, EditTAInteractionModal and
+   AddTaskModal do; CreateKanbanTaskModal does not. */
+.date-select-calendar
+  .react-datepicker__time-list-item[aria-disabled='true']:not(
+    .react-datepicker__time-list-item--selected
+  ) {
+  color: var(--muted-foreground) !important;
+  opacity: 0.5;
 }
 
 .date-select-calendar .react-datepicker__time-list-item--selected,

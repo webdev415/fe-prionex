@@ -141,7 +141,10 @@ export interface LegalThreadDetail {
 
 export interface LegalLetterConfirmRequest {
   letter_type_id: string
-  client_id: number
+  /** Null only together with `no_client_link` (KAN-1008); the API rejects one without the other. */
+  client_id: number | null
+  /** The operator ticked "no client link". Required - a missing client is not enough. */
+  no_client_link?: boolean
   due_date: string
   assigned_to_user_id: number
   contract_number?: string | null
@@ -154,7 +157,7 @@ export interface LegalLetterConfirmResponse {
   legal_task_id: number
   processing_status: string
   confirmed_letter_type_id: string
-  confirmed_client_id: number
+  confirmed_client_id: number | null
   confirmed_lawyer_user_id: number
   confirmed_due_date: string
   confirmed_contract_number?: string | null

@@ -168,11 +168,18 @@ describe('AiAssistantBetaPage conversation sidebar', () => {
     fireEvent.click(await screen.findByTestId('conversation-item-43'))
 
     // Selecting a conversation closes the drawer and loads the dialog.
+    //
+    // Wait on the SELECTION, not on the drawer. handleSelectConversation closes
+    // the drawer as its first statement, before the guard that can return
+    // early, so "the drawer is gone" is true whether or not anything was
+    // picked up — waiting on it synchronises the test against a signal that
+    // proves nothing, and the failure then surfaces further down as a mystery
+    // timeout on the message text. The stored pointer is the real signal.
     await waitFor(() => {
-      expect(screen.queryByTestId('conversation-item-43')).not.toBeInTheDocument()
+      expect(useAiAssistantStore.getState().conversationIdFor('7')).toBe(43)
     })
+    expect(screen.queryByTestId('conversation-item-43')).not.toBeInTheDocument()
     expect(await screen.findByText('Сообщение в чате 43')).toBeInTheDocument()
-    expect(useAiAssistantStore.getState().conversationIdFor('7')).toBe(43)
   })
 
   it('closes the mobile drawer by tapping the backdrop', async () => {

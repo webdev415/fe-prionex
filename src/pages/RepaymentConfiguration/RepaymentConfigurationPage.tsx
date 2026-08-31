@@ -24,6 +24,7 @@ import {
   type Algorithm,
   type RepaymentComponent,
 } from '@/features/repaymentConfig'
+import { CoefficientRangesSection } from './CoefficientRangesSection'
 import { RepaymentConfigurationPageSkeleton } from './RepaymentConfigurationPageSkeleton'
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -572,6 +573,9 @@ export function RepaymentConfigurationPage() {
           </div>
         </section>
       )}
+
+      {/* KAN-994 — loan closing coefficient ranges */}
+      <CoefficientRangesSection />
 
       {/* Activate Strict Order confirmation modal */}
       <Modal open={showActivateModal} onClose={() => setShowActivateModal(false)}>

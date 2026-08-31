@@ -5,7 +5,7 @@
  * Integrated with real API using React Query.
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, type ReactNode } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -22,17 +22,29 @@ import { ResetPasswordConfirmModal } from './components/ResetPasswordConfirmModa
 import { AdminToggleTwoFactorModal } from './components/AdminToggleTwoFactorModal'
 import { UnlockAccountModal } from './components/UnlockAccountModal'
 import { GoogleAuthenticatorStatusIcon } from './components/GoogleAuthenticatorStatusIcon'
+import { cn } from '@/lib/utils'
 import { UserSearchBar } from './components/UserSearchBar'
 import { UserFiltersBar } from './components/UserFiltersBar'
-import type { ApiUser, UserSearchField, UserSortOrder } from '@/features/users/types'
+import { UserAvatar } from '@/components/ui/UserAvatar'
+import { FilterTemplatesMenu } from './components/FilterTemplatesMenu'
+import type {
+  ApiUser,
+  FilterTemplate,
+  UserSearchField,
+  UserSortOrder,
+} from '@/features/users/types'
+import { ALL_PROJECTS, departmentsOf, positionsOf } from './lib/employeeOrg'
+import {
+  filterStateToTemplate,
+  templateToExtras,
+  templateToFilterState,
+} from './lib/filterTemplateMapping'
 import { Icons } from '@/lib/icons'
 import { DataTable, type Column, type SortConfig } from '@/components/ui/DataTable'
-import { StatusBadge } from '@/components/ui/StatusBadge'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
 import { Pagination } from '@/components/ui/Pagination'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { ErrorState } from '@/components/ErrorState'
-import { LinkButton } from '@/components/ui/LinkButton'
 import { DoubleButton } from '@/components/ui/DoubleButton'
 import {
   DropdownMenu,
@@ -40,7 +52,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/DropdownMenu'
-import { TooltipProvider } from '@/components/ui/Tooltip'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/Tooltip'
 
 import {
   ALL_FILTER_VALUE,
@@ -48,9 +60,62 @@ import {
   DEFAULT_USER_SORT_BY,
   DEFAULT_USER_SORT_ORDER,
   DEFAULT_USER_STATUS_FILTER,
+  DEFAULT_WORK_FORMAT_FILTER,
+  parseDepartmentIds,
+  asStatusFilter,
   statusFilterToApiStatus,
+  workFormatToApiValue,
   type UserFilterState,
+  type WorkFormatFilter,
 } from './lib/userFilterDefaults'
+
+function EmployeeStatus({ status }: { status: 'active' | 'disabled' | 'inactive' | 'suspended' }) {
+  const { t } = useTranslation('common')
+  const isActive = status === 'active'
+
+  return (
+    <span className="flex items-center gap-1.5">
+      <span
+        className={cn(
+          'h-2 w-2 shrink-0 rounded-full',
+          isActive ? 'bg-success-500' : 'bg-muted-foreground'
+        )}
+      />
+      <span className={cn('text-sm', isActive ? 'text-success-500' : 'text-muted-foreground')}>
+        {t(`statusLabels.${status}`, { defaultValue: status })}
+      </span>
+    </span>
+  )
+}
+
+function IconAction({
+  label,
+  icon,
+  onClick,
+  disabled,
+}: {
+  label: string
+  icon: ReactNode
+  onClick: () => void
+  disabled?: boolean
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          onClick={onClick}
+          disabled={disabled}
+          aria-label={label}
+          className="text-foreground hover:bg-muted flex h-8 w-8 cursor-pointer items-center justify-center rounded-md transition-colors focus:outline-none disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {icon}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  )
+}
 
 const DEFAULT_PAGE_SIZE = 10
 const DEFAULT_SEARCH_FIELD: UserSearchField = 'full_name'
@@ -80,19 +145,25 @@ export function UserManagementPage() {
   const [projectFilter, setProjectFilter] = useURLState<number>('project', ALL_FILTER_VALUE, {
     debounce: 0,
   })
-  const [departmentFilter, setDepartmentFilter] = useURLState<number>(
-    'department',
-    ALL_FILTER_VALUE,
-    { debounce: 0 }
-  )
+  const [departmentFilter, setDepartmentFilter] = useURLState<string | number>('department', '', {
+    debounce: 0,
+  })
   const [groupFilter, setGroupFilter] = useURLState<number>('group', ALL_FILTER_VALUE, {
     debounce: 0,
   })
-  const [statusFilter, setStatusFilter] = useURLState<UserFilterState['statusFilter']>(
+  const departmentIds = useMemo(() => parseDepartmentIds(departmentFilter), [departmentFilter])
+
+  const [workFormatFilter, setWorkFormatFilter] = useURLState<WorkFormatFilter>(
+    'work_format',
+    DEFAULT_WORK_FORMAT_FILTER,
+    { debounce: 0 }
+  )
+  const [rawStatusFilter, setStatusFilter] = useURLState<UserFilterState['statusFilter']>(
     'status',
     DEFAULT_USER_STATUS_FILTER,
     { debounce: 0 }
   )
+  const statusFilter = asStatusFilter(rawStatusFilter)
   const [sortBy, setSortBy] = useURLState<string>('sort_by', DEFAULT_USER_SORT_BY, {
     debounce: 0,
   })
@@ -185,8 +256,9 @@ export function UserManagementPage() {
       status: statusFilterToApiStatus(statusFilter),
       role_id: roleFilter > 0 ? roleFilter : undefined,
       project_id: projectFilter > 0 ? projectFilter : undefined,
-      department_id: departmentFilter > 0 ? departmentFilter : undefined,
+      department_ids: departmentIds.length > 0 ? departmentIds : undefined,
       group_id: groupFilter > 0 ? groupFilter : undefined,
+      work_format: workFormatToApiValue(workFormatFilter),
       sort_by: sortBy as UserFilterState['sortBy'],
       sort_order: sortOrder,
     }),
@@ -198,8 +270,9 @@ export function UserManagementPage() {
       statusFilter,
       roleFilter,
       projectFilter,
-      departmentFilter,
+      departmentIds,
       groupFilter,
+      workFormatFilter,
       sortBy,
       sortOrder,
     ]
@@ -230,10 +303,6 @@ export function UserManagementPage() {
 
   const handleEditSuccess = () => {
     setEditUserId(null)
-  }
-
-  const handleEdit = (user: ApiUser) => {
-    setEditUserId(user.id)
   }
 
   const handleView = (user: ApiUser) => {
@@ -309,13 +378,71 @@ export function UserManagementPage() {
     () => ({
       roleId: roleFilter,
       projectId: projectFilter,
-      departmentId: departmentFilter,
+      departmentIds: departmentIds,
       groupId: groupFilter,
+      workFormat: workFormatFilter,
       statusFilter,
       sortBy: sortBy as UserFilterState['sortBy'],
       sortOrder,
     }),
-    [roleFilter, projectFilter, departmentFilter, groupFilter, statusFilter, sortBy, sortOrder]
+    [
+      roleFilter,
+      projectFilter,
+      departmentIds,
+      groupFilter,
+      workFormatFilter,
+      statusFilter,
+      sortBy,
+      sortOrder,
+    ]
+  )
+
+  const currentTemplateDocument = useMemo(
+    () =>
+      filterStateToTemplate(filterState, {
+        search: searchQuery,
+        searchField,
+        pageSize,
+      }),
+    [filterState, searchQuery, searchField, pageSize]
+  )
+
+  const handleApplyTemplate = useCallback(
+    (template: FilterTemplate) => {
+      const restored = templateToFilterState(template.filters)
+      const extras = templateToExtras(template.filters, {
+        search: '',
+        searchField: DEFAULT_SEARCH_FIELD,
+        pageSize: DEFAULT_PAGE_SIZE,
+      })
+
+      setRoleFilter(restored.roleId)
+      setProjectFilter(restored.projectId)
+      setDepartmentFilter(restored.departmentIds.join(','))
+      setGroupFilter(restored.groupId)
+      setWorkFormatFilter(restored.workFormat)
+      setStatusFilter(restored.statusFilter)
+      setSortBy(restored.sortBy)
+      setSortOrder(restored.sortOrder)
+      setSearchQuery(extras.search)
+      setSearchField(extras.searchField)
+      setPageSize(extras.pageSize)
+      setCurrentPage(1)
+    },
+    [
+      setRoleFilter,
+      setProjectFilter,
+      setDepartmentFilter,
+      setGroupFilter,
+      setWorkFormatFilter,
+      setStatusFilter,
+      setSortBy,
+      setSortOrder,
+      setSearchQuery,
+      setSearchField,
+      setPageSize,
+      setCurrentPage,
+    ]
   )
 
   const sortConfig = useMemo<SortConfig>(
@@ -330,8 +457,9 @@ export function UserManagementPage() {
     (next: Partial<UserFilterState>) => {
       if (next.roleId !== undefined) setRoleFilter(next.roleId)
       if (next.projectId !== undefined) setProjectFilter(next.projectId)
-      if (next.departmentId !== undefined) setDepartmentFilter(next.departmentId)
+      if (next.departmentIds !== undefined) setDepartmentFilter(next.departmentIds.join(','))
       if (next.groupId !== undefined) setGroupFilter(next.groupId)
+      if (next.workFormat !== undefined) setWorkFormatFilter(next.workFormat)
       if (next.statusFilter !== undefined) setStatusFilter(next.statusFilter)
       if (next.sortBy !== undefined) setSortBy(next.sortBy)
       if (next.sortOrder !== undefined) setSortOrder(next.sortOrder)
@@ -342,6 +470,7 @@ export function UserManagementPage() {
       setProjectFilter,
       setDepartmentFilter,
       setGroupFilter,
+      setWorkFormatFilter,
       setStatusFilter,
       setSortBy,
       setSortOrder,
@@ -352,8 +481,9 @@ export function UserManagementPage() {
   const handleResetFilters = useCallback(() => {
     setRoleFilter(DEFAULT_USER_FILTERS.roleId)
     setProjectFilter(DEFAULT_USER_FILTERS.projectId)
-    setDepartmentFilter(DEFAULT_USER_FILTERS.departmentId)
+    setDepartmentFilter(DEFAULT_USER_FILTERS.departmentIds.join(','))
     setGroupFilter(DEFAULT_USER_FILTERS.groupId)
+    setWorkFormatFilter(DEFAULT_USER_FILTERS.workFormat)
     setStatusFilter(DEFAULT_USER_FILTERS.statusFilter)
     setSortBy(DEFAULT_USER_FILTERS.sortBy)
     setSortOrder(DEFAULT_USER_FILTERS.sortOrder)
@@ -366,6 +496,7 @@ export function UserManagementPage() {
     setGroupFilter,
     setStatusFilter,
     setSortBy,
+    setWorkFormatFilter,
     setSortOrder,
     setCurrentPage,
     clearPersistedState,
@@ -388,58 +519,79 @@ export function UserManagementPage() {
   // Table columns definition
   const columns: Column<ApiUser>[] = [
     {
-      key: 'id',
-      header: t('pages.users.tableHeaders.userId'),
-      sortable: true,
-      sortKey: 'id',
-      render: (user) => <span className="text-foreground">{user.id}</span>,
-    },
-    {
-      key: 'username',
-      header: t('pages.users.tableHeaders.username'),
-      sortable: true,
-      sortKey: 'username',
-      render: (user) => <span className="font-medium">{user.username}</span>,
-    },
-    {
       key: 'fullName',
       header: t('pages.users.tableHeaders.fullName'),
       sortable: true,
       sortKey: 'full_name',
-      render: (user) => <span>{user.full_name || '-'}</span>,
+      render: (user) => (
+        <button
+          type="button"
+          onClick={() => handleView(user)}
+          className="text-foreground hover:text-primary group flex cursor-pointer items-center gap-3 text-left font-medium"
+        >
+          <UserAvatar
+            userId={user.id}
+            firstName={user.first_name}
+            lastName={user.last_name}
+            fullName={user.full_name}
+            avatarUrl={user.avatar_url}
+            size={32}
+            className="shrink-0"
+          />
+          <span className="underline-offset-2 group-hover:underline">
+            {user.full_name || user.username}
+          </span>
+        </button>
+      ),
     },
     {
-      key: 'email',
-      header: t('pages.users.tableHeaders.email'),
-      sortable: true,
-      sortKey: 'email',
-      render: (user) => <span className="text-foreground">{user.email || '-'}</span>,
-    },
-    {
-      key: 'projectRole',
-      header: t('pages.users.tableHeaders.projectRole'),
-      sortable: true,
-      sortKey: 'project_role',
+      key: 'department',
+      header: t('pages.users.tableHeaders.department'),
       render: (user) => {
-        // Display project name with role: "Project Name (Role)"
-        if (user.projects && user.projects.length > 0) {
-          const projectRoles = user.projects.map((p) => {
-            const projectName = p.project_name || t('pages.users.unknownProject')
-            const roleName = p.role_name || t('pages.users.noRole')
-            const orgParts = [p.department_name, p.group_name].filter(Boolean)
-            return (
-              <div key={`${p.project_id}-${p.role_id}`} className="py-0.5">
-                <span className="font-medium">{projectName}</span>
-                <span className="text-muted-foreground"> ({roleName})</span>
-                {orgParts.length > 0 && (
-                  <div className="text-muted-foreground text-xs">{orgParts.join(' · ')}</div>
-                )}
-              </div>
-            )
-          })
-          return <div className="flex flex-col gap-0.5">{projectRoles}</div>
+        const departments = departmentsOf(user, projectFilter > 0 ? projectFilter : ALL_PROJECTS)
+        if (departments.length === 0) {
+          return <span className="text-muted-foreground">—</span>
         }
-        return <span className="text-muted-foreground">{t('pages.users.noAssignment')}</span>
+        return <span className="text-foreground">{departments.join(', ')}</span>
+      },
+    },
+    {
+      key: 'position',
+      header: t('pages.users.tableHeaders.position'),
+      render: (user) => {
+        const positions = positionsOf(user, projectFilter > 0 ? projectFilter : ALL_PROJECTS)
+        if (positions.length === 0) {
+          return <span className="text-muted-foreground">{t('pages.users.noRole')}</span>
+        }
+        return <span className="text-foreground">{positions.join(', ')}</span>
+      },
+    },
+    {
+      key: 'status',
+      header: t('pages.users.tableHeaders.status'),
+      align: 'center',
+      sortable: true,
+      sortKey: 'status',
+      render: (user) => (
+        <div className="flex items-center justify-center gap-1.5">
+          <EmployeeStatus status={getStatusType(user.status)} />
+          <GoogleAuthenticatorStatusIcon enabled={user.two_factor_enabled} />
+        </div>
+      ),
+    },
+    {
+      key: 'workFormat',
+      header: t('pages.users.tableHeaders.workFormat'),
+      align: 'center',
+      render: (user) => {
+        if (user.work_format !== 'office' && user.work_format !== 'remote') {
+          return <span className="text-muted-foreground">—</span>
+        }
+        return (
+          <span className="text-foreground">
+            {t(`pages.profileSettings.workFormat.${user.work_format}`)}
+          </span>
+        )
       },
     },
     {
@@ -471,112 +623,60 @@ export function UserManagementPage() {
       ),
     },
     {
-      key: 'status',
-      header: t('pages.users.tableHeaders.status'),
-      align: 'center',
-      sortable: true,
-      sortKey: 'status',
-      render: (user) => (
-        <div className="flex items-center justify-center gap-1.5">
-          <StatusBadge status={getStatusType(user.status)} />
-          <GoogleAuthenticatorStatusIcon enabled={user.two_factor_enabled} />
-        </div>
-      ),
-    },
-    {
       key: 'actions',
       header: t('pages.users.tableHeaders.actions'),
       align: 'center',
       render: (user) => (
         <div className="flex items-center justify-center gap-2 sm:gap-4">
           {/* Desktop: Individual link buttons */}
-          <div className="hidden items-center gap-4 lg:flex">
-            <LinkButton
-              variant="regular-black"
-              size="xs"
-              onClick={() => handleView(user)}
-              leftIcon={<Icons.View size={16} strokeWidth={1.5} className="text-foreground" />}
-            >
-              {t('pages.users.actions.view')}
-            </LinkButton>
-            <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
-              <LinkButton
-                variant="regular-black"
-                size="xs"
-                onClick={() => handleEdit(user)}
-                leftIcon={
-                  <Icons.PencilEdit size={16} strokeWidth={1.5} className="text-foreground" />
-                }
-              >
-                {t('pages.users.actions.edit')}
-              </LinkButton>
-            </PermissionGuard>
-
+          <div className="hidden items-center gap-1 lg:flex">
             <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
               {currentUser?.id !== String(user.id) && (
-                <LinkButton
-                  variant="regular-black"
-                  size="xs"
+                <IconAction
+                  label={t('pages.users.actions.resetPassword')}
+                  icon={<Icons.LockSync01 size={18} strokeWidth={1.5} />}
                   onClick={() => setResetPasswordUser(user)}
-                  leftIcon={
-                    <Icons.LockSync01 size={16} strokeWidth={1.5} className="text-foreground" />
-                  }
-                >
-                  {t('pages.users.actions.resetPassword')}
-                </LinkButton>
+                />
               )}
             </PermissionGuard>
 
             <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
               {currentUser?.id !== String(user.id) &&
                 (user.two_factor_enabled || user.two_factor_has_secret) && (
-                  <LinkButton
-                    variant="regular-black"
-                    size="xs"
-                    onClick={() => setToggleTwoFactorUser(user)}
-                    leftIcon={
-                      <Icons.Shield size={16} strokeWidth={1.5} className="text-foreground" />
+                  <IconAction
+                    label={
+                      user.two_factor_enabled
+                        ? t('pages.users.actions.disableTwoFactor')
+                        : t('pages.users.actions.reenableTwoFactor')
                     }
-                  >
-                    {user.two_factor_enabled
-                      ? t('pages.users.actions.disableTwoFactor')
-                      : t('pages.users.actions.reenableTwoFactor')}
-                  </LinkButton>
+                    icon={<Icons.Shield size={18} strokeWidth={1.5} />}
+                    onClick={() => setToggleTwoFactorUser(user)}
+                  />
                 )}
             </PermissionGuard>
 
             <PermissionGuard permission={PERMISSIONS.USERS.IMPERSONATE}>
               {currentUser?.id !== String(user.id) && (
-                <LinkButton
-                  variant="regular-black"
-                  size="xs"
+                <IconAction
+                  label={
+                    impersonatingUserId === user.id
+                      ? t('pages.users.actions.impersonating')
+                      : t('pages.users.actions.impersonate')
+                  }
+                  icon={<Icons.SecurityValidation size={18} strokeWidth={1.5} />}
                   onClick={() => handleImpersonate(user)}
                   disabled={authLoading || impersonatingUserId !== null}
-                  leftIcon={
-                    <Icons.SecurityValidation
-                      size={16}
-                      strokeWidth={1.5}
-                      className="text-foreground"
-                    />
-                  }
-                >
-                  {impersonatingUserId === user.id
-                    ? t('pages.users.actions.impersonating')
-                    : t('pages.users.actions.impersonate')}
-                </LinkButton>
+                />
               )}
             </PermissionGuard>
 
             <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
-              <LinkButton
-                variant="regular-black"
-                size="xs"
+              <IconAction
+                label={t('pages.users.actions.unlock')}
+                icon={<Icons.Unlock size={18} strokeWidth={1.5} />}
                 onClick={() => setUnlockUser(user)}
                 disabled={!isUserLocked(user)}
-                leftIcon={<Icons.Unlock size={16} strokeWidth={1.5} className="text-foreground" />}
-              >
-                {t('pages.users.actions.unlock')}
-              </LinkButton>
+              />
             </PermissionGuard>
           </div>
 
@@ -597,22 +697,6 @@ export function UserManagementPage() {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="bg-card">
-                <DropdownMenuItem
-                  onClick={() => handleView(user)}
-                  className="text-foreground flex cursor-pointer items-center gap-2 text-sm"
-                >
-                  <Icons.View size={16} strokeWidth={1.5} />
-                  <span>{t('pages.users.actions.view')}</span>
-                </DropdownMenuItem>
-                <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
-                  <DropdownMenuItem
-                    onClick={() => handleEdit(user)}
-                    className="text-foreground flex cursor-pointer items-center gap-2 text-sm"
-                  >
-                    <Icons.PencilEdit size={16} strokeWidth={1.5} />
-                    <span>{t('pages.users.actions.edit')}</span>
-                  </DropdownMenuItem>
-                </PermissionGuard>
                 <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
                   {currentUser?.id !== String(user.id) && (
                     <DropdownMenuItem
@@ -736,9 +820,11 @@ export function UserManagementPage() {
           </PermissionGuard>
         </div>
 
-        {/* Search Bar */}
-        <div className="mb-6 flex w-full items-center gap-4">
-          <div className="flex items-center gap-3">
+        <UserFiltersBar
+          filters={filterState}
+          onFilterChange={handleFilterChange}
+          onReset={handleResetFilters}
+          search={
             <UserSearchBar
               value={searchQuery}
               searchField={searchField}
@@ -746,16 +832,14 @@ export function UserManagementPage() {
               onSearchFieldChange={handleSearchFieldChange}
               onSearch={handleSearch}
               onClear={handleClearSearch}
-              isLoading={isLoading}
             />
-          </div>
-        </div>
-
-        {/* Filter panel */}
-        <UserFiltersBar
-          filters={filterState}
-          onFilterChange={handleFilterChange}
-          onReset={handleResetFilters}
+          }
+          actions={
+            <FilterTemplatesMenu
+              currentFilters={currentTemplateDocument}
+              onApply={handleApplyTemplate}
+            />
+          }
         />
 
         {/* Loading State */}
@@ -809,6 +893,10 @@ export function UserManagementPage() {
             open={viewUserId !== null}
             userId={viewUserId}
             onClose={handleCloseView}
+            onEdit={() => {
+              setViewUserId(null)
+              setEditUserId(viewUserId)
+            }}
           />
         )}
 

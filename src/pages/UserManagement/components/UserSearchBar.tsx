@@ -29,7 +29,6 @@ interface UserSearchBarProps {
   onSearchFieldChange: (field: UserSearchField) => void
   onSearch: () => void
   onClear: () => void
-  isLoading?: boolean
 }
 
 export function UserSearchBar({
@@ -39,7 +38,6 @@ export function UserSearchBar({
   onSearchFieldChange,
   onSearch,
   onClear,
-  isLoading = false,
 }: UserSearchBarProps) {
   const { t } = useTranslation('common')
   const [isMobileDropdownOpen, setIsMobileDropdownOpen] = useState(false)
@@ -92,7 +90,7 @@ export function UserSearchBar({
   }
 
   return (
-    <div className="border-border bg-card flex w-[280px] items-center gap-3 rounded-full border pr-2 pl-4 sm:w-[400px] md:w-[500px] lg:w-[600px]">
+    <div className="border-border bg-card flex w-full items-center gap-3 rounded-full border pr-2 pl-4">
       <div className="flex min-w-0 flex-1 items-center gap-2 py-1">
         <input
           type="text"
@@ -203,16 +201,6 @@ export function UserSearchBar({
           </DropdownMenu>
         </div>
       </div>
-
-      <button
-        type="button"
-        onClick={onSearch}
-        disabled={isLoading}
-        className="bg-primary-300 flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-105 disabled:opacity-60"
-        aria-label={t('pages.users.searchButton')}
-      >
-        <Icons.Search size={18} className="text-primary-foreground" strokeWidth={1.5} />
-      </button>
     </div>
   )
 }

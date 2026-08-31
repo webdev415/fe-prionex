@@ -25,8 +25,13 @@ vi.mock('../../hooks/useTemplates', () => ({
 vi.mock('../../hooks/useScorecardDraft', () => ({
   useScorecardDraft: () => ({
     scores: {},
+    overallComment: '',
+    disputeReason: '',
     isDirty: false,
     isSaving: false,
+    setScore: vi.fn(),
+    setOverallComment: vi.fn(),
+    setDisputeReason: vi.fn(),
     flush: vi.fn(),
     reset: vi.fn(),
   }),

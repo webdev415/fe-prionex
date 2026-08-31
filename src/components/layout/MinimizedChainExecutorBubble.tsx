@@ -65,7 +65,7 @@ export function MinimizedChainExecutorBubble() {
             <TooltipContent
               side="bottom"
               sideOffset={8}
-              className="max-w-sm border border-gray-700 bg-gray-900 p-4 shadow-xl"
+              className="border-border bg-card max-w-sm border p-4 shadow-xl"
             >
               <div className="flex min-w-[240px] flex-col gap-3">
                 <div className="flex items-center gap-3">
@@ -73,18 +73,18 @@ export function MinimizedChainExecutorBubble() {
                     <Icons.PlayCircle02 size={20} className="text-white" strokeWidth={1.5} />
                   </div>
                   <div className="flex min-w-0 flex-1 flex-col">
-                    <div className="truncate text-sm font-semibold text-white">
+                    <div className="text-foreground truncate text-sm font-semibold">
                       {info.clientName}
                     </div>
-                    <div className="text-xs text-gray-300">
+                    <div className="text-muted-foreground text-xs">
                       {info.chainName ??
                         t('pages.clientChains.chainExecution', { defaultValue: 'Chain execution' })}
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 border-t border-gray-700 pt-2">
-                  <Icons.Info size={14} className="text-gray-400" strokeWidth={1.5} />
-                  <span className="text-xs text-gray-300">
+                <div className="border-border flex items-center gap-2 border-t pt-2">
+                  <Icons.Info size={14} className="text-muted-foreground" strokeWidth={1.5} />
+                  <span className="text-muted-foreground text-xs">
                     {t('pages.clientChains.stepProgress', {
                       current: info.currentStepOrder,
                       total: info.totalSteps,
@@ -104,14 +104,14 @@ export function MinimizedChainExecutorBubble() {
           <div className="absolute top-2 right-2 flex items-center gap-1 sm:top-4 sm:right-12">
             <button
               onClick={() => minimizeRef.current?.()}
-              className="flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-gray-100"
+              className="hover:bg-muted flex h-8 w-8 items-center justify-center rounded-md transition-colors"
               aria-label="Minimize modal"
             >
               <Icons.Remove02 size={20} className="text-dark-500" strokeWidth={1.5} />
             </button>
             <button
               onClick={handleClose}
-              className="flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-gray-100"
+              className="hover:bg-muted flex h-8 w-8 items-center justify-center rounded-md transition-colors"
               aria-label="Close modal"
             >
               <Icons.Cancel01 size={20} className="text-dark-500" strokeWidth={1.5} />

@@ -1,8 +1,10 @@
 /**
- * AssistantInternalsSection tests — read-only «Устройство ассистента» card
- * pair (brain config + prompting). API layer mocked, hook is real.
- * PermissionGuard driven via the @/hooks mock; the i18n mock in
- * src/test/setup.ts returns keys, so assertions use keys.
+ * AssistantInternalsSection tests — the read-only «Устройство ассистента»
+ * config card (model/commit/flags/limits). Persona, prompt append and
+ * skills live in AssistantManagementSection now and are covered there.
+ * API layer mocked, hook is real. PermissionGuard driven via the @/hooks
+ * mock; the i18n mock in src/test/setup.ts returns keys, so assertions use
+ * keys.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
@@ -62,6 +64,7 @@ const OVERVIEW: AssistantOverview = {
       apply: 'gw-restart',
     },
     prompt0_append: {
+      template: 'Дополнительный контекст оператора',
       text: 'Дополнительный контекст оператора',
       length: 34,
       limit: 2000,
@@ -105,7 +108,7 @@ describe('AssistantInternalsSection', () => {
     expect(screen.getByTestId('assistant-internals-skeleton')).toBeInTheDocument()
   })
 
-  it('renders config flags, limits, and prompts once loaded', async () => {
+  it('renders config flags and limits once loaded', async () => {
     mockGetAssistantOverview.mockResolvedValue(OVERVIEW)
     renderSection()
 
@@ -119,13 +122,10 @@ describe('AssistantInternalsSection', () => {
     expect(screen.getByText('45')).toBeInTheDocument()
     expect(screen.getByText('500')).toBeInTheDocument()
 
-    expect(screen.getByTestId('assistant-internals-prompts')).toBeInTheDocument()
-    expect(screen.getByText('Роша')).toBeInTheDocument()
-    expect(screen.getByText('34/2000')).toBeInTheDocument()
-    expect(screen.getByText('search_clients')).toBeInTheDocument()
-    expect(screen.getByText('draft_tools')).toBeInTheDocument()
-    expect(screen.getByText('assistant_knowledge.md')).toBeInTheDocument()
-    expect(screen.getByText('policies.md')).toBeInTheDocument()
+    // Prompting artifacts moved to AssistantManagementSection — a second
+    // read-only copy here is exactly what that move removed.
+    expect(screen.queryByTestId('assistant-internals-prompts')).not.toBeInTheDocument()
+    expect(screen.queryByText('Роша')).not.toBeInTheDocument()
   })
 
   it('shows the unavailable card on a 502 without breaking the rest of the page', async () => {

@@ -61,6 +61,15 @@ export interface DebtDetail {
   principal_debt?: string | null
   total_paid_amount?: string | null
   total_to_return?: string | null
+  /** KAN-994 — closing-coefficient band for the Principal Debt tooltip, or
+   *  null/absent when no tooltip is due. Computed server-side. */
+  closing_coefficient?: {
+    min_coefficient: string
+    max_coefficient: string
+    min_amount: string
+    max_amount: string
+    debt_age_days: number
+  } | null
 
   // KAN-784 AC2: true when the loan is fully returned (total_to_return <= 0)
   // but verified payments-to-us fell short of the principal, so auto-close was
@@ -268,6 +277,12 @@ export interface Client {
   // UBKI outbound submission opt-out (credit bureau).
   // When true, this client's data is never sent to UBKI (manual or scheduled).
   do_not_send_to_ubki?: boolean
+
+  // Compliance exclusions. Present on the list so a do-not-call client is marked
+  // as such even when the v3 model has no score for them.
+  is_deceased?: boolean
+  is_fraudster?: boolean
+  lawsuit_filed?: boolean
 }
 
 export interface ClientDetail extends Client {
@@ -410,7 +425,16 @@ export interface GetClientsParams {
   // by ``ta_chain_steps.id`` (not target_action_id) so a chain with two
   // steps that share the same target_action stays independently
   // filterable. Ignored without ``chain_id``.
+  /** @deprecated KAN-821 — use ``chain_ids``. Folded in when that is absent. */
   chain_id?: number
+  /** Comma-separated ta_chains.id values (KAN-821 multi-select). */
+  chain_ids?: string
+  /**
+   * KAN-821. True (default): match only clients whose MOST RECENT interaction —
+   * across every chain, not per selected chain — is in the selected set.
+   * False: match any historical interaction (pre-KAN-821 behaviour).
+   */
+  only_last_chain?: boolean
   step_ids?: string // Comma-separated ta_chain_steps.id values
 
   // Filter: Per-step value bounds. Format: ``<step_id>:<value>`` items
@@ -512,6 +536,9 @@ export interface ClientProfileResponse {
   is_bankrupt: boolean
   is_deceased: boolean
   is_fraudster: boolean
+  /** Compliance exclusion — the client card marks these do-not-call with or
+   *  without a v3 score. */
+  lawsuit_filed?: boolean
   is_military: boolean
   has_nbu_complaint: boolean
   do_not_send_to_ubki?: boolean
@@ -702,13 +729,16 @@ export interface AddressResponse {
 export interface CreateContactRequest {
   contact_value: string
   contact_type_id?: number | null
-  comment?: string
+  // null, not just undefined: clearing the field has to be sent explicitly.
+  // Omitting it means "leave the stored value alone" on the update endpoint,
+  // which is why a cleared comment never used to persist.
+  comment?: string | null
 }
 
 export interface UpdateContactRequest {
   contact_value?: string
   contact_type_id?: number | null
-  comment?: string
+  comment?: string | null
 }
 
 export interface ContactResponse {
@@ -821,6 +851,8 @@ export interface PaymentResponse {
   penalty_paid: string
   fines_paid: string
   payment_method: string
+  /** EasyPay rows only: card | google_pay | apple_pay. Null elsewhere. */
+  easypay_method?: string | null
   payment_method_details?: string | null
   payment_type?: string | null
   status: string

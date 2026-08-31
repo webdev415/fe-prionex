@@ -45,7 +45,7 @@ export const Slider = forwardRef<HTMLInputElement, SliderProps>(
     return (
       <div className={cn('flex flex-col gap-2', className)}>
         {label && (
-          <label htmlFor={id} className="text-dark-500 text-sm font-medium">
+          <label htmlFor={id} className="text-foreground text-sm font-medium">
             {label}
           </label>
         )}
@@ -60,15 +60,15 @@ export const Slider = forwardRef<HTMLInputElement, SliderProps>(
               step={step}
               value={value}
               onChange={handleChange}
-              className="[&::-webkit-slider-thumb]:bg-primary-500 [&::-moz-range-thumb]:bg-primary-500 h-1 w-full cursor-pointer appearance-none rounded-lg bg-gray-200 transition-all outline-none md:h-1.5 [&::-moz-range-thumb]:h-[16px] [&::-moz-range-thumb]:w-[16px] [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:shadow-md md:[&::-moz-range-thumb]:h-[18px] md:[&::-moz-range-thumb]:w-[18px] [&::-webkit-slider-thumb]:h-[16px] [&::-webkit-slider-thumb]:w-[16px] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:shadow-md md:[&::-webkit-slider-thumb]:h-[18px] md:[&::-webkit-slider-thumb]:w-[18px]"
+              className="[&::-webkit-slider-thumb]:bg-primary-500 [&::-moz-range-thumb]:bg-primary-500 [&::-moz-range-thumb]:border-card [&::-webkit-slider-thumb]:border-card bg-muted h-1 w-full cursor-pointer appearance-none rounded-lg transition-all outline-none md:h-1.5 [&::-moz-range-thumb]:h-[16px] [&::-moz-range-thumb]:w-[16px] [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:shadow-md md:[&::-moz-range-thumb]:h-[18px] md:[&::-moz-range-thumb]:w-[18px] [&::-webkit-slider-thumb]:h-[16px] [&::-webkit-slider-thumb]:w-[16px] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:shadow-md md:[&::-webkit-slider-thumb]:h-[18px] md:[&::-webkit-slider-thumb]:w-[18px]"
               style={{
-                background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${percentage}%, #e5e7eb ${percentage}%, #e5e7eb 100%)`,
+                background: `linear-gradient(to right, var(--color-primary-500) 0%, var(--color-primary-500) ${percentage}%, var(--muted) ${percentage}%, var(--muted) 100%)`,
               }}
               {...props}
             />
           </div>
           {showValue && (
-            <span className="text-dark-500 w-12 text-right text-sm font-medium">
+            <span className="text-foreground w-12 text-right text-sm font-medium">
               {Math.round(value)}%
             </span>
           )}

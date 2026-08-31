@@ -38,6 +38,7 @@ vi.mock('react-i18next', () => ({
         'pages.clients.editModal.addressType': 'Address Type',
         'pages.clients.editModal.region': 'Region',
         'pages.clients.editModal.city': 'City',
+        'pages.clients.detail.ubki.doNotSendLabel': 'Do not send data to UBKI',
         'pages.clients.editModal.street': 'Street',
         'pages.clients.editModal.building': 'Building',
         'pages.clients.editModal.apartment': 'Apartment',
@@ -168,6 +169,7 @@ const mockProfileData = {
 describe('EditClientModal', () => {
   const mockOnClose = vi.fn()
   const mockUpdateClientAsync = vi.fn().mockResolvedValue(undefined)
+  const mockUpdateClientMutate = vi.fn((_vars, opts) => opts?.onSuccess?.())
   const mockCreateAddress = vi.fn()
   const mockUpdateAddress = vi.fn()
   const mockDeleteAddress = vi.fn()
@@ -195,6 +197,7 @@ describe('EditClientModal', () => {
 
     vi.mocked(useClientsModule.useUpdateClient).mockReturnValue({
       mutateAsync: mockUpdateClientAsync,
+      mutate: mockUpdateClientMutate,
       isPending: false,
       isError: false,
       error: null,
@@ -294,6 +297,100 @@ describe('EditClientModal', () => {
 
       expect(screen.getByText('Addresses')).toBeInTheDocument()
       expect(screen.getByText(/Main/)).toBeInTheDocument()
+    })
+  })
+
+  describe('UBKI opt-out toggle', () => {
+    it('seeds the toggle from the profile', () => {
+      vi.mocked(useClientsModule.useClientProfile).mockReturnValue({
+        data: { ...mockProfileData, do_not_send_to_ubki: true },
+        isLoading: false,
+        isError: false,
+        error: null,
+      } as unknown as ReturnType<typeof useClientsModule.useClientProfile>)
+
+      render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
+
+      // The flag lives on the profile response; while the API omitted it the
+      // toggle read "off" for an opted-out client and a save wrote that back.
+      expect(screen.getByLabelText('Do not send data to UBKI')).toBeChecked()
+    })
+
+    it('writes the flag on its own the moment it is toggled', async () => {
+      render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
+
+      fireEvent.click(screen.getByLabelText('Do not send data to UBKI'))
+
+      // A single-field write, so a consent flag stays settable even when the
+      // personal section fails its name/tax-id validation.
+      await waitFor(() => {
+        expect(mockUpdateClientMutate).toHaveBeenCalledWith(
+          { id: 123, data: { do_not_send_to_ubki: true } },
+          expect.anything()
+        )
+      })
+    })
+
+    it('keeps the flag out of the personal payload', async () => {
+      render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
+
+      fireEvent.click(screen.getByTestId('edit-client-save-personal'))
+
+      await waitFor(() => {
+        expect(mockUpdateClientAsync).toHaveBeenCalled()
+      })
+      // Sending mount-time state on every save would revert a change made
+      // elsewhere while the form was open.
+      const [{ data }] = mockUpdateClientAsync.mock.calls[0]
+      expect(data).not.toHaveProperty('do_not_send_to_ubki')
+    })
+  })
+
+  describe('E-mail payload', () => {
+    it('omits an untouched address so imported junk cannot block the save', async () => {
+      render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
+
+      fireEvent.click(screen.getByTestId('edit-client-save-personal'))
+
+      await waitFor(() => {
+        expect(mockUpdateClientAsync).toHaveBeenCalled()
+      })
+      const [{ data }] = mockUpdateClientAsync.mock.calls[0]
+      // Resubmitting an unchanged address fails EmailStr for the addresses
+      // imports left behind, rejecting edits to unrelated fields.
+      expect(data.email).toBeUndefined()
+    })
+
+    it('sends an edited address', async () => {
+      render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
+
+      fireEvent.change(screen.getByDisplayValue('john@example.com'), {
+        target: { value: 'new@example.org' },
+      })
+      fireEvent.click(screen.getByTestId('edit-client-save-personal'))
+
+      await waitFor(() => {
+        expect(mockUpdateClientAsync).toHaveBeenCalled()
+      })
+      const [{ data }] = mockUpdateClientAsync.mock.calls[0]
+      expect(data.email).toBe('new@example.org')
+    })
+
+    it('sends null when the address is cleared, so it is actually removed', async () => {
+      render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
+
+      fireEvent.change(screen.getByDisplayValue('john@example.com'), {
+        target: { value: '' },
+      })
+      fireEvent.click(screen.getByTestId('edit-client-save-personal'))
+
+      await waitFor(() => {
+        expect(mockUpdateClientAsync).toHaveBeenCalled()
+      })
+      const [{ data }] = mockUpdateClientAsync.mock.calls[0]
+      // undefined would be dropped by dict(exclude_unset=True) server-side,
+      // leaving the old address in place.
+      expect(data.email).toBeNull()
     })
   })
 

@@ -403,3 +403,68 @@ describe('runOnceOnNextAuthSuccess — dismiss on auth-service success only', ()
     expect(cb).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('api interceptors — per-request opt-outs', () => {
+  it('does not end the session on a 401 a caller asked to handle itself', async () => {
+    // A profile photo that 401s means that photo is gone, not that the session
+    // is. Signing the user out over one subresource would drop whatever they
+    // were in the middle of.
+    // The adapter must reject with the config it was handed, not a fabricated
+    // one, or the per-request flag never reaches the interceptor.
+    api.defaults.adapter = makeAdapter((config) =>
+      Promise.reject(
+        Object.assign(new Error('Unauthorized'), {
+          isAxiosError: true,
+          response: { status: 401, data: {}, headers: {}, statusText: 'Unauthorized' },
+          config,
+        })
+      )
+    )
+
+    await expect(
+      api.get('/api/v1/users/avatars/1.png', { _skipAuthRedirect: true } as never)
+    ).rejects.toBeTruthy()
+
+    expect(getAccessToken()).toBe('test-token')
+    expect(useAuthStore.getState().isAuthenticated).toBe(true)
+    expect(lastHref).toBe('')
+  })
+
+  it('still ends the session on a 401 without the opt-out', async () => {
+    api.defaults.adapter = makeAdapter((config) =>
+      Promise.reject(
+        Object.assign(new Error('Unauthorized'), {
+          isAxiosError: true,
+          response: { status: 401, data: {}, headers: {}, statusText: 'Unauthorized' },
+          config,
+        })
+      )
+    )
+
+    await expect(api.get('/api/v1/users/avatars/1.png')).rejects.toBeTruthy()
+
+    expect(lastHref).toBe('/login')
+  })
+
+  it('does not retry a request that opted out of transient retry', async () => {
+    // A cross-origin fetch blocked by CORS arrives as ERR_NETWORK, which the
+    // retry rule accepts for GETs - three attempts with backoff per photo.
+    let attempts = 0
+    api.defaults.adapter = makeAdapter((config) => {
+      attempts += 1
+      return Promise.reject(
+        Object.assign(new Error('Network Error'), {
+          isAxiosError: true,
+          code: 'ERR_NETWORK',
+          config,
+        })
+      )
+    })
+
+    await expect(
+      api.get('/api/v1/users/avatars/1.png', { _noTransientRetry: true } as never)
+    ).rejects.toBeTruthy()
+
+    expect(attempts).toBe(1)
+  })
+})

@@ -5,6 +5,7 @@
  * Tests for all user CRUD operations
  */
 
+import axios from 'axios'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { usersApi } from '../api/usersApi'
 import type { UserListParams, CreateUserInput, UpdateUserInput } from '../types'
@@ -61,6 +62,7 @@ describe('usersApi', () => {
 
       expect(api.get).toHaveBeenCalledWith('/api/v1/admin/users', {
         params: {},
+        paramsSerializer: { indexes: null },
       })
       expect(result).toEqual(mockResponse.data)
     })
@@ -79,6 +81,7 @@ describe('usersApi', () => {
 
       expect(api.get).toHaveBeenCalledWith('/api/v1/admin/users', {
         params,
+        paramsSerializer: { indexes: null },
       })
     })
 
@@ -86,6 +89,27 @@ describe('usersApi', () => {
       vi.mocked(api.get).mockRejectedValueOnce(new Error('Network error'))
 
       await expect(usersApi.getUsers()).rejects.toThrow('Network error')
+    })
+
+    it('sends several departments as a repeated key the list endpoint reads', async () => {
+      vi.mocked(api.get).mockResolvedValueOnce({ data: { users: [], pagination: {} } })
+
+      await usersApi.getUsers({ department_ids: [4, 2] })
+
+      const [url, config] = vi.mocked(api.get).mock.calls[0]
+      const requested = axios.getUri({ url, ...config })
+
+      expect(requested).toBe('/api/v1/admin/users?department_ids=4&department_ids=2')
+    })
+
+    it('leaves the department key off the request when nothing is selected', async () => {
+      vi.mocked(api.get).mockResolvedValueOnce({ data: { users: [], pagination: {} } })
+
+      await usersApi.getUsers({ page: 1, department_ids: undefined })
+
+      const [url, config] = vi.mocked(api.get).mock.calls[0]
+
+      expect(axios.getUri({ url, ...config })).toBe('/api/v1/admin/users?page=1')
     })
   })
 

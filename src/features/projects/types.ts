@@ -24,6 +24,20 @@ export interface ApiProject {
   start_date?: string
   end_date?: string
 
+  // Company legal details
+  full_company_name?: string | null
+  address?: string | null
+  edrpou_code?: string | null
+  website?: string | null
+  email?: string | null
+  hotline_phone?: string | null
+  director_name?: string | null
+
+  // Banking details
+  iban?: string | null
+  bank_name?: string | null
+  bank_code?: string | null
+
   // Metrics
   total_clients: number
   total_debt_amount: string
@@ -119,6 +133,20 @@ export interface CreateProjectInput {
   contract_number?: string
   start_date?: string
   end_date?: string
+
+  // Company legal details — all optional
+  full_company_name?: string | null
+  address?: string | null
+  edrpou_code?: string | null
+  website?: string | null
+  email?: string | null
+  hotline_phone?: string | null
+  director_name?: string | null
+
+  // Banking details — all optional
+  iban?: string | null
+  bank_name?: string | null
+  bank_code?: string | null
 }
 
 /**
@@ -132,6 +160,20 @@ export interface UpdateProjectInput {
   start_date?: string
   end_date?: string
   status?: 'active' | 'inactive'
+
+  // Company legal details — all optional
+  full_company_name?: string | null
+  address?: string | null
+  edrpou_code?: string | null
+  website?: string | null
+  email?: string | null
+  hotline_phone?: string | null
+  director_name?: string | null
+
+  // Banking details — all optional
+  iban?: string | null
+  bank_name?: string | null
+  bank_code?: string | null
 }
 
 /**

@@ -409,12 +409,12 @@ export function EmailThreadPanel({
         aria-busy={isLoading || undefined}
       >
         {isLoading ? (
-          <div className="flex w-full max-w-md flex-col gap-3 px-6">
+          <div className="flex w-full max-w-md animate-pulse flex-col gap-3 px-6">
             <span className="sr-only">{title}</span>
-            <div className="bg-muted h-4 w-40 animate-pulse rounded" />
-            <div className="bg-muted h-3 w-full animate-pulse rounded" />
-            <div className="bg-muted mt-4 h-24 w-full animate-pulse rounded-xl" />
-            <div className="bg-muted h-24 w-full animate-pulse rounded-xl" />
+            <div className="bg-muted h-4 w-40 rounded" />
+            <div className="bg-muted h-3 w-full rounded" />
+            <div className="bg-muted mt-4 h-24 w-full rounded-xl" />
+            <div className="bg-muted h-24 w-full rounded-xl" />
           </div>
         ) : (
           <div className="flex max-w-sm flex-col items-center px-6 text-center">
@@ -475,10 +475,10 @@ export function EmailThreadPanel({
   }
 
   // Fired by the generation modal after a successful generate: pull the freshly
-  // persisted PDF and attach it to the reply, then close the modal.
+  // persisted PDF and attach it to the reply. The modal stays open on its
+  // success screen so the lawyer can download the .docx twin before closing.
   const handleGeneratedDocument = async (result: GenerateDocumentResponse) => {
     if (letterClientId == null) return
-    setGenerateOpen(false)
     try {
       const blob = await documentApi.preview(letterClientId, result.document_id)
       const filename = result.pdf_document?.original_filename ?? `${result.document_name}.pdf`

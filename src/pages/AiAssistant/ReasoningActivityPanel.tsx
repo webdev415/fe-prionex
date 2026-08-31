@@ -557,6 +557,12 @@ type ReasoningActivityPanelProps = {
   streaming: boolean
   /** Thinking-mode placeholder phase (window pre-opened before any delta). */
   placeholderActive: boolean
+  /**
+   * Настройка оператора «показывать раздумья». Снята — секция «Ход рассуждения»
+   * не рендерится; шаги оркестратора и «Источники» остаются (это не раздумья, по
+   * ним проверяют факты ответа).
+   */
+  showReasoning: boolean
   reasoning: string
   toolSteps: ToolStep[]
   /** Источники факт-сносок текущего сообщения (Слой 2) — секция «Источники». */
@@ -594,6 +600,7 @@ export function ReasoningActivityPanel({
   open,
   streaming,
   placeholderActive,
+  showReasoning,
   reasoning,
   toolSteps,
   citations,
@@ -674,7 +681,7 @@ export function ReasoningActivityPanel({
   )
 
   const hasSteps = toolSteps.length > 0
-  const showReasoningBox = reasoning.trim().length > 0 || placeholderActive
+  const showReasoningBox = showReasoning && (reasoning.trim().length > 0 || placeholderActive)
   const hasCitations = citations.length > 0
 
   return (

@@ -111,7 +111,7 @@ export function CallLogCard({
   const isCall = !!type
 
   // KAN-490: outcome classification is centralised in @/lib/callOutcome.
-  const outcomeRender = classifyCallOutcome(status)
+  const outcomeRender = classifyCallOutcome(status, direction)
   const palette = OUTCOME_PALETTE_CLASSES[outcomeRender.palette]
   const translatedStatus = outcomeRender.labelKey
     ? t(outcomeRender.labelKey, outcomeRender.fallback)

@@ -22,8 +22,11 @@ import {
   useUpdateScorecard,
 } from '../hooks/useScorecards'
 import { useTemplates } from '../hooks/useTemplates'
+import { isDisputeReasonRequested, resolveDisputeThreshold } from '../lib/dispute'
 import { computeWeightedScorePreview } from '../lib/scoringPreview'
+import { normalizeCriterionScale } from '../types'
 import type { Criterion, Section } from '../types'
+import { ScoreDivergenceBadge } from './ScoreDivergenceBadge'
 
 const SCRIPT_STAGES_SECTION_KEY = 'script_stages'
 
@@ -90,6 +93,7 @@ export function ScorecardPanel({
     return {
       scores: activeScorecard.scores,
       overall_comment: activeScorecard.overall_comment ?? '',
+      dispute_reason: activeScorecard.dispute_reason ?? '',
     }
   }, [activeScorecard])
 
@@ -108,6 +112,21 @@ export function ScorecardPanel({
     () => computeWeightedScorePreview(sections, draft.scores),
     [sections, draft.scores]
   )
+
+  // Both scores on the 0-100 display axis. The trainer's side prefers the live
+  // preview over the API's `trainer_score_100` so the comparison tracks what
+  // they are typing; the served number is the fallback for when the template
+  // sections haven't loaded and nothing can be previewed yet.
+  const trainerScore100 =
+    livePreview != null ? livePreview * 20 : (activeScorecard?.trainer_score_100 ?? null)
+  const aiScore100 = activeScorecard?.ai_weighted_score ?? null
+  const disputeThreshold = resolveDisputeThreshold(activeScorecard)
+  // Below the threshold this is two readers rounding the same checklist
+  // differently — not worth a field. Kept visible once written, whatever the
+  // current gap, so an existing objection can never be stranded off-screen.
+  const showDisputeReason =
+    isDisputeReasonRequested(aiScore100, trainerScore100, disputeThreshold) ||
+    draft.disputeReason.trim().length > 0
 
   const { requiredCount, scoredCount } = useMemo(() => {
     let req = 0
@@ -156,6 +175,7 @@ export function ScorecardPanel({
     draft.reset({
       scores: activeScorecard.scores,
       overall_comment: activeScorecard.overall_comment ?? '',
+      dispute_reason: activeScorecard.dispute_reason ?? '',
     })
   }
 
@@ -198,11 +218,11 @@ export function ScorecardPanel({
     // backend rejects it with a 403.
     if (canEditProp === false) {
       return (
-        <aside className="flex h-full flex-col gap-3 rounded-xl bg-white p-4 shadow-sm">
+        <aside className="bg-card flex h-full flex-col gap-3 rounded-xl p-4 shadow-sm">
           <h2 className="text-dark-500 text-lg font-medium">
             {t('pages.training.scorecard.title', 'Quality evaluation')}
           </h2>
-          <p className="text-sm text-[#6B7280]">
+          <p className="text-muted-foreground text-sm">
             {t(
               'pages.training.scorecard.notAssigned',
               'This operator is not assigned to you, so you cannot score this call.'
@@ -213,7 +233,7 @@ export function ScorecardPanel({
     }
 
     return (
-      <aside className="flex h-full flex-col gap-3 rounded-xl bg-white p-4 shadow-sm">
+      <aside className="bg-card flex h-full flex-col gap-3 rounded-xl p-4 shadow-sm">
         <h2 className="text-dark-500 text-lg font-medium">
           {t('pages.training.scorecard.title', 'Quality evaluation')}
         </h2>
@@ -227,7 +247,7 @@ export function ScorecardPanel({
           </div>
         ) : null}
 
-        <label className="text-sm font-medium text-gray-700">
+        <label className="text-foreground text-sm font-medium">
           {t('pages.training.scorecard.scorecardType', 'Scorecard type')}
         </label>
         <div className="flex gap-2">
@@ -243,7 +263,7 @@ export function ScorecardPanel({
                 className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                   selected
                     ? 'border-primary-500 bg-primary-500 text-white'
-                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                    : 'border-border bg-card text-foreground hover:border-muted-foreground/40'
                 }`}
               >
                 {type === 'client'
@@ -257,7 +277,7 @@ export function ScorecardPanel({
         <button
           type="button"
           onClick={() => setShowTemplateOverride((v) => !v)}
-          className="self-start text-xs text-gray-500 underline-offset-2 hover:text-gray-700 hover:underline"
+          className="text-muted-foreground hover:text-foreground self-start text-xs underline-offset-2 hover:underline"
         >
           {showTemplateOverride
             ? t('pages.training.scorecard.hideTemplatePicker', 'Hide template list')
@@ -265,7 +285,7 @@ export function ScorecardPanel({
         </button>
         {showTemplateOverride ? (
           <select
-            className="rounded-lg border border-gray-200 px-3 py-2 text-sm"
+            className="border-border rounded-lg border px-3 py-2 text-sm"
             value={selectedTemplateId ?? ''}
             onChange={(e) => setSelectedTemplateId(e.target.value ? Number(e.target.value) : null)}
             disabled={templatesQuery.isLoading}
@@ -310,7 +330,7 @@ export function ScorecardPanel({
 
   if (activeQuery.isLoading) {
     return (
-      <aside className="flex h-full items-center justify-center rounded-xl bg-white p-4 shadow-sm">
+      <aside className="bg-card flex h-full items-center justify-center rounded-xl p-4 shadow-sm">
         <Icons.Spinner className="h-5 w-5" />
       </aside>
     )
@@ -318,19 +338,19 @@ export function ScorecardPanel({
 
   if (!activeScorecard) {
     return (
-      <aside className="rounded-xl bg-white p-4 text-sm text-red-600 shadow-sm">
+      <aside className="bg-card text-error-600 rounded-xl p-4 text-sm shadow-sm">
         {t('pages.training.errors.loadScorecardFailed', 'Failed to load scorecard')}
       </aside>
     )
   }
 
   return (
-    <aside className="flex h-full flex-col gap-3 rounded-xl bg-white p-4 shadow-sm">
+    <aside className="bg-card flex h-full flex-col gap-3 rounded-xl p-4 shadow-sm">
       <header className="flex items-center justify-between">
         <h2 className="text-dark-500 text-lg font-medium">
           {activeScorecard.template_snapshot.name}
         </h2>
-        <span className="rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700">
+        <span className="bg-muted text-foreground rounded-full px-2 py-1 text-xs font-medium">
           {t(`pages.training.scorecard.status.${status}`, status)}
         </span>
       </header>
@@ -343,7 +363,7 @@ export function ScorecardPanel({
             setSelectedTemplateId(null)
             setShowTemplateOverride(false)
           }}
-          className="self-start text-xs text-gray-500 underline-offset-2 hover:text-gray-700 hover:underline"
+          className="text-muted-foreground hover:text-foreground self-start text-xs underline-offset-2 hover:underline"
         >
           {t('pages.training.scorecard.changeType', '← Change scorecard type')}
         </button>
@@ -373,7 +393,12 @@ export function ScorecardPanel({
             {livePreview != null ? `${Math.round(livePreview * 20)} / 100` : '—'}
           </span>
         </span>
-        <span className="flex flex-shrink-0 items-center gap-2 text-xs font-medium">
+        <span className="flex flex-shrink-0 flex-wrap items-center justify-end gap-2 text-xs font-medium">
+          <ScoreDivergenceBadge
+            aiScore100={aiScore100}
+            trainerScore100={trainerScore100}
+            threshold={disputeThreshold}
+          />
           {canEdit ? (
             <span className={isComplete ? 'text-primary-600' : 'text-amber-600'}>
               {t('pages.training.scorecard.scoredCount', '{{scored}}/{{total}} scored', {
@@ -402,16 +427,45 @@ export function ScorecardPanel({
           />
         ))}
 
-        <label className="mt-3 block text-sm font-medium text-gray-700">
+        <label
+          htmlFor="scorecard-overall-comment"
+          className="text-foreground mt-3 block text-sm font-medium"
+        >
           {t('pages.training.scorecard.perCallComment', 'Overall comment')}
         </label>
         <textarea
-          className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm"
+          id="scorecard-overall-comment"
+          className="border-border w-full rounded-lg border px-3 py-2 text-sm"
           rows={3}
           value={draft.overallComment}
           onChange={(e) => draft.setOverallComment(e.target.value)}
           disabled={!canEdit}
         />
+
+        {showDisputeReason ? (
+          <div data-testid="dispute-reason-field" className="mt-3">
+            <label
+              htmlFor="scorecard-dispute-reason"
+              className="text-foreground block text-sm font-medium"
+            >
+              {t('pages.training.scorecard.disputeReason', 'Why you disagree with the AI')}
+            </label>
+            <p className="text-muted-foreground mt-0.5 text-xs">
+              {t('pages.training.scorecard.disputeReasonHint', {
+                defaultValue:
+                  'Optional. Your score stands either way — filling this in records it as an objection to the AI review.',
+              })}
+            </p>
+            <textarea
+              id="scorecard-dispute-reason"
+              className="border-border mt-1 w-full rounded-lg border px-3 py-2 text-sm"
+              rows={3}
+              value={draft.disputeReason}
+              onChange={(e) => draft.setDisputeReason(e.target.value)}
+              disabled={!canEdit}
+            />
+          </div>
+        ) : null}
       </div>
 
       <footer className="flex flex-wrap gap-2">
@@ -504,11 +558,11 @@ function SectionEditor({ section, scores, disabled, totalWeight, onChange }: Sec
   const [collapsed, setCollapsed] = useState(false)
   const isStages = section.key === SCRIPT_STAGES_SECTION_KEY
   return (
-    <section className="mt-3 rounded-lg border border-gray-100">
+    <section className="border-border mt-3 rounded-lg border">
       <button
         type="button"
         onClick={() => setCollapsed(!collapsed)}
-        className="flex w-full items-center justify-between px-3 py-2 text-left text-sm font-medium text-gray-700"
+        className="text-foreground flex w-full items-center justify-between px-3 py-2 text-left text-sm font-medium"
       >
         <span>{section.name}</span>
         <Icons.ArrowDown
@@ -562,7 +616,7 @@ export function StageChecklist({ section, scores, disabled, onChange }: StageChe
 
   return (
     <div className="space-y-1.5 px-3 py-3">
-      <p className="mb-1 text-xs text-gray-500">
+      <p className="text-muted-foreground mb-1 text-xs">
         {t(
           'pages.training.scorecard.stages.hint',
           'Mark which script stages the call reached. Each stage is independent.'
@@ -573,10 +627,10 @@ export function StageChecklist({ section, scores, disabled, onChange }: StageChe
         return (
           <div
             key={criterion.key}
-            className="flex items-center justify-between gap-2 rounded-md bg-gray-50 px-3 py-2"
+            className="bg-muted flex items-center justify-between gap-2 rounded-md px-3 py-2"
           >
-            <span className="flex items-center gap-2 text-sm text-gray-700">
-              <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-gray-200 text-[10px] font-semibold text-gray-600">
+            <span className="text-foreground flex items-center gap-2 text-sm">
+              <span className="bg-muted text-muted-foreground flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-semibold">
                 {index + 1}
               </span>
               {criterion.name}
@@ -590,7 +644,7 @@ export function StageChecklist({ section, scores, disabled, onChange }: StageChe
                 className={`rounded-full border px-2.5 py-1 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-60 ${
                   value === true
                     ? 'border-emerald-500 bg-emerald-500 text-white'
-                    : 'border-gray-200 bg-white text-gray-700'
+                    : 'border-border bg-card text-foreground'
                 }`}
               >
                 {t('pages.training.scorecard.stages.reached', 'Reached')}
@@ -602,8 +656,8 @@ export function StageChecklist({ section, scores, disabled, onChange }: StageChe
                 aria-pressed={value === false}
                 className={`rounded-full border px-2.5 py-1 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-60 ${
                   value === false
-                    ? 'border-red-500 bg-red-500 text-white'
-                    : 'border-gray-200 bg-white text-gray-700'
+                    ? 'border-error-500 bg-error-500 text-white'
+                    : 'border-border bg-card text-foreground'
                 }`}
               >
                 {t('pages.training.scorecard.stages.notReached', 'Not reached')}
@@ -626,19 +680,21 @@ interface CriterionRowProps {
 
 function CriterionRow({ criterion, entry, disabled, totalWeight, onChange }: CriterionRowProps) {
   const { t } = useTranslation('common')
-  const isBinary = criterion.scale === 'binary'
+  // Normalised on read: a scale written by something other than this UI
+  // must degrade to a real control, not fall through to the 0..5 band.
+  const isBinary = normalizeCriterionScale(criterion.scale) === 'binary'
   const needsScore = !disabled && Number(criterion.weight) > 0 && entry?.value == null
   return (
     <div
       className={`rounded-md px-3 py-2 ${
-        needsScore ? 'bg-amber-50 ring-1 ring-amber-200' : 'bg-gray-50'
+        needsScore ? 'bg-warning-50 ring-warning-200 ring-1' : 'bg-muted'
       }`}
     >
       <div className="mb-2 flex items-center justify-between gap-2">
-        <span className="text-sm text-gray-700">
+        <span className="text-foreground text-sm">
           {criterion.name}
           {criterion.weight > 0 ? (
-            <span className="ml-1.5 text-xs text-gray-400">
+            <span className="text-muted-foreground ml-1.5 text-xs">
               · {criterion.weight} {t('pages.training.scorecard.pts', 'pts')}
             </span>
           ) : null}
@@ -671,7 +727,7 @@ function CriterionRow({ criterion, entry, disabled, totalWeight, onChange }: Cri
         defaultValue={entry?.comment ?? ''}
         disabled={disabled}
         onBlur={(e) => onChange(criterion.key, entry?.value ?? null, e.target.value)}
-        className="mt-2 w-full rounded-md border border-gray-200 px-2 py-1 text-xs"
+        className="border-border mt-2 w-full rounded-md border px-2 py-1 text-xs"
       />
     </div>
   )
@@ -698,7 +754,7 @@ function BinaryInput({
         className={`rounded-full border px-3 py-1 text-xs font-medium ${
           value === true
             ? 'bg-primary-500 border-primary-500 text-white'
-            : 'border-gray-200 bg-white text-gray-700'
+            : 'border-border bg-card text-foreground'
         }`}
       >
         ✓
@@ -711,8 +767,8 @@ function BinaryInput({
         aria-pressed={value === false}
         className={`rounded-full border px-3 py-1 text-xs font-medium ${
           value === false
-            ? 'border-red-500 bg-red-500 text-white'
-            : 'border-gray-200 bg-white text-gray-700'
+            ? 'border-error-500 bg-error-500 text-white'
+            : 'border-border bg-card text-foreground'
         }`}
       >
         ✗
@@ -726,13 +782,13 @@ const LEVEL_6: { value: number; labelKey: string; fallback: string; bar: string 
     value: 0,
     labelKey: 'pages.training.dialogue.ratings.notDone',
     fallback: 'Not done',
-    bar: 'bg-red-500/50',
+    bar: 'bg-error-500/50',
   },
   {
     value: 1,
     labelKey: 'pages.training.dialogue.ratings.poor',
     fallback: 'Poor',
-    bar: 'bg-red-400/40',
+    bar: 'bg-error-400/40',
   },
   {
     value: 2,
@@ -744,7 +800,7 @@ const LEVEL_6: { value: number; labelKey: string; fallback: string; bar: string 
     value: 3,
     labelKey: 'pages.training.dialogue.ratings.normal',
     fallback: 'Normal',
-    bar: 'bg-blue-500/50',
+    bar: 'bg-information-500/50',
   },
   {
     value: 4,
@@ -788,14 +844,16 @@ function Level6Input({
             aria-label={t(lvl.labelKey, lvl.fallback)}
             aria-pressed={selected}
             className={`flex min-h-[58px] flex-col rounded-md border px-1.5 py-1.5 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
-              selected ? 'border-primary-500 bg-primary-50' : 'border-gray-200 bg-white'
+              selected ? 'border-primary-500 bg-primary-50' : 'border-border bg-card'
             }`}
           >
             <span className={`mb-1 h-1.5 w-full rounded-full ${lvl.bar}`} />
-            <span className="text-[10px] leading-tight font-medium text-gray-700">
+            <span className="text-foreground text-[10px] leading-tight font-medium">
               {t(lvl.labelKey, lvl.fallback)}
             </span>
-            {weight > 0 ? <span className="text-[9px] text-gray-400">+{points}</span> : null}
+            {weight > 0 ? (
+              <span className="text-muted-foreground text-[9px]">+{points}</span>
+            ) : null}
           </button>
         )
       })}

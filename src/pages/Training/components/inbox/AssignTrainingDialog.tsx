@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useOperators } from '@/features/users/hooks'
 import { useCourses, useEnrollCourse } from '@/features/training/hooks/useCourses'
 import { useDrills, useAssignDrill } from '@/features/training/hooks/useDrills'
+import { EmployeeSearchList } from '../dialogue/EmployeeMultiSelect'
 
 interface AssignTrainingDialogProps {
   open: boolean
@@ -147,20 +148,13 @@ export function AssignTrainingDialog({ open, onClose, operatorId }: AssignTraini
             <span className="text-xs font-semibold text-[#05040D]">
               {t('pages.training.assign.operators', 'Operators')}
             </span>
-            <div className="grid max-h-40 grid-cols-1 gap-1 overflow-y-auto rounded-lg border border-[#EBECE8] p-2 sm:grid-cols-2">
-              {operators.map((op) => (
-                <label
-                  key={op.id}
-                  className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-xs hover:bg-[#FAFAFA]"
-                >
-                  <input
-                    type="checkbox"
-                    checked={operatorIds.includes(op.id)}
-                    onChange={() => setOperatorIds((l) => toggle(l, op.id))}
-                  />
-                  <span className="truncate text-[#05040D]">{op.full_name}</span>
-                </label>
-              ))}
+            <div className="rounded-lg border border-[#EBECE8]">
+              <EmployeeSearchList
+                operators={operators}
+                selectedIds={operatorIds}
+                onSelect={(id) => setOperatorIds((l) => toggle(l, id))}
+                listClassName="max-h-40"
+              />
             </div>
           </div>
 

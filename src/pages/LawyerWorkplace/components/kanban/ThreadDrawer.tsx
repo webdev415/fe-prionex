@@ -1,12 +1,25 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useLegalDrawerThread, type LegalLetterType } from '@/features/lawyerWorkplace'
+import {
+  useLegalDrawerThread,
+  type LegalKanbanTaskPatch,
+  type LegalLawyer,
+  type LegalLetterType,
+} from '@/features/lawyerWorkplace'
+import { useLegalProfileTimezone } from '@/features/lawyerWorkplace/hooks/useLegalProfileTimezone'
+import { Button } from '@/components/ui/Button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from '@/components/ui/DropdownMenu'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
-import type { KanbanTask } from '../../kanban/kanbanData'
+import type { KanbanColumnId, KanbanTask } from '../../kanban/kanbanData'
 import { EmailThreadPanel } from '../thread/EmailThreadPanel'
 import { LetterContextPanel } from '../thread/LetterContextPanel'
 import { KanbanTaskDetailPanel } from './KanbanTaskDetailPanel'
+import { KanbanTaskActionsMenuItems } from './KanbanTaskEditMenus'
 
 export interface KanbanThreadDrawerTarget {
   letterId: string | null
@@ -16,7 +29,12 @@ export interface KanbanThreadDrawerTarget {
 interface ThreadDrawerProps {
   target: KanbanThreadDrawerTarget | null
   letterTypes?: LegalLetterType[]
+  lawyers?: LegalLawyer[]
+  /** Active letter types offered in the change-type menu. */
+  editableLetterTypes?: LegalLetterType[]
   onClose: () => void
+  onMoveTask?: (taskId: string, columnId: KanbanColumnId) => void
+  onTaskUpdate?: (taskId: string, patch: LegalKanbanTaskPatch) => void
 }
 
 /** A task whose letters were grouped (same client + lawyer + day) shows a merged thread. */
@@ -94,14 +112,24 @@ function ThreadDrawerContent({ task }: { task: KanbanTask }) {
   )
 }
 
-export function ThreadDrawer({ target, letterTypes = [], onClose }: ThreadDrawerProps) {
+export function ThreadDrawer({
+  target,
+  letterTypes = [],
+  lawyers = [],
+  editableLetterTypes = [],
+  onClose,
+  onMoveTask,
+  onTaskUpdate,
+}: ThreadDrawerProps) {
   const { t } = useTranslation('common')
+  const timezone = useLegalProfileTimezone()
   const isOpen = target !== null
   const task = target?.task ?? null
   const letterId = target?.letterId ?? null
   const isGroup = task ? isGroupedTask(task) : false
   const showThread = isOpen && task != null && (letterId != null || isGroup)
   const showTaskOnly = isOpen && task != null && letterId == null && !isGroup
+  const isTaskActive = task != null && task.columnId !== 'completed'
 
   return (
     <>
@@ -127,20 +155,76 @@ export function ThreadDrawer({ target, letterTypes = [], onClose }: ThreadDrawer
               ? t('pages.lawyerWorkplace.kanban.taskDetails', 'Task details')
               : t('pages.lawyerWorkplace.kanban.emailThread', 'Email thread')}
           </span>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={t('pages.lawyerWorkplace.thread.closeThread', 'Close thread')}
-            className="text-muted-foreground hover:text-foreground hover:bg-muted flex h-7 w-7 items-center justify-center rounded-md transition-colors"
-          >
-            <Icons.Cancel01 size={18} strokeWidth={1.5} />
-          </button>
+          <div className="flex items-center gap-1.5">
+            {/* Explicit status action — lawyers never found the card's kebab menu.
+                Task-only mode renders its own button inside the detail panel. */}
+            {task && isTaskActive && showThread && onMoveTask && task.columnId !== 'in_progress' ? (
+              <Button
+                type="button"
+                variant="primary"
+                size="xs"
+                onClick={() => onMoveTask(task.id, 'in_progress')}
+              >
+                <Icons.ArrowRight size={13} strokeWidth={1.8} />
+                {t('pages.lawyerWorkplace.kanban.startWork', 'Передати в роботу')}
+              </Button>
+            ) : null}
+            {/* Thread view has no inline field editors — offer the full task menu here. */}
+            {task && isTaskActive && showThread && (onMoveTask || onTaskUpdate) ? (
+              <DropdownMenu modal={false}>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="text-muted-foreground hover:text-foreground focus-visible:ring-primary-500 hover:bg-muted flex h-7 w-7 items-center justify-center rounded-md focus:outline-none focus-visible:ring-2"
+                    title={t('pages.lawyerWorkplace.kanban.moreOptions', 'More options')}
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 14 14"
+                      fill="currentColor"
+                      aria-hidden="true"
+                    >
+                      <circle cx="2" cy="7" r="1.4" />
+                      <circle cx="7" cy="7" r="1.4" />
+                      <circle cx="12" cy="7" r="1.4" />
+                    </svg>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="min-w-[190px] p-1.5">
+                  <KanbanTaskActionsMenuItems
+                    task={task}
+                    lawyers={lawyers}
+                    editableLetterTypes={editableLetterTypes}
+                    timezone={timezone}
+                    onMoveTask={onMoveTask}
+                    onTaskUpdate={onTaskUpdate}
+                  />
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : null}
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label={t('pages.lawyerWorkplace.thread.closeThread', 'Close thread')}
+              className="text-muted-foreground hover:text-foreground hover:bg-muted flex h-7 w-7 items-center justify-center rounded-md transition-colors"
+            >
+              <Icons.Cancel01 size={18} strokeWidth={1.5} />
+            </button>
+          </div>
         </div>
 
         <div className="min-h-0 flex-1 overflow-hidden">
           {showThread && task ? <ThreadDrawerContent key={task.taskId} task={task} /> : null}
           {showTaskOnly && task ? (
-            <KanbanTaskDetailPanel task={task} letterTypes={letterTypes} />
+            <KanbanTaskDetailPanel
+              task={task}
+              letterTypes={letterTypes}
+              lawyers={lawyers}
+              editableLetterTypes={editableLetterTypes}
+              onMoveTask={onMoveTask}
+              onTaskUpdate={onTaskUpdate}
+            />
           ) : null}
         </div>
       </div>
