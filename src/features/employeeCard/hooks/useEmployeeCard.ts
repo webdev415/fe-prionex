@@ -150,6 +150,29 @@ export function useRemoveSurvey(userId: number, projectId?: number | null) {
   })
 }
 
+/**
+ * Take the termination off, which is what rehiring looks like here.
+ *
+ * Acted from the panel rather than from a dialog, so there is nowhere on
+ * screen to put a failure - a toast is where the rest of the app says so. The
+ * card comes back reopened, which is why nothing is refetched.
+ */
+export function useReinstate(userId: number, projectId?: number | null) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => employeeCardApi.reinstate(userId),
+    onSuccess: (card) => {
+      queryClient.setQueryData(employeeCardKeys.one(userId, projectId), card)
+      // The departure went with it, and the timeline is a separate query that
+      // would otherwise keep a leaving date for somebody who is back.
+      void queryClient.invalidateQueries({ queryKey: employeeEventKeys.all })
+    },
+    onError: (error) => {
+      toast.error(getErrorMessage(error))
+    },
+  })
+}
+
 export function useCardNeighbours(userId: number, listQuery: string) {
   return useQuery({
     queryKey: employeeCardKeys.neighbours(userId, listQuery),

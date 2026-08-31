@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { Button } from '@/components/ui/Button'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { Icons } from '@/lib/icons'
 import { displayName } from '@/features/employeeCard/lib/displayName'
@@ -6,6 +7,12 @@ import type { CardHeader } from '@/features/employeeCard/types.card'
 
 export interface ProfilePanelProps {
   header: CardHeader
+  /** Whether a termination has been recorded, which is what the action offers to undo. */
+  terminated?: boolean
+  /** Whether this reader may write to the card at all. */
+  canEdit?: boolean
+  onTerminate?: () => void
+  onReinstate?: () => void
 }
 
 /**
@@ -21,7 +28,13 @@ export interface ProfilePanelProps {
  * default, and something already as tall as everything beside it has nowhere
  * to slide, which is how this was marked sticky and did nothing.
  */
-export function ProfilePanel({ header }: ProfilePanelProps) {
+export function ProfilePanel({
+  header,
+  terminated = false,
+  canEdit = false,
+  onTerminate,
+  onReinstate,
+}: ProfilePanelProps) {
   const { t, i18n } = useTranslation()
 
   const hired = header.hired_at ? new Date(header.hired_at).toLocaleDateString(i18n.language) : null
@@ -91,6 +104,31 @@ export function ProfilePanel({ header }: ProfilePanelProps) {
               <p className="text-foreground text-sm font-medium">{value}</p>
             </div>
           ))}
+        </div>
+      )}
+
+      {/*
+        Whether somebody still works here is a fact about the person, so it is
+        acted on where the person is - beside the name and the status badge,
+        not in a section three screens down that a reader has to find first.
+
+        Only ever one of the two, because they are the same fact from either
+        side: an employee who has left can be brought back, and one who has not
+        cannot leave twice.
+      */}
+      {canEdit && (terminated ? onReinstate : onTerminate) && (
+        <div className="border-border w-full border-t pt-4">
+          {terminated ? (
+            <Button variant="outline" size="md" className="w-full" onClick={onReinstate}>
+              <Icons.Unlock size={16} strokeWidth={1.8} aria-hidden="true" />
+              {t('pages.employeeCard.termination.reinstate')}
+            </Button>
+          ) : (
+            <Button variant="danger" size="md" className="w-full" onClick={onTerminate}>
+              <Icons.Logout size={16} strokeWidth={1.8} aria-hidden="true" />
+              {t('pages.employeeCard.termination.terminate')}
+            </Button>
+          )}
         </div>
       )}
     </aside>

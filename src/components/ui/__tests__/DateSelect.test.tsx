@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { DateSelect } from '../DateSelect'
@@ -589,6 +589,30 @@ describe('DateSelect (selected time slot keeps its selected look) — KAN-992', 
  * again, one grid over.
  */
 describe('DateSelect (a blocked "today" still reads as blocked)', () => {
+  /*
+   * "Today" is the subject here, so the calendar it lands in cannot be left to
+   * the day the suite happens to run on. Only Date is faked - real timers keep
+   * userEvent flowing - which is how the rest of the suite pins a date.
+   *
+   * It was left to the real clock, and so failed one day in every month: on
+   * the last of one, ``min`` falls in the NEXT month, the picker opens there,
+   * and today arrives wearing ``--outside-month`` on top of ``--disabled``.
+   *
+   * The colour was never at risk. Both classes are comma-branches of the SAME
+   * rule, so they tie on importance, specificity and source order - and the
+   * cascade helper breaks an exact tie by taking the last match, which is the
+   * branch listed second. The assertion naming ``--disabled`` was pinning
+   * which branch the helper happens to report, not which rule paints the cell.
+   * So the date is pinned here, and the month-end case says what it is worth
+   * asserting there instead: still blocked, still not the accent.
+   */
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   // A value on another day matters: with none, react-datepicker marks today
   // ``--keyboard-selected``, which the today rule already excludes — so the
   // accent case would never be exercised.
@@ -597,10 +621,17 @@ describe('DateSelect (a blocked "today" still reads as blocked)', () => {
     await userEvent.click(screen.getByRole('textbox'))
   }
 
+  const tomorrow = () => {
+    const day = new Date()
+    day.setDate(day.getDate() + 1)
+    return day
+  }
+
   it('greys today when today is itself out of range', async () => {
-    const tomorrow = new Date()
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    await openWithMin(tomorrow)
+    // Mid-month, so tomorrow is in the same month and today stays on screen as
+    // an ordinary cell - which is the case the accent bug was reported in.
+    vi.setSystemTime(new Date('2026-08-14T09:00:00Z'))
+    await openWithMin(tomorrow())
 
     const today = document.querySelector('.react-datepicker__day--today') as HTMLElement
     expect(today).not.toBeNull()
@@ -611,11 +642,25 @@ describe('DateSelect (a blocked "today" still reads as blocked)', () => {
     expect(winner?.selector).toContain('--disabled')
   })
 
+  it('greys it on the last day of a month too, where the picker has moved on', async () => {
+    // 31 August: tomorrow is September, the picker opens there, and today is
+    // shown as a trailing day of the previous month. A different rule paints
+    // it - the point is that it is still not the accent.
+    vi.setSystemTime(new Date('2026-08-31T09:00:00Z'))
+    await openWithMin(tomorrow())
+
+    const today = document.querySelector('.react-datepicker__day--today') as HTMLElement
+    expect(today).not.toBeNull()
+    expect(today).toHaveAttribute('aria-disabled', 'true')
+    expect(winningDeclaration(today, 'color')?.value).toBe('var(--muted-foreground)')
+  })
+
   it('still accents today when today is selectable', async () => {
     // The accent is the point of the rule; the exclusion must not remove it
     // from the ordinary case.
     // Both dates stay inside the current month: the calendar follows the
     // value's month, and today has to be on screen to be asserted about.
+    vi.setSystemTime(new Date('2026-08-14T09:00:00Z'))
     const monthStart = new Date()
     monthStart.setDate(1)
     const otherDayThisMonth = new Date()

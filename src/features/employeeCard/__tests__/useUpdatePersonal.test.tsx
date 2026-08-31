@@ -16,10 +16,11 @@ import { usersKeys } from '@/features/users/hooks/useUsers'
 const updatePersonal = vi.hoisted(() => vi.fn())
 const removeSurvey = vi.hoisted(() => vi.fn())
 const updateWork = vi.hoisted(() => vi.fn())
+const reinstate = vi.hoisted(() => vi.fn())
 
-vi.mock('../api/employeeCardApi', () => ({ updatePersonal, updateWork, removeSurvey }))
+vi.mock('../api/employeeCardApi', () => ({ updatePersonal, updateWork, removeSurvey, reinstate }))
 
-const { useUpdatePersonal, useUpdateWork, useRemoveSurvey, employeeCardKeys } =
+const { useUpdatePersonal, useUpdateWork, useRemoveSurvey, useReinstate, employeeCardKeys } =
   await import('../hooks/useEmployeeCard')
 
 function harness() {
@@ -123,6 +124,35 @@ describe('useUpdateWork', () => {
 
     const { result } = renderHook(() => useUpdateWork(7, null), { wrapper })
     await result.current.mutateAsync({ role_id: 3 })
+
+    expect(client.getQueryData(employeeCardKeys.one(7, null))).toEqual(saved)
+  })
+})
+
+/*
+ * Reopening a card takes the departure out of the chronology, and the timeline
+ * is a separate query - so the card coming back active is not enough to stop
+ * the history below still ending on a leaving date for somebody who is back.
+ */
+describe('useReinstate', () => {
+  it('refreshes the chronology the departure was on', async () => {
+    const { client, wrapper } = harness()
+    reinstate.mockResolvedValue({ header: { id: 7 }, termination: null })
+    const invalidate = vi.spyOn(client, 'invalidateQueries')
+
+    const { result } = renderHook(() => useReinstate(7, null), { wrapper })
+    await result.current.mutateAsync()
+
+    await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ['employee-events'] }))
+  })
+
+  it('puts the reopened card straight into the cache', async () => {
+    const { client, wrapper } = harness()
+    const saved = { header: { id: 7 }, termination: null }
+    reinstate.mockResolvedValue(saved)
+
+    const { result } = renderHook(() => useReinstate(7, null), { wrapper })
+    await result.current.mutateAsync()
 
     expect(client.getQueryData(employeeCardKeys.one(7, null))).toEqual(saved)
   })

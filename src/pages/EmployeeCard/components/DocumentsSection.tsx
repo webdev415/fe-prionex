@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { downloadDocument } from '@/features/employeeCard/api/employeeCardApi'
+import { mayWrite } from '@/features/employeeCard/lib/mayWrite'
 import type { EmployeeCard } from '@/features/employeeCard/types.card'
 import { CardSection } from './CardSection'
 
@@ -52,7 +53,7 @@ export function DocumentsSection({ card, onEdit }: DocumentsSectionProps) {
     <CardSection
       id="documents-and-hiring"
       title={t('pages.employeeCard.sections.documents-and-hiring')}
-      {...(card.can_edit && onEdit
+      {...(mayWrite(card) && onEdit
         ? { editLabel: t('pages.employeeCard.edit'), onEdit: () => onEdit('documents') }
         : {})}
     >

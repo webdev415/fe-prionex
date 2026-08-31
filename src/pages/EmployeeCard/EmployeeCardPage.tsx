@@ -10,14 +10,16 @@ import { EmployeeCardSkeleton } from './components/EmployeeCardSkeleton'
 import { DocumentsSection } from './components/DocumentsSection'
 import { ProfilePanel } from './components/ProfilePanel'
 import { SurveysSection } from './components/SurveysSection'
+import { TerminationSection } from './components/TerminationSection'
 import { SurveysDialog } from './components/dialogs/SurveysDialog'
 import { AdditionalDialog } from './components/dialogs/AdditionalDialog'
 import { ContactsDialog } from './components/dialogs/ContactsDialog'
 import { DocumentsDialog } from './components/dialogs/DocumentsDialog'
 import { PersonalDialog } from './components/dialogs/PersonalDialog'
+import { TerminationDialog } from './components/dialogs/TerminationDialog'
 import { WorkDialog } from './components/dialogs/WorkDialog'
 import { useConfirm } from '@/components/ui/useConfirm'
-import { useRemoveSurvey } from '@/features/employeeCard/hooks/useEmployeeCard'
+import { useReinstate, useRemoveSurvey } from '@/features/employeeCard/hooks/useEmployeeCard'
 import { CARD_HEADER_OFFSET, useScrollSpy } from './hooks/useScrollSpy'
 import { useTailSpace } from './hooks/useTailSpace'
 
@@ -29,6 +31,9 @@ const SECTION_IDS = [
   'documents-and-hiring',
   'surveys',
   'chronology',
+  // Last, because it is where the record stops: the history runs up to the
+  // day somebody left, and the leaving is what closes the card behind it.
+  'termination',
 ]
 
 export function EmployeeCardPage() {
@@ -57,6 +62,7 @@ export function EmployeeCardPage() {
    */
   const [survey, setSurvey] = useState<number | null>(null)
   const removeOne = useRemoveSurvey(employeeId, projectId)
+  const reinstate = useReinstate(employeeId, projectId)
   const { confirm, confirmDialog } = useConfirm()
 
   /*
@@ -73,6 +79,21 @@ export function EmployeeCardPage() {
       tone: 'danger',
     })
     if (agreed) removeOne.mutate(surveyId)
+  }
+
+  /*
+   * Asked before reinstating, because the reason, the date and the comment go
+   * with the record - recording the departure again means typing all three
+   * back in, and whoever knew them may not be the one clicking.
+   */
+  const confirmReinstate = async () => {
+    const agreed = await confirm({
+      title: t('pages.employeeCard.termination.reinstateTitle'),
+      message: t('pages.employeeCard.termination.reinstateHint'),
+      confirmLabel: t('pages.employeeCard.termination.reinstate'),
+      tone: 'danger',
+    })
+    if (agreed) reinstate.mutate()
   }
 
   const tabs = useMemo(
@@ -119,7 +140,13 @@ export function EmployeeCardPage() {
         <div className="grid items-start gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
           <div className="space-y-4 pt-4 md:pt-6 lg:sticky lg:top-0">
             <BackToList listQuery={listQuery} />
-            <ProfilePanel header={data.header} />
+            <ProfilePanel
+              header={data.header}
+              terminated={data.termination !== null}
+              canEdit={data.can_edit}
+              onTerminate={() => setEditing('termination')}
+              onReinstate={() => void confirmReinstate()}
+            />
           </div>
 
           <div className="min-w-0 space-y-6">
@@ -177,6 +204,8 @@ export function EmployeeCardPage() {
               <ChronologySection userId={employeeId} />
             </section>
 
+            <TerminationSection card={data} onEdit={() => setEditing('termination')} />
+
             {/*
               Somewhere for the last section to scroll to. Without it the
               container runs out before that section's top reaches the header,
@@ -216,6 +245,14 @@ export function EmployeeCardPage() {
                 card={data}
                 projectId={projectId}
                 surveyId={survey}
+                open
+                onClose={() => setEditing(null)}
+              />
+            )}
+            {editing === 'termination' && (
+              <TerminationDialog
+                card={data}
+                projectId={projectId}
                 open
                 onClose={() => setEditing(null)}
               />

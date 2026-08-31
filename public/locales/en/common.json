@@ -11000,6 +11000,7 @@
         "additional-data": "Additional Data",
         "documents-and-hiring": "Documents and Hiring",
         "surveys": "Surveys",
+        "termination": "Termination",
         "chronology": "Chronology"
       },
       "previousEmployee": "Previous employee",
@@ -11063,6 +11064,29 @@
         "removeMessage": "“{{name}}” and its line in the chronology will both be removed. The answers themselves live in the form this was recorded from.",
         "noDateHint": "Without a date this answer will not appear in the chronology."
       },
+      "termination": {
+        "terminate": "Terminate",
+        "record": "Record a termination",
+        "correct": "Correct the termination",
+        "left": "Employee Terminated",
+        "readOnly": "Card available for viewing only",
+        "stillHere": "Employee Active",
+        "fillsIn": "This block is filled out upon termination.",
+        "date": "Termination Date",
+        "reason": "Reason for Termination",
+        "comment": "Comment",
+        "hint": "Recording a termination closes the card: every other section becomes read-only, and the departure appears in the chronology. This section can still be corrected afterwards.",
+        "reinstate": "Reinstate",
+        "reinstateTitle": "Reinstate this employee?",
+        "reinstateHint": "The recorded reason, date and comment will be removed, along with the departure in the chronology. The card becomes editable again.",
+        "reasons": {
+          "personal_desire": "Personal Desire",
+          "dismissed": "Dismissed",
+          "end_of_contract": "End of Contract",
+          "redundancy": "Redundancy",
+          "other": "Other"
+        }
+      },
       "saveFailed": "That could not be saved.",
       "dialogs": {
         "personal": "Personal Data",
@@ -11077,7 +11101,8 @@
         "documents": "Documents",
         "attachFile": "Attach a document (PDF or Word, up to 10 MB)",
         "searchManager": "Search by name",
-        "surveys": "Survey answers"
+        "surveys": "Survey answers",
+        "termination": "Termination"
       },
       "tabs": {
         "showEarlier": "Show earlier sections",

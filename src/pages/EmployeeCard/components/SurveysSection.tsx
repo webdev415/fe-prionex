@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { mayWrite } from '@/features/employeeCard/lib/mayWrite'
 import type { EmployeeCard } from '@/features/employeeCard/types.card'
 import { Icons } from '@/lib/icons'
 import { CardSection } from './CardSection'
@@ -30,7 +31,7 @@ export interface SurveysSectionProps {
  */
 export function SurveysSection({ card, onAdd, onEditSurvey, onRemoveSurvey }: SurveysSectionProps) {
   const { t, i18n } = useTranslation()
-  const mayEdit = card.can_edit
+  const mayEdit = mayWrite(card)
 
   return (
     <CardSection

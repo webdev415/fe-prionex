@@ -2,9 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { EmployeeCard } from '@/features/employeeCard/types.card'
 
 const removeSurvey = vi.hoisted(() => vi.fn())
+const reinstate = vi.hoisted(() => vi.fn())
 
 const state = vi.hoisted(() => ({
   card: null as EmployeeCard | null,
@@ -25,6 +27,7 @@ vi.mock('@/features/employeeCard/hooks/useEmployeeCard', () => ({
     return { data: state.neighbours }
   },
   useRemoveSurvey: () => ({ mutate: removeSurvey }),
+  useReinstate: () => ({ mutate: reinstate }),
 }))
 
 vi.mock('@/features/employeeCard', () => ({
@@ -41,7 +44,7 @@ vi.mock('@/lib/avatarImage', async (importOriginal) => {
 const { EmployeeCardPage } = await import('../EmployeeCardPage')
 
 function card(overrides: Partial<EmployeeCard> = {}): EmployeeCard {
-  return {
+  const built = {
     header: {
       id: 7,
       full_name: 'Kovalchuk Olena',
@@ -88,6 +91,17 @@ function card(overrides: Partial<EmployeeCard> = {}): EmployeeCard {
     can_edit: false,
     ...overrides,
   }
+
+  // Terminating deactivates the account now, so a fixture pairing a
+  // termination with an active status is one the server cannot produce - and a
+  // test resting on it would be testing a state that cannot happen.
+  return {
+    ...built,
+    header: {
+      ...built.header,
+      status: built.termination ? 'inactive' : built.header.status,
+    },
+  }
 }
 
 /** The column holding the way back and the profile panel. */
@@ -96,12 +110,17 @@ function leftColumn(): HTMLElement {
 }
 
 function renderAt(path: string) {
+  // The dialogs the card opens write the saved card straight into the cache,
+  // so opening one from here needs a client even when nothing is saved.
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
-    <MemoryRouter initialEntries={[path]}>
-      <Routes>
-        <Route path="/dashboard/team-management/users/:userId" element={<EmployeeCardPage />} />
-      </Routes>
-    </MemoryRouter>
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route path="/dashboard/team-management/users/:userId" element={<EmployeeCardPage />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>
   )
 }
 
@@ -187,7 +206,16 @@ describe('EmployeeCardPage', () => {
   it('offers a tab for every section', () => {
     renderAt('/dashboard/team-management/users/7')
 
-    expect(screen.getAllByRole('tab')).toHaveLength(7)
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+      'pages.employeeCard.sections.personal-information',
+      'pages.employeeCard.sections.work-information',
+      'pages.employeeCard.sections.contacts-and-family',
+      'pages.employeeCard.sections.additional-data',
+      'pages.employeeCard.sections.documents-and-hiring',
+      'pages.employeeCard.sections.surveys',
+      'pages.employeeCard.sections.chronology',
+      'pages.employeeCard.sections.termination',
+    ])
   })
 
   it('mounts the chronology for this employee', () => {
@@ -441,9 +469,15 @@ describe('EmployeeCardPage: what stays on screen while the sections scroll', () 
   it('leaves room after the last section for its own tab to reach the header', () => {
     renderAt('/dashboard/team-management/users/7')
 
-    const chronology = document.getElementById('chronology') as HTMLElement
-    const tail = chronology.nextElementSibling as HTMLElement
+    // Taken from the tab bar rather than named, so reordering the sections
+    // moves the room with the last one instead of leaving it behind.
+    const tabs = screen.getAllByRole('tab')
+    const last = document.getElementById(
+      tabs[tabs.length - 1].textContent!.replace('pages.employeeCard.sections.', '')
+    ) as HTMLElement
+    const tail = last.nextElementSibling as HTMLElement
 
+    expect(last).not.toBeNull()
     expect(tail).not.toBeNull()
     expect(tail.getAttribute('aria-hidden')).toBe('true')
     expect(tail.style.height).not.toBe('')
@@ -672,5 +706,94 @@ describe('EmployeeCardPage: removing a survey', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Cancel' }))
 
     expect(removeSurvey).not.toHaveBeenCalled()
+  })
+})
+
+/*
+ * A closed card stops accepting changes. The service refuses those writes with
+ * a 409 whether or not the interface offered one, so what matters here is that
+ * the card stops offering them - a pencil that always ends in an error is
+ * worse than no pencil.
+ */
+describe('EmployeeCardPage once somebody has left', () => {
+  const GONE = { terminated_on: '2025-04-30', reason: 'dismissed', comment: null }
+
+  beforeEach(() => {
+    state.card = card({
+      can_edit: true,
+      termination: GONE,
+      surveys: [
+        {
+          id: 11,
+          name: 'Q2 2024 Satisfaction',
+          completed_on: '2024-06-15',
+          status: 'completed',
+          score: 87,
+          max_score: 100,
+          details_url: null,
+        },
+      ],
+    })
+    state.isLoading = false
+    state.isError = false
+    reinstate.mockReset()
+  })
+
+  it('takes the edit action off every other section', () => {
+    renderAt('/dashboard/team-management/users/7')
+
+    expect(screen.queryByRole('button', { name: 'pages.employeeCard.edit' })).toBeNull()
+    expect(screen.queryByRole('button', { name: /surveys.record/ })).toBeNull()
+    expect(screen.queryByRole('button', { name: /surveys.remove/ })).toBeNull()
+  })
+
+  /*
+   * Asked before reopening, because the reason, the date and the comment go
+   * with the record - recording the departure again means typing all three
+   * back in, and whoever knew them may not be the one clicking.
+   */
+  it('asks before reopening the card', async () => {
+    renderAt('/dashboard/team-management/users/7')
+
+    await userEvent.click(screen.getByRole('button', { name: /termination\.reinstate/ }))
+
+    expect(
+      await screen.findByText('pages.employeeCard.termination.reinstateTitle')
+    ).toBeInTheDocument()
+    expect(reinstate).not.toHaveBeenCalled()
+  })
+
+  it('reopens it once the question is answered', async () => {
+    renderAt('/dashboard/team-management/users/7')
+
+    await userEvent.click(screen.getByRole('button', { name: /termination\.reinstate/ }))
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'pages.employeeCard.termination.reinstate' })
+    )
+
+    await waitFor(() => expect(reinstate).toHaveBeenCalled())
+  })
+
+  it('leaves the card closed when the question is declined', async () => {
+    renderAt('/dashboard/team-management/users/7')
+
+    await userEvent.click(screen.getByRole('button', { name: /termination\.reinstate/ }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Cancel' }))
+
+    expect(reinstate).not.toHaveBeenCalled()
+  })
+
+  /*
+   * The one exception, and the reason it is one: a date recorded wrongly has
+   * to be correctable, or the mistake is permanent.
+   */
+  it('leaves the termination itself editable', async () => {
+    renderAt('/dashboard/team-management/users/7')
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'pages.employeeCard.termination.correct' })
+    )
+
+    expect(await screen.findByText('pages.employeeCard.dialogs.termination')).toBeInTheDocument()
   })
 })

@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { displayName } from '@/features/employeeCard/lib/displayName'
+import { mayWrite } from '@/features/employeeCard/lib/mayWrite'
 import type { EmployeeCard } from '@/features/employeeCard/types.card'
 import { CardSection } from './CardSection'
 import { FieldGrid } from './FieldGrid'
@@ -27,7 +28,7 @@ export function CardSections({ card, onEdit }: CardSectionsProps) {
     value ? new Date(value).toLocaleDateString(i18n.language) : null
 
   const editable = (section: string) =>
-    card.can_edit && onEdit
+    mayWrite(card) && onEdit
       ? { editLabel: t('pages.employeeCard.edit'), onEdit: () => onEdit(section) }
       : {}
 
