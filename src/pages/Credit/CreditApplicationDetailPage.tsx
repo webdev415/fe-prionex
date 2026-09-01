@@ -25,6 +25,7 @@ import { CreditStatusBadge } from './components/CreditStatusBadge'
 import { CreditDocumentOpenButton } from './components/CreditDocumentOpenButton'
 import { CreditDraftBlocks } from './components/CreditDraftBlocks'
 import { CreditFlagList } from './components/CreditFlagList'
+import { CreditStageProgress } from './components/CreditStageProgress'
 import { collectApplicationFlags } from '@/features/credit/api/applicantFlags'
 import { formatIdle, idleMinutes } from '@/features/credit/api/idle'
 import { useNowTick } from '@/features/credit/hooks/useNowTick'
@@ -208,6 +209,11 @@ export function CreditApplicationDetailPage() {
                 )}
               </CreditNotice>
             )}
+            {/* Весь путь клиента по этапам — теми же пятью шагами и с той же
+                нумерацией, что он видит в своём кабинете. Стоит рядом с
+                «застряв на кроці» намеренно: та строка отвечает «где встал»,
+                эта — «сколько позади и сколько осталось». */}
+            <CreditStageProgress application={application} />
             {/* Основания, на которых машина откажет: непогашенный заём и
                 остывание после прошлого отказа. Оператор решает здесь же —
                 значит и предъявлять их надо здесь. */}

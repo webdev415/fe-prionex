@@ -11893,7 +11893,9 @@
       "disbursementObservedTime": "The provider did not tell us the settlement time — we derived it from the moment we found out. The two-day cancellation window (CA s.124.4) is counted from this date: the client’s deadline is estimated, not known.",
       "disbursementNoRetryButton": "There is deliberately no retry button here: the resume command accepts only the «failed» state with a closed review, requires no retry reason, accepts no idempotency key and does not record who pressed it. For now a module developer performs the retry on request.",
       "disbursementRetryContradiction": "The module marks the retry as allowed, but the resume command will refuse it: the module’s flag is wider than the command’s condition. Aligning them is on the module side.",
-      "disbursementUnknown": "Disbursement state is unknown — the core did not answer. This does NOT mean no transfer was made: it may have gone out and failed. Refresh or come back later."
+      "disbursementUnknown": "Disbursement state is unknown — the core did not answer. This does NOT mean no transfer was made: it may have gone out and failed. Refresh or come back later.",
+      "stagesTitle": "Client path",
+      "stagesHint": "the same five steps the client sees in their cabinet"
     },
     "stand": {
       "notice": "Stage 1: the module runs outside Kong and does not know CRM roles yet — the role below is a stand mock (WS-20 replaces it with JWT).",
@@ -12300,6 +12302,19 @@
       "RC-08": "Cool-down period after a decline",
       "RC-11": "Insufficient affordability / income below minimum",
       "client_not_identifiable": "Client could not be identified"
+    },
+    "stage": {
+      "registration": "Registration",
+      "questionnaire": "Application form",
+      "bank": "Income check",
+      "decision": "Decision",
+      "signing": "Signing"
+    },
+    "stageState": {
+      "done": "done",
+      "current": "current step",
+      "todo": "ahead",
+      "failed": "not passed"
     }
   }
 }

@@ -18,6 +18,7 @@ import type {
   CreditLoanStatus,
   CreditQueueStatus,
 } from './types'
+import { CREDIT_APPLICATION_STAGES, CREDIT_STAGE_STATES } from './applicationStages'
 
 /**
  * Типы проводок журнала (JournalEntry.entry_type).
@@ -266,4 +267,11 @@ export const CREDIT_DYNAMIC_NAMESPACES: Record<string, readonly string[]> = {
   // заявки причину отказа платёжного провайдера. Разведены по домену.
   referralReason: CREDIT_REVIEW_REASONS,
   railReviewReason: CREDIT_RAIL_REVIEW_REASONS,
+  // Этапы пути клиента и их состояния. Ключи подставляются динамически
+  // (`t(`credit.stage.${step.stage}`)`), поэтому статический страж их не
+  // видит; а список — не наш, он снят с кабинета клиента, и потерять в нём
+  // строку значит показать оператору машинное имя шага, номер которого клиент
+  // называет вслух по телефону.
+  stage: CREDIT_APPLICATION_STAGES,
+  stageState: CREDIT_STAGE_STATES,
 }
