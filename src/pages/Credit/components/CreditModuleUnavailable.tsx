@@ -15,9 +15,25 @@
  */
 import { useTranslation } from 'react-i18next'
 import { Alert } from '@/components/ui/Alert'
+import { CreditApiError } from '@/features/credit/api/creditApi'
+import { CreditApiKeyPanel } from './CreditApiKeyPanel'
 
 export function CreditModuleUnavailable({ error }: { error: unknown }) {
   const { t } = useTranslation('common')
+  // 401 — это НЕ «модуль не развёрнут»: модуль есть, отвечает и требует ключ.
+  // Свалить эти состояния в одно значит отправить человека искать несуществующую
+  // аварию вместо того, чтобы дать ему поле для ключа.
+  const needsKey = error instanceof CreditApiError && error.status === 401
+  if (needsKey) {
+    return (
+      <div className="p-6">
+        <h1 className="text-foreground mb-4 text-xl font-semibold">
+          {t('navigation.creditModule', 'Credit Module')}
+        </h1>
+        <CreditApiKeyPanel />
+      </div>
+    )
+  }
   return (
     <div className="p-6">
       <h1 className="text-foreground mb-4 text-xl font-semibold">

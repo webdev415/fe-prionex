@@ -18,6 +18,7 @@ import {
   useCreditLoans,
   useCreditApplications,
 } from '@/features/credit/hooks/useCredit'
+import { CreditApiError } from '@/features/credit/api/creditApi'
 
 vi.mock('@/features/credit/hooks/useCredit', () => ({
   useCreditOverview: vi.fn(),
@@ -62,5 +63,44 @@ describe.each([
       </MemoryRouter>
     )
     expect(screen.getByText(/status code 404/)).toBeInTheDocument()
+  })
+})
+
+describe('401 — это не «модуль не развёрнут»', () => {
+  // Три состояния, которые легко свалить в одно и тем соврать оператору:
+  // модуль не развёрнут (маршрута нет), модуль требует ключ (401), модуль
+  // работает. При 401 модуль ЖИВ и отвечает — отправлять человека искать
+  // аварию значит тратить его час на исправное.
+  const UNAUTHORIZED = new CreditApiError('Invalid X-Internal-Api-Key', 401, 'unauthorized')
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(useCreditOverview).mockReturnValue({
+      ...idle,
+      error: UNAUTHORIZED,
+    } as unknown as ReturnType<typeof useCreditOverview>)
+    vi.mocked(useCreditLoans).mockReturnValue({ ...idle, error: UNAUTHORIZED } as never)
+  })
+
+  it('предлагает вписать ключ, а не сообщает о неразвёрнутом модуле', () => {
+    render(
+      <MemoryRouter>
+        <CreditLoansPage />
+      </MemoryRouter>
+    )
+    expect(screen.getByText(/standKey\.title/)).toBeInTheDocument()
+    expect(screen.queryByText(/unavailable\.title/)).not.toBeInTheDocument()
+  })
+
+  it('говорит, где взять ключ и что он живёт до закрытия вкладки', () => {
+    // Подсказка «обратитесь к администратору» бесполезна: человек не знает
+    // ни что просить, ни почему ключ исчез после перезапуска браузера.
+    render(
+      <MemoryRouter>
+        <CreditLoansPage />
+      </MemoryRouter>
+    )
+    expect(screen.getByText(/standKey\.where/)).toBeInTheDocument()
+    expect(screen.getByText(/standKey\.lifetime/)).toBeInTheDocument()
   })
 })

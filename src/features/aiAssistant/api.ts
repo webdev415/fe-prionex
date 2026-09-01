@@ -9,6 +9,7 @@ import {
   type AssistantToolStart,
   type SseDonePayload,
   type SseErrorPayload,
+  type SseMetaPayload,
   type SseSessionPayload,
 } from './sse'
 
@@ -160,6 +161,13 @@ export interface AssistantFeedbackRequest {
  * order and must be accumulated to form the full answer.
  */
 export interface SendChatMessageCallbacks {
+  /**
+   * CRM `meta` — id строки диалога, приходит ПЕРВЫМ кадром. Страница по нему
+   * сохраняет указатель диалога сразу, а не после `done`: обновление страницы
+   * посреди длинного ответа иначе теряло диалог (ответ дописывается на
+   * сервере и без указателя его негде показать).
+   */
+  onMeta?: (meta: SseMetaPayload) => void
   onSession?: (payload: SseSessionPayload) => void
   onText?: (delta: string) => void
   /** Reasoning deltas ("Ход рассуждения"); forwarded, never part of the answer. */
@@ -320,7 +328,10 @@ export async function sendChatMessage(
     // `conversation_id: 0`, прокси такой диалог не находил и отвечал 404
     // «Асистент зараз недоступний» (живой баг прода 20.08.2026: воспроизводился
     // на ЛЮБОМ втором сообщении и при клике по кнопке-уточнению).
-    onMeta: (meta) => applySessionId(meta.conversation_id),
+    onMeta: (meta) => {
+      applySessionId(meta.conversation_id)
+      callbacks.onMeta?.(meta)
+    },
     onSession: (session) => {
       applySessionId(session.session_id)
       callbacks.onSession?.(session)

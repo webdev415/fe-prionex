@@ -123,7 +123,10 @@
       "chainStepLabel": "Step {{step}} - Collection: {{label}}",
       "chainStepCreditLabel": "Step 9 - Collection: Credit *",
       "chainContinue": "Continue",
-      "chainDemoNotice": "This is a demo chain — no data was saved."
+      "chainDemoNotice": "This is a demo chain — no data was saved.",
+      "noClientInteraction": "This number was dialed without client details, so an interaction cannot be logged against a client record.",
+      "noClientChain": "A TA chain needs a client record. None is attached to this number.",
+      "unknownClient": "Unknown contact"
     },
     "accessGroup": {
       "all_groups": "All groups",
@@ -187,7 +190,9 @@
       "maxAttempts": "Attempts per number",
       "maxAttemptsHint": "Total attempts, including the first. Line failures are periodic, so a retry usually lands on another SIM.",
       "retryDelayFailed": "Retry delay (seconds)",
-      "retryDelayFailedHint": "0 disables retrying failures."
+      "retryDelayFailedHint": "0 disables retrying failures.",
+      "answerMode": "Answer mode",
+      "answerModeHint": "Manual gives operators an accept window before the customer is connected."
     },
     "numbers": {
       "inQueue": "In Queue",
@@ -272,6 +277,10 @@
     "telephonyType": {
       "white": "White",
       "grey": "Grey"
+    },
+    "answerMode": {
+      "auto": "Automatic",
+      "manual": "Manual (operator accepts)"
     }
   },
   "search": {
@@ -839,7 +848,14 @@
         "errorNotFound": "The file is no longer available",
         "errorTooLarge": "The file is too large to open here — ask for a smaller export",
         "errorBrainUnavailable": "The assistant is unavailable — try again in a moment"
-      }
+      },
+      "contextUsageTitle": "Dialog context: {{used}} / {{max}} tokens ({{percent}}%). Longer conversations answer slower — start a new chat once the ring turns yellow.",
+      "slashMenuAria": "Assistant commands",
+      "slashStatus": "session and model",
+      "slashReset": "clear the brain context (conversation stays)",
+      "slashHelp": "what the assistant can do",
+      "slashNewChat": "start a new chat",
+      "answerInProgress": "The answer is still being prepared — it will appear here when ready"
     },
     "lawyerWorkplace": {
       "navAria": "Lawyer Workplace navigation",
@@ -11662,6 +11678,16 @@
     "unavailable": {
       "title": "The credit module is not deployed on this stand",
       "hint": "The section is in place, but the credit service is not routed here yet: on stage 1 it runs outside Kong. Locally it is served on localhost:8020; on the dev server the route /api/v1/credit will appear together with the module deployment."
+    },
+    "standKey": {
+      "title": "Stand service key",
+      "where": "Ask DevOps for INTERNAL_API_KEY of the credit module on this stand (deploy/.env on the server), and paste it here.",
+      "lifetime": "The key lives until this tab is closed — being asked again after reopening the tab is normal, not a fault.",
+      "placeholder": "X-Internal-Api-Key",
+      "save": "Save key",
+      "clear": "Clear",
+      "present": "A key is saved for this tab.",
+      "absent": "No key saved: the module answers 401."
     }
   }
 }
