@@ -1,0 +1,62 @@
+name: DEV branch autodeploy
+
+# Builds and deploys the DEV stand on every push to `dev`.
+#
+# Build (build.yml) and deploy (deploy-stand.yml, reached via deploy-dev.yml on
+# the manual path) are separate, and there is no other push -> build -> deploy
+# chain for `dev`, so this thin caller wires the two reusable workflows:
+#   build  -> build.yml        (ref=dev, environment=dev) -> sha-<12hex>-dev
+#   deploy -> deploy-stand.yml  (the same DEV parameters deploy-dev.yml passes)
+#
+# `concurrency.group` is the same literal deploy-dev.yml and dev-reset.yml use
+# (`deploy-dev-fe-prionex-dev`) so a push deploy, a manual deploy, and the weekly
+# reset can never overlap the stand's pull -> up -d window. It must stay a literal
+# constant (an expression fails the whole file at pre-execution — D30/D33) and
+# must live in this caller (a callee's own concurrency block is void when the
+# workflow is called — D21).
+#
+# The `name:` is deliberately NOT `Deploy DEV Stand`: dev-reset.yml dispatches
+# deploy-dev.yml by name and greps the runs API for that literal, so a distinct
+# name keeps these runs out of that read.
+#
+# `ref: dev` is a literal (a github-context expression in a caller's `with:` can
+# resolve empty here — see build.yml's workflow_call `ref` note), so build and
+# deploy each re-derive `dev` HEAD; `cancel-in-progress: false` plus the stand
+# file-lock bound the race to the same window build-main.yml already accepts.
+
+on:
+  push:
+    branches:
+      - dev
+
+concurrency:
+  group: deploy-dev-fe-prionex-dev
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build and Push Image
+    uses: ./.forgejo/workflows/build.yml
+    with:
+      ref: dev
+      environment: dev
+    secrets: inherit
+
+  deploy:
+    name: Deploy DEV via the shared definition
+    needs: build
+    uses: ./.forgejo/workflows/deploy-stand.yml
+    with:
+      runner_label: deploy-dev-preprod
+      compose_project_name: fe-prionex-dev
+      container_name: fe-prionex-dev
+      frontend_port: 127.0.0.1:8082
+      frontend_network: crm-dev-network
+      stand_dir: /root/crm-prionex/fe-prionex-dev
+      image_env: dev
+      ref: dev
+      lock_wait_seconds: "240"
+      lock_ttl_seconds: "720"
+      health_timeout_seconds: "120"
+      expect_unrouted_api: "true"
+    secrets: inherit
