@@ -404,7 +404,16 @@ export interface CreditLoanDetail {
   status: CreditLoanStatus
   currency: string
   principal_minor: number
-  balance_total_minor: number
+  /**
+   * ⚠️ Живой модуль отдаёт здесь `null` — проверено на кредите FB-000088
+   * (01.09). Тип объявлял `number` и врал: код, поверивший объявлению
+   * (`balance_total_minor.toFixed()`), упал бы на любом кредите.
+   *
+   * Деньги оператору берутся НЕ отсюда, а из `balances.total_due_minor`
+   * состояния ядра — того же среза, по которому считает модуль. Это поле
+   * оставлено как есть только потому, что контракт его объявляет.
+   */
+  balance_total_minor: number | null
   project_id: number
   /** null до этапа 2 (C-08): связь с CRM появляется при выдаче. */
   client_id: number | null
@@ -603,7 +612,16 @@ export interface CreditLoanState {
   currency: string
   as_of: string
   principal_minor: number
-  balance_total_minor: number
+  /**
+   * ⚠️ Живой модуль отдаёт здесь `null` — проверено на кредите FB-000088
+   * (01.09). Тип объявлял `number` и врал: код, поверивший объявлению
+   * (`balance_total_minor.toFixed()`), упал бы на любом кредите.
+   *
+   * Деньги оператору берутся НЕ отсюда, а из `balances.total_due_minor`
+   * состояния ядра — того же среза, по которому считает модуль. Это поле
+   * оставлено как есть только потому, что контракт его объявляет.
+   */
+  balance_total_minor: number | null
   paid_minor: number
   maturity_date: string
   disbursed_at: string
