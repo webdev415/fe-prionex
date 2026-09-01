@@ -60,6 +60,13 @@ export function CreditStageProgress({ application }: { application: CreditApplic
                 step.number
               )}
             </span>
+            {/* Номер отдельной строкой для читалки: кружок с цифрой помечен
+                `aria-hidden` (он несёт ещё и знак состояния), поэтому без этой
+                строки номер не достаётся вспомогательной технологии вовсе.
+                А номер — это ровно то, ради чего лента заведена: оператор и
+                клиент должны назвать ОДИН шаг. Приёмка поймала: читалке
+                доставалось «Перевірка доходу — поточний крок», без «3». */}
+            <span className="sr-only">{step.number}.</span>
             <span className={`text-sm ${LABEL_CLASS[step.state]}`}>
               {t(`credit.stage.${step.stage}`)}
             </span>

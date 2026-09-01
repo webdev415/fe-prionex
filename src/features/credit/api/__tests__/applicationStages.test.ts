@@ -120,10 +120,33 @@ describe('этапы заявки: зеркало кабинета', () => {
     // Кабинет считает состояние только из `status` и `missing_fields`. Стоит
     // начать читать здесь `resume_step` — и оператор с клиентом молча разойдутся
     // ровно на тех заявках, где шаг остановки не совпал с нехваткой блоков.
+    //
+    // Первая версия этой проверки сравнивала ДВА значения между собой и была
+    // надписью, а не стражем: приёмка вставила в функцию ветку
+    // `if (resume_step === 'income') return [...]` — и все тесты остались
+    // зелёными, потому что 'income' в сравнении не участвовал. Поэтому здесь
+    // ВСЕ живые значения плюс отсутствие поля сверяются с одним и тем же
+    // ответом: любой результат, зависящий от `resume_step`, ломает равенство.
     const base = { status: 'in_progress', missing_fields: ['bank_verification'] }
-    expect(creditApplicationStageStates({ ...base, resume_step: 'personal' })).toEqual(
-      creditApplicationStageStates({ ...base, resume_step: 'done' })
+    // Шесть значений модуля: пять обязательных блоков анкеты + 'done'
+    // (`REQUIRED_BLOCKS` и `missing[0] if missing else "done"`), плюс
+    // 'bank_verification' и отсутствие поля.
+    const values = [
+      undefined,
+      'personal',
+      'address',
+      'phones',
+      'income',
+      'params',
+      'bank_verification',
+      'done',
+    ]
+    const answers = new Set(
+      values.map((resume_step) =>
+        JSON.stringify(creditApplicationStageStates({ ...base, resume_step }))
+      )
     )
+    expect(answers.size).toBe(1)
   })
 })
 

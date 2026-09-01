@@ -11658,7 +11658,8 @@
       "reasons": "Review reason",
       "referred": "Referred",
       "waiting": "In queue",
-      "assigned": "Assigned"
+      "assigned": "Assigned",
+      "disbursed": "Disbursed"
     },
     "fields": {
       "name": "Name",
@@ -11756,7 +11757,12 @@
       "providerTxId": "Provider transaction ID",
       "providerStatus": "Provider status",
       "clientTransactionId": "Our operation key",
-      "retry": "Retry"
+      "retry": "Retry",
+      "applicationId": "Application ID",
+      "externalApplicationId": "External application ID",
+      "decisionId": "Decision ID",
+      "loanId": "Loan ID",
+      "loanAgeDays": "Days since disbursement"
     },
     "tabs": {
       "form": "Application form",
@@ -11895,7 +11901,8 @@
       "disbursementRetryContradiction": "The module marks the retry as allowed, but the resume command will refuse it: the module’s flag is wider than the command’s condition. Aligning them is on the module side.",
       "disbursementUnknown": "Disbursement state is unknown — the core did not answer. This does NOT mean no transfer was made: it may have gone out and failed. Refresh or come back later.",
       "stagesTitle": "Client path",
-      "stagesHint": "the same five steps the client sees in their cabinet"
+      "stagesHint": "the same five steps the client sees in their cabinet",
+      "identifiers": "Identifiers"
     },
     "stand": {
       "notice": "Stage 1: the module runs outside Kong and does not know CRM roles yet — the role below is a stand mock (WS-20 replaces it with JWT).",

@@ -34,6 +34,7 @@ import {
   CreditNotice,
   type CreditHeaderMetric,
 } from './components/CreditCardHeader'
+import { CreditIdentifierRows } from './components/CreditIdentifiers'
 import { CreditIbvTab } from './components/CreditIbvTab'
 import { CreditDecisionBasis } from './components/CreditDecisionBasis'
 import {
@@ -406,6 +407,31 @@ function ApplicationForm({ application }: { application: CreditApplicationDetail
             '—'
           )}
         </Field>
+      </Panel>
+
+      {/* Ссылка «Відкрити кредит» отвечает на «куда нажать», но не на «что
+          продиктовать»: сами идентификаторы в ней не видны. */}
+      <Panel title={t('credit.card.identifiers')}>
+        <CreditIdentifierRows
+          items={[
+            {
+              key: 'application',
+              label: t('credit.fields.applicationId'),
+              value: application.application_id,
+            },
+            {
+              key: 'external',
+              label: t('credit.fields.externalApplicationId'),
+              value: application.external_application_id,
+            },
+            {
+              key: 'decision',
+              label: t('credit.fields.decisionId'),
+              value: application.decision_id,
+            },
+            { key: 'loan', label: t('credit.fields.loanId'), value: application.loan_id },
+          ]}
+        />
       </Panel>
     </>
   )

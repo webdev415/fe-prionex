@@ -142,6 +142,21 @@ export function CreditLoansPage() {
       render: (row) => row.client_email ?? '—',
     },
     {
+      // Дата выдачи в списке не показывалась вовсе, хотя сервис по ней
+      // сортирует (`LOAN_SORTABLE`): вопрос «какие кредиты выданы вчера» и
+      // «самый старый непогашенный» решался открыванием карточек подряд.
+      // Днями возраст здесь НЕ пишем: в списке нет среза `as_of`, от которого
+      // он считается в карточке, и два разных отсчёта на двух экранах — это
+      // разговор «у вас цифры не сходятся».
+      key: 'disbursed',
+      sortable: true,
+      sortKey: 'disbursed_at',
+      header: t('credit.columns.disbursed'),
+      render: (row) => (
+        <span className="text-muted-foreground text-xs">{formatDate(row.disbursed_at)}</span>
+      ),
+    },
+    {
       key: 'maturity',
       sortable: true,
       sortKey: 'maturity_date',
