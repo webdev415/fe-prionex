@@ -14,10 +14,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { CreditStageProgress } from '../components/CreditStageProgress'
 import { CreditApplicationDetailPage } from '../CreditApplicationDetailPage'
 import * as hooks from '@/features/credit/hooks/useCredit'
 import type { CreditApplicationDetail } from '@/features/credit/api/types'
+
+// Страница ищет клиента CRM по телефону заёмщика (см. CreditClientLink), поэтому
+// ей нужен клиент запросов. Запрос в тестах не уходит: телефона в фикстурах нет,
+// а хук включается только при непустом телефоне — но провайдер обязан быть.
+const withQuery = (ui: React.ReactNode) => (
+  <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+    {ui}
+  </QueryClientProvider>
+)
 
 vi.mock('@/features/credit/hooks/useCredit')
 vi.mock('react-router-dom', async () => ({
@@ -109,11 +119,7 @@ describe('карточка заявки', () => {
   })
 
   it('несёт ленту этапов рядом с блоком «застряв на кроці»', () => {
-    render(
-      <MemoryRouter>
-        <CreditApplicationDetailPage />
-      </MemoryRouter>
-    )
+    render(<MemoryRouter>{withQuery(<CreditApplicationDetailPage />)}</MemoryRouter>)
     // Обе вещи на одном экране: где встал (строка простоя) и весь путь (лента).
     expect(screen.getByText(/credit\.card\.stuckAt/)).toBeInTheDocument()
     expect(screen.getByText(/credit\.card\.stagesTitle/)).toBeInTheDocument()
