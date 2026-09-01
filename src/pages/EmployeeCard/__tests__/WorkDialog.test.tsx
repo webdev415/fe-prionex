@@ -37,6 +37,7 @@ vi.mock('@/features/roles', () => ({
         { id: 10, name: 'Operator', department_id: 1, is_active: true },
         { id: 11, name: 'Senior Operator', department_id: 1, is_active: true },
         { id: 12, name: 'Analyst', department_id: 2, is_active: true },
+        { id: 13, name: 'Admin', department_id: null, is_active: true },
       ],
     },
   }),
@@ -125,6 +126,44 @@ describe('WorkDialog', () => {
 
     expect(screen.getByRole('option', { name: 'Senior Operator' })).toBeInTheDocument()
     expect(screen.queryByRole('option', { name: 'Analyst' })).not.toBeInTheDocument()
+  })
+
+  /*
+   * Most roles here belong to no department at all - Admin, collector,
+   * manager, 25 of 39. Without an option that lists them, anybody holding one
+   * is stranded: no department can be picked that shows their own position.
+   */
+  it('offers the department-less roles under "no department"', async () => {
+    render(<WorkDialog card={card()} projectId={3} open onClose={vi.fn()} />)
+
+    await userEvent.click(screen.getAllByRole('combobox')[0])
+    await userEvent.click(
+      screen.getByRole('option', { name: 'pages.employeeCard.dialogs.noDepartment' })
+    )
+    await userEvent.click(screen.getAllByRole('combobox')[1])
+
+    expect(screen.getByRole('option', { name: 'Admin' })).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: 'Operator' })).not.toBeInTheDocument()
+  })
+
+  /*
+   * The server derives the department from the role and only reads this to
+   * check the two agree, so sending it when nothing was chosen would be
+   * sending a value it does not act on.
+   */
+  it('sends no department when none was chosen', async () => {
+    render(<WorkDialog card={card()} projectId={3} open onClose={vi.fn()} />)
+
+    await userEvent.click(screen.getAllByRole('combobox')[0])
+    await userEvent.click(
+      screen.getByRole('option', { name: 'pages.employeeCard.dialogs.noDepartment' })
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'actions.save' }))
+
+    // The KEY must be absent, not merely null: expect.anything() does not
+    // match null, so asserting on the value would pass even while a null the
+    // server ignores was being sent.
+    expect(Object.keys(state.saved.mock.calls[0][0])).not.toContain('department_id')
   })
 
   it('clears the position when the department changes under it', async () => {

@@ -55,7 +55,7 @@ export function WorkDialog({ card, projectId, open, onClose }: WorkDialogProps) 
   const { data: peopleData } = useUsers({ page: 1, page_size: 100, status: 'active' })
 
   const [departmentId, setDepartmentId] = useState<string>(
-    card.work.department_id ? String(card.work.department_id) : ''
+    card.work.department_id ? String(card.work.department_id) : NOBODY
   )
   const [roleId, setRoleId] = useState<string>(card.work.role_id ? String(card.work.role_id) : '')
   const [managerId, setManagerId] = useState<string>(
@@ -81,11 +81,32 @@ export function WorkDialog({ card, projectId, open, onClose }: WorkDialogProps) 
     [peopleData, card.header.id, t]
   )
 
+  /*
+   * The department is not a field on the employee - it follows from their
+   * role, and the server only reads it here to check the two agree. What this
+   * select really does is narrow the list of positions below it.
+   *
+   * So "no department" heads the list as the roles that belong to no
+   * department: Admin, collector, manager and the rest, 25 of the 39 roles
+   * here. Leaving it out stranded anybody holding one of them, because no
+   * department could be chosen that would list their own position.
+   */
+  const departments = useMemo(
+    () => [
+      { id: NOBODY, name: t('pages.employeeCard.dialogs.noDepartment') },
+      ...(departmentsData?.departments ?? []).map((department) => ({
+        id: String(department.id),
+        name: department.name,
+      })),
+    ],
+    [departmentsData, t]
+  )
+
   const positions = useMemo(
     () =>
-      departmentId
-        ? roles.filter((role) => String(role.department_id ?? '') === departmentId)
-        : roles,
+      departmentId === NOBODY
+        ? roles.filter((role) => role.department_id == null)
+        : roles.filter((role) => String(role.department_id ?? '') === departmentId),
     [roles, departmentId]
   )
 
@@ -106,7 +127,7 @@ export function WorkDialog({ card, projectId, open, onClose }: WorkDialogProps) 
           void save({
             ...(projectId ? { project_id: projectId } : {}),
             ...(roleId ? { role_id: Number(roleId) } : {}),
-            ...(departmentId ? { department_id: Number(departmentId) } : {}),
+            ...(departmentId === NOBODY ? {} : { department_id: Number(departmentId) }),
             manager_user_id: managerId === NOBODY ? null : Number(managerId),
             hired_at: hiredAt || null,
           })
@@ -127,8 +148,8 @@ export function WorkDialog({ card, projectId, open, onClose }: WorkDialogProps) 
               <SelectValue placeholder={t('pages.employeeCard.dialogs.choose')} />
             </SelectTrigger>
             <SelectContent>
-              {(departmentsData?.departments ?? []).map((department) => (
-                <SelectItem key={department.id} value={String(department.id)}>
+              {departments.map((department) => (
+                <SelectItem key={department.id} value={department.id}>
                   {department.name}
                 </SelectItem>
               ))}

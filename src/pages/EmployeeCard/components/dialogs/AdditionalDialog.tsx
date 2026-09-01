@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
+import { DateSelect } from '@/components/ui/DateSelect'
+import '@/components/ui/DateSelect.theme.css'
 import { Input } from '@/components/ui/Input'
 import { useUpdateAdditional } from '@/features/employeeCard/hooks/useEmployeeCard'
 import type { EmployeeCard } from '@/features/employeeCard/types.card'
@@ -152,11 +154,30 @@ export function AdditionalDialog({ card, projectId, open, onClose }: AdditionalD
                   value={row.faculty}
                   onChange={(event) => update(index, { faculty: event.target.value })}
                 />
-                <Input
-                  label={t('pages.employeeCard.fields.graduationYear')}
-                  value={row.graduation_year}
-                  onChange={(event) => update(index, { graduation_year: event.target.value })}
-                />
+                {/*
+                  A year, not a date. The field stores one number, so a picker
+                  offering a month and a day would ask for two more that are
+                  thrown away on save - and typing a year by hand invites the
+                  typo the bounds below would then reject.
+                */}
+                <div className="space-y-1.5">
+                  <span className="text-muted-foreground text-xs">
+                    {t('pages.employeeCard.fields.graduationYear')}
+                  </span>
+                  <DateSelect
+                    value={row.graduation_year ? new Date(Number(row.graduation_year), 0, 1) : null}
+                    onChange={({ value }) =>
+                      update(index, {
+                        graduation_year: value ? String(value.getFullYear()) : '',
+                      })
+                    }
+                    showYearPicker
+                    format="yyyy"
+                    min={new Date(1900, 0, 1)}
+                    max={new Date(2100, 11, 31)}
+                    placeholder={t('pages.employeeCard.fields.graduationYear')}
+                  />
+                </div>
               </div>
               <Button
                 type="button"

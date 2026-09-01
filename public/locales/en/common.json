@@ -11140,6 +11140,7 @@
         "languagesHint": "For example: English (B2), Polish (A2)",
         "choose": "Choose",
         "noManager": "No manager",
+        "noDepartment": "No department",
         "documents": "Documents",
         "attachFile": "Attach a document (PDF or Word, up to 10 MB)",
         "searchManager": "Search by name",
