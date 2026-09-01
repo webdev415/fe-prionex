@@ -51,6 +51,9 @@ import {
   CreditNotice,
   type CreditHeaderMetric,
 } from './components/CreditCardHeader'
+import { CreditIdentifierRows } from './components/CreditIdentifiers'
+import { loanAgeDays, todayInTimezone } from '@/features/credit/api/loanAge'
+import { useNowTick } from '@/features/credit/hooks/useNowTick'
 
 /** Часовой пояс кредита: окно отказа регуляторное, показывать его надо
  *  в зоне юрисдикции, иначе киевский оператор увидит чужие сутки. */
@@ -615,9 +618,19 @@ function LoanPassport({
   stateError: unknown
 }) {
   const { t } = useTranslation('common')
+  // Возраст кредита считается от «сейчас», когда среза сервиса ещё нет, и без
+  // собственного тика замер бы на моменте открытия карточки: смена дал бы
+  // «14 днів» до самого закрытия вкладки.
+  const now = useNowTick()
+  const timezone = JURISDICTION_TIMEZONE[loan.jurisdiction]
   const caps = state?.caps
   const capEntries = caps ? Object.entries(caps) : []
   const failedCaps = capEntries.filter(([, ok]) => !ok)
+  // Считаем от СЕГОДНЯ В ЮРИСДИКЦИИ, как это делает кабинет клиента, а не от
+  // `as_of`: тот равен горизонту ночного расчёта и уходит вперёд — на стенде
+  // кредиты, выданные 31.08, имели `as_of` 04.10, и оператор увидел бы «34
+  // днів» там, где клиент видит «1 день».
+  const ageDays = loanAgeDays(loan.disbursed_at, todayInTimezone(now, timezone))
 
   return (
     <>
@@ -629,7 +642,17 @@ function LoanPassport({
           {loan.product_code} · {loan.product_version}
         </Field>
         <Field label={t('credit.fields.jurisdiction')}>{loan.jurisdiction}</Field>
-        <Field label={t('credit.fields.disbursedAt')}>{formatDateTime(loan.disbursed_at)}</Field>
+        {/* Зона обязательна: без неё дата выдачи рисуется по часам браузера, а
+            возраст рядом считается по календарю юрисдикции. Канадская выдача
+            после ~15:00 по местному времени попадала у киевского оператора в
+            следующие сутки — «видано сьогодні, живе день» в соседних строках. */}
+        <Field label={t('credit.fields.disbursedAt')}>
+          {formatDateTime(loan.disbursed_at, timezone)}
+        </Field>
+        {/* Сколько кредит живёт. Поля в модуле нет — это разность дат (см.
+            loanAge.ts), поэтому и стоит рядом с датой выдачи, из которой
+            посчитано, а не в шапке среди цифр, пришедших от сервиса. */}
+        <Field label={t('credit.fields.loanAgeDays')}>{ageDays === null ? '—' : ageDays}</Field>
         {/* «Кінцевий строк», а не «Дата погашення»: последнее оператор читает
             как ближайший платёж — тот теперь в шапке отдельной строкой. */}
         <Field label={t('credit.fields.maturity')}>{formatDate(loan.maturity_date)}</Field>
@@ -673,6 +696,19 @@ function LoanPassport({
           )}
         </Panel>
       )}
+
+      <Panel title={t('credit.card.identifiers')}>
+        <CreditIdentifierRows
+          items={[
+            { key: 'loan', label: t('credit.fields.loanId'), value: loan.loan_id },
+            {
+              key: 'application',
+              label: t('credit.fields.applicationId'),
+              value: loan.application_id,
+            },
+          ]}
+        />
+      </Panel>
 
       <Panel title={t('credit.card.links')}>
         <Field label={t('credit.fields.application')}>

@@ -120,4 +120,29 @@ describe('карточка заявки', () => {
     expect(screen.getAllByRole('listitem')).toHaveLength(5)
     expect(within(stageItem('questionnaire')).getByText('credit.stageState.current')).toBeVisible()
   })
+
+  it('номер шага достаётся читалке, а не только глазу', () => {
+    // Кружок с цифрой помечен aria-hidden — он несёт ещё и знак состояния.
+    // Значит номер обязан быть отдельной строкой, иначе оператору с читалкой
+    // не достаётся именно то, ради чего лента и заведена: общий с клиентом
+    // номер шага. Приёмка показала, что getByText и toBeVisible этого не
+    // ловят — проверяем текст элементов, НЕ помеченных aria-hidden.
+    render(
+      <CreditStageProgress
+        application={{ status: 'in_progress', missing_fields: ['bank_verification'] }}
+      />
+    )
+
+    const items = Array.from(document.querySelectorAll('li'))
+    const spoken = items.map((li) =>
+      Array.from(li.querySelectorAll('span'))
+        .filter((el) => el.getAttribute('aria-hidden') === null)
+        .map((el) => el.textContent)
+        .join(' ')
+    )
+    // Третий шаг — банковская проверка, он же текущий: читалка обязана
+    // произнести его номер.
+    expect(spoken[2]).toContain('3.')
+    expect(spoken[0]).toContain('1.')
+  })
 })
