@@ -41,6 +41,8 @@ function card(overrides: Partial<EmployeeCard> = {}): EmployeeCard {
       role_id: 2,
       manager: 'Serhiy Lytvyn',
       hired_at: '2024-03-15',
+      asterisk_extension: null,
+      dialer_extension: null,
     },
     contacts: [],
     children: [],
