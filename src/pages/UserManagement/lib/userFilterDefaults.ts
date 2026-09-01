@@ -98,3 +98,52 @@ export function parseDepartmentIds(raw: unknown): number[] {
   }
   return []
 }
+
+/**
+ * Turn the list's own URL into the filters its API takes.
+ *
+ * The two vocabularies differ: the URL says role, project, department and
+ * group because that is what the controls are called, while the endpoints say
+ * role_id, project_id, department_ids and group_id, and the search field is
+ * searchField in one and search_field in the other. Anything carrying the URL
+ * straight to an endpoint - the card asking where somebody sits in the list,
+ * for one - loses exactly those four, silently, because an unknown query
+ * parameter is ignored rather than refused. Sort and search survive, which is
+ * what makes the loss easy to miss: the order looks right and only the count
+ * is wrong.
+ */
+export function listFiltersFromSearch(search: URLSearchParams): Record<string, string> {
+  const params = new URLSearchParams()
+
+  const number = (from: string, to: string) => {
+    const value = Number(search.get(from))
+    if (Number.isFinite(value) && value > ALL_FILTER_VALUE) params.set(to, String(value))
+  }
+
+  number('role', 'role_id')
+  number('project', 'project_id')
+  number('group', 'group_id')
+
+  const departments = parseDepartmentIds(search.get('department'))
+  if (departments.length > 0) params.set('department_ids', departments.join(','))
+
+  const status = statusFilterToApiStatus(asStatusFilter(search.get('status') ?? undefined))
+  if (status) params.set('status', status)
+
+  const workFormat = workFormatToApiValue(
+    (search.get('work_format') as WorkFormatFilter) ?? DEFAULT_WORK_FORMAT_FILTER
+  )
+  if (workFormat) params.set('work_format', workFormat)
+
+  const query = search.get('search')?.trim()
+  if (query) {
+    params.set('search', query)
+    const field = search.get('searchField')
+    if (field) params.set('search_field', field)
+  }
+
+  params.set('sort_by', search.get('sort_by') || DEFAULT_USER_SORT_BY)
+  params.set('sort_order', search.get('sort_order') || DEFAULT_USER_SORT_ORDER)
+
+  return Object.fromEntries(params)
+}

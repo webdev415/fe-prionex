@@ -3693,7 +3693,7 @@
     },
     "users": {
       "title": "Employees",
-      "addNewUser": "New User",
+      "addNewUser": "New Employee",
       "noUsersFound": "No users found",
       "errorLoading": "Error loading users",
       "searchPlaceholder": "Search users...",
@@ -10996,6 +10996,200 @@
           "issueNoWording": "A level with no wording gives the model nothing to tell it by",
           "issueLineMismatch": "The card is narrowed to one line and the scale points at the other — it would never apply"
         }
+      }
+    },
+    "employeeCard": {
+      "chronology": {
+        "title": "Chronology",
+        "filterLabel": "Filter the chronology",
+        "loadMore": "Show earlier",
+        "empty": "Nothing recorded for this employee yet.",
+        "failed": "The chronology could not be loaded.",
+        "filters": {
+          "all": "All",
+          "personnel": "Personnel",
+          "evaluation": "Evaluations",
+          "training": "Training"
+        },
+        "events": {
+          "hired": "Hired — {{department}}, {{role}}",
+          "hired_noDepartment": "Hired — {{role}}",
+          "role_changed": "Role changed — {{from}} to {{to}}",
+          "role_changed_noFrom": "Role set — {{to}}",
+          "department_changed": "Department changed — {{from}} to {{to}}",
+          "department_changed_noFrom": "Department set — {{to}}",
+          "evaluation_completed": "Quality assessment — {{score}}",
+          "feedback_given": "Feedback — {{kind}}",
+          "training_assigned": "Course assigned — {{course}}",
+          "training_completed": "Completed course — {{course}}",
+          "survey_completed": "Survey — {{name}} ({{score}})",
+          "terminated": "Terminated — {{reason}}",
+          "terminated_noReason": "Terminated"
+        },
+        "from": "From",
+        "to": "To",
+        "selectPeriod": "Select period",
+        "clearPeriod": "Clear the period"
+      },
+      "backToList": "To the list",
+      "notFound": "That employee could not be found.",
+      "failed": "The card could not be loaded.",
+      "sectionNav": "Card sections",
+      "status": {
+        "active": "Active",
+        "inactive": "Disabled",
+        "suspended": "Suspended"
+      },
+      "workFormat": {
+        "office": "Office",
+        "remote": "Remote"
+      },
+      "panel": {
+        "department": "Department",
+        "manager": "Manager",
+        "hiredAt": "Date of hire",
+        "phone": "Phone",
+        "email": "Email"
+      },
+      "sections": {
+        "personal-information": "Personal Information",
+        "work-information": "Work Information",
+        "contacts-and-family": "Contacts and Family",
+        "additional-data": "Additional Data",
+        "documents-and-hiring": "Documents and Hiring",
+        "surveys": "Surveys",
+        "feedback": "Feedback",
+        "grades": "Grades and History",
+        "termination": "Termination",
+        "chronology": "Chronology"
+      },
+      "previousEmployee": "Previous employee",
+      "nextEmployee": "Next employee",
+      "position": "{{position}} from {{total}}",
+      "edit": "Edit",
+      "fields": {
+        "fullName": "Full Name",
+        "dateOfBirth": "Date of Birth",
+        "phone": "Phone Number",
+        "telegram": "Telegram",
+        "email": "Email",
+        "city": "City",
+        "address": "Address",
+        "novaPoshta": "Nova Poshta",
+        "workFormat": "Work Format",
+        "referralSource": "Where referred from",
+        "department": "Department",
+        "position": "Position",
+        "manager": "Manager",
+        "hiredAt": "Date of Hire",
+        "contactPerson": "Contact Person",
+        "children": "Children",
+        "name": "Name",
+        "relation": "Relationship",
+        "militaryService": "Military Service",
+        "visaStatus": "Visa Status",
+        "languages": "Foreign Language Proficiency",
+        "educationLevel": "Level of Education",
+        "institution": "Educational Institution",
+        "faculty": "Faculty / Specialty",
+        "graduationYear": "Year of Graduation",
+        "childName": "Child's Full Name",
+        "lastName": "Last Name",
+        "firstName": "First Name",
+        "middleName": "Middle Name"
+      },
+      "documents": {
+        "none": "No documents attached.",
+        "download": "Download",
+        "downloadFailed": "That document could not be downloaded.",
+        "uploaded": "Uploaded {{date}} · {{size}}",
+        "interviewComment": "Post-Interview Comment"
+      },
+      "surveys": {
+        "none": "No surveys recorded.",
+        "pending": "Pending",
+        "details": "Details",
+        "name": "Survey name",
+        "record": "Record answers",
+        "hint": "Surveys run outside Prionex, so their results are recorded here by hand. A dated answer also appears in this employee's chronology.",
+        "completedOn": "Date answered",
+        "score": "Score",
+        "scoreHint": "Leave empty for an answer still being waited on.",
+        "detailsUrl": "Link to the results",
+        "add": "Add survey",
+        "save": "Save changes",
+        "edit": "Correct {{name}}",
+        "remove": "Remove {{name}}",
+        "removeTitle": "Remove this survey?",
+        "removeMessage": "“{{name}}” and its line in the chronology will both be removed. The answers themselves live in the form this was recorded from.",
+        "noDateHint": "Without a date this answer will not appear in the chronology."
+      },
+      "feedback": {
+        "none": "No feedback recorded.",
+        "types": {
+          "praise": "Praise",
+          "note": "Note",
+          "correction_task": "Correction task"
+        },
+        "statuses": {
+          "unread": "Unread",
+          "read": "Read",
+          "completed": "Done"
+        }
+      },
+      "grades": {
+        "none": "No assessments recorded.",
+        "assessment": "Assessment",
+        "disputed": "Disputed",
+        "notScored": "Not scored"
+      },
+      "quality": {
+        "unavailable": "This could not be loaded. The rest of the card is unaffected."
+      },
+      "termination": {
+        "terminate": "Terminate",
+        "record": "Record a termination",
+        "correct": "Correct the termination",
+        "left": "Employee Terminated",
+        "readOnly": "Card available for viewing only",
+        "stillHere": "Employee Active",
+        "fillsIn": "This block is filled out upon termination.",
+        "date": "Termination Date",
+        "reason": "Reason for Termination",
+        "comment": "Comment",
+        "hint": "Recording a termination closes the card: every other section becomes read-only, and the departure appears in the chronology. This section can still be corrected afterwards.",
+        "reinstate": "Reinstate",
+        "reinstateTitle": "Reinstate this employee?",
+        "reinstateHint": "The recorded reason, date and comment will be removed, along with the departure in the chronology. The card becomes editable again.",
+        "reasons": {
+          "personal_desire": "Personal Desire",
+          "dismissed": "Dismissed",
+          "end_of_contract": "End of Contract",
+          "redundancy": "Redundancy",
+          "other": "Other"
+        }
+      },
+      "saveFailed": "That could not be saved.",
+      "dialogs": {
+        "personal": "Personal Data",
+        "work": "Personnel Data",
+        "contacts": "Contacts and Family",
+        "additional": "Additional Data",
+        "add": "Add",
+        "education": "Education",
+        "languagesHint": "For example: English (B2), Polish (A2)",
+        "choose": "Choose",
+        "noManager": "No manager",
+        "noDepartment": "No department",
+        "documents": "Documents",
+        "attachFile": "Attach a document (PDF or Word, up to 10 MB)",
+        "searchManager": "Search by name",
+        "surveys": "Survey answers",
+        "termination": "Termination"
+      },
+      "tabs": {
+        "showEarlier": "Show earlier sections",
+        "showLater": "Show later sections"
       }
     }
   },

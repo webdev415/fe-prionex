@@ -3706,7 +3706,7 @@
     },
     "users": {
       "title": "Співробітники",
-      "addNewUser": "Новий користувач",
+      "addNewUser": "Новий співробітник",
       "noUsersFound": "Користувачів не знайдено",
       "errorLoading": "Помилка завантаження користувачів",
       "searchPlaceholder": "Пошук користувачів...",
@@ -11017,6 +11017,200 @@
           "issueNoWording": "У рівня без опису модель не має за чим його відрізнити",
           "issueLineMismatch": "Картка звужена до однієї лінії, а шкала вказує на іншу — така шкала не спрацює жодного разу"
         }
+      }
+    },
+    "employeeCard": {
+      "chronology": {
+        "title": "Хронологія",
+        "filterLabel": "Фільтр хронології",
+        "loadMore": "Показати раніші",
+        "empty": "Для цього співробітника ще нічого не записано.",
+        "failed": "Не вдалося завантажити хронологію.",
+        "filters": {
+          "all": "Усі",
+          "personnel": "Кадрові",
+          "evaluation": "Оцінки",
+          "training": "Навчання"
+        },
+        "events": {
+          "hired": "Прийнято — {{department}}, {{role}}",
+          "hired_noDepartment": "Прийнято — {{role}}",
+          "role_changed": "Посаду змінено — {{from}} на {{to}}",
+          "role_changed_noFrom": "Посаду призначено — {{to}}",
+          "department_changed": "Відділ змінено — {{from}} на {{to}}",
+          "department_changed_noFrom": "Відділ призначено — {{to}}",
+          "evaluation_completed": "Оцінка якості — {{score}}",
+          "feedback_given": "Зворотний зв'язок — {{kind}}",
+          "training_assigned": "Призначено курс — {{course}}",
+          "training_completed": "Завершено курс — {{course}}",
+          "survey_completed": "Опитування — {{name}} ({{score}})",
+          "terminated": "Звільнено — {{reason}}",
+          "terminated_noReason": "Звільнено"
+        },
+        "from": "Від",
+        "to": "До",
+        "selectPeriod": "Оберіть період",
+        "clearPeriod": "Очистити період"
+      },
+      "backToList": "До списку",
+      "notFound": "Такого співробітника не знайдено.",
+      "failed": "Не вдалося завантажити картку.",
+      "sectionNav": "Розділи картки",
+      "status": {
+        "active": "Активний",
+        "inactive": "Вимкнений",
+        "suspended": "Призупинений"
+      },
+      "workFormat": {
+        "office": "Офіс",
+        "remote": "Віддалено"
+      },
+      "panel": {
+        "department": "Відділ",
+        "manager": "Керівник",
+        "hiredAt": "Дата прийняття",
+        "phone": "Телефон",
+        "email": "Пошта"
+      },
+      "sections": {
+        "personal-information": "Особисті дані",
+        "work-information": "Робоча інформація",
+        "contacts-and-family": "Контакти та сімя",
+        "additional-data": "Додаткові дані",
+        "documents-and-hiring": "Документи та прийняття",
+        "surveys": "Опитування",
+        "feedback": "Зворотний зв’язок",
+        "grades": "Оцінки та історія",
+        "termination": "Звільнення",
+        "chronology": "Хронологія"
+      },
+      "previousEmployee": "Попередній співробітник",
+      "nextEmployee": "Наступний співробітник",
+      "position": "{{position}} з {{total}}",
+      "edit": "Редагувати",
+      "fields": {
+        "fullName": "ПІБ",
+        "dateOfBirth": "Дата народження",
+        "phone": "Телефон",
+        "telegram": "Telegram",
+        "email": "Пошта",
+        "city": "Місто",
+        "address": "Адреса",
+        "novaPoshta": "Нова Пошта",
+        "workFormat": "Формат роботи",
+        "referralSource": "Звідки дізнався",
+        "department": "Відділ",
+        "position": "Посада",
+        "manager": "Керівник",
+        "hiredAt": "Дата прийняття",
+        "contactPerson": "Контактна особа",
+        "children": "Діти",
+        "name": "Імя",
+        "relation": "Звязок",
+        "militaryService": "Військовий облік",
+        "visaStatus": "Статус візи",
+        "languages": "Володіння мовами",
+        "educationLevel": "Рівень освіти",
+        "institution": "Навчальний заклад",
+        "faculty": "Факультет / Спеціальність",
+        "graduationYear": "Рік випуску",
+        "childName": "ПІБ дитини",
+        "lastName": "Прізвище",
+        "firstName": "Ім'я",
+        "middleName": "По батькові"
+      },
+      "documents": {
+        "none": "Документів не додано.",
+        "download": "Завантажити",
+        "downloadFailed": "Не вдалося завантажити документ.",
+        "uploaded": "Завантажено {{date}} · {{size}}",
+        "interviewComment": "Коментар після співбесіди"
+      },
+      "surveys": {
+        "none": "Опитувань не записано.",
+        "pending": "Очікує",
+        "details": "Деталі",
+        "name": "Назва опитування",
+        "record": "Записати відповіді",
+        "hint": "Опитування проходять поза Prionex, тому їх результати вносяться вручну. Відповідь із датою також з'явиться у хронології співробітника.",
+        "completedOn": "Дата відповіді",
+        "score": "Бали",
+        "scoreHint": "Залиште порожнім, якщо відповідь ще очікується.",
+        "detailsUrl": "Посилання на результати",
+        "add": "Додати опитування",
+        "save": "Зберегти зміни",
+        "edit": "Виправити {{name}}",
+        "remove": "Видалити {{name}}",
+        "removeTitle": "Видалити це опитування?",
+        "removeMessage": "«{{name}}» та його рядок у хронології буде видалено. Самі відповіді залишаються у формі, з якої їх записали.",
+        "noDateHint": "Без дати ця відповідь не з'явиться у хронології."
+      },
+      "feedback": {
+        "none": "Зворотного зв’язку не записано.",
+        "types": {
+          "praise": "Похвала",
+          "note": "Зауваження",
+          "correction_task": "Завдання на виправлення"
+        },
+        "statuses": {
+          "unread": "Не прочитано",
+          "read": "Прочитано",
+          "completed": "Виконано"
+        }
+      },
+      "grades": {
+        "none": "Оцінок не записано.",
+        "assessment": "Оцінювання",
+        "disputed": "Оскаржено",
+        "notScored": "Без оцінки"
+      },
+      "quality": {
+        "unavailable": "Не вдалося завантажити. Решта картки не постраждала."
+      },
+      "termination": {
+        "terminate": "Звільнити",
+        "record": "Записати звільнення",
+        "correct": "Виправити звільнення",
+        "left": "Співробітника звільнено",
+        "readOnly": "Картка доступна лише для перегляду",
+        "stillHere": "Співробітник працює",
+        "fillsIn": "Цей блок заповнюється під час звільнення.",
+        "date": "Дата звільнення",
+        "reason": "Причина звільнення",
+        "comment": "Коментар",
+        "hint": "Запис про звільнення закриває картку: усі інші розділи стають доступними лише для читання, а звільнення з’являється у хронології. Цей розділ можна виправити й після цього.",
+        "reinstate": "Поновити",
+        "reinstateTitle": "Поновити цього співробітника?",
+        "reinstateHint": "Записані причину, дату та коментар буде видалено разом зі звільненням у хронології. Картка знову стане доступною для редагування.",
+        "reasons": {
+          "personal_desire": "За власним бажанням",
+          "dismissed": "Звільнено",
+          "end_of_contract": "Завершення договору",
+          "redundancy": "Скорочення",
+          "other": "Інше"
+        }
+      },
+      "saveFailed": "Не вдалося зберегти.",
+      "dialogs": {
+        "personal": "Особисті дані",
+        "work": "Кадрові дані",
+        "contacts": "Контакти та сімя",
+        "additional": "Додаткові дані",
+        "add": "Додати",
+        "education": "Освіта",
+        "languagesHint": "Наприклад: English (B2), Polish (A2)",
+        "choose": "Оберіть",
+        "noManager": "Без керівника",
+        "noDepartment": "Без відділу",
+        "documents": "Документи",
+        "attachFile": "Додати документ (PDF або Word, до 10 МБ)",
+        "searchManager": "Пошук за іменем",
+        "surveys": "Відповіді опитування",
+        "termination": "Звільнення"
+      },
+      "tabs": {
+        "showEarlier": "Показати попередні розділи",
+        "showLater": "Показати наступні розділи"
       }
     }
   },
