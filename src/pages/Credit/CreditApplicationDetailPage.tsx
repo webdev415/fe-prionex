@@ -26,6 +26,7 @@ import { CreditDocumentOpenButton } from './components/CreditDocumentOpenButton'
 import { CreditDraftBlocks } from './components/CreditDraftBlocks'
 import { CreditFlagList } from './components/CreditFlagList'
 import { CreditStageProgress } from './components/CreditStageProgress'
+import { CreditClientLink } from './components/CreditClientLink'
 import { collectApplicationFlags } from '@/features/credit/api/applicantFlags'
 import { formatIdle, idleMinutes } from '@/features/credit/api/idle'
 import { useNowTick } from '@/features/credit/hooks/useNowTick'
@@ -377,8 +378,13 @@ function ApplicationForm({ application }: { application: CreditApplicationDetail
 
       <Panel title={t('credit.card.links')}>
         <Field label={t('credit.fields.clientId')}>
+          {/* Раньше здесь стояло «клієнта ще не створено», и это обещало, что
+              запись появится сама. Не появится: CRM требует при создании
+              десятизначный налоговый номер, у канадского заёмщика такого нет.
+              Теперь ищем по телефону сами и говорим, что именно узнали —
+              включая «не искали», которое не равно «не найдено». */}
           {application.client_id === null ? (
-            <span className="text-muted-foreground text-xs">{t('credit.card.clientPending')}</span>
+            <CreditClientLink clientId={null} phone={application.client_phone} />
           ) : (
             <Link
               to={`/dashboard/clients/${application.client_id}`}

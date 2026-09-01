@@ -11834,6 +11834,16 @@
       "current": "current step",
       "todo": "ahead",
       "failed": "not passed"
+    },
+    "clientLink": {
+      "byPhone": "matched by phone",
+      "ambiguous": "{{count}} cards matched this phone — pick one manually",
+      "notFound": "not found in CRM by phone",
+      "notSearched": {
+        "no_phone": "not searched: no phone",
+        "loading": "searching…",
+        "failed": "not searched: CRM did not answer"
+      }
     }
   }
 }
