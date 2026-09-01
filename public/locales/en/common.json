@@ -8642,7 +8642,8 @@
         "inbound-followup": "Inbound without follow-up",
         "contact-tag": "Contact / No contact",
         "communication-gap": "Communication gap",
-        "operator-promises": "Operator promises"
+        "operator-promises": "Operator promises",
+        "outbound-calls": "Outbound calls"
       },
       "processing": {
         "dateFrom": "Date from",
@@ -8903,6 +8904,36 @@
         "emptyDepartment": "No operators in this department for the period — every department is shown on the «All» tab",
         "forbidden": "You don't have permission to view this report",
         "unavailable": "Employee or payment data is temporarily unavailable. Please try again later.",
+        "error": {
+          "title": "Failed to load the report",
+          "retry": "Retry"
+        }
+      },
+      "outboundCalls": {
+        "dateFrom": "Date from",
+        "dateTo": "Date to",
+        "invalidDate": "The date is not a real calendar date — pick a date to replace it",
+        "invalidRange": "Start date is later than end date",
+        "rangeTooLong": "Date range must not exceed 90 days",
+        "columns": {
+          "operator": "Operator",
+          "sip": "SIP",
+          "fullCount": "Calls total",
+          "envCount": "Third parties",
+          "answerCount": "Connected",
+          "answerPercent": "% connected",
+          "qualityCount": "Quality",
+          "qualityPercent": "% quality",
+          "answerDuration": "Talk time",
+          "qualityDuration": "Quality talk time",
+          "avgPerCall": "Average per call",
+          "avgPerAnswered": "Average per connected",
+          "department": "Department",
+          "group": "Group"
+        },
+        "empty": "No calls for the selected period",
+        "forbidden": "You don't have permission to view this report",
+        "unavailable": "Employee or call data is temporarily unavailable. Please try again later.",
         "error": {
           "title": "Failed to load the report",
           "retry": "Retry"

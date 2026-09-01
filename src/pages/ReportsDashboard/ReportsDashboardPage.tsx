@@ -1,7 +1,7 @@
 /**
  * ReportsDashboardPage Component
  *
- * Main page for viewing reports. Hosts nine tabs (active tab in the URL via
+ * Main page for viewing reports. Hosts ten tabs (active tab in the URL via
  * `?tab=…`): the reports dashboard with KPIs and agent performance metrics
  * (default), the "Відпрацювання за ЦД" client processing report, the
  * "Верифікація 3-х осіб" third-party verification report, the
@@ -9,8 +9,9 @@
  * searcher follow-up work list, the "Вхід без відпрацювання" inbound
  * follow-up work list (its semantic twin — same source column shape, hence
  * its neighbour in the strip), the "Контакт/Неконтакт" tagged-client work
- * list, the "Великий розрив" communication-gap work list, and the
- * "Обіцянки по операторах" operator promises report.
+ * list, the "Великий розрив" communication-gap work list, the
+ * "Обіцянки по операторах" operator promises report and the
+ * "Вихідні дзвінки" outbound calls report.
  */
 
 import { useState, useMemo, useEffect, useCallback } from 'react'
@@ -53,6 +54,7 @@ import { InboundFollowupFeedTab } from '@/features/inboundFollowup'
 import { ContactTagFeedTab } from '@/features/contactTag'
 import { CommunicationGapFeedTab } from '@/features/communicationGap'
 import { OperatorPromisesTab } from '@/features/operatorPromises'
+import { OutboundCallsTab } from '@/features/outboundCalls'
 import { SegmentedTabs, segmentedTabId, segmentedTabPanelId } from '@/components/ui/SegmentedTabs'
 
 // ============================================================================
@@ -461,6 +463,7 @@ const REPORT_TABS = [
   'contact-tag',
   'communication-gap',
   'operator-promises',
+  'outbound-calls',
 ] as const
 type ReportsTab = (typeof REPORT_TABS)[number]
 
@@ -580,6 +583,8 @@ export function ReportsDashboardPage() {
           <CommunicationGapFeedTab />
         ) : activeTab === 'operator-promises' ? (
           <OperatorPromisesTab />
+        ) : activeTab === 'outbound-calls' ? (
+          <OutboundCallsTab />
         ) : (
           <DashboardTab />
         )}

@@ -73,6 +73,11 @@ vi.mock('@/features/operatorPromises', () => ({
   OperatorPromisesTab: () => <div data-testid="operator-promises-tab" />,
 }))
 
+// …and for the outbound-calls report (features/outboundCalls).
+vi.mock('@/features/outboundCalls', () => ({
+  OutboundCallsTab: () => <div data-testid="outbound-calls-tab" />,
+}))
+
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: (selector: (s: unknown) => unknown) =>
     selector({
@@ -149,6 +154,8 @@ const communicationGapTab = () =>
   screen.getByRole('tab', { name: 'pages.reports.tabs.communication-gap' })
 const operatorPromisesTab = () =>
   screen.getByRole('tab', { name: 'pages.reports.tabs.operator-promises' })
+const outboundCallsTab = () =>
+  screen.getByRole('tab', { name: 'pages.reports.tabs.outbound-calls' })
 
 describe('ReportsDashboardPage (tab host)', () => {
   it('renders the processing report panel for ?tab=processing', () => {
@@ -177,6 +184,7 @@ describe('ReportsDashboardPage (tab host)', () => {
     expect(screen.queryByTestId('contact-tag-feed-tab')).not.toBeInTheDocument()
     expect(screen.queryByTestId('communication-gap-feed-tab')).not.toBeInTheDocument()
     expect(screen.queryByTestId('operator-promises-tab')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('outbound-calls-tab')).not.toBeInTheDocument()
     expect(dashboardTab()).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'reports-panel-dashboard')
   })
@@ -455,7 +463,33 @@ describe('ReportsDashboardPage (tab host)', () => {
     expect(search()).toContain('opd=collection')
   })
 
-  it('offers all nine report tabs in a fixed order', () => {
+  it('renders the outbound-calls report panel for ?tab=outbound-calls', () => {
+    renderPage(['/reports?tab=outbound-calls'])
+
+    expect(screen.getByTestId('outbound-calls-tab')).toBeInTheDocument()
+    expect(screen.queryByTestId('operator-promises-tab')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('agent-performance-table')).not.toBeInTheDocument()
+    expect(outboundCallsTab()).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'reports-panel-outbound-calls')
+  })
+
+  it('keeps the outbound-calls filters when switching tabs', async () => {
+    renderPage(['/reports?tab=outbound-calls&ocf=2026-08-01&oct=2026-08-27'])
+    expect(screen.getByTestId('outbound-calls-tab')).toBeInTheDocument()
+
+    await userEvent.click(dashboardTab())
+
+    // Same documented contract as the other report tabs: the filters survive a
+    // round-trip through the dashboard, and no key set collides with another
+    // tab's (`ocf/oct` vs the operator-promises `opf/opt/opd` — the closest
+    // spelling in the registry).
+    expect(screen.getByTestId('agent-performance-table')).toBeInTheDocument()
+    expect(search()).not.toContain('tab=')
+    expect(search()).toContain('ocf=2026-08-01')
+    expect(search()).toContain('oct=2026-08-27')
+  })
+
+  it('offers all ten report tabs in a fixed order', () => {
     // The strip is the only place the tab set is visible at a glance; a new
     // report must be ADDED here rather than replace a sibling.
     renderPage()
@@ -474,6 +508,7 @@ describe('ReportsDashboardPage (tab host)', () => {
       'pages.reports.tabs.contact-tag',
       'pages.reports.tabs.communication-gap',
       'pages.reports.tabs.operator-promises',
+      'pages.reports.tabs.outbound-calls',
     ])
   })
 
