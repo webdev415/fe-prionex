@@ -840,7 +840,14 @@
         "errorNotFound": "The file is no longer available",
         "errorTooLarge": "The file is too large to open here — ask for a smaller export",
         "errorBrainUnavailable": "The assistant is unavailable — try again in a moment"
-      }
+      },
+      "contextUsageTitle": "Dialog context: {{used}} / {{max}} tokens ({{percent}}%). Longer conversations answer slower — start a new chat once the ring turns yellow.",
+      "slashMenuAria": "Assistant commands",
+      "slashStatus": "session and model",
+      "slashReset": "clear the brain context (conversation stays)",
+      "slashHelp": "what the assistant can do",
+      "slashNewChat": "start a new chat",
+      "answerInProgress": "The answer is still being prepared — it will appear here when ready"
     },
     "lawyerWorkplace": {
       "navAria": "Lawyer Workplace navigation",
@@ -6622,7 +6629,12 @@
         },
         "email": "E-mail",
         "dateOfBirthWithAge": "{{date}} ({{age}} years)",
-        "closingCoefficientLabel": "Loan closing coefficient"
+        "closingCoefficientLabel": "Loan closing coefficient",
+        "easypayMethods": {
+          "card": "Card",
+          "google_pay": "Google Pay",
+          "apple_pay": "Apple Pay"
+        }
       },
       "debtSummary": {
         "title": "Debt Summary",
@@ -9232,6 +9244,7 @@
         "eventInformation": "Event Information",
         "changes": "Changes",
         "details": "Details",
+        "reason": "Reason",
         "requestInformation": "Request Information",
         "timestamp": "Timestamp",
         "user": "User",

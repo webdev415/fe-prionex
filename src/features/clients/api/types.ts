@@ -851,6 +851,8 @@ export interface PaymentResponse {
   penalty_paid: string
   fines_paid: string
   payment_method: string
+  /** EasyPay rows only: card | google_pay | apple_pay. Null elsewhere. */
+  easypay_method?: string | null
   payment_method_details?: string | null
   payment_type?: string | null
   status: string

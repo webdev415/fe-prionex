@@ -1,0 +1,505 @@
+name: CI
+
+# Story 2.2: push is now armed, pull_request is not.
+#
+# `push` fires on every branch EXCEPT main/staging/development
+# (`branches-ignore`), which is FR2's "push on feature branches" read
+# literally. It deliberately excludes the three long-lived branches so a
+# documentation-only commit landing on any of them does not spend a run —
+# four concurrent jobs, ~540s of wall clock and ~918 job-seconds since
+# Story 2.3 added coverage (run 522; it was ~468s / ~810 before) — on a
+# host shared with another tenant's production. (An earlier version of this
+# comment said "four jobs (~487s each)", which overstated the cost roughly
+# fourfold: 487s is the whole run, not each job. Measured on run 505: Lint
+# 143s, Type Check 86s, Unit Tests 467s, Build 113s.) Verified
+# empirically on Forgejo 15.0.5+gitea-1.22.0 that `branches-ignore` is
+# honoured (see Story 2.2's Dev Agent Record for the probe-branch evidence:
+# a push naming this branch in `branches-ignore` produced zero runs, the same
+# push with the branch NOT named produced one).
+#
+# `pull_request` is intentionally absent. The repository's pull-request unit
+# (`has_pull_requests`) is disabled on this instance for a named reason (a PR
+# opened from any of ~497 branches whose head commit predates this workflow
+# would fall through to legacy `.github/workflows/CI.yml` on another team's
+# runner — see `docs/migration-decisions.md` D9). Enabling that unit is out
+# of scope for this story; AC2/AC3 (pull_request behaviour) are recorded as
+# deferred, not closed, until that decision is made explicitly.
+#
+# No `concurrency` block: Forgejo already auto-cancels an earlier run of the
+# same workflow on the same ref for `push` events by default, without one
+# (`docs/migration-decisions.md` D8). Adding a block to get behaviour that is
+# already the default was Story 1.12's mistake — a test that cannot fail
+# proves nothing.
+#
+# `workflow_dispatch` is retained alongside `push`: it costs nothing idle,
+# and it is the only manual fallback if a trigger turns out not to fire.
+# 🚨 LOAD-BEARING: the `branches-ignore` filter is what keeps this workflow off
+# tags, not the absence of a `tags:` clause. A ref filter of any kind makes
+# Forgejo skip non-branch refs; simplify this to a bare `on: push:` with no
+# filter and it fires on every tag push AND on main/staging/development.
+on:
+  workflow_dispatch:
+  push:
+    # Long-lived branches are excluded because a commit landing on one of them
+    # is a MERGE RESULT — it was already gated by the `pull_request` run below,
+    # on the same head SHA. Running CI again on the merge commit pays twice for
+    # the same answer. Feature branches are not excluded: they are where the
+    # first answer comes from.
+    #
+    # `prod`, `preprod` and `dev` added 2026-08-15 with the four-branch model
+    # (sprint-change-proposal-2026-08-15-branch-topology.md). They were added
+    # HERE, and this change was merged, BEFORE the branches were created —
+    # creating them first would have fired a full CI run per branch, and a push
+    # to a brand-new `prod` before it was excluded.
+    #
+    # `staging` and `development` stay in this list. They are the previous
+    # model's long-lived branches, they are not being migrated, and they are not
+    # being deleted — so they must keep behaving as long-lived branches here.
+    branches-ignore:
+      - main
+      - prod
+      - preprod
+      - dev
+      - staging
+      - development
+  # Added 2026-08-14, Story 2.2 AC2/AC3, once Oleg enabled the pull-request unit.
+  # FR2 asks for both this and the push trigger above, so a branch that is BOTH
+  # pushed and part of an open PR produces TWO runs per push — one `push`, one
+  # `pull_request` — at ~468s each. That is measured, not assumed; see the story's
+  # Dev Agent Record. If the cost is judged too high, dropping the `push` trigger
+  # for PR branches is the lever, not dropping this one: this is the half that
+  # gates merges.
+  # Bases extended 2026-08-15 to the four-branch model. This is the gate: a PR
+  # into any long-lived branch runs CI against its head SHA, and the required
+  # status checks on that branch refuse the merge until it is green.
+  #
+  # 🚨 The required-context set is NOT the same for these branches as for `main`,
+  # and getting it wrong bricks the branch. `main` requires all EIGHT contexts
+  # (four jobs × `(push)` and `(pull_request)`) because its PRs come from feature
+  # branches: the head branch's own push produces the `(push)` half. In a
+  # promotion PR — `dev` → `preprod`, `preprod` → `prod` — the HEAD is itself a
+  # long-lived branch, which is in `branches-ignore` above, so no `push` run ever
+  # happens and the `(push)` contexts never appear. Requiring them would leave
+  # the merge permanently unsatisfiable. `prod`, `preprod` and `dev` therefore
+  # require the FOUR `(pull_request)` contexts only. See D19, and Story 2.6's
+  # record, which named this failure mode before it had a way to happen.
+  #
+  # `staging` and `development` are deliberately absent: the previous model's
+  # branches are not being migrated, so nothing here starts gating them.
+  pull_request:
+    branches:
+      - main
+      - prod
+      - preprod
+      - dev
+
+jobs:
+  lint:
+    name: Lint
+    # node-20, and never `ubuntu-latest`: the CRM org carries an idle runner
+    # under that label belonging to ANOTHER TEAM. Naming it here does not fail
+    # — it resolves, and runs our CI on their infrastructure, which is worse.
+    # node-20 is the label Story 1.7 provisioned for us. (Verification greps
+    # for this string must exclude comment lines; the name has to appear here
+    # so a future reader knows exactly what is forbidden.)
+    runs-on: node-20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Separate step from format:check so the job log shows unambiguously
+      # which of the two failed.
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Check formatting
+        run: npm run format:check
+
+  typecheck:
+    name: Type Check
+    runs-on: node-20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run TypeScript type check
+        run: npm run typecheck
+
+  test:
+    name: Unit Tests
+    runs-on: node-20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # CI runs test:coverage:ci — not test:run:ci, not test:coverage. Five test
+      # scripts exist (package.json); this is the only one safe here.
+      #
+      # Heap: unchanged reasoning from the `test:run:ci` step this replaces.
+      # `test:coverage:ci` is pinned to 16384 MB, matching `test:run:ci`'s
+      # ceiling — `test:coverage` (the developer-facing script) stays at
+      # 8192 MB and is untouched, same as `test:run`. `cross-env` hardcodes the
+      # ceiling per-script, so a job-level `env:` cannot raise it; raising it
+      # inside `test:coverage` itself would raise it for every developer too,
+      # and the machine this repo is developed on has 16 GB of RAM total —
+      # telling Node it may take all of it as heap on every pre-commit hook
+      # guarantees swapping. The runner has the headroom the laptop does not
+      # (job container is not memory-capped in the nested dind; s1 reported
+      # ~80 GB available).
+      #
+      # One pass, not two: this step REPLACES what was `test:run:ci`, it does
+      # not run alongside a second, uninstrumented pass. `vitest run --coverage`
+      # executes the identical 228-file suite; only instrumentation differs.
+      # Running both would roughly double `Unit Tests`, already ~467s of a
+      # ~468s whole run (measured run 505) — the suite is serial by config
+      # (`pool: 'forks'`, `maxWorkers: 1`, `fileParallelism: false` in
+      # vitest.config.ts:30-32), so a second pass amortises nothing. This is a
+      # deliberate deviation from the epic's literal Story 2.3 AC1 wording
+      # (`npm run test:coverage` after `npm run test:run`), the same shape as
+      # the `test:run:ci` deviation Story 2.1 recorded, which this block replaces.
+      # Recorded in
+      # _bmad-output/implementation-artifacts/2-3-publish-coverage-as-an-artifact-instead-of-uploading-to-codecov.md.
+      #
+      # No `continue-on-error` here, by design (AC3). The legacy pipeline
+      # (.github/workflows/CI.yml:70-72) had `continue-on-error: true` on its
+      # coverage step, paired with `fail_ci_if_error: false` on the Codecov
+      # upload — that pairing is the exact mechanism that let a coverage step
+      # which had never once succeeded (the coverage provider was never
+      # installed) report green for the life of this repository. If coverage
+      # generation fails, this job fails, full stop.
+      - name: Run unit tests with coverage
+        run: npm run test:coverage:ci
+
+      # AC4: record observed peak memory for this job. cgroup v2 exposes a
+      # running peak at memory.peak; some hosts only carry the cgroup v1
+      # memory.max_usage_in_bytes equivalent. Neither path is guaranteed to
+      # exist on every kernel/cgroup configuration, so this step must not
+      # fail the job when a file is absent — it only ever reports what it
+      # can find, in human-readable MB.
+      # AC4 of Story 2.1 asked for the peak recorded. The first version printed
+      # it — and that number was unreadable for two days, because job logs on
+      # this instance reach neither the API (404 on three routes) nor storage
+      # (`log_in_storage` stays false; 0 of 4 logs persisted for run 492).
+      #
+      # 🚨 So the number goes where it CAN be read: into the artifact's NAME,
+      # which lands in `action_artifact.artifact_name` in the database. One SQL
+      # query returns it, forever, with no log, no browser and no human. This is
+      # the project's own rule applied literally — prove it in the database or
+      # the filesystem, never in stdout.
+      #
+      # `$GITHUB_ENV` is used deliberately here and would be forbidden for a
+      # secret: the runner creates that file world-readable (0644) before the
+      # step body runs. A memory figure is not a secret. `with:` cannot see
+      # shell variables, so this is the only route from the measurement to the
+      # artifact name.
+      #
+      # `if: always()` on both steps, unlike the coverage upload below: a run
+      # that died is exactly when the peak is most worth having.
+      - name: Record peak memory usage
+        if: always()
+        run: |
+          if [ -f /sys/fs/cgroup/memory.peak ]; then
+            bytes=$(cat /sys/fs/cgroup/memory.peak)
+            mb=$(( bytes / 1024 / 1024 ))
+            source="cgroup v2 memory.peak"
+          elif [ -f /sys/fs/cgroup/memory.max_usage_in_bytes ]; then
+            bytes=$(cat /sys/fs/cgroup/memory.max_usage_in_bytes)
+            mb=$(( bytes / 1024 / 1024 ))
+            source="cgroup v1 memory.max_usage_in_bytes"
+          else
+            mb="unknown"
+            source="neither cgroup v2 memory.peak nor cgroup v1 memory.max_usage_in_bytes exists on this runner"
+          fi
+          echo "Peak memory usage (${source}): ${mb} MB"
+          echo "PEAK_MB=${mb}" >> "$GITHUB_ENV"
+          printf 'peak_mb=%s\nsource=%s\nheap_ceiling_mb=16384\n' "${mb}" "${source}" > peak-memory.txt
+
+      # The payload is three lines; the POINT is the name. `peak-memory-1487mb`
+      # in `action_artifact.artifact_name` is the measurement itself, readable
+      # by `select artifact_name from action_artifact where run_id = ?`.
+      # A run where neither cgroup file exists yields `peak-memory-unknownmb`,
+      # which is also a finding rather than a silence.
+      - name: Publish peak memory as an artifact name
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: peak-memory-${{ env.PEAK_MB }}mb
+          path: peak-memory.txt
+          retention-days: 7
+
+      # Archive before upload: `actions/upload-artifact@v3` writes one
+      # database row per FILE, not one per upload. Story 2.1 proved this
+      # uploading `dist/` unpackaged — 154 rows for 154 files (see the `dist`
+      # upload below). `vitest.config.ts:26`'s `html` reporter can emit close
+      # to one file per source file the suite touches — up to roughly 1229
+      # candidate files, up to ~8x the `dist` upload, and this job runs twice
+      # per commit once a PR is open (push + pull_request). Archiving into one
+      # file makes the row count exactly 1 regardless of how many files the
+      # html reporter produced. No step here runs on failure: if the coverage
+      # step above failed, the job is already failing (AC3) and there is
+      # nothing trustworthy to archive.
+      - name: Archive coverage report
+        run: tar -czf coverage.tar.gz coverage/
+
+      # Same @v3 pin as the `dist` upload below, same reason — @v4 does not
+      # resolve on this instance (GHESNotSupportedError, Story 1.8).
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage
+          path: coverage.tar.gz
+          # 7 days, not 1 (raised 2026-08-14 by Oleg's decision). The first
+          # rationale for flagging this was wrong: it worried about opening
+          # coverage after a FAILED run, but the steps above carry no
+          # `if: always()`, so a failed run produces no artifact at all. The
+          # real case is a GREEN run consulted later than the same day — 24h
+          # covers "next morning" and fails Friday→Monday. Cost of 7 days at
+          # 3.9 MB per run and daily cadence is ~28 MB, negligible beside the
+          # 154 `dist` rows kept on the same terms.
+          retention-days: 7
+
+  build:
+    name: Build
+    runs-on: node-20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+        env:
+          # CI-only literal. The ported line was
+          # `${{ secrets.VITE_API_BASE_URL || 'http://localhost:80' }}`
+          # (CI.yml:96-99) and that `||` fallback is exactly the construct NFR8
+          # and D6 forbid: a missing variable must fail the build, not ship a
+          # bundle pointed somewhere silently. This build is a compile-and-bundle
+          # check — its output is never deployed anywhere, so a real API base
+          # URL is not needed here. Real per-environment values are Story
+          # 3.3's job, read from OpenBao at deploy time.
+          VITE_API_BASE_URL: http://ci.invalid
+
+      # Pinned to @v3, not @v4: @v4 fails on this instance with
+      # GHESNotSupportedError (Story 1.8). @v3 is the version Story 1.8
+      # proved works — its own log confirmed "Container for artifact ...
+      # successfully created" and "Artifact has been finalized".
+      #
+      # That proof covers upload only. There is still no Actions-artifacts API
+      # on this instance (established by Story 2.3, deferred-work.md:886-898:
+      # a token-authenticated call to
+      # /api/v1/repos/CRM/fe-prionex/actions/artifacts returns 404) — but the
+      # web route /CRM/fe-prionex/actions/runs/{index}/artifacts/{name}
+      # exists and gates on a browser session (Story 2.3,
+      # deferred-work.md:886-898). It redirects an API token to /user/login —
+      # which proves the route exists and is session-gated, NOT that the file
+      # comes out the other side. Only a human click proves a download. Never
+      # build a script or a
+      # later story on programmatic artifact retrieval, it does not work here.
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: dist
+          path: dist/
+          retention-days: 1
+
+  # No Codecov step, no Codecov token, no Codecov secret — anywhere in this
+  # file (FR3). Story 2.3 reintroduced coverage generation (`test` job, above:
+  # `test:coverage:ci`, single pass) and publishes it as an uploaded workflow
+  # artifact — archived to one file first, `actions/upload-artifact@v3` — in
+  # place of the third-party upload this comment used to describe as future
+  # work. See
+  # _bmad-output/implementation-artifacts/2-3-publish-coverage-as-an-artifact-instead-of-uploading-to-codecov.md.
+
+  # ── Story 3.4 ────────────────────────────────────────────────────────────────
+  #
+  # The container image, built only after lint, typecheck and tests pass. This
+  # is what makes an image exist for a feature branch without anyone asking
+  # (AC2), which is in turn what makes the DEV deploy in Story 4.3 possible: it
+  # pulls fail-fast with no `:latest` fallback, so the image has to already be
+  # there.
+  #
+  # `needs:` is the gate. A failing test does not produce a broken image — it
+  # produces NO image, because a job whose `needs` failed is skipped, not run.
+  # No trigger is involved and none was available: `workflow_run` was measured
+  # and is not usable on this instance (PR #30).
+  #
+  # `uses:` rather than a copy of build.yml's steps. That file holds ~150 lines
+  # of load-bearing logic — the OpenBao read with its trap-revoke, the tag
+  # computation with its `keep_pattern` guard and permanence report, the digest
+  # assertion — and a second copy of the `keep_pattern` guard is exactly how it
+  # drifts out of step with the retention rule in the database. `workflow_call`
+  # was measured property by property before this was written; see D21.
+  #
+  # 🔴 `environment: dev` is a LITERAL, and that is AC5. No expression, no
+  # input, no fallback — because a preprod or prod build mints a PERMANENT tag,
+  # and removing one needs an authorised DELETE plus a write:package token,
+  # which has twice required Oleg in person.
+  #
+  # ⚠️ Precisely which tag is permanent, because an earlier version of this
+  # comment said "`-preprod` and `-prod` tags" and only half of that is true:
+  # it is `sha-<12>-preprod` and `sha-<12>-prod` that the retention rule keeps
+  # forever. The branch tag `<branch>-prod` matches no `keep_pattern`
+  # alternative and expires at 14 days like any `-dev` tag — `probe-3-3-preprod-preprod`
+  # is sitting in the registry right now on the ordinary clock. The literal is
+  # still right, but a future story must not reason from the wider claim. The automatic
+  # path must not be able to reach those environments even by accident, and
+  # "cannot" here is provable by reading this one line.
+  #
+  # `secrets: inherit` is not a shortcut — it is the only mechanism that works.
+  # A callee cannot declare the secrets it needs (`on.workflow_call.secrets` is
+  # rejected by the parser) and repository secrets are not ambient inside a
+  # callee. Both measured, D21. ⚠️ It is all-or-nothing: build.yml receives every
+  # repository secret including the production OpenBao credentials. That is not
+  # a regression — it already had them as a top-level workflow, and the
+  # per-environment `case` in its OpenBao step is what actually narrows them
+  # (D20) — but Story 4.8 should weigh it before extracting a deploy workflow.
+  #
+  # 🚨 The `if:` keeps this off `pull_request`, where the run's ref is
+  # `refs/pull/N/head` and the image would be tagged `N-head-dev` — junk in the
+  # registry for no benefit, since the push run on the same branch already built
+  # the same content.
+  #
+  # 🔴 It tests `github.ref`, NOT `github.event_name`, and that is the whole
+  # point. The first version of this job used `github.event_name == 'push'` and
+  # produced a GREEN RUN THAT BUILT NOTHING — run 631: `image` reported success
+  # while `image.build-and-push` was skipped, and the registry had no new tag.
+  #
+  # The cause: Forgejo copies a `uses:` job's `if:` DOWN into the expanded
+  # callee job — visibly, the same way it copies `needs:` — and re-evaluates it
+  # there, where `github.event_name` is `workflow_call`, never `push`. The
+  # condition was constant-false. Nothing errored.
+  #
+  # `github.ref` does not have this problem because it is a property of the RUN,
+  # not of the job: `action_run.ref` is a single column, and the expanded callee
+  # lives inside the same run. Only `event_name` is synthesized per job to
+  # describe the call.
+  #
+  # 🔴 The condition is written POSITIVELY — `startsWith(…, 'refs/heads/')` —
+  # and that is deliberate, because the negative form `!startsWith(…,
+  # 'refs/pull/')` is TRUE when `github.ref` is empty. It would run the job for
+  # the wrong reason and look identical to working. Written this way an
+  # unresolvable context skips the job, which is visible, instead of running it
+  # on a ref nobody supplied.
+  #
+  # No `ref:` is passed. `${{ github.ref_name }}` was tried here and arrived at
+  # the callee EMPTY — run 632 died on build.yml's own guard with `ref ''
+  # sanitizes to an empty string`. The branch is derived inside build.yml from
+  # `GITHUB_REF` instead, in bash, where string slicing actually exists.
+  #
+  # ⚠️ A green `image` job is NOT evidence that an image was built. The wrapper
+  # reports success when every expanded job was SKIPPED. The only evidence is
+  # the tag in the registry — Story 3.4 Task 5 means the registry, not the tick.
+  #
+  # 🚨 On concurrency, deliberately NOT adding a block. build.yml's own block
+  # does not apply when it is called (D21), so the policy here is Forgejo's
+  # default for `push`: auto-cancel an earlier run of the SAME workflow on the
+  # SAME ref for the SAME event. Adding an explicit block would turn every rapid
+  # push on a feature branch into a queued ~540s run on a host shared with
+  # another tenant's production.
+  #
+  # 🔴 An earlier version of this comment claimed more than that mechanism can
+  # deliver, and review was right to attack it. Correcting the record:
+  #
+  #   - "auto-cancel leaves exactly one writer" holds only WITHIN one workflow
+  #     file and one event type. A manual dispatch of `build.yml` for the same
+  #     ref is a separate writer with its own group, and nothing serializes it
+  #     against this one. Two green runs can leave `<branch>-dev` pointing at the
+  #     OLDER commit.
+  #   - "a cancel cannot leave a tag pointing at the wrong image" is true per
+  #     TAG and false per tag SET. Two tags are pushed in sequence; a cancel
+  #     between the two manifest PUTs leaves the `sha-` tag updated and
+  #     `<branch>-dev` stale, and the digest assertion never runs to say so.
+  #   - "`sha-<12>-dev` tags cannot collide" is false across time. The same
+  #     commit is rebuilt whenever it is reachable from two refs, and the builds
+  #     are not reproducible — the base image floats and the OpenBao URLs can
+  #     change — so the tag silently repoints to a different digest.
+  #
+  # None of that is newly introduced here; it is the residual race build.yml
+  # already records for the dispatch path, which this job arms automatically.
+  # It is written down rather than fixed because fixing it needs a serialization
+  # mechanism this instance does not offer at job level (D8), and Story 4.8 will
+  # have to face the same question for deploys.
+  # 🔴 `ci.yml` also has a `workflow_dispatch` trigger with NO branch filter —
+  # `branches-ignore` applies to `push` only. On a dispatch `github.ref` is
+  # `refs/heads/<chosen branch>`, so the `image` job's own `if:` is TRUE and it
+  # pushes to the registry. Dispatching CI on `prod` would build prod-branch
+  # content baked with DEV OpenBao URLs and tag it `prod-dev`.
+  #
+  # It cannot be fixed in the `image` job's `if:` using `github.event_name`: a
+  # `uses:` job's `if:` is copied down into the callee and re-evaluated where
+  # that value is `workflow_call` (D21) — the trap that produced a green run
+  # building nothing in run 631. `github.ref` survives the copy, `event_name`
+  # does not.
+  #
+  # So the check lives in an ordinary `run:` job whose `if:` is not copied
+  # anywhere, and `image` depends on it. A skipped dependency skips the
+  # dependent — confirmed by run 642.
+  #
+  # ⚠️ THIS JOB WAS ADDED, REVERTED, AND RESTORED, and the reason it was reverted
+  # was a measurement error worth recording so nobody repeats it. It was claimed
+  # that a skipped ordinary job leaves its commit status `pending` forever, and
+  # that this hung PR #35. The database refutes it flatly — for the very commit
+  # in question:
+  #
+  #   CI / Gate the image build to real pushes (pull_request) | pending | idx 30
+  #   CI / Gate the image build to real pushes (pull_request) | success | idx 31
+  #
+  # both stamped the same second, and across the whole repository there are 434
+  # `success` and 21 `failure` commit statuses and **zero** `pending`. An
+  # intermediate row was sampled and reported as final — the same mistake Story
+  # 2.1 made with job logs, in a story that warns about it twice.
+  #
+  # A skipped ordinary job resolves to success. It does not hang anything.
+
+  gate:
+    name: Gate the image build to real pushes
+    if: github.event_name == 'push'
+    runs-on: node-20
+    timeout-minutes: 5
+    steps:
+      - name: Report why the image build is allowed
+        run: echo "event is push — the image build may proceed"
+
+  image:
+    name: Build and Push Image
+    needs: [lint, typecheck, test, gate]
+    if: ${{ startsWith(github.ref, 'refs/heads/') }}
+    uses: ./.forgejo/workflows/build.yml
+    with:
+      environment: dev
+    secrets: inherit

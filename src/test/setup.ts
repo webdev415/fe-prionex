@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 import '@testing-library/jest-dom'
-import { configure } from '@testing-library/react'
+import { cleanup, configure } from '@testing-library/react'
 import { vi, beforeAll, beforeEach, afterEach, afterAll } from 'vitest'
 import './mocks/callQaSettings'
 import './mocks/aiAssistantSettings'
@@ -29,6 +29,13 @@ import './mocks/assistantAdmin'
  * пойдёт сам, и ожидание повисло бы навсегда.
  */
 afterEach(async () => {
+  // `cleanup()` пришёл из main: размонтирует дерево ДО такта, чтобы отложенная
+  // задача Radix успела сработать на живом окне, а не догорала уже после того,
+  // как vitest начал сносить окружение.
+  cleanup()
+  // Под подменёнными таймерами `setTimeout` сам не пойдёт, и ожидание повисло
+  // бы навсегда. В main этой защиты нет; здесь она обязательна, потому что
+  // часть файлов подменяет таймеры целиком.
   if (vi.isFakeTimers()) return
   await new Promise((resolve) => setTimeout(resolve, 0))
 })
@@ -129,6 +136,16 @@ const installNetworkBlock = () => {
 installNetworkBlock()
 beforeEach(installNetworkBlock)
 
+// jsdom's URL persists across tests within a file. Pages that mirror state into
+// the address bar (AiAssistant deep-link ?conversation=, tabs with
+// useSearchParams) would otherwise leak query params from one test into the
+// mount of the next — e.g. a hydrated dialog id resurfacing as a deep-link in a
+// test that expects a pristine page. Reset to a bare path before every test; a
+// test that needs its own URL sets it after this hook runs.
+beforeEach(() => {
+  window.history.replaceState(null, '', window.location.pathname)
+})
+
 // Suppress console warnings in tests
 const originalError = console.error
 const originalWarn = console.warn
@@ -159,6 +176,37 @@ afterAll(() => {
   console.warn = originalWarn
 })
 
+// Unmount, then let the timers that unmounting schedules actually run — while the
+// jsdom realm that owns them is still alive.
+//
+// The failure this prevents is a whole-suite flake that never reproduces on a
+// single file. Radix's FocusScope restores focus in a `setTimeout(..., 0)`
+// registered by its cleanup function (`@radix-ui/react-focus-scope`, the returned
+// teardown): it constructs a `CustomEvent` and dispatches it on the container.
+// Nothing awaits that timer. When a test file ends with a Radix overlay still
+// mounted — any Dialog, Popover, Select or Dropdown — the timer is still pending
+// as the file finishes.
+//
+// `pool: 'forks'` + `maxWorkers: 1` + `fileParallelism: false` means files run
+// sequentially in ONE process, each with a FRESH jsdom environment. So the pending
+// timer fires during the *next* file, by which time `globalThis.CustomEvent` belongs
+// to the new realm while `container` still belongs to the old one. jsdom rejects the
+// cross-realm object with:
+//
+//   TypeError: Failed to execute 'dispatchEvent' on 'EventTarget':
+//              parameter 1 is not of type 'Event'.
+//
+// Every test still passes — it is an *unhandled error*, not an assertion failure —
+// but Vitest reports it and exits non-zero, so a fully green suite fails the run.
+// Measured on 2026-08-13: 2 failures in 6 full-suite runs, and it rejected a commit
+// of its own fix's story. Story 2.5 needs five consecutive green runs and Story 2.6
+// puts required status checks on top of that, so at a ~33% rate merges would have
+// blocked at random with nothing wrong in the code.
+//
+// `cleanup()` is called explicitly rather than relying on RTL's auto-cleanup so this
+// hook does not depend on hook ordering: whichever runs first, by the time the
+// `await` below resolves the tree is unmounted and its timers have run in the realm
+// that created them. Calling `cleanup()` twice is a no-op.
 // Mock ResizeObserver
 if (typeof globalThis.ResizeObserver === 'undefined') {
   class ResizeObserverMock {

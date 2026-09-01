@@ -531,6 +531,8 @@ export interface PaymentMonitoringItem {
   verified_at: string | null
   amount: string
   payment_method: PaymentMethod
+  /** EasyPay rows only: which service the payer chose. Null elsewhere. */
+  easypay_method?: 'card' | 'google_pay' | 'apple_pay' | null
   status: PaymentStatus
 }
 

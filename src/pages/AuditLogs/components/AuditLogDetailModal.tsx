@@ -115,6 +115,15 @@ export function AuditLogDetailModal({ open, log, onClose }: AuditLogDetailModalP
   }
 
   // Format value for display
+  /** Render a details value for display: primitives as-is, nested structures
+   *  as compact JSON. Empty strings and nulls become an em dash so a missing
+   *  value is visibly missing rather than an invisible blank row. */
+  const formatDetailValue = (value: unknown): string => {
+    if (value === null || value === undefined || value === '') return '—'
+    if (typeof value === 'object') return JSON.stringify(value)
+    return String(value)
+  }
+
   const formatValue = (value: string | null | undefined, fieldName?: string): string => {
     if (value === null || value === undefined) return '(null)'
     if (value === '') return '(empty)'
@@ -286,22 +295,62 @@ export function AuditLogDetailModal({ open, log, onClose }: AuditLogDetailModalP
             </div>
           </div>
 
-          {/* Details Section — the free-text reason behind the event.
-              Rendered above Changes because an event that carries one often
-              has no field-level diff at all: a deletion, or anything a
-              background job did. Without this the modal showed only the
-              header fields for such rows, and everything the backend recorded
-              about WHY was invisible. */}
+          {/* Reason — the free-text explanation behind the event. Kept
+              separate from Details below: that renders a structured payload,
+              this is one sentence, and an event often carries one without the
+              other. Deletions and background jobs typically have no
+              field-level diff at all, so without this the modal showed their
+              header fields and nothing about why. */}
           {log.reason && (
             <div className="flex flex-col gap-2 self-stretch">
               <span className="text-foreground text-base leading-[155%] font-medium tracking-[-0.32px]">
-                {t('pages.auditLogs.detailModal.details')}
+                {t('pages.auditLogs.detailModal.reason', 'Reason')}
               </span>
               <div className="border-border bg-card/50 flex flex-col items-start justify-center gap-1 self-stretch rounded-xl border px-3 py-3 sm:px-6 sm:py-4">
                 <span className="text-foreground text-sm leading-[155%] break-words">
                   {log.reason}
                 </span>
               </div>
+            </div>
+          )}
+
+          {/* Details Section — shown when the event carries a payload rather than
+              field-level changes: credit lookups, gateway callbacks, exports.
+              Rendered only when `changes` is absent so update events keep their
+              richer old -> new view. */}
+          {!log.changes?.length && log.details && (
+            <div className="flex flex-col gap-2 self-stretch">
+              <span className="text-foreground text-base leading-[155%] font-medium tracking-[-0.32px]">
+                {t('pages.auditLogs.detailModal.details', 'Details')}
+              </span>
+              {Object.entries(log.details).map(([section, value]) => (
+                <div
+                  key={section}
+                  className="border-border bg-card/50 flex flex-col items-start gap-2 self-stretch rounded-xl border px-3 py-3 sm:px-6 sm:py-4"
+                >
+                  <span className="text-muted-foreground text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
+                    {section}
+                  </span>
+                  {value !== null && typeof value === 'object' && !Array.isArray(value) ? (
+                    <div className="flex flex-col gap-1 self-stretch">
+                      {Object.entries(value as Record<string, unknown>).map(([key, val]) => (
+                        <div key={key} className="flex flex-col gap-1 sm:flex-row sm:gap-3">
+                          <span className="text-muted-foreground w-full text-xs leading-[150%] font-medium tracking-[-0.28px] sm:w-[180px] sm:shrink-0">
+                            {key}
+                          </span>
+                          <span className="text-foreground text-xs leading-[150%] font-medium tracking-[-0.28px] break-all">
+                            {formatDetailValue(val)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-foreground text-xs leading-[150%] font-medium tracking-[-0.28px] break-all">
+                      {formatDetailValue(value)}
+                    </span>
+                  )}
+                </div>
+              ))}
             </div>
           )}
 

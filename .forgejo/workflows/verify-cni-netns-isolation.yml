@@ -1,0 +1,435 @@
+name: Verify — CNI netns isolation for RUN steps
+
+# Epic 3 retro action item A1 (2026-08-18/19). PERMANENT standing
+# regression-test workflow, promoted from the throwaway probe branch
+# `probe/a1-cni-netns-isolation` per review round 1 item 6: the thing this
+# proves — that a RUN step's own network namespace has exactly the
+# reachability this project has decided it should have, and none of the
+# reachability it shouldn't — needs re-proving on demand any time
+# `Dockerfile.buildkit-cni`, the CNI conflist baked into it, or its
+# iptables firewall entrypoint change, not just once at adoption time. The
+# probe branch itself is deleted after merge (its content lives on here);
+# do not resurrect it as a separate branch for future changes — dispatch
+# this workflow instead.
+#
+# Dispatch-only, never runs automatically, not referenced by ci.yml or
+# build.yml, and does not touch the production pipeline's tags or its
+# shared `:buildcache`. Builds its OWN throwaway test image straight from
+# whatever `Dockerfile.buildkit-cni` currently says on the dispatched
+# ref — NOT the already-published `v1.0.0-buildkit-cni` production tag —
+# so this can validate a proposed change BEFORE it is retagged and rolled
+# out. See D26 in docs/migration-decisions.md for the full chronicle this
+# harness's earlier runs (as the probe workflow: 737, 739, 740, 741) fed
+# into, and `.forgejo/workflows/build-buildkit-cni-image.yml` for the
+# separate workflow that actually publishes the production tag/digest.
+#
+# ── What this answers, precisely ────────────────────────────────────────
+# docs/migration-decisions.md#d22 already measured and closed the sharper
+# half of A1's original question: `network=host` was replaced by a
+# user-defined bridge (`network=fe-prionex-build`), closing the most
+# direct Docker-API hole. What CNI isolation additionally closes — proven
+# here — is that a RUN step's own netns can no longer reach anything on
+# the outer builder container's own private/link-local ranges: OpenBao
+# (172.20.0.5:8200, D22's own named residual risk) and the dind engine's
+# own default-bridge gateway (172.17.0.1:2375 — root-equivalent Docker
+# API reachable locally; docs/runners/config.yml). Outbound public
+# internet (`npm ci`) must survive in every configuration this checks.
+#
+# ── The outcome matrix, and why it has FOUR jobs, not one ───────────────
+# A check that cannot fail proves nothing (this project's own repeated
+# lesson, and the specific finding review round 2 leveled against this
+# harness's own earlier design: `127.0.0.1:2375` measured from INSIDE the
+# sandboxed netns is the sandbox's own loopback — structurally reachable
+# under every possible firewall configuration, so a check against it can
+# never fail and proves nothing). This harness checks `172.17.0.1:2375`
+# instead — a target that is genuinely reachable today, outside CNI, and
+# must become genuinely unreachable under it:
+#   baseline-network-checks  — today's config, no CNI. Dind gateway
+#     (172.17.0.1:2375): expected REACHABLE — a guard that can actually
+#     fail, not the vacuous loopback check this harness used to run.
+#     OpenBao: expected REACHABLE (reproduces D22's own residual-risk
+#     finding — if this step is unexpectedly green-as-unreachable, the
+#     environment has already changed since D22 and the rest of this
+#     comparison needs re-checking before trusting it). Internet: expected
+#     reachable.
+#   cni-network-checks       — the CNI-enabled test builder. Dind gateway
+#     AND OpenBao: both expected UNREACHABLE now — the actual thing this
+#     harness exists to prove, per the default-deny ruleset described in
+#     Dockerfile.buildkit-cni's own entrypoint comment. Internet: still
+#     expected reachable.
+#   cache-alive-check        — proves the registry cache mechanism still
+#     works under the CNI-enabled builder, using its OWN throwaway cache
+#     tag, never the shared `:buildcache` the production pipeline depends
+#     on (Story 3.6's own retro finding: "permanent side effects from
+#     throwaway work" was already a scored hazard once this epic). Both
+#     builds use IDENTICAL build-args on purpose — BuildKit's cache key
+#     for a RUN instruction includes the ARG values referenced by it.
+#     🚨 This job proves cache LIVENESS via its own two-step cold/warm
+#     comparison and this step's own pass/fail logic — it does NOT apply
+#     the duration-comparison methodology D22 used elsewhere, and it only
+#     ever exercises this harness's own trivial single-layer diagnostic
+#     Dockerfile, never the real multi-stage Dockerfile.prod. Do not read
+#     a green run of this job as proof the cache mechanism works against
+#     Dockerfile.prod specifically — it has never been exercised there.
+#
+# ── Job logs are not retrievable on this instance ───────────────────────
+# Every diagnostic step's PASS/FAIL status IS the evidence — see
+# Dockerfile.netns-isolation-check's own header for how the exit code is
+# encoded. Step and job NAMES are written to be legible from the Forgejo
+# Actions run list alone, without opening a single log line.
+#
+# ── Budget ────────────────────────────────────────────────────────────
+# Implementation: 4 runs per dispatch — one per job below, in the ORDER
+# they appear (build-cni-image must complete before cni-network-checks or
+# cache-alive-check can use its output). baseline-network-checks has no
+# dependency and can run in parallel with build-cni-image. If CNI
+# plugin/bridge creation itself fails on the real runner — that failure IS
+# the answer: "not viable on this host, or this change broke it", not a
+# bug to iterate on blindly. Re-dispatch only with a new plan, not
+# repeatedly hoping for a different outcome ("не героствуй" — standing
+# instruction).
+#
+# Registry footprint: two throwaway tags
+# (git.crm-prionex.com/crm/fe-prionex:verify-cni-isolation-builder and
+# :verify-cni-isolation-cache), both outside the retention rule's
+# `keep_pattern` (verified against the compiled pattern in build.yml's own
+# tags step — neither matches `sha-...`, `latest`, `buildcache`,
+# `(pre)?prod-<hex>`, or the semver shape `v?\d+\.\d+\.\d+.*`), so both
+# expire in 14 days with no cleanup action required.
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: verify-cni-netns-isolation
+  cancel-in-progress: false
+
+jobs:
+  # ───────────────────────────────────────────────────────────────────────
+  build-cni-image:
+    name: "1. Build the CNI-enabled test builder image (from this ref's Dockerfile.buildkit-cni)"
+    runs-on: node-20
+    timeout-minutes: 20
+    outputs:
+      image: ${{ steps.image.outputs.ref }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install docker CLI
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends docker.io
+
+      - name: Create the build network
+        env:
+          BUILD_NETWORK: fe-prionex-build
+        run: |
+          set -euo pipefail
+          if docker network inspect "$BUILD_NETWORK" >/dev/null 2>&1; then
+            echo "network ${BUILD_NETWORK} already exists"
+          else
+            docker network create "$BUILD_NETWORK"
+            echo "network ${BUILD_NETWORK} created"
+          fi
+
+      # Same driver/network as build.yml's own builder — this job's push
+      # still goes through the ordinary path, unaffected by anything this
+      # harness is testing. Only the IMAGE this build PRODUCES carries CNI;
+      # the builder building it here does not use CNI itself.
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
+          driver-opts: network=fe-prionex-build
+
+      - name: Log in to git.crm-prionex.com
+        uses: docker/login-action@v3
+        with:
+          registry: git.crm-prionex.com
+          username: ${{ secrets.REGISTRY_USER }}
+          password: ${{ secrets.REGISTRY_TOKEN_RW }}
+
+      # 🔴 Throwaway tag, deliberately outside keep_pattern — see the header
+      # comment above for the compiled check. Never `sha-…`, never anything
+      # this project's retention rule would keep forever. Builds the SAME
+      # Dockerfile.buildkit-cni the production image workflow builds, so a
+      # dispatch of this harness against a proposed change proves that
+      # change, not a stale copy.
+      - name: Build and push the CNI-enabled test builder image
+        id: image
+        run: |
+          set -euo pipefail
+          IMAGE="git.crm-prionex.com/crm/fe-prionex:verify-cni-isolation-builder"
+          docker buildx build \
+            --file Dockerfile.buildkit-cni \
+            --tag "$IMAGE" \
+            --push \
+            .
+          echo "ref=${IMAGE}" >> "$GITHUB_OUTPUT"
+          echo "Pushed: ${IMAGE}"
+
+  # ───────────────────────────────────────────────────────────────────────
+  baseline-network-checks:
+    name: "2. Baseline (today's config, no CNI) — control"
+    runs-on: node-20
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install docker CLI
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends docker.io
+
+      - name: Create the build network
+        env:
+          BUILD_NETWORK: fe-prionex-build
+        run: |
+          set -euo pipefail
+          if docker network inspect "$BUILD_NETWORK" >/dev/null 2>&1; then
+            echo "network ${BUILD_NETWORK} already exists"
+          else
+            docker network create "$BUILD_NETWORK"
+            echo "network ${BUILD_NETWORK} created"
+          fi
+
+      # Exactly today's production config — stock image, no CNI.
+      - name: Set up Docker Buildx (baseline, no CNI)
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
+          driver-opts: network=fe-prionex-build
+
+      # No `docker login` here on purpose: these three builds never push
+      # or pull anything from our registry, only from Docker Hub
+      # (`alpine:3.20`, already public), so no registry credential is
+      # needed for this job at all.
+
+      - name: "Dind gateway must be reachable under baseline (expect PASS = a guard that can actually fail)"
+        run: |
+          set -euo pipefail
+          docker buildx build --no-cache \
+            --file Dockerfile.netns-isolation-check \
+            --build-arg PROBE_HOST=172.17.0.1 \
+            --build-arg PROBE_PORT=2375 \
+            --build-arg EXPECT_REACHABLE=yes \
+            --build-arg PROBE_LABEL=baseline-dind-gateway \
+            .
+
+      - name: "OpenBao must be reachable under baseline (expect PASS = reproduces D22's known gap)"
+        run: |
+          set -euo pipefail
+          docker buildx build --no-cache \
+            --file Dockerfile.netns-isolation-check \
+            --build-arg PROBE_HOST=172.20.0.5 \
+            --build-arg PROBE_PORT=8200 \
+            --build-arg EXPECT_REACHABLE=yes \
+            --build-arg PROBE_LABEL=baseline-openbao \
+            .
+
+      - name: "Public internet must be reachable under baseline (expect PASS)"
+        run: |
+          set -euo pipefail
+          docker buildx build --no-cache \
+            --file Dockerfile.netns-isolation-check \
+            --build-arg PROBE_HOST=registry.npmjs.org \
+            --build-arg PROBE_PORT=443 \
+            --build-arg EXPECT_REACHABLE=yes \
+            --build-arg PROBE_LABEL=baseline-internet \
+            .
+
+  # ───────────────────────────────────────────────────────────────────────
+  cni-network-checks:
+    name: "3. CNI-sandboxed RUN steps — the actual question"
+    needs: build-cni-image
+    runs-on: node-20
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install docker CLI
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends docker.io
+
+      - name: Create the build network
+        env:
+          BUILD_NETWORK: fe-prionex-build
+        run: |
+          set -euo pipefail
+          if docker network inspect "$BUILD_NETWORK" >/dev/null 2>&1; then
+            echo "network ${BUILD_NETWORK} already exists"
+          else
+            docker network create "$BUILD_NETWORK"
+            echo "network ${BUILD_NETWORK} created"
+          fi
+
+      # Needed to PULL job 1's custom builder image.
+      - name: Log in to git.crm-prionex.com
+        uses: docker/login-action@v3
+        with:
+          registry: git.crm-prionex.com
+          username: ${{ secrets.REGISTRY_USER }}
+          password: ${{ secrets.REGISTRY_TOKEN_RW }}
+
+      # The OUTER builder container stays on the same safe bridge as
+      # today's production config (`network=fe-prionex-build`) — this
+      # harness is not reverting that fix. `image=` points buildx at job
+      # 1's test image. `buildkitd-config-inline` — NOT `buildkitd-flags`,
+      # which is broken on this buildkitd build (see Dockerfile.buildkit-
+      # cni's own header comment) — is what turns CNI on for the OCI
+      # worker's per-RUN-step sandboxing. Paths must match exactly where
+      # Dockerfile.buildkit-cni put the plugin binaries and the CNI
+      # conflist (both are also buildkitd's own documented defaults, so
+      # this is doubly redundant with intent, not fragile).
+      - name: Set up Docker Buildx (CNI-enabled)
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
+          driver-opts: |
+            network=fe-prionex-build
+            image=${{ needs.build-cni-image.outputs.image }}
+          buildkitd-config-inline: |
+            [worker.oci]
+              networkMode = "cni"
+              cniConfigPath = "/etc/buildkit/cni.conflist"
+              cniBinaryDir = "/opt/cni/bin"
+
+      - name: "Dind gateway must become UNREACHABLE under CNI (expect PASS — the actual question, half 1)"
+        run: |
+          set -euo pipefail
+          docker buildx build --no-cache \
+            --file Dockerfile.netns-isolation-check \
+            --build-arg PROBE_HOST=172.17.0.1 \
+            --build-arg PROBE_PORT=2375 \
+            --build-arg EXPECT_REACHABLE=no \
+            --build-arg PROBE_LABEL=cni-dind-gateway \
+            .
+
+      - name: "OpenBao must become UNREACHABLE under CNI (expect PASS — the actual question, half 2)"
+        run: |
+          set -euo pipefail
+          docker buildx build --no-cache \
+            --file Dockerfile.netns-isolation-check \
+            --build-arg PROBE_HOST=172.20.0.5 \
+            --build-arg PROBE_PORT=8200 \
+            --build-arg EXPECT_REACHABLE=no \
+            --build-arg PROBE_LABEL=cni-openbao \
+            .
+
+      - name: "Public internet must SURVIVE CNI isolation (expect PASS — a break here is blocking)"
+        run: |
+          set -euo pipefail
+          docker buildx build --no-cache \
+            --file Dockerfile.netns-isolation-check \
+            --build-arg PROBE_HOST=registry.npmjs.org \
+            --build-arg PROBE_PORT=443 \
+            --build-arg EXPECT_REACHABLE=yes \
+            --build-arg PROBE_LABEL=cni-internet \
+            .
+
+  # ───────────────────────────────────────────────────────────────────────
+  cache-alive-check:
+    name: "4. Registry cache still works under the CNI-enabled builder"
+    needs: build-cni-image
+    runs-on: node-20
+    timeout-minutes: 15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install docker CLI
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends docker.io
+
+      - name: Create the build network
+        env:
+          BUILD_NETWORK: fe-prionex-build
+        run: |
+          set -euo pipefail
+          if docker network inspect "$BUILD_NETWORK" >/dev/null 2>&1; then
+            echo "network ${BUILD_NETWORK} already exists"
+          else
+            docker network create "$BUILD_NETWORK"
+            echo "network ${BUILD_NETWORK} created"
+          fi
+
+      # Must run BEFORE "Set up Docker Buildx" below, not after —
+      # `driver-opts: image=` makes buildx PULL the custom builder image
+      # from OUR OWN PRIVATE registry as part of builder creation; without
+      # credentials in place first, that pull fails closed (401/403) and
+      # kills buildx setup itself before either build step below ever
+      # runs. build.yml's own step order carries the same requirement, for
+      # the same reason (this harness's own earlier run — as the probe
+      # workflow, run 739 — was broken by exactly this ordering bug in
+      # this specific job, fixed by the commit that produced run 741).
+      - name: Log in to git.crm-prionex.com
+        uses: docker/login-action@v3
+        with:
+          registry: git.crm-prionex.com
+          username: ${{ secrets.REGISTRY_USER }}
+          password: ${{ secrets.REGISTRY_TOKEN_RW }}
+
+      - name: Set up Docker Buildx (CNI-enabled)
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
+          driver-opts: |
+            network=fe-prionex-build
+            image=${{ needs.build-cni-image.outputs.image }}
+          buildkitd-config-inline: |
+            [worker.oci]
+              networkMode = "cni"
+              cniConfigPath = "/etc/buildkit/cni.conflist"
+              cniBinaryDir = "/opt/cni/bin"
+
+      # First build: no cache-from (nothing published under this harness's
+      # own cache tag yet), cache-to exports it.
+      # 🔴 Its own cache tag, `:verify-cni-isolation-cache` — NEVER the
+      # shared `:buildcache` the production pipeline depends on. Outside
+      # keep_pattern, expires in 14 days, same as the builder image above.
+      - name: "First build (cold) — exports to this harness's own cache tag"
+        run: |
+          set -euo pipefail
+          IMAGE="git.crm-prionex.com/crm/fe-prionex:verify-cni-isolation-cache-test"
+          docker buildx build --no-cache \
+            --file Dockerfile.netns-isolation-check \
+            --build-arg PROBE_HOST=registry.npmjs.org \
+            --build-arg PROBE_PORT=443 \
+            --build-arg EXPECT_REACHABLE=yes \
+            --build-arg PROBE_LABEL=cache-check \
+            --cache-to "type=registry,ref=git.crm-prionex.com/crm/fe-prionex:verify-cni-isolation-cache,mode=max" \
+            --tag "$IMAGE" \
+            --push \
+            .
+
+      # Second build: SAME Dockerfile, SAME build-args (this matters —
+      # BuildKit's cache key for a RUN instruction includes the ARG values
+      # it references, so a changed PROBE_LABEL here would silently
+      # produce a false "cache miss"). `--cache-from` instead of
+      # `--no-cache` is the only difference. This step's own pass/fail
+      # (it must succeed at all, resolving via the cache rather than
+      # failing to find a compatible layer) is the evidence of cache
+      # liveness — this job does NOT compare step durations against a
+      # threshold (an unreliable guard this project has already named as
+      # its own worst pattern elsewhere), and it does not stand in for
+      # proof against Dockerfile.prod specifically (see the header
+      # comment's 🚨 note).
+      - name: "Second build (warm) — must resolve from this harness's own cache tag"
+        run: |
+          set -euo pipefail
+          IMAGE="git.crm-prionex.com/crm/fe-prionex:verify-cni-isolation-cache-test"
+          docker buildx build \
+            --file Dockerfile.netns-isolation-check \
+            --build-arg PROBE_HOST=registry.npmjs.org \
+            --build-arg PROBE_PORT=443 \
+            --build-arg EXPECT_REACHABLE=yes \
+            --build-arg PROBE_LABEL=cache-check \
+            --cache-from "type=registry,ref=git.crm-prionex.com/crm/fe-prionex:verify-cni-isolation-cache" \
+            --tag "$IMAGE" \
+            --push \
+            .
