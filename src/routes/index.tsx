@@ -28,6 +28,9 @@ const PublicPaymentsPage = lazy(() =>
   import('@/pages/PublicPayments').then((m) => ({ default: m.PublicPaymentsPage }))
 )
 const ForceChangePasswordPage = lazy(() => import('@/pages/auth/ForceChangePasswordPage'))
+const EmployeeCardPage = lazy(() =>
+  import('@/pages/EmployeeCard').then((m) => ({ default: m.EmployeeCardPage }))
+)
 const UserManagementPage = lazy(() =>
   import('@/pages/UserManagement').then((m) => ({ default: m.UserManagementPage }))
 )
@@ -446,6 +449,14 @@ export const router = createBrowserRouter([
             mode="any"
           >
             <CreditSectionGate>{withSuspense(<CreditLoanDetailPage />)}</CreditSectionGate>
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'team-management/users/:userId',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.EMPLOYEE_CARD.VIEW}>
+            {withSuspense(<EmployeeCardPage />)}
           </PermissionRoute>
         ),
       },

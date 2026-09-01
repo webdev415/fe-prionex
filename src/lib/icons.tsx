@@ -35,6 +35,7 @@ import {
   Alert02Icon,
   Add01Icon,
   Edit01Icon,
+  Edit02Icon,
   PencilEdit01Icon,
   Delete01Icon,
   Delete02Icon,
@@ -244,6 +245,7 @@ export const Icons = {
   // Actions
   Add: (props: Omit<IconProps, 'icon'>) => <Icon icon={Add01Icon} {...props} />,
   Edit: (props: Omit<IconProps, 'icon'>) => <Icon icon={Edit01Icon} {...props} />,
+  Edit02: (props: Omit<IconProps, 'icon'>) => <Icon icon={Edit02Icon} {...props} />,
   PencilEdit: (props: Omit<IconProps, 'icon'>) => <Icon icon={PencilEdit01Icon} {...props} />,
   Delete: (props: Omit<IconProps, 'icon'>) => <Icon icon={Delete02Icon} {...props} />,
   Delete01: (props: Omit<IconProps, 'icon'>) => <Icon icon={Delete01Icon} {...props} />,
@@ -480,6 +482,7 @@ export {
   Alert02Icon,
   Add01Icon,
   Edit01Icon,
+  Edit02Icon,
   PencilEdit01Icon,
   Delete01Icon,
   Delete02Icon,
