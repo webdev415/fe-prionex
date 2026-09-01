@@ -2,7 +2,11 @@ name: CD
 
 on:
   push:
-    branches: [main, development]
+    # development убран 01.09.2026 (решение CEO): деплой dev идёт конвейером
+    # Forgejo; зеркальный ff-push в GitHub-development запускал второй,
+    # лишний деплой фронта (прогон 33472003575, 01.09 05:01). main остаётся:
+    # прод пока выкатывается отсюда — до живого прогона Forgejo deploy-prod.
+    branches: [main]
     tags:
       - 'v*'
   workflow_dispatch:
