@@ -62,6 +62,7 @@ const schema = z.object({
   department_ids: z.array(z.number().int()),
   access_groups: z.array(z.string()),
   telephony_type: z.enum(['white', 'grey']),
+  answer_mode: z.enum(['auto', 'manual']),
   // Mirrors the gateway's campaign range; 0 is rejected upstream.
   priority: z
     .number({ error: 'Enter a number from 1 to 5' })
@@ -128,6 +129,7 @@ export function QueueFormModal({ open, queue, onClose }: QueueFormModalProps) {
       department_ids: queue?.department_ids ?? [],
       access_groups: queue?.access_groups ?? [],
       telephony_type: queue?.telephony_type ?? 'white',
+      answer_mode: queue?.answer_mode ?? 'auto',
       priority: queue?.priority ?? 3,
       sim_card_limit: queue?.sim_card_limit ?? 4,
       max_attempts: queue?.max_attempts ?? 3,
@@ -142,6 +144,7 @@ export function QueueFormModal({ open, queue, onClose }: QueueFormModalProps) {
         department_ids: queue?.department_ids ?? [],
         access_groups: queue?.access_groups ?? [],
         telephony_type: queue?.telephony_type ?? 'white',
+        answer_mode: queue?.answer_mode ?? 'auto',
         priority: queue?.priority ?? 3,
         sim_card_limit: queue?.sim_card_limit ?? 4,
         max_attempts: queue?.max_attempts ?? 3,
@@ -325,6 +328,41 @@ export function QueueFormModal({ open, queue, onClose }: QueueFormModalProps) {
                       )}
                     </p>
                   )}
+                </div>
+
+                {/* Answer mode — the gateway's accept_mode. On 'auto' it bridges
+                    the customer to whichever operator is free, with no chance to
+                    decline; 'manual' opens an accept window on the operator's
+                    screen first. */}
+                <div>
+                  <label className="text-foreground mb-1 block text-sm font-medium">
+                    {t('dialer.queueForm.answerMode', 'Answer mode')}
+                  </label>
+                  <Controller
+                    control={control}
+                    name="answer_mode"
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <SelectTrigger aria-label={t('dialer.queueForm.answerMode', 'Answer mode')}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="auto">
+                            {t('dialer.answerMode.auto', 'Automatic')}
+                          </SelectItem>
+                          <SelectItem value="manual">
+                            {t('dialer.answerMode.manual', 'Manual (operator accepts)')}
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    {t(
+                      'dialer.queueForm.answerModeHint',
+                      'Manual gives operators an accept window before the customer is connected.'
+                    )}
+                  </p>
                 </div>
 
                 <div className="flex flex-col gap-4 sm:flex-row">
