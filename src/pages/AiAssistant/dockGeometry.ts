@@ -32,10 +32,20 @@ const LEFT_RAIL_EXPANDED_HISTORY_COLLAPSED = 'lg:left-[21.25rem]'
 /* 240 + 28 + (280 + 16) = 564px */
 const LEFT_RAIL_EXPANDED_HISTORY_EXPANDED = 'lg:left-[35.25rem]'
 
+/**
+ * @param isEmbedded OneX dock mode (`?embed=dock`): the dashboard rail and the
+ *   history panel are not rendered, so there is nothing to clear — the dock
+ *   keeps its full-width box (`left-0 right-0 w-full`) at every viewport width.
+ *   Returning desktop offsets here would push the composer off a host window
+ *   wider than the `lg` breakpoint.
+ */
 export function getDockDesktopBoxClasses(
   isOpenSideBar: boolean,
-  isHistoryCollapsed: boolean
+  isHistoryCollapsed: boolean,
+  isEmbedded = false
 ): string {
+  if (isEmbedded) return ''
+
   const left = isOpenSideBar
     ? isHistoryCollapsed
       ? LEFT_RAIL_EXPANDED_HISTORY_COLLAPSED

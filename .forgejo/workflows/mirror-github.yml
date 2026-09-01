@@ -1,0 +1,34 @@
+name: mirror-github
+
+# GitHub — РЕЗЕРВНАЯ копия (решение CEO 31.08.2026): источник правды — этот Forgejo.
+# До дня переключения зеркалится ТОЛЬКО development: на GitHub в main стоит CD с
+# автодеплоем прода, и зеркало main запустило бы его мимо PRE-PROD. main и теги —
+# после отключения GitHub Actions. Пуш на GitHub ТОЛЬКО fast-forward:
+# без --force. Если GitHub разошёлся (кто-то запушил туда напрямую) — job краснеет,
+# ничего не перетирается; разбирать руками. Секрет GH_MIRROR_TOKEN — репо-уровень
+# (имя GITHUB_* Forgejo не принимает).
+
+on:
+  push:
+    branches: [development]
+
+concurrency:
+  group: mirror-github-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Push to GitHub (fast-forward only)
+        env:
+          GH_MIRROR_TOKEN: ${{ secrets.GH_MIRROR_TOKEN }}
+        run: |
+          set -eu
+          test -n "$GH_MIRROR_TOKEN" || { echo "нет секрета GH_MIRROR_TOKEN"; exit 1; }
+          git remote add github "https://x-access-token:${GH_MIRROR_TOKEN}@github.com/CRM-Prionex/fe-prionex.git"
+          echo "→ GitHub: $GITHUB_REF"
+          git push github "HEAD:$GITHUB_REF"

@@ -12,6 +12,7 @@ import {
   createTemplate,
   updateTemplate,
   deleteTemplate,
+  restoreTemplate,
   updateSMSConfig,
 } from '../api/smsApi'
 import type {
@@ -145,6 +146,24 @@ export function useDeleteSMSTemplate() {
 
 // Alias for backward compatibility
 export const useDeleteTemplate = useDeleteSMSTemplate
+
+/**
+ * Restore a soft-deleted SMS template
+ */
+export function useRestoreSMSTemplate() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (templateId: number) => restoreTemplate(templateId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sms', 'templates'] })
+    },
+    onError: (error: AxiosError<{ detail?: string }>) => {
+      const message = error?.response?.data?.detail || 'Failed to restore template'
+      toast.error(message)
+    },
+  })
+}
 
 /**
  * Update SMS configuration

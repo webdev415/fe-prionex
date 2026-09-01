@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { formatMonthDay, formatTimeShort } from '@/lib/localeFormat'
@@ -7,7 +7,11 @@ import { useAuthStore } from '@/stores/authStore'
 import { useOperators } from '@/features/users/hooks'
 import { useThirdParty } from '@/features/training/hooks/useThirdParty'
 import { useExportThirdParty } from '@/features/training/hooks/useExportThirdParty'
-import { CallRecordingModal } from '@/pages/ClientManagement/components/CallRecordingModal'
+import {
+  CallRecordingModal,
+  type CallRecordingModalHandle,
+} from '@/pages/ClientManagement/components/CallRecordingModal'
+import { CallTranscriptPanel } from '@/features/quality'
 import type {
   CallMonitoringPeriod,
   ThirdPartyFilters,
@@ -17,6 +21,7 @@ import type {
 } from '@/features/training/types'
 import { AnalyticsMockTable } from './AnalyticsMockTable'
 import { AnalyticsKpiTile } from './AnalyticsKpiTile'
+import { AnalyticsTableOverlay } from './AnalyticsTableOverlay'
 import {
   ANALYTICS_TABLE_HEAD,
   ANALYTICS_TABLE_ROW,
@@ -154,6 +159,14 @@ export function ThirdPartiesSubTab() {
   const rows = query.data?.items ?? []
   const total = query.data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
+  // keepPreviousData keeps the PREVIOUS filter's rows on screen while the new
+  // request is in flight — without an explicit indicator that reads as wrong
+  // data (KAN-1027/KAN-1029 UX follow-up). Dim + spinner until it settles.
+  const isRefetching = query.isFetching && !query.isLoading
+
+  // Seek target for the transcript's timecodes (the modal delegates to its
+  // embedded player).
+  const callModalRef = useRef<CallRecordingModalHandle>(null)
 
   const modalCallData = useMemo(() => {
     if (!selected || !selected.call_id) return null
@@ -305,64 +318,70 @@ export function ThirdPartiesSubTab() {
         </div>
       </div>
 
-      <AnalyticsMockTable>
-        <thead className={ANALYTICS_TABLE_HEAD}>
-          <tr>
-            <th className={ANALYTICS_TABLE_TH}>
-              {t('pages.training.thirdParties.cols.date', 'Date / Time')}
-            </th>
-            <th className={ANALYTICS_TABLE_TH}>
-              {t('pages.training.thirdParties.cols.operator', 'Operator')}
-            </th>
-            <th className={ANALYTICS_TABLE_TH}>
-              {t('pages.training.thirdParties.cols.clientMain', 'Client (main)')}
-            </th>
-            <th className={ANALYTICS_TABLE_TH}>
-              {t('pages.training.thirdParties.cols.thirdPartyPhone', 'Third party phone')}
-            </th>
-            <th className={ANALYTICS_TABLE_TH}>
-              {t('pages.training.thirdParties.cols.duration', 'Duration')}
-            </th>
-            <th className={ANALYTICS_TABLE_TH}>
-              {t('pages.training.thirdParties.cols.result', 'Result')}
-            </th>
-            <th className={ANALYTICS_TABLE_TH}>
-              {t('pages.training.thirdParties.cols.returned', 'Returned to the client')}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {query.isLoading ? (
+      <div className="relative" aria-busy={isRefetching}>
+        <AnalyticsMockTable>
+          <thead className={ANALYTICS_TABLE_HEAD}>
             <tr>
-              <td colSpan={7} className="px-4 py-6 text-center text-[11px] text-[#9CA3AF]">
-                {t('pages.training.thirdParties.loading', 'Loading…')}
-              </td>
+              <th className={ANALYTICS_TABLE_TH}>
+                {t('pages.training.thirdParties.cols.date', 'Date / Time')}
+              </th>
+              <th className={ANALYTICS_TABLE_TH}>
+                {t('pages.training.thirdParties.cols.operator', 'Operator')}
+              </th>
+              <th className={ANALYTICS_TABLE_TH}>
+                {t('pages.training.thirdParties.cols.clientMain', 'Client (main)')}
+              </th>
+              <th className={ANALYTICS_TABLE_TH}>
+                {t('pages.training.thirdParties.cols.thirdPartyPhone', 'Third party phone')}
+              </th>
+              <th className={ANALYTICS_TABLE_TH}>
+                {t('pages.training.thirdParties.cols.duration', 'Duration')}
+              </th>
+              <th className={ANALYTICS_TABLE_TH}>
+                {t('pages.training.thirdParties.cols.result', 'Result')}
+              </th>
+              <th className={ANALYTICS_TABLE_TH}>
+                {t('pages.training.thirdParties.cols.returned', 'Returned to the client')}
+              </th>
             </tr>
-          ) : query.isError ? (
-            <tr>
-              <td colSpan={7} className="px-4 py-6 text-center text-[11px] text-[#EF4444]">
-                {t('pages.training.thirdParties.loadFailed', 'Failed to load. Please retry.')}
-              </td>
-            </tr>
-          ) : rows.length === 0 ? (
-            <tr>
-              <td colSpan={7} className="px-4 py-6 text-center text-[11px] text-[#9CA3AF]">
-                {t('pages.training.thirdParties.empty', 'No third-party calls match the filters.')}
-              </td>
-            </tr>
-          ) : (
-            rows.map((row) => (
-              <ThirdPartyRow
-                key={row.id}
-                row={row}
-                onOpen={() => row.call_id && setSelected(row)}
-                yesLabel={t('pages.training.thirdParties.returned.yes', 'Yes')}
-                didNotReturnLabel={t('pages.training.thirdParties.returned.no', 'Did not return')}
-              />
-            ))
-          )}
-        </tbody>
-      </AnalyticsMockTable>
+          </thead>
+          <tbody>
+            {query.isLoading ? (
+              <tr>
+                <td colSpan={7} className="px-4 py-6 text-center text-[11px] text-[#9CA3AF]">
+                  {t('pages.training.thirdParties.loading', 'Loading…')}
+                </td>
+              </tr>
+            ) : query.isError ? (
+              <tr>
+                <td colSpan={7} className="px-4 py-6 text-center text-[11px] text-[#EF4444]">
+                  {t('pages.training.thirdParties.loadFailed', 'Failed to load. Please retry.')}
+                </td>
+              </tr>
+            ) : rows.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-4 py-6 text-center text-[11px] text-[#9CA3AF]">
+                  {t(
+                    'pages.training.thirdParties.empty',
+                    'No data for the selected filters in this period.'
+                  )}
+                </td>
+              </tr>
+            ) : (
+              rows.map((row) => (
+                <ThirdPartyRow
+                  key={row.id}
+                  row={row}
+                  onOpen={() => row.call_id && setSelected(row)}
+                  yesLabel={t('pages.training.thirdParties.returned.yes', 'Yes')}
+                  didNotReturnLabel={t('pages.training.thirdParties.returned.no', 'Did not return')}
+                />
+              ))
+            )}
+          </tbody>
+        </AnalyticsMockTable>
+        <AnalyticsTableOverlay visible={isRefetching} />
+      </div>
 
       {total > pageSize ? (
         <Pagination
@@ -374,8 +393,25 @@ export function ThirdPartiesSubTab() {
         />
       ) : null}
 
+      {/* Call QA — third-party calls are exactly where a trainer wants the AI
+        read of the conversation; the panel gates itself on `view_transcripts`
+        plus the global Call QA switch. */}
       {selected && modalCallData ? (
-        <CallRecordingModal open onClose={() => setSelected(null)} callData={modalCallData} />
+        <CallRecordingModal
+          ref={callModalRef}
+          open
+          onClose={() => setSelected(null)}
+          callData={modalCallData}
+          transcriptPanel={
+            modalCallData.call_id ? (
+              <CallTranscriptPanel
+                callId={modalCallData.call_id}
+                active
+                onSeek={(ms) => callModalRef.current?.seekTo(ms)}
+              />
+            ) : undefined
+          }
+        />
       ) : null}
     </div>
   )

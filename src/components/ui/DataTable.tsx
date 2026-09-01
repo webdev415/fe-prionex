@@ -34,7 +34,12 @@ import {
 
 export interface Column<T> {
   key: string
-  header: string
+  /**
+   * Header cell content. For visually terse headers that need a richer
+   * accessible name (e.g. several "%" columns), pass a node with a
+   * `sr-only` span instead of relying on aria-label (unreliable on <th>).
+   */
+  header: ReactNode
   render?: (item: T) => ReactNode
   align?: 'left' | 'center' | 'right'
   className?: string

@@ -14,6 +14,15 @@ export { useGuardedAction } from './useGuardedAction'
 export { useURLState, type UseURLStateOptions } from './useURLState'
 
 export {
+  useUrlPagedFeedFilters,
+  usePagedFeedPages,
+  DEFAULT_FEED_PAGE_SIZE,
+  FEED_PAGE_SIZE_OPTIONS,
+  type UrlPagedFeedFilters,
+  type UrlPagedFeedFiltersConfig,
+} from './useUrlPagedFeedFilters'
+
+export {
   useAutoPersistedState,
   useSyncedState,
   detectPeriodFromDates,

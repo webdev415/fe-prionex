@@ -1,15 +1,100 @@
 /* eslint-disable no-console */
 import '@testing-library/jest-dom'
-import { cleanup } from '@testing-library/react'
-import { vi, beforeAll, afterAll, afterEach } from 'vitest'
+import { cleanup, configure } from '@testing-library/react'
+import { vi, beforeAll, beforeEach, afterAll, afterEach } from 'vitest'
 import './mocks/callQaSettings'
 import './mocks/aiAssistantSettings'
 import './mocks/assistantOverview'
+import './mocks/assistantAdmin'
+
+// Testing Library's own async budget, which `testTimeout` does NOT cover:
+// every `findBy*` and bare `waitFor` gives up after 1s regardless of the 20s
+// per-test limit in vitest.config.ts. That second is the tightest deadline in
+// the suite and the one that breaks first on CI — `AiAssistantBetaPage.sidebar`
+// runs in ~840ms locally, so its mobile case (resize, render, open the drawer,
+// select, wait for the drawer to unmount, then wait for the conversation to
+// load through react-query) has nothing left to spare once the runner is under
+// load. With `pool: 'forks'`, `maxWorkers: 1` and `fileParallelism: false`
+// every file shares one core, so "slower than local" is the normal case.
+//
+// 5s keeps a hang visible well inside the 20s test timeout while removing the
+// flake. Raise the per-query timeout locally instead of this global if a single
+// test genuinely needs longer — that keeps the slow one honest about being slow.
+configure({ asyncUtilTimeout: 5000 })
 
 // Set default API base URL for tests (deployed backend) if not already set
 // This ensures tests use the deployed backend URL
 // Note: import.meta.env is read-only, so we use vi.stubEnv which works at test runtime
 vi.stubEnv('VITE_API_BASE_URL', 'https://api.dev.crm-prionex.online')
+
+// ── No real network from a unit test ─────────────────────────────────────────
+// The base URL above is a REAL, reachable host, so any request a test forgets
+// to mock actually leaves the machine — and the dev API answers 401. That 401
+// hits the interceptor in lib/api.ts, which calls triggerAuthExpired() and
+// wipes the auth store (user: null, isAuthenticated: false) out from under a
+// test that never logged anybody out. The visible tell is jsdom's "Not
+// implemented: navigation to another Document", from the `location.href =
+// '/login'` on the same path.
+//
+// It lands as a race, not a hard failure: whether the reply arrives before or
+// after the test's own assertions depends purely on how loaded the runner is.
+// AiAssistantBetaPage.sidebar's mobile case is where it showed up — with auth
+// cleared, handleSelectConversation closes the drawer, hits `if (userId ==
+// null) return`, and the conversation is silently never selected. Green
+// locally, red on CI, and a different subset of tests each run.
+//
+// So cut the transport. Axios goes through XMLHttpRequest under jsdom; both it
+// and fetch now fail the way an offline machine would — a network error with
+// NO response, which is exactly what keeps `error.response?.status === 401`
+// false and leaves the auth store alone. Tests that mock their API module are
+// untouched; a test that wants a response still has to say what it is.
+const failOffline = () => new Error('Network request blocked in tests')
+class BlockedXHR {
+  status = 0
+  readyState = 0
+  responseText = ''
+  onerror: ((this: unknown, ev: unknown) => unknown) | null = null
+  open() {}
+  setRequestHeader() {}
+  abort() {}
+  getAllResponseHeaders() {
+    return ''
+  }
+  addEventListener(type: string, cb: (ev: unknown) => void) {
+    if (type === 'error') this.onerror = cb
+  }
+  removeEventListener() {}
+  send() {
+    setTimeout(() => this.onerror?.call(this, new Event('error')), 0)
+  }
+}
+// Installed by ASSIGNMENT, not vi.stubGlobal, and re-applied before every test.
+// Ten files (most of them AiAssistant ones) call vi.unstubAllGlobals() in their
+// teardown, which restores whatever vitest recorded when the stub was created —
+// the REAL XMLHttpRequest, if the block were a stub. That switched the block off
+// for the rest of those files, which is precisely where it is needed. A plain
+// assignment is not vitest's to revert, and the beforeEach covers a file that
+// reaches for the global itself.
+//
+// The hook runs before any hook the test file registers, so a file that wants
+// its own fetch (SSE, TTS, transcribe sockets) still overrides this and wins.
+const blockedFetch = () => Promise.reject(failOffline())
+const installNetworkBlock = () => {
+  globalThis.XMLHttpRequest = BlockedXHR as unknown as typeof XMLHttpRequest
+  globalThis.fetch = blockedFetch as unknown as typeof fetch
+}
+installNetworkBlock()
+beforeEach(installNetworkBlock)
+
+// jsdom's URL persists across tests within a file. Pages that mirror state into
+// the address bar (AiAssistant deep-link ?conversation=, tabs with
+// useSearchParams) would otherwise leak query params from one test into the
+// mount of the next — e.g. a hydrated dialog id resurfacing as a deep-link in a
+// test that expects a pristine page. Reset to a bare path before every test; a
+// test that needs its own URL sets it after this hook runs.
+beforeEach(() => {
+  window.history.replaceState(null, '', window.location.pathname)
+})
 
 // Suppress console warnings in tests
 const originalError = console.error
@@ -133,6 +218,41 @@ vi.mock('react-i18next', () => ({
       if (key === 'pages.imports.operatorAssignment.preview.confirm' && options) {
         return `Confirm & Assign ${String(options.count)} Clients`
       }
+      // A count-based plural key (locales hold floorHint_one/_few/_many/_other).
+      // The month count is the whole point of this hint — it now comes from the
+      // feed's response, so a test has to be able to see the VALUE and not just
+      // the key. Rendered as `<key>:<count>`, deterministic and still key-based.
+      if (key === 'pages.reports.lowVerification.floorHint') {
+        return `${key}:${String(vars?.count)}`
+      }
+      // Same shape, same reason: the operator-promises totals block states WHEN
+      // the numbers were computed (the report is re-served from a 15-minute
+      // server-side cache), so the stamp itself has to be assertable and not
+      // just the key it rides on.
+      if (key === 'pages.reports.operatorPromises.totals.generatedAt') {
+        return `${key}:${String(vars?.value)}`
+      }
+      // Same shape, same reason: the contact-tag feed's hint states the sale-date
+      // upper bound the BACKEND applied when the tab sent none — the whole point
+      // of the line is the date, so it has to be assertable and not just the key.
+      if (key === 'pages.reports.contactTag.sellToDefaultHint') {
+        return `${key}:${String(vars?.date)}`
+      }
+      // Same shape, same reason: the dialogs-list loan cell collapses extra
+      // active loans into a "+N more" badge — the N is the whole point of the
+      // badge, so it has to be assertable and not just the key it rides on.
+      if (key === 'pages.training.dialogue.list.moreLoans') {
+        return `${key}:${String(vars?.count)}`
+      }
+      // Same shape, same reason: the OneX dock's context chip exists to tell
+      // the operator WHICH page will be sent along, so the label has to be
+      // assertable and not just the key it rides on.
+      if (key === 'pages.aiAssistant.onexContextChip') {
+        return `${key}:${String(vars?.label)}`
+      }
+      if (key === 'pages.aiAssistant.onexContextClientFallback') {
+        return `${key}:${String(vars?.id)}`
+      }
       // Map translation keys to readable text for testing
       const translations: Record<string, string> = {
         'login.title': 'Sign In',
@@ -250,9 +370,25 @@ vi.mock('react-i18next', () => ({
         'pages.clients.detail.tableHeaders.counterparty': 'Counterparty',
         'pages.clients.detail.tableHeaders.saleDate': 'Sale Date',
         'pages.clients.detail.tableHeaders.debt': 'Debt',
+        // Carries an interpolation, so it needs a template here for the
+        // formatted value to be observable in assertions.
+        'pages.clients.detail.closedInline': 'Closed: {{date}}',
         'pages.clients.detail.tableHeaders.status': 'Status',
         'actions.cancel': 'Cancel',
         'actions.close': 'Close',
+        'actions.delete': 'Delete',
+        'pages.users.filterTemplates.label': 'Save as template',
+        'pages.users.filters.clearFilters': 'Clear filters',
+        'pages.users.filterTemplates.saveCurrent': 'Save current filters',
+        'pages.users.filterTemplates.nameLabel': 'Template name',
+        'pages.users.filterTemplates.saved': 'Filter template saved',
+        'pages.users.filterTemplates.deleted': 'Filter template deleted',
+        'pages.users.filterTemplates.empty': 'No saved templates yet',
+        'pages.users.filterTemplates.loading': 'Loading templates...',
+        'pages.users.filterTemplates.loadFailed': 'Could not load templates - tap to retry',
+        'pages.users.filterTemplates.confirmDeleteTitle': 'Delete this template?',
+        'pages.users.filterTemplates.confirmDeleteMessage':
+          '"{{name}}" is removed from your saved filters. The filters themselves are not changed.',
         // Two-Factor Authentication
         'twoFactor.title': 'Two-Factor Authentication',
         'twoFactor.subtitle': 'Enter the 6-digit code from your authenticator app',
@@ -325,6 +461,47 @@ vi.mock('react-i18next', () => ({
         'twoFactor.backupCodes.copied': 'Copied',
         'twoFactor.backupCodes.copyFailed': 'Could not copy to clipboard',
         'twoFactor.backupCodes.download': 'Download .txt',
+        // Profile settings: photo + work format.
+        'pages.profile.agentStatus.online': 'Online',
+        'pages.profile.agentStatus.offline': 'Offline',
+        'pages.profile.agentStatus.busy': 'Busy',
+        'pages.profile.agentStatus.onCall': 'On Call',
+        'pages.profileSettings.photo.upload': 'Upload photo',
+        'pages.profileSettings.photo.replace': 'Replace photo',
+        'pages.profileSettings.photo.confirmRemoveTitle': 'Remove your photo?',
+        'pages.profileSettings.photo.confirmRemoveMessage':
+          'Your initials will be shown instead. You can upload a new photo at any time.',
+        'pages.profileSettings.photo.remove': 'Remove photo',
+        'pages.profileSettings.photo.wrongType': 'Choose a JPEG, PNG or WebP image',
+        'pages.profileSettings.photo.tooLarge': 'The photo must be 2 MB or smaller',
+        'pages.profileSettings.photo.uploaded': 'Photo updated',
+        'pages.profileSettings.photo.removed': 'Photo removed',
+        'pages.profileSettings.workFormat.label': 'Work format',
+        'pages.profileSettings.workFormat.office': 'Office',
+        'pages.profileSettings.workFormat.remote': 'Remote',
+        // Shared soft-delete section labels.
+        'softDelete.columns.deletedAt': 'Deleted',
+        'softDelete.columns.expires': 'Expires',
+        'softDelete.columns.actions': 'Actions',
+        'softDelete.actions.restore': 'Restore',
+        'softDelete.expiry.noDeadline': 'No deadline',
+        'softDelete.expiry.today': 'Removed today',
+        'softDelete.sectionHint':
+          'These were deleted and can still be restored until the date shown.',
+        'pages.smsTemplates.deleted.title': 'Deleted templates',
+        'pages.messagingDrafts.deleted.title': 'Deleted drafts',
+        // Soft delete is a recovery promise, so these two say Trash, not
+        // "permanently removed" — the copy they replaced was untrue.
+        'pages.smsTemplates.modals.delete.recoverableTitle':
+          'The template will be removed from the active list',
+        'pages.smsTemplates.modals.delete.recoverableDescription':
+          'It moves to the deleted list at the bottom of this page, where a supervisor can restore it.',
+        'pages.messagingDrafts.delete.confirmMessage':
+          'Are you sure you want to delete the draft "{{name}}"?',
+        'pages.messagingDrafts.delete.recoverableTitle':
+          'The draft will be removed from the active list',
+        'pages.messagingDrafts.delete.recoverableDescription':
+          'It moves to the deleted list at the bottom of this page, where a supervisor can restore it.',
         'pages.clients.modals.deleteClient.title': 'Delete Client',
         'pages.clients.modals.deleteClient.softDeleteWarning':
           'This action will remove the client from active records (soft delete). Data can be recovered by administrators if needed.',
@@ -370,12 +547,32 @@ vi.mock('react-i18next', () => ({
         'pages.aiAssistant.codeCopied': 'Copied',
         'pages.aiAssistant.showAllRows': 'Show all ({{count}})',
         'pages.aiAssistant.collapseRows': 'Collapse',
+        // Assistant-generated files (charts, exports) rendered in the bubble
+        'pages.aiAssistant.filePreview.loading': 'Loading…',
+        'pages.aiAssistant.filePreview.loadFailed': 'Could not load the file',
+        'pages.aiAssistant.filePreview.imageFailed': 'Could not load the image “{{name}}”',
+        'pages.aiAssistant.filePreview.openFull': 'Open “{{name}}” full size',
+        'pages.aiAssistant.filePreview.close': 'Close',
+        'pages.aiAssistant.filePreview.download': 'Download',
+        'pages.aiAssistant.filePreview.downloadFailed': 'Download failed — try again',
+        'pages.aiAssistant.filePreview.openPreview': 'Open preview',
+        'pages.aiAssistant.filePreview.externalLink': 'external link',
+        'pages.aiAssistant.filePreview.blocked': 'Attachment not shown',
+        'pages.aiAssistant.filePreview.linkLost':
+          'The link to this file was lost — ask the assistant to send it again',
+        'pages.aiAssistant.filePreview.errorNotFound': 'The file is no longer available',
+        'pages.aiAssistant.filePreview.errorTooLarge':
+          'The file is too large to open here — ask for a smaller export',
+        'pages.aiAssistant.filePreview.errorBrainUnavailable':
+          'The assistant is unavailable — try again in a moment',
       }
       const template = translations[key] || key
-      if (options && typeof template === 'string' && template.includes('{{')) {
+      // Interpolate from `vars`, not `options`: in the `t(key, fallback, vars)`
+      // form `options` is the fallback string, and indexing into it throws.
+      if (vars && typeof vars === 'object' && template.includes('{{')) {
         return template.replace(/\{\{(\w+)\}\}/g, (_, name: string) =>
-          name in (options as Record<string, unknown>)
-            ? String((options as Record<string, unknown>)[name])
+          name in (vars as Record<string, unknown>)
+            ? String((vars as Record<string, unknown>)[name])
             : `{{${name}}}`
         )
       }
@@ -402,6 +599,11 @@ vi.mock('i18next', () => ({
     // `<html lang>` in step with the active language.
     on: vi.fn(),
     language: 'en',
+    // Hooks that toast outside a component call i18n.t directly. Without this
+    // the call throws inside onSuccess, React Query turns the mutation into a
+    // failure, and any test asserting only on cache state passes while the
+    // success path it claims to cover never runs.
+    t: (key: string, options?: Record<string, unknown>) => (options?.defaultValue as string) ?? key,
   },
 }))
 

@@ -17,6 +17,39 @@ export const NotificationType = {
   UBKI_FAILURE_ALERT: 'ubki_failure_alert',
   UBKI_CONNECTION_DOWN: 'ubki_connection_down',
   UBKI_DAILY_SUMMARY: 'ubki_daily_summary',
+  // KAN-413 — Inbox / coaching: trainer schedules a 1-on-1, the 30-min
+  // reminder, and a trainer taking charge of an operator's assignment.
+  ONE_ON_ONE_SCHEDULED: 'one_on_one_scheduled',
+  ONE_ON_ONE_REMINDER: 'one_on_one_reminder',
+  ASSIGNMENT_TAKEN: 'assignment_taken',
+  // KAN-411 Feature 3.1 — correction-task lifecycle pushes (assigned /
+  // completed / returned; overdue is CORRECTION_TASK_OVERDUE above).
+  CORRECTION_TASK_ASSIGNED: 'correction_task_assigned',
+  CORRECTION_TASK_COMPLETED: 'correction_task_completed',
+  CORRECTION_TASK_RETURNED: 'correction_task_returned',
+  // KAN-410 — Call Monitoring & Quality Scoring feedback/score pushes.
+  FEEDBACK_RECEIVED: 'feedback_received',
+  FEEDBACK_REPLIED: 'feedback_replied',
+  SCORECARD_SENT: 'scorecard_sent',
+  SCORE_DROP_DETECTED: 'score_drop_detected',
+  SCORE_GROWTH_DETECTED: 'score_growth_detected',
+  // Legal workplace task deadline reminders.
+  LEGAL_TASK_DUE_TOMORROW: 'legal_task_due_tomorrow',
+  LEGAL_TASK_DUE_TODAY: 'legal_task_due_today',
+  // KAN-752 — group-training lifecycle. Both fan out to the training's
+  // participants: TRAINING_SCHEDULED when a trainer assigns them,
+  // TRAINING_REMINDER 30 min before it starts.
+  TRAINING_SCHEDULED: 'training_scheduled',
+  TRAINING_REMINDER: 'training_reminder',
+  // Trainer-facing nudge: a completed 1-on-1 still has no feedback filed.
+  ONE_ON_ONE_FEEDBACK_DUE: 'one_on_one_feedback_due',
+  // KAN-761 / KAN-615 — Trainings & Sessions assignment lifecycle.
+  DRILL_ASSIGNED: 'drill_assigned',
+  DRILL_COMPLETED: 'drill_completed',
+  DRILL_CONFIRMED: 'drill_confirmed',
+  DRILL_RETURNED: 'drill_returned',
+  DRILL_OVERDUE: 'drill_overdue',
+  COURSE_ASSIGNED: 'course_assigned',
 } as const
 
 export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType]

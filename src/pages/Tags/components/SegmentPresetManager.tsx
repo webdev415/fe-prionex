@@ -96,10 +96,10 @@ export function SegmentPresetManager({ tags }: SegmentPresetManagerProps) {
     <div className="space-y-3">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h4 className="text-sm font-medium text-gray-900">
+          <h4 className="text-foreground text-sm font-medium">
             {t('pages.tags.settings.segmentPresets', 'Segment Templates')}
           </h4>
-          <p className="mt-0.5 text-xs text-gray-500">
+          <p className="text-muted-foreground mt-0.5 text-xs">
             {t(
               'pages.tags.settings.segmentPresetsDesc',
               'Templates for quickly creating segments with ready-made groups and conditions.'
@@ -112,9 +112,9 @@ export function SegmentPresetManager({ tags }: SegmentPresetManagerProps) {
         </Button>
       </div>
 
-      <div className="divide-y divide-gray-100 rounded-md border border-gray-200">
+      <div className="divide-border border-border divide-y rounded-md border">
         {sortedPresets.length === 0 && (
-          <p className="px-3 py-4 text-center text-xs text-gray-400">
+          <p className="text-muted-foreground px-3 py-4 text-center text-xs">
             {t('pages.tags.settings.noTemplates', 'No templates')}
           </p>
         )}
@@ -124,22 +124,22 @@ export function SegmentPresetManager({ tags }: SegmentPresetManagerProps) {
             <div className="flex items-start gap-3">
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="truncate text-sm font-medium text-gray-900">{preset.name}</p>
-                  <code className="rounded bg-gray-50 px-1.5 py-0.5 text-[10px] text-gray-600">
+                  <p className="text-foreground truncate text-sm font-medium">{preset.name}</p>
+                  <code className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-[10px]">
                     {preset.code}
                   </code>
                 </div>
                 {preset.description && (
-                  <p className="mt-1 text-xs text-gray-500">{preset.description}</p>
+                  <p className="text-muted-foreground mt-1 text-xs">{preset.description}</p>
                 )}
               </div>
 
               <div className="flex shrink-0 items-center gap-2">
-                <span className="rounded bg-gray-100 px-2 py-0.5 text-[10px] text-gray-600">
+                <span className="bg-muted text-muted-foreground rounded px-2 py-0.5 text-[10px]">
                   {preset.conditions.length}{' '}
                   {t('pages.tags.settings.conditionsCount', 'conditions')}
                 </span>
-                <span className="rounded bg-blue-50 px-2 py-0.5 text-[10px] text-blue-700">
+                <span className="bg-information-50 text-information-700 rounded px-2 py-0.5 text-[10px]">
                   {t(
                     `pages.tags.segments.refreshModes.${preset.refresh_mode}`,
                     preset.refresh_mode
@@ -148,7 +148,7 @@ export function SegmentPresetManager({ tags }: SegmentPresetManagerProps) {
                 <button
                   type="button"
                   onClick={() => openEdit(preset)}
-                  className="flex h-7 w-7 items-center justify-center rounded text-gray-400 hover:bg-gray-50 hover:text-gray-600"
+                  className="text-muted-foreground hover:bg-muted hover:text-foreground flex h-7 w-7 items-center justify-center rounded"
                   title={t('pages.tags.settings.editTemplate', 'Edit template')}
                 >
                   <Icons.PencilEdit size={14} strokeWidth={1.5} />
@@ -156,7 +156,7 @@ export function SegmentPresetManager({ tags }: SegmentPresetManagerProps) {
                 <button
                   type="button"
                   onClick={() => removePreset('segmentPresets', preset.key)}
-                  className="flex h-7 w-7 items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-500"
+                  className="text-muted-foreground hover:bg-error-50 hover:text-error-500 flex h-7 w-7 items-center justify-center rounded"
                   title={t('actions.delete', 'Delete')}
                 >
                   <Icons.Cancel01 size={14} strokeWidth={1.5} />
@@ -220,7 +220,7 @@ function buildConditionPreview({
       entries.push({
         key: `or-${groupIndex}`,
         node: (
-          <span className="rounded bg-orange-50 px-1.5 py-0.5 text-[10px] font-medium text-orange-600">
+          <span className="bg-warning-50 text-warning-600 rounded px-1.5 py-0.5 text-[10px] font-medium">
             {t('pages.tags.segments.orLabel', 'OR')}
           </span>
         ),
@@ -232,7 +232,7 @@ function buildConditionPreview({
         entries.push({
           key: `and-${groupIndex}-${conditionIndex}`,
           node: (
-            <span className="text-[10px] text-gray-400">
+            <span className="text-muted-foreground text-[10px]">
               {t('pages.tags.segments.andLabel', 'AND')}
             </span>
           ),
@@ -247,7 +247,7 @@ function buildConditionPreview({
         entries.push({
           key: `condition-${groupIndex}-${conditionIndex}`,
           node: (
-            <span className="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] text-blue-700">
+            <span className="bg-information-50 text-information-700 rounded px-1.5 py-0.5 text-[10px]">
               {tagName ?? '—'}
             </span>
           ),
@@ -259,7 +259,7 @@ function buildConditionPreview({
         entries.push({
           key: `condition-${groupIndex}-${conditionIndex}`,
           node: (
-            <span className="rounded bg-red-50 px-1.5 py-0.5 text-[10px] text-red-700">
+            <span className="bg-error-50 text-error-700 rounded px-1.5 py-0.5 text-[10px]">
               {t('pages.tags.segments.conditionTypes.not_has_tag', 'NOT')} {tagName ?? '—'}
             </span>
           ),
@@ -276,7 +276,7 @@ function buildConditionPreview({
       entries.push({
         key: `condition-${groupIndex}-${conditionIndex}`,
         node: (
-          <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-700">
+          <span className="bg-muted text-foreground rounded px-1.5 py-0.5 text-[10px]">
             {label}
           </span>
         ),
@@ -461,11 +461,11 @@ function SegmentPresetEditorModal({
       <form onSubmit={handleSubmit(onSubmit)} className="min-w-0">
         <ModalHeader
           icon={
-            <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
+            <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-full">
               {isEdit ? (
-                <Icons.PencilEdit size={20} className="text-dark-500" strokeWidth={2} />
+                <Icons.PencilEdit size={20} className="text-primary-foreground" strokeWidth={2} />
               ) : (
-                <Icons.Add size={20} className="text-dark-500" strokeWidth={2} />
+                <Icons.Add size={20} className="text-primary-foreground" strokeWidth={2} />
               )}
             </div>
           }
@@ -549,7 +549,7 @@ function SegmentPresetEditorModal({
 
             <div className="space-y-1.5">
               <Label>{t('pages.tags.segments.conditions', 'Conditions')}</Label>
-              <p className="text-xs text-gray-500">
+              <p className="text-muted-foreground text-xs">
                 {t(
                   'pages.tags.segments.conditionHelp',
                   'Conditions within a group are combined with AND. Groups are combined with OR.'

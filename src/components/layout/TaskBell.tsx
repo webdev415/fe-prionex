@@ -319,7 +319,7 @@ export function TaskBell() {
                               void handleOperatorTransition(task.id, 'in_progress')
                             }}
                             disabled={transitionMutation.isPending}
-                            className="flex-1 rounded-md border border-[#204E4D] px-2 py-1 text-[10px] font-semibold text-[#204E4D] disabled:opacity-60"
+                            className="border-secondary-800 text-secondary-800 flex-1 rounded-md border px-2 py-1 text-[10px] font-semibold disabled:opacity-60"
                           >
                             Mark in progress
                           </button>
@@ -332,7 +332,7 @@ export function TaskBell() {
                               void handleOperatorTransition(task.id, 'completed')
                             }}
                             disabled={transitionMutation.isPending}
-                            className="flex-1 rounded-md bg-[#204E4D] px-2 py-1 text-[10px] font-semibold text-white disabled:opacity-60"
+                            className="bg-secondary-800 text-secondary-foreground flex-1 rounded-md px-2 py-1 text-[10px] font-semibold disabled:opacity-60"
                           >
                             Mark completed
                           </button>

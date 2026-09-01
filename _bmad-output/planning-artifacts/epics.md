@@ -26,7 +26,12 @@ This document provides the complete epic and story breakdown for the migration o
 decomposing the requirements from `docs/forgejo-migration.md` (which serves as both PRD
 and Architecture for this infrastructure effort) into implementable stories.
 
-**Target topology:** s1 — DEV + PRE-PROD, s2 — PROD.
+**Target topology:** s1 — DEV + PRE-PROD; PROD — **s10** (VM `e1-rung3`, `192.168.122.11`,
+behind jump host `62.112.10.55`; admin access `ssh -J root@62.112.10.55 root@192.168.122.11`).
+~~s2 — PROD.~~ 🔴 **AMENDED 2026-08-18** (`sprint-change-proposal-2026-08-18-prod-target.md`):
+production moves to a dedicated VM; s2 (`175.110.122.17`) keeps serving the **legacy**
+production stand untouched until the external traffic switch (Story 6.9), and is never a
+Forgejo deploy target.
 **Hard constraint:** existing DEV and PROD stands must not be touched during migration;
 the new pipeline is built in parallel and switched over only at the final step.
 
@@ -44,7 +49,12 @@ Two consequences the plan depends on and cannot itself guarantee:
   writing.
 - **Two pipelines can reach production.** The legacy GitHub CD deploys to s2 on a merge to
   `main` and is not disabled (Story 6.1, cancelled). From the moment Forgejo can also deploy
-  to s2, concurrent deploys from two independent pipelines are possible.
+  to s2, concurrent deploys from two independent pipelines are possible. 🔴 **AMENDED
+  2026-08-18** (`sprint-change-proposal-2026-08-18-prod-target.md`): the two pipelines no
+  longer share a host — legacy CD deploys to s2, Forgejo deploys to s10 — so *concurrent
+  deploys to the same stand* are impossible by construction. The residual risk is milder and
+  different: **two productions exist in parallel** until the traffic switch, and until that
+  switch s2 is the one users see.
 
 Both are accepted risk for the duration, not solved problems.
 
@@ -53,6 +63,52 @@ environment variables stay baked in at build time, so a distinct image is built 
 environment. Artifact promotion PRE-PROD → PROD is **not** achieved in this migration and
 is recorded as explicit technical debt. Every requirement below that would have depended
 on a single promotable artifact is adjusted accordingly and marked `[C]`.
+
+## 🔴 Amendment drift — read this before trusting an FR or an AC below
+
+> **Added 2026-08-24 by a BMAD reconciliation pass (`chore/bmad-actualization-2026-08-24`).**
+> **No requirement and no acceptance criterion was changed by that pass.** This section only records
+> a gap that was found while reconciling the tracking artifacts, because a reader who opens this file
+> alone is currently being told several things that the shipped pipeline contradicts.
+
+**The fact.** The last commit that modified this file is `a003e25b` (2026-08-23, Story 4.8's code
+review fix-pass). Stories **4.2, 4.3, 4.7, 5.1, 5.2, 5.3 and 5.4 never edited this file at all.**
+Each of them amended, narrowed, substituted or added acceptance criteria — and each recorded those
+amendments **in its own story file and in `docs/migration-decisions.md`** instead. By Epic 5 this had
+become an explicit, stated policy rather than an oversight: `5-3-…md:1185` and `5-4-…md:1366` both
+list `epics.md` under *"Explicitly not touched … a planning artifact — an epic amendment is not a
+story edit."*
+
+**Why it matters.** Stories 1.x through 4.1 and 4.4/4.6/4.8 *did* amend this file in place, and did
+it well — the `🔴 AMENDED` / `~~struck~~` markers throughout are theirs. So this file looks
+maintained, and a reader has no way to tell which regions stopped being maintained on 2026-08-23.
+
+**What is materially FALSE as built.** Each of the following still asserts the pre-amendment reading.
+The authoritative text is named for each; none of it is transcribed here, because transcribing it
+would change what the criterion asserts, and that is Oleg's call, not a reconciliation pass's.
+
+| Where | What it still says | What actually shipped | Authority |
+|---|---|---|---|
+| **FR14** and **Story 5.4 AC1** | the retag happens automatically *"after a successful PRE-PROD deploy"* | ~~`record-preprod-candidate.yml` is `workflow_dispatch`-only with a required `validated: pass\|fail` verdict — a **deliberate deviation from FR14's letter**, taken so that `preprod-<sha>` means "validated", which is what Story 6.5's promotion guard actually reads it as~~ 🟢 **CLOSED 2026-08-27, by WITHDRAWING the deviation rather than ratifying it** ([D51](../../docs/migration-decisions.md#d51), `sprint-change-proposal-2026-08-27-approval-automation.md`). The deviation stood 13 days and is the reason `#d38` §6's six-guard matrix exists; **five of those six guards survive the withdrawal, G1 (verdict = `pass`) does not.** FR16 is amended in the same change — the marker no longer means "validated" | D38; Story 5.4; **D51** |
+| **FR19** and **Story 4.3 AC3** | deploy order `down → pull → up -d → health` | shipped order is `resolve → pull → down → up -d → health`. Load-bearing: "fails before touching the container" is the guarantee 4.4, 5.3 and 6.4 all lean on | D29; Story 4.3 |
+| **FR25** | `docker-compose.server.yml` is parameterized | that file was deliberately left **untouched**; the artifact is the NEW `docker-compose.stand.yml` + `.env.stand.example`. Story 4.1's four Givens still cite line numbers inside a file the story never edited | D27; Story 4.1 |
+| **Story 4.7 AC2 / AC3** | verdict measured on the deploy job; a week-long inspection of the legacy DEV stand | AC2 rebound to run wall-clock against 600s; AC3 substituted — the legacy stand is on `72.62.17.132` and is unreachable, so the AC as written is **unexecutable** | Story 4.7 |
+| **Story 5.1 AC3** | *"the DEV stand remains attached to `crm-network`"* | `crm-dev-network`. `crm-network` is the **legacy** stand's network, on another host — and this file says so itself elsewhere | Story 5.1 |
+| **Story 5.2 AC2** | *"three stands now share s1"* | two, per **this file's own FR25 amendment of 2026-08-19**. Internally contradictory | Story 5.2 |
+| **Story 4.2 AC5** | legacy and new container both healthy on s1 | unsatisfiable on s1 for the same reason as 4.7 AC3 | Story 4.2 |
+| Epic 5 preamble | `secret/fe/pre-prod/app` holds `PLACEHOLDER-preprod-backend-not-provisioned` | falsified by Story 5.1 — Oleg wrote the real values on 2026-08-15, confirmed twice by bundle extraction | Story 5.1 |
+
+**Purely mechanical gaps** (the decision exists and is recorded; only the transcription is missing):
+Story 3.3's `environment` becoming a REQUIRED input; Story 4.1's AC3 choice (image default **removed**,
+not repointed); Story 4.2's AC2 permissions clause deferred to 4.3; Story 4.3's AC7/AC8; Story 4.7's
+AC4 narrowing and AC5; Story 5.1's AC4/AC5; Story 5.2's AC1 detail, AC4 reopening, AC5 and AC6;
+Story 5.3's AC6/AC7; Story 5.4's AC6/AC7/AC8. Also: `D25`, `D26`, `D27`, `D32`, `D34`, `D36`, `D37`
+and `D38` are referenced by no line in this file, although `D20`-`D24` and `D28`-`D31`, `D33` are.
+
+**The decision this needs.** Either amend this file to match what shipped, or state explicitly that
+`docs/migration-decisions.md` plus the story files are the authoritative record of AC drift and that
+this file freezes as the original plan. Both are defensible; the current middle state — a file that
+*looks* amended up to date and is not — is the one that misleads. **Owner: Oleg.**
 
 ## Requirements Inventory
 
@@ -99,9 +155,10 @@ nothing.
 
 FR6: The build workflow triggers on push to any branch (including feature branches), push
 to `main`, and tag `v*`, plus `workflow_dispatch` with a `ref` input.
+🔴 **AMENDED 2026-08-16 (Story 3.4, [D21](../../docs/migration-decisions.md#d21), [D18](../../docs/migration-decisions.md#d18)).** Three of the four are delivered, the fourth is **withdrawn**. Feature branches: `ci.yml`'s `image` job, `needs: [lint, typecheck, test]` — the build follows the tests rather than the push, which is Oleg's decision of 2026-08-16, since `workflow_run` does not exist on this instance. Push to `main`: `build-main.yml`, a separate file, because `ci.yml` excludes `main` by a decision its own header argues with measurements. `workflow_dispatch`: unchanged in `build.yml`. **Tag `v*`: withdrawn** — the repository has zero tags of any kind, no deploy story consumes a semver tag, Story 6.5's guard extracts a commit SHA and would reject one by construction, and `ci.yml`'s ref filter is what keeps it off tags, so `v*` costs another workflow file plus its own measurement. The `keep_pattern` semver clause stays; only the trigger is withdrawn.
 
 FR7: Tagging scheme — `sha-<short>` on every build, `<branch>`, semver tags from `v*`, and
-`latest` only from `main`.
+`latest` only from `main`. 🔴 **AMENDED 2026-08-16 (Story 3.3, [D20](../../docs/migration-decisions.md#d20)).** The bare `sha-<short>` **no longer exists.** FR8 requires an environment discriminator and Story 3.3 AC3 requires the bare form never be ambiguous between environments — under Option C one commit yields up to three images, so it cannot be both. As built: **`sha-<12 hex>-<env>`** and **`<sanitized-branch>-<env>`**, env ∈ {`dev`, `preprod`, `prod`}. The 12 is pinned deliberately — Stories 5.4 and 6.5 compare those strings byte for byte. `latest` is **dropped** (Story 3.3 AC4, decided rather than deferred again). Semver from `v*` is **deferred to Story 3.4**, which owns the trigger that would produce it. ⚠️ **NFR4, Story 3.4 AC2 and Story 3.6 AC1 still address images by the bare form and must be read as `sha-<short>-<env>`.** ⚠️ Note the shape is not free: the retention rule protects `sha-<7-64 hex>-(pre)?prod` and nothing adjacent, so `-prod` and `-preprod` are permanent while `-dev` expires at 14 days. ✅ **RESOLVED 2026-08-16: Story 3.4 WITHDREW it** ([D18](../../docs/migration-decisions.md#d18)) — zero tags of any kind exist here, no deploy story consumes a semver tag, Story 6.5's guard would reject one by construction, and adding the trigger costs another workflow file plus its own measurement because `ci.yml`'s ref filter is what keeps it off tags. The `keep_pattern` semver clause stays; only the trigger is withdrawn.
 
 FR8: `[C]` The build workflow takes a target environment (`dev` / `preprod` / `prod`) and
 injects `VITE_API_BASE_URL` and `VITE_WS_URL` as `--build-arg` per environment. Images for
@@ -126,7 +183,7 @@ to avoid.** Neither Story 3.1's file, nor `deferred-work.md`, nor this plan reco
 **Story 3.5 must budget for this as its first task, not discover it.** Three routes exist and none
 is free: give the dind daemon the host mapping so `docker-container` can reach the registry; enable
 the containerd snapshotter; or drop to native `docker build`/`docker push` with a manual cache
-strategy. **Owner: Story 3.5.**
+strategy. **Owner: Story 3.5.** ✅ **RESOLVED 2026-08-16 by Story 3.5 ([D22](../../docs/migration-decisions.md#d22)): route (a) works.** `docker-container` with `driver-opts: network=host` pushes to the registry, so `cache-to type=registry` is reachable and FR9 is satisfied. The conflict's own diagnosis was wrong: the failure was never the un-inherited `--add-host` but the loss of Docker's embedded DNS resolver on the default bridge — `network=host` restores it and fixes the NAME, not only the route. ⚠️ Measured outcome: the cache works cross-runner (107 s → 28 s on an identical tree) but the driver costs a steady +25 s on source-changed builds, so the net effect is **−1.9 s per build** — break-even. Kept for variance and resilience rather than for mean build time.
 
 FR10: The Forgejo Container Registry is enabled, a ~~`ci-bot`~~ `robot-registry` technical user holds a
 `write:package` token, and s1/s2 hold `read:package` tokens only. ⚠️ **Проверено 2026-08-12:** s1 использует `robot-registry`/read, s2 — **`robot-deploy`**/read; все семь токенов `robot-deploy` имеют scope ровно `read:package`, так что клауз «только» для s2 установлен. ⚠️ **AMENDED (2026-08-12, Story 1.10):** `ci-bot` does not exist; the platform already provides `robot-registry` with org secret `REGISTRY_TOKEN_RW` (`write:package`). ⚠️ Уточнено code review 2026-08-12: сам секрет **не упражнялся** — доказательство получено на минтованном эквиваленте того же scope; ~~`REGISTRY_TOKEN_RW` остаётся «не проверено»~~. ✅ **Упражнён 2026-08-14 (Story 3.1, ран 512):** `docker/login-action` аутентифицировался именно этим секретом, пуш прошёл, и версия в реестре записана с `creator.login: robot-registry`. Снято code review 2026-08-15. Nothing was created. See `docs/migration-decisions.md#d14`.
@@ -158,14 +215,30 @@ FR13: `deploy-preprod.yml` triggers **only** on `workflow_dispatch` with a manda
 FR14: After a successful PRE-PROD deploy the workflow retags the image in the registry as
 `preprod-current` and `preprod-<sha>` via `docker buildx imagetools create`, making the
 registry the single source of truth for release history.
+🟢 **DEVIATION WITHDRAWN 2026-08-27** (`sprint-change-proposal-2026-08-27-approval-automation.md`;
+[D51](../../docs/migration-decisions.md#d51)). Story 5.4 shipped this as a `workflow_dispatch`-only
+recorder with a mandatory `validated: pass|fail` verdict — a deliberate deviation from the text
+above, recorded as `#d38` §2. That deviation is **withdrawn**: the record returns to being automatic
+on a successful deploy, exactly as written, and **`preprod-<sha>` therefore means "this commit
+reached PRE-PROD", not "this commit was validated"**. FR16 is amended in the same change. Story 6.11
+implements it.
 
 FR15: `deploy-prod.yml` triggers on `workflow_dispatch` with an `image_tag` input and an
 optional `rollback: bool` input.
 
 FR16: `[C]` The promotion guard checks that the **commit SHA** encoded in `image_tag` has a
-corresponding `preprod-<sha>` tag in the registry — i.e. that this commit was validated on
-PRE-PROD. It cannot assert image identity, because under Option C the PROD image is rebuilt
-and is byte-different from the PRE-PROD image. The guard is skipped when `rollback: true`.
+corresponding `preprod-<sha>` tag in the registry — i.e. that ~~this commit was validated on
+PRE-PROD~~ **this commit was built for PRE-PROD and deployed there through the pipeline**. It cannot
+assert image identity, because under Option C the PROD image is rebuilt and is byte-different from
+the PRE-PROD image. The guard is skipped when `rollback: true`.
+🔴 **AMENDED 2026-08-27** ([D51](../../docs/migration-decisions.md#d51)): the struck clause was true
+only while the `preprod-<sha>` marker required a human `validated=pass` dispatch to exist. It no
+longer does. **The guard's code is unchanged and is not weakened to nothing** — it still refuses a
+commit that never went through PRE-PROD at all, which is the hotfix-straight-to-prod path
+`docs/production-approval-regulation.md`'s `## Emergency / hotfix` section exists to close, and its
+refusal branch (run 687) still discriminates. What a pass no longer proves is that **anyone looked at
+the result**. That is now carried by `docs/preprod-candidates.md` and `RVC-v1.1` alone, enforced by
+rule and by no machinery whatsoever.
 
 FR17: `[C]` `deploy-prod.yml` rebuilds the image with production build-args before
 deploying (no pure `docker pull` promotion). On `rollback: true` it pulls an existing
@@ -185,6 +258,13 @@ workflows run on a deploy runner located on the target host and follow the seque
 compose file in the stand directory → `docker compose down` → `docker pull` (fail-fast, **no**
 fallback to `:latest`) → `docker compose up -d` → health check. **No step connects to the host
 over SSH.** ~~All deploy workflows follow the sequence: scp compose file → …~~
+🔴 **TARGET AMENDED 2026-08-18** (`sprint-change-proposal-2026-08-18-prod-target.md`): for
+production, "the target host" is **s10** (`e1-rung3`), not s2. The mechanism is unchanged and
+re-validated by the new topology: the VM is NAT-hidden behind a jump host, so workflow SSH
+would require two hops, while the runner's outbound polling is measured working. The runner
+currently on s10 (id 21, labels `s10`/`e1-rung3`) is **CI-shaped and cannot deploy** — its
+jobs execute in its own dind, not against the host daemon. Story 6.10 provisions the
+deploy-shaped counterpart.
 
 FR20: The health check polls `docker inspect -f '{{.State.Health.Status}}'` against a
 **parameterized** container name, with a fallback `curl` against the **parameterized**
@@ -197,7 +277,18 @@ FR22: Slack start / success / failure notifications are sent via `curl` to the i
 webhook, replacing `slackapi/slack-github-action`.
 
 FR23: `dev-reset.yml` runs on a Sunday `schedule`, deploys `main` to DEV, and runs
-`docker image prune`.
+~~`docker image prune`~~ a targeted sweep of this project's own untagged images and lock-holder
+debris.
+
+🔴 **AMENDED 2026-08-21 (Story 4.6, [D31](../../docs/migration-decisions.md#d31)).** Bare
+`docker image prune` is host-wide with no repository filter, and this host is multi-tenant —
+measured, not argued: `docker ps --filter name=` is a substring match here
+(`deferred-work.md:2650-2653`), so even a name-scoped attempt at this class of command risks
+matching another tenant's containers, including the four `forgejo-runner-fe-prionex*` containers
+this very job runs inside. The sweep instead enumerates `git.crm-prionex.com/crm/fe-prionex`
+images with no repository tag and this project's own anchored lock-holder pattern, excludes
+anything referenced or too young, and removes the rest by explicit id — the FR's own intent (host
+hygiene attached to the weekly reset) is met without the literal command's own hazard.
 
 FR24: Rollback is performed by running `deploy-prod.yml` with a previous `image_tag` and
 `rollback: true`.
@@ -205,11 +296,18 @@ FR24: Rollback is performed by running `deploy-prod.yml` with a previous `image_
 **Infrastructure and coexistence (Phases 1, 2, 5, 6)**
 
 FR25: `docker-compose.server.yml` is parameterized — `COMPOSE_PROJECT_NAME`,
-`CONTAINER_NAME`, `FRONTEND_PORT` — so DEV (`8082`) and PRE-PROD (`8081`) coexist on s1
-alongside the untouched legacy stand.
+`CONTAINER_NAME`, `FRONTEND_PORT` — so DEV (`8082`) and PRE-PROD (~~`8081`~~ **`8083`**) coexist on s1 🔴 **AMENDED 2026-08-15** (`sprint-change-proposal-2026-08-15-preprod-reality.md`): `8081` is **taken** on s1 — `docker-proxy` binds `127.0.0.1:8081` — and was called a permanent allocation on the strength of a port census the story deliberately ran *from the artifacts rather than by SSH*. `8083` is free, measured. The instruction not to look is what produced the wrong number.
+~~alongside the untouched legacy stand.~~ 🔴 **AMENDED 2026-08-19 (Story 4.1, measured on s1 by SSH):
+the legacy stand is NOT on s1.** s1 is `185.185.49.127`; the legacy DEV stand is `72.62.17.132`
+(`README.md:136`, and `CD.yml:157` deploys to `secrets.DEV_SSH_HOST`). On s1 there is no
+`fe-prionex` frontend container running or stopped, no `~/crm-prionex` directory, and nothing
+listening on `8080`. The two stands that coexist on s1 are the **new DEV** and **PRE-PROD**; the
+legacy stand cannot collide with either because it is on a different machine. Same lesson as this
+FR's own 2026-08-15 amendment: the premise had never been measured.
 
 FR26: Stand directories are separated: `~/crm-prionex/fe-prionex-dev/` and
-`~/crm-prionex/fe-prionex-preprod/`.
+`~/crm-prionex/fe-prionex-preprod/`. **AMENDED 2026-08-18:** the PROD stand directory lives on
+s10 as `~/crm-prionex/fe-prionex-prod/`, same convention, established by Story 6.10.
 
 FR27: PRE-PROD runs on its own Docker network — **named by agreement with `CRM/api-prionex`,
 whose stack convention is `crm-preprod-network`** — with its own Kong gateway, so
@@ -230,9 +328,16 @@ FR28: A Forgejo runner is registered at the `CRM` organization level with two la
 
 FR29: A second runner is online before required status checks are enabled on `main`.
 
-FR30: Concurrent deploys to the same stand serialize via `concurrency: cd-${{ github.ref }}`
-with `cancel-in-progress: false`, **plus** a server-side `flock` on a file in the stand
+FR30: Concurrent deploys to the same stand serialize via ~~`concurrency: cd-${{ github.ref }}`~~
+with `cancel-in-progress: false`, **plus** ~~a server-side~~ `flock` on a file in the stand
 directory that does not depend on the Forgejo version.
+🔴 **AMENDED 2026-08-20 (Story 4.4, [D30](../../docs/migration-decisions.md#d30)).** Concurrency
+key is the literal `deploy-dev-fe-prionex-dev` (the stand's own identity), not
+`cd-${{ github.ref }}` — this workflow serializes on the STAND, not on a ref, and the epic's own
+key would be wrong for that purpose the moment it stopped being an accidental constant. There is
+no "server-side" in the deploy mechanism as it exists (SSH/`scp` retired 2026-08-11) — the `flock`
+is taken by a sibling container through the job's own `docker.sock`, which still satisfies "a file
+in the stand directory that does not depend on the Forgejo version" exactly as written.
 
 **Cutover and decommissioning (Phases 7, 8)**
 
@@ -276,7 +381,10 @@ NFR4: Every image is immutable and traceable to the exact commit that produced i
 `sha-<short>` tag.
 
 NFR5: The existing DEV and PROD stands remain fully operational and untouched throughout
-phases 0–6; Forgejo deploys only to newly created stands.
+phases 0–6; Forgejo deploys only to newly created stands. **AMENDED 2026-08-18:** for PROD the
+guarantee is now absolute — Forgejo never deploys to s2 at all. The legacy PROD stand on s2
+remains untouched through the entire migration and keeps serving until the external traffic
+switch.
 
 NFR6: Registry credentials on s1/s2 are read-only (`read:package`); only ~~`ci-bot`~~ `robot-registry` holds
 `write:package`. ⚠️ **AMENDED (2026-08-12, Story 1.10):** `ci-bot` does not exist; `robot-registry`/`REGISTRY_TOKEN_RW` is the platform's existing write-capable pair, adopted as-is. ⚠️ **Область действия утверждения, уточнено code review:** «только `robot-registry`» верно **среди сервисных токенов**. На инстансе три администратора (`platform-admin`, `Ruslan`, `Marina`), а админ обходит package-скоупы — это вне модели угроз данного NFR, а не его нарушение. See `docs/migration-decisions.md#d14`.
@@ -286,7 +394,12 @@ no longer authenticates to s2 over SSH (FR19), so **no new deployment key is req
 existing key stays authorized on s2 as an **administrative access path only**; it is not a delivery
 credential, and its rotation is Story 7.5's concern rather than a prerequisite for any deploy.
 ~~s2 receives a **new** SSH key~~; the old key is not revoked until Phase 8 completes, to
-avoid losing access.
+avoid losing access. **AMENDED 2026-08-18:** the administrative access path to the new PROD
+contour is `ssh -J root@62.112.10.55 root@192.168.122.11` (key-based, proven 2026-08-18). The
+jump host is a pure relay: it holds no access into the VM itself — from its own shell the VM
+is unreachable (measured, "No route to host"), so only externally authorized keys reach s10.
+The old s2 key remains authorized on s2 as the admin path to the **legacy** stand only; its
+rotation stays Story 7.5's concern. No SSH credential of any kind enters Forgejo — unchanged.
 
 NFR8: No silent URL fallbacks — the `CD.yml:49,59` style defaults to the production API are
 removed, so a missing secret fails the build instead of shipping a wrong bundle.
@@ -371,8 +484,8 @@ interface surface. No UX design contract exists for this effort, and none is req
 | FR3 | Epic 2 | Coverage published as artifact, codecov removed |
 | FR4 | Epic 2 | `main` protected, required status checks enforced |
 | FR5 | Epic 3 | `build.yml` on the `docker-build` label pushes to the Forgejo registry |
-| FR6 | Epic 3 | Build triggers include feature branches, `main`, `v*`, dispatch |
-| FR7 | Epic 3 | Tag scheme `sha-<short>` / `<branch>` / semver / `latest` |
+| FR6 | Epic 3 | Build triggers include feature branches, `main`, ~~`v*`~~ (withdrawn 16.08.2026, Story 3.4), dispatch |
+| FR7 | Epic 3 | Tag scheme `sha-<12>-<env>` / `<branch>-<env>` / ~~semver~~ (withdrawn 16.08.2026, Story 3.4) / ~~`latest`~~ (cancelled, D20) |
 | FR8 | Epic 3 | `[C]` Per-environment build-args and tag discriminator |
 | FR9 | Epic 3 | Registry-backed build cache replaces `type=gha` |
 | FR10 | Epic 1 | Container Registry enabled, `ci-bot` write token, read-only server tokens | ⚠️ **`REGISTRY_TOKEN`/`ci-bot` не существуют — см. [#d14](../../docs/migration-decisions.md#d14) (code review story 1.10, 2026-08-12). Действующие: `robot-registry` / `REGISTRY_TOKEN_RW` / `REGISTRY_TOKEN_RO`.**
@@ -388,16 +501,16 @@ interface surface. No UX design contract exists for this effort, and none is req
 | FR20 | Epic 4 | Health check parameterized by container name and published port |
 | FR21 | Epic 6 | Post-deploy PROD smoke check incl. log scan for ERROR |
 | FR22 | Epic 4 | Slack start/success/failure via `curl` |
-| FR23 | Epic 4 | Weekly scheduled DEV reset to `main` + image prune |
+| FR23 | Epic 4 | Weekly scheduled DEV reset to `main` + targeted image/holder sweep (amended 21.08, not literal `docker image prune`, [D31](../../docs/migration-decisions.md#d31)) |
 | FR24 | Epic 6 | Rollback via previous `image_tag` with `rollback: true` |
 | FR25 | Epic 4 | `docker-compose.server.yml` parameterized for coexisting stands |
 | FR26 | Epic 4 | Separate stand directories on s1 |
 | FR27 | Epic 5 | Dedicated network (agreed name, their convention: `crm-preprod-network`) with its own Kong, answering to `crm-kong-gateway` inside it (amended 13.08) |
 | FR28 | Epic 1 | Org-level runner with `node-20` and `docker-build` labels |
 | FR29 | Epic 1 | Second runner online before required checks are enabled |
-| FR30 | Epic 4 | `concurrency` plus version-independent server-side `flock` |
-| FR31 | Epic 6 | `[C]` Rebuild the running PROD commit into the Forgejo registry as `sha-<commit>`, `prod-current` **and `prod-<sha>`** (ghcr unreachable; amended 13.08) |
-| FR32 | Epic 6 | Cutover validated by a no-op `rollback: true` deploy |
+| FR30 | Epic 4 | `concurrency` (literal stand-identity key, not `cd-${{ github.ref }}`) plus a sibling-container `flock` on a stand-directory file, version-independent (amended 20.08, [D30](../../docs/migration-decisions.md#d30)) |
+| FR31 | Epic 6 | `[C]` Rebuild ~~the running PROD commit~~ **the last validated PRE-PROD candidate** into the Forgejo registry as `sha-<commit>`, `prod-current` **and `prod-<sha>`** (ghcr unreachable; amended 13.08). 🔴 **AMENDED 2026-08-26** (`sprint-change-proposal-2026-08-26-cutover-candidate.md`). The running PROD commit `41ab0470ab6b3df3bc332fc90f8bccaaba44dc39` is **absent from the Forgejo repository** — measured across 549 remote heads and against the server itself (`git ls-remote`) — so it cannot be checked out and cannot be built. The cutover image is built from `a99ccd44c5a39345fa65eb74e87343b187e129e9` instead, which **has** `preprod-a99ccd44c5a3` (measured in `package_version`) and therefore **satisfies FR16 rather than requiring an exception to it**. The cost is FR32 below and the product-code gap gated by Story 6.9's new AC. |
+| FR32 | Epic 6 | Cutover validated by a ~~no-op~~ **`rollback: true`** deploy. 🔴 **AMENDED 2026-08-26** (`sprint-change-proposal-2026-08-26-cutover-candidate.md`). The word **no-op is withdrawn and is not replaced by a synonym**: under the amended FR31 the cutover image is built from a **different commit** than the one legacy production serves, so the deploy changes what the new stand serves and **the cutover is the first real release**. `rollback: true` is still required, but for a **mechanical** reason unrelated to the promotion guard — the release path rebuilds (Story 6.4 AC2), and `build.yml`'s `Enforce AC2` refuses to repoint an existing `sha-<12hex>-prod` because `vite.config.ts`'s `Date.now()` makes every rebuild differ ([#d24](../../docs/migration-decisions.md#d24) §2b). A release-path dispatch of a commit Story 6.3 already built **goes red**. |
 | FR33 | — | **Cancelled** — no action on GitHub. File deletion only, via Story 7.2 |
 | FR34 | — | **Cancelled** — no action on GitHub. Server-side key rotation only, via Story 7.5 |
 
@@ -457,7 +570,12 @@ while the legacy DEV stand keeps running untouched.
 by Epics 5 and 6: parameterized compose, **execution on a deploy runner located on the target
 host** (amended 2026-08-11; was ~~native `ssh`/`scp` instead of `appleboy/*`~~),
 fail-fast `docker pull` with no `:latest` fallback, health check parameterized by container
-name and port, Slack via `curl`, and the server-side `flock`.
+name and port, Slack via `curl`, and ~~the server-side `flock`~~ a sibling-container `flock`
+through `docker.sock`
+🔴 **AMENDED 2026-08-21 (Story 4.4 code review M6, [D30](../../docs/migration-decisions.md#d30)).**
+The retired-mechanism phrase survived here after being struck from FR30 in this same file — there
+is no server-side deploy script at all (retired 2026-08-11); the lock is taken by a sibling
+container launched through the job's own `docker.sock`, bind-mounting the stand directory.
 
 ### Epic 5: PRE-PROD Release Candidate Environment
 
@@ -484,6 +602,23 @@ technical approval gate — organizational control), NFR11 (`[C]` promotion prin
 **Implementation notes:** `[C]` This is where the Option C compromise becomes visible: the
 PROD image is rebuilt rather than promoted, the guard degrades from image identity to commit
 identity, and the deviation is recorded as tracked technical debt.
+
+🔴 **Story 6.8 cancelled 2026-08-26** (`sprint-change-proposal-2026-08-26-story-6-8-cancelled.md`).
+The epic still says *"rollback is proven in practice rather than in theory"* and that is still
+true — it was proven by Story 6.4's live dispatches (runs 634, 642), not by the rehearsal story,
+which had nothing left to build or to do first. **FR24 and NFR3 stay covered by this epic**, with
+one named gap: **NFR3's measured duration was never recorded and now has no owner story**
+(`deferred-work.md`, owner Oleg). The epic drops from 9 planned stories to 8, one of them
+cancelled at 6.1.
+
+🔴 **Amended 2026-08-26** (`sprint-change-proposal-2026-08-26-cutover-candidate.md`). This epic's preamble records that *"the first Forgejo
+release is a one-way door"* and that rollback depth starts at zero. **That is now sharper, not
+softer.** Under the amended FR31 the cutover image is built from a **different commit** than the one
+production serves, so after the traffic switch **no Forgejo-side artifact carries the code users are
+being served today at all**. The legacy pipeline remains the only route back to it, and stays so until
+the team's product work is in Forgejo — gated by Story 6.9's new final AC. **Do not read the
+now-passing promotion guard as a safety net it is not:** it proves the built commit was validated on
+PRE-PROD, not that it is what production was running.
 
 ### Epic 7: Forgejo as the Single Source of Delivery
 
@@ -676,8 +811,9 @@ backend, rendering PRE-PROD validation fictional.
 
 **Given** PRE-PROD needs to be reachable
 **When** the requirement is submitted
-**Then** it includes the DNS name `preprod.crm-prionex.online` and its TLS certificate
-**And** it includes the published port allocation `8081` on s1.
+**Then** it includes the DNS name ~~`preprod.crm-prionex.online`~~ **`crm.preprod.crm-prionex.online`** and its TLS certificate
+**And** it includes the published port allocation ~~`8081`~~ **`8083`** on s1.
+🔴 **AMENDED 2026-08-15 — both values named things that do not exist.** `preprod.crm-prionex.online` and `api.preprod.crm-prionex.online` are **NXDOMAIN**; what the platform side actually built is `crm.preprod.crm-prionex.online` (frontend, resolves — vhost and certificate still missing) and **`api.crm.preprod.crm-prionex.online`** (API, resolving with an nginx vhost and a Let's Encrypt certificate). The extra `.crm.` segment is the whole difference, and **the real name appeared in zero files in this repository** before this amendment. `8081` is bound. Under Option C these values are baked into the bundle at build time, so the build would have succeeded and the image would have failed in a browser — the exact failure class Story 1.6 exists to prevent, one layer up. The story measured the neighbours' compose file and caught the Kong collision; it did not measure their DNS.
 
 **Given** the requirement has been submitted
 **When** the platform team responds
@@ -1356,12 +1492,12 @@ deterministically.
 
 **Given** a build triggered by a `v*` git tag
 **When** tags are computed
-**Then** the image carries the corresponding semver tags.
+**Then** the image carries the corresponding semver tags. 🔴 **NOT IMPLEMENTED by Story 3.2 — recorded deviation, 2026-08-15.** The `v*` trigger this AC names belongs to Story 3.4 (FR6), no `v*` tag has ever existed in this repository (`git tag` and `git ls-remote --tags` both empty), no deploy story accepts a semver `image_tag`, and Story 6.5's promotion guard extracts a commit SHA from the tag — which a semver string does not carry — so it would reject one by construction. **Story 3.4 must either implement it or take the decision to drop FR7's semver clause; it must not inherit this unexamined.** Annotated here by Story 3.2's code review, which found the deviation recorded in `deferred-work.md` and [D18](../../docs/migration-decisions.md#d18) but not in this file — the one a later story actually reads. ✅ **RESOLVED 2026-08-16: Story 3.4 took the decision and DROPPED it** — see FR6 and [D18](../../docs/migration-decisions.md#d18). This AC is withdrawn, not deferred a third time.
 
 **Given** a build from `main`
 **When** tags are computed
 **Then** the image additionally carries `latest`
-**And** builds from any other ref never produce `latest`.
+**And** builds from any other ref never produce `latest`. 🔴 **The first clause is NOT IMPLEMENTED by Story 3.2 — recorded deviation, 2026-08-15.** The rule is computed on every run and the tag is deliberately not pushed (Oleg, 2026-08-15): `latest` is named literally in the retention rule's `keep_pattern`, so pushing it is permanent, and **Story 3.3 AC4 is authorised to decide `latest` should not exist at all** — removal afterwards costs an authorised `DELETE` plus a `write:package` token. The second clause is closed and proven from the image config label `org.prionex.latest-eligible`. ⚠️ `LATEST_ELIGIBLE=true` has never been produced by any run: no build from `main` has happened. ~~**Story 3.3 AC4 owns the verdict and flips a one-line switch.**~~ ✅ **DECIDED 2026-08-16: `latest` is DROPPED** (Story 3.3 AC4, [D20](../../docs/migration-decisions.md#d20)). It cannot be bound to one of three images without an arbitrary choice, and binding it to `prod` would make the most dangerous image the one reachable by the laziest reference. The evaluation is kept and ships as the image label `org.prionex.latest-eligible`, so this AC's negative half stays provable from a positive value rather than from an absence.
 
 **Given** the tag set has been produced
 **When** the registry is inspected after a build
@@ -1424,7 +1560,7 @@ So that I can deploy that branch to DEV, which pulls fail-fast and would otherwi
 
 **Given** `.forgejo/workflows/build.yml` from Story 3.1
 **When** triggers are configured
-**Then** it runs on `push` to any branch, on `push` to `main`, and on `push` of a `v*` tag
+**Then** it runs on `push` to any branch, on `push` to `main`, and on `push` of a ~~`v*` tag~~ 🔴 **WITHDRAWN 2026-08-16 (Story 3.4, [D18](../../docs/migration-decisions.md#d18)).** Zero tags of any kind exist in this repository, verified local and on the instance; no deploy story consumes a semver tag; Story 6.5's guard extracts a commit SHA and would reject one by construction; and `ci.yml`'s ref filter is what keeps it off tags, so the trigger costs another workflow file plus its own measurement. The `keep_pattern` semver clause stays as insurance for a hand-pushed tag — only the trigger is withdrawn.
 **And** the `workflow_dispatch` trigger with a `ref` input is retained.
 
 **Given** a developer pushes a new feature branch
@@ -1479,22 +1615,39 @@ So that "deploy this tag" is an unambiguous instruction and an audit can reconst
 **When** the build completes
 **Then** the registry contains an image whose `sha-<short>` tag maps to that exact commit
 **And** the mapping is verifiable from the image metadata or labels without consulting the
-run log.
+run log. 🔴 **AMENDED 2026-08-18 (Story 3.6, [D20](../../docs/migration-decisions.md#d20)): read
+`sha-<short>` as `sha-<12 hex>-<env>` — the bare form was removed by D20.** Satisfied by
+`org.opencontainers.image.revision`, which `build.yml` has emitted since Story 3.2.
 
 **Given** an existing `sha-<short>` tag in the registry
 **When** the same commit is built a second time
 **Then** the existing tag is not silently repointed to a different digest, or if it is, the
-behaviour is detected and documented as a known limitation.
+behaviour is detected and documented as a known limitation. 🔴 **AMENDED 2026-08-18 (Story 3.6):**
+read `sha-<short>` as `sha-<12 hex>-<env>` (D20, as above). **Refuse, not document** —
+[D24](../../docs/migration-decisions.md#d24): `build.yml` reads the tag's pre-existing digest before
+pushing and either attaches or fails the build, naming both digests, rather than letting the repoint
+happen and recording it afterward. ✅ **Live-verified 2026-08-18, superseding the review's own
+caveat**: all four guard outcomes were exercised against real dispatches — absent (run 720), equal
+(run 721, full cache hit), differ (runs 723+725, including a discriminating re-dispatch proving the
+refused run left the tag untouched rather than merely reporting it as wrong), and the defensive
+ambiguous/fail-closed branch (run 719). See D24 and the story's Dev Agent Record for the run table.
 
 **Given** an image built for a specific environment
 **When** its metadata is inspected
 **Then** the environment it was built for is determinable from the image itself, not only from
-its tag string.
+its tag string. ✅ **Verified 2026-08-18** on current images (not the two-day-old evidence this story
+used earlier): `sha-6703b6683de1-dev` carries `org.prionex.environment = dev`,
+`sha-00ef3be4743d-preprod` carries `org.prionex.environment = preprod` — the two differ in exactly
+this one label. See the story's Task 4.2.
 
 **Given** all Epic 3 stories are complete
 **When** the phase-4 definition of done is evaluated
 **Then** a push to any branch demonstrably produces an immutable image bound to its commit
-**And** the evidence is recorded.
+**And** the evidence is recorded. ✅ **Closed 2026-08-18** — Oleg's merge of Story 3.6's own PR #50
+(commit `6703b6683de1`) into `main` triggered `build-main.yml` run 730, which produced
+`package_version` id 3352 (`sha-6703b6683de1-dev`) alongside `main-dev`/`buildcache` from the same
+run — a real push, not a green tick, evidenced from the registry and the package table. Epic 3 marked
+`done` in `sprint-status.yaml`. See the story's Task 5.1/5.2.
 
 ---
 
@@ -1504,7 +1657,10 @@ Any developer can deploy any feature branch to a new DEV stand on s1 without app
 the legacy DEV stand keeps serving untouched. This epic also establishes the deployment
 mechanics that Epics 5 and 6 reuse: parameterized compose, **execution on a deploy runner
 located on the target host** (amended 2026-08-11; was ~~native `ssh`/`scp`~~), fail-fast
-pull, parameterized health check, Slack via `curl`, and the server-side lock.
+pull, parameterized health check, Slack via `curl`, and ~~the server-side lock~~ a
+sibling-container `flock` through `docker.sock` (amended 2026-08-21, Story 4.4 code review M6,
+[D30](../../docs/migration-decisions.md#d30) — same defect as the near-identical phrase at :500,
+fixed alongside it).
 
 ### Story 4.1: Parameterize the Compose File for Coexisting Stands
 
@@ -1556,10 +1712,15 @@ So that the migration can be exercised without risking the environment the team 
 
 **Acceptance Criteria:**
 
-**Given** s1 already hosts the legacy DEV stand
+**Given** ~~s1 already hosts the legacy DEV stand~~ **s1 hosts no frontend stand at all** 🔴 **AMENDED
+2026-08-19 (Story 4.1, measured on s1)** — the legacy DEV stand is on `72.62.17.132`, a different
+machine; s1 (`185.185.49.127`) is the runner host and carries the `crm-dev` / `crm-preprod` stacks
 **When** the new stand is provisioned
-**Then** it lives in `~/crm-prionex/fe-prionex-dev/`
-**And** the legacy stand's directory, container and port are not modified.
+**Then** it lives in `~/crm-prionex/fe-prionex-dev/` — **which does not exist yet and is created by
+this story**, not placed beside an existing sibling
+**And** the legacy stand's directory, container and port are not modified — **trivially satisfied on
+s1, because they are not there.** NFR5's real exposure for the legacy stand is not host contention on
+s1; it is `CD.yml` deploying to `DEV_SSH_HOST`, which Story 4.1's verdict (b) already fenced off.
 
 **Given** the new stand directory
 **When** its `.env` is created
@@ -1647,23 +1808,89 @@ So that one deploy's `down` cannot tear down another deploy's freshly started co
 
 **Given** the behaviour of `concurrency` observed in Story 1.3
 **When** `deploy-dev.yml` is configured
-**Then** it declares `concurrency: cd-${{ github.ref }}` with `cancel-in-progress: false`,
+**Then** it declares ~~`concurrency: cd-${{ github.ref }}`~~ with `cancel-in-progress: false`,
 matching `CD.yml:19-21`.
+🔴 **AMENDED 2026-08-20 (Story 4.4, [D30](../../docs/migration-decisions.md#d30)).** The key is a
+**literal constant, `deploy-dev-fe-prionex-dev`**, not `cd-${{ github.ref }}`. `deploy-dev.yml` is
+`workflow_dispatch`-only and lives only on `main`, so `github.ref` is constant in practice today —
+the literal key produces the same behaviour for the right reason, where the expression would have
+produced it for the wrong one, and would split into per-branch groups the moment this file gains a
+`push` trigger or is dispatched from another branch (available on this instance, measured, run
+917). This workflow protects ONE STAND, not a per-ref artifact — two deploys of different refs to
+the same stand collide exactly as badly as two of the same ref, so a per-ref key (Story 3.2's own
+fix for `build.yml`'s look-alike defect) would be actively wrong here. `cancel-in-progress: false`
+stands as written.
 
 **Given** `concurrency` may be silently ignored by this Forgejo version
-**When** the deploy script runs on the server
+**When** ~~the deploy script runs on the server~~
 **Then** it acquires an exclusive `flock` on a file inside the stand directory before touching
 containers
 **And** it releases the lock on both success and failure paths.
+🔴 **AMENDED 2026-08-20 (Story 4.4, [D30](../../docs/migration-decisions.md#d30)).** There is no
+deploy script on the server — that mechanism was abandoned 2026-08-11
+(`sprint-change-proposal-2026-08-11-deploy-runner.md`) in favour of a job container on the target
+host holding `docker.sock`. The clause survives literally anyway: the `flock` is taken by a
+**sibling container**, launched through that same `docker.sock`, which bind-mounts the stand
+directory and holds the lock inside it — the deploy job itself cannot reach that directory
+(neither `container.options` nor `valid_volumes` allow it, `/root` is `drwx------`), but a sibling
+container launched through the socket the job already holds can, confirmed live before the design
+was written (D28 §4's own H5 amendment (i), measured not inherited). Acquire/release placement,
+bounded wait (240s) and holder TTL (720s) — [D30](../../docs/migration-decisions.md#d30).
 
-**Given** two deploys are dispatched to the same stand at nearly the same moment
-**When** both run
+**Given** ~~two deploys are dispatched to the same stand at nearly the same moment~~
+**When** ~~both run~~
 **Then** the second waits for the first to finish
-**And** the final container state corresponds to exactly one of the two deploys, not a mix.
+**And** the final container state corresponds to exactly one of the two deploys, not a mix
+(verified host-side by image digest and container `Created`/`StartedAt`, not by a log line).
 
-**Given** a deploy is killed mid-run while holding the lock
+🔴 **AMENDED 2026-08-21 (Story 4.4 code review M6, [D30](../../docs/migration-decisions.md#d30)).**
+*"Two simultaneous dispatches"* is not a runnable test on this platform, and a naive attempt at it
+produces a guaranteed false positive: the deploy runner's `capacity: 1` (D29 §8, re-verified by
+this story's Task 2.1) already serializes two deploy JOBS, so two dispatches would queue at the
+runner and the lock would never be exercised, while the run timings would look exactly like
+success — the same trap Story 1.3 solved with a disposable capacity-2 probe runner, and Story 3.6
+caught in validation before spending a run. Contention is made deterministic instead of hoped for:
+an input-gated hook (`hold_lock_seconds`, precedent `simulate_bad_credential`) starts the lock
+holder as a CONTAINER that outlives its own job, so the next — necessarily sequential — dispatch
+genuinely meets a held lock regardless of runner capacity.
+
+**Given** a deploy dies while holding the lock (job timeout, runner restart, host-side kill — an
+Actions-run **cancel** is not available on this instance, `deferred-work.md:94-98`)
 **When** a subsequent deploy is dispatched
-**Then** it is not blocked forever by a stale lock.
+**Then** it is not blocked indefinitely
+**And** no lock state survives on disk that a human must clean up by hand for the normal path to
+resume.
+
+🔴 **AMENDED 2026-08-21 (Story 4.4 code review M6, [D30](../../docs/migration-decisions.md#d30)).**
+Wording aligned with the story's own AC4 — "killed mid-run" widened to name the causes this
+platform actually presents (job timeout, runner restart, host-side kill; no cancel API exists
+here), and "not blocked forever" sharpened to "not blocked indefinitely, and no lock state
+survives that needs manual cleanup" — the holder's own bounded TOTAL life (TTL from its own
+container start, not from acquisition; code review H1/DN2) is the mechanism.
+
+**Given** the lock is held past this deploy's bounded wait
+**When** the acquire step gives up
+**Then** the job fails **before** `docker compose down` is ever called
+**And** the stand is still serving exactly what it served before the dispatch
+**And** the message names the true cause (which run holds the lock, how much of its TTL remains, and
+the one command that clears it), not a generic timeout.
+
+🔴 **ADDED 2026-08-21 (Story 4.4 code review M6 — this AC existed in the story,
+[D30](../../docs/migration-decisions.md#d30), but was missing from this file, which used to carry
+four ACs where the story carries six).** Why this AC exists: a lock that is only ever observed
+succeeding is indistinguishable from no lock at all — this is the row that makes the guard
+falsifiable, and the row that proves the lock is taken on the safe side of `down`.
+
+**Given** the uncontended case, which is every ordinary deploy
+**When** a deploy runs with no competing holder
+**Then** it succeeds end to end exactly as an unguarded deploy did — healthy stand, digest matching
+the resolved digest, `crm-dev-network` id unchanged, `$GITHUB_RUN_ID`-suffixed workspace paths still
+in effect
+**And** the lock adds no measurable share of the deploy's wall-clock beyond acquisition.
+
+🔴 **ADDED 2026-08-21 (Story 4.4 code review M6, [D30](../../docs/migration-decisions.md#d30)) —
+the second of the two ACs missing from this file.** The guard must not degrade the deploy it
+guards; this is the control row against every contended row above.
 
 ### Story 4.5: Notify Slack on Deploy Start, Success and Failure
 
@@ -1717,23 +1944,110 @@ So that a stale feature branch does not sit on the shared stand indefinitely.
 **Given** `.forgejo/workflows/dev-reset.yml`
 **When** its trigger is configured
 **Then** it runs on a `schedule` every Sunday
-**And** it can also be dispatched manually.
+**And** it can also be dispatched manually ~~.~~
+**And** the manual dispatch path takes **zero inputs**, so it cannot be aimed anywhere but `main`.
+
+🔴 **AMENDED 2026-08-21 (Story 4.6, [D31](../../docs/migration-decisions.md#d31)).** The zero-input
+clause is stronger than "can also be dispatched manually" and is what makes the manual path real
+EVIDENCE for the scheduled one: with no ref/tag/environment a human can steer it at, a manual
+dispatch and a scheduled firing execute the identical job over identical inputs, so the manual path
+proves the body while the scheduled firing only has to prove it ran at a moment nobody chose.
+Precedent, same instance, same team: `PRIONEX_HUB/.github/workflows/reset-dev.yml:22-23`.
+
+🔴 **ADDED 2026-08-21 (Story 4.6, [D31](../../docs/migration-decisions.md#d31)) — the schedule must
+be proven for THIS repository, not assumed from a sibling.** `schedule:` has never fired for
+`CRM/fe-prionex` (a 124-run event census records none); it HAS fired in production, on this same
+Forgejo build, in two sibling repositories on this instance — a strong prior, not a fact about this
+one. The story closes with at least one `action_run` row for `CRM/fe-prionex` created by the
+scheduler, identified by query, with its run id, trigger and actor recorded — never asserted from
+"the sibling repo does it, so ours will."
 
 **Given** the scheduled run
 **When** it executes
-**Then** it deploys the current `main` image to the DEV stand using the same mechanics as
-Story 4.3
-**And** it runs `docker image prune` on the host afterwards.
+**Then** it ~~deploys the current `main` image to the DEV stand using the same mechanics as
+Story 4.3~~ causes `deploy-dev.yml` to run with `ref=main` through the Forgejo API, duplicating
+none of its steps
+**And** it runs ~~`docker image prune`~~ a targeted sweep on the host ~~afterwards~~ **first, before
+the dispatch** (see FR23's own amendment).
 
-**Given** the prune step
+🔴 **AMENDED 2026-08-21 (Story 4.6, [D31](../../docs/migration-decisions.md#d31)).** "Same
+mechanics as Story 4.3" reads naturally as "duplicate its steps," and both sibling repositories on
+this instance read it exactly that way, each copying their own deploy body into their reset file
+and booking the duplication as debt for a later factoring story. This story refuses that reading
+because the factoring story already exists and is numbered — Story 4.8, next but one — so a
+duplicated deploy body written here is work 4.8 would have to delete. "Same mechanics" is satisfied
+by *running the same workflow* (`deploy-dev.yml`, live-proven across seven runs and four review
+rounds) through the Forgejo API, not by containing the same steps.
+
+🔴 **AMENDED 2026-08-22 (Story 4.6 code review M9).** The first amendment above struck the literal
+command (`docker image prune`) but left the ordering word "afterwards" standing, and the shipped
+file does the opposite by explicit decision: `dev-reset.yml` sweeps **first** (step 1) and
+dispatches **last** (step 3), for two stated reasons (Dev Notes §4 of the story) — the previous
+cycle's debris is removed while the current stand's own image is still safely referenced by its
+running container, and sweeping first removes any need to wait on a foreign run before cleaning up.
+"Amend, do not quietly diverge" (Task 8.2's own rule) applies to an ordering word exactly as much as
+to a command name; struck and corrected above rather than left to silently contradict the shipped
+file.
+
+🔴 **AMENDED 2026-08-22 (Story 4.6 code review M10) — this AC never described a real step and is
+now struck.** The clause below was never amended when FR23's `docker image prune` was replaced by a
+targeted sweep in the AC above and in FR23 itself; it kept referring to "the prune step" — a step
+that has never existed in the shipped file, which has a **sweep** step instead. Reproduced,
+struck, and restated to describe what the sweep step actually does and actually enforces (AC4 of
+the story, `dev-reset.yml:127-268`):
+
+**Given** ~~the prune step~~ **the sweep step**
 **When** it runs
 **Then** it does not remove images currently in use by the legacy stand or any other container
-on s1.
+on s1 ~~.~~ **— enforced by excluding anything any container (running or stopped) references, by
+name-pattern anchoring at both ends so it cannot match another tenant's container as a substring,
+and by an explicit age threshold on each of the two object classes it touches (untagged images,
+stopped lock-holder containers).**
 
 **Given** the reset has run
 **When** the stand is inspected
 **Then** it serves the `main` build
-**And** the outcome is announced in Slack.
+**And** ~~the outcome is announced in Slack~~.
+
+🔴 **AMENDED 2026-08-21 (Story 4.6) — Slack deferred, not dropped.** Story 4.5 (Slack
+notifications) is parked by Oleg's own decision (2026-08-21); its context lives on an unmerged
+branch this story does not read. No notification step is written, and no AC here is satisfied only
+when one is sent — the standing rule every deploy story has followed applies here too: *the deploy
+must work without it* (`epics.md:1814-1818`). Recorded as deferred to Story 4.5, the same way
+Stories 5.3 and 6.4 recorded theirs.
+
+🔴 **ADDED 2026-08-21 (Story 4.6, [D31](../../docs/migration-decisions.md#d31)) — fail-closed: a
+reset that cannot run leaves the stand exactly as it was.** Given the dispatch cannot authenticate,
+the endpoint refuses, `main-dev` does not exist (14-day `-dev` retention expiry), or ~~the deploy
+itself fails~~ — the run ends red, naming which cause, and the stand keeps serving whatever it was
+serving before: no `down` ran, no image the running container needs was removed, and anything the
+sweep already did removed nothing the still-running container references.
+
+🔴 **NARROWED 2026-08-22 (Story 4.6 code review DN1, Oleg's decision).** As first written, this AC
+promised a red, named run for four causes, two of which (`main-dev` missing; the deploy itself
+failing) happen entirely *inside* the `deploy-dev.yml` run this workflow only requests — observing
+them from `dev-reset.yml` requires polling the dispatched run to completion, which is a proven
+self-deadlock against the shared `concurrency:` group both workflows use. Struck above and narrowed
+to the two causes this workflow's own layer can actually classify: the dispatch cannot authenticate,
+or the dispatch endpoint refuses the request. A **non-blocking** read-back after a successful
+dispatch (one `GET .../actions/runs`, not waited on) additionally confirms the request reached a
+real, queued run rather than a proxy or a disabled workflow, without reporting that run's own
+outcome. The two struck causes are covered instead by `deploy-dev.yml`'s own classifiers — Story
+4.3's run 948 already drove the missing-image case through its own 404 path live — which is where
+AC5, two clauses up, already reads the deploy's own result from (the stand's digest), not from this
+run's status. **Accepted residual gap:** a deploy this workflow successfully triggers, that then
+fails downstream, still marks the reset run green; until Story 4.5's notifications land, a named
+human reader checks both runs by query every week as the compensating control (see the story's own
+Dev Notes §H2 and AC6 narrative for the full argument and the removal trigger).
+
+🔴 **ADDED 2026-08-21 (Story 4.6, [D31](../../docs/migration-decisions.md#d31)) — the cron
+expression cannot take the repository down with it.** Forgejo persistently DISABLES a workflow
+whose `schedule:` spec fails to parse at tick time (a pushed fix does not revive it — a human must
+re-enable it), and an invalid `on.schedule` cron has been observed, on this exact Forgejo major
+version, to break push-triggered Actions for the WHOLE repository (codeberg #12566) — including
+workflows that carry no schedule at all. The expression is a plain 5-field cron, validated against
+a parser before it is ever pushed, with no seconds field, no `@`-descriptor, and no
+`TZ=`/`CRON_TZ=`/`timezone:` override.
 
 ### Story 4.7: Validate DEV Deploys Across Five Feature Branches
 
@@ -1779,12 +2093,28 @@ So that a fix applied for one environment cannot silently miss the other two.
 > it. Continue reading the clause below with the Slack element deferred.
 steps live in a single reusable definition
 **And** the mechanism used is the one Story 1.3 proved works on this instance.
+> 🔴 **AMENDED 2026-08-22 — "the mechanism Story 1.3 proved" is the wrong citation.** Story 1.3's
+> own Probe C declared no inputs, no secrets, no outputs, no `concurrency` block and one trigger —
+> its own table listed `secrets: inherit` under *"expectations to test against, not findings"*
+> (`deferred-work.md:1860-1875`). It did not settle `workflow_call`. The mechanism actually proven
+> on this instance is **D21**'s (Story 3.4, probe runs 617-631, live twice in this repository
+> since `ci.yml`→`build.yml` and `build-main.yml`→`build.yml`, before Story 4.8 added a third).
+> Satisfied in substance (the mechanism was established by test on this instance); the citation was
+> wrong and is corrected here so the next reader does not chase Story 1.3's own file for it.
 
 **Given** neither `workflow_call` nor composite actions are supported by this Forgejo version
 **When** the fallback is chosen
 **Then** the shared logic is extracted into a version-controlled shell script that the
 workflows invoke
 **And** the triplication is confined to a thin invocation rather than the whole procedure.
+> 🔴 **AMENDED 2026-08-22 — this Given is FALSE, and the fallback was never taken.** Composite
+> actions (`uses:` at step level) are dead on the deploy runner's own job image (run 920, no error,
+> silent non-execution). `workflow_call` (`uses:` at job level) works and is expanded
+> SERVER-SIDE — the runner never sees a `uses:` at all, so run 920's finding does not reach it. The
+> shell-script fallback was rejected on a SECOND, independent ground even where it would have been
+> available: Story 4.7 found (H4) that the `deploy` job's own task log does not persist reliably —
+> `action_task_step` rows are the only surviving per-step evidence for that job, and a monolithic
+> script would collapse 22 of them into 1, destroying it. See [D33](../../docs/migration-decisions.md#d33).
 
 **Given** the shared definition
 **When** it is parameterized
@@ -1793,15 +2123,43 @@ image tag are all inputs
 **And** no target host is passed, because the runner label determines the host (amended
 2026-08-11; was ~~target host~~)
 **And** no environment-specific value is embedded in it.
+> ⚠️ **AMENDED 2026-08-22 — four real parameters this list never named, plus one deliberate
+> non-input.** `compose_project_name` and `frontend_network` (two of the five variables
+> `docker-compose.stand.yml` requires; neither is covered by "container name" or "port");
+> `lock_wait_seconds`/`lock_ttl_seconds`/`health_timeout_seconds` (the tuning constants, now
+> configurable per stand, with Story 4.4's own TTL-exceeds-timeout invariant asserted in the file);
+> and **`expect_unrouted_api`** — the Kong guard's `no Route matched` signature check encodes DEV's
+> own Kong configuration as an invariant; PRE-PROD's Kong runs real services and would fail every
+> deploy without this input. **The `concurrency:` group is deliberately NOT an input** — a callee's
+> own `concurrency:` block is silently void (D21), so the group lives in each caller as a literal,
+> one per stand; an input here would read as load-bearing and do nothing.
 
 **Given** `deploy-dev.yml` from Story 4.3
 **When** it is refactored onto the shared definition
 **Then** a DEV deploy still succeeds end to end
 **And** the health check still fails correctly against a stopped stand.
+> ✅ **Confirmed live, 2026-08-22/23.** DEV deploy: run 1132, all 23 `action_task_step` rows
+> SUCCESS (22 original + one new fail-closed guard). Health check fails correctly against a
+> **running-but-unhealthy** stand AND the post-`down` rollback restores it with no human: run 1143,
+> the third dispatch attempt against a replacement throwaway probe (the original probe branch this
+> AC's own test depended on, `test/4-3-unhealthy-probe`, was found deleted by design at Story 4.3's
+> own closeout — the first two replacement attempts used a probe construction incompatible with the
+> rollback mechanism by design, both recorded honestly rather than smoothed over — see `4-8-…md`
+> Task 6.5). 🔴 **Corrected 2026-08-23 (code review)**: this amendment originally said "a stopped
+> stand" — inaccurate. Run 1143's probe broke `nginx.conf`'s own listen port, not the compose file;
+> the container stayed RUNNING throughout, only its Docker healthcheck failed. The story's own
+> method note (Task 6.5's own text) already carried this caveat honestly; this amendment had dropped
+> it. "Stopped" is a genuinely different, untested failure shape for this AC.
 
 **Given** the shared definition exists
 **When** the remaining deploy workflows are written in Epics 5 and 6
 **Then** they consume it rather than copying it.
+> 🔴 **NARROWED 2026-08-22 — this AC cannot be closed by Story 4.8 itself.** `deploy-preprod.yml`
+> and `deploy-prod.yml` do not exist yet; Stories 5.3 and 6.4 write them. What Story 4.8 discharges
+> in their place: the callee's own input surface walked line-by-line against both stories' own ACs
+> (no gaps found); a fully commented caller skeleton committed in `deploy-stand.yml`'s own header
+> (not a fourth workflow file); this amendment; and [D33](../../docs/migration-decisions.md#d33),
+> which records the contract for whoever writes 5.3/6.4 without needing to open the story file.
 
 ### Story 4.9: Cut DEV Over to the New Stand
 
@@ -1854,9 +2212,29 @@ in Story 1.6.
 > The alias is in their `docker-compose.server.yml`, their plan's mass-rename step now carries Kong
 > as an explicit exception, and they added a deploy-blocking runtime check (`AC1.alias`) that probes
 > the name **from inside the stand's network** and asserts Kong's own `no Route matched` signature.
-> **What still blocks this epic:** the PRE-PROD network, Kong and services themselves are on their
+> ~~**What still blocks this epic:** the PRE-PROD network, Kong and services themselves are on their
 > roadmap with no date given to us, and §2.4/§2.5 of the requirement — DNS, TLS, the external
-> `api.preprod` hostname and CORS — are unanswered. Artifact:
+> `api.preprod` hostname and CORS — are unanswered.~~
+>
+> ✅ **EPIC 5 IS NO LONGER BLOCKED — measured 2026-08-15 by Story 1.6's code review**
+> (`sprint-change-proposal-2026-08-15-preprod-reality.md`). None of that is on a roadmap; **it is
+> running.** `crm-preprod-network` carries **69 containers**, `crm-preprod-kong-gateway` is up with
+> the alias, and `api.crm.preprod.crm-prionex.online` serves over TLS with a Let's Encrypt
+> certificate. **Story 5.1's first two ACs are already satisfied by the other side** and become
+> verification rather than construction.
+>
+> 🔴 **What the plan got wrong while waiting:** the hostname above is not the one this plan asked
+> for. `api.preprod.crm-prionex.online` and `preprod.crm-prionex.online` are **NXDOMAIN**; the real
+> convention carries an extra `.crm.` segment, and it appeared in **zero files in this repository**
+> until 2026-08-15. Port `8081` — FR25's "permanent allocation" — is **taken**. Both values are
+> baked into the bundle at build time under Option C, so the build would have passed and the image
+> would have failed in a browser.
+>
+> **What genuinely remains:** an nginx vhost and a certificate for the **frontend** name
+> `crm.preprod.crm-prionex.online` (it resolves; s1 has vhosts only for the two API names) — that is
+> Story 5.2's and it is ours — plus the PRE-PROD Kong's CORS origin, currently
+> `http://localhost:8320`. ⚠️ *Configured wrong is worse than unconfigured: it looks done and fails
+> only in a browser.* Artifact:
 > [`docs/preprod-infrastructure-requirement.md`](../../docs/preprod-infrastructure-requirement.md);
 > decisions: [`#d11`](../../docs/migration-decisions.md#d11) and the proposal above.
 >
@@ -1911,7 +2289,7 @@ So that a release candidate can be validated the way a user would experience it.
 **Given** the parameterized compose file from Story 4.1
 **When** the PRE-PROD stand is provisioned
 **Then** it lives in `~/crm-prionex/fe-prionex-preprod/`
-**And** its `.env` sets `FRONTEND_PORT=8081`, a distinct `CONTAINER_NAME`, a distinct
+**And** its `.env` sets `FRONTEND_PORT=`~~`8081`~~**`8083`** (amended 2026-08-15: `8081` is taken on s1, measured), a distinct `CONTAINER_NAME`, a distinct
 `COMPOSE_PROJECT_NAME`, and the agreed PRE-PROD network.
 
 **Given** three stands now share s1
@@ -1920,9 +2298,14 @@ So that a release candidate can be validated the way a user would experience it.
 **And** none appears in another's compose project.
 
 **Given** the DNS name and certificate from Story 1.6
-**When** `preprod.crm-prionex.online` is configured
+**When** ~~`preprod.crm-prionex.online`~~ **`crm.preprod.crm-prionex.online`** is configured
 **Then** it resolves to the PRE-PROD stand
 **And** it serves over TLS with a valid certificate.
+🔴 **AMENDED 2026-08-15.** The name resolves already (`185.185.49.127`); what is missing is **an
+nginx vhost and a certificate for it** — s1 has vhosts and Let's Encrypt certs only for the two
+**API** names (`api.crm.preprod…`, `api.crm.dev…`). So this AC is no longer "wait for someone to
+give us a name"; it is **the one piece of PRE-PROD infrastructure that genuinely does not exist**,
+and it is ours. The API side is done: `api.crm.preprod.crm-prionex.online` serves over TLS today.
 
 **Given** the stand is provisioned
 **When** registry access is configured
@@ -1954,6 +2337,12 @@ steps — compose placement, `down`, fail-fast pull, `up -d`, parameterized heal
 running on the deploy runner located on s1 (amended 2026-08-11; was ~~native `ssh`/`scp`,
 compose copy~~)
 **And** it acquires the Story 4.4 lock on the PRE-PROD stand directory.
+> ⚠️ **AMENDED 2026-08-22 (Story 4.8) — one parameter this story must set that no prior story
+> named.** The shared callee's Kong guard defaults to `expect_unrouted_api: true` (DEV's own
+> behaviour). PRE-PROD's Kong routes real services — this caller must set
+> `expect_unrouted_api: "false"` in its own `with:` block, or every deploy fails the Kong guard for
+> a reason that has nothing to do with the deploy itself. See the caller skeleton in
+> `deploy-stand.yml`'s own header and [D33](../../docs/migration-decisions.md#d33).
 
 **Given** an `image_tag` that does not exist in the registry
 **When** the deploy runs
@@ -2071,12 +2460,15 @@ Option C compromise becomes visible and is recorded as tracked technical debt.
 > **Accepted risk: the rollback horizon resets at cutover (recorded 2026-08-07).** Every image
 > built before the migration lives in `ghcr.io/crm-prionex/fe-prionex`, and no action is taken
 > on GitHub — which includes pulling from its registry. Those images are therefore
-> unreachable. Rollback via Story 6.8 can only target versions built by Forgejo.
+> unreachable. Rollback — the `rollback: true` path of `deploy-prod.yml`, Story 6.4 — can only
+> target versions built by Forgejo.
 >
 > The practical consequence: **the first Forgejo release is a one-way door.** Before it, the
 > legacy pipeline can still put an older version back. After it, rollback depth starts at zero
-> and grows one release at a time. Story 6.8 must be proven on a Forgejo-built version before
-> the cutover, not after, because there is no older version to fall back to.
+> and grows one release at a time. The path had to be proven on a Forgejo-built version before
+> the cutover, not after, because there is no older version to fall back to — **it was, in runs
+> 634 and 642 under Story 6.4**, which is the ground on which Story 6.8 was cancelled
+> (2026-08-26).
 >
 > This compounds the loss of the GitHub fallback recorded in Story 7.1 (cancelled). Together
 > they mean Epic 6 carries no external safety net at all.
@@ -2138,13 +2530,37 @@ So that the cutover can be rehearsed against the code already in production.
 > image rather than the artifact validated on PRE-PROD, so this introduces no new compromise —
 > it makes the story consistent with one the plan had already accepted (NFR11).
 
+> **Note added 2026-08-18** (`sprint-change-proposal-2026-08-18-prod-target.md`): identification
+> of the running production commit still happens on **s2** — that is where the legacy production
+> serves from until the traffic switch. Only the *deploy destination* of the rebuilt image
+> changed (s10, per Story 6.4 as amended). The ACs stand as written.
+
+> 🔴 **SCOPE AMENDED 2026-08-26** (`sprint-change-proposal-2026-08-26-cutover-candidate.md`). **The build source is no longer the
+> running production commit.** It is `a99ccd44c5a39345fa65eb74e87343b187e129e9` — the last validated
+> PRE-PROD candidate — because the running commit `41ab0470ab6b3df3bc332fc90f8bccaaba44dc39` is
+> **absent from this repository** and cannot be checked out. Decision: Oleg, 2026-08-26,
+> *«Берем тот коммит, который последний в pre-prod»*, reversing his own earlier
+> *«Занесу коммиты в Forgejo»* of the same day. **The 2026-08-18 note above no longer holds in one
+> respect** — the s2 identification still happens, but it is now the story's **reference
+> measurement**, not its build source. **The ACs no longer stand as written**: AC1 and AC4 are
+> amended below.
+>
+> **The title and the story key
+> (`6-3-rebuild-the-running-production-commit-into-the-forgejo-registry`) are deliberately left
+> unchanged** — the key names a branch, a story file and a `sprint-status.yaml` row that are all in
+> flight, and renaming them costs more than the mismatch does. **Read the ACs, not the title.**
+
 **Acceptance Criteria:**
 
 **Given** production currently runs an image from ghcr.io
 **When** the running commit is identified
 **Then** it is determined from the running container on s2 — via its image labels or the
 recorded deployment — not assumed from a branch name
-**And** the identification is evidenced rather than asserted.
+**And** the identification is evidenced rather than asserted
+**And** 🔴 **AMENDED 2026-08-26 (`sprint-change-proposal-2026-08-26-cutover-candidate.md`): this identification is the story's
+REFERENCE MEASUREMENT, not its build source.** It is recorded so the distance between what
+production serves and what the cutover image contains is **visible and dated** rather than implicit.
+The build source is the last validated PRE-PROD candidate (FR31 as amended).
 
 **Given** the identified commit
 **When** it is built
@@ -2159,12 +2575,22 @@ previously created `prod-<sha>` nowhere, leaving the rebuilt cutover image prote
 a moving name. `prod-<sha>` is created here, at rebuild time, rather than waited for from the
 next deploy.
 
-**Given** the rebuilt image
+**Given** the built image
 **When** it is compared with what production serves
-**Then** it is confirmed to originate from the same commit
-**And** it is recorded that it is **not** byte-identical, because it was rebuilt — so Story
-6.9's "no-op deploy" is a no-op in code, not in bytes, and must be validated by behaviour
-rather than by digest comparison.
+**Then** 🔴 **AMENDED 2026-08-26 (`sprint-change-proposal-2026-08-26-cutover-candidate.md`), and the direction is reversed:** it is
+recorded that the image originates from a **DIFFERENT COMMIT** — `a99ccd44c5a3…` against s2's
+`41ab0470…`, both values pasted — together with the reason the running commit could not be used
+(absent from Forgejo, measured)
+**And** the **product-code distance** is stated with its measured and unmeasured halves both named:
+Forgejo's newest team-authored `src/` commit is **2026-08-04**, production was built **2026-08-22**,
+and **how much of that delta is product code is UNMEASURED**, because reading GitHub is forbidden
+(`#d7`)
+**And** it is recorded that the image is **not** byte-identical to anything production has served —
+true **by construction** (`vite.config.ts`'s `Date.now()`, [#d24](../../docs/migration-decisions.md#d24)
+§2b) and **never to be presented as a measured comparison**; the plan has rejected that vacuous claim
+five times
+**And** ~~Story 6.9's "no-op deploy" is a no-op in code, not in bytes~~ — **withdrawn: under the
+amended FR32 there is no no-op deploy at all.**
 
 **Given** the retention policy from Story 1.11
 **When** it runs
@@ -2195,9 +2621,12 @@ PRE-PROD artifact.
 **Then** it pulls the existing tag without rebuilding
 **And** no build step runs on this path.
 
-**Given** the deploy targets s2
+**Given** the deploy targets s10 ~~s2~~ (amended 2026-08-18,
+`sprint-change-proposal-2026-08-18-prod-target.md`)
 **When** the workflow declares `runs-on`
-**Then** it targets the deploy runner located on s2 by its label
+**Then** it targets the deploy runner located on s10 by its label — the label Story 6.10
+registers, **not** `s10`/`e1-rung3`, which belong to the CI runner whose jobs execute in dind
+and can never reach the host's stand
 **And** no SSH credential is used, so production access cannot be lost by a key change.
 
 > Amended 2026-08-11 (`sprint-change-proposal-2026-08-11-deploy-runner.md`). Was: *"Then it
@@ -2206,6 +2635,11 @@ PRE-PROD artifact.
 > decision:** the s2 deploy runner holds that host's `docker.sock`, so a production deploy job
 > has root-equivalent control of the s2 daemon. This is the hub's documented pattern and the
 > only way this model reaches production.
+>
+> **Re-scoped 2026-08-18** (`sprint-change-proposal-2026-08-18-prod-target.md`): the accepted
+> `docker.sock` root-equivalence now applies to a dedicated single-purpose VM (s10) rather than
+> a shared production host — the risk stands, its blast radius shrinks to that VM. The decision
+> remains Oleg's and remains accepted.
 
 **Given** the deploy sequence
 **When** it executes
@@ -2323,30 +2757,27 @@ As a release engineer,
 I want to restore the previous production release quickly,
 So that a bad release is a short incident rather than a long one.
 
-**Acceptance Criteria:**
-
-**Given** a previously deployed production `image_tag`
-**When** `deploy-prod.yml` is dispatched with that tag and `rollback` true
-**Then** the promotion guard is skipped and the image is pulled without rebuilding.
-
-**Given** the rollback executes
-**When** it completes
-**Then** the elapsed time is the pull plus container restart, with no build stage
-**And** the measured duration is recorded.
-
-**Given** the rollback completes
-**When** the smoke check from Story 6.7 runs
-**Then** it passes against the restored release.
-
-**Given** the rollback has been performed
-**When** the registry is inspected
-**Then** `prod-current` points at the restored image.
-
-**Given** this is a real rehearsal rather than a documented intention
-**When** the story closes
-**Then** an actual rollback has been executed against the production stand and observed to
-work
-**And** the procedure is documented with the observed timing.
+> **CANCELLED — the mechanism shipped and ran before the story could (decided by Oleg,
+> 2026-08-26,** `sprint-change-proposal-2026-08-26-story-6-8-cancelled.md`**).** This story was
+> written as a rehearsal of a rollback path that did not exist yet. Story 6.4 built that path and
+> then dispatched it **live against the production stand twice — runs 634 and 642** — with the
+> build job skipped and the stand healthy on both. There is no unbuilt mechanism left here and no
+> first rollback left to perform.
+>
+> **Where each of its five AC clauses now lives:**
+>
+> | AC clause | Disposition |
+> |---|---|
+> | Guard skipped, image pulled without rebuilding | ✅ **Story 6.4, AC3** — runs 634, 642. FR24 is met by the shipped `rollback: true` path, not by this story. |
+> | Elapsed time is pull + restart, **and the duration is recorded** | ⚠️ **ORPHANED.** The *no-rebuild* half is proven (the `build` job is visibly skipped); **the measured half has no owner story.** Story 6.4 §"not in scope" item 4 deferred it here explicitly. Filed in `deferred-work.md`, owner Oleg. |
+> | The Story 6.7 smoke check passes against the restored release | ➡️ **Story 6.7**, which is where the smoke check is built. It runs on every deploy, and the rollback path is a deploy. |
+> | `prod-current` points at the restored image | ➡️ **Story 6.6**, whose ledger writes run on **both** paths by its own AC, and whose §8 exercise moves `prod-current` on a rollback and then moves it back. |
+> | A real rollback executed against the production stand, procedure documented | 🟡 **Half met.** The execution happened (634, 642), and Story 6.6 has since added three more — runs **662, 667, 668**, `prod-current` moved and moved back. **Five live rollbacks, none of them timed.** The written procedure did not get written — same `deferred-work.md` entry. |
+>
+> **What this does NOT change.** The rollback horizon still resets at cutover, and the accepted
+> risk recorded in this epic's preamble stands word for word — it was never a property of this
+> story, only described by it. Rollback depth still starts at zero and grows one release at a
+> time.
 
 ### Story 6.9: Cut Production Over with a No-Op Deploy
 
@@ -2354,12 +2785,39 @@ As a release engineer,
 I want the full production mechanism exercised without changing what production serves,
 So that cutover risk is separated from release risk.
 
+> 🔴 **MEANING AMENDED 2026-08-18** (`sprint-change-proposal-2026-08-18-prod-target.md`).
+> As written, this story assumed old and new production share a host, so "deploy without
+> changing what production serves" was one stand restarting on itself. Now: the no-op deploy
+> exercises the full mechanism **on the s10 stand while s2 continues to serve users**. The
+> comparison "content before and after is identical" is made between what s2 serves and what
+> s10 serves (behaviour, not digest — the Option C caveat already recorded here). **The actual
+> switch of public traffic from s2 to s10 is an external dependency** — hypervisor
+> port-forwarding, front nginx, or DNS, owned outside this repository — and this plan treats it
+> like the PRE-PROD vhost: named, owned, and verified from our side, not built by us. The
+> cutover is complete only when the traffic switch has happened and the smoke check passes
+> against the public name.
+
+> 🔴 **PREMISE WITHDRAWN 2026-08-26** (`sprint-change-proposal-2026-08-26-cutover-candidate.md`). This story's own purpose line reads
+> *"so that cutover risk is separated from release risk"*. **Under the amended FR31 that separation
+> no longer exists.** The image Story 6.3 produces is built from a **different commit** than the one
+> legacy production serves, so the cutover deploy carries a commit change with it and **is the first
+> real release**; both risks land together. **The separation is not recoverable** without importing
+> the running commit — the alternative Oleg considered and declined on 2026-08-26. Stated here rather
+> than left for this story to discover, and the final AC below is the gate that contains what it
+> costs.
+
 **Acceptance Criteria:**
 
-**Given** the image imported in Story 6.3
-**When** `deploy-prod.yml` is dispatched against it with `rollback` true
-**Then** the deploy pulls that image from the Forgejo registry and restarts the stand
-**And** the content served before and after the deploy is identical.
+**Given** the image **built** in Story 6.3 from the validated PRE-PROD candidate
+**When** `deploy-prod.yml` is dispatched against `sha-<12hex>-prod` with `rollback` **true**
+**Then** the deploy pulls that image from the Forgejo registry and starts the s10 stand
+**And** 🔴 **AMENDED 2026-08-26 (`sprint-change-proposal-2026-08-26-cutover-candidate.md`): the identity comparison is WITHDRAWN.**
+~~the content served before and after the deploy is identical~~ — s10 and s2 serve **different
+commits**, so they are **expected to differ, and a difference is not a defect**. What is asserted
+instead: **s10 serves the exact image Story 6.3 recorded**, verified by digest against `prod-<12hex>`
+**And** `rollback: true` is used for the **mechanical** reason in FR32 as amended — **not** because
+the promotion guard would refuse this commit. It would now pass: the built commit carries
+`preprod-a99ccd44c5a3`.
 
 **Given** the no-op deploy
 **When** it completes
@@ -2376,6 +2834,78 @@ So that cutover risk is separated from release risk.
 **Then** it states that production is now delivered by Forgejo
 **And** the Option C deviation from the promotion principle is restated in the release
 documentation so it is not forgotten.
+
+**Given** 🔴 **NEW AC, added 2026-08-26** (`sprint-change-proposal-2026-08-26-cutover-candidate.md`) — the traffic switch will point
+users at a stand serving a **different commit** than the one they are served today, and Forgejo's
+newest team-authored `src/` commit is **2026-08-04** while production was built **2026-08-22**
+**When** the switch is planned
+**Then** the product-code delta between what s2 serves and what s10 serves is **measured and written
+down before the switch, not after**
+**And** if that delta contains team work absent from Forgejo, **the switch does not happen until that
+work is in Forgejo** — this is a gate on the action, not a note
+**And** the owner of that import is named — **Oleg** — with its state recorded as `PENDING (owner:
+Oleg)`, `OPEN`, or the work done; **there is no fourth, softer word**
+**And** it is stated that this precondition **did not exist before 2026-08-26** and was created by the
+change to FR31, so it is not misread as an oversight in the original plan.
+
+### Story 6.10: Provision the PROD Deploy Contour on s10
+
+> **Added 2026-08-18** (`sprint-change-proposal-2026-08-18-prod-target.md`). Listed after 6.9
+> to preserve numbering, **must complete before Story 6.4** — the precedent is Story 1.13,
+> which also ran out of numeric order for the same reason.
+
+As a release engineer,
+I want the new PROD host able to receive a Forgejo deploy before any deploy story runs,
+So that Epic 6 lands on a host that is measured ready rather than assumed ready.
+
+> **Everything below starts from the 2026-08-18 measurements**
+> (`sprint-change-proposal-2026-08-18-prod-target.md` §1): a CI-shaped runner (id 21) already
+> polls from s10 via `--add-host git.crm-prionex.com:10.70.0.1`; the host itself resolves the
+> public IP and gets an empty reply; no registry credential exists on the host; the host was in
+> a provisioning crash-loop the same morning. **Re-verify at execution time — this host is
+> moving.**
+
+**Acceptance Criteria:**
+
+**Given** the hub's deploy-runner pattern (`s1-deploy-dev-preprod`, `s2-prod-deploy`)
+**When** the deploy runner for s10 is provisioned — **by us, on s10 itself** (Oleg's decision
+2026-08-18: we hold root on the VM via the jump path; only the registration token comes from
+the Forgejo side)
+**Then** a runner registration exists on s10 whose jobs execute against the **host** Docker
+daemon (not dind), carrying a dedicated deploy label distinct from `s10`/`e1-rung3`
+**And** the registration scope (instance/org) is verified to make it reachable from
+`CRM/fe-prionex`, and runner id 21 is confirmed untouched.
+
+**Given** the contour talks to the hub over wg-private **by design** (Oleg, 2026-08-18), and
+the registry answers only there (measured: public → empty reply after TLS, `10.70.0.1` → 401)
+**When** the host is prepared
+**Then** `/etc/hosts` on s10 maps `git.crm-prionex.com` to `10.70.0.1`, mirroring s1's
+split-horizon — the designed network model, not a workaround
+**And** a host-level `docker pull` of a real, currently-existing image tag succeeds — this is
+the proof, not a `curl`.
+
+**Given** s2's credential pattern (`robot-deploy`, scope exactly `read:package`)
+**When** the pull credential is placed on s10
+**Then** it is read-only, its account and scope are recorded, and a push attempt is refused
+(`401`) — same proof shape as Story 1.10
+**And** no `write:package` credential exists anywhere on s10.
+
+**Given** FR25/FR26 conventions and the compose file from Story 4.1
+**When** the stand directory is created
+**Then** `~/crm-prionex/fe-prionex-prod/` exists on s10 with its server-side `.env`
+(`COMPOSE_PROJECT_NAME`, `CONTAINER_NAME`, `FRONTEND_PORT`)
+**And** the chosen `FRONTEND_PORT` is measured free on s10, not assumed — the FR25 lesson.
+
+**Given** public traffic must eventually reach this stand
+**When** the story closes
+**Then** the traffic path (hypervisor port-forward / front proxy / DNS) is named with its owner
+and current state, as an external dependency in the Story 6.9 sense
+**And** nothing about it is built or changed by this story.
+
+**Given** the plan's record-keeping
+**When** the story closes
+**Then** `docs/migration-decisions.md` D23 is updated with what was provisioned, by whom, and
+what remains external.
 
 ---
 
@@ -2402,8 +2932,10 @@ So that decommissioning is irreversible only after the replacement has proven it
 > **The fallback it described is gone in a way worth stating plainly.** The story treated the
 > still-enabled GitHub deploy job as a safety net — "could be re-enabled if the Forgejo
 > pipeline failed badly". Re-enabling it would be an action on GitHub, so that net does not
-> exist for us. Rollback lives entirely inside Forgejo (Story 6.8, redeploy of a previous
-> `image_tag`), and Epic 6 must be proven on its own merits before production depends on it.
+> exist for us. Rollback lives entirely inside Forgejo (the `rollback: true` redeploy of a
+> previous `image_tag`, built and dispatched live in **Story 6.4**; Story 6.8, which would have
+> rehearsed it a second time, was cancelled 2026-08-26 as already met), and Epic 6 must be proven
+> on its own merits before production depends on it.
 >
 > Recording each Forgejo release cycle is still worth doing, but as ordinary release practice
 > under the regulation in Story 6.2 — not as a gate on a decommissioning that will not happen.
@@ -2449,7 +2981,10 @@ So that a new team member is not onboarded onto a pipeline that no longer exists
 **Given** the migration is complete
 **When** `docs/deployment.md` is written
 **Then** it describes the flow feature branch → DEV → pull request → `main` → PRE-PROD → PROD
-**And** it names s1 as DEV plus PRE-PROD and s2 as PROD with their ports.
+**And** it names s1 as DEV plus PRE-PROD, and s10 (VM `e1-rung3` behind jump `62.112.10.55`)
+as PROD with their ports — including the admin access path (`ssh -J`) and s2's status as the
+decommission-pending legacy host (amended 2026-08-18,
+`sprint-change-proposal-2026-08-18-prod-target.md`).
 
 **Given** the new pipeline
 **When** the documentation is written
@@ -2523,7 +3058,9 @@ So that deleting the secret is not mistaken for the key becoming safe.
 **Then** the old key is removed from `authorized_keys` on s1.
 
 **Given** the old s2 key was deliberately retained through the migration per NFR7
-**When** the Forgejo production path has been proven by Story 6.8 and Story 6.9
+**When** the Forgejo production path has been proven — rollback by Story 6.4's live
+`rollback: true` dispatches (Story 6.8's rehearsal was cancelled 2026-08-26) and cutover by
+Story 6.9
 **Then** the old s2 key is removed from `authorized_keys` on s2
 **And** this is the final step of the migration, performed only after production delivery via
 Forgejo is confirmed working.
@@ -2537,3 +3074,181 @@ Forgejo is confirmed working.
 **When** the closing record is written
 **Then** it lists what was rotated, what was revoked, and what remains as tracked technical
 debt.
+
+> **Note added 2026-08-18** (`sprint-change-proposal-2026-08-18-prod-target.md`): s2 leaves the
+> delivery topology at cutover but the old s2 key removal clause stands unchanged — it guards
+> the *legacy* stand for as long as s2 serves or holds anything. The closing record gains one
+> line: the keys authorized on the jump host (`62.112.10.55`) and on s10 are the production
+> administrative path and must be inventoried in the same record.
+
+### Story 7.6: Give the Production OpenBao Credential an Expiry Owner
+
+As a release engineer,
+I want the credential that every production build depends on to have a rotation owner and an alarm
+before it expires,
+So that its expiry is a scheduled task rather than the day production stops building.
+
+🔴 **Added 2026-08-15 by Story 3.3.** `OPENBAO_PROD_SECRET_ID` was issued 2026-08-13 with
+`secret_id_ttl 7200h` and **expires 2027-06-09**. Nothing rotates it, nothing monitors it, and no
+story in Epics 1–7 mentions it. Story 3.3 is the first thing to depend on it — it reads
+`secret/fe/prod/app` through that AppRole to bake the production API URL into the production bundle,
+so from Epic 6 onward **every production build and every production deploy authenticates with it.**
+
+⚠️ **The failure mode is what makes this a story rather than a note.** When the `secret_id` expires,
+the AppRole login returns an authentication error that says nothing about credential age — and Story
+3.3 measured that a *wrong* `secret_id` fails **identically** to a missing one. So the first symptom
+is every production build failing at once, with a message that points at the credential rather than
+at its expiry, on a day nobody chose. Forgejo secret values are write-only, so the old one cannot be
+read back to compare; it can only be re-minted.
+
+**Acceptance Criteria:**
+
+**Given** `OPENBAO_PROD_SECRET_ID` expires on a known date
+**When** this story is done
+**Then** the expiry date, the AppRole it belongs to (`fe-prod`) and the Forgejo secret it is stored
+in are recorded in `docs/migration-decisions.md`
+**And** a named person owns the rotation.
+
+**Given** a credential that expires silently
+**When** the expiry approaches
+**Then** a warning reaches a human **before** the credential stops working
+**And** the warning names the credential, its AppRole and what breaks when it lapses.
+
+**Given** the rotation will have to be performed at least once
+**When** the procedure is written
+**Then** it is executable end to end from the record — mint, store, verify by a real login, and
+confirm the previous `secret_id` no longer authenticates
+**And** it states plainly that a wrong value fails identically to a missing one, so the verification
+step is not optional.
+
+**Given** `fe-dev` and `fe-pre-prod` use `secret_id_ttl 0` while `fe-prod` uses `7200h`
+**When** the asymmetry is reviewed
+**Then** it is either justified in writing or removed
+**And** the decision records which risk was chosen: a credential that never expires, or one that
+expires without an owner.
+
+⚠️ **Deliberately last in the plan and deliberately not urgent.** The expiry is nine months out. It
+is a story rather than a `deferred-work.md` line because deferred items in this project have
+repeatedly been read as "someone will notice" — and the whole point of this one is that **nobody
+will notice until production stops.**
+
+### Story 7.7: Replace the E2E Placeholder with Real End-to-End Coverage
+
+As a release engineer,
+I want the critical flows verified by a machine on every PRE-PROD candidate,
+So that "validated" stops costing a person an hour of clicking and stops depending on whether they
+were thorough that day.
+
+🔴 **Added 2026-08-24 by Story 5.5.** 5.5 shipped `docs/release-validation-checklist.md` (`RVC-v1`)
+and the `e2e` placeholder job in `.forgejo/workflows/deploy-preprod.yml`. Both are deliberate
+stopgaps. The project has **no browser or end-to-end tooling of any kind** — `package.json` carries
+Vitest only (229 component test files, jsdom, no driver) — so the placeholder job prints its own
+rationale and exits 0, and every one of `RVC-v1`'s twelve flow items is executed by a human in a
+browser. `docs/forgejo-migration.md:231` planned exactly this split ("на первом этапе — заглушка +
+чек-лист ручной валидации критичных флоу. Автотесты — отдельная задача"); this story is that
+separate task, recorded as a story so it cannot be absorbed into the migration's scope.
+
+⚠️ **This story is blocked on something outside this repository, and that is the point of writing it
+down.** `RVC-v1` marks 8 of its 12 items `BLOCKED — owner: CRM/api-prionex, CORS origin`: PRE-PROD's
+Kong returns an `Access-Control-Allow-Origin` naming an unrelated `localhost` origin, so a browser
+on `crm.preprod.crm-prionex.online` cannot call the API at all. An automated browser test is a
+browser, so automation does not route around this — it inherits it. Any attempt to start this story
+before that fix would produce a suite that can only test the four items a human can already test.
+
+**Acceptance Criteria:**
+
+**Given** the project has no browser test tooling
+**When** a runner is chosen
+**Then** the choice is recorded in `docs/migration-decisions.md` with what it costs — CI minutes,
+image size on the `node-20` runner, and who maintains the suite
+**And** it is installed as a dev dependency with its browsers pinned, so a CI run does not silently
+pick up a different browser build than a developer's.
+
+**Given** `docs/release-validation-checklist.md` enumerates twelve flow items with an explicit pass
+criterion each
+**When** the suite is written
+**Then** each automated test names the `RVC-v1` item id it replaces (`F1`…`F12`)
+**And** the checklist is amended to mark those items as machine-verified rather than deleted, so the
+manual procedure remains executable when the suite is unavailable
+**And** any item that is deliberately not automated is stated, with the reason.
+
+**Given** the PRE-PROD Kong's CORS origin is fixed by `CRM/api-prionex`
+**When** the suite runs against a deployed PRE-PROD candidate
+**Then** the authenticated flows (`F4` login and its six refusal paths, `F5`, `F6`) pass against a
+real backend
+**And** a test that cannot reach the API fails loudly rather than being skipped, because a skipped
+test reads as a pass in every summary anyone looks at
+**And** 🔴 `F9` is explicitly excluded from "unblocked by the CORS fix alone" — corrected, code
+review of Story 5.5's own fix-pass (2026-08-25): an earlier version of this criterion listed `F9`
+alongside `F4`/`F5`/`F6` here, which is the exact misattribution
+`docs/release-validation-checklist.md`'s own F9 section and `docs/migration-decisions.md#d39` §6
+were written to prevent — F9 carries a **second**, independent blockage (no restricted-role account
+provisioned on PRE-PROD, owner Oleg) that the CORS fix does not touch. This story's own suite for
+F9 needs both fixed before it can run against a real restricted account.
+
+**Given** the placeholder job in `.forgejo/workflows/deploy-preprod.yml`
+**When** the suite exists and has run green at least five consecutive times **in a temporary
+`e2e-trial` job** — a second job in the same workflow, carrying `continue-on-error: true`, deleted
+by the same change that replaces the placeholder
+**Then** the placeholder's `run:` step is replaced by the real suite
+**And** the header comment is rewritten to describe what the job now asserts, replacing the
+placeholder rationale rather than sitting next to it.
+
+🔴 **Why the trial job is named here rather than left to the implementer.** Two constraints that a
+naive reading of "five consecutive green runs" violates. (1) `deploy-preprod.yml` is
+**dispatch-only** — there is no push trigger, so five green runs means five deliberate PRE-PROD
+dispatches. Dispatches in this project are **budget-ledgered per story** (D37 set a ceiling of 24;
+D38 ran an overrun of 3; Story 5.4 closed at overrun 9), and an acceptance criterion that obligates
+five extra dispatches which nothing prices is how a ledger gets blown by its own acceptance text.
+(2) The placeholder is the **only** e2e slot in the workflow, so "run the suite five times, then
+replace the placeholder" is unreachable as written — there is nowhere for the suite to run before
+the replacement. The trial job resolves both: it gives the suite somewhere to live during the trial,
+and it makes the trial's dispatches countable in advance.
+
+**Given** this story dispatches a workflow whose runs are budget-ledgered
+**When** work begins
+**Then** the story declares its own run-ledger **floor and ceiling before the first dispatch**, the
+same way every other story in this project does, and the five trial runs are inside that ceiling
+**And** an overrun is recorded with its cause named, not absorbed silently.
+
+**Given** `deploy-preprod.yml`'s `e2e` job carries `continue-on-error: true` at **job** level, a
+form this repository removed at step level (`dev-reset.yml` code review H4) and records as
+deliberately unused on Forgejo (`ci.yml:190-191`), and which Story 5.5 re-added **unmeasured**
+**When** this story touches that job
+**Then** the flag is either **removed** — the job that now proves something must be able to fail the
+run — or **measured** on this instance and the measurement recorded in
+`docs/migration-decisions.md`, and doing neither is not an option
+**And** whichever is chosen, the job's own comment stops describing the flag as unmeasured.
+
+**Given** a suite that gates a release
+**When** it is flaky
+**Then** a quarantine rule is written down before the first flake, naming who may quarantine a test
+and for how long
+**And** it states plainly that a quarantined test provides no coverage, so a release validated with
+tests in quarantine is validated on a reduced checklist and the `validation_note` must say so.
+
+**Given** the suite replaces manual execution
+**When** a candidate is recorded
+**Then** the suite's own result — not a person's recollection of it — produces the single-line
+`validation_note` that `.forgejo/workflows/record-preprod-candidate.yml` requires
+**And** the note still fits that workflow's existing `validation_note` input unchanged, because that
+input is a one-cell Markdown ledger row and must stay one line.
+
+**Given** the suite runs **inside** `deploy-preprod.yml` while the verdict is a **later, manual**
+`workflow_dispatch` input to `record-preprod-candidate.yml` — two different runs, minutes or hours
+apart, with no channel between them
+**When** the operator dispatches the recorder
+**Then** the handoff path is **defined and named in the workflow itself**: the suite emits its
+ready-to-paste `validation_note` line to `"$GITHUB_STEP_SUMMARY"` **and** to a build artifact the
+operator copies **verbatim** — both, because job logs on this instance have repeatedly failed to
+archive (`log_in_storage=f`, six observations across Stories 5.3 and 5.4) and step-summary
+persistence here was still unverified as of Story 5.4
+**And** the note the operator pastes is required to be that exact line, so "the suite's own result"
+is a transported string rather than a recollection
+**And** the story states what the operator does when neither channel survived — which is to re-run,
+not to reconstruct the note from memory.
+
+> **Sequencing.** Epic 7 otherwise closes the migration; this story does not block it. It cannot
+> start before `CRM/api-prionex` fixes the CORS origin, and it should not start before Story 6.5's
+> promotion guard exists, since the guard is what makes the suite's verdict consequential. If Epic 7
+> closes first, this story survives it — the migration ending is not a reason for it to lapse.

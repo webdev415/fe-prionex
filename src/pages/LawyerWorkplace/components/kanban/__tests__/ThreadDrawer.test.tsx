@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi, beforeAll } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { KanbanTask } from '../../../kanban/kanbanData'
@@ -135,16 +135,30 @@ const groupedTask: KanbanTask = {
   letterCount: 2,
 }
 
-function renderDrawer() {
+function renderDrawer(props: Partial<React.ComponentProps<typeof ThreadDrawer>> = {}) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <MemoryRouter>
       <QueryClientProvider client={queryClient}>
-        <ThreadDrawer target={{ letterId: 'letter-b', task: groupedTask }} onClose={vi.fn()} />
+        <ThreadDrawer
+          target={{ letterId: 'letter-b', task: groupedTask }}
+          onClose={vi.fn()}
+          {...props}
+        />
       </QueryClientProvider>
     </MemoryRouter>
   )
 }
+
+// Radix menus rely on pointer-capture APIs jsdom does not implement.
+beforeAll(() => {
+  if (!Element.prototype.hasPointerCapture) {
+    Element.prototype.hasPointerCapture = vi.fn(() => false)
+    Element.prototype.setPointerCapture = vi.fn()
+    Element.prototype.releasePointerCapture = vi.fn()
+  }
+  Element.prototype.scrollIntoView = vi.fn()
+})
 
 describe('ThreadDrawer — grouped-letter thread', () => {
   it('renders the drawer panel at 85vw width', () => {
@@ -167,5 +181,38 @@ describe('ThreadDrawer — grouped-letter thread', () => {
     expect(listTaskLetters).toHaveBeenCalledWith(77)
     expect(getThread).not.toHaveBeenCalled()
     expect(getMessage).not.toHaveBeenCalled()
+  })
+})
+
+describe('ThreadDrawer — header task actions (complaint 04.08, item 8)', () => {
+  it('offers «Передати в роботу» for a task that is not yet in progress', () => {
+    const onMoveTask = vi.fn()
+    renderDrawer({
+      target: { letterId: 'letter-b', task: { ...groupedTask, columnId: 'not_defined' } },
+      onMoveTask,
+    })
+
+    const button = screen.getByRole('button', { name: 'pages.lawyerWorkplace.kanban.startWork' })
+    fireEvent.click(button)
+
+    expect(onMoveTask).toHaveBeenCalledWith('TASK-77', 'in_progress')
+  })
+
+  it('hides the button when the task is already in progress but keeps the actions menu', () => {
+    renderDrawer({ onMoveTask: vi.fn(), onTaskUpdate: vi.fn() })
+
+    expect(
+      screen.queryByRole('button', { name: 'pages.lawyerWorkplace.kanban.startWork' })
+    ).not.toBeInTheDocument()
+    expect(screen.getByTitle('pages.lawyerWorkplace.kanban.moreOptions')).toBeInTheDocument()
+  })
+
+  it('shows no task actions when the drawer stays read-only (no handlers)', () => {
+    renderDrawer()
+
+    expect(
+      screen.queryByRole('button', { name: 'pages.lawyerWorkplace.kanban.startWork' })
+    ).not.toBeInTheDocument()
+    expect(screen.queryByTitle('pages.lawyerWorkplace.kanban.moreOptions')).not.toBeInTheDocument()
   })
 })

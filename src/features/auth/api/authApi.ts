@@ -52,6 +52,19 @@ export const authApi = {
   updateMyProfile: (data: UpdateMyProfileInput) =>
     api.patch<CurrentUserResponse>('/api/v1/users/me', data),
 
+  uploadAvatar: (file: File) => {
+    const body = new FormData()
+    body.append('file', file)
+    return api
+      .post<CurrentUserResponse>('/api/v1/users/me/avatar', body, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((response) => response.data)
+  },
+
+  deleteAvatar: () =>
+    api.delete<CurrentUserResponse>('/api/v1/users/me/avatar').then((response) => response.data),
+
   switchProject: (projectId: number) =>
     api.post<SwitchProjectResponse>('/api/v1/auth/switch-project', { project_id: projectId }),
 

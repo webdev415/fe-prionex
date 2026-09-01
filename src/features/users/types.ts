@@ -51,11 +51,14 @@ export interface ApiUser {
   updated_at?: string
   projects?: ProjectRole[]
   asterisk_extension?: string
+  dialer_extension?: string
   is_agent: boolean
   agent_status?: 'online' | 'offline' | 'busy' | 'on-call'
   two_factor_enabled: boolean
   // True when the user has previously enrolled — admin can re-enable without re-enrollment.
   two_factor_has_secret: boolean
+  avatar_url?: string | null
+  work_format?: 'office' | 'remote'
 }
 
 /**
@@ -64,7 +67,7 @@ export interface ApiUser {
 export type UserSearchField = 'full_name' | 'username' | 'email' | 'extension'
 
 /** Status filter values shown in the User Management filter panel */
-export type UserStatusFilter = 'all' | 'active' | 'disabled'
+export type UserStatusFilter = 'all' | 'active' | 'inactive'
 
 export type UserSortField =
   | 'id'
@@ -85,7 +88,9 @@ export interface UserListParams {
   role_id?: number
   project_id?: number
   department_id?: number
+  department_ids?: number[]
   group_id?: number
+  work_format?: 'office' | 'remote'
   sort_by?: UserSortField
   sort_order?: UserSortOrder
 }
@@ -119,6 +124,7 @@ export interface CreateUserInput {
   must_change_password: boolean
   project_assignments: ProjectRoleAssignment[]
   asterisk_extension?: string
+  dialer_extension?: string
   is_agent?: boolean
 }
 
@@ -136,6 +142,7 @@ export interface UpdateUserInput {
   status?: 'active' | 'inactive' | 'suspended'
   project_assignments?: ProjectRoleAssignment[]
   asterisk_extension?: string
+  dialer_extension?: string
   is_agent?: boolean
 }
 
@@ -179,4 +186,28 @@ export interface IpWhitelistSettings {
 
 export interface UpdateIpWhitelistSettingsInput {
   enabled: boolean
+}
+
+export type FilterTemplateValue = string | number | boolean | null
+
+export interface FilterTemplate {
+  id: number
+  name: string
+  filters: Record<string, FilterTemplateValue>
+  created_at: string
+  updated_at?: string | null
+}
+
+export interface FilterTemplateListResponse {
+  templates: FilterTemplate[]
+}
+
+export interface SaveFilterTemplateInput {
+  name: string
+  filters: Record<string, FilterTemplateValue>
+}
+
+export interface UpdateFilterTemplateInput {
+  name?: string
+  filters?: Record<string, FilterTemplateValue>
 }

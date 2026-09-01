@@ -84,7 +84,7 @@ function CronPreview({
 }) {
   const humanized = humanizeCronLocal(expression, t)
   if (humanized === expression) return null
-  return <p className="text-xs text-green-600">{humanized}</p>
+  return <p className="text-success-600 text-xs">{humanized}</p>
 }
 
 // Dropdown options loaded from tagConfigStore (manageable via Settings tab)
@@ -222,6 +222,35 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
               path: ['trigger_tag_code'],
             })
           }
+          // The API rejects both of these too, so without a branch here the
+          // operator only learns after submitting, from a 422 phrased for API
+          // consumers rather than for the person filling in the form.
+          if (data.action_type === 'replace_tag' && !data.replace_tag_code) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: t(
+                'pages.tags.rules.validation.replaceTagRequired',
+                'Tag to be replaced is required for replace rules'
+              ),
+              path: ['replace_tag_code'],
+            })
+          }
+          // Removing and adding the same tag is a guaranteed no-op: the engine
+          // unassigns it, then assigns it straight back.
+          if (
+            data.action_type === 'replace_tag' &&
+            data.replace_tag_code &&
+            data.replace_tag_code === data.target_tag_code
+          ) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: t(
+                'pages.tags.rules.validation.replaceTagSameAsTarget',
+                'Tag to be replaced must differ from the tag to add'
+              ),
+              path: ['replace_tag_code'],
+            })
+          }
         }),
     [t]
   )
@@ -356,6 +385,8 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
     }
   }
   const actionType = watch('action_type')
+  const targetTagCode = watch('target_tag_code')
+  const replaceTagCode = watch('replace_tag_code')
   const cronValue = watch('cron_expression')
 
   // Reset form when modal opens
@@ -440,17 +471,23 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
       })),
     [tags]
   )
+  // Same source as the selects, so the effect line names tags exactly as the
+  // operator sees them in the dropdowns.
+  const tagLabelByCode = useMemo(
+    () => new Map(tagCodeOptions.map((o) => [o.value, o.label])),
+    [tagCodeOptions]
+  )
 
   return (
     <Modal open={open} onClose={handleClose} maxWidth="xl">
       <form onSubmit={handleSubmit(onSubmit)} className="min-w-0">
         <ModalHeader
           icon={
-            <div className="bg-primary-400 flex h-8 w-8 items-center justify-center rounded-full">
+            <div className="bg-primary flex h-8 w-8 items-center justify-center rounded-full">
               {isEdit ? (
-                <Icons.PencilEdit size={20} className="text-dark-500" strokeWidth={2} />
+                <Icons.PencilEdit size={20} className="text-primary-foreground" strokeWidth={2} />
               ) : (
-                <Icons.Add size={20} className="text-dark-500" strokeWidth={2} />
+                <Icons.Add size={20} className="text-primary-foreground" strokeWidth={2} />
               )}
             </div>
           }
@@ -567,7 +604,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                     </Select>
                   )}
                 />
-                <p className="text-xs text-gray-500">
+                <p className="text-muted-foreground text-xs">
                   {t(`pages.tags.rules.triggerHelpers.${triggerType}`, '')}
                 </p>
               </div>
@@ -577,7 +614,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                 <div className="space-y-1.5">
                   <Label>{t('pages.tags.rules.eventName', 'Event name')}</Label>
                   <select
-                    className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900"
+                    className="border-border bg-card text-foreground w-full rounded-md border px-3 py-2 text-sm"
                     value={isCustomEvent ? '__custom__' : watch('trigger_event') || ''}
                     onChange={(e) => {
                       if (e.target.value === '__custom__') {
@@ -614,7 +651,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                   {errors.trigger_event?.message && (
                     <p className="text-error-500 text-xs">{errors.trigger_event.message}</p>
                   )}
-                  <p className="text-xs text-gray-500">
+                  <p className="text-muted-foreground text-xs">
                     {t('pages.tags.rules.eventHint', 'Select a system event or enter your own')}
                   </p>
                 </div>
@@ -677,7 +714,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
             {/* Conditions */}
             <div className="space-y-1.5">
               <Label>{t('pages.tags.rules.conditions', 'Conditions')}</Label>
-              <p className="text-xs text-gray-500">
+              <p className="text-muted-foreground text-xs">
                 {t(
                   'pages.tags.rules.conditionsHelp',
                   'All conditions must be true for the rule to fire (AND logic). Leave empty to always fire.'
@@ -808,7 +845,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                       type="button"
                       variant="ghost"
                       size="icon-xs"
-                      className="self-start text-gray-400 hover:text-red-500"
+                      className="text-muted-foreground hover:text-error-500 self-start"
                       onClick={() => remove(index)}
                       aria-label={t('actions.remove', 'Remove')}
                     >
@@ -821,7 +858,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                   type="button"
                   variant="ghost"
                   size="xs"
-                  className="text-xs text-gray-500 hover:text-gray-700"
+                  className="text-muted-foreground hover:text-foreground text-xs"
                   onClick={() => append({ field: '', op: 'eq', value: '' })}
                   leftIcon={<Icons.Add size={12} />}
                 >
@@ -854,9 +891,21 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                 />
               </div>
 
-              {/* Target Tag Code */}
+              {/* Target Tag Code.
+                  For replace_tag this is the tag that gets ADDED, and the
+                  field below is the one that gets REMOVED. "Target Tag" read
+                  as "the tag being replaced", which is the opposite of what
+                  the engine does, so operators filled the pair backwards and
+                  the rule silently did nothing: it looked for a client holding
+                  the tag they wanted to end up with, found none, and skipped.
+                  Named by effect here, and only for replace, so add_tag and
+                  remove_tag keep the label they have always had. */}
               <div className="space-y-1.5">
-                <Label required>{t('pages.tags.rules.targetTag', 'Target Tag')}</Label>
+                <Label required>
+                  {actionType === 'replace_tag'
+                    ? t('pages.tags.rules.tagToAdd', 'Tag to add')
+                    : t('pages.tags.rules.targetTag', 'Target Tag')}
+                </Label>
                 <Controller
                   name="target_tag_code"
                   control={control}
@@ -887,7 +936,7 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
             {/* Replace Tag Code (if replace_tag) */}
             {actionType === 'replace_tag' && (
               <div className="space-y-1.5">
-                <Label>{t('pages.tags.rules.replaceTag', 'Replace With Tag')}</Label>
+                <Label required>{t('pages.tags.rules.tagToReplace', 'Tag to be replaced')}</Label>
                 <Controller
                   name="replace_tag_code"
                   control={control}
@@ -909,6 +958,23 @@ export function RuleFormModal({ open, rule, tags, onClose, onSuccess }: RuleForm
                     </Select>
                   )}
                 />
+                {/* Rendered from the current selections, so a rule saved with
+                    the pair swapped can be spotted by opening it. Suppressed
+                    when the two match: the sentence would read "replaces X with
+                    X", contradicting the validation error shown beside it. */}
+                {replaceTagCode && targetTagCode && replaceTagCode !== targetTagCode && (
+                  <p className="text-xs text-gray-500">
+                    {t('pages.tags.rules.replaceEffect', {
+                      defaultValue:
+                        'This rule replaces "{{remove}}" with "{{add}}" for clients that have "{{remove}}".',
+                      remove: tagLabelByCode.get(replaceTagCode) ?? replaceTagCode,
+                      add: tagLabelByCode.get(targetTagCode) ?? targetTagCode,
+                    })}
+                  </p>
+                )}
+                {errors.replace_tag_code && (
+                  <p className="text-error-500 text-xs">{errors.replace_tag_code.message}</p>
+                )}
               </div>
             )}
 

@@ -1,0 +1,157 @@
+# Epic 3 retro action item A1 (2026-08-18/19) — PRODUCTION infrastructure
+# image. Not an application image; this is what `build.yml`'s builder runs
+# AS, to give every Dockerfile `RUN` step (in `Dockerfile.prod`, `npm ci`
+# and `npm run build` included) its own CNI-managed network namespace,
+# closing most of the residual gap D22 named and accepted: under the
+# `network=fe-prionex-build` bridge alone, a RUN step sits on the same
+# network as the outer builder container and can reach whatever THAT
+# container can — measured (review, round 2): the dind default-bridge
+# gateway `172.17.0.1:2375` (root-equivalent Docker API — see
+# `docs/runners/config.yml`), the wg-private range `10.70.0.0/24`, and
+# OpenBao specifically at `172.20.0.5:8200`. See
+# [D26](docs/migration-decisions.md#d26) for the full account,
+# including what this design does NOT cover.
+#
+# ── History, so the next reader does not re-derive it ───────────────────
+# D22 measured the stock `moby/buildkit:buildx-stable-1` image ships no CNI
+# at all (17.08). A probe branch built and proved a first version of this
+# file end to end (local validation, then real-host runs 739/741 — D26 has
+# the chronicle). Three review layers on the production rollout PR then
+# hardened it further: default-deny of ALL private/link-local ranges
+# instead of a single rule keyed to OpenBao's own (volatile) container IP;
+# a digest-pinned, checksum-verified build instead of floating tags; a
+# permanent semver tag (`v1.0.0-buildkit-cni`, matches the retention rule's
+# own `keep_pattern`) instead of a cron-refreshed one.
+#
+# Two mechanism details that are easy to get wrong again:
+#   - `docker/setup-buildx-action`'s `buildkitd-flags` input (and the CLI
+#     equivalent, `docker buildx create --buildkitd-flags
+#     '--oci-worker-net=cni ...'`) does NOT work on this buildkitd build
+#     (v0.32.2) — flags are correctly split into argv but
+#     `--oci-cni-config-path` is read as an empty string regardless of what
+#     is passed. `build.yml` supplies this image's CNI config via
+#     `buildkitd-config-inline` — an inline `buildkitd.toml` with
+#     `[worker.oci] networkMode = "cni"` — which does not have this
+#     problem. If you find yourself reaching for `--oci-worker-net=cni` on
+#     a command line to reproduce or debug this, stop: that is the exact
+#     broken path.
+#   - `docker/login-action` (registry auth) MUST run BEFORE
+#     `docker/setup-buildx-action` in any workflow that references this
+#     image via `driver-opts: image=` — builder creation PULLS this image
+#     from OUR OWN private registry, and an unauthenticated pull of a
+#     private image fails the whole builder-creation step before any build
+#     runs. `build.yml`'s own step order carries a comment pointing back
+#     here for the same reason.
+#
+# 🚨 Digest-pinned, not just tag-pinned — a floating tag plus every build's
+# own `write:package` credential is an unnecessary supply-chain surface.
+# Bump this deliberately (a reviewed PR changing the digest, matching
+# Dockerfile.prod's own base-image pinning discipline), not by re-pulling
+# `buildx-stable-1` and hoping.
+FROM moby/buildkit:buildx-stable-1@sha256:28a898719c18a33f4e8000685287fa36fd0dd9560c6440227d3a732d79bb41d8
+
+# CNI plugins version AND its published sha256 travel together — a version
+# bump without updating the checksum fails the build closed at the `sha256sum
+# -c` step below, rather than silently trusting whatever the release happens
+# to contain that day.
+ARG CNI_PLUGINS_VERSION=v1.5.1
+ARG CNI_PLUGINS_SHA256=77baa2f669980a82255ffa2f2717de823992480271ee778aa51a9c60ae89ff9b
+
+# 🚨 Fail-closed format check on the version string BEFORE it is used to
+# build a download URL — an unvalidated ARG interpolated into a URL is an
+# injection surface (and a malformed one is just as likely to be a typo
+# that silently 404s past `curl -f` in some configurations). Requires
+# exactly `v<major>.<minor>.<patch>`, no suffix, matching how this project
+# already reads semver shapes elsewhere (`keep_pattern`'s own
+# `v?[0-9]+\.[0-9]+\.[0-9]+.*` is deliberately looser than this — this
+# check is stricter on purpose, for a value that becomes a URL component).
+RUN case "$CNI_PLUGINS_VERSION" in \
+      v[0-9]*.[0-9]*.[0-9]*) ;; \
+      *) echo "FAIL: CNI_PLUGINS_VERSION '${CNI_PLUGINS_VERSION}' is not shaped like v<major>.<minor>.<patch>. Refusing to build a download URL from it."; exit 1 ;; \
+    esac
+
+RUN apk add --no-cache curl tar iptables \
+    && mkdir -p /opt/cni/bin \
+    && curl -fsSL -o /tmp/cni-plugins.tgz \
+       "https://github.com/containernetworking/plugins/releases/download/${CNI_PLUGINS_VERSION}/cni-plugins-linux-amd64-${CNI_PLUGINS_VERSION}.tgz" \
+    && echo "${CNI_PLUGINS_SHA256}  /tmp/cni-plugins.tgz" | sha256sum -c - \
+    && tar -C /opt/cni/bin -xzf /tmp/cni-plugins.tgz \
+    && rm -f /tmp/cni-plugins.tgz \
+    && apk del curl tar
+# 🔴 `iptables` stays installed (not `apk del`ed) — the entrypoint wrapper
+# below needs it at container START, not just at image build time. Checked
+# directly, not assumed: `apk del curl tar` does NOT remove the base
+# image's CA bundle (`/etc/ssl/certs/ca-certificates.crt` is a file baked
+# into the base image, not an apk package) — a real hypothesis raised while
+# diagnosing an early real-host failure, and disproven before it cost a run.
+# 🔴 The checksum above is the OFFICIAL one published alongside the release
+# (`cni-plugins-linux-amd64-v1.5.1.tgz.sha256` on the same GitHub release),
+# fetched and independently recomputed to confirm the two agree — not typed
+# in from a single source and trusted.
+
+# Sandbox network for RUN steps only, separate from whatever network the
+# OUTER buildkitd container itself is on (`network=fe-prionex-build`, set
+# in `build.yml`'s `driver-opts:`, unchanged by this file). `ipMasq: true`
+# NATs this bridge's traffic out so RUN steps keep outbound public internet
+# access (`npm ci` needs it, and this has been proven to survive the whole
+# setup, cache included, on the real host — see D26).
+#
+# 🚨 MUST be named `*.conflist`, not `*.json` — measured: buildkit's CNI
+# provider picks single-plugin vs multi-plugin ("conflist") JSON schema BY
+# FILE EXTENSION. `cni.json` (buildx's own `--help` text names this as the
+# documented default path) produced `buildkitd: error parsing
+# configuration: missing 'type'` — it was trying to parse a conflist body
+# as a single-plugin config.
+#
+# Subnet chosen to avoid Docker's own default pools (172.17-31.0.0/16) and
+# this project's known-occupied ranges — reasoned, not exhaustively
+# measured against every possible collision on the real host. A
+# bridge-create failure or an address collision here is diagnostic
+# information a build should surface, not something ruled out here.
+RUN mkdir -p /etc/buildkit && echo '{"cniVersion":"0.4.0","name":"buildkit-runc-sandbox","plugins":[{"type":"bridge","bridge":"bk-cni0","isGateway":true,"ipMasq":true,"hairpinMode":true,"ipam":{"type":"host-local","subnet":"10.99.0.0/24","routes":[{"dst":"0.0.0.0/0"}]}},{"type":"loopback"}]}' > /etc/buildkit/cni.conflist
+
+# ── Default-deny of private/link-local ranges, not one rule keyed to one IP ──
+# Review round 2 replaced the original design (a single rule naming
+# OpenBao's own container IP) after proving it was both too narrow AND
+# fragile: too narrow because the SAME reachability problem — a RUN step
+# riding the outer container's own network — also reaches the dind
+# default-bridge gateway (`172.17.0.1:2375`, an unauthenticated Docker API,
+# root-equivalent on the host; see docs/runners/config.yml) and the
+# wg-private range (`10.70.0.0/24`, including the internal path to the
+# registry itself and the hypervisor), neither of which the OpenBao-only
+# rule touched; fragile because OpenBao's `172.20.0.5` is a container IP
+# that changes if the container is ever recreated (named explicitly
+# elsewhere in this project's own D-records as a real, repeated failure
+# mode) — a rule keyed to it would go silently stale.
+#
+# The sandbox only ever legitimately needs the public internet (`npm ci`
+# against the public registry; DNS resolves publicly inside the sandbox —
+# see the note below). So: deny the sandbox subnet's outbound traffic to
+# every RFC1918 range and to link-local, explicitly ACCEPT its own subnet
+# first (it is a subset of 10.0.0.0/8, and would otherwise be caught by
+# that same deny), and leave the default policy (ACCEPT) to carry
+# everything else — i.e. the public internet — exactly as before.
+#
+# ✅ VERIFIED on the real host (review round 2's own dispatch, plus this
+# session's local reproduction with a stand-in before that dispatch):
+# 172.17.0.1:2375 and 172.20.0.5:8200 both unreachable from a RUN step
+# under this ruleset; public internet still reachable. See D26 for exactly
+# what was measured where, and what was not.
+#
+# 🚨 What this does NOT cover, named rather than implied — see D26:
+# IPv6 (no v6 in this conflist, so nothing filters it; if the host ever
+# routes v6, this ruleset is silent on it); INPUT to the builder container
+# itself (latent today — nothing listens on an INPUT-reachable port in this
+# image — but not the same claim as "closed"); MTU is not pinned, so a
+# path-MTU mismatch would manifest as a hung bulk transfer, not a clean
+# error; `host-local` IPAM does not prune reservations, so a long-lived
+# builder that creates enough sandboxes without ever restarting could
+# exhaust the /24's ~254 addresses.
+#
+# `--privileged` (already required for the CNI bridge/veth creation
+# itself) covers the NET_ADMIN this needs; no additional capability
+# requested.
+RUN printf '#!/bin/sh\nset -e\niptables -I FORWARD -s 10.99.0.0/24 -d 10.0.0.0/8 -j DROP\niptables -I FORWARD -s 10.99.0.0/24 -d 172.16.0.0/12 -j DROP\niptables -I FORWARD -s 10.99.0.0/24 -d 192.168.0.0/16 -j DROP\niptables -I FORWARD -s 10.99.0.0/24 -d 169.254.0.0/16 -j DROP\niptables -I FORWARD -s 10.99.0.0/24 -d 10.99.0.0/24 -j ACCEPT\nexec buildkitd "$@"\n' > /usr/local/bin/entrypoint-with-firewall.sh \
+    && chmod +x /usr/local/bin/entrypoint-with-firewall.sh
+
+ENTRYPOINT ["/usr/local/bin/entrypoint-with-firewall.sh"]

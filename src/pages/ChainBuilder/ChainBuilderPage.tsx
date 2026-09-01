@@ -65,10 +65,10 @@ import { useAuthStore } from '@/stores/authStore'
 import { getErrorMessage } from '@/lib/errors'
 
 const TYPE_COLOR: Record<string, string> = {
-  text: '#10b981',
-  dropdown: '#8b5cf6',
-  date: '#f97316',
-  amount: '#3b82f6',
+  text: 'var(--color-success-500)',
+  dropdown: 'var(--color-information-500)',
+  date: 'var(--color-warning-500)',
+  amount: 'var(--color-information-400)',
 }
 
 const TRIGGER_TYPES = [
@@ -117,19 +117,19 @@ function ChainBuilderMainSkeleton() {
       aria-busy="true"
     >
       <div className="border-border bg-muted flex-1 animate-pulse rounded-lg border" />
-      <div className="border-border bg-card w-full space-y-4 rounded-lg border p-4 lg:w-[360px]">
-        <div className="bg-muted h-6 w-56 animate-pulse rounded-md" />
+      <div className="border-border bg-card w-full animate-pulse space-y-4 rounded-lg border p-4 lg:w-[360px]">
+        <div className="bg-muted h-6 w-56 rounded-md" />
         <div className="space-y-2">
-          <div className="bg-muted h-3 w-24 animate-pulse rounded" />
-          <div className="bg-muted h-14 w-full animate-pulse rounded-md" />
+          <div className="bg-muted h-3 w-24 rounded" />
+          <div className="bg-muted h-14 w-full rounded-md" />
         </div>
         <div className="space-y-2">
-          <div className="bg-muted h-3 w-20 animate-pulse rounded" />
-          <div className="bg-muted h-14 w-full animate-pulse rounded-md" />
+          <div className="bg-muted h-3 w-20 rounded" />
+          <div className="bg-muted h-14 w-full rounded-md" />
         </div>
         <div className="space-y-2">
-          <div className="bg-muted h-3 w-16 animate-pulse rounded" />
-          <div className="bg-muted h-24 w-full animate-pulse rounded-md" />
+          <div className="bg-muted h-3 w-16 rounded" />
+          <div className="bg-muted h-24 w-full rounded-md" />
         </div>
       </div>
     </div>
@@ -138,22 +138,22 @@ function ChainBuilderMainSkeleton() {
 
 function ChainBuilderConfigPanelSkeleton() {
   return (
-    <div className="flex flex-col gap-5" role="status" aria-busy="true">
+    <div className="flex animate-pulse flex-col gap-5" role="status" aria-busy="true">
       <div className="space-y-2">
-        <div className="bg-muted h-3 w-28 animate-pulse rounded" />
-        <div className="bg-muted h-10 w-full animate-pulse rounded-md" />
-        <div className="bg-muted h-8 w-full animate-pulse rounded-md" />
+        <div className="bg-muted h-3 w-28 rounded" />
+        <div className="bg-muted h-10 w-full rounded-md" />
+        <div className="bg-muted h-8 w-full rounded-md" />
       </div>
       <div className="bg-muted h-px w-full" />
       <div className="space-y-2">
-        <div className="bg-muted h-3 w-24 animate-pulse rounded" />
-        <div className="bg-muted h-10 w-full animate-pulse rounded-md" />
-        <div className="bg-muted h-8 w-full animate-pulse rounded-md" />
+        <div className="bg-muted h-3 w-24 rounded" />
+        <div className="bg-muted h-10 w-full rounded-md" />
+        <div className="bg-muted h-8 w-full rounded-md" />
       </div>
       <div className="bg-muted h-px w-full" />
       <div className="space-y-2">
-        <div className="bg-muted h-3 w-20 animate-pulse rounded" />
-        <div className="bg-muted h-20 w-full animate-pulse rounded-md" />
+        <div className="bg-muted h-3 w-20 rounded" />
+        <div className="bg-muted h-20 w-full rounded-md" />
       </div>
     </div>
   )
@@ -368,13 +368,16 @@ export function ChainBuilderPage() {
         label: `${step.step_order}. ${step.target_action_name ?? t('pages.chainBuilder.taFallback', { id: step.target_action_id })}`,
       },
       style: {
-        border: `2px solid ${TYPE_COLOR[step.target_action_field_type ?? 'text'] ?? '#6b7280'}`,
+        border: `2px solid ${TYPE_COLOR[step.target_action_field_type ?? 'text'] ?? 'var(--muted-foreground)'}`,
         borderRadius: '8px',
         padding: '10px 16px',
         fontSize: '13px',
         fontWeight: 500,
-        background: selectedStepId === step.id ? '#eff6ff' : '#ffffff',
-        color: '#111827',
+        background:
+          selectedStepId === step.id
+            ? 'color-mix(in srgb, var(--color-information-500) 12%, var(--card))'
+            : 'var(--card)',
+        color: 'var(--foreground)',
         cursor: 'pointer',
         minWidth: '180px',
         textAlign: 'center' as const,
@@ -390,14 +393,18 @@ export function ChainBuilderPage() {
         target: `step-${steps[i + 1].id}`,
         type: 'smoothstep',
         animated: false,
-        style: { stroke: '#9ca3af', strokeWidth: 2 },
-        markerEnd: { type: MarkerType.ArrowClosed, color: '#9ca3af' },
+        style: { stroke: 'var(--muted-foreground)', strokeWidth: 2 },
+        markerEnd: { type: MarkerType.ArrowClosed, color: 'var(--muted-foreground)' },
       })
     }
 
     // Branch edges
     if (builderData) {
       for (const br of builderData.branches) {
+        const branchStroke =
+          br.condition_leaf_id === null && br.condition_dropdown_value_id === null
+            ? 'var(--color-warning-500)'
+            : 'var(--color-information-500)'
         flowEdges.push({
           id: `branch-${br.id}`,
           source: `step-${br.from_step_id}`,
@@ -405,19 +412,13 @@ export function ChainBuilderPage() {
           type: 'smoothstep',
           animated: true,
           style: {
-            stroke:
-              br.condition_leaf_id === null && br.condition_dropdown_value_id === null
-                ? '#f59e0b'
-                : '#8b5cf6',
+            stroke: branchStroke,
             strokeWidth: 2,
             strokeDasharray: '5,5',
           },
           markerEnd: {
             type: MarkerType.ArrowClosed,
-            color:
-              br.condition_leaf_id === null && br.condition_dropdown_value_id === null
-                ? '#f59e0b'
-                : '#8b5cf6',
+            color: branchStroke,
           },
           label:
             br.condition_dropdown_value_id != null
@@ -427,7 +428,7 @@ export function ChainBuilderPage() {
               : br.condition_leaf_id != null
                 ? t('pages.chainBuilder.branchEdgeLeaf', { id: br.condition_leaf_id })
                 : t('pages.chainBuilder.branchElse'),
-          labelStyle: { fontSize: 10, fill: '#6b7280' },
+          labelStyle: { fontSize: 10, fill: 'var(--muted-foreground)' },
         })
       }
     }

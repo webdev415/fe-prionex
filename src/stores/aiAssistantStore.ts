@@ -32,6 +32,25 @@ export type AssistantVoiceMaxDuration = 30 | 60 | 120
 export interface AssistantSettings {
   /** Reasoning depth sent with every chat request: fast (default) | thinking. */
   mode: AssistantMode
+  /**
+   * Выбранная модель внешнего Claude («Експерт») или `null` — обычный ход на
+   * нашем боксе. Отдельное поле, а не третье значение {@link AssistantMode}:
+   * `mode` уходит в тело запроса как есть, и подмешивать туда «expert» значило
+   * бы менять контракт хода ради состояния меню.
+   *
+   * Хранится, как и остальные настройки, в localStorage — но правом на режим
+   * распоряжается бэкенд: страница шлёт `expert` только когда `capabilities`
+   * подтвердили доступ и эту модель (иначе значение молча игнорируется).
+   */
+  expertModel: string | null
+  /**
+   * Показывать ли оператору ход рассуждения модели — плашку «Ход рассуждения» в
+   * бабле и одноимённую секцию панели «Активность». Чисто клиентская настройка:
+   * `reasoning` приходит отдельным SSE-кадром, запрос к мозгу не меняется.
+   * Шаги оркестратора и «Источники» под ней не прячутся — по ним оператор
+   * проверяет факты ответа.
+   */
+  showReasoning: boolean
   responseMode: AssistantResponseMode
   outputFormat: AssistantOutputFormat
   voiceInputEnabled: boolean
@@ -53,6 +72,8 @@ export interface AssistantSettings {
 
 export const DEFAULT_ASSISTANT_SETTINGS: AssistantSettings = {
   mode: 'fast',
+  expertModel: null,
+  showReasoning: true,
   responseMode: 'short',
   outputFormat: 'mixed',
   voiceInputEnabled: true,

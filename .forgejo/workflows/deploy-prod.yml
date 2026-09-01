@@ -1,0 +1,846 @@
+name: Deploy PROD Stand
+
+# Story 6.4, FR15/FR17/FR24. The production deploy caller: dispatch-only, two paths, and the
+# first caller in this repository that is NOT a single `uses:`.
+#
+# ── The two paths ───────────────────────────────────────────────────────────────────────
+#   rollback: true   -> pull an existing sha-<12hex>-prod and start it. NO BUILD RUNS.
+#   rollback: false  -> rebuild the commit at `environment: prod` FIRST, then deploy. Option C
+#                       bakes the production VITE_* values into the bundle, so a PRE-PROD
+#                       artifact cannot be promoted -- it has the wrong URLs baked in (NFR11).
+#
+# ── 🔴 WHY THIS FILE HAS THREE JOBS AND NOT TWO ─────────────────────────────────────────
+# `deploy-dev.yml` and `deploy-preprod.yml` are each ONE job, one `uses:`. This file cannot be,
+# for two independent reasons:
+#
+#  (1) `deploy-stand.yml` BUILDS NOTHING. It deploys an image that already exists. The release
+#      path therefore needs `build.yml` as a second callee.
+#  (2) 🔴 A `uses:` job's `with:` accepts EXPRESSIONS ONLY, and this expression language has no
+#      substring operation. The commit cannot be sliced out of `image_tag` inside `with:`. So a
+#      plain job has to do it in shell and publish it as an output -- hence `derive`.
+#
+# Order: derive -> build (skipped on rollback) -> deploy.
+#
+# ── 🔴 THE `needs:` + `if:` TRAP, AND WHY THE DEPLOY JOB'S `if:` LOOKS LIKE THAT ────────
+# A skipped `needs:` dependency normally makes the dependent job skip too. The deploy job MUST
+# run on BOTH paths, so its `if:` admits "build succeeded OR build was skipped" explicitly, and
+# is wrapped in `always()` so the expression is evaluated at all after a skip.
+# Get this wrong and the ROLLBACK PATH SILENTLY DOES NOTHING while the run reports green -- the
+# worst outcome available to a production workflow, because nothing fails.
+# ⚠️ `#d21` established that a `uses:` job's `if:` is copied down into the callee and
+# re-evaluated there. This is verified by observation (Story 6.4 AC6), not by reasoning.
+#
+# ── 🔴 THE TAG IS DERIVED TWICE, AND THE TWO MUST AGREE BYTE FOR BYTE ───────────────────
+# `build.yml` declares NO `workflow_call` outputs -- measured. A caller cannot learn which tag
+# the build published. So `derive` below computes `sha-<12hex>-prod` independently, and
+# `build.yml` computes its own from `git rev-parse HEAD`. If the two ever diverge the failure
+# surfaces as a 404 on the pull, which reads as "the image was never built" rather than "you
+# asked for the wrong name". `deploy-stand.yml`'s own `image_env` input documents the same
+# hazard for its own sanitizer.
+# The short SHA is TWELVE characters. `#d18` §3 binds Stories 5.4, 6.3, 6.5 and 6.6 to that
+# number: "если любая выведет тег из полного 40-символьного SHA, цель отката и гейт разойдутся
+# молча". Do not "simplify" it.
+#
+# ── The dispatch contract ───────────────────────────────────────────────────────────────
+# `image_tag` NAMES THE COMMIT, in `sha-<12hex>-<env>` form, on both paths:
+#   release path : the validated PRE-PROD candidate, e.g. sha-28f7fd36b75e-preprod
+#   rollback path: an existing PROD tag,             e.g. sha-a99ccd44c5a3-prod
+# `derive` extracts the twelve hex characters and always hands `deploy-stand.yml` the `-prod`
+# form. `deploy-stand.yml` refuses any tag that does not end in `-prod` (its own
+# tag<->environment guard), which is why the `-prod` form is derived rather than passed through.
+#
+# 🔴 `prod-current` and `prod-<12hex>` are NOT accepted here and never will be. They are records,
+# not deployable references, and that same guard refuses them. Story 6.9 dispatches
+# `sha-<12hex>-prod`.
+#
+# ── ✅ STORY 6.5's PROMOTION GUARD LANDED HERE, 2026-08-27 (FR16) ───────────────────────
+# `derive` was made a separate named step "precisely so 6.5 has somewhere obvious to land", and
+# Story 6.6 then left it BYTE-IDENTICAL so this rebase would be clean. The `guard` job below
+# consumes `needs.derive.outputs.hex` and changes nothing inside `derive`.
+#
+# 🔴 ITS FAIL-DIRECTION IS THE INVERSE OF STORY 6.6's, AND THAT IS THE DESIGN.
+# 6.6's fourteenth defect was a guard that failed OPEN -- a probe said "absent", the code
+# believed it, and a permanent tag was written. Here the polarity flips:
+#   a false 404 REFUSES a legitimate release -- loud, recoverable, cheap;
+#   a false 200 ADMITS AN UNVALIDATED COMMIT TO PRODUCTION -- silent and expensive.
+# Therefore ONLY a classified 200 admits the release. 401, 403, 000, a timeout, an unparseable
+# answer -- all REFUSE. An error is never existence; a tool failure is never a verdict.
+#
+# 🔴 IT IS A PLAIN JOB, NOT A `uses:` JOB, AND THAT IS NOT A STYLE CHOICE.
+# `#d21`, run 631: a SKIPPED `uses:` wrapper reports **success**. Story 6.6 saw it live in its own
+# run 662 -- the `build` wrapper reported success while its inner job was `skipped`. A guard that
+# reports green when it did not run is worse than having no guard at all.
+#
+# 🔴 IT RUNS BEFORE `build`, AND THE `deploy` CONDITION HAD TO CHANGE FOR THAT TO BE SAFE.
+# `build` already carried `if: is_rollback != 'true'`; adding `guard` to its `needs:` means a
+# refused guard SKIPS the build. But `deploy`'s own condition admits a skipped build by design
+# (that is how the rollback path works) -- so on a refused guard, deploy would have RUN. Its
+# condition now also requires `guard` to be success-or-skipped. Get this wrong and the guard is
+# decorative: it goes red and production is deployed anyway.
+#
+# ── `secrets: inherit`, decided rather than inherited by habit (Story 6.4 AC8) ──────────
+# `deploy-stand.yml` CANNOT declare `on.workflow_call.secrets` -- the parser rejects it (`#d21`)
+# -- so a caller passes `inherit` or the callee gets nothing. Both shipped callers use it.
+# The cost, named: `inherit` hands the callee EVERY org secret, including REGISTRY_TOKEN_RW, a
+# write:package credential over a namespace that holds another team's production packages.
+#   build  : needs it -- the OpenBao AppRole pair and the RW push credential are both required.
+#   deploy : its callee references only the RO pair, but the same parser limitation applies, and
+#            a narrower block cannot be expressed on the callee side. `inherit` on both, with the
+#            RW exposure recorded as accepted, matching deploy-dev.yml and deploy-preprod.yml.
+#
+# ── Values, and the two that would be copied WRONG from the siblings ────────────────────
+# 🔴 frontend_port is `0.0.0.0:8080`, and BOTH halves of that value are load-bearing.
+#    NOT `127.0.0.1:8080`: DEV and PRE-PROD bind loopback because nothing outside their host
+#    reaches them, but PROD traffic arrives FROM THE HYPERVISOR, so a loopback binding makes the
+#    stand unreachable by construction -- and the health check, which probes the container itself,
+#    would still report `healthy` and serve 200.
+#    NOT a bare `8080` either: `deploy-stand.yml` asserts a host prefix and refuses without one --
+#    "a bare port would parse wrong here (host and port would both become the port number)". Run
+#    632 hit exactly that, AFTER the container was already up and healthy.
+#    `0.0.0.0` satisfies the parser and binds every interface, which is what the hypervisor
+#    forward needs.
+# 🔴 runner_label is `fe-prionex-prod-deploy` — OUR OWN runner, provisioned on s10 by Story 6.4
+#    after run 629. NEVER `s10`/`e1-rung3` (the CI-shaped runner, jobs in dind, cannot reach the
+#    host stand) and NEVER `e1-rung3-prod-deploy` either: that is the NEIGHBOURING team's runner,
+#    and its label is declared `:host`. Under a host executor there is no own job container, so
+#    `deploy-stand.yml`'s `docker inspect $(hostname)` — which it needs to launch the Story 4.4
+#    lock holder as a sibling container — fails with "no such object: e1-rung3". Run 629 proved
+#    exactly that. Ours is declared
+#    `fe-prionex-prod-deploy:docker://deploy-base-dev-preprod:2026-08-07`, mirroring s1's own
+#    deploy runner: jobs run IN A CONTAINER, and that container holds the HOST docker.sock, so the
+#    deploy acts on the host daemon where the stand actually lives.
+# ⚠️ frontend_network is `crm-prod-network`, and this is the axis where a wrong value fails
+#    SILENTLY: nginx resolves Kong lazily and the healthcheck probes itself, so a stand on the
+#    wrong network reports `healthy` and serves 200. `crm-prod-kong-gateway` carries the alias
+#    `crm-kong-gateway` that the image's nginx.conf actually resolves -- verified on the host.
+#
+# ── Not here, deliberately ──────────────────────────────────────────────────────────────
+#   6.8 rollback proven with measured timing · 6.9 the cutover · 4.5 Slack (BLOCKED -- the channel
+#   does not exist; see the `smoke` job's header)
+#   ✅ Story 6.7's smoke check IS here now -- the `smoke` job below. It was on this list until
+#   2026-08-27. What it is NOT: (the callee's health and Kong probes
+#   are NOT it) · 6.8 rollback proven with measured timing · 6.9 the cutover · 4.5 Slack,
+#   deferred 2026-08-14 and explicitly NOT gating: "the production deploy must work, and must
+#   be provable, without any notification".
+#   ✅ Story 6.6 IS here now -- the `record` job below. It was on this list until 2026-08-27.
+#
+# ── 🔴 STORY 6.6: WHY `record` IS A FOURTH JOB, AND WHAT ITS `if:` MUST SAY ─────────────
+# `record-prod-image.yml` is Story 6.3's file and already did this work on a human dispatch.
+# 6.6 does not reimplement it -- it gives that file a `workflow_call` block and calls it, so
+# there is ONE implementation of the registry write and one place to fix it.
+# Its `if:` is `needs.deploy.result == 'success'` with NO `always()`, and the contrast with the
+# `deploy` job above is the whole point: `deploy` needs `always()` because it must run when
+# `build` was SKIPPED. `record` must NOT run unless the deploy actually succeeded, so a plain
+# `needs:` (which propagates skip and failure) is exactly right. Adding `always()` here would
+# record a production image that was never deployed -- the mirror of the trap the header warns
+# about for `deploy`, and worse, because the registry would then lie permanently.
+#
+# ── 🔴 A GREEN DEPLOY WITH A FAILED `record` IS A REAL STATE, AND IT IS DISCLOSED ───────
+# Every fail-closed branch in the recorder -- the repoint refusal, both read-back mismatches,
+# the ambiguous probe, G6, and the AC2 displaced-marker guard -- exits AFTER `deploy-stand.yml`
+# has already replaced the running container. The run goes RED while the stand is UPDATED, so
+# the operator's natural reading ("the deploy failed") is wrong in the most expensive direction.
+# The `record-outcome` job below exists solely to say so, and to name the repair.
+#
+# ── 🔴 CONCURRENCY: THE CALLEE'S OWN GROUP DOES NOT APPLY, AND THAT IS `#d21` ───────────
+# `record-prod-image.yml` declares `concurrency: record-prod-fe-prionex-prod`. `#d21`: "собственный
+# `concurrency` вызываемого воркфлоу при вызове не применяется -- молча". So on THIS path the
+# recorder runs under this file's own group (`deploy-prod-fe-prionex-prod`), while a manual
+# recovery dispatch of the recorder runs under ITS group. The two are DISJOINT: nothing
+# serializes an automatic record against a hand-dispatched one, over two permanent registry
+# writes, and `imagetools create` has no compare-and-swap. Named here rather than discovered
+# later; closing it needs a single shared group declared on every caller, which is a change to
+# a frozen file and is not taken here.
+#
+# ── 🔴 THE DISPATCH INPUT IS `tag`, NOT `image_tag`, AND THE RENAME IS THE FIX ─────────
+# Runs 637 and 640 both built correctly and then failed at the deploy with the callee reporting
+# the tag THIS WORKFLOW WAS DISPATCHED WITH (`sha-…-preprod`) rather than the `-prod` tag passed
+# in `with:`. `deploy-stand.yml` reads `${{ inputs.image_tag }}` — the ordinary, correct way — so
+# the callee is not at fault: on this instance the callee's `inputs` were populated from the
+# DISPATCH's inputs, not from the caller's `with:`, for a key present in both.
+#
+# 🔴 WHY NOBODY HAS EVER HIT THIS. Both shipped callers pass `image_tag: ${{ inputs.image_tag }}`
+# — caller value and dispatch value are the SAME STRING, so the substitution is invisible and
+# harmless there. This is the first caller whose `with:` value DIFFERS from its own dispatch
+# input, and it is what made the behaviour observable at all. Same family as `#d21`'s expression
+# and context surprises.
+#
+# Naming the dispatch input `tag` means there is no `image_tag` in the dispatch to shadow the
+# callee's, so `with: image_tag:` is the only source and reaches it intact.
+# ⚠️ Story 6.4's epic AC1 says the workflow "accepts a required `image_tag` input". The input is
+# required and it is the image tag; only the NAME differs, and it differs because the epic's name
+# cannot work here. Recorded as a deviation with its reason, not taken silently.
+#
+# ── Every input reaches a `run:` body through `env:`, never through an expression (`#d21`) ──
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "🔴 NAMED `tag`, NOT `image_tag`, and that is a FIX not a preference — see the header. The image tag naming the commit, in sha-<12hex>-<env> form. RELEASE: the validated PRE-PROD candidate (e.g. sha-28f7fd36b75e-preprod). ROLLBACK: an existing PROD tag (e.g. sha-a99ccd44c5a3-prod). NOT prod-current and NOT prod-<hex> — those are records, not deployable references."
+        required: true
+        type: string
+      rollback:
+        description: "true = pull the existing PROD tag and start it, NO build. false = rebuild the commit at environment=prod first (Option C), then deploy."
+        required: false
+        type: boolean
+        default: false
+
+# Its own literal group, shared with no other stand and containing no expression.
+# Story 5.3's Prohibition 7: never copy another stand's group. DEV's and PRE-PROD's groups guard
+# THEIR stands; this one guards the production stand on s10.
+concurrency:
+  group: deploy-prod-fe-prionex-prod
+  cancel-in-progress: false
+
+jobs:
+  # ── derive ────────────────────────────────────────────────────────────────────────────
+  # Shape-checks the dispatch and produces the two values the callees need. Does no network
+  # I/O, touches no host, and is the seam Story 6.5's guard lands on.
+  derive:
+    name: "Derive the commit and the PROD tag, and refuse anything else"
+    runs-on: node-20
+    timeout-minutes: 5
+    outputs:
+      hex: ${{ steps.d.outputs.hex }}
+      full_sha: ${{ steps.d.outputs.full_sha }}
+      deploy_tag: ${{ steps.d.outputs.deploy_tag }}
+      is_rollback: ${{ steps.d.outputs.is_rollback }}
+    steps:
+      # 🔴 THIS CHECKOUT MUST COME FIRST, AND THAT ORDER IS LOAD-BEARING.
+      # `actions/checkout` CLEANS THE WORKSPACE — and on this instance `$GITHUB_OUTPUT` lives
+      # inside it. Run 637 put this step AFTER the derive step and the checkout silently DESTROYED
+      # every output written before it: `deploy_tag`, `hex` and `is_rollback` all arrived empty at
+      # the callees, while `full_sha` — written after the checkout — survived. The deploy then
+      # fell back to the DISPATCH's own `image_tag` (`sha-…-preprod`) and was correctly refused by
+      # `deploy-stand.yml`'s tag<->environment guard. Nothing warned; the outputs were simply gone.
+      # Same family as `#d21`'s expression/context surprises. **Never write a job output before a
+      # checkout in this job.**
+      #
+      # Its `if:` reads the RAW dispatch input rather than a step output, because it now runs
+      # BEFORE any step that could normalise one. The rollback path checks out nothing: it rebuilds
+      # nothing, so it needs no commit.
+      - name: "Check out, so the short SHA can be expanded and the commit's existence proven"
+        if: ${{ inputs.rollback != true && inputs.rollback != 'true' }}
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: "Derive and validate"
+        id: d
+        env:
+          IMAGE_TAG: ${{ inputs.tag }}
+          ROLLBACK: ${{ inputs.rollback }}
+        run: |
+          set -euo pipefail
+
+          # A dispatch boolean can arrive as a real boolean or as the string "true" depending on
+          # how the dispatch was made. Normalise ONCE, here, and let every later decision read
+          # this single output instead of re-deciding it in an expression.
+          case "$ROLLBACK" in
+            true|True|TRUE) IS_ROLLBACK=true ;;
+            *)              IS_ROLLBACK=false ;;
+          esac
+
+          case "$IMAGE_TAG" in
+            *$'\n'*|*$'\r'*|*' '*|*$'\t'*)
+              echo "FAIL: image_tag contains whitespace or a newline. Refusing before any shape check."
+              exit 1 ;;
+          esac
+
+          # prod-current / prod-<hex> are records, not deployable references, and
+          # deploy-stand.yml's own tag<->environment guard would refuse them anyway. Refusing
+          # here means the operator gets a message that explains WHY instead of a suffix
+          # mismatch four jobs later.
+          case "$IMAGE_TAG" in
+            prod-current|prod-*)
+              echo "FAIL: image_tag='${IMAGE_TAG}' is a RECORD, not a deployable reference."
+              echo "  prod-current names what production is meant to be running and prod-<12hex> is"
+              echo "  history. Neither ends in '-prod', so deploy-stand.yml refuses both by design."
+              echo "  Dispatch the sha-<12hex>-prod tag instead."
+              exit 1 ;;
+          esac
+
+          if ! printf '%s' "$IMAGE_TAG" | grep -qE '^sha-[0-9a-f]{7,64}-(prod|preprod)$'; then
+            echo "FAIL: image_tag='${IMAGE_TAG}' does not match ^sha-<hex>-(prod|preprod)\$."
+            echo "  This workflow names the commit through the tag; see the file header."
+            exit 1
+          fi
+
+          HEX="${IMAGE_TAG#sha-}"
+          HEX="${HEX%-prod}"
+          HEX="${HEX%-preprod}"
+
+          # EXACTLY twelve. build.yml pins its short SHA at 12 and Story 6.5's guard compares
+          # these strings byte for byte. A 40-character SHA here would derive sha-<40hex>-prod,
+          # which build.yml never publishes -- the pull would 404 and read as "never built",
+          # and the rollback target and the gate would diverge silently (#d18 §3).
+          if ! printf '%s' "$HEX" | grep -qE '^[0-9a-f]{12}$'; then
+            echo "FAIL: the hex part of '${IMAGE_TAG}' is '${HEX}' (${#HEX} characters), not exactly 12."
+            echo "  build.yml pins the short SHA at 12; deriving any other length produces a tag"
+            echo "  nothing ever published. Refusing (#d18 §3)."
+            exit 1
+          fi
+
+          # On the ROLLBACK path the operator must name a PROD tag. Accepting a -preprod tag
+          # here would mean 'rolling back' to an artifact production never ran, whose bundle
+          # carries the PRE-PROD API URLs baked in at build time (Option C, NFR11) -- green
+          # everywhere and dead in the browser.
+          if [ "$IS_ROLLBACK" = true ]; then
+            case "$IMAGE_TAG" in
+              *-preprod)
+                echo "FAIL: rollback=true but image_tag='${IMAGE_TAG}' names the PRE-PROD environment."
+                echo "  A rollback restores something production actually ran. A -preprod artifact"
+                echo "  has PRE-PROD's API URLs baked into its bundle and was never a PROD image."
+                exit 1 ;;
+            esac
+          fi
+
+          DEPLOY_TAG="sha-${HEX}-prod"
+          {
+            echo "hex=${HEX}"
+            echo "deploy_tag=${DEPLOY_TAG}"
+            echo "is_rollback=${IS_ROLLBACK}"
+          } >> "$GITHUB_OUTPUT"
+
+          # 🔴 The 12-hex short SHA names the TAG, but it is NOT a safe `ref` for
+          # `actions/checkout`: an abbreviated SHA is not fetchable and a shallow fetch has no
+          # object to resolve it against. `build.yml` feeds `inputs.ref` straight to checkout, and
+          # Story 6.3's own prod build used the FULL 40-hex form. Expand it here -- after the
+          # checkout above, which is why that checkout comes first.
+          # This also buys a real guard for free: it PROVES the commit exists in this repository.
+          # Story 6.3 halted for two sessions on exactly that question, for a commit that had
+          # never been imported, and had no mechanical check for it. This is that check.
+          if [ "$IS_ROLLBACK" != true ]; then
+            if ! FULL="$(git rev-parse --verify "${HEX}^{commit}" 2>/dev/null)"; then
+              echo "FAIL: commit '${HEX}' does not exist in this repository."
+              echo "  The release path rebuilds that commit, so it must be checkoutable here. A tag"
+              echo "  can name a commit this repository never received -- Story 6.3 halted on"
+              echo "  exactly that. Refusing before anything is built."
+              exit 1
+            fi
+            echo "full_sha=${FULL}" >> "$GITHUB_OUTPUT"
+            echo "full sha:        ${FULL}"
+          fi
+
+          echo "commit (12 hex): ${HEX}"
+          echo "deploy tag:      ${DEPLOY_TAG}"
+          echo "rollback:        ${IS_ROLLBACK}"
+
+      - name: "State which path this run takes, and what that means"
+        env:
+          IS_ROLLBACK: ${{ steps.d.outputs.is_rollback }}
+          DEPLOY_TAG: ${{ steps.d.outputs.deploy_tag }}
+          IMAGE_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          {
+            if [ "$IS_ROLLBACK" = true ]; then
+              echo "### ROLLBACK — no build will run"
+              echo
+              echo "Pulling the existing \`${DEPLOY_TAG}\` and starting it. **No image is produced by"
+              echo "this run.** The build job is skipped; the deploy job still runs."
+            else
+              echo "### RELEASE — this is a REBUILD, not a promotion"
+              echo
+              echo "🔴 The image deployed by this run is **built here**, from the commit named by"
+              echo "\`${IMAGE_TAG}\`. It is **NOT** the artifact validated on PRE-PROD and is **not"
+              echo "byte-identical** to it: under Option C the production \`VITE_API_BASE_URL\` and"
+              echo "\`VITE_WS_URL\` are baked into the bundle at build time, so a PRE-PROD artifact"
+              echo "cannot be promoted — it carries the wrong URLs (NFR11, \`#d2\`)."
+              echo
+              echo "What PRE-PROD validation proves is that **this commit** passed. It proves nothing"
+              echo "about **these bytes**. Nobody attests to the bytes."
+              echo
+              echo "Deploying \`${DEPLOY_TAG}\`."
+            fi
+          } | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
+
+  # ── guard (Story 6.5, FR16) ───────────────────────────────────────────────────────────
+  # Refuses a release whose commit was never recorded as validated on PRE-PROD. Skipped entirely
+  # on the rollback path: a rollback restores something production ALREADY RAN, so re-validating
+  # it proves nothing -- and `#d2`'s older claim that the skip is also needed because
+  # `preprod-<sha>` may have been deleted by retention is FALSE and is corrected there:
+  # `preprod-<12hex>` matches `keep_pattern`'s `(pre)?prod-[0-9a-f]{7,64}` and is protected.
+  #
+  # 🔴 WHAT A GREEN GUARD MEANS, AND WHAT IT DOES NOT. It means a `preprod-<12hex>` marker exists
+  # for this commit. It does NOT mean the validation behind that marker was clean: `RVC-v1.1`'s
+  # waiver carries NO signal at the registry (Story 5.4's own D1 -- `validation_note` never
+  # reaches it), and the live proof is `preprod-a99ccd44c5a3`, minted on a run scoring
+  # `7/12 pass, 5 BLOCKED` and dispatched `pass` on Oleg's written waiver alone (`#d40`/`#d41`).
+  # This gate structurally cannot ask that question -- the signal is not in the tier it reads.
+  # Story 6.2 already wrote the policy half: THE APPROVER READS docs/preprod-candidates.md.
+  # 🚫 Do NOT "fix" this by grepping that file from here. Epic AC2 forbids building a weaker
+  # duplicate of the neighbouring gate, and a check that looks like it closes the gap but cannot
+  # is worse than the gap.
+  #
+  # ── Positioning (epic AC2): the FRONTEND HALF of an existing pattern ────────────────────
+  # `CRM/api-prionex` gates its own PROD promotion on `ops/deploy/validate-preprod-digests.sh`,
+  # which compares the DIGESTS OF THE CONTAINERS ACTUALLY RUNNING on PRE-PROD against the release
+  # manifest -- "Digests, not tags: a tag can be moved, a digest cannot. There is no bypass flag."
+  # (established 2026-08-14; not re-measured here and not ours to operate).
+  # 🔴 Theirs is STRICTLY STRONGER ON BOTH AXES: digest identity vs our commit identity, and no
+  # bypass vs our `rollback: true`. Stated plainly rather than softened -- under Option C we
+  # cannot compare artifacts at all, because the PROD image is a separate build (`#d2`, NFR11).
+  guard:
+    name: "Promotion guard -- refuse a commit that never reached PRE-PROD"
+    needs: derive
+    if: needs.derive.outputs.is_rollback != 'true'
+    runs-on: node-20
+    timeout-minutes: 5
+    steps:
+      - name: "Require preprod-<12hex>, and admit ONLY a classified 200"
+        env:
+          REG_USER: ${{ secrets.REGISTRY_USER_RO }}
+          REG_TOKEN: ${{ secrets.REGISTRY_TOKEN_RO }}
+          HEX: ${{ needs.derive.outputs.hex }}
+          DEPLOY_TAG: ${{ needs.derive.outputs.deploy_tag }}
+          IMAGE_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          IMAGE_REPO="git.crm-prionex.com/crm/fe-prionex"
+
+          # The hex comes from `derive`, which already asserted ^[0-9a-f]{12}$. Re-checked here
+          # because this job must not be defeated by an empty output -- Story 6.4 lost two runs to
+          # `actions/checkout` silently destroying $GITHUB_OUTPUT (#d47(4)), and an empty HEX would
+          # otherwise probe `preprod-` and take whatever the registry said about it.
+          # EXACTLY twelve: #d18 §3 binds 5.4, 6.3, 6.5 and 6.6 to the same number, and
+          # record-preprod-candidate.yml mints exactly this shape. A length mismatch here fails
+          # EVERY legitimate release at this gate.
+          if ! printf '%s' "${HEX:-}" | grep -qE '^[0-9a-f]{12}$'; then
+            echo "FAIL: the commit handed to this guard is '${HEX:-<empty>}', not exactly 12 hex."
+            echo "  derive asserts that shape, so an empty or malformed value here means the"
+            echo "  output was lost in transit (#d47(4)), not that the tag was wrong. Refusing"
+            echo "  rather than probing a marker name built from nothing."
+            exit 1
+          fi
+          MARKER="preprod-${HEX}"
+
+          if [ -z "${REG_USER:-}" ] || [ -z "${REG_TOKEN:-}" ]; then
+            echo "FAIL: REGISTRY_USER_RO / REGISTRY_TOKEN_RO is empty or unset. This is a MISSING"
+            echo "  CREDENTIAL, not an absent marker. Refusing before the request so the failure"
+            echo "  names its own cause."
+            exit 1
+          fi
+
+          HTTP_CODE="$(printf 'user = "%s:%s"\n' "$REG_USER" "$REG_TOKEN" \
+            | curl -sS -L --proto-redir '=https' \
+                --retry 2 --retry-delay 2 --retry-connrefused --max-time 30 \
+                -o /dev/null -w '%{http_code}' --config - \
+                -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
+                -H "Accept: application/vnd.docker.distribution.manifest.list.v2+json" \
+                -H "Accept: application/vnd.oci.image.manifest.v1+json" \
+                -H "Accept: application/vnd.oci.image.index.v1+json" \
+                "https://${IMAGE_REPO%%/*}/v2/${IMAGE_REPO#*/}/manifests/${MARKER}" || true)"
+
+          # 🔴 ONLY 200 ADMITS. Every other answer refuses, and each names itself, because the
+          # operator's next action differs: an absent marker means "record the candidate first",
+          # a refused credential means "fix the secret", an ambiguous read means "try again".
+          case "$HTTP_CODE" in
+            200)
+              : ;;
+            404)
+              echo "FAIL: ${MARKER} is ABSENT from the registry (HTTP 404 -- a classified absence,"
+              echo "  not an ambiguous read: the registry answered, and it answered 'not found')."
+              echo
+              echo "  Commit ${HEX} has no PRE-PROD marker, so it never reached PRE-PROD"
+              echo "  through the pipeline at all; this release"
+              echo "  is refused before anything is built and before the production stand is"
+              echo "  touched. FR16, #d2."
+              echo
+              echo "  Dispatched tag:  ${IMAGE_TAG}"
+              echo "  Would deploy:    ${DEPLOY_TAG}"
+              echo "  Missing marker:  ${MARKER}"
+              echo
+              echo "  Two legitimate ways forward:"
+              echo "    1. Validate the commit on PRE-PROD and record it -- dispatch"
+              echo "       record-preprod-candidate.yml for sha-${HEX}-preprod. THEN re-dispatch."
+              echo "    2. If you are RESTORING a release production already ran, dispatch with"
+              echo "       rollback: true -- this guard is skipped there by design."
+              exit 1
+              ;;
+            401|403)
+              echo "FAIL: probing ${MARKER} returned HTTP ${HTTP_CODE} -- the registry REFUSED THE"
+              echo "  CREDENTIAL. This is neither presence nor absence and must never be reported"
+              echo "  as either. Refusing the release: a guard that cannot read cannot clear."
+              exit 1
+              ;;
+            *)
+              echo "FAIL: probing ${MARKER} returned HTTP ${HTTP_CODE}, which is neither 200 nor"
+              echo "  404. This is AMBIGUOUS, a different outcome from ABSENT, and it must not be"
+              echo "  reported as one."
+              echo "  🔴 Refusing the release. This guard admits ONLY a classified 200, because a"
+              echo "  false negative costs a re-dispatch while a false positive puts a commit that"
+              echo "  never reached PRE-PROD into production."
+              exit 1
+              ;;
+          esac
+
+          # Success. Say precisely what was and was not established.
+          {
+            echo "### Promotion guard: PASSED"
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| commit | ${HEX} |"
+            echo "| marker found | ${MARKER} |"
+            echo "| will deploy | ${DEPLOY_TAG} |"
+            echo
+            echo "**What this proves:** this commit was built for PRE-PROD and deployed there"
+            echo "through the pipeline. A marker exists for it."
+            echo
+            echo "**What it does NOT prove, and cannot:**"
+            echo "- 🔴 **Not that anyone validated it.** Since 2026-08-27 (Story 6.11, #d51) the"
+            echo "  marker is written AUTOMATICALLY by a successful PRE-PROD deploy. There is no"
+            echo "  verdict input anywhere in the pipeline and no workflow reads one. This gate"
+            echo "  proves the commit went through PRE-PROD, not that anyone looked at the result."
+            echo "  RVC-v1.1 still applies and is carried by docs/preprod-candidates.md and"
+            echo "  docs/production-approval-regulation.md alone. (#d51, #d41, #d38 section 2.)"
+            echo "- **Not the artifact.** Under Option C the PROD image is a separate build,"
+            echo "  byte-different from the one PRE-PROD served, so nothing here compares"
+            echo "  artifacts. A build-time variable difference -- a typo in a prod-only"
+            echo "  VITE_ value -- reaches production unvalidated. (#d2, NFR11.)"
+            echo "- **Not that any validation was clean** -- a strictly weaker statement than"
+            echo "  the one above, kept because the waiver mechanism still exists. A waiver leaves"
+            echo "  NO signal at the registry, so this gate could not tell a waived candidate from"
+            echo "  a 12/12 one even when the marker still implied a verdict."
+            echo "  The approver reads docs/preprod-candidates.md, not this marker."
+            echo "  (Story 5.4 D1; #d40/#d41; docs/production-approval-regulation.md.)"
+            echo
+            echo "Compare CRM/api-prionex's backend gate, which is stronger on both axes:"
+            echo "it compares DIGESTS of the containers actually running on PRE-PROD and has"
+            echo "no bypass flag. This is the frontend half of that pattern, not an equal."
+          } | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
+
+  # ── build ─────────────────────────────────────────────────────────────────────────────
+  # Release path only. Publishes sha-<12hex>-prod (permanent) and <sanitized-ref>-prod (14 days).
+  # 🔴 build.yml's own "Enforce AC2" refuses to repoint an existing sha-<12hex>-prod, and
+  # vite.config.ts's Date.now() makes every rebuild differ -- so a release dispatch of a commit
+  # ALREADY built at prod goes red, by construction and not by defect (#d24 §2b, #d46).
+  build:
+    name: "Rebuild the commit at environment: prod"
+    needs: [derive, guard]
+    if: needs.derive.outputs.is_rollback != 'true'
+    uses: ./.forgejo/workflows/build.yml
+    with:
+      ref: ${{ needs.derive.outputs.full_sha }}
+      environment: prod
+    secrets: inherit
+
+  # ── deploy ────────────────────────────────────────────────────────────────────────────
+  # Runs on BOTH paths. See the header: `always()` plus an explicit success-or-skipped test is
+  # what keeps the rollback path from silently doing nothing.
+  deploy:
+    name: "Deploy to the PROD stand on s10"
+    needs: [derive, build, guard]
+    # 🔴 STORY 6.5 ADDED THE `guard` CLAUSE, AND WITHOUT IT THE GUARD WOULD BE DECORATIVE.
+    # A refused guard SKIPS `build` (a failed `needs:` member does that) -- and this condition
+    # admits a skipped build BY DESIGN, because that is how the rollback path reaches deploy. So
+    # before this clause existed, a red guard would have gone red and PRODUCTION WOULD HAVE BEEN
+    # DEPLOYED ANYWAY. `guard` must be success (release path, admitted) or skipped (rollback path,
+    # not applicable) -- never failure.
+    if: >-
+      always() &&
+      needs.derive.result == 'success' &&
+      (needs.guard.result == 'success' || needs.guard.result == 'skipped') &&
+      (needs.build.result == 'success' || needs.build.result == 'skipped')
+    uses: ./.forgejo/workflows/deploy-stand.yml
+    with:
+      runner_label: fe-prionex-prod-deploy
+      compose_project_name: fe-prionex-prod
+      container_name: fe-prionex-prod
+      frontend_port: "0.0.0.0:8080"
+      frontend_network: crm-prod-network
+      stand_dir: /root/crm-prionex/fe-prionex-prod
+      image_env: prod
+      image_tag: ${{ needs.derive.outputs.deploy_tag }}
+      lock_wait_seconds: "240"
+      lock_ttl_seconds: "720"
+      health_timeout_seconds: "120"
+      expect_unrouted_api: "false"
+    secrets: inherit
+
+  # ── smoke (Story 6.7) ─────────────────────────────────────────────────────────────────
+  # 🔴 WHAT THIS IS NOT, FIRST, BECAUSE THE OVERLAP IS THE MAIN TRAP HERE.
+  # `deploy-stand.yml` ALREADY polls `docker inspect` for running/restarting/healthy with a timeout,
+  # fails fast on `unhealthy`, ASSERTS THE HEALTHY CONTAINER IS THIS PROJECT'S (anchored), and issues
+  # GET / from a --network host sibling asserting 200. This job does NOT re-implement any of that --
+  # a weaker duplicate of a stronger existing check is the anti-pattern this epic banned twice
+  # (Story 6.5's epic AC2; this file's own earlier header line about 6.7).
+  #
+  # What it adds, and why each addition can actually FAIL:
+  #   1. It runs AFTER the deploy job ended and the Story 4.4 lock was RELEASED. A container that was
+  #      healthy at hand-off and has since crash-looped is precisely what the callee cannot see.
+  #   2. CONTENT, not liveness. `GET / == 200` proves almost nothing: nginx returns 200 for a stale
+  #      index, for a default page, and for an index whose bundle 404s. So this job reads the asset
+  #      the SERVED index actually references and fetches THAT. The filename carries a content hash,
+  #      so it changes every build -- the probe can only pass if the served bundle is the one this
+  #      index names.
+  #   3. A DISCRIMINATING negative, available for free from `nginx.conf` itself: `location /` is
+  #      `try_files $uri $uri/ /index.html`, so ANY path returns 200 -- but the regex location
+  #      `~* \.(js|css|...)$` takes precedence and has NO try_files, so a NON-EXISTENT .js returns
+  #      404. Asserting both proves the asset location is live and the server is not blanket-200.
+  #   4. The security headers `nginx.conf` sets with `always` (X-Content-Type-Options: nosniff, and
+  #      X-Frame-Options: SAMEORIGIN). Stock nginx sets NEITHER -- so this distinguishes "our config
+  #      is serving" from "a default nginx is answering", which a status code cannot.
+  #
+  # 🔴 IT MUST TARGET THE STAND, NOT THE PUBLIC NAME. `crm.prod.crm-prionex.online` RESOLVES AND
+  # REFUSES (`#d43`, measured 2026-08-26: the A record exists, 80/443 answer `refused`, there is no
+  # web front on the hypervisor yet). A smoke check pointed there fails on a HEALTHY stand.
+  # The `--network host` sibling container is how a containerised job reaches the host-published
+  # mapping -- `deploy-stand.yml` needed exactly this after runs 925/927 failed without it.
+  #
+  # 🔴 SLACK IS BLOCKED AND IS NOT SUBSTITUTED. Epic AC4 wants Slack to report the failure. That
+  # channel DOES NOT EXIST: the webhook is Story 1.13's unrecoverable stub (write-only, URL
+  # unrecoverable) and a NEW incoming webhook must be created in Slack. OWNER: OLEG. Story 4.5 is
+  # backlog and was resequenced last by him. Same deferral Story 6.4 took 2026-08-14 -- "the
+  # production deploy must work, and must be provable, without any notification". The other three
+  # clauses of AC4 are built in full; the AC is recorded PARTIAL, not met.
+  #
+  # ── Placement: parallel to `record`, and the reason ─────────────────────────────────────
+  # `record` states WHAT WAS DEPLOYED. A bad deploy that happened is still a fact worth recording,
+  # and `record-outcome` already exists to disclose the inverse. Serialising smoke before record
+  # would buy "the registry only records images that passed" at the cost of delaying the record --
+  # and a missing record is the state this file already treats as expensive. Decided, not defaulted.
+  smoke:
+    name: "Smoke-check PROD after the deploy (content, not liveness)"
+    needs: [derive, deploy]
+    if: needs.deploy.result == 'success'
+    runs-on: fe-prionex-prod-deploy
+    timeout-minutes: 10
+    steps:
+      # 🔴 The runner label is NOT a free choice. `fe-prionex-prod-deploy` is OUR runner on s10,
+      # declared `docker://deploy-base-dev-preprod:2026-08-07`, so jobs run IN A CONTAINER holding
+      # the HOST docker.sock. NEVER `s10`/`e1-rung3` (CI-shaped, jobs in dind, cannot reach the host
+      # stand) and NEVER `e1-rung3-prod-deploy` (the neighbours', declared `:host` -- run 629 proved
+      # `docker inspect $(hostname)` fails there). Story 6.4 lost a run to each.
+      - name: "Re-assert health AFTER the deploy job ended and the lock was released"
+        env:
+          CONTAINER_NAME: fe-prionex-prod
+        run: |
+          set -euo pipefail
+          if ! STATE="$(docker inspect "$CONTAINER_NAME" --format '{{.State.Running}} {{.State.Restarting}} {{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' 2>/dev/null)"; then
+            echo "FAIL: container '${CONTAINER_NAME}' does not exist on this host. The deploy job"
+            echo "  reported success, so it existed minutes ago -- it has since been removed."
+            exit 1
+          fi
+          RUNNING="$(printf '%s' "$STATE" | cut -d' ' -f1)"
+          RESTARTING="$(printf '%s' "$STATE" | cut -d' ' -f2)"
+          HEALTH="$(printf '%s' "$STATE" | cut -d' ' -f3)"
+          echo "running=${RUNNING} restarting=${RESTARTING} health=${HEALTH}"
+          # NOT a re-implementation of the callee's poll: no waiting, no timeout, no retry. The
+          # callee already waited for a stable healthy state while holding the lock. This is a
+          # single read AFTER that, and the only new information it can carry is DECAY.
+          if [ "$RUNNING" != "true" ] || [ "$RESTARTING" != "false" ] || [ "$HEALTH" != "healthy" ]; then
+            echo "FAIL: the stand was healthy when the deploy job handed off and is NOT healthy now."
+            echo "  This is the crash-after-handoff case the deploy's own check cannot see."
+            exit 1
+          fi
+          echo "OK: still healthy after the deploy job ended."
+
+      - name: "Error entries in the last 5 minutes of container log"
+        env:
+          CONTAINER_NAME: fe-prionex-prod
+        run: |
+          set -euo pipefail
+          # 🔴 The matcher is written against what this container ACTUALLY logs, not against the word
+          # "ERROR". The image is nginx:alpine: access lines go to stdout in the combined format and
+          # error lines to stderr as `2026/08/27 10:00:00 [error] 7#7: *1 ...`. A bare `grep ERROR`
+          # would match a URL in an access line and FAIL A CORRECT DEPLOY -- and a check that cries
+          # wolf gets disabled by the third incident. Anchored on nginx's own bracketed level field.
+          # `[warn]` is deliberately excluded: nginx emits it for benign conditions.
+          # 🔴 ORDER IS LOAD-BEARING, AND GETTING IT WRONG COST FOUR RUNS (698, 699, 702 and one
+          # more). This step used to run AFTER the serve-check, whose deliberate 404 probe makes
+          # nginx log exactly what this step greps for:
+          #   [error] ... open() ".../assets/definitely-not-a-real-bundle-6-7.js" failed (2: No such
+          #   file or directory)
+          # A 404 is an ACCESS-log event, but a missing STATIC FILE is an ERROR-log event in nginx --
+          # so the smoke check failed on a healthy stand, on a line IT HAD JUST WRITTEN ITSELF.
+          # Reproduced locally on nginx:alpine with this repo's own nginx.conf before fixing.
+          # Two things close it, and both are kept because either alone is fragile:
+          #   1. this step now runs BEFORE the serve-check, so the window predates our own probes;
+          #   2. the matcher excludes the one line our probe provably produces, by its exact path.
+          # ⚠️ (2) is written narrowly ON PURPOSE: it excludes OUR probe's filename, not "any missing
+          # file". A real missing bundle -- the failure this whole job exists to catch -- still hits.
+          LOGS="$(docker logs --since 5m "$CONTAINER_NAME" 2>&1 || true)"
+          HITS="$(printf '%s' "$LOGS" | grep -E '\[(error|crit|alert|emerg)\]' \
+            | grep -v 'definitely-not-a-real-bundle-6-7\.js' || true)"
+          if [ -n "$HITS" ]; then
+            echo "FAIL: nginx logged error-level entries in the last 5 minutes:"
+            printf '%s\n' "$HITS" | head -40
+            exit 1
+          fi
+          # 🔴 AN EMPTY WINDOW IS A PASS, DELIBERATELY. A freshly started nginx that has served only
+          # this job's own probes legitimately logs nothing at error level, and failing on silence
+          # would fail every quiet deploy. Stated here so it is a decision, not an accident.
+          if [ -z "$LOGS" ]; then
+            echo "OK: the 5-minute window is EMPTY. Treated as a PASS -- a just-started container"
+            echo "  with no traffic legitimately logs nothing. Silence is not evidence of health."
+          else
+            echo "OK: log window has content and no error-level entries."
+          fi
+
+      - name: "Serve-check: the index, the asset it NAMES, a 404 that must be a 404, and our headers"
+        env:
+          STAND_URL: "http://0.0.0.0:8080"
+        run: |
+          set -euo pipefail
+          # The host-published mapping is reachable only from the host's own network namespace.
+          # deploy-stand.yml established this shape after runs 925/927 failed without it.
+          SELF_IMAGE="$(docker inspect "$(hostname)" --format '{{.Config.Image}}')"
+          fetch() { docker run --rm --network host "$SELF_IMAGE" curl -sS --max-time 15 "$@" || true; }
+
+          # 🔴 EVERY FAILURE BELOW MUST BE SELF-DESCRIBING IN A SINK THAT SURVIVES. Job logs are NOT
+          # retrievable on this instance (both API routes 404 since Story 3.6), so a failure whose
+          # evidence exists only on stdout is a failure nobody can diagnose. `diag` mirrors into the
+          # step summary. Learned the hard way on run 698: this check failed on a stand the deploy
+          # had just certified healthy, and there was no way to see WHY without changing the code.
+          diag() { printf '%s\n' "$@" | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"; }
+
+          # ── 1. the index, with its status and OUR headers ──────────────────────────────
+          HDRS="$(fetch -D - -o /dev/null "${STAND_URL}/")"
+          CODE="$(printf '%s' "$HDRS" | awk '/^HTTP\//{c=$2} END{print c+0}')"
+          if [ "$CODE" != "200" ]; then
+            diag "### SMOKE FAIL — GET /" "" "Status: \`${CODE}\` (expected 200; 000 = no connection at all)" "" "Response headers as received:" "" '```' "$HDRS" '```'
+            exit 1
+          fi
+          # 🔴 THIS ASSERTION WAS WRONG ON ITS FIRST TWO RUNS (698, 699) AND IS CORRECTED HERE
+          # AGAINST A LOCAL REPRODUCTION, not a guess. It originally required
+          # `x-content-type-options: nosniff` and `x-frame-options: sameorigin` -- which nginx.conf
+          # does declare, at SERVER level, with `always`. They are NOT SERVED on `/`.
+          # Why: nginx `add_header` is inherited into a location ONLY IF that location declares no
+          # `add_header` of its own. `location ~* \.html$` declares two (Content-Type and
+          # Cache-Control), and the SPA fallback serves /index.html THROUGH that location -- so the
+          # server-level security headers are dropped for every HTML response.
+          # Reproduced on `nginx:alpine` with this exact nginx.conf: `/` returns 200 with
+          # Content-Type and Cache-Control from the .html block and NEITHER security header.
+          # ⚠️ That is a real finding about the production config and it is FILED, not fixed here --
+          # nginx.conf is frozen for this story. See deferred-work.md.
+          # What is asserted instead is a header this config DOES deliver and stock nginx does not,
+          # which preserves the property this probe exists for: telling "our config is serving" from
+          # "a default nginx is answering 200", something no status code can do.
+          for H in "cache-control: no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"; do
+            if ! printf '%s' "$HDRS" | tr '[:upper:]' '[:lower:]' | tr -d '\r' | grep -q "^${H}$"; then
+              diag "### SMOKE FAIL — missing header on GET /" "" "Expected: \`${H}\`" "" "This header comes from nginx.conf's own \`location ~* \\.html\$\` block. Stock nginx does not set it, so its absence means a different config — or a different image — is answering." "" "Response headers as received:" "" '```' "$HDRS" '```'
+              exit 1
+            fi
+          done
+          echo "OK: GET / is 200 and carries this image's own security headers."
+
+          # ── 2. the asset the SERVED index actually names ───────────────────────────────
+          BODY="$(fetch "${STAND_URL}/")"
+          ASSET="$(printf '%s' "$BODY" | grep -oE 'src="/assets/[^"]+\.js"' | head -1 | sed 's/^src="//; s/"$//')"
+          if [ -z "$ASSET" ]; then
+            diag "### SMOKE FAIL — the served index names no /assets/*.js bundle" "" "A 200 with no bundle is a default page or a broken build, and GET / alone cannot tell you that." "" "First 2000 bytes of the served body:" "" '```' "$(printf '%s' "$BODY" | head -c 2000)" '```'
+            exit 1
+          fi
+          echo "index references: ${ASSET}"
+          ACODE="$(fetch -o /dev/null -w '%{http_code}' "${STAND_URL}${ASSET}")"
+          if [ "$ACODE" != "200" ]; then
+            diag "### SMOKE FAIL — the index names an asset that is not served" "" "Index references: \`${ASSET}\`" "Fetching it returned: \`${ACODE}\`" "" "The served index and the served assets are from DIFFERENT builds, or the bundle is absent."
+            exit 1
+          fi
+          echo "OK: the bundle the index names is served (${ASSET})."
+
+          # ── 3. the discriminating negative, free from nginx.conf itself ────────────────
+          # `location /` is try_files ... /index.html, so ANY path returns 200. But the regex
+          # location `~* \.(js|css|...)$` takes precedence and has NO try_files -- so a NON-EXISTENT
+          # .js must 404. If this returns 200, the asset location is not active and probe 2 above
+          # proved nothing: the SPA fallback would have answered 200 for any asset name at all.
+          NCODE="$(fetch -o /dev/null -w '%{http_code}' "${STAND_URL}/assets/definitely-not-a-real-bundle-6-7.js")"
+          if [ "$NCODE" != "404" ]; then
+            diag "### SMOKE FAIL — a non-existent asset did not 404" "" "Returned: \`${NCODE}\`, expected 404." "" "nginx.conf's regex asset location takes precedence over the SPA fallback and has no try_files. A 200 here means the fallback is answering for assets — which would make the bundle probe above **vacuous**, since any asset name would pass."
+            exit 1
+          fi
+          echo "OK: a non-existent asset 404s -- the asset location is live and probe 2 is not vacuous."
+
+      - name: "🔴 On failure: what is true, and the exact rollback dispatch"
+        if: failure()
+        env:
+          DEPLOY_TAG: ${{ needs.derive.outputs.deploy_tag }}
+        run: |
+          set -euo pipefail
+          {
+            echo "### 🔴 SMOKE CHECK FAILED — production is running this deploy"
+            echo
+            echo "The deploy SUCCEEDED and the stand is serving '${DEPLOY_TAG}'. The smoke check"
+            echo "then found it is not serving correctly. **Production is live and wrong.**"
+            echo
+            echo "**Roll back now.** Dispatch \`deploy-prod.yml\` with:"
+            echo
+            echo "    tag:      <the PREVIOUS sha-<12hex>-prod from docs/prod-releases.md>"
+            echo "    rollback: true"
+            echo
+            echo "\`rollback: true\` pulls the existing tag without rebuilding and skips the"
+            echo "promotion guard, so a previously deployed release can always be restored."
+            echo "Per docs/production-approval-regulation.md, restoring a tag already in the"
+            echo "ledger is NOT a new release and needs no new approval."
+            echo
+            echo "⚠️ **No Slack notification was sent, and none was attempted.** That channel does"
+            echo "not exist: the webhook is Story 1.13's unrecoverable stub and a new incoming"
+            echo "webhook must be created in Slack (Story 4.5, owner Oleg). Epic AC4's Slack"
+            echo "clause is recorded BLOCKED rather than substituted."
+          } | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
+          echo "::error::Smoke check failed. Production is serving ${DEPLOY_TAG} and is wrong. See the summary for the rollback dispatch."
+
+  # ── record (Story 6.6, FR18) ──────────────────────────────────────────────────────────
+  # Retags the deployed image as prod-<12hex> (permanent history) and prod-current (the
+  # pointer). Runs on BOTH paths: a rollback moves the pointer too -- Story 6.8's own AC
+  # depends on it and nothing else in the plan does it.
+  # 🔴 `image_tag:` NOT `tag:` -- this caller's dispatch input is deliberately named `tag` so it
+  # cannot shadow the callee's `image_tag` (#d47(3), runs 637/640). Do not "tidy" either name.
+  # `allow_current_move` is not passed: the callee defaults it TRUE on the workflow_call path
+  # and FALSE on dispatch, which is Story 6.6's policy split, declared in that file.
+  record:
+    name: "Record the deployed image (prod-<12hex>, then prod-current)"
+    needs: [derive, deploy]
+    if: needs.deploy.result == 'success'
+    uses: ./.forgejo/workflows/record-prod-image.yml
+    with:
+      image_tag: ${{ needs.derive.outputs.deploy_tag }}
+    secrets: inherit
+
+  # ── record-outcome ────────────────────────────────────────────────────────────────────
+  # Exists for ONE state: the deploy succeeded and the record did not. See the header. Without
+  # it the run is red, the stand is updated, prod-current still names the PREVIOUS release, and
+  # nothing anywhere says so.
+  record-outcome:
+    name: "🔴 Disclose a green deploy whose record did not land"
+    needs: [derive, deploy, record]
+    if: always() && needs.deploy.result == 'success' && needs.record.result != 'success'
+    runs-on: node-20
+    timeout-minutes: 5
+    steps:
+      - name: "State what is true right now"
+        env:
+          DEPLOY_TAG: ${{ needs.derive.outputs.deploy_tag }}
+          RECORD_RESULT: ${{ needs.record.result }}
+          HISTORY_WRITTEN: ${{ needs.record.outputs.history_written }}
+          CURRENT_WRITTEN: ${{ needs.record.outputs.current_written }}
+        run: |
+          set -euo pipefail
+          {
+            echo "### 🔴 PRODUCTION IS UPDATED. THE REGISTRY IS NOT."
+            echo
+            echo "The deploy job SUCCEEDED and the record job did not (\`${RECORD_RESULT}\`)."
+            echo "Read this before reading the red run status."
+            echo
+            echo "**True right now:**"
+            echo "- The PROD stand on s10 is running \`${DEPLOY_TAG}\`. The deploy is done."
+            echo "- \`prod-current\` still names the **previous** release, or nothing."
+            echo "- `prod-<12hex>` for this commit: **${HISTORY_WRITTEN:-not reported}**."
+            echo "- `prod-current`: **${CURRENT_WRITTEN:-not reported}**."
+            echo "  (read from the callee's own workflow_call outputs -- H7. Empty means"
+            echo "   the record job died before that step reported, which the write order"
+            echo "   makes readable: history FIRST, pointer second.)"
+            echo
+            echo "**Repair, and it is safe to repeat:** dispatch \`record-prod-image.yml\`"
+            echo "manually with \`image_tag: ${DEPLOY_TAG}\`, acknowledgement"
+            echo "\`MOVE-PROD-CURRENT\`, and \`allow_current_move: true\`. Every write in that"
+            echo "file is attach-if-absent / no-op-if-identical, so re-running is idempotent."
+            echo
+            echo "**Do NOT redeploy to fix this.** The stand is already correct; only the"
+            echo "registry record is missing."
+          } | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
+          echo "::error::Deploy succeeded but the record did not (${RECORD_RESULT}). prod-current is stale. See the job summary."
+          exit 1

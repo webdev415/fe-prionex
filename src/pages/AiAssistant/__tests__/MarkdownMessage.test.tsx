@@ -225,6 +225,51 @@ describe('MarkdownMessage — ссылки на клиента [[client:id|Им�
     expect(link).toHaveTextContent('Коваленко О. П.')
   })
 
+  // Живой дефект 25.08.2026, поймал CEO на демонстрации прода: в таблице ответа
+  // ассистента колонка «Картка» показывала сырой текст `[[client:281201  #281201]]`
+  // вместо ссылки. Фронт в этом не виноват — в GFM-таблице `|` это ГРАНИЦА ЯЧЕЙКИ,
+  // и разбор резал маркер раньше, чем его видел rehype-плагин. Починка сделана в
+  // движке ассистента (рендер результата инструмента экранирует `|` → `\|`), а эти
+  // два теста фиксируют КОНТРАКТ, на который та починка опирается: экранированный
+  // маркер во фронте кликабелен, а неэкранированный — заведомо ломается.
+  it('маркер с экранированной чертой внутри ячейки таблицы становится ссылкой', () => {
+    const md = [
+      '| Оператор | Клієнт |',
+      '| --- | --- |',
+      '| Шкабура Микола | [[client:406068\\|Комашко В`ячеслав]] |',
+    ].join('\n')
+
+    render(
+      <MemoryRouter>
+        <MarkdownMessage>{md}</MarkdownMessage>
+      </MemoryRouter>
+    )
+
+    const link = screen.getByTestId('markdown-client-link')
+    expect(link).toHaveAttribute('href', '/dashboard/clients/406068')
+    expect(link).toHaveTextContent('Комашко В`ячеслав')
+    // ссылка лежит в своей ячейке, а не разъехалась по соседним
+    expect(link.closest('td')).not.toBeNull()
+  })
+
+  it('без экранирования тот же маркер разрезается таблицей и ссылкой не становится', () => {
+    const md = [
+      '| Оператор | Клієнт |',
+      '| --- | --- |',
+      '| Шкабура Микола | [[client:406068|Комашко В`ячеслав]] |',
+    ].join('\n')
+
+    const { container } = render(
+      <MemoryRouter>
+        <MarkdownMessage>{md}</MarkdownMessage>
+      </MemoryRouter>
+    )
+
+    expect(screen.queryByTestId('markdown-client-link')).not.toBeInTheDocument()
+    // именно так это и выглядело у CEO: обрубок маркера в ячейке
+    expect(container.querySelector('table')?.textContent).toContain('[[client:406068')
+  })
+
   it('текст без маркеров не создаёт ни сносок, ни ссылок', () => {
     render(
       <MemoryRouter>

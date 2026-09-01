@@ -30,6 +30,18 @@ export function useCallQaSettings() {
   })
 }
 
+/**
+ * Whether scorecard editing is restricted to the trainer's own operators
+ * (`scorecard_assigned_only` from the Call QA settings). The single source for
+ * every «не закріплений» gate on the frontend — don't re-derive it elsewhere.
+ * Backends that predate the switch (or a still-loading query) count as
+ * restricted, so the legacy behaviour holds until the setting says otherwise.
+ */
+export function useScorecardAssignedOnly(): boolean {
+  const { data } = useCallQaSettings()
+  return data?.scorecard_assigned_only !== false
+}
+
 export function useUpdateCallQaSettings() {
   const queryClient = useQueryClient()
 

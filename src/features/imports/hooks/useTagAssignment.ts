@@ -44,7 +44,7 @@ export function useTagAssignmentExecute() {
       // Cancel the orphaned pending job so the BulkJobBanner doesn't surface
       // it as "Queued" indefinitely after a failed execute.
       try {
-        await importsApi.cancelImportJob(jobId)
+        await importsApi.cancelImportJob(jobId, { onlyIfNotStarted: true })
       } catch (cancelError) {
         console.error('Failed to cancel orphaned tag assignment job:', cancelError)
       }

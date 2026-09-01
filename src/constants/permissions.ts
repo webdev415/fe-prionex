@@ -30,6 +30,28 @@ export const PERMISSIONS = {
   },
 
   /**
+   * Credit Module Category (WS-20)
+   * Раздел кредитного модуля: заявки, решения, кредиты, параметры.
+   * Имена совпадают с `x-required-permission` контракта credit-module —
+   * когда роли появятся в auth-service, переименований не потребуется.
+   * До WS-20 бэкенд их ещё не выдаёт: пункт меню и маршруты используют
+   * mode 'any' вместе с системным правом, чтобы раздел был доступен
+   * администратору на этапе интеграции.
+   */
+  CREDIT: {
+    APPLICATIONS_VIEW: 'credit.applications.read',
+    APPLICATIONS_WRITE: 'credit.applications.write',
+    DECISIONS_DECIDE: 'credit.decisions.decide',
+    DOCUMENTS_VIEW: 'credit.documents.read',
+    DOCUMENTS_GENERATE: 'credit.documents.generate',
+    LOANS_VIEW: 'credit.loans.read',
+    PARAMETERS_VIEW: 'credit.parameters.read',
+    PARAMETERS_PROPOSE: 'credit.parameters.propose',
+    PARAMETERS_APPROVE: 'credit.parameters.approve',
+    PRODUCTS_VIEW: 'credit.products.read',
+  },
+
+  /**
    * Write-offs Category (4 permissions, KAN-245)
    * Controls access to the per-accrual-type debt write-off CRUD.
    * Seeded by auth migration 028.
@@ -154,6 +176,10 @@ export const PERMISSIONS = {
     MANAGE_CALL_QA: 'manage_call_qa',
     // AI settings — global assistant kill-switch + its settings surface
     MANAGE_AI_SETTINGS: 'manage_ai_settings',
+    // Call QA listening rules — critical-blocker dictionary + AI rubrics.
+    // Held by the training-department head and admins; gates the Training
+    // «Settings» tab and every write on those two surfaces.
+    MANAGE_QA_RULES: 'manage_qa_rules',
   },
 
   /**
@@ -215,15 +241,23 @@ export const PERMISSIONS = {
   },
 
   /**
-   * Scoring Configuration Category (4 permissions)
+   * Scoring Configuration Category (5 permissions)
    * Controls access to scoring algorithm configuration
-   * Note: View permissions restricted to Admin and Supervisor
+   * Note: config permissions are restricted to Admin and Supervisor.
+   *
+   * VIEW_PRIORITY_SCORES is the exception and is deliberately separate (KAN-791,
+   * auth migration 057): it grants read access to a debt's v3 priority BUCKET —
+   * the client-card badge, list badges and the Priority Work List — and is held
+   * by Operator as well, because operators are the audience for a work queue.
+   * It does NOT grant any access to model configuration, and it is not what
+   * gates the shadow-run report (that stays on VIEW).
    */
   SCORING_CONFIG: {
     VIEW: 'view_scoring_config',
     EDIT: 'edit_scoring_config',
     MANAGE_SELLER_CONFIG: 'manage_seller_scoring_config',
     VIEW_HISTORY: 'view_scoring_config_history',
+    VIEW_PRIORITY_SCORES: 'view_priority_scores',
   },
 
   /**
@@ -472,6 +506,18 @@ export const PERMISSION_CATEGORIES = {
  * Permission descriptions for display in UI
  */
 export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
+  // Credit module (WS-20)
+  'credit.applications.read': 'View credit applications and their cards',
+  'credit.applications.write': 'Create and edit credit applications on behalf of a client',
+  'credit.decisions.decide': 'Make a manual underwriting decision on an application',
+  'credit.documents.read': 'View credit application and loan documents',
+  'credit.documents.generate': 'Generate credit documents (agreement, schedule, disclosures)',
+  'credit.loans.read': 'View loans, schedules and the ledger',
+  'credit.parameters.read': 'View the decision-engine parameter registry',
+  'credit.parameters.propose': 'Propose a change to a decision-engine parameter',
+  'credit.parameters.approve': 'Approve a proposed parameter change (second approver, UW-04)',
+  'credit.products.read': 'View the credit product catalogue and versions',
+
   // Clients
   view_clients: 'View client data and information',
   view_full_client_data: 'View unmasked client PII (name, phone, TIN) in dashboards',
@@ -538,6 +584,7 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   view_audit_logs: 'View system audit logs',
   manage_roles: 'Create and edit roles and permissions',
   manage_call_qa: 'Toggle the global AI call analysis (Call QA) switch and manage its settings',
+  manage_qa_rules: 'Manage Call QA listening rules — critical blockers and AI rubrics',
 
   // Projects
   manage_projects: 'Create, update, archive and restore projects',
@@ -562,6 +609,8 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   edit_scoring_config: 'Update scoring weights and priority thresholds',
   manage_seller_scoring_config: 'Manage seller-specific scoring configurations',
   view_scoring_config_history: 'View scoring configuration change history',
+  view_priority_scores:
+    'View v3 priority buckets and work ordering (client card, lists, work list)',
 
   // Repayment Configuration (KAN-246)
   view_repayment_config: 'View global repayment order and write-off rule configuration',

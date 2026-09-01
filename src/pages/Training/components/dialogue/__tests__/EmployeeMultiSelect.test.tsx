@@ -6,7 +6,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import type { OperatorUser } from '@/features/users/api/usersApi'
-import { EmployeeMultiSelect } from '../EmployeeMultiSelect'
+import { EmployeeMultiSelect, EmployeeSearchList } from '../EmployeeMultiSelect'
 
 const OPERATORS = [
   { id: 41, full_name: 'Kateryna Antonova' },
@@ -82,5 +82,58 @@ describe('EmployeeMultiSelect quick-select', () => {
       />
     )
     expect(screen.getByRole('button', { expanded: false })).toHaveTextContent('My employees')
+  })
+})
+
+/** The i18n mock returns keys, so the search input is found by its key. */
+const SEARCH_PLACEHOLDER = 'pages.training.dialogue.employee.searchPlaceholder'
+
+describe('EmployeeMultiSelect search', () => {
+  it('narrows the list to names matching the typed fragment', () => {
+    render(<EmployeeMultiSelect value={[]} onChange={vi.fn()} operators={OPERATORS} />)
+    openDropdown()
+    expect(screen.getByText('Kateryna Antonova')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByPlaceholderText(SEARCH_PLACEHOLDER), {
+      target: { value: 'bond' },
+    })
+    expect(screen.getByText('Oleh Bondar')).toBeInTheDocument()
+    expect(screen.queryByText('Kateryna Antonova')).not.toBeInTheDocument()
+    expect(screen.queryByText('Ivan Petrenko')).not.toBeInTheDocument()
+  })
+
+  it('shows the empty state when nothing matches', () => {
+    render(<EmployeeMultiSelect value={[]} onChange={vi.fn()} operators={OPERATORS} />)
+    openDropdown()
+    fireEvent.change(screen.getByPlaceholderText(SEARCH_PLACEHOLDER), {
+      target: { value: 'zzz' },
+    })
+    expect(screen.getByText('pages.training.dialogue.employee.noMatches')).toBeInTheDocument()
+  })
+
+  it('still toggles a filtered row through onChange', () => {
+    const onChange = vi.fn()
+    render(<EmployeeMultiSelect value={[]} onChange={onChange} operators={OPERATORS} />)
+    openDropdown()
+    fireEvent.change(screen.getByPlaceholderText(SEARCH_PLACEHOLDER), {
+      target: { value: 'petrenko' },
+    })
+    fireEvent.click(screen.getByText('Ivan Petrenko'))
+    expect(onChange).toHaveBeenCalledWith([43])
+  })
+})
+
+describe('EmployeeSearchList single-pick mode', () => {
+  it('hides excluded operators and picks by row click', () => {
+    const onSelect = vi.fn()
+    render(<EmployeeSearchList operators={OPERATORS} excludeIds={[41]} onSelect={onSelect} />)
+    expect(screen.queryByText('Kateryna Antonova')).not.toBeInTheDocument()
+
+    fireEvent.change(screen.getByPlaceholderText(SEARCH_PLACEHOLDER), {
+      target: { value: 'oleh' },
+    })
+    expect(screen.queryByText('Ivan Petrenko')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByText('Oleh Bondar'))
+    expect(onSelect).toHaveBeenCalledWith(42)
   })
 })

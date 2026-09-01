@@ -11,6 +11,7 @@ function client(overrides: Partial<IncomingCallClient> = {}): IncomingCallClient
     contact_comment: null,
     contact_source: null,
     contact_type_name: null,
+    contact_category: null,
     recent_interactions: [],
     loans: [],
     ...overrides,
@@ -76,6 +77,85 @@ describe('isCallerUnresolved', () => {
 
   it('is false without an incoming call at all', () => {
     expect(isCallerUnresolved(null)).toBe(false)
+  })
+})
+
+describe('buildIncomingCallLoans — the owner each loan links to', () => {
+  const anchored = client({
+    client_id: 1,
+    client_name: 'Коваленко Іван',
+    loans: [{ loan_id: 10, contract_number: 'L-10', remaining_debt: '100', status: 'active' }],
+  })
+  const other = client({
+    client_id: 2,
+    client_name: 'Мельник Андрій',
+    loans: [{ loan_id: 20, contract_number: 'L-20', remaining_debt: '200', status: 'active' }],
+  })
+  const call = payload({
+    client_id: 1,
+    clients: [anchored, other],
+    loans: [
+      { loan_id: 10, contract_number: 'L-10', remaining_debt: '100', status: 'active' },
+      { loan_id: 20, contract_number: 'L-20', remaining_debt: '200', status: 'active' },
+    ],
+  })
+
+  it('carries the owning client of each loan, not the anchored one', () => {
+    const loans = buildIncomingCallLoans(call)
+
+    // A third-party loan belongs to someone other than the client the popup is
+    // anchored to; without its own id the card cannot link anywhere, which is
+    // how its "View Client" ended up a dead button.
+    expect(loans?.find((l) => l.id === '10')?.clientId).toBe(1)
+    expect(loans?.find((l) => l.id === '20')?.clientId).toBe(2)
+  })
+
+  it('still names an owner when the loan matches no listed client', () => {
+    const orphan = payload({
+      client_id: 7,
+      clients: [],
+      loans: [{ loan_id: 30, contract_number: 'L-30', remaining_debt: '300', status: 'active' }],
+    })
+
+    expect(buildIncomingCallLoans(orphan)?.[0]?.clientId).toBe(7)
+  })
+
+  it('does not file an unmatched loan under the caller', () => {
+    const stray = payload({
+      client_id: 1,
+      clients: [anchored, other],
+      loans: [{ loan_id: 99, contract_number: 'L-99', remaining_debt: '900', status: 'active' }],
+    })
+
+    const [loan] = buildIncomingCallLoans(stray) ?? []
+    // Naming the caller and grouping it as their own debt asserts an ownership
+    // nothing in the payload supports — the same wrong attribution the missing
+    // link avoids, expressed in words instead of a destination.
+    expect(loan?.clientName).toBe('Unknown')
+    expect(loan?.priority).not.toBe('Critical')
+  })
+
+  it('leaves an unmatched loan unlinked when the caller did match someone', () => {
+    const stray = payload({
+      client_id: 1,
+      clients: [anchored, other],
+      loans: [{ loan_id: 99, contract_number: 'L-99', remaining_debt: '900', status: 'active' }],
+    })
+
+    // The payload named candidates and this loan belongs to none of them, so
+    // its owner is unknown. Pointing the card at the anchored client would send
+    // the operator confidently to the wrong person.
+    expect(buildIncomingCallLoans(stray)?.[0]?.clientId).toBeNull()
+  })
+
+  it('leaves the id absent when nothing identifies the caller', () => {
+    const unknown = payload({
+      clients: [],
+      loans: [{ loan_id: 40, contract_number: 'L-40', remaining_debt: '400', status: 'active' }],
+    })
+
+    // The card must render without a link rather than point at nobody.
+    expect(buildIncomingCallLoans(unknown)?.[0]?.clientId).toBeNull()
   })
 })
 

@@ -16,28 +16,53 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/DropdownMenu'
 import {
+  aiAssistantKeys,
   useAssistantConversation,
+  useExpertCapability,
   useMarkCitation,
   useSendAssistantMessage,
   useSendFeedback,
 } from '@/features/aiAssistant/hooks'
 import {
   AssistantChatStreamError,
+  SOFT_DENIED_REASON_CODES,
   type AssistantCitationVerdict,
+  type AssistantExpertCapability,
   type AssistantFeedbackComprehension,
   type AssistantFeedbackRating,
 } from '@/features/aiAssistant/api'
 import { normalizeCitations } from '@/features/aiAssistant/sse'
-import type { AssistantCitation, AssistantSources } from '@/features/aiAssistant/sse'
+import type {
+  AssistantCitation,
+  AssistantExpertUsage,
+  AssistantSources,
+} from '@/features/aiAssistant/sse'
+import { useQueryClient } from '@tanstack/react-query'
 import {
+  ATTACHMENT_ACCEPT,
   blobToBase64,
-  extractImageFiles,
+  extractFileEntries,
+  formatAttachmentSize,
+  MAX_ATTACHMENT_BYTES,
   MAX_ATTACHMENTS,
   toChatAttachmentPayload,
-  validateImageFile,
+  validateAttachmentFile,
   type AttachmentType,
   type PendingAttachment,
 } from '@/features/aiAssistant/attachments'
+import {
+  buildContextualMessage,
+  contextChipLabel,
+  ONEX_ASK_SUMMARY_PROMPT,
+  stripOnexContextBlock,
+  type OnexPageContext,
+} from '@/features/onexEmbed/embedContext'
+import {
+  useIsOnexDockEmbed,
+  useOnexAsk,
+  useOnexDockReady,
+  useOnexPageContext,
+} from '@/features/onexEmbed/hooks'
 import { useServerDictation } from '@/features/aiAssistant/useServerDictation'
 import {
   useVoiceMessageRecorder,
@@ -53,9 +78,15 @@ import {
   type AssistantVoiceMaxDuration,
   type AssistantVoiceSilenceTimeout,
 } from '@/stores/aiAssistantStore'
-import type { AssistantMode } from '@/features/aiAssistant/api'
+import type { AssistantConversationDetail, AssistantMode } from '@/features/aiAssistant/api'
 import { isAxiosError } from 'axios'
+import { parseConversationParam, writeConversationParam } from './conversationUrl'
+import { ANSWER_POLL_INTERVAL_MS, ANSWER_POLL_MAX_MS } from './answerPolling'
 import { ConversationSidebar } from './ConversationSidebar'
+import { ContextUsageRing } from './ContextUsageRing'
+import { extractContextUsage, type ContextUsageSnapshot } from './contextUsage'
+import { SlashCommandMenu } from './SlashCommandMenu'
+import { exactSlashCommand, matchSlashCommands, type SlashCommand } from './slashCommands'
 import { getDockDesktopBoxClasses, getDockRightOffset } from './dockGeometry'
 import { MarkdownMessage, type MarkdownCitation } from './MarkdownMessage'
 import {
@@ -81,6 +112,66 @@ const VOICE_SILENCE_OPTIONS: AssistantVoiceSilenceTimeout[] = [1.5, 2, 3]
 /** Max-recording-length choices (seconds) offered in voice settings. */
 const VOICE_MAX_DURATION_OPTIONS: AssistantVoiceMaxDuration[] = [30, 60, 120]
 
+/**
+ * Короткое имя экспертной модели для меню и бейджа («Sonnet», «Opus»).
+ * Незнакомая модель показывается своим идентификатором: список приходит с
+ * бэкенда, и новая модель должна появляться в меню без релиза фронта.
+ */
+const EXPERT_MODEL_LABELS: Record<string, string> = {
+  'claude-sonnet-5': 'Sonnet',
+  'claude-opus-5': 'Opus',
+}
+
+/** Однострочная подсказка под моделью — только для известных моделей. */
+const EXPERT_MODEL_HINT_KEYS: Record<string, string> = {
+  'claude-sonnet-5': 'pages.aiAssistant.expertSonnetHint',
+  'claude-opus-5': 'pages.aiAssistant.expertOpusHint',
+}
+
+function expertModelLabel(model: string): string {
+  return EXPERT_MODEL_LABELS[model] ?? model
+}
+
+/**
+ * Деньги в бейдже: «$0.05». Ход дешевле цента показывается с четырьмя знаками
+ * («$0.0007»), иначе округление до копеек превратило бы его в «$0.00» — а «ход
+ * стоил ноль» и «ход стоил меньше цента» это разные утверждения.
+ */
+function formatUsd(amount: number): string {
+  if (amount > 0 && amount < 0.01) return `$${amount.toFixed(4)}`
+  return `$${amount.toFixed(2)}`
+}
+
+/**
+ * Подпись с токенами для тултипа ценника.
+ *
+ * Вход считается ВМЕСТЕ с кэшем: у Claude повторный контекст берётся из кэша, и
+ * `input_tokens` показывает только «свежую» часть. На живом ходе 27.08 это были
+ * 4 токена при реальном входе 32 442 из кэша — подпись «4 токена на вхід»
+ * читалась бы как поломка счётчика. Когда кэш участвовал, его объём называем
+ * отдельно, чтобы видно было, откуда взялась большая цифра.
+ *
+ * Нет ни входа, ни выхода — тултипа нет вовсе (пустая подсказка бесполезна).
+ */
+function expertTokensTitle(
+  usage: AssistantExpertUsage,
+  t: (key: string, options?: Record<string, unknown>) => string
+): string | undefined {
+  if (usage.inputTokens == null || usage.outputTokens == null) return undefined
+  const cached = usage.cacheReadTokens ?? 0
+  const input = usage.inputTokens + cached
+  return cached > 0
+    ? t('pages.aiAssistant.expertTokensCached', {
+        input,
+        cached,
+        output: usage.outputTokens,
+      })
+    : t('pages.aiAssistant.expertTokens', {
+        input,
+        output: usage.outputTokens,
+      })
+}
+
 const COMPOSER_DROPDOWN_TRIGGER_CLASS =
   'text-foreground inline-flex h-9 min-h-9 w-full min-w-0 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-border bg-card px-3 text-xs font-light shadow-none sm:h-8 sm:min-h-0 sm:w-32 sm:flex-none'
 
@@ -98,6 +189,16 @@ type LocalAttachment = {
   type: AttachmentType
   mime: string
   url: string
+  /** File name — the whole card for a document, absent for a voice note. */
+  name?: string
+  sizeBytes?: number
+}
+
+/** A picked file being encoded into base64 — a placeholder card in the composer. */
+type PreparingAttachment = {
+  id: string
+  name: string
+  sizeBytes: number
 }
 
 type ChatMessage = {
@@ -133,6 +234,40 @@ type ChatMessage = {
   reasoningStartedAt?: number
   /** Frozen reasoning duration (ms) once the turn settles. */
   reasoningElapsedMs?: number
+  /**
+   * Экспертный ход: модель, которую ждём. Живёт только пока ход идёт — питает
+   * подпись со своим секундным тиком («Sonnet аналізує… 24 с»), чтобы 30–40
+   * секунд внешнего ответа не выглядели зависанием.
+   */
+  expertWaitingModel?: string
+  /** Расход экспертного хода (фрейм `result`) — бейдж «Sonnet · $0.05». */
+  expert?: AssistantExpertUsage
+}
+
+/**
+ * Подпись ожидания экспертного хода с СОБСТВЕННЫМ секундным тиком.
+ *
+ * Обычный ход перерисовывается на каждой дельте, и таймеру хватает чужих
+ * рендеров; экспертный ход молчит десятки секунд — без своего интервала
+ * счётчик замер бы на «0 с» и читался бы как зависание.
+ */
+function ExpertWaitingLabel({ model }: { model: string }) {
+  const { t } = useTranslation('common')
+  const [seconds, setSeconds] = useState(0)
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setSeconds((value) => value + 1), 1000)
+    return () => window.clearInterval(timer)
+  }, [])
+
+  return (
+    <span
+      data-testid="assistant-expert-waiting"
+      className="text-muted-foreground ml-1.5 text-xs font-light"
+    >
+      {t('pages.aiAssistant.expertWaiting', { model: expertModelLabel(model), seconds })}
+    </span>
+  )
 }
 
 function joinDictation(prev: string, text: string): string {
@@ -194,9 +329,17 @@ function messageHasReasoning(item: ChatMessage): boolean {
  * `messageHasReasoning`: клик по сноске `[[N]]` в fast-ходе без рассуждения тоже
  * должен открывать панель (там будут только «Источники»). Гейтит выбор активного
  * сообщения панели, но НЕ бабл-чип «Ход рассуждения» (тот остаётся по reasoning).
+ *
+ * `showReasoning` — настройка оператора «показывать раздумья»: когда она снята,
+ * само рассуждение перестаёт быть поводом открывать панель, а шаги оркестратора и
+ * источники — остаются (по ним проверяют факты ответа, это не раздумья).
  */
-function messageHasActivity(item: ChatMessage): boolean {
-  return messageHasReasoning(item) || Boolean(item.citations && item.citations.length > 0)
+function messageHasActivity(item: ChatMessage, showReasoning: boolean): boolean {
+  if (showReasoning && messageHasReasoning(item)) return true
+  return (
+    Boolean(item.toolSteps && item.toolSteps.length > 0) ||
+    Boolean(item.citations && item.citations.length > 0)
+  )
 }
 
 /**
@@ -291,6 +434,53 @@ function resolveSpeechLang(language?: string): string {
   return 'en-US'
 }
 
+/** Icon for a non-image attachment: a sheet for tabular data, a page otherwise. */
+function AttachmentIcon({ mime }: { mime: string }) {
+  const isSpreadsheet =
+    mime === 'text/csv' ||
+    mime === 'application/vnd.ms-excel' ||
+    mime === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  return isSpreadsheet ? (
+    <Icons.Csv02 size={20} strokeWidth={1.5} className="text-primary-600 shrink-0" />
+  ) : (
+    <Icons.File size={20} strokeWidth={1.5} className="text-primary-600 shrink-0" />
+  )
+}
+
+/**
+ * OneX dock: the page the operator is looking at in the main pane, shown above
+ * the composer so it is obvious *before* sending what the assistant will be
+ * told about. ✕ drops it; sending a message consumes it.
+ */
+function OnexContextChip({ context, onClear }: { context: OnexPageContext; onClear: () => void }) {
+  const { t } = useTranslation('common')
+  const label =
+    contextChipLabel(context) ??
+    (context.clientId !== null
+      ? t('pages.aiAssistant.onexContextClientFallback', { id: context.clientId })
+      : t('pages.aiAssistant.onexContextPageFallback'))
+
+  return (
+    <div
+      className="border-primary-200 bg-primary-50/60 text-foreground mb-2 flex items-center gap-2 rounded-xl border border-dashed px-2.5 py-1.5 text-xs font-light"
+      data-testid="onex-context-chip"
+    >
+      <Icons.Link01 size={14} strokeWidth={1.5} className="text-primary-600 shrink-0" />
+      <span className="min-w-0 flex-1 truncate" title={context.url ?? undefined}>
+        {t('pages.aiAssistant.onexContextChip', { label })}
+      </span>
+      <button
+        type="button"
+        aria-label={t('pages.aiAssistant.onexContextClear')}
+        onClick={onClear}
+        className="text-muted-foreground hover:text-foreground hover:bg-muted flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors"
+      >
+        <Icons.Cancel01 size={12} strokeWidth={2} />
+      </button>
+    </div>
+  )
+}
+
 function AssistFilterDropdown({ ariaLabel, value, options, onChange }: AssistDropdownProps) {
   const label = useMemo(
     () => options.find((o) => o.value === value)?.label ?? options[0]?.label ?? '',
@@ -323,6 +513,17 @@ function AssistFilterDropdown({ ariaLabel, value, options, onChange }: AssistDro
 type ModeDropdownProps = {
   value: AssistantMode
   onChange: (mode: AssistantMode) => void
+  /** Настройка «показывать раздумья» — живёт рядом с выбором режима. */
+  showReasoning: boolean
+  onShowReasoningChange: (show: boolean) => void
+  /**
+   * Экспертный режим этого сотрудника. Пункт «Експерт (Claude)» рисуется только
+   * когда режим включён И разрешён: у оператора его в меню нет вовсе.
+   */
+  expert: AssistantExpertCapability
+  /** Выбранная экспертная модель или `null` — идёт обычный ход (fast/thinking). */
+  expertModel: string | null
+  onSelectExpert: (model: string) => void
 }
 
 const MODE_OPTIONS: {
@@ -356,13 +557,39 @@ const MODE_OPTIONS: {
  *
  * Implemented as a small controlled popover (not Radix) so it opens on a plain
  * click and renders inline — matching the settings popover in this component.
+ *
+ * Под списком режимов — тумблер «Показывать раздумья»: раздумья приходят только
+ * в режиме «Думает», поэтому настройка их видимости стоит там же, где режим.
  */
-function ModeDropdown({ value, onChange }: ModeDropdownProps) {
+function ModeDropdown({
+  value,
+  onChange,
+  showReasoning,
+  onShowReasoningChange,
+  expert,
+  expertModel,
+  onSelectExpert,
+}: ModeDropdownProps) {
   const { t } = useTranslation('common')
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const isThinking = value === 'thinking'
-  const ActiveIcon = isThinking ? Icons.AiBrain03 : Icons.Flash
+  const isExpert = expertModel != null
+  /**
+   * Отказ, при котором пункт остаётся на виду, но выбрать нечего: дневной
+   * бюджет исчерпан либо учёт трат недоступен. Прятать здесь нельзя — у
+   * руководителя пункт молча исчез бы вместо честного «ліміт вичерпано».
+   * Отказ по роли (и выключенный режим) прячется, как и раньше.
+   */
+  const isSoftDenied =
+    !expert.allowed &&
+    expert.reasonCode != null &&
+    SOFT_DENIED_REASON_CODES.includes(expert.reasonCode)
+  // Пункт экспертного режима существует только с разрешения бэкенда и только
+  // при непустом списке моделей — выбирать «Експерт» без модели нечего.
+  const showExpertSection =
+    expert.enabled && (expert.allowed || isSoftDenied) && expert.models.length > 0
+  const ActiveIcon = isExpert ? Icons.Sparkles : isThinking ? Icons.AiBrain03 : Icons.Flash
 
   useEffect(() => {
     if (!open) return
@@ -397,12 +624,14 @@ function ModeDropdown({ value, onChange }: ModeDropdownProps) {
         <ActiveIcon
           size={15}
           strokeWidth={1.5}
-          className={isThinking ? 'text-primary-500' : 'text-warning-500'}
+          className={isExpert || isThinking ? 'text-primary-500' : 'text-warning-500'}
         />
         <span className="min-w-0 truncate">
-          {isThinking
-            ? t('pages.aiAssistant.modeThinkingShort')
-            : t('pages.aiAssistant.modeFastShort')}
+          {isExpert
+            ? t('pages.aiAssistant.expertTrigger', { model: expertModelLabel(expertModel) })
+            : isThinking
+              ? t('pages.aiAssistant.modeThinkingShort')
+              : t('pages.aiAssistant.modeFastShort')}
         </span>
         <Icons.ArrowDown size={13} strokeWidth={1.5} className="text-muted-foreground shrink-0" />
       </button>
@@ -417,7 +646,7 @@ function ModeDropdown({ value, onChange }: ModeDropdownProps) {
               key={mode}
               type="button"
               role="menuitemradio"
-              aria-checked={value === mode}
+              aria-checked={!isExpert && value === mode}
               onClick={() => {
                 onChange(mode)
                 setOpen(false)
@@ -428,7 +657,7 @@ function ModeDropdown({ value, onChange }: ModeDropdownProps) {
               <span className="min-w-0 flex-1">
                 <span className="text-foreground flex items-center gap-1.5 text-sm font-medium">
                   {t(labelKey)}
-                  {value === mode && (
+                  {!isExpert && value === mode && (
                     <Icons.Checkmark
                       size={14}
                       strokeWidth={2}
@@ -442,6 +671,126 @@ function ModeDropdown({ value, onChange }: ModeDropdownProps) {
               </span>
             </button>
           ))}
+
+          {/* Экспертный режим: вопрос уходит во внешний Claude. Секции нет
+              вовсе, если бэкенд не подтвердил доступ — у оператора этот пункт
+              не должен даже мелькать. */}
+          {showExpertSection && (
+            <div
+              className="border-border/70 mt-1 border-t pt-1"
+              data-testid="assistant-expert-section"
+            >
+              <div className="flex items-center gap-1.5 px-2.5 pt-1 pb-0.5">
+                <Icons.Sparkles size={14} strokeWidth={1.5} className="text-primary-500 shrink-0" />
+                <span className="text-foreground text-[11px] font-semibold tracking-tight">
+                  {t('pages.aiAssistant.expertTitle')}
+                </span>
+              </div>
+
+              {expert.models.map((model) => {
+                const hintKey = EXPERT_MODEL_HINT_KEYS[model]
+                return (
+                  <button
+                    key={model}
+                    type="button"
+                    role="menuitemradio"
+                    aria-checked={expertModel === model}
+                    // Бюджет исчерпан / учёт трат недоступен: модель видно, но
+                    // выбрать нельзя — ход всё равно упёрся бы в 429.
+                    disabled={isSoftDenied}
+                    data-testid={`assistant-expert-model-${model}`}
+                    onClick={() => {
+                      onSelectExpert(model)
+                      setOpen(false)
+                    }}
+                    className={cn(
+                      'flex w-full items-start gap-2.5 rounded-lg px-2.5 py-2 text-left transition-colors',
+                      isSoftDenied ? 'cursor-not-allowed opacity-50' : 'hover:bg-muted/70'
+                    )}
+                  >
+                    <Icons.Sparkles
+                      size={16}
+                      strokeWidth={1.5}
+                      className="text-primary-500 mt-0.5 shrink-0"
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="text-foreground flex items-center gap-1.5 text-sm font-medium">
+                        {expertModelLabel(model)}
+                        {expertModel === model && (
+                          <Icons.Checkmark
+                            size={14}
+                            strokeWidth={2}
+                            className="text-primary-500 shrink-0"
+                          />
+                        )}
+                      </span>
+                      {hintKey && (
+                        <span className="text-muted-foreground mt-0.5 block text-[11px] leading-snug font-light">
+                          {t(hintKey)}
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                )
+              })}
+
+              {/* Куда уходит запрос и сколько бюджета осталось — рядом с
+                  выбором, а не спрятано в настройках. */}
+              <div className="text-muted-foreground space-y-1 px-2.5 pt-1 pb-1.5 text-[11px] leading-snug font-light">
+                <span className="flex items-start gap-1.5" data-testid="assistant-expert-external">
+                  <Icons.Link01 size={13} strokeWidth={1.5} className="mt-px shrink-0" />
+                  {t('pages.aiAssistant.expertExternalNotice')}
+                </span>
+                {expert.dailyLimitUsd != null && expert.spentTodayUsd != null && (
+                  <span className="block" data-testid="assistant-expert-budget">
+                    {t('pages.aiAssistant.expertBudget', {
+                      spent: formatUsd(expert.spentTodayUsd),
+                      limit: formatUsd(expert.dailyLimitUsd),
+                    })}
+                  </span>
+                )}
+                {/* Почему выбрать нельзя — словами бэкенда (украинский текст
+                    уже написан для человека и несёт суммы). */}
+                {isSoftDenied && expert.reason && (
+                  <span
+                    className="text-warning-700 block font-medium"
+                    data-testid="assistant-expert-reason"
+                  >
+                    {expert.reason}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div
+            className="border-border/70 mt-1 flex items-start gap-2.5 border-t px-2.5 pt-2.5 pb-1.5"
+            data-testid="assistant-show-reasoning-row"
+          >
+            <Icons.AiBrain03
+              size={16}
+              strokeWidth={1.5}
+              className="text-muted-foreground mt-0.5 shrink-0"
+            />
+            <span className="min-w-0 flex-1">
+              <span className="text-foreground block text-sm font-medium">
+                {t('pages.aiAssistant.showReasoning')}
+              </span>
+              <span className="text-muted-foreground mt-0.5 block text-[11px] leading-snug font-light">
+                {/* На fast раздумий не бывает — честно говорим об этом, но тумблер
+                    оставляем живым: оператор настраивает его заранее. */}
+                {isThinking
+                  ? t('pages.aiAssistant.showReasoningHint')
+                  : t('pages.aiAssistant.showReasoningFastHint')}
+              </span>
+            </span>
+            <ToggleSwitch
+              checked={showReasoning}
+              onChange={onShowReasoningChange}
+              ariaLabel={t('pages.aiAssistant.showReasoning')}
+              className="mt-0.5 shrink-0"
+            />
+          </div>
         </div>
       )}
     </div>
@@ -589,6 +938,15 @@ function ComposerHubMenu({
 export function AiAssistantBetaPage() {
   const { t, i18n } = useTranslation('common')
   const { data: aiSettings } = useAiAssistantSettings()
+  // OneX dock (`?embed=dock`): the page runs inside the operators' browser as a
+  // ~420px sidebar. See features/onexEmbed/embedContext.ts for the contract.
+  const isEmbedded = useIsOnexDockEmbed()
+  const {
+    context: onexContext,
+    clearContext: clearOnexContext,
+    consumeContext: consumeOnexContext,
+  } = useOnexPageContext(isEmbedded)
+  useOnexDockReady(isEmbedded)
   const isOpenSideBar = useSidebarStore((state) => state.isOpenSideBar)
   const userId = useAuthStore((state) => state.user?.id ?? null)
   const storedConversationId = useAiAssistantStore((state) => state.conversationIdFor(userId))
@@ -601,6 +959,17 @@ export function AiAssistantBetaPage() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([])
   const [isAssistantResponding, setIsAssistantResponding] = useState(false)
   const [conversationId, setConversationId] = useState<number | null>(null)
+  // Диалог открыт с незавершённым ходом (последнее сообщение — вопрос без
+  // ответа): ответ дописывается на сервере, страница ждёт его опросом.
+  const [awaitingServerAnswer, setAwaitingServerAnswer] = useState(false)
+  // Заполненность контекстного окна мозга по последнему ходу (usage из
+  // терминального `done`-кадра). Кружок у композера — см. ContextUsageRing.
+  const [contextUsage, setContextUsage] = useState<ContextUsageSnapshot | null>(null)
+  // Меню слеш-команд: индекс подсвеченной строки и «закрыто по Esc» (сбрасывается
+  // ЛЮБЫМ ручным вводом в onChange, а не эффектом по message — программная
+  // подстановка команды не должна тут же переоткрывать меню).
+  const [slashActiveIndex, setSlashActiveIndex] = useState(0)
+  const [slashDismissed, setSlashDismissed] = useState(false)
   const [feedbackByMessage, setFeedbackByMessage] = useState<Record<number, MessageFeedback>>({})
   // Пометки источников «верно/неверно» (Слой 5), keyed by серверный message_id →
   // (номер сноски → вердикт). Оптимистичны: применяются сразу, откатываются при
@@ -630,11 +999,20 @@ export function AiAssistantBetaPage() {
   // An explicit click in the history panel must load the conversation even
   // when "remember conversation context" is off.
   const [isExplicitSelection, setIsExplicitSelection] = useState(false)
-  const [isMobileOrTablet, setIsMobileOrTablet] = useState(() => window.innerWidth < 1024)
+  const [isNarrowViewport, setIsNarrowViewport] = useState(() => window.innerWidth < 1024)
+  /**
+   * Compact layout: every desktop-only surface (inline settings popover, the
+   * reasoning panel reserving its own column, the fixed dock's rail offsets)
+   * falls back to its mobile form. The OneX dock is always compact — it has no
+   * dashboard rail and no history panel to lay out against, whatever width the
+   * host window happens to have.
+   */
+  const isMobileOrTablet = isNarrowViewport || isEmbedded
   const [voiceStatus, setVoiceStatus] = useState<'idle' | 'listening'>('idle')
   const [interimTranscript, setInterimTranscript] = useState('')
   const [dictationDraft, setDictationDraft] = useState('')
-  const [pendingImages, setPendingImages] = useState<PendingAttachment[]>([])
+  const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([])
+  const [preparingAttachments, setPreparingAttachments] = useState<PreparingAttachment[]>([])
   const [showScrollToLatest, setShowScrollToLatest] = useState(false)
   const [dockHeight, setDockHeight] = useState(320)
   const settingsPanelRef = useRef<HTMLDivElement>(null)
@@ -645,25 +1023,89 @@ export function AiAssistantBetaPage() {
   const scrollContainerRef = useRef<HTMLElement | null>(null)
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const imageInputRef = useRef<HTMLInputElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const dictationGhostRef = useRef<HTMLDivElement>(null)
   const lastDictationFinalRef = useRef('')
   const longPressTimerRef = useRef<number | null>(null)
   const longPressFiredRef = useRef(false)
   /** Every object URL minted for attachments — revoked on reset/unmount. */
   const attachmentUrlsRef = useRef<string[]>([])
+  /**
+   * How many attachments the next message already carries, staged and still
+   * encoding. Held in a ref, not derived from state, so two picks in the same
+   * tick cannot both see an empty composer and together overflow the cap.
+   */
+  const attachmentCountRef = useRef(0)
   const responseTokenRef = useRef(0)
+  /**
+   * Synchronous twin of `isAssistantResponding`. The state flag is a render
+   * value, so two sends dispatched in the same tick — a double-clicked quick
+   * action, or a host firing `onex:ask` twice — both read `false` and both
+   * start a turn on the same conversation. The ref flips before the first
+   * `await`, so the second one bounces off the same guard.
+   */
+  const respondingRef = useRef(false)
   const hasConversation = chatMessages.length > 0
 
   const { mutateAsync: sendChat } = useSendAssistantMessage()
   const { mutate: mutateFeedback } = useSendFeedback()
   const { mutate: mutateMarkCitation } = useMarkCitation()
+  const queryClient = useQueryClient()
+  const expertCapability = useExpertCapability()
+  /**
+   * Экспертная модель, с которой РЕАЛЬНО уйдёт следующий ход.
+   *
+   * Право на режим принадлежит бэкенду, а не localStorage: сохранённый выбор
+   * действует, только пока capabilities подтверждают доступ и знают эту модель.
+   * Иначе (роль сняли, режим выключили, модель убрали из списка) ход тихо
+   * уходит обычным путём — вместо 403 на каждое сообщение.
+   */
+  const activeExpertModel = useMemo(() => {
+    const chosen = assistantSettings.expertModel
+    if (chosen == null) return null
+    const available =
+      expertCapability.enabled &&
+      expertCapability.allowed &&
+      expertCapability.models.includes(chosen)
+    return available ? chosen : null
+  }, [
+    assistantSettings.expertModel,
+    expertCapability.allowed,
+    expertCapability.enabled,
+    expertCapability.models,
+  ])
 
   // Re-hydrate the dialog persisted for this user: history lives on the
   // backend, the store only keeps the conversation pointer. Hydration is
   // skipped as soon as the user starts a conversation in this mount.
   // Switching a conversation from the history panel resets the local chat
   // state and re-arms this flag, so the same mechanism loads the new dialog.
+  // Deep-link: ?conversation=<id> в адресе — явный выбор диалога, как клик в
+  // истории. Читается один раз при появлении userId (до этого гидратация всё
+  // равно невозможна) и перекрывает сохранённый указатель. Явность важна:
+  // ссылка обязана открыть диалог даже при выключенном «помнить контекст».
+  // RBAC не обходится — чужой id бэкенд ответит 404, указатель и параметр
+  // будут сброшены эффектом ниже. В OneX-доке адрес не пользовательский —
+  // там deep-link не читается и не пишется.
+  const urlConversationConsumedRef = useRef(false)
+  useEffect(() => {
+    if (urlConversationConsumedRef.current || isEmbedded || userId == null) return
+    urlConversationConsumedRef.current = true
+    const fromUrl = parseConversationParam(window.location.search)
+    if (fromUrl == null) return
+    setIsExplicitSelection(true)
+    setActiveConversation(userId, fromUrl)
+  }, [isEmbedded, setActiveConversation, userId])
+
+  // Обратная сторона deep-link: активный диалог всегда отражён в адресе, так
+  // что «поделиться разговором» = скопировать URL из адресной строки. Пишем
+  // только ненулевой id (null на маунте — ещё не гидратировано, затирать
+  // параметр рано); снятие параметра — явное, в «Новий чат» и при 404.
+  useEffect(() => {
+    if (isEmbedded || conversationId == null) return
+    writeConversationParam(conversationId)
+  }, [conversationId, isEmbedded])
+
   const shouldHydrateConversation =
     storedConversationId != null &&
     conversationId == null &&
@@ -681,7 +1123,7 @@ export function AiAssistantBetaPage() {
   }, [assistantSettings, saveSettings, userId])
 
   useEffect(() => {
-    const onResize = () => setIsMobileOrTablet(window.innerWidth < 1024)
+    const onResize = () => setIsNarrowViewport(window.innerWidth < 1024)
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
   }, [])
@@ -880,8 +1322,8 @@ export function AiAssistantBetaPage() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [recorderStatus, cancelVoiceMessage])
 
-  const clearPendingImages = useCallback(() => {
-    setPendingImages((current) => {
+  const clearPendingAttachments = useCallback(() => {
+    setPendingAttachments((current) => {
       // Object URLs stay alive while a sent message still shows them in the
       // feed; pending chips that never left the composer are revoked here.
       current.forEach((item) => {
@@ -892,7 +1334,14 @@ export function AiAssistantBetaPage() {
       })
       return current.length > 0 ? [] : current
     })
+    setPreparingAttachments((current) => (current.length > 0 ? [] : current))
   }, [])
+
+  // Reconcile the cap counter with what is actually staged: `addFiles` bumps it
+  // synchronously when it admits files, removals only land through state.
+  useEffect(() => {
+    attachmentCountRef.current = pendingAttachments.length + preparingAttachments.length
+  }, [pendingAttachments.length, preparingAttachments.length])
 
   useEffect(() => {
     const recordingActive =
@@ -1004,11 +1453,8 @@ export function AiAssistantBetaPage() {
     })
   }, [])
 
-  useEffect(() => {
-    const detail = conversationQuery.data
-    if (!detail || !shouldHydrateConversation) return
-    setConversationId(detail.id)
-    setChatMessages(
+  const mapServerMessages = useCallback(
+    (detail: AssistantConversationDetail): ChatMessage[] =>
       detail.messages.map((item) => {
         const isAssistant = item.role === 'assistant'
         // Слой 5: источники приходят сырым конвертом `{items:[...]}` (как и во
@@ -1021,7 +1467,12 @@ export function AiAssistantBetaPage() {
         return {
           id: `server-${item.id}`,
           role: item.role,
-          content: item.content,
+          // A turn sent from the OneX dock carries a machine-facing page-context
+          // envelope alongside what the operator typed, and the backend stores
+          // `message` verbatim. Unconditional (not gated on the dock): the
+          // conversation is just as likely to be reopened in a plain CRM tab,
+          // and that surface must not regress into a wall of machine text.
+          content: isAssistant ? item.content : stripOnexContextBlock(item.content),
           serverMessageId: isAssistant ? item.id : undefined,
           // Слой 5: гидратируем раздумья и источники серверного сообщения, чтобы
           // панель «Активность» и факт-сноски `[[N]]` работали в загруженном из
@@ -1031,11 +1482,74 @@ export function AiAssistantBetaPage() {
           reasoning: isAssistant ? item.reasoning : undefined,
           citations: citations.length > 0 ? citations : undefined,
         }
-      })
+      }),
+    []
+  )
+
+  useEffect(() => {
+    const detail = conversationQuery.data
+    if (!detail || !shouldHydrateConversation) return
+    setConversationId(detail.id)
+    const mapped = mapServerMessages(detail)
+    const last = detail.messages[detail.messages.length - 1]
+    // Последний ход — вопрос без ответа: ответ ещё дописывается на сервере
+    // (обрыв соединения при обновлении страницы). Показываем «печатает…» и
+    // ждём его опросом, а не оставляем оператора с висящим вопросом.
+    const pending = last?.role === 'user'
+    setChatMessages(
+      pending
+        ? [
+            ...mapped,
+            {
+              id: 'pending-server-answer',
+              role: 'assistant',
+              content: '',
+              isLoading: true,
+              loadingLabel: t('pages.aiAssistant.answerInProgress'),
+            },
+          ]
+        : mapped
     )
+    setAwaitingServerAnswer(pending)
     setIsExplicitSelection(false)
     window.setTimeout(() => scrollToConversationBottom('auto'), 0)
-  }, [conversationQuery.data, shouldHydrateConversation, scrollToConversationBottom])
+  }, [
+    conversationQuery.data,
+    shouldHydrateConversation,
+    scrollToConversationBottom,
+    mapServerMessages,
+    t,
+  ])
+
+  // Опрос диалога с незавершённым ходом: refetch работает и у выключенного
+  // запроса. Ответ появился — подменяем «печатает…» настоящими сообщениями;
+  // потолок ожидания — дедлайн thinking-хода с запасом.
+  useEffect(() => {
+    if (!awaitingServerAnswer) return
+    const startedAt = Date.now()
+    const timer = window.setInterval(() => {
+      if (Date.now() - startedAt > ANSWER_POLL_MAX_MS) {
+        setAwaitingServerAnswer(false)
+        setChatMessages((current) => current.filter((m) => m.id !== 'pending-server-answer'))
+        return
+      }
+      void conversationQuery.refetch()
+    }, ANSWER_POLL_INTERVAL_MS)
+    return () => window.clearInterval(timer)
+    // refetch стабилен на время жизни запроса; сам объект запроса меняется
+    // каждый рендер и не должен перезапускать таймер.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [awaitingServerAnswer])
+
+  useEffect(() => {
+    if (!awaitingServerAnswer) return
+    const detail = conversationQuery.data
+    const last = detail?.messages[detail.messages.length - 1]
+    if (!detail || last?.role !== 'assistant') return
+    setChatMessages(mapServerMessages(detail))
+    setAwaitingServerAnswer(false)
+    window.setTimeout(() => scrollToConversationBottom('auto'), 0)
+  }, [awaitingServerAnswer, conversationQuery.data, mapServerMessages, scrollToConversationBottom])
 
   useEffect(() => {
     if (!conversationQuery.isError) return
@@ -1043,8 +1557,11 @@ export function AiAssistantBetaPage() {
     // Transient errors (network, 5xx) keep it so a later visit can retry.
     if (isAxiosError(conversationQuery.error) && conversationQuery.error.response?.status === 404) {
       clearStoredConversation()
+      // Мёртвый (или чужой) указатель мог прийти из deep-link — убираем и его,
+      // чтобы F5 не долбил бэкенд тем же 404.
+      if (!isEmbedded) writeConversationParam(null)
     }
-  }, [conversationQuery.isError, conversationQuery.error, clearStoredConversation])
+  }, [conversationQuery.isError, conversationQuery.error, clearStoredConversation, isEmbedded])
 
   const updateScrollToLatestVisibility = useCallback(() => {
     const scrollContainer = scrollContainerRef.current
@@ -1104,16 +1621,19 @@ export function AiAssistantBetaPage() {
     cancelVoiceMessage()
     stopTts()
     setDictationDraft('')
-    clearPendingImages()
+    clearPendingAttachments()
     responseTokenRef.current += 1
     setChatMessages((current) => (current.length > 0 ? [] : current))
     setConversationId(null)
+    setContextUsage(null)
+    setAwaitingServerAnswer(false)
     setFeedbackByMessage({})
     setCitationMarksByMessage((current) => (Object.keys(current).length > 0 ? {} : current))
     setReasoningOpenByMessage((current) => (Object.keys(current).length > 0 ? {} : current))
     setFocusedCitation(null)
+    respondingRef.current = false
     setIsAssistantResponding(false)
-  }, [stopVoiceRecognition, cancelDictation, cancelVoiceMessage, stopTts, clearPendingImages])
+  }, [stopVoiceRecognition, cancelDictation, cancelVoiceMessage, stopTts, clearPendingAttachments])
 
   const clientOptions = useMemo(
     () => [
@@ -1175,17 +1695,28 @@ export function AiAssistantBetaPage() {
 
           {/* Reasoning mode now lives in the dropdown next to the composer
               (single source of truth); the settings panel only points to it. */}
-          <div className="bg-muted/60 border-border/70 mt-2.5 flex items-center gap-2 rounded-lg border px-2.5 py-2">
-            {assistantSettings.mode === 'thinking' ? (
+          <div
+            className="bg-muted/60 border-border/70 mt-2.5 flex items-center gap-2 rounded-lg border px-2.5 py-2"
+            data-testid="assistant-settings-mode-summary"
+          >
+            {activeExpertModel ? (
+              <Icons.Sparkles size={14} strokeWidth={1.5} className="text-primary-500 shrink-0" />
+            ) : assistantSettings.mode === 'thinking' ? (
               <Icons.AiBrain03 size={14} strokeWidth={1.5} className="text-primary-500 shrink-0" />
             ) : (
               <Icons.Flash size={14} strokeWidth={1.5} className="text-warning-500 shrink-0" />
             )}
             <span className="text-foreground min-w-0 flex-1 text-[11px] leading-snug font-light">
               {t('pages.aiAssistant.mode')}:{' '}
-              {assistantSettings.mode === 'thinking'
-                ? t('pages.aiAssistant.modeThinkingShort')
-                : t('pages.aiAssistant.modeFastShort')}
+              {/* Экспертный ход идёт не на нашем боксе — сводка обязана
+                  называть его, а не «Швидкий», под которым он уезжает. */}
+              {activeExpertModel
+                ? t('pages.aiAssistant.expertTrigger', {
+                    model: expertModelLabel(activeExpertModel),
+                  })
+                : assistantSettings.mode === 'thinking'
+                  ? t('pages.aiAssistant.modeThinkingShort')
+                  : t('pages.aiAssistant.modeFastShort')}
             </span>
             <span className="text-muted-foreground shrink-0 text-[11px] font-light">
               {t('pages.aiAssistant.modeChangeHint')}
@@ -1413,8 +1944,11 @@ export function AiAssistantBetaPage() {
       resetChatState()
       setIsExplicitSelection(true)
       setActiveConversation(userId, id)
+      // Адрес обновляется сразу по клику, не дожидаясь гидратации: ссылка
+      // должна быть копируемой в момент выбора.
+      if (!isEmbedded) writeConversationParam(id)
     },
-    [conversationId, resetChatState, setActiveConversation, userId]
+    [conversationId, isEmbedded, resetChatState, setActiveConversation, userId]
   )
 
   const handleNewChat = useCallback(() => {
@@ -1423,14 +1957,41 @@ export function AiAssistantBetaPage() {
     setMessage('')
     setIsExplicitSelection(false)
     clearStoredConversation()
-  }, [clearStoredConversation, resetChatState])
+    if (!isEmbedded) writeConversationParam(null)
+  }, [clearStoredConversation, isEmbedded, resetChatState])
+
+  // Меню слеш-команд (как в Claude Code): «/» в начале поля открывает список,
+  // сами команды исполняет мозг — кроме /новий, который чистит диалог локально.
+  const slashItems = slashDismissed ? [] : matchSlashCommands(message)
+  const applySlashCommand = useCallback(
+    (cmd: SlashCommand) => {
+      setSlashDismissed(true)
+      setSlashActiveIndex(0)
+      if (cmd.clientAction === 'newChat') {
+        setMessage('')
+        handleNewChat()
+        return
+      }
+      // Подстановка канона; отправка — вторым Enter (меню уже закрыто).
+      setMessage(cmd.command)
+      textareaRef.current?.focus()
+    },
+    [handleNewChat]
+  )
 
   const submitPrompt = useCallback(
     async (rawPrompt: string, attachments?: PendingAttachment[]) => {
       const prompt = rawPrompt.trim()
+      // Клиентская слеш-команда (/новий) — локальное действие, в мозг не уходит.
+      const clientCommand = exactSlashCommand(prompt)
+      if (clientCommand?.clientAction === 'newChat') {
+        setMessage('')
+        handleNewChat()
+        return
+      }
       const attachmentList = attachments ?? []
       const hasAudio = attachmentList.some((item) => item.type === 'audio')
-      if (isAssistantResponding) return
+      if (isAssistantResponding || respondingRef.current) return
       if (!prompt && !hasAudio) {
         // Backend rule: an empty message is valid only with a voice note;
         // images alone are a 422 — nudge the user instead of failing silently.
@@ -1440,8 +2001,22 @@ export function AiAssistantBetaPage() {
         return
       }
 
+      // OneX dock: the page the operator is looking at rides along as a fenced
+      // block after their own text (the chat contract has no field for host
+      // context; the text leads so the backend's auto-title names the chat after
+      // the question). It is consumed by this one turn — but only once the turn
+      // has actually landed, so a 5xx or a dropped connection does not silently
+      // cost the operator their context.
+      const sentContext = isEmbedded ? onexContext : null
+      const outboundMessage = buildContextualMessage(prompt, sentContext)
+
       setMessage('')
-      setPendingImages((current) => (current.length > 0 ? [] : current))
+      // Only the attachments that went out with this turn leave the composer —
+      // a quick action fired while a file is staged must not discard it.
+      if (attachmentList.length > 0) {
+        const sentIds = new Set(attachmentList.map((item) => item.id))
+        setPendingAttachments((current) => current.filter((item) => !sentIds.has(item.id)))
+      }
       appendChatMessage({
         role: 'user',
         content: prompt,
@@ -1451,18 +2026,28 @@ export function AiAssistantBetaPage() {
                 type: item.type,
                 mime: item.mime,
                 url: item.previewUrl,
+                name: item.name,
+                sizeBytes: item.sizeBytes,
               }))
             : undefined,
       })
+      respondingRef.current = true
       setIsAssistantResponding(true)
 
-      const isThinking = assistantSettings.mode === 'thinking'
+      const expertModel = activeExpertModel
+      const isExpertTurn = expertModel != null
+      // Экспертный ход идёт во внешнюю модель — «думающего» окна раздумий у
+      // него нет, поэтому режим раздумий на него не распространяется.
+      const isThinking = !isExpertTurn && assistantSettings.mode === 'thinking'
       const reasoningStartedAt = Date.now()
       const loadingId = appendChatMessage({
         role: 'assistant',
         content: isThinking
           ? t('pages.aiAssistant.assistantThinking')
           : t('pages.aiAssistant.assistantTyping'),
+        // Экспертный ход отвечает десятки секунд: подпись со своим таймером
+        // держит ожидание читаемым (см. ExpertWaitingLabel).
+        expertWaitingModel: expertModel ?? undefined,
         isLoading: true,
         // Start marker for the "Xс" reasoning timer (chip + activity panel).
         reasoningStartedAt,
@@ -1500,7 +2085,9 @@ export function AiAssistantBetaPage() {
       try {
         const result = await sendChat({
           payload: {
-            message: prompt,
+            // The feed bubble above shows `prompt`; what goes to the brain may
+            // carry the fenced OneX page-context block after it.
+            message: outboundMessage,
             conversation_id: assistantSettings.rememberConversationContext
               ? (conversationId ?? undefined)
               : undefined,
@@ -1512,8 +2099,25 @@ export function AiAssistantBetaPage() {
             deep_research: assistantSettings.deepResearch ? true : undefined,
             attachments:
               attachmentList.length > 0 ? toChatAttachmentPayload(attachmentList) : undefined,
+            // Поле уходит только у экспертного хода — обычный запрос остаётся
+            // байт-в-байт прежним.
+            expert: expertModel ? { model: expertModel } : undefined,
           },
           callbacks: {
+            onMeta: (meta) => {
+              // Указатель диалога — сразу, не после done: обновление страницы
+              // посреди ответа возвращает оператора в ЭТОТ диалог, где ответ
+              // дописывается сервером и подтягивается опросом.
+              const id = meta.conversation_id
+              if (
+                typeof id === 'number' &&
+                id > 0 &&
+                userId != null &&
+                assistantSettings.rememberConversationContext
+              ) {
+                setActiveConversation(userId, id)
+              }
+            },
             onText: (delta) => {
               streamedText += delta
               receivedDelta = true
@@ -1568,8 +2172,21 @@ export function AiAssistantBetaPage() {
             onFollowups: (questions) => {
               if (questions.length > 0) patchLoadingMessage({ followups: questions })
             },
+            onExpert: (usage) => patchLoadingMessage({ expert: usage }),
+            onDone: (done) => {
+              // Обновляем кружок контекста только по ходам с реальным usage:
+              // слеш-команды и уточнения роутера завершаются без него — там
+              // показание не менялось, затирать прежнее нечем.
+              const snapshot = extractContextUsage(done)
+              if (snapshot) setContextUsage(snapshot)
+            },
           },
         })
+        // The turn reached the brain, so the page context it carried is spent —
+        // a conversation must not be re-stamped with the same page on every
+        // message. Consumed by identity, so a page the host published while the
+        // answer streamed survives for the next turn.
+        if (sentContext) consumeOnexContext(sentContext)
         if (requestToken !== responseTokenRef.current) {
           return
         }
@@ -1592,7 +2209,14 @@ export function AiAssistantBetaPage() {
           // Freeze the reasoning timer at its final value.
           reasoningElapsedMs: Date.now() - reasoningStartedAt,
           serverMessageId: result.message_id > 0 ? result.message_id : undefined,
+          // Ожидание закончилось — подпись с таймером уходит, ценник остаётся.
+          expertWaitingModel: undefined,
+          expert: result.expert,
         })
+        if (isExpertTurn) {
+          // Ход потратил деньги — счётчик остатка в меню обязан это увидеть.
+          void queryClient.invalidateQueries({ queryKey: aiAssistantKeys.capabilities })
+        }
       } catch (error) {
         if (requestToken !== responseTokenRef.current) {
           return
@@ -1608,12 +2232,69 @@ export function AiAssistantBetaPage() {
               ? error.response?.status
               : undefined
         const isThinkingUnavailable = isThinking && status === 503
+        // A rejected attachment is something the operator can fix, so the
+        // server's own wording goes on screen instead of the catch-all. The two
+        // rejections need different advice and must not be collapsed:
+        //   422 — *this file* is wrong (type, size, faked signature);
+        //   413 — *too much at once*, the fix is to send in smaller batches.
+        const serverDetail =
+          error instanceof AssistantChatStreamError ? error.serverDetail : undefined
+        const errorCode = error instanceof AssistantChatStreamError ? error.code : undefined
+        // A 413 has two possible authors and only one of them speaks to the
+        // operator. Ours carries a machine code next to its Ukrainian wording;
+        // the gateway's own size limit answers `{"message": "Request size limit
+        // exceeded"}` — English, about bytes, and useless at the keyboard. So
+        // the text is trusted here only when the code proves it is ours;
+        // otherwise the localised batch wording stands in.
+        const isOurRefusal = Boolean(errorCode)
+        // Отказы экспертного хода бэкенд формулирует сам и по-украински —
+        // «немає права», «денний ліміт витрат вичерпано (X з Y $)». Показываем
+        // их дословно: свои выдумки здесь были бы менее точны, чем текст того,
+        // кто отказал.
+        const isExpertRefusal = isExpertTurn && (status === 403 || status === 429 || status === 503)
+        // 503 — исключение: прокси CRM заменяет текст мозга своим, «Думающий
+        // режим сейчас недоступен. Повторите запрос в обычном режиме», потому
+        // что на этой формулировке держится откат thinking → fast
+        // (`_status_detail` в services/ai-assistant/app/routers/chat.py). Для
+        // экспертного хода она неверна вдвойне: он не «думающий», и повторять
+        // его «в обычном режиме» — это другой вопрос к другой модели. Здесь
+        // текст сервера не показываем, а говорим про внешний сервис сами.
+        const showsServerText =
+          status === 400 ||
+          status === 415 ||
+          status === 422 ||
+          (status === 413 && isOurRefusal) ||
+          (isExpertRefusal && status !== 503)
+        const expertFallbackMessage = isExpertRefusal
+          ? status === 403
+            ? t('pages.aiAssistant.expertForbidden')
+            : status === 429
+              ? t('pages.aiAssistant.expertLimitReached')
+              : t('pages.aiAssistant.expertUnavailable')
+          : undefined
         const errorMessage = isThinkingUnavailable
           ? t('pages.aiAssistant.thinkingUnavailable')
-          : t('pages.aiAssistant.apiError')
+          : showsServerText && serverDetail
+            ? serverDetail
+            : (expertFallbackMessage ??
+              (status === 413
+                ? t('pages.aiAssistant.attachTotalTooLarge')
+                : t('pages.aiAssistant.apiError')))
         if (isThinkingUnavailable) {
           setAssistantSettings((s) => ({ ...s, mode: 'fast' }))
         }
+        if (isExpertRefusal) {
+          // 403 — права больше нет: снимаем выбор, иначе каждый следующий ход
+          // упирается в тот же отказ. 429/503 — препятствие временное, выбор
+          // руководителя остаётся за ним.
+          if (status === 403) {
+            setAssistantSettings((s) => ({ ...s, expertModel: null }))
+          }
+          void queryClient.invalidateQueries({ queryKey: aiAssistantKeys.capabilities })
+        }
+        // Give the typed text back so a failed send is one Enter away from a
+        // retry — unless the user has already started typing something else.
+        if (prompt) setMessage((current) => (current.trim() ? current : prompt))
         toast.error(errorMessage)
         patchLoadingMessage({
           content: errorMessage,
@@ -1626,23 +2307,32 @@ export function AiAssistantBetaPage() {
           followups: undefined,
           reasoning: undefined,
           toolSteps: undefined,
+          expertWaitingModel: undefined,
+          expert: undefined,
         })
       } finally {
         if (requestToken === responseTokenRef.current) {
+          respondingRef.current = false
           setIsAssistantResponding(false)
           window.setTimeout(() => scrollToConversationBottom('smooth'), 0)
         }
       }
     },
     [
+      activeExpertModel,
       appendChatMessage,
       assistantSettings.deepResearch,
       assistantSettings.mode,
       assistantSettings.outputFormat,
       assistantSettings.rememberConversationContext,
       assistantSettings.responseMode,
+      consumeOnexContext,
       conversationId,
+      handleNewChat,
       isAssistantResponding,
+      isEmbedded,
+      onexContext,
+      queryClient,
       scrollToConversationBottom,
       sendChat,
       setActiveConversation,
@@ -1650,6 +2340,27 @@ export function AiAssistantBetaPage() {
       userId,
     ]
   )
+
+  /**
+   * OneX «ask this now»: the host either spells the question out or names a
+   * preset. The text lands in the composer either way, so a command that
+   * arrives mid-answer is not lost — it simply waits for the operator to press
+   * send instead of queueing behind the running turn.
+   *
+   * Staged attachments are deliberately left alone (same as a quick action): a
+   * host command must not silently consume a file the operator picked for a
+   * question they have not asked yet.
+   */
+  useOnexAsk(isEmbedded, (command) => {
+    // Not i18n: the context block around it is a fixed Ukrainian machine contract,
+    // and an EN-interface operator firing the preset must not pull the whole
+    // turn into an English analysis (see embedContext.ts).
+    const prompt = command.text || (command.preset === 'summary' ? ONEX_ASK_SUMMARY_PROMPT : '')
+    if (!prompt) return
+    setMessage(prompt)
+    if (isAssistantResponding) return
+    void submitPrompt(prompt)
+  })
 
   // Latest-ref wiring: the recorder hook is declared before submitPrompt.
   useEffect(() => {
@@ -1676,53 +2387,86 @@ export function AiAssistantBetaPage() {
     }
   }, [submitPrompt, t])
 
-  const addImageFiles = useCallback(
+  /**
+   * Stage picked files (picker / paste / drop): screenshots and documents alike.
+   * Each file is validated against the contract first, then encoded to base64 —
+   * a 50MB workbook takes a moment, so admitted files show a "preparing" card
+   * until their bytes are ready.
+   */
+  const addFiles = useCallback(
     async (files: File[]) => {
       if (files.length === 0) return
-      const room = MAX_ATTACHMENTS - pendingImages.length
       let unsupported = false
+      let overflow = false
+      let readFailed = false
       let tooLarge = false
-      let overflow = files.length > Math.max(room, 0)
-      const accepted: PendingAttachment[] = []
-      for (const file of files.slice(0, Math.max(room, 0))) {
-        const error = validateImageFile(file, 0)
-        if (error === 'unsupportedType') {
-          unsupported = true
-          continue
-        }
-        if (error === 'tooLarge') {
-          tooLarge = true
-          continue
-        }
-        try {
-          const data_b64 = await blobToBase64(file)
-          const previewUrl = URL.createObjectURL(file)
-          attachmentUrlsRef.current.push(previewUrl)
-          accepted.push({
-            id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-            type: 'image',
-            mime: file.type,
-            data_b64,
-            previewUrl,
-            sizeBytes: file.size,
+      const admitted: { file: File; id: string; type: AttachmentType; mime: string }[] = []
+
+      for (const file of files) {
+        const verdict = validateAttachmentFile(file, attachmentCountRef.current + admitted.length)
+        if (verdict.ok) {
+          admitted.push({
+            file,
+            id: `att-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            type: verdict.type,
+            mime: verdict.mime,
           })
+          continue
+        }
+        if (verdict.error === 'unsupportedType') unsupported = true
+        else if (verdict.error === 'tooLarge') tooLarge = true
+        else overflow = true
+      }
+
+      if (overflow) toast.error(t('pages.aiAssistant.attachTooMany', { count: MAX_ATTACHMENTS }))
+      if (unsupported) toast.error(t('pages.aiAssistant.attachUnsupported'))
+      if (tooLarge) {
+        toast.error(
+          t('pages.aiAssistant.attachTooLarge', {
+            limit: formatAttachmentSize(MAX_ATTACHMENT_BYTES),
+          })
+        )
+      }
+      if (admitted.length === 0) return
+
+      // Claim the slots before the first `await` so a second pick in the same
+      // tick sees them taken.
+      attachmentCountRef.current += admitted.length
+      setPreparingAttachments((current) => [
+        ...current,
+        ...admitted.map(({ id, file }) => ({ id, name: file.name, sizeBytes: file.size })),
+      ])
+
+      for (const item of admitted) {
+        try {
+          const data_b64 = await blobToBase64(item.file)
+          const previewUrl = URL.createObjectURL(item.file)
+          attachmentUrlsRef.current.push(previewUrl)
+          setPendingAttachments((current) => [
+            ...current,
+            {
+              id: item.id,
+              type: item.type,
+              mime: item.mime,
+              name: item.file.name,
+              data_b64,
+              previewUrl,
+              sizeBytes: item.file.size,
+            },
+          ])
         } catch {
-          unsupported = true
+          readFailed = true
+        } finally {
+          setPreparingAttachments((current) => current.filter((entry) => entry.id !== item.id))
         }
       }
-      if (room <= 0) overflow = true
-      if (overflow) toast.error(t('pages.aiAssistant.attachImageTooMany'))
-      if (unsupported) toast.error(t('pages.aiAssistant.attachImageUnsupported'))
-      if (tooLarge) toast.error(t('pages.aiAssistant.attachImageTooLarge'))
-      if (accepted.length > 0) {
-        setPendingImages((current) => [...current, ...accepted].slice(0, MAX_ATTACHMENTS))
-      }
+      if (readFailed) toast.error(t('pages.aiAssistant.attachReadFailed'))
     },
-    [pendingImages.length, t]
+    [t]
   )
 
-  const removePendingImage = useCallback((id: string) => {
-    setPendingImages((current) => {
+  const removePendingAttachment = useCallback((id: string) => {
+    setPendingAttachments((current) => {
       const target = current.find((item) => item.id === id)
       if (target) {
         URL.revokeObjectURL(target.previewUrl)
@@ -1736,40 +2480,35 @@ export function AiAssistantBetaPage() {
 
   const handlePaste = useCallback(
     (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
-      const files = extractImageFiles(event.clipboardData.items)
+      const files = extractFileEntries(event.clipboardData.items)
       if (files.length === 0) return
       event.preventDefault()
-      void addImageFiles(files)
+      void addFiles(files)
     },
-    [addImageFiles]
+    [addFiles]
   )
 
-  const handleImageInputChange = useCallback(
+  const handleFileInputChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const files = event.target.files
       if (files && files.length > 0) {
-        void addImageFiles(Array.from(files))
+        void addFiles(Array.from(files))
       }
       // Reset so picking the same file again still fires onChange.
       event.target.value = ''
     },
-    [addImageFiles]
+    [addFiles]
   )
 
   const handleDrop = useCallback(
     (event: React.DragEvent<HTMLDivElement>) => {
       if (event.dataTransfer.files.length === 0) return
       // Always swallow file drops — otherwise the browser navigates to the
-      // dropped file; non-image files surface the unsupported-type toast.
+      // dropped file. Unsupported ones are rejected by addFiles with a toast.
       event.preventDefault()
-      const files = extractImageFiles(event.dataTransfer.files)
-      if (files.length === 0) {
-        toast.error(t('pages.aiAssistant.attachImageUnsupported'))
-        return
-      }
-      void addImageFiles(files)
+      void addFiles(extractFileEntries(event.dataTransfer.files))
     },
-    [addImageFiles, t]
+    [addFiles]
   )
 
   const clearLongPressTimer = useCallback(() => {
@@ -1939,11 +2678,11 @@ export function AiAssistantBetaPage() {
     for (let i = chatMessages.length - 1; i >= 0; i -= 1) {
       const item = chatMessages[i]
       if (item.role !== 'assistant' || item.isError) continue
-      if (!messageHasActivity(item)) continue
+      if (!messageHasActivity(item, assistantSettings.showReasoning)) continue
       if (isReasoningOpen(item)) return item
     }
     return null
-  }, [chatMessages, isReasoningOpen])
+  }, [chatMessages, isReasoningOpen, assistantSettings.showReasoning])
 
   const isReasoningPanelOpen = activeReasoningMessage != null
   // Номер источника для подсветки в панели — только если фокус принадлежит
@@ -2067,10 +2806,29 @@ export function AiAssistantBetaPage() {
     )
   }
 
+  /**
+   * Ценник экспертного хода: «Sonnet · $0.05». Без цифр (бэкенд их не прислал)
+   * остаётся одна модель — так видно, что отвечал внешний Claude, даже когда
+   * стоимость неизвестна.
+   */
+  const renderExpertCost = (usage: AssistantExpertUsage) => (
+    <span
+      data-testid="assistant-expert-cost"
+      title={expertTokensTitle(usage, t)}
+      className="border-border bg-muted/60 text-muted-foreground inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-light"
+    >
+      <Icons.Sparkles size={12} strokeWidth={1.5} className="text-primary-500 shrink-0" />
+      {usage.costUsd != null
+        ? `${expertModelLabel(usage.model)} · ${formatUsd(usage.costUsd)}`
+        : expertModelLabel(usage.model)}
+    </span>
+  )
+
   /** TTS playback + feedback in one row under an assistant bubble. */
   const renderAssistantActions = (item: ChatMessage) => (
     <div className="mt-1.5 flex flex-wrap items-center gap-1.5 px-1">
       {renderTtsButton(item)}
+      {item.expert && renderExpertCost(item.expert)}
       {item.serverMessageId != null && (
         <>
           <span className="bg-border mx-0.5 h-4 w-px" aria-hidden />
@@ -2092,13 +2850,15 @@ export function AiAssistantBetaPage() {
     // есть — без чипа они после гидратации/перезагрузки истории становятся
     // недоступны (панель нельзя открыть). Чип корректно деградирует на пустом
     // reasoning + нулевом stepCount (см. ReasoningInlineChip).
-    if (!messageHasActivity(item)) return null
+    if (!messageHasActivity(item, assistantSettings.showReasoning)) return null
     const elapsed = reasoningElapsedMs(item, reasoningNow)
     return (
       <ReasoningInlineChip
         open={isReasoningOpen(item)}
         streaming={Boolean(item.isStreamingReasoning)}
-        reasoning={item.reasoning ?? ''}
+        // Раздумья скрыты — не отдаём их и в тизер плашки (иначе последняя мысль
+        // всё равно попадала бы оператору на глаза).
+        reasoning={assistantSettings.showReasoning ? (item.reasoning ?? '') : ''}
         stepCount={item.toolSteps?.length ?? 0}
         elapsedLabel={elapsed != null ? formatReasoningDuration(elapsed) : null}
         onToggle={() => toggleReasoning(item)}
@@ -2186,8 +2946,14 @@ export function AiAssistantBetaPage() {
         paddingRight:
           !isMobileOrTablet && isReasoningPanelOpen ? `${reasoningPanelWidth}px` : undefined,
       }}
+      data-testid={isEmbedded ? 'assistant-onex-dock' : undefined}
       className={cn(
-        'relative flex min-h-[calc(100vh-5.5rem)] w-full min-w-0 flex-1 flex-col self-stretch overflow-x-hidden supports-[height:100dvh]:min-h-[calc(100dvh-5.5rem)]',
+        'relative flex w-full min-w-0 flex-1 flex-col self-stretch overflow-x-hidden',
+        // The dashboard header (80px top padding + 20px bottom) is not there in
+        // the dock, so the chat gets the whole host window height.
+        isEmbedded
+          ? 'min-h-screen supports-[height:100dvh]:min-h-[100dvh]'
+          : 'min-h-[calc(100vh-5.5rem)] supports-[height:100dvh]:min-h-[calc(100dvh-5.5rem)]',
         // Reserve space for the fixed history panel (its width + a 1rem gap).
         !isMobileOrTablet &&
           'lg:transition-[padding] lg:duration-300 ' +
@@ -2220,13 +2986,20 @@ export function AiAssistantBetaPage() {
 
       {/* Mobile history trigger: fixed below the dashboard header so it stays
           reachable in a scrolled chat (sticky elements never pin here — see
-          the note on the panel above). */}
+          the note on the panel above). In the OneX dock the history panel is
+          gone for good (no width for it) and there is no dashboard header to
+          clear, so the same button sits at the very top and keeps past chats
+          plus "new chat" one tap away through the drawer — at every width,
+          hence no `lg:hidden` there. */}
       {isMobileOrTablet && (
         <button
           type="button"
           aria-label={t('pages.aiAssistant.historyOpenAria')}
           onClick={() => setIsHistoryDrawerOpen(true)}
-          className="border-border text-foreground hover:bg-muted bg-card/95 fixed top-[68px] left-3 z-30 flex h-9 w-9 items-center justify-center rounded-full border shadow-md transition-colors lg:hidden"
+          className={cn(
+            'border-border text-foreground hover:bg-muted bg-card/95 fixed z-30 flex h-9 w-9 items-center justify-center rounded-full border shadow-md transition-colors',
+            isEmbedded ? 'top-2 left-2' : 'top-[68px] left-3 lg:hidden'
+          )}
         >
           <Icons.MessageMultiple01 size={18} strokeWidth={1.5} />
         </button>
@@ -2241,7 +3014,14 @@ export function AiAssistantBetaPage() {
 
       {hasConversation ? (
         <div
-          className="relative min-h-0 flex-1 px-3 pt-3 sm:px-8 sm:pt-5 md:px-10 lg:px-14 lg:pt-6 xl:px-20"
+          className={cn(
+            'relative min-h-0 flex-1',
+            // Dock: no room for the wide desktop gutters — the ribbon runs
+            // nearly edge to edge in a ~420px sidebar.
+            isEmbedded
+              ? 'px-2 pt-2'
+              : 'px-3 pt-3 sm:px-8 sm:pt-5 md:px-10 lg:px-14 lg:pt-6 xl:px-20'
+          )}
           style={{ paddingBottom: `${dockHeight}px` }}
         >
           <div className="mx-auto w-full max-w-5xl 2xl:max-w-6xl">
@@ -2253,7 +3033,9 @@ export function AiAssistantBetaPage() {
                 // shrinking to the short header (w-fit) — the reasoning box then
                 // uses the full available width rather than looking narrow.
                 const hasReasoningSurface =
-                  item.role === 'assistant' && !item.isError && messageHasActivity(item)
+                  item.role === 'assistant' &&
+                  !item.isError &&
+                  messageHasActivity(item, assistantSettings.showReasoning)
                 return (
                   <div
                     key={item.id}
@@ -2280,15 +3062,44 @@ export function AiAssistantBetaPage() {
                       >
                         {item.attachments && item.attachments.length > 0 && (
                           <div className={cn('flex flex-col gap-2', item.content && 'mb-2')}>
-                            {item.attachments.map((attachment, index) =>
-                              attachment.type === 'image' ? (
-                                <img
-                                  key={index}
-                                  src={attachment.url}
-                                  alt={t('pages.aiAssistant.attachedImageAlt')}
-                                  className="max-h-48 max-w-full rounded-lg object-contain"
-                                />
-                              ) : (
+                            {item.attachments.map((attachment, index) => {
+                              if (attachment.type === 'image') {
+                                return (
+                                  <img
+                                    key={index}
+                                    src={attachment.url}
+                                    alt={t('pages.aiAssistant.attachedImageAlt')}
+                                    className="max-h-48 max-w-full rounded-lg object-contain"
+                                  />
+                                )
+                              }
+                              if (attachment.type === 'document') {
+                                // The card is the record that the operator sent
+                                // this file — the parsed content lives server-side.
+                                return (
+                                  <div
+                                    key={index}
+                                    data-testid="message-attachment-document"
+                                    className="border-border/60 bg-background/10 flex max-w-full items-center gap-2 rounded-lg border px-2.5 py-2"
+                                  >
+                                    <AttachmentIcon mime={attachment.mime} />
+                                    <div className="min-w-0">
+                                      <p
+                                        className="max-w-[14rem] truncate text-xs font-medium"
+                                        title={attachment.name}
+                                      >
+                                        {attachment.name}
+                                      </p>
+                                      {attachment.sizeBytes != null && (
+                                        <p className="text-[11px] opacity-70">
+                                          {formatAttachmentSize(attachment.sizeBytes)}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                )
+                              }
+                              return (
                                 // eslint-disable-next-line jsx-a11y/media-has-caption -- voice note, no transcript available client-side
                                 <audio
                                   key={index}
@@ -2298,7 +3109,7 @@ export function AiAssistantBetaPage() {
                                   className="h-10 max-w-full"
                                 />
                               )
-                            )}
+                            })}
                           </div>
                         )}
                         {/* Live "Ход рассуждения": shown above the answer both
@@ -2316,10 +3127,14 @@ export function AiAssistantBetaPage() {
                               <span className="bg-secondary-500 h-1.5 w-1.5 animate-bounce rounded-full [animation-delay:-0.2s]" />
                               <span className="bg-secondary-500 h-1.5 w-1.5 animate-bounce rounded-full [animation-delay:-0.1s]" />
                               <span className="bg-secondary-500 h-1.5 w-1.5 animate-bounce rounded-full" />
-                              {item.loadingLabel && (
-                                <span className="text-muted-foreground ml-1.5 text-xs font-light">
-                                  {item.loadingLabel}
-                                </span>
+                              {item.expertWaitingModel ? (
+                                <ExpertWaitingLabel model={item.expertWaitingModel} />
+                              ) : (
+                                item.loadingLabel && (
+                                  <span className="text-muted-foreground ml-1.5 text-xs font-light">
+                                    {item.loadingLabel}
+                                  </span>
+                                )
                               )}
                             </span>
                           )
@@ -2363,7 +3178,10 @@ export function AiAssistantBetaPage() {
         </div>
       ) : (
         <div
-          className="flex min-h-0 flex-1 flex-col items-center justify-center px-3 sm:px-8 md:px-10 lg:px-14 xl:px-20"
+          className={cn(
+            'flex min-h-0 flex-1 flex-col items-center justify-center',
+            isEmbedded ? 'px-2' : 'px-3 sm:px-8 md:px-10 lg:px-14 xl:px-20'
+          )}
           style={{ paddingBottom: `${dockHeight}px` }}
         >
           <div className="mx-auto flex w-full max-w-xl flex-col items-center justify-center gap-4 text-center sm:gap-5">
@@ -2401,8 +3219,11 @@ export function AiAssistantBetaPage() {
           // content area (see dockGeometry.ts), so the input card and the
           // quick actions share one column centre with the message ribbon in
           // every sidebar combination. Mobile keeps the full-width box.
-          'pointer-events-none fixed right-0 bottom-0 left-0 z-20 flex w-full min-w-0 shrink-0 flex-col items-center px-3 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] transition-[left,right] duration-300 sm:px-8 sm:pt-6 md:px-10 lg:px-14 xl:px-20',
-          getDockDesktopBoxClasses(isOpenSideBar, isHistoryCollapsed)
+          'pointer-events-none fixed right-0 bottom-0 left-0 z-20 flex w-full min-w-0 shrink-0 flex-col items-center transition-[left,right] duration-300',
+          isEmbedded
+            ? 'px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]'
+            : 'px-3 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-8 sm:pt-6 md:px-10 lg:px-14 xl:px-20',
+          getDockDesktopBoxClasses(isOpenSideBar, isHistoryCollapsed, isEmbedded)
         )}
       >
         {hasConversation && showScrollToLatest && (
@@ -2417,47 +3238,165 @@ export function AiAssistantBetaPage() {
         )}
         <div className="pointer-events-auto mx-auto w-full max-w-5xl min-w-0 2xl:max-w-6xl">
           <div
-            className="border-border/60 bg-card/95 shadow-foreground/5 rounded-2xl border p-3 shadow-lg sm:rounded-3xl sm:p-5"
+            className={cn(
+              'border-border/60 bg-card/95 shadow-foreground/5 rounded-2xl border shadow-lg',
+              isEmbedded ? 'p-2' : 'p-3 sm:rounded-3xl sm:p-5'
+            )}
             onDragOver={(e) => {
               if (e.dataTransfer.types.includes('Files')) e.preventDefault()
             }}
             onDrop={handleDrop}
+            data-testid="pending-attachments-dropzone"
           >
-            {pendingImages.length > 0 && (
+            {(pendingAttachments.length > 0 || preparingAttachments.length > 0) && (
               <div className="mb-2 flex flex-wrap gap-2" data-testid="pending-attachments">
-                {pendingImages.map((image) => (
-                  <div
-                    key={image.id}
-                    className="border-border bg-card relative h-16 w-16 overflow-hidden rounded-lg border"
-                  >
-                    <img
-                      src={image.previewUrl}
-                      alt={t('pages.aiAssistant.attachedImageAlt')}
-                      className="h-full w-full object-cover"
-                    />
-                    <button
-                      type="button"
-                      aria-label={t('pages.aiAssistant.attachImageRemove')}
-                      onClick={() => removePendingImage(image.id)}
-                      className="absolute top-0.5 right-0.5 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white transition-colors hover:bg-black/80"
+                {pendingAttachments.map((attachment) =>
+                  attachment.type === 'image' ? (
+                    <div
+                      key={attachment.id}
+                      className="border-border bg-card relative h-16 w-16 overflow-hidden rounded-lg border"
+                      data-testid="pending-attachment-image"
                     >
-                      <Icons.Cancel01 size={12} strokeWidth={2} />
-                    </button>
+                      <img
+                        src={attachment.previewUrl}
+                        alt={t('pages.aiAssistant.attachedImageAlt')}
+                        className="h-full w-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        aria-label={t('pages.aiAssistant.attachImageRemove')}
+                        onClick={() => removePendingAttachment(attachment.id)}
+                        className="absolute top-0.5 right-0.5 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white transition-colors hover:bg-black/80"
+                      >
+                        <Icons.Cancel01 size={12} strokeWidth={2} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      key={attachment.id}
+                      className="border-border bg-muted/40 flex h-16 min-w-0 items-center gap-2 rounded-lg border px-2.5 py-2"
+                      data-testid="pending-attachment-document"
+                    >
+                      <AttachmentIcon mime={attachment.mime} />
+                      <div className="min-w-0">
+                        <p
+                          className="text-foreground max-w-[11rem] truncate text-xs font-medium"
+                          title={attachment.name}
+                        >
+                          {attachment.name}
+                        </p>
+                        <p className="text-muted-foreground text-[11px]">
+                          {formatAttachmentSize(attachment.sizeBytes)}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        aria-label={t('pages.aiAssistant.attachmentRemove', {
+                          name: attachment.name,
+                        })}
+                        onClick={() => removePendingAttachment(attachment.id)}
+                        className="text-muted-foreground hover:text-foreground hover:bg-muted flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors"
+                      >
+                        <Icons.Cancel01 size={12} strokeWidth={2} />
+                      </button>
+                    </div>
+                  )
+                )}
+                {preparingAttachments.map((item) => (
+                  <div
+                    key={item.id}
+                    className="border-border bg-muted/40 flex h-16 min-w-0 items-center gap-2 rounded-lg border px-2.5 py-2"
+                    data-testid="pending-attachment-preparing"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    <span className="border-primary-500 h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-t-transparent" />
+                    <div className="min-w-0">
+                      <p
+                        className="text-foreground max-w-[11rem] truncate text-xs font-medium"
+                        title={item.name}
+                      >
+                        {item.name}
+                      </p>
+                      <p className="text-muted-foreground text-[11px]">
+                        {t('pages.aiAssistant.attachPreparing')}
+                      </p>
+                    </div>
                   </div>
                 ))}
               </div>
             )}
 
+            {isEmbedded && onexContext && (
+              <OnexContextChip context={onexContext} onClear={clearOnexContext} />
+            )}
+
+            {/* Экспертный режим включён — руководитель видит ДО отправки, что
+                этот вопрос уйдёт во внешний сервис. Констатация, не
+                предупреждение: отправлять данные туда решено осознанно. */}
+            {activeExpertModel && (
+              <div
+                data-testid="assistant-expert-external-notice"
+                className="border-primary-200 bg-primary-50/60 text-muted-foreground mb-2 flex items-center gap-2 rounded-xl border border-dashed px-2.5 py-1.5 text-[11px] font-light"
+              >
+                <Icons.Link01 size={14} strokeWidth={1.5} className="text-primary-600 shrink-0" />
+                <span className="min-w-0 flex-1">
+                  {t('pages.aiAssistant.expertComposerNotice', {
+                    model: expertModelLabel(activeExpertModel),
+                  })}
+                </span>
+              </div>
+            )}
+
             <div className="relative">
+              <SlashCommandMenu
+                items={slashItems}
+                activeIndex={Math.min(slashActiveIndex, Math.max(slashItems.length - 1, 0))}
+                onSelect={applySlashCommand}
+              />
               <Textarea
                 ref={textareaRef}
                 value={message}
-                onChange={(e) => setMessage(e.target.value)}
+                onChange={(e) => {
+                  setMessage(e.target.value)
+                  // Ручной ввод снимает «закрыто по Esc» — меню слеш-команд
+                  // снова следует за содержимым поля.
+                  setSlashDismissed(false)
+                }}
                 onPaste={handlePaste}
                 onKeyDown={(e) => {
+                  if (slashItems.length > 0) {
+                    if (e.key === 'ArrowDown') {
+                      e.preventDefault()
+                      setSlashActiveIndex((i) => (i + 1) % slashItems.length)
+                      return
+                    }
+                    if (e.key === 'ArrowUp') {
+                      e.preventDefault()
+                      setSlashActiveIndex((i) => (i - 1 + slashItems.length) % slashItems.length)
+                      return
+                    }
+                    if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey)) {
+                      e.preventDefault()
+                      applySlashCommand(
+                        slashItems[Math.min(slashActiveIndex, slashItems.length - 1)]
+                      )
+                      return
+                    }
+                    if (e.key === 'Escape') {
+                      e.preventDefault()
+                      setSlashDismissed(true)
+                      return
+                    }
+                  }
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault()
-                    void submitPrompt(message, pendingImages)
+                    // Sending now would leave the still-encoding files behind.
+                    if (preparingAttachments.length > 0) {
+                      toast.error(t('pages.aiAssistant.attachStillPreparing'))
+                      return
+                    }
+                    void submitPrompt(message, pendingAttachments)
                   }
                 }}
                 // The grey draft ghost is drawn over the textarea — the
@@ -2555,7 +3494,7 @@ export function AiAssistantBetaPage() {
                 {/* Composer "+" hub: attach / CRM actions / deep research /
                     context — Claude / ChatGPT "+" pattern. */}
                 <ComposerHubMenu
-                  onAttach={() => imageInputRef.current?.click()}
+                  onAttach={() => fileInputRef.current?.click()}
                   onQuickAction={(key) => void submitPrompt(quickActionPrompts[key])}
                   quickActionDisabled={isAssistantResponding}
                   deepResearch={assistantSettings.deepResearch}
@@ -2567,13 +3506,13 @@ export function AiAssistantBetaPage() {
                   onClientScopeChange={setClientScope}
                 />
                 <input
-                  ref={imageInputRef}
+                  ref={fileInputRef}
                   type="file"
-                  accept="image/png,image/jpeg,image/webp"
+                  accept={ATTACHMENT_ACCEPT}
                   multiple
                   className="hidden"
                   data-testid="attach-image-input"
-                  onChange={handleImageInputChange}
+                  onChange={handleFileInputChange}
                 />
 
                 <div className="relative shrink-0">
@@ -2596,6 +3535,9 @@ export function AiAssistantBetaPage() {
                     </div>
                   )}
                 </div>
+
+                {/* Заполненность контекста мозга — как кружок в Claude Code. */}
+                <ContextUsageRing usage={contextUsage} />
               </div>
 
               <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
@@ -2612,10 +3554,25 @@ export function AiAssistantBetaPage() {
                   options={periodOptions}
                 />
 
-                {/* Reasoning-mode picker (source of truth for `mode`). */}
+                {/* Reasoning-mode picker (source of truth for `mode`) + тумблер
+                    видимости раздумий. */}
                 <ModeDropdown
                   value={assistantSettings.mode}
-                  onChange={(mode) => applySettings((s) => ({ ...s, mode }))}
+                  // Выбор обычного режима снимает экспертный: пункты меню
+                  // взаимоисключающие, «Швидкий + Експерт» одновременно не бывает.
+                  onChange={(mode) => applySettings((s) => ({ ...s, mode, expertModel: null }))}
+                  showReasoning={assistantSettings.showReasoning}
+                  onShowReasoningChange={(show) =>
+                    applySettings((s) => ({ ...s, showReasoning: show }))
+                  }
+                  expert={expertCapability}
+                  expertModel={activeExpertModel}
+                  // Экспертный ход идёт во внешнюю модель — «думающий» режим
+                  // нашего бокса при этом ни при чём, поэтому сбрасываем его в
+                  // fast, чтобы возврат к обычному ходу был предсказуем.
+                  onSelectExpert={(model) =>
+                    applySettings((s) => ({ ...s, mode: 'fast', expertModel: model }))
+                  }
                 />
 
                 <button
@@ -2718,6 +3675,7 @@ export function AiAssistantBetaPage() {
           activeReasoningMessage?.thinkingPlaceholder &&
           activeReasoningMessage?.isStreamingReasoning
         )}
+        showReasoning={assistantSettings.showReasoning}
         reasoning={activeReasoningMessage?.reasoning ?? ''}
         toolSteps={activeReasoningMessage?.toolSteps ?? []}
         citations={activeReasoningMessage?.citations ?? []}

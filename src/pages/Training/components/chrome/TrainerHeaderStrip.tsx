@@ -1,9 +1,10 @@
-import { type ReactElement } from 'react'
+import { useState, type ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { useHeaderKpis } from '@/features/quality/coaching/hooks'
 import type { HeaderKpisFilters } from '@/features/quality/coaching/types'
 import { HeaderKpiTile } from './HeaderKpiTile'
+import { OneOnOneTodayDialog } from './OneOnOneTodayDialog'
 
 /**
  * Header KPI strip — five Figma "Work Type" metric cards (KAN-413 §1.5).
@@ -30,6 +31,7 @@ interface KpiTileConfig {
   iconColor: string
   iconBg: string
   accentColor: string
+  onClick?: () => void
 }
 
 function formatDeltaPct(delta: number | null | undefined): string | undefined {
@@ -41,6 +43,10 @@ function formatDeltaPct(delta: number | null | undefined): string | undefined {
 export function TrainerHeaderStrip({ filters, enabled = true }: TrainerHeaderStripProps) {
   const { t } = useTranslation('common')
   const { data, isLoading } = useHeaderKpis(filters, enabled)
+
+  // "1-on-1 today" drill-down (Tanya, 13.08): the tile used to be a dead
+  // div — the count was visible but who/when/topic was not.
+  const [oneOnOneDialogOpen, setOneOnOneDialogOpen] = useState(false)
 
   const placeholder = isLoading ? '…' : '—'
   const inProgress = data ? String(data.in_progress_count) : placeholder
@@ -96,24 +102,31 @@ export function TrainerHeaderStrip({ filters, enabled = true }: TrainerHeaderStr
       iconColor: 'text-[#22C55E]',
       iconBg: 'bg-[#22C55E]/10',
       accentColor: '#22C55E',
+      // The sessions list rides GET /coaching/one-on-ones (view_inbox-gated,
+      // same as header-kpis) — keep the tile inert when the strip is disabled.
+      onClick: enabled ? () => setOneOnOneDialogOpen(true) : undefined,
     },
   ]
 
   return (
-    <div className="flex flex-wrap items-stretch gap-3">
-      {tiles.map((tile) => (
-        <HeaderKpiTile
-          key={tile.key}
-          label={tile.label}
-          value={tile.value}
-          delta={tile.delta}
-          icon={tile.icon}
-          iconColor={tile.iconColor}
-          iconBg={tile.iconBg}
-          accentColor={tile.accentColor}
-        />
-      ))}
-    </div>
+    <>
+      <div className="flex flex-wrap items-stretch gap-3">
+        {tiles.map((tile) => (
+          <HeaderKpiTile
+            key={tile.key}
+            label={tile.label}
+            value={tile.value}
+            delta={tile.delta}
+            icon={tile.icon}
+            iconColor={tile.iconColor}
+            iconBg={tile.iconBg}
+            accentColor={tile.accentColor}
+            onClick={tile.onClick}
+          />
+        ))}
+      </div>
+      <OneOnOneTodayDialog open={oneOnOneDialogOpen} onClose={() => setOneOnOneDialogOpen(false)} />
+    </>
   )
 }
 

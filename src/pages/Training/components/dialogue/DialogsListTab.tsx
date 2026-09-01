@@ -6,12 +6,18 @@ import { useConfirm } from '@/components/ui/useConfirm'
 import { useDebounce } from '@/hooks/useDebounce'
 import { useAuthStore } from '@/stores/authStore'
 import { useOperators } from '@/features/users/hooks'
+import { useDepartments } from '@/features/departments'
+import { PERMISSIONS } from '@/constants/permissions'
 import { useCallMonitoring } from '@/features/training'
 import type { CallMonitoringItem, ScorecardCategory, TelephonyType } from '@/features/training'
 import { useMyOperators, useOperatorTrainers } from '@/features/quality/coaching/hooks'
-import { useClientNames } from '@/features/clients/hooks/useClients'
+import { useScorecardAssignedOnly } from '@/features/quality/hooks/useCallQaSettings'
+import { useClientDebts, useClientNames } from '@/features/clients/hooks/useClients'
+import type { DebtDetail } from '@/features/clients/api/types'
 import { useScopedUserIds } from '../../lib/scope'
 import { EmployeeMultiSelect } from './EmployeeMultiSelect'
+import { LoanLink } from './LoanLink'
+import { DepartmentMultiSelect } from './DepartmentMultiSelect'
 import { EmployeeAvatar } from './EmployeeAvatar'
 import { CallReviewPanel } from './CallReviewPanel'
 import {
@@ -77,6 +83,7 @@ interface Selected {
   createdAt?: string
   operatorName?: string
   talkDurationSec?: number | null
+  clientId: number | null
 }
 
 /**
@@ -88,18 +95,31 @@ interface Selected {
 export function DialogsListTab() {
   const { t } = useTranslation('common')
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
+  const userPermissions = useAuthStore((s) => s.user?.permissions ?? [])
   const { data: operators = [] } = useOperators(activeProjectId ? Number(activeProjectId) : null)
   const scoped = useScopedUserIds(operators)
 
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<number[]>([])
   const [nameQuery, setNameQuery] = useState('')
   const debouncedName = useDebounce(nameQuery, 300)
-  const [departmentId, setDepartmentId] = useState<number | 'all'>('all')
+  // Empty = every department, matching the backend's omitted `department_ids`.
+  const [departmentIds, setDepartmentIds] = useState<number[]>([])
   const [telephonyType, setTelephonyType] = useState<TelephonyFilter>('')
   const [category, setCategory] = useState<CategoryFilter>('')
+  // Disputes-only view. Gated on `manage_qa_rules` (the head of training):
+  // the backend refuses the param to everyone else, and a control that can
+  // only ever return 403 is worse than no control. Ordinary trainers still
+  // see the marker on their own rows.
+  const [disputedOnly, setDisputedOnly] = useState(false)
   const [callFrom, setCallFrom] = useState('')
   const [callTo, setCallTo] = useState('')
   const [minDuration, setMinDuration] = useState('')
+  // Typed filters are debounced like the ПІБ search above: a date field emits
+  // an onChange per keystroke (2026-0…, 2026-06…) and the spinner fires per
+  // click, each of which would otherwise be a request.
+  const debouncedCallFrom = useDebounce(callFrom, 300)
+  const debouncedCallTo = useDebounce(callTo, 300)
+  const debouncedMinDuration = useDebounce(minDuration, 300)
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(PAGE_SIZE)
   const [selected, setSelected] = useState<Selected | null>(null)
@@ -109,6 +129,10 @@ export function DialogsListTab() {
   const myOperatorsQuery = useMyOperators()
   const myOperatorIds = useMemo(() => myOperatorsQuery.data ?? [], [myOperatorsQuery.data])
   const { data: operatorTrainers = [] } = useOperatorTrainers()
+  // «Оцінювати лише закріплених»: while the admin switch is on (or the backend
+  // predates it), editing is limited to the trainer's own operators; off means
+  // any trainer with the scorecard permission can score any project operator.
+  const scorecardAssignedOnly = useScorecardAssignedOnly()
 
   // Nothing to filter by until the trainer has operators under their control;
   // without this the button would be a silent no-op.
@@ -129,24 +153,51 @@ export function DialogsListTab() {
     return map
   }, [operatorTrainers])
 
+  // The departments directory is `manage_roles`-gated server-side, so a plain
+  // trainer would only ever get a 403 from it: ask for it under the permission
+  // and otherwise fall back to the departments the project roster names. The
+  // directory adds the departments that currently have no operator in the
+  // roster; the roster keeps the picker usable without the permission.
+  const canFilterDisputes = userPermissions.includes(PERMISSIONS.SYSTEM.MANAGE_QA_RULES)
+  const canReadDepartments = userPermissions.includes(PERMISSIONS.SYSTEM.MANAGE_ROLES)
+  const departmentsQuery = useDepartments(
+    {
+      project_id: activeProjectId ? Number(activeProjectId) : undefined,
+      is_active: true,
+      page_size: 200,
+    },
+    canReadDepartments
+  )
+
   const departmentOptions = useMemo(() => {
     const map = new Map<number, string>()
+    for (const d of departmentsQuery.data?.departments ?? []) {
+      map.set(d.id, d.name?.trim() || `ID ${d.id}`)
+    }
     for (const o of operators) {
       if (o.department_id != null && !map.has(o.department_id)) {
         map.set(o.department_id, o.department_name?.trim() || `ID ${o.department_id}`)
       }
     }
-    return Array.from(map, ([id, label]) => ({ id, label })).sort((a, b) =>
-      a.label.localeCompare(b.label)
+    return Array.from(map, ([id, name]) => ({ id, name })).sort((a, b) =>
+      a.name.localeCompare(b.name)
     )
-  }, [operators])
+  }, [departmentsQuery.data, operators])
 
   // Scope ∩ employee picker ∩ department → the operators whose calls we list.
+  // The department narrowing is kept client-side on top of the server-side
+  // `department_ids` below: the roster is the only department source the UI
+  // has, and it keeps the list correct while the backend param is still being
+  // rolled out (an unknown query param is simply ignored). Both directions
+  // narrow, so the result is the same intersection either way.
   const operatorIds = useMemo<number[] | undefined>(() => {
     let ids = selectedEmployeeIds.length > 0 ? selectedEmployeeIds : scoped.userIds
-    if (departmentId !== 'all') {
+    if (departmentIds.length > 0) {
+      const wanted = new Set(departmentIds)
       const inDept = new Set(
-        operators.filter((o) => o.department_id === departmentId).map((o) => o.id)
+        operators
+          .filter((o) => o.department_id != null && wanted.has(o.department_id))
+          .map((o) => o.id)
       )
       ids = (ids ?? operators.map((o) => o.id)).filter((id) => inDept.has(id))
     }
@@ -158,7 +209,7 @@ export function DialogsListTab() {
       ids = (ids ?? operators.map((o) => o.id)).filter((id) => named.has(id))
     }
     return ids
-  }, [selectedEmployeeIds, scoped.userIds, departmentId, operators, debouncedName])
+  }, [selectedEmployeeIds, scoped.userIds, departmentIds, operators, debouncedName])
 
   const { extensions, operatorByExtension } = useMemo(() => {
     const base = operatorIds ?? operators.map((o) => o.id)
@@ -175,28 +226,33 @@ export function DialogsListTab() {
     return { extensions: exts, operatorByExtension: extToOp }
   }, [operators, operatorIds])
 
-  const useCustomRange = !!(callFrom || callTo)
+  const useCustomRange = !!(debouncedCallFrom || debouncedCallTo)
   const filters = useMemo(
     () => ({
       agent_extensions: extensions,
+      department_ids: departmentIds.length > 0 ? departmentIds : undefined,
       period: useCustomRange ? undefined : ('last_30d' as const),
-      from_datetime: dayStartIso(callFrom),
-      to_datetime: dayEndIso(callTo),
+      from_datetime: dayStartIso(debouncedCallFrom),
+      to_datetime: dayEndIso(debouncedCallTo),
       telephony_types: telephonyType ? [telephonyType] : undefined,
       category: category || undefined,
-      min_duration: parsePositiveInt(minDuration),
+      disputed: canFilterDisputes && disputedOnly ? true : undefined,
+      min_duration: parsePositiveInt(debouncedMinDuration),
       sort: 'date_desc' as const,
       limit: pageSize,
       offset: (page - 1) * pageSize,
     }),
     [
       extensions,
+      departmentIds,
       useCustomRange,
-      callFrom,
-      callTo,
+      debouncedCallFrom,
+      debouncedCallTo,
       telephonyType,
       category,
-      minDuration,
+      canFilterDisputes,
+      disputedOnly,
+      debouncedMinDuration,
       page,
       pageSize,
     ]
@@ -206,22 +262,43 @@ export function DialogsListTab() {
     () =>
       JSON.stringify([
         extensions,
+        departmentIds,
         telephonyType,
         category,
-        callFrom,
-        callTo,
-        minDuration,
+        disputedOnly,
+        debouncedCallFrom,
+        debouncedCallTo,
+        debouncedMinDuration,
         pageSize,
       ]),
-    [extensions, telephonyType, category, callFrom, callTo, minDuration, pageSize]
+    [
+      extensions,
+      departmentIds,
+      telephonyType,
+      category,
+      disputedOnly,
+      debouncedCallFrom,
+      debouncedCallTo,
+      debouncedMinDuration,
+      pageSize,
+    ]
   )
   const [trackedResetKey, setTrackedResetKey] = useState(resetKey)
   if (resetKey !== trackedResetKey) {
     setTrackedResetKey(resetKey)
     setPage(1)
+    // The right panel belonged to the previous result set — narrowing the
+    // filters must not leave a call on screen that the list no longer shows.
+    // Kept while the scorecard editor is dirty: silently dropping a
+    // half-written evaluation is worse than a stale panel (the row-switch
+    // guard below asks before discarding for exactly that reason).
+    if (!reviewDirty) setSelected(null)
   }
 
-  const { data, isLoading, isError } = useCallMonitoring(filters, extensions.length > 0)
+  // No extension → no `agent_extensions` to query by → the request is
+  // pointless. Tracked explicitly so the table can name the reason.
+  const noExtensions = extensions.length === 0
+  const { data, isLoading, isError } = useCallMonitoring(filters, !noExtensions)
   const calls = useMemo(() => data?.calls ?? [], [data?.calls])
   const total = data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
@@ -232,6 +309,8 @@ export function DialogsListTab() {
     [calls]
   )
   const clientNames = useClientNames(clientIds)
+  // Same clientKeys.detail queries as useClientNames — no extra requests.
+  const clientDebts = useClientDebts(clientIds)
 
   const selectCall = (call: CallMonitoringItem, operatorId: number) => {
     setSelected({
@@ -241,6 +320,7 @@ export function DialogsListTab() {
       createdAt: call.initiated_at,
       operatorName: operatorByExtension.get(call.agent_extension)?.name,
       talkDurationSec: call.talk_duration,
+      clientId: call.client_id ?? null,
     })
   }
 
@@ -274,16 +354,18 @@ export function DialogsListTab() {
   const clearFilters = () => {
     setSelectedEmployeeIds([])
     setNameQuery('')
-    setDepartmentId('all')
+    setDepartmentIds([])
     setTelephonyType('')
     setCategory('')
+    setDisputedOnly(false)
     setCallFrom('')
     setCallTo('')
     setMinDuration('')
   }
   const hasAnyFilter =
     selectedEmployeeIds.length > 0 ||
-    departmentId !== 'all' ||
+    departmentIds.length > 0 ||
+    disputedOnly ||
     !!(nameQuery || telephonyType || category || callFrom || callTo || minDuration)
 
   const inputCls =
@@ -310,22 +392,13 @@ export function DialogsListTab() {
             hint: myEmployeesHint,
           }}
         />
-        <select
-          value={departmentId}
-          onChange={(e) =>
-            setDepartmentId(e.target.value === 'all' ? 'all' : Number(e.target.value))
-          }
-          className={inputCls}
-        >
-          <option value="all">
-            {t('pages.training.dialogue.dialogs.allDepartments', 'All departments')}
-          </option>
-          {departmentOptions.map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.label}
-            </option>
-          ))}
-        </select>
+        <DepartmentMultiSelect
+          value={departmentIds}
+          onChange={setDepartmentIds}
+          options={departmentOptions}
+          disabled={scoped.departmentPickerDisabled}
+          disabledHint={t(scoped.disabledLabelKey, scoped.scope)}
+        />
         <select
           value={telephonyType}
           onChange={(e) => setTelephonyType(e.target.value as TelephonyFilter)}
@@ -401,11 +474,35 @@ export function DialogsListTab() {
             {t(`pages.training.dialogue.category.${c}`, c)}
           </button>
         ))}
+        {canFilterDisputes ? (
+          <button
+            type="button"
+            data-testid="disputes-only-chip"
+            aria-pressed={disputedOnly}
+            onClick={() => setDisputedOnly((on) => !on)}
+            className={`rounded-full px-3 py-1 text-[11px] font-medium transition-colors ${
+              disputedOnly
+                ? 'bg-[#204E4D] text-white'
+                : 'bg-white text-[#545454] hover:bg-[#F7F7F7]'
+            }`}
+          >
+            {t('pages.training.dialogue.chips.disputesOnly', 'Disputes only')}
+          </button>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-[1fr_520px]">
         <div className="flex flex-col gap-3">
-          {isLoading ? (
+          {noExtensions ? (
+            // The query never fires without extensions (`enabled` below), so
+            // "no dialogs match the filters" would be a lie — say why instead.
+            <EmptyBox>
+              {t(
+                'pages.training.dialogue.dialogs.noExtensions',
+                'The selected employees have no telephony extensions'
+              )}
+            </EmptyBox>
+          ) : isLoading ? (
             <EmptyBox>{t('common.loading', 'Loading…')}</EmptyBox>
           ) : isError ? (
             <EmptyBox tone="error">
@@ -421,11 +518,12 @@ export function DialogsListTab() {
               operatorByExtension={operatorByExtension}
               trainerByOperator={trainerByOperator}
               clientNames={clientNames}
+              clientDebts={clientDebts}
               selectedCallId={selected?.callId}
               onSelect={handleSelectRow}
             />
           )}
-          {!isLoading && !isError && total > 0 ? (
+          {!noExtensions && !isLoading && !isError && total > 0 ? (
             <Pagination
               currentPage={page}
               totalPages={totalPages}
@@ -443,7 +541,13 @@ export function DialogsListTab() {
           createdAt={selected?.createdAt}
           operatorName={selected?.operatorName}
           talkDurationSec={selected?.talkDurationSec}
-          canEdit={selected != null && myOperatorIds.includes(selected.operatorId)}
+          clientId={selected?.clientId}
+          clientName={selected?.clientId != null ? clientNames.get(selected.clientId) : undefined}
+          clientDebts={selected?.clientId != null ? clientDebts.get(selected.clientId) : undefined}
+          canEdit={
+            selected != null &&
+            (!scorecardAssignedOnly || myOperatorIds.includes(selected.operatorId))
+          }
           onDirtyChange={setReviewDirty}
         />
       </div>
@@ -463,11 +567,17 @@ function EmptyBox({ children, tone }: { children: ReactNode; tone?: 'error' }) {
   )
 }
 
+/** Loan-number cell — see {@link LoanLink} (shared with the review panel). */
+function LoanCell({ clientId, debts }: { clientId: number | null; debts?: DebtDetail[] }) {
+  return <LoanLink clientId={clientId} debts={debts} fallback="—" />
+}
+
 function DialogsTable({
   calls,
   operatorByExtension,
   trainerByOperator,
   clientNames,
+  clientDebts,
   selectedCallId,
   onSelect,
 }: {
@@ -475,6 +585,7 @@ function DialogsTable({
   operatorByExtension: Map<string, { id: number; name: string }>
   trainerByOperator: Map<number, string>
   clientNames: Map<number, string>
+  clientDebts: Map<number, DebtDetail[]>
   selectedCallId?: string
   onSelect: (call: CallMonitoringItem, operatorId: number) => void
 }) {
@@ -494,6 +605,9 @@ function DialogsTable({
           </th>
           <th className={ANALYTICS_TABLE_TH}>
             {t('pages.training.dialogue.list.client', 'Client')}
+          </th>
+          <th className={ANALYTICS_TABLE_TH}>
+            {t('pages.training.dialogue.list.loanNumber', 'Loan number')}
           </th>
           <th className={ANALYTICS_TABLE_TH}>
             {t('pages.training.dialogue.list.callType', 'Call type')}
@@ -549,6 +663,12 @@ function DialogsTable({
               <td className={ANALYTICS_TABLE_TD}>
                 {clientName ?? (call.client_id != null ? `#${call.client_id}` : '—')}
               </td>
+              <td className={ANALYTICS_TABLE_TD} data-testid="loan-cell">
+                <LoanCell
+                  clientId={call.client_id}
+                  debts={call.client_id != null ? clientDebts.get(call.client_id) : undefined}
+                />
+              </td>
               <td className={ANALYTICS_TABLE_TD}>
                 <span
                   className={`rounded-full px-2 py-0.5 text-[10px] font-medium capitalize ${
@@ -568,7 +688,23 @@ function DialogsTable({
                   {t(`pages.training.dialogue.category.${cat}`, cat)}
                 </span>
               </td>
-              <td className={`${ANALYTICS_TABLE_TD} tabular-nums`}>{rating ?? '—'}</td>
+              <td className={ANALYTICS_TABLE_TD}>
+                <span className="flex items-center gap-1.5">
+                  <span className="tabular-nums">{rating ?? '—'}</span>
+                  {call.scorecard_is_disputed ? (
+                    <span
+                      data-testid="dispute-marker"
+                      title={t(
+                        'pages.training.dialogue.list.disputeHint',
+                        'The trainer disagreed with the AI review'
+                      )}
+                      className="rounded-full border border-[#204E4D] px-1.5 py-0.5 text-[10px] font-medium text-[#204E4D]"
+                    >
+                      {t('pages.training.dialogue.list.dispute', 'dispute')}
+                    </span>
+                  ) : null}
+                </span>
+              </td>
               <td
                 className={`${ANALYTICS_TABLE_TD} max-w-[220px] truncate`}
                 title={call.scorecard_comment ?? undefined}

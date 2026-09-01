@@ -4,7 +4,13 @@
  */
 
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { getClientSMSHistory, getSMSConfig, getTemplate, getTemplates } from '../api/smsApi'
+import {
+  getClientSMSHistory,
+  getDeletedTemplates,
+  getSMSConfig,
+  getTemplate,
+  getTemplates,
+} from '../api/smsApi'
 import type { SMSHistoryParams } from '../api/types'
 
 /**
@@ -14,6 +20,24 @@ export function useSMSTemplates(params?: { project_id?: number; category?: strin
   return useQuery({
     queryKey: ['sms', 'templates', params],
     queryFn: () => getTemplates(params),
+    placeholderData: keepPreviousData,
+  })
+}
+
+/**
+ * List soft-deleted templates (trash)
+ *
+ * Keyed under ['sms', 'templates'] on purpose: every template mutation already
+ * invalidates that prefix, so the trash view and the live list cannot drift.
+ */
+export function useDeletedSMSTemplates(
+  params?: { category?: string; limit?: number; offset?: number },
+  enabled = true
+) {
+  return useQuery({
+    queryKey: ['sms', 'templates', 'trash', params],
+    queryFn: () => getDeletedTemplates(params),
+    enabled,
     placeholderData: keepPreviousData,
   })
 }

@@ -17,6 +17,16 @@ export default defineConfig({
     port: 3000,
     host: true,
     proxy: {
+      // Кредитный модуль — отдельный сервис (credit-service). Локально он живёт
+      // на машине разработчика, поэтому идёт мимо dev-Kong; на этапе 2 маршрут
+      // /api/v1/credit/* появится в Kong и это правило исчезнет.
+      // ВАЖНО: правило объявлено ДО общего '/api' — vite берёт первое
+      // совпадение префикса, и при обратном порядке кредитные запросы уехали бы
+      // на dev-сервер, где сервиса ещё нет.
+      '/api/v1/credit': {
+        target: process.env.VITE_CREDIT_PROXY_TARGET || 'http://localhost:8020',
+        changeOrigin: true,
+      },
       '/api': {
         target: 'http://72.62.17.132:8000',
         changeOrigin: true,
@@ -44,7 +54,12 @@ export default defineConfig({
             '@radix-ui/react-tooltip',
           ],
           forms: ['react-hook-form', '@hookform/resolvers', 'zod'],
-          i18n: ['i18next', 'react-i18next', 'i18next-browser-languagedetector', 'i18next-http-backend'],
+          i18n: [
+            'i18next',
+            'react-i18next',
+            'i18next-browser-languagedetector',
+            'i18next-http-backend',
+          ],
           misc: ['axios', 'date-fns', 'socket.io-client'],
         },
       },

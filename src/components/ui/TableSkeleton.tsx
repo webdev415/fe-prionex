@@ -30,19 +30,19 @@ export function TableSkeleton({
 }: TableSkeletonProps) {
   return (
     <div
-      className={`border-border bg-card overflow-hidden rounded-xl border shadow-sm ${className || ''}`}
+      className={`border-border bg-card animate-pulse overflow-hidden rounded-xl border shadow-sm [will-change:opacity] ${className || ''}`}
     >
       {showBulkHeader && (
         <div className="border-border bg-card flex h-[49px] items-center justify-between border-b px-6">
-          <div className="bg-muted h-4 w-24 animate-pulse rounded" />
-          <div className="bg-muted h-8 w-32 animate-pulse rounded" />
+          <div className="bg-muted h-4 w-24 rounded" />
+          <div className="bg-muted h-8 w-32 rounded" />
         </div>
       )}
 
       {showTableHeaderActions && (
         <div className="border-border bg-card flex h-[49px] items-center justify-between border-b px-6">
-          <div className="bg-muted h-4 w-32 animate-pulse rounded" />
-          <div className="bg-muted h-8 w-40 animate-pulse rounded" />
+          <div className="bg-muted h-4 w-32 rounded" />
+          <div className="bg-muted h-8 w-40 rounded" />
         </div>
       )}
 
@@ -51,7 +51,7 @@ export function TableSkeleton({
           <tr className="bg-muted/60">
             {enableBulkSelection && (
               <th scope="col" className="border-border h-[49px] border-r px-6 text-left">
-                <div className="bg-muted h-4 w-4 animate-pulse rounded" />
+                <div className="bg-muted h-4 w-4 rounded" />
               </th>
             )}
             {Array.from({ length: columns }).map((_, index) => (
@@ -60,7 +60,7 @@ export function TableSkeleton({
                 scope="col"
                 className={`h-[49px] px-6 ${index < columns - 1 ? 'border-border border-r' : ''}`}
               >
-                <div className="bg-muted h-4 w-20 animate-pulse rounded" />
+                <div className="bg-muted h-4 w-20 rounded" />
               </th>
             ))}
           </tr>
@@ -70,7 +70,7 @@ export function TableSkeleton({
             <tr key={rowIndex} className="bg-card">
               {enableBulkSelection && (
                 <td className="border-border h-[49px] border-r px-6">
-                  <div className="bg-muted h-4 w-4 animate-pulse rounded" />
+                  <div className="bg-muted h-4 w-4 rounded" />
                 </td>
               )}
               {Array.from({ length: columns }).map((_, colIndex) => (
@@ -79,7 +79,7 @@ export function TableSkeleton({
                   className={`h-[49px] px-6 ${colIndex < columns - 1 ? 'border-border border-r' : ''}`}
                 >
                   <div
-                    className={`bg-muted h-4 animate-pulse rounded ${
+                    className={`bg-muted h-4 rounded ${
                       colIndex === 0 ? 'w-[60%]' : colIndex === columns - 1 ? 'w-[40%]' : 'w-[80%]'
                     }`}
                   />

@@ -34,6 +34,8 @@ import {
 } from '@/features/contactTags/hooks/useContactTags'
 import type { ContactTagCategory, ContactTagValue } from '@/features/contactTags/types'
 
+import { ContactTagsPageSkeleton } from './ContactTagsPageSkeleton'
+
 type StatusFilter = 'all' | 'active' | 'hidden'
 
 export function ContactTagsPage() {
@@ -320,7 +322,7 @@ export function ContactTagsPage() {
               <Button
                 size="sm"
                 variant="ghost"
-                className="text-red-500 hover:text-red-600"
+                className="text-error-500 hover:text-error-600"
                 onClick={() => void handleDeleteCategory(row)}
               >
                 {t('common.delete', 'Delete')}
@@ -334,8 +336,10 @@ export function ContactTagsPage() {
 
   return (
     <div className="flex flex-col gap-4 p-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">{t('pages.contactTags.title', 'Contact Tags')}</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-foreground text-xl font-semibold sm:text-2xl">
+          {t('pages.contactTags.title', 'Contact Tags')}
+        </h1>
         <div className="flex items-center gap-3">
           <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
             <SelectTrigger className="w-[140px]">
@@ -356,17 +360,17 @@ export function ContactTagsPage() {
       </div>
 
       {isError ? (
-        <p className="text-red-500">{t('common.loadError', 'Failed to load data')}</p>
+        <p className="text-error-500">{t('common.loadError', 'Failed to load data')}</p>
       ) : isPending ? (
-        <p className="text-dark-500 text-sm">{t('status.loading')}</p>
+        <ContactTagsPageSkeleton />
       ) : (
         <DataTable columns={columns} data={categories} />
       )}
 
       {categories.map((cat) =>
         cat.values.length > 0 ? (
-          <div key={`values-${cat.id}`} className="rounded border p-3">
-            <div className="mb-2 text-sm font-medium">{cat.name} — values</div>
+          <div key={`values-${cat.id}`} className="border-border bg-card rounded-xl border p-3">
+            <div className="text-foreground mb-2 text-sm font-medium">{cat.name} — values</div>
             <div className="flex flex-wrap gap-2">
               {cat.values.map((v) => (
                 <span
@@ -426,7 +430,7 @@ export function ContactTagsPage() {
           {!editingCategory?.is_system && (
             <>
               <div>
-                <p className="text-dark-500 mb-2 text-sm">
+                <p className="text-foreground mb-2 text-sm">
                   {t('pages.contactTags.selectionType', 'Selection type')}
                 </p>
                 <RadioGroup
@@ -445,14 +449,14 @@ export function ContactTagsPage() {
                 </RadioGroup>
               </div>
               <div className="flex items-center justify-between gap-4">
-                <span className="text-dark-500 text-sm">
+                <span className="text-foreground text-sm">
                   {t('pages.contactTags.protected', 'Protected')}
                 </span>
                 <ToggleSwitch checked={catProtected} onChange={setCatProtected} />
               </div>
             </>
           )}
-          {formError && <p className="text-sm text-red-500">{formError}</p>}
+          {formError && <p className="text-error-500 text-sm">{formError}</p>}
         </ModalContent>
         <ModalFooter>
           <Button variant="ghost" onClick={() => setCategoryModalOpen(false)}>
@@ -491,24 +495,24 @@ export function ContactTagsPage() {
             type="number"
           />
           <div className="flex items-center justify-between gap-4">
-            <span className="text-dark-500 text-sm">
+            <span className="text-foreground text-sm">
               {t('pages.contactTags.blocksCalls', 'Blocks calls')}
             </span>
             <ToggleSwitch checked={valBlocksCalls} onChange={setValBlocksCalls} />
           </div>
           <div className="flex items-center justify-between gap-4">
-            <span className="text-dark-500 text-sm">
+            <span className="text-foreground text-sm">
               {t('pages.contactTags.blocksSms', 'Blocks SMS')}
             </span>
             <ToggleSwitch checked={valBlocksSms} onChange={setValBlocksSms} />
           </div>
           <div className="flex items-center justify-between gap-4">
-            <span className="text-dark-500 text-sm">
+            <span className="text-foreground text-sm">
               {t('pages.contactTags.blocksSpam', 'Blocks spam')}
             </span>
             <ToggleSwitch checked={valBlocksSpam} onChange={setValBlocksSpam} />
           </div>
-          {formError && <p className="text-sm text-red-500">{formError}</p>}
+          {formError && <p className="text-error-500 text-sm">{formError}</p>}
         </ModalContent>
         <ModalFooter>
           <Button variant="ghost" onClick={() => setValueModalOpen(false)}>

@@ -344,3 +344,162 @@ jobs:
   # place of the third-party upload this comment used to describe as future
   # work. See
   # _bmad-output/implementation-artifacts/2-3-publish-coverage-as-an-artifact-instead-of-uploading-to-codecov.md.
+
+  # ── Story 3.4 ────────────────────────────────────────────────────────────────
+  #
+  # The container image, built only after lint, typecheck and tests pass. This
+  # is what makes an image exist for a feature branch without anyone asking
+  # (AC2), which is in turn what makes the DEV deploy in Story 4.3 possible: it
+  # pulls fail-fast with no `:latest` fallback, so the image has to already be
+  # there.
+  #
+  # `needs:` is the gate. A failing test does not produce a broken image — it
+  # produces NO image, because a job whose `needs` failed is skipped, not run.
+  # No trigger is involved and none was available: `workflow_run` was measured
+  # and is not usable on this instance (PR #30).
+  #
+  # `uses:` rather than a copy of build.yml's steps. That file holds ~150 lines
+  # of load-bearing logic — the OpenBao read with its trap-revoke, the tag
+  # computation with its `keep_pattern` guard and permanence report, the digest
+  # assertion — and a second copy of the `keep_pattern` guard is exactly how it
+  # drifts out of step with the retention rule in the database. `workflow_call`
+  # was measured property by property before this was written; see D21.
+  #
+  # 🔴 `environment: dev` is a LITERAL, and that is AC5. No expression, no
+  # input, no fallback — because a preprod or prod build mints a PERMANENT tag,
+  # and removing one needs an authorised DELETE plus a write:package token,
+  # which has twice required Oleg in person.
+  #
+  # ⚠️ Precisely which tag is permanent, because an earlier version of this
+  # comment said "`-preprod` and `-prod` tags" and only half of that is true:
+  # it is `sha-<12>-preprod` and `sha-<12>-prod` that the retention rule keeps
+  # forever. The branch tag `<branch>-prod` matches no `keep_pattern`
+  # alternative and expires at 14 days like any `-dev` tag — `probe-3-3-preprod-preprod`
+  # is sitting in the registry right now on the ordinary clock. The literal is
+  # still right, but a future story must not reason from the wider claim. The automatic
+  # path must not be able to reach those environments even by accident, and
+  # "cannot" here is provable by reading this one line.
+  #
+  # `secrets: inherit` is not a shortcut — it is the only mechanism that works.
+  # A callee cannot declare the secrets it needs (`on.workflow_call.secrets` is
+  # rejected by the parser) and repository secrets are not ambient inside a
+  # callee. Both measured, D21. ⚠️ It is all-or-nothing: build.yml receives every
+  # repository secret including the production OpenBao credentials. That is not
+  # a regression — it already had them as a top-level workflow, and the
+  # per-environment `case` in its OpenBao step is what actually narrows them
+  # (D20) — but Story 4.8 should weigh it before extracting a deploy workflow.
+  #
+  # 🚨 The `if:` keeps this off `pull_request`, where the run's ref is
+  # `refs/pull/N/head` and the image would be tagged `N-head-dev` — junk in the
+  # registry for no benefit, since the push run on the same branch already built
+  # the same content.
+  #
+  # 🔴 It tests `github.ref`, NOT `github.event_name`, and that is the whole
+  # point. The first version of this job used `github.event_name == 'push'` and
+  # produced a GREEN RUN THAT BUILT NOTHING — run 631: `image` reported success
+  # while `image.build-and-push` was skipped, and the registry had no new tag.
+  #
+  # The cause: Forgejo copies a `uses:` job's `if:` DOWN into the expanded
+  # callee job — visibly, the same way it copies `needs:` — and re-evaluates it
+  # there, where `github.event_name` is `workflow_call`, never `push`. The
+  # condition was constant-false. Nothing errored.
+  #
+  # `github.ref` does not have this problem because it is a property of the RUN,
+  # not of the job: `action_run.ref` is a single column, and the expanded callee
+  # lives inside the same run. Only `event_name` is synthesized per job to
+  # describe the call.
+  #
+  # 🔴 The condition is written POSITIVELY — `startsWith(…, 'refs/heads/')` —
+  # and that is deliberate, because the negative form `!startsWith(…,
+  # 'refs/pull/')` is TRUE when `github.ref` is empty. It would run the job for
+  # the wrong reason and look identical to working. Written this way an
+  # unresolvable context skips the job, which is visible, instead of running it
+  # on a ref nobody supplied.
+  #
+  # No `ref:` is passed. `${{ github.ref_name }}` was tried here and arrived at
+  # the callee EMPTY — run 632 died on build.yml's own guard with `ref ''
+  # sanitizes to an empty string`. The branch is derived inside build.yml from
+  # `GITHUB_REF` instead, in bash, where string slicing actually exists.
+  #
+  # ⚠️ A green `image` job is NOT evidence that an image was built. The wrapper
+  # reports success when every expanded job was SKIPPED. The only evidence is
+  # the tag in the registry — Story 3.4 Task 5 means the registry, not the tick.
+  #
+  # 🚨 On concurrency, deliberately NOT adding a block. build.yml's own block
+  # does not apply when it is called (D21), so the policy here is Forgejo's
+  # default for `push`: auto-cancel an earlier run of the SAME workflow on the
+  # SAME ref for the SAME event. Adding an explicit block would turn every rapid
+  # push on a feature branch into a queued ~540s run on a host shared with
+  # another tenant's production.
+  #
+  # 🔴 An earlier version of this comment claimed more than that mechanism can
+  # deliver, and review was right to attack it. Correcting the record:
+  #
+  #   - "auto-cancel leaves exactly one writer" holds only WITHIN one workflow
+  #     file and one event type. A manual dispatch of `build.yml` for the same
+  #     ref is a separate writer with its own group, and nothing serializes it
+  #     against this one. Two green runs can leave `<branch>-dev` pointing at the
+  #     OLDER commit.
+  #   - "a cancel cannot leave a tag pointing at the wrong image" is true per
+  #     TAG and false per tag SET. Two tags are pushed in sequence; a cancel
+  #     between the two manifest PUTs leaves the `sha-` tag updated and
+  #     `<branch>-dev` stale, and the digest assertion never runs to say so.
+  #   - "`sha-<12>-dev` tags cannot collide" is false across time. The same
+  #     commit is rebuilt whenever it is reachable from two refs, and the builds
+  #     are not reproducible — the base image floats and the OpenBao URLs can
+  #     change — so the tag silently repoints to a different digest.
+  #
+  # None of that is newly introduced here; it is the residual race build.yml
+  # already records for the dispatch path, which this job arms automatically.
+  # It is written down rather than fixed because fixing it needs a serialization
+  # mechanism this instance does not offer at job level (D8), and Story 4.8 will
+  # have to face the same question for deploys.
+  # 🔴 `ci.yml` also has a `workflow_dispatch` trigger with NO branch filter —
+  # `branches-ignore` applies to `push` only. On a dispatch `github.ref` is
+  # `refs/heads/<chosen branch>`, so the `image` job's own `if:` is TRUE and it
+  # pushes to the registry. Dispatching CI on `prod` would build prod-branch
+  # content baked with DEV OpenBao URLs and tag it `prod-dev`.
+  #
+  # It cannot be fixed in the `image` job's `if:` using `github.event_name`: a
+  # `uses:` job's `if:` is copied down into the callee and re-evaluated where
+  # that value is `workflow_call` (D21) — the trap that produced a green run
+  # building nothing in run 631. `github.ref` survives the copy, `event_name`
+  # does not.
+  #
+  # So the check lives in an ordinary `run:` job whose `if:` is not copied
+  # anywhere, and `image` depends on it. A skipped dependency skips the
+  # dependent — confirmed by run 642.
+  #
+  # ⚠️ THIS JOB WAS ADDED, REVERTED, AND RESTORED, and the reason it was reverted
+  # was a measurement error worth recording so nobody repeats it. It was claimed
+  # that a skipped ordinary job leaves its commit status `pending` forever, and
+  # that this hung PR #35. The database refutes it flatly — for the very commit
+  # in question:
+  #
+  #   CI / Gate the image build to real pushes (pull_request) | pending | idx 30
+  #   CI / Gate the image build to real pushes (pull_request) | success | idx 31
+  #
+  # both stamped the same second, and across the whole repository there are 434
+  # `success` and 21 `failure` commit statuses and **zero** `pending`. An
+  # intermediate row was sampled and reported as final — the same mistake Story
+  # 2.1 made with job logs, in a story that warns about it twice.
+  #
+  # A skipped ordinary job resolves to success. It does not hang anything.
+
+  gate:
+    name: Gate the image build to real pushes
+    if: github.event_name == 'push'
+    runs-on: node-20
+    timeout-minutes: 5
+    steps:
+      - name: Report why the image build is allowed
+        run: echo "event is push — the image build may proceed"
+
+  image:
+    name: Build and Push Image
+    needs: [lint, typecheck, test, gate]
+    if: ${{ startsWith(github.ref, 'refs/heads/') }}
+    uses: ./.forgejo/workflows/build.yml
+    with:
+      environment: dev
+    secrets: inherit

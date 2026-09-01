@@ -1,0 +1,376 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { fireEvent, render, screen, within } from '@testing-library/react'
+import { MarkdownMessage, MUTED_CITATION_CLASS } from '../MarkdownMessage'
+import { REPORT_TABLES_FLAG } from '../reportTableHighlight'
+
+/** Отчёт «как из ассистента»: числовая колонка, строка-аномалия и вывод. */
+const REPORT_MD = [
+  '| Оператор | Сума |',
+  '| --- | --- |',
+  '| Петренко | 1 209 239,06 |',
+  '| ⚠️ Коваль | 12 500 |',
+  '',
+  'Висновок: середній чек виріс.',
+].join('\n')
+
+/** Отчёт без маркеров — чистый зелёный авто-градиент по колонке сумм. */
+const GRADIENT_MD = [
+  '| Оператор | Сума |',
+  '| --- | --- |',
+  '| Петренко | 1 209 239,06 |',
+  '| Коваль | 12 500 |',
+  '| Шевченко | 340 236 |',
+].join('\n')
+
+/**
+ * Разметка того же отчёта ДО доработки (снята с origin/development).
+ * Атрибут `node="[object Object]"` на `<table>` — давняя особенность
+ * react-markdown c `passNode`, и она тоже должна остаться нетронутой.
+ */
+const BASELINE_HTML =
+  '<div><div data-testid="markdown-table" class="my-2">' +
+  '<div class="overflow-x-auto"><table node="[object Object]">' +
+  '<thead><tr><th>Оператор</th><th>Сума</th></tr></thead>' +
+  '<tbody><tr><td>Петренко</td><td>1 209 239,06</td></tr>' +
+  '<tr><td>⚠️ Коваль</td><td>12 500</td></tr></tbody>' +
+  '</table></div></div>\n<p>Висновок: середній чек виріс.</p></div>'
+
+/** Отчёт без единого числа — эталон деградации: раскрашивать нечего. */
+const TEXT_TABLE_MD = [
+  '| Оператор | Відділ |',
+  '| --- | --- |',
+  '| Петренко | Стягнення |',
+  '| Коваль | Юристи |',
+].join('\n')
+
+/** Таблица из `n` строк, где максимум суммы лежит в последней строке. */
+function longReport(n: number): string {
+  const header = '| Оператор | Сума |\n| --- | --- |'
+  const rows = Array.from({ length: n }, (_, i) => `| Оператор ${i + 1} | ${(i + 1) * 100} |`)
+  return [header, ...rows].join('\n')
+}
+
+function bodyRows(): HTMLElement[] {
+  const table = screen.getByTestId('markdown-table')
+  return within(table).getAllByRole('row').slice(1)
+}
+
+describe('MarkdownMessage — отчётные таблицы, флаг выключен', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it('без флага рендерит отчёт байт-в-байт так же, как до доработки', () => {
+    const { container } = render(<MarkdownMessage>{REPORT_MD}</MarkdownMessage>)
+    expect(container.innerHTML).toBe(BASELINE_HTML)
+  })
+
+  it('явное «false» тоже ничего не меняет', () => {
+    vi.stubEnv(REPORT_TABLES_FLAG, 'false')
+    const { container } = render(<MarkdownMessage>{REPORT_MD}</MarkdownMessage>)
+    expect(container.innerHTML).toBe(BASELINE_HTML)
+  })
+
+  it('без флага нет ни тепловой карты, ни подсветки строки, ни лид-вывода', () => {
+    render(<MarkdownMessage>{REPORT_MD}</MarkdownMessage>)
+    const table = screen.getByTestId('markdown-table')
+    expect(table.querySelectorAll('[data-heat]')).toHaveLength(0)
+    expect(table.querySelectorAll('[data-row-marker]')).toHaveLength(0)
+    expect(screen.queryByTestId('markdown-conclusion')).not.toBeInTheDocument()
+  })
+})
+
+describe('MarkdownMessage — отчётные таблицы, флаг включён', () => {
+  beforeEach(() => {
+    vi.stubEnv(REPORT_TABLES_FLAG, 'true')
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  it('заливает только числовую колонку и не трогает колонку имён', () => {
+    render(<MarkdownMessage>{GRADIENT_MD}</MarkdownMessage>)
+
+    const [first, second] = bodyRows()
+    const firstCells = within(first).getAllByRole('cell')
+    const secondCells = within(second).getAllByRole('cell')
+
+    // Колонка 0 — имена: ни температуры, ни жирного.
+    expect(firstCells[0]).not.toHaveAttribute('data-heat')
+    expect(secondCells[0]).not.toHaveAttribute('data-heat')
+
+    // Колонка 1 — суммы: температура по шкале колонки.
+    expect(firstCells[1]).toHaveAttribute('data-heat', '1.00')
+    expect(secondCells[1]).toHaveAttribute('data-heat', '0.00')
+  })
+
+  it('максимум колонки дополнительно выделен полужирным', () => {
+    render(<MarkdownMessage>{GRADIENT_MD}</MarkdownMessage>)
+
+    const [first, second] = bodyRows()
+    const max = within(first).getAllByRole('cell')[1]
+    const min = within(second).getAllByRole('cell')[1]
+
+    expect(max).toHaveAttribute('data-heat-max', 'true')
+    expect(max).toHaveClass('font-semibold')
+    expect(min).not.toHaveAttribute('data-heat-max')
+    expect(min).not.toHaveClass('font-semibold')
+  })
+
+  it('строка с «⚠️» — жёлтый фон строки, маркер перекрывает авто-градиент', () => {
+    render(<MarkdownMessage>{REPORT_MD}</MarkdownMessage>)
+
+    const [first, second] = bodyRows()
+    expect(second).toHaveClass('assistant-attention-row')
+    expect(second).toHaveAttribute('data-row-marker', 'attention')
+    expect(second).toHaveTextContent('Коваль')
+    expect(second.textContent).not.toContain('⚠')
+    // Приоритет маркера: помеченная строка целиком, без поячеечного градиента.
+    expect(within(second).getAllByRole('cell')[1]).not.toHaveAttribute('data-heat')
+
+    // Немаркированная строка — обычный зелёный градиент.
+    expect(first).not.toHaveAttribute('data-row-marker')
+    expect(within(first).getAllByRole('cell')[1]).toHaveAttribute('data-heat')
+  })
+
+  it('строка с «🔴» — красный фон (плохо), строка с «🟢» — зелёный (хорошо)', () => {
+    const md = [
+      '| Оператор | Сума |',
+      '| --- | --- |',
+      '| Петренко | 500 |',
+      '| 🔴 Коваль | 0 |',
+      '| 🟢 Шевченко | 900 |',
+    ].join('\n')
+
+    render(<MarkdownMessage>{md}</MarkdownMessage>)
+    const [, bad, good] = bodyRows()
+
+    // Тип «светофора» доказываем классом и data-атрибутом; точный токен фона —
+    // в юнит-тесте markerBackground (jsdom не парсит color-mix в inline-style).
+    expect(bad).toHaveClass('assistant-bad-row')
+    expect(bad).toHaveAttribute('data-row-marker', 'bad')
+    expect(bad).toHaveTextContent('Коваль')
+    expect(bad.textContent).not.toContain('🔴')
+
+    expect(good).toHaveClass('assistant-good-row')
+    expect(good).toHaveAttribute('data-row-marker', 'good')
+    expect(good).toHaveTextContent('Шевченко')
+    expect(good.textContent).not.toContain('🟢')
+  })
+
+  it('красный маркер перебивает зелёный градиент даже на максимуме колонки', () => {
+    // Колонка «больше = хуже»: максимум помечен 🔴 — зелёного градиента на нём быть
+    // не должно, а немаркированные строки градиент сохраняют.
+    const md = [
+      '| Оператор | Прострочка |',
+      '| --- | --- |',
+      '| Петренко | 100 |',
+      '| Коваль | 300 |',
+      '| 🔴 Шевченко | 900 |',
+    ].join('\n')
+
+    render(<MarkdownMessage>{md}</MarkdownMessage>)
+    const [first, secondRow, worst] = bodyRows()
+
+    expect(worst).toHaveAttribute('data-row-marker', 'bad')
+    expect(within(worst).getAllByRole('cell')[1]).not.toHaveAttribute('data-heat')
+    expect(within(worst).getAllByRole('cell')[1]).not.toHaveClass('font-semibold')
+
+    // Немаркированные строки — обычный зелёный градиент по шкале всей колонки.
+    expect(within(first).getAllByRole('cell')[1]).toHaveAttribute('data-heat', '0.00')
+    expect(within(secondRow).getAllByRole('cell')[1]).toHaveAttribute('data-heat', '0.25')
+  })
+
+  it('итоговая строка с маркером: без фона, маркер вырезан, без градиента', () => {
+    const md = [
+      '| Оператор | Сума |',
+      '| --- | --- |',
+      '| Петренко | 100 |',
+      '| Коваль | 300 |',
+      '| 🟢 **Усього** | 503 |',
+    ].join('\n')
+
+    render(<MarkdownMessage>{md}</MarkdownMessage>)
+    const rows = bodyRows()
+    const total = rows[2]
+
+    // Маркер на итоге игнорируется барьером: ни фона, ни класса маркера.
+    expect(total).not.toHaveAttribute('data-row-marker')
+    expect(total).not.toHaveClass('assistant-good-row')
+    // Маркер вырезан из отображения, но текст итога и число на месте.
+    expect(total.textContent).not.toContain('🟢')
+    expect(total).toHaveTextContent('Усього')
+    expect(total).toHaveTextContent('503')
+    // Авто-градиент к итогу не применяется — итог не сравнивается с данными.
+    expect(within(total).getAllByRole('cell')[1]).not.toHaveAttribute('data-heat')
+  })
+
+  it('итоговая строка без маркера («РАЗОМ КОНТАКТ-ЦЕНТР») рендерится обычной', () => {
+    const md = [
+      '| Відділ | Сума |',
+      '| --- | --- |',
+      '| Стягнення | 100 |',
+      '| Юристи | 300 |',
+      '| РАЗОМ КОНТАКТ-ЦЕНТР | 400 |',
+    ].join('\n')
+
+    render(<MarkdownMessage>{md}</MarkdownMessage>)
+    const total = bodyRows()[2]
+
+    expect(total).not.toHaveAttribute('data-row-marker')
+    expect(total).toHaveTextContent('РАЗОМ КОНТАКТ-ЦЕНТР')
+    expect(within(total).getAllByRole('cell')[1]).not.toHaveAttribute('data-heat')
+  })
+
+  it('итог исключён из шкалы: строки данных красятся по своим min/max', () => {
+    // Итог 400 не должен «сжечь» шкалу — данные 100..300 дают 0.00 и 1.00.
+    const md = [
+      '| Оператор | Сума |',
+      '| --- | --- |',
+      '| Петренко | 100 |',
+      '| Коваль | 300 |',
+      '| Разом | 400 |',
+    ].join('\n')
+
+    render(<MarkdownMessage>{md}</MarkdownMessage>)
+    const [first, second, total] = bodyRows()
+
+    expect(within(first).getAllByRole('cell')[1]).toHaveAttribute('data-heat', '0.00')
+    expect(within(second).getAllByRole('cell')[1]).toHaveAttribute('data-heat', '1.00')
+    expect(within(second).getAllByRole('cell')[1]).toHaveAttribute('data-heat-max', 'true')
+    expect(within(total).getAllByRole('cell')[1]).not.toHaveAttribute('data-heat')
+  })
+
+  it('нечисловая таблица остаётся без тепловой карты', () => {
+    render(<MarkdownMessage>{TEXT_TABLE_MD}</MarkdownMessage>)
+    const table = screen.getByTestId('markdown-table')
+    expect(table.querySelectorAll('[data-heat]')).toHaveLength(0)
+    expect(table.querySelectorAll('[data-row-marker]')).toHaveLength(0)
+  })
+
+  it('нечисловая таблица даёт ту же разметку, что и с выключенным флагом', () => {
+    const { container: on } = render(<MarkdownMessage>{TEXT_TABLE_MD}</MarkdownMessage>)
+    const withFlag = on.innerHTML
+
+    vi.unstubAllEnvs()
+    const { container: off } = render(<MarkdownMessage>{TEXT_TABLE_MD}</MarkdownMessage>)
+
+    expect(withFlag).toBe(off.innerHTML)
+  })
+
+  it('обычный текст без таблицы и без «Висновок:» тоже не меняется', () => {
+    const md = ['# Звіт', '', 'Перший абзац.', '', '- пункт списку', '- другий пункт'].join('\n')
+
+    const { container: on } = render(<MarkdownMessage>{md}</MarkdownMessage>)
+    const withFlag = on.innerHTML
+
+    vi.unstubAllEnvs()
+    const { container: off } = render(<MarkdownMessage>{md}</MarkdownMessage>)
+
+    expect(withFlag).toBe(off.innerHTML)
+  })
+
+  it('строка-аномалия в нечисловой таблице подсвечивается и не теряет ячейки', () => {
+    const md = [
+      '| Оператор | Відділ |',
+      '| --- | --- |',
+      '| Петренко | Стягнення |',
+      '| ⚠️ Коваль | Юристи |',
+    ].join('\n')
+
+    render(<MarkdownMessage>{md}</MarkdownMessage>)
+    const [first, second] = bodyRows()
+
+    expect(first).not.toHaveAttribute('data-row-marker')
+    expect(second).toHaveAttribute('data-row-marker', 'attention')
+    // Клонирование строки не должно стереть её ячейки: колонок по-прежнему две.
+    expect(within(second).getAllByRole('cell')).toHaveLength(2)
+    expect(second).toHaveTextContent('Коваль')
+    expect(second.textContent).not.toContain('⚠')
+    expect(second).toHaveTextContent('Юристи')
+  })
+
+  it('колонка дат и телефонов не превращается в тепловую карту', () => {
+    const md = [
+      '| Дата | Телефон |',
+      '| --- | --- |',
+      '| 19.08.2026 | 0671234567 |',
+      '| 20.08.2026 | 0509876543 |',
+    ].join('\n')
+
+    render(<MarkdownMessage>{md}</MarkdownMessage>)
+    expect(screen.getByTestId('markdown-table').querySelectorAll('[data-heat]')).toHaveLength(0)
+  })
+
+  it('шкала колонки считается по всей таблице, а не по видимым 10 строкам', () => {
+    render(<MarkdownMessage>{longReport(12)}</MarkdownMessage>)
+
+    // Максимум (строка 12) скрыт под сверткой — видимая первая строка не должна
+    // считать себя максимумом.
+    const visible = bodyRows()
+    expect(visible).toHaveLength(10)
+    expect(within(visible[9]).getAllByRole('cell')[1]).not.toHaveAttribute('data-heat-max')
+    expect(within(visible[9]).getAllByRole('cell')[1]).toHaveAttribute('data-heat', '0.82')
+
+    fireEvent.click(screen.getByTestId('markdown-table-toggle'))
+    const all = bodyRows()
+    expect(all).toHaveLength(12)
+    expect(within(all[11]).getAllByRole('cell')[1]).toHaveAttribute('data-heat-max', 'true')
+    // Уже показанная строка не «перегрелась» после разворота.
+    expect(within(all[9]).getAllByRole('cell')[1]).toHaveAttribute('data-heat', '0.82')
+  })
+
+  it('строку «Висновок:» подаёт как лид-абзац, обычный абзац не трогает', () => {
+    render(
+      <MarkdownMessage>
+        {['Звичайний абзац.', '', 'Висновок: платежі за вихідні дозаллються в понеділок.'].join(
+          '\n'
+        )}
+      </MarkdownMessage>
+    )
+
+    const lead = screen.getByTestId('markdown-conclusion')
+    expect(lead.tagName).toBe('P')
+    expect(lead).toHaveClass('font-medium')
+    expect(lead).toHaveTextContent('Висновок: платежі за вихідні дозаллються в понеділок.')
+
+    const plain = screen.getByText('Звичайний абзац.')
+    expect(plain.tagName).toBe('P')
+    expect(plain).not.toHaveAttribute('class')
+    expect(plain).not.toHaveAttribute('node')
+  })
+
+  it('видит «Висновок:» и когда модель выделила его жирным', () => {
+    render(<MarkdownMessage>{'**Висновок:** середній чек виріс.'}</MarkdownMessage>)
+    expect(screen.getByTestId('markdown-conclusion')).toBeInTheDocument()
+  })
+})
+
+describe('MarkdownMessage — сноски-цитаты в ячейках таблиц приглушены', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  /** Таблица с факт-сноской `[[1]]` прямо в числовой ячейке («46①»). */
+  const CITED_TABLE_MD = ['| Оператор | Сума |', '| --- | --- |', '| Петренко | 46[[1]] |'].join(
+    '\n'
+  )
+
+  it('цитата внутри ячейки получает приглушающий класс', () => {
+    render(<MarkdownMessage>{CITED_TABLE_MD}</MarkdownMessage>)
+    expect(screen.getByTestId('markdown-fact')).toHaveClass(MUTED_CITATION_CLASS)
+  })
+
+  it('та же цитата вне таблицы приглушающего класса не получает', () => {
+    render(<MarkdownMessage>{'Борг 46[[1]] закрито.'}</MarkdownMessage>)
+    expect(screen.getByTestId('markdown-fact')).not.toHaveClass(MUTED_CITATION_CLASS)
+  })
+
+  it('приглушение цитат не зависит от флага отчётных таблиц', () => {
+    // Шум сносок в ячейках убираем всегда, а не только при включённых отчётах.
+    vi.stubEnv(REPORT_TABLES_FLAG, 'true')
+    render(<MarkdownMessage>{CITED_TABLE_MD}</MarkdownMessage>)
+    expect(screen.getByTestId('markdown-fact')).toHaveClass(MUTED_CITATION_CLASS)
+  })
+})

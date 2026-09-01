@@ -138,8 +138,13 @@ describe('AiAssistantBetaPage composer "+" hub', () => {
       expect.objectContaining({ message: 'разберись детально', deep_research: true }),
       expect.anything()
     )
-    // The flag persisted to the settings store.
-    expect(useAiAssistantStore.getState().settingsFor('7')?.deepResearch).toBe(true)
+    // The flag persisted to the settings store. Awaited, not read straight
+    // away: the page write-throughs settings from an effect, so the store
+    // trails the send by a commit and a synchronous read races it on a loaded
+    // runner (green locally, intermittently false on CI).
+    await waitFor(() =>
+      expect(useAiAssistantStore.getState().settingsFor('7')?.deepResearch).toBe(true)
+    )
   })
 
   it('omits deep_research when the toggle stays off (default)', async () => {
