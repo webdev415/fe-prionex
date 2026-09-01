@@ -7,7 +7,12 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  // `coverage` joins `dist` here as of Story 2.3, which made the coverage script
+  // work for the first time. `eslint .` walks the generated report — 780 files,
+  // three of which trip rules — so `npm run lint` fails for anyone who has run
+  // coverage locally. CI never sees it: `lint` and `test` are separate jobs with
+  // separate checkouts, so the trap is a developer-only, silent one.
+  globalIgnores(['dist', 'coverage']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

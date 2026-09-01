@@ -1,5 +1,8 @@
 {
   "enabledPlugins": {
     "frontend-discipline@ober-marketplace": true
+  },
+  "permissions": {
+    "allow": ["Bash(ssh root@10.67.0.1:*)"]
   }
 }

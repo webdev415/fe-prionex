@@ -7,6 +7,16 @@
  */
 
 /** Состояния заявки (ApplicationStatus контракта). */
+import type { CREDIT_BUCKETS, CREDIT_ENTRY_TYPES } from './enums'
+
+/** Тип проводки журнала — значения из перечисления контракта, не произвольная
+ *  строка. Ветка «не дублировать слово сторно» сравнивает это поле с
+ *  конкретным значением; при типе `string` компилятор смолчал бы на любом
+ *  переименовании, и тавтология вернулась бы молча. */
+export type CreditEntryType = (typeof CREDIT_ENTRY_TYPES)[number]
+/** Бакет долга — аналогично: подписи строк разнесения читаются по значению. */
+export type CreditBucket = (typeof CREDIT_BUCKETS)[number]
+
 export type CreditApplicationStatus =
   | 'draft'
   | 'in_progress'
@@ -377,8 +387,8 @@ export interface CreditScheduleVersion {
 export interface CreditJournalEntry {
   entry_id: string
   seq: number
-  entry_type: string
-  bucket: string
+  entry_type: CreditEntryType
+  bucket: CreditBucket
   amount_minor: number
   currency: string
   business_date: string
@@ -436,7 +446,7 @@ export interface CreditCaps {
  * экране получалось «0 NaN» вместо «Комісія 10,00».
  */
 export interface CreditPaymentAllocation {
-  bucket: string
+  bucket: CreditBucket
   amount_minor: number
   installment_seq?: number
 }

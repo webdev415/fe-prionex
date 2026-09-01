@@ -1,0 +1,65 @@
+# Sanitised, version-controlled copy of runner 1's live config, taken from
+# /opt/forgejo-runner-fe-prionex/config.yml on s1 (2026-08-12, Story 1.9).
+# See docs/runners/README.md — this is a RECORD, not a deployment mechanism:
+# nothing applies this file automatically, and it will drift from the host
+# unless someone updates it by hand after a future change.
+# No secret lives in this file — the runner's permanent instance secret is
+# in .runner (host-only, data/runner/.runner, never committed).
+
+log:
+  level: info
+  job_level: info
+
+runner:
+  file: /data/.runner
+  capacity: 2
+  timeout: 2h
+  fetch_interval: 2s
+  fetch_timeout: 5s
+  # Empty and stays empty: labels were fixed at registration time (Task 3.5,
+  # interactive `register` prompts, not this file's `labels` key, and not the
+  # compose GITEA_RUNNER_LABELS env either — see docker-compose.yml). A
+  # non-empty value here would only matter if we ever re-registered with
+  # `--labels` on the CLI (Trap 5) — we don't.
+  labels: []
+
+cache:
+  enabled: true
+  dir: ""
+  # Runner container's own address on the shared bridge (192.168.226.0/24),
+  # NOT the host's LAN IP. Verified empirically (Story 1.7, 2026-08-10): a
+  # container spawned inside the nested `dind` engine (i.e. what a real job
+  # container is) cannot reach 10.67.0.1:34568 — the host's externally
+  # published port — because hairpin NAT back to the host's own LAN IP does
+  # not work from inside the double-nested network path. It CAN reach this
+  # container directly at 192.168.226.3 via ordinary NAT through dind's own
+  # eth0 on the same bridge. Confirmed with a throwaway container run via
+  # `docker -H tcp://localhost:2375 run --rm curlimages/curl ...` from inside
+  # the dind container.
+  host: "192.168.226.3"
+  proxy_port: 34568
+
+container:
+  network: ""
+  privileged: false
+  # From inside a job container (running in the NESTED dind engine), 172.17.0.1
+  # is that engine's own default-bridge gateway, i.e. reaches dind's own Docker
+  # API locally — this is the documented forgejo-runner example pattern for
+  # docker-build jobs, unrelated to the cache reachability note above.
+  # 🚨 LOAD-BEARING: `--add-host git.crm-prionex.com:10.67.0.1` — without it, a
+  # job container cannot resolve the registry by name at all (split-horizon
+  # DNS resolves it publicly instead); Story 1.8 proved this and Story 3.1
+  # depends on it.
+  # 🚨 LOAD-BEARING: `--add-host openbao:172.20.0.5` — job containers are created
+  # inside the NESTED dind engine, whose network list is only bridge/host/none,
+  # so `container.network: "forgejo_forgejo"` cannot name the host-level network
+  # at all; and OpenBao's 8200 is published only on 10.70.0.1 and 127.0.0.1,
+  # which a container on the host bridge cannot reach (measured: 000). Both dind
+  # engines are attached to `forgejo_forgejo` and OpenBao is addressed by its
+  # container IP. If OpenBao is recreated that IP may change and every deploy
+  # fails on an opaque connection error — Story 1.12's preflight exists to name
+  # that cause rather than let a timeout speak for it. Added by Story 1.12.
+  options: "-e DOCKER_HOST=tcp://172.17.0.1:2375 --add-host git.crm-prionex.com:10.67.0.1 --add-host openbao:172.20.0.5"
+  docker_host: "tcp://dind:2375"
+  valid_volumes: []
+  force_pull: true

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { DateSelect } from '../DateSelect'
@@ -589,6 +589,20 @@ describe('DateSelect (selected time slot keeps its selected look) — KAN-992', 
  * again, one grid over.
  */
 describe('DateSelect (a blocked "today" still reads as blocked)', () => {
+  // These tests build dates relative to the REAL today, and that made them
+  // month-boundary flaky: on the last day of a month "tomorrow" lands in the
+  // next month, the calendar opens there, and today's cell renders as
+  // ``--outside-month`` instead of ``--disabled`` (first observed 31.08).
+  // Pin the clock to a mid-month day; only Date is faked — real timers keep
+  // userEvent working without an advanceTimers shim.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 7, 5, 12, 0))
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   // A value on another day matters: with none, react-datepicker marks today
   // ``--keyboard-selected``, which the today rule already excludes — so the
   // accent case would never be exercised.

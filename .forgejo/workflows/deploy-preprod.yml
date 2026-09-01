@@ -1,0 +1,461 @@
+name: Deploy PRE-PROD Stand
+
+# Story 5.2 provisioned the PRE-PROD stand; Story 5.3 (this file) is the first CONSUMER of the
+# shared `workflow_call` definition's second mode — deploying a pre-built `image_tag` directly,
+# with no application `ref` anywhere. `.forgejo/workflows/deploy-stand.yml` (Story 4.8) carries the
+# actual mechanics: compose placement, `down`, fail-fast digest-pinned pull, `up -d`, the
+# parameterized health check, the Story 4.4 lock, and the Kong guard. This file is a THIN caller —
+# its own name, its own dispatch inputs and its own `concurrency:` block, nothing else.
+#
+# ── `deploy-stand.yml` is READ-ONLY to this story — WITH a §12 exception, exercised three times ──
+# 🔴 (code review M11, corrected post-merge: the line above used to state the read-only rule
+# without its own exception, in the file a future operator reads first.) `deploy-stand.yml` is
+# read-only in general; the ONE permitted deviation is §12's priced, escalated, authorized-before-
+# editing exception procedure. This story used it three times, all in the shared digest-resolve
+# step's 404 branch and its neighbours: (1) a missing `IMAGE_ENV` env: key that crashed the 404
+# classifier before it could print (run 1185); (2) a backslash-continued assignment in the same
+# branch that crashed one statement deeper, found only once fix (1) let the code run that far (run
+# 1190); (3) a code-review batch — a tag↔environment guard (a `-dev` tag could otherwise deploy
+# fully green onto PRE-PROD), the same backslash-continuation defect at a third, dormant site
+# (`:1652`), and a neutral rewording of the 404 message's clause (a). See
+# `docs/migration-decisions.md#d37` for the full record.
+#
+# ── The runner label — deliberately NOT the skeleton's `deploy-preprod-preprod` ─────────────────
+# `deploy-stand.yml:216`'s commented caller skeleton suggests `runner_label: deploy-preprod-preprod`.
+# No such label exists on any runner. Three sources of truth on the deploy runner's own labels
+# disagree (`.runner` on disk: four labels; the runner's own `config.yml`: one; Postgres
+# `action_runner.agent_labels`, the table the SCHEDULER actually matches `runs-on` against: one —
+# `["deploy-dev-preprod"]`, re-confirmed read-only immediately before this file was written,
+# 2026-08-24). `deploy-dev-preprod` is the only value present in every source and the only one with
+# live dispatch evidence (deploy-dev.yml, dev-reset.yml, runs 1132-1150). This story does NOT edit
+# `deploy-stand.yml:216` to fix the comment — every edit to that file re-triggers Epic 5's own
+# re-earning of the retro-E5 evidence Story 4.8 paid for, and it sits inside Story 4.9's blast
+# radius. The correction lives HERE, in a file that actually executes, and the comment fix is
+# routed to Story 6.4 (`docs/migration-decisions.md#d37`, `deferred-work.md`).
+#
+# ── `concurrency:` — own literal group, never DEV's, never an expression (D21/D30) ──────────────
+# `group:` is a LITERAL CONSTANT. A workflow this instance cannot parse fails BEFORE any job
+# exists, visible only in `action_run.pre_execution_error_details` (no job, no log, no API route
+# for it — D21). Copying DEV's own group would serialize two independent stands and hide it
+# (Prohibition 7). This block is real protection only because the shared definition deliberately
+# carries no `concurrency:` of its own — a callee's own block would be silently VOID (D21) — so it
+# must live here, in the caller, exactly as it does in deploy-dev.yml.
+#
+# ── `secrets: inherit` — all-or-nothing, named for Oleg before Story 6.4 ships ───────────────────
+# The callee receives every org secret this repository holds and references only
+# `REGISTRY_USER_RO`/`REGISTRY_TOKEN_RO`. PRE-PROD is the intermediate case between DEV (already
+# live) and Story 6.4's PRODUCTION caller, where this question is sharper. Not re-litigated here.
+#
+# ── `image_tag` mode's first live execution — this file's own first dispatch ────────────────────
+# 🔴 (code review M11, corrected post-merge — this note described dev-story's own starting
+# condition, which the merge itself falsifies for a later reader.) Before this file's first
+# dispatch, the mode had never executed anywhere — two blockers Story 4.8's own code review found
+# by reading were fixed in the same pass and had never been dispatched. That first dispatch (run
+# 1184) went green immediately; two further dispatches then found two real, previously-
+# undiscoverable defects in the shared 404 classifier (see the exception note above) — the mode is
+# now live-exercised, not merely read-verified, and the defects it exposed are fixed.
+#
+# ── Naming invariants — deliberately NOT claimed for this file ──────────────────────────────────
+# deploy-dev.yml's exact file name and workflow `name:` are load-bearing because `dev-reset.yml`
+# dispatches and reads it back by both, silently. Nothing dispatches or reads back
+# `deploy-preprod.yml` by name today. If a future PRE-PROD reset or a Story 5.4 recorder starts
+# doing so, this header should be upgraded to say so explicitly, the same way deploy-dev.yml's is.
+#
+# ── The `e2e` job — a PLACEHOLDER that never gates, and why it lives in the CALLER (Story 5.5) ──
+# ⚠️ `e2e` runs no test. The project has NO browser/end-to-end tooling of any kind: `package.json`
+# carries Vitest only (229 component test FILES, jsdom, no driver). The job prints why it exists and
+# exits 0. Adding playwright/cypress/puppeteer here is explicitly out of Story 5.5's scope — real
+# coverage is **Story 7.7** (`_bmad-output/planning-artifacts/epics.md`, `sprint-status.yaml`),
+# recorded as its own story precisely so it cannot be absorbed into this migration. The plan
+# sentence it implements is `docs/forgejo-migration.md:231`; the decision record is
+# `docs/migration-decisions.md#d39`.
+#
+# WHY THE CALLER AND NOT `deploy-stand.yml`. The epic text says "a job after the healthcheck". The
+# healthcheck is `deploy-stand.yml:1907` (`Poll health status, bounded timeout`) — and 🔴 it is NOT
+# the callee's last gating step, which an earlier draft of this header asserted. FOUR more failing
+# steps follow it inside the same terminal `deploy` job: `:1995` (anchored identity assert), `:2035`
+# (fallback HTTP check), `:2098` (AC6 — running image matches the resolved digest), `:2144` (Kong
+# alias guard), plus a recording step at `:2251`.
+#
+# The conclusion survives the correction and is in fact STRONGER. `needs: deploy` places `e2e` after
+# the ENTIRE deploy job — strictly after the healthcheck AND after those four later assertions.
+# "After the whole job" is a superset of "after the healthcheck", so the epic's requirement is
+# satisfied more strongly, not less, and still with no edit to the callee at all.
+#
+# The consequence a future reader needs: there is NO position between the healthcheck and those
+# later steps that a caller-side job can occupy. Reaching one would require editing the read-only
+# callee under its §12 exception. That matters because `deploy-stand.yml` is shared with DEV, is
+# declared READ-ONLY by this very file (see the §12 note above), and sits inside Story 4.9's blast
+# radius. §12 is a priced, escalated procedure — not a permission — and a placeholder that runs no
+# test does not earn one.
+#
+# 🔴 WHAT WAS NOT PROVEN BEFORE THE FIRST DISPATCH, and what run 1281 settled. `ci.yml:498-502`
+# proved a caller may mix a `uses:` job with ordinary jobs, and that a `uses:` job may carry
+# `needs:` on ordinary jobs. The REVERSE — an ordinary job with `needs:` on a `uses:` job — had no
+# precedent anywhere in this repository and was never exercised on this instance until the
+# coordinator's confirming dispatch. **Settled: run 1281 (`ref=main`, `image_tag=sha-28f7fd36b75e-
+# preprod`), dispatched AFTER this PR's merge rather than before it as the PR description required
+# — that deviation is recorded honestly in `docs/migration-decisions.md#d39` §4 and is not hidden
+# here.** Job `10719` "Deploy PRE-PROD via the shared definition" then job `10720` "E2E placeholder
+# (runs no test, never gates)" — both SUCCESS. D21's rejection mode (no job, no log, only
+# `action_run.pre_execution_error_details`) did NOT occur; the HALT condition never triggered. **An
+# ordinary job with `needs:` on a `uses:` job schedules on this instance. Proven, not merely
+# parsed, not merely hoped.**
+#
+# 🔴 `continue-on-error: true` IS A CONSTRUCT THIS REPOSITORY DELIBERATELY REMOVED, and this story
+# re-adds it — stated here rather than left to be discovered. `dev-reset.yml:450-462` records code
+# review H4 removing the STEP-level form as "the only untested platform assumption load-bearing in
+# this file", and `ci.yml:190-191` records that it is deliberately NOT used on Forgejo (in the
+# retired GitHub pipeline, `continue-on-error: true` paired with `fail_ci_if_error: false` is the
+# exact mechanism that let a coverage step which had never once succeeded report green for the life
+# of this repository). What this job carries is the JOB-level form, which is LESS proven than the
+# step-level form H4 removed.
+#
+# 🔴 **PERMANENTLY UNMEASURED BY DESIGN, and that is now the honest and final disposition — code
+# review's own decision, Oleg's veto open.** Run 1281 answered whether `needs:` on a `uses:` job
+# schedules (above) and could NOT answer whether this flag is honoured, because the step body was
+# `echo`s plus a guarded redirect that could not fail on a green run — the instruction to "observe
+# this as the dispatch's second purpose" asked the same dispatch to measure a flag the job's own
+# body makes unreachable, and it is REMOVED, not repeated. The redirect below now carries `|| true`,
+# which makes "the step body cannot fail on its own" literally true rather than an argument resting
+# on the very flag being described — so invariant (1) ("must never fail a run") no longer depends on
+# this flag at all, and the flag is genuinely redundant belt-over-braces, not a load-bearing one.
+# Measuring it deliberately (on a throwaway workflow, not this one) or removing it outright remains
+# Story 7.7's own AC, recorded in `_bmad-output/implementation-artifacts/deferred-work.md`.
+#
+# `needs: deploy` also means a RED deploy SKIPS this job — the run stays red on the deploy's own
+# failure, which is the existing behaviour and is not changed by adding this.
+
+# ── `simulate_bad_credential` / `hold_lock_seconds` — added here, not in the epic's skeleton ────
+# The skeleton omits both. This caller forwards them byte-for-byte in DEV's own dispatch shapes
+# because without them AC4's 401 row and AC3's lock-contention row have no cheap discriminating
+# form at all on this stand. Permanent, minimal regression hooks (Story 4.4 Task 5, Story 4.8 Task
+# 8.3) — they move into the shared definition, they do not disappear, and that applies to every
+# consumer, not only DEV. Full safety argument for both lives in deploy-dev.yml's own header and in
+# the shared definition's own `hold-lock` job / digest-resolve step comments; unchanged here.
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "A pre-built image tag to deploy directly (e.g. sha-00ef3be4743d-preprod). Required — there is no git ref for PRE-PROD deploys; the tag names the exact artifact being validated."
+        required: true
+        type: string
+      simulate_bad_credential:
+        description: 'TESTING ONLY (permanent regression hook, forwarded to the shared definition — see this file''s own header) — if true, the digest-resolve step uses a deliberately WRONG credential value, to exercise the unauthorized fail-closed path on demand. Never reads, modifies, or exposes the real REGISTRY_USER_RO/REGISTRY_TOKEN_RO org secrets. Leave false (the default) for every normal deploy.'
+        required: false
+        type: boolean
+        default: false
+      hold_lock_seconds:
+        description: "TESTING ONLY (permanent regression hook, forwarded to the shared definition — see this file's own header) — if greater than 0, this dispatch does NOT deploy: it starts the stand lock's holder container for this many seconds and exits, to stage contention for a following dispatch. Bounded to the holder TTL constant (720s). Leave 0 (the default) for every normal deploy."
+        required: false
+        type: number
+        default: 0
+
+concurrency:
+  group: deploy-preprod-fe-prionex-preprod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: "Deploy PRE-PROD via the shared definition"
+    uses: ./.forgejo/workflows/deploy-stand.yml
+    with:
+      runner_label: deploy-dev-preprod
+      compose_project_name: fe-prionex-preprod
+      container_name: fe-prionex-preprod
+      frontend_port: 127.0.0.1:8083
+      frontend_network: crm-preprod-network
+      stand_dir: /root/crm-prionex/fe-prionex-preprod
+      image_env: preprod
+      image_tag: ${{ inputs.image_tag }}
+      lock_wait_seconds: "240"
+      lock_ttl_seconds: "720"
+      health_timeout_seconds: "120"
+      expect_unrouted_api: "false"
+      simulate_bad_credential: ${{ inputs.simulate_bad_credential }}
+      hold_lock_seconds: ${{ inputs.hold_lock_seconds }}
+    secrets: inherit
+
+  # See the `e2e` header section above before editing this job. Three invariants, in order of how
+  # badly they break if ignored: (1) it must never fail a run; (2) it must never gate the deploy;
+  # (3) it must never acquire the stand lock or touch the stand — it now runs ON the deploy runner
+  # (see the `runs-on` note below), so "does not run there" is no longer what protects the stand;
+  # what protects it is that this job's body is `echo`s and opens no SSH, no docker, and no lock.
+  e2e:
+    name: "E2E placeholder (runs no test, never gates)"
+    needs: deploy
+    # `deploy-dev-preprod` — the SAME label the `deploy` job above already passes as its
+    # `runner_label:` input (grep this file for `      runner_label: deploy-dev-preprod` — the
+    # leading whitespace and value both included, since a bare `runner_label:` search also hits
+    # this file's own header comment quoting `deploy-stand.yml:216`'s DECOY skeleton value
+    # `runner_label: deploy-preprod-preprod`, a label that does not exist on any runner; code
+    # review, corrected. No line number, because line numbers in files this project keeps editing
+    # rot — Story 5.4's M11 lesson). Deliberately NOT `node-20`, and never `ubuntu-latest` (that
+    # label resolves to ANOTHER TEAM's idle runner in this org, `ci.yml:97-99`).
+    #
+    # 🔴 The rule this encodes: a placeholder that asserts nothing must not make a PRE-PROD deploy
+    # depend on a SECOND runner. `node-20` is the shared CI runner. With `needs: deploy` and this
+    # workflow's own `concurrency:` group at `cancel-in-progress: false`, an `e2e` job queued behind
+    # a saturated or offline `node-20` keeps the whole run in-progress and therefore HOLDS the
+    # PRE-PROD concurrency group — blocking the next dispatch, a hotfix included, on a job that by
+    # its own words proves nothing. `timeout-minutes: 5` does NOT cover that: it bounds EXECUTION,
+    # not queue wait.
+    #
+    # 🔴 Code review, corrected: the two sentences that used to stand here — "the deploy runner is
+    # already required by this run, so reusing it adds no new dependency of any kind" and "paid on a
+    # runner this run already holds" — are FALSE AS WRITTEN. A run does not hold a runner across job
+    # boundaries; `deploy-dev-preprod` is shared by `deploy-dev.yml:75`, `dev-reset.yml:166` and
+    # `record-preprod-candidate.yml:227`, all under DIFFERENT concurrency groups from this one. The
+    # reachable path the corrected argument must own, not hide: `deploy` finishes and releases the
+    # capacity-1 slot → a DEV deploy or a recorder run claims it first → this `e2e` job queues behind
+    # it → `timeout-minutes: 5` bounds its own execution once scheduled, not the queue wait before
+    # that → the run stays in-progress → `cancel-in-progress: false` holds THIS workflow's own
+    # PRE-PROD group regardless → the next PRE-PROD dispatch, a hotfix included, is blocked. That is
+    # verbatim the failure this comment block rejects `node-20` for, reachable on `deploy-dev-preprod`
+    # too. The CHOICE is still defensible — `node-20` is the busier, more contended runner in this
+    # org, so `deploy-dev-preprod` is the lower-probability queue, not a zero-probability one — but
+    # the argument for it must say so, not claim the dependency does not exist.
+    runs-on: deploy-dev-preprod
+    timeout-minutes: 5
+    # Kept, PERMANENTLY UNMEASURED BY DESIGN at job level on this instance — see the
+    # `continue-on-error` block in the header for the full provenance. The body cannot fail (the
+    # `|| true` below makes that literally true, not merely argued), so this flag is genuinely
+    # redundant belt-over-braces, not a load-bearing observation any future dispatch is asked to make.
+    continue-on-error: true
+    steps:
+      # No `${{ }}` anywhere in this body, including inside its comments -- this instance
+      # substitutes inside shell comments too, and one empty token has rejected an entire workflow
+      # with no diagnostic beyond `action_run.pre_execution_error_details` (D21). Values that this
+      # job ever needs must arrive through an `env:` block. It needs none today.
+      - name: State why this job exists and that it proves nothing
+        run: |
+          set -euo pipefail
+          # The text is defined ONCE, as a function, and emitted TWICE: to stdout (the job log) and
+          # to the step summary. Reason: job logs on this instance frequently never archive --
+          # `log_in_storage=f` was observed six times across Stories 5.3 and 5.4 -- and this job's
+          # entire purpose is to be VISIBLE. A rationale that survives only in a log that vanishes
+          # is exactly the invisibility the job was added to prevent. One function, two sinks, so
+          # the two copies cannot drift.
+          #
+          # Honest about the second sink too: whether step summaries persist on THIS instance was
+          # still unverified as of Story 5.4 (docs/preprod-candidates.md says so in its own header).
+          # This is a second best-effort channel, not a proven one. The durable record of why this
+          # job exists is docs/migration-decisions.md#d39 and this file's own header.
+          rationale() {
+            echo "e2e: PLACEHOLDER. No end-to-end test ran, and none exists in this repository."
+            echo ""
+            echo "This job asserts NOTHING about the candidate. It is a named, reserved slot so that"
+            echo "the deploy pipeline has an agreed place for real end-to-end coverage to land, and"
+            echo "so that its absence is visible in every PRE-PROD run instead of being invisible."
+            echo ""
+            echo "What actually validates a PRE-PROD candidate today is a MANUAL checklist:"
+            echo "  docs/release-validation-checklist.md  (version marker RVC-v1)"
+            echo "Its result is compressed into the validation_note that"
+            echo "  .forgejo/workflows/record-preprod-candidate.yml"
+            echo "requires before it will mint preprod-<sha>. A failing item means verdict 'fail',"
+            echo "and that workflow's G1 refuses 'fail' before any registry read -- so nothing is"
+            echo "written and Story 6.5's promotion guard has nothing to match."
+            echo ""
+            echo "Replacing this placeholder with real tests is Story 7.7 -- a separate story, not a"
+            echo "task of this migration. See docs/migration-decisions.md#d39 and"
+            echo "docs/forgejo-migration.md:231."
+            echo ""
+            echo "This job cannot fail the run and does not gate the deploy. Exiting 0 deliberately."
+          }
+
+          rationale
+
+          # Guarded with :- because `set -u` would otherwise abort on an unset GITHUB_STEP_SUMMARY,
+          # and invariant (1) is that this job never fails a run. Fenced so Markdown renders the
+          # block verbatim instead of collapsing its line breaks.
+          #
+          # 🔴 Code review, fixed: `${GITHUB_STEP_SUMMARY:-}` only guards UNSET/EMPTY -- it does
+          # nothing for set-but-unwritable, a missing directory, or a full disk, any of which exits
+          # this redirect non-zero under `set -euo pipefail` and would have failed the step on a
+          # directly reachable path, resting invariant (1) entirely on the job-level
+          # `continue-on-error` flag this file names UNMEASURED above. `|| true` on the redirect
+          # below makes "the step body's only statements are echos, so it cannot fail on its own"
+          # literally true, not an argument that quietly depended on the very flag it was arguing
+          # was unnecessary.
+          if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+            {
+              echo "## e2e placeholder -- runs no test, never gates"
+              echo ""
+              echo '```'
+              rationale
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY" || true
+            echo "OK: rationale also written to the step summary (or the write failed harmlessly -- see the || true above)."
+          else
+            echo "NOTE: GITHUB_STEP_SUMMARY is unset -- the rationale exists only in this job log,"
+            echo "which on this instance has repeatedly failed to archive (log_in_storage=f)."
+          fi
+
+  # ── gate ──────────────────────────────────────────────────────────────────────────────────
+  # 🔴 THIS JOB EXISTS BECAUSE THE CONDITION IT CARRIES CANNOT LIVE ON `record`, AND THAT WAS
+  # MEASURED, NOT PREDICTED. Run 725, 2026-08-27, a `hold_lock_seconds: 60` dispatch:
+  #
+  #   Deploy PRE-PROD via the shared definition ......... success   (skipped wrapper, `#d21`)
+  #     0. Preflight .................................... skipped
+  #     Deploy a ref or image tag to the stand .......... skipped
+  #   Hold-lock test fixture -- does not deploy ......... success
+  #   Record the deployed candidate ..................... 🔴 RAN
+  #   🔴 Disclose a green deploy whose record did not land  skipped
+  #
+  # BOTH of those last two jobs carried the SAME clause, `!(inputs.hold_lock_seconds > 0)`.
+  # `record-outcome` is a PLAIN job: its `if:` was evaluated HERE, in the caller, where
+  # `inputs.hold_lock_seconds` is 60 -- the clause returned false and the job skipped, correctly.
+  # `record` is a `uses:` job: `#d21` (run 631) established that a `uses:` job's `if:` is COPIED
+  # DOWN into the callee and evaluated THERE, where the caller's `inputs` do not exist. So
+  # `inputs.hold_lock_seconds` was null, `null > 0` was false, `!false` was TRUE, and the record
+  # ran on a dispatch that deployed nothing.
+  #
+  # 🟢 Nothing was written, and the reason is worth keeping: G5 refused. The stand was serving
+  # `sha256:e17c88af…` while the candidate resolved to `sha256:a62e8687…`, and G5's message was
+  # *"Recording this candidate now would be a claim, not evidence -- refusing."* Defence in depth
+  # did its job. It is NOT the design, and this gate is not optional because of it.
+  #
+  # The fix is the shape Story 6.5 already used for the promotion guard, for the same reason
+  # (`#d49`: *"Не `uses:`-джоба: `#d21` ран 631 -- пропущенная обёртка рапортует success"*): a
+  # PLAIN job whose `if:` is evaluated in this workflow's own context, which `record` then simply
+  # `needs:`. No expression on `record` at all -- a skipped dependency skips its dependents, which
+  # is dependency semantics rather than expression evaluation, and therefore not subject to the
+  # copied-down rule that broke the first attempt.
+  #
+  # ⚠️ It must SKIP, never FAIL, on the hold-lock path. `#d49` also recorded that jobs depending
+  # on a FAILED job report `failure`, not `skipped` -- a failing gate would turn every hold-lock
+  # test dispatch red and would fire `record-outcome`'s alarm over a fixture.
+  #
+  # `runs-on`: the same trade the `e2e` job above argues and then corrects itself about. See it.
+  gate:
+    name: "Gate the record on a deploy that actually deployed"
+    needs: deploy
+    if: needs.deploy.result == 'success' && !(inputs.hold_lock_seconds > 0)
+    runs-on: deploy-dev-preprod
+    timeout-minutes: 5
+    steps:
+      # No `${{ }}` in this body, including in its comments (`#d21`). Values arrive via `env:`.
+      - name: "Say why the record is allowed to run"
+        env:
+          HOLD_SECONDS: ${{ inputs.hold_lock_seconds }}
+          CANDIDATE_TAG: ${{ inputs.image_tag }}
+        run: |
+          set -euo pipefail
+          echo "deploy succeeded and hold_lock_seconds='${HOLD_SECONDS:-<unset>}' is not > 0,"
+          echo "so this dispatch really deployed ${CANDIDATE_TAG} and the record may proceed."
+          echo
+          echo "If you are reading this on a run where nothing was deployed, THIS GATE HAS FAILED"
+          echo "and the bug is in its own condition -- not in the recorder it guards. Run 725 is"
+          echo "the recorded instance of that failure mode."
+
+  # ── record ────────────────────────────────────────────────────────────────────────────────
+  # Story 6.11 (`#d51`). Until 2026-08-27 this did not exist and recording a candidate was a
+  # SECOND human dispatch carrying a `validated: pass|fail` verdict. `#d38` §2 argued that shape
+  # was the only one in which `preprod-<sha>` could mean "validated"; Oleg's decision accepted the
+  # argument and paid its price. The marker now means "this commit REACHED PRE-PROD".
+  #
+  # 🔴 THE INPUT IS `candidate_tag`, NOT `image_tag`, AND THAT IS THE WHOLE POINT.
+  # `#d47`(3), runs 637/640: a caller's `workflow_dispatch` input SHADOWS a callee input of the
+  # same name. This file's dispatch input IS `image_tag` and cannot be renamed. Had the callee's
+  # input also been `image_tag`, the `with:` mapping below would be permanently UNPROVABLE -- the
+  # two values coincide by construction, so nothing could distinguish "the mapping works" from
+  # "the shadow supplied it". That is exactly why `#d47` records the defect as invisible in both
+  # shipped callers. The callee prints both inputs and the resolved value; that print is the proof.
+  #
+  # 🔴 `needs.deploy.result == 'success'` IS NOT A SUFFICIENT GATE ON ITS OWN, AND THE SECOND
+  # CLAUSE IS NOT DEFENSIVE PADDING. `deploy` above is a `uses:` wrapper, and `#d21` (run 631)
+  # established that a SKIPPED `uses:` job reports **success** -- Story 6.6 saw it again in run
+  # 662. `deploy-stand.yml` gates its `preflight` job, and the whole deploy chain behind it, on
+  #     if: ${{ !(inputs.hold_lock_seconds > 0) }}
+  # so a `hold_lock_seconds > 0` dispatch DEPLOYS NOTHING while this wrapper still reports
+  # success. Without the second clause below, such a dispatch would record a candidate: the stand
+  # is still serving whatever it served before, G5 finds that digest present and passes, and
+  # `preprod-current` is moved by a run that deployed nothing -- with nothing going red anywhere.
+  # The clause is written as the LITERAL COMPLEMENT of `deploy-stand.yml`'s own condition, not as
+  # `== 0`, deliberately: whatever that expression does with a given input, this one does the
+  # exact opposite of it, and no second interpretation of the input's type is introduced.
+  #
+  # ⚠️ `simulate_bad_credential` needs NO clause and none is added. It makes the deploy genuinely
+  # FAIL, so `needs.deploy.result == 'success'` already excludes it. An unnecessary condition is a
+  # claim that something was checked.
+  #
+  # ⚠️ The callee's own `concurrency:` block is NOT applied on this path (`#d21`) -- but here that
+  # lands better than it did for PROD, and the difference is worth stating rather than inheriting
+  # `#d48`'s conclusion. `record-prod-image.yml`'s own group is DISJOINT from its caller's, which
+  # is why `#d48` records an open window between a manual and an automatic record over two
+  # permanent writes. `record-preprod-candidate.yml`'s own group is ALREADY the literal group this
+  # file uses -- `deploy-preprod-fe-prionex-preprod` -- so on this path the record runs under the
+  # group it would have chosen anyway, and a hand dispatch is serialized against an automatic one
+  # by that same group. 🔴 ARGUED FROM THE TWO FILES, NOT OBSERVED: no dispatch has raced the two.
+  record:
+    name: "Record the deployed candidate (preprod-<12hex>, then preprod-current)"
+    needs: [deploy, gate]
+    uses: ./.forgejo/workflows/record-preprod-candidate.yml
+    with:
+      candidate_tag: ${{ inputs.image_tag }}
+    secrets: inherit
+
+  # ── record-outcome ────────────────────────────────────────────────────────────────────────
+  # Exists for ONE state: the deploy succeeded and the record did not. Without it the run is red,
+  # the stand is updated, `preprod-current` still names the PREVIOUS candidate, and nothing
+  # anywhere says so. Direct twin of `deploy-prod.yml`'s job of the same name (Story 6.6).
+  #
+  # ⚠️ `runs-on`, chosen knowingly -- read the `e2e` header above before changing it. That job
+  # rejects `node-20` because a job queued behind the shared CI runner keeps this run in progress
+  # and therefore HOLDS this file's PRE-PROD concurrency group at `cancel-in-progress: false`,
+  # blocking the next dispatch including a hotfix; and it then CORRECTS ITSELF, because
+  # `deploy-dev-preprod` is shared too (`deploy-dev.yml`, `dev-reset.yml`, and
+  # `record-preprod-candidate.yml`'s own verify job) and is a lower-probability queue, not a
+  # zero-probability one. The same trade is made here for the same reason, and the same residual
+  # is inherited: this job can queue, and while it queues the group is held. It is bounded by
+  # `timeout-minutes` only once SCHEDULED, never in the queue.
+  record-outcome:
+    name: "🔴 Disclose a green deploy whose record did not land"
+    needs: [deploy, record]
+    if: always() && needs.deploy.result == 'success' && !(inputs.hold_lock_seconds > 0) && needs.record.result != 'success'
+    runs-on: deploy-dev-preprod
+    timeout-minutes: 5
+    steps:
+      # No `${{ }}` anywhere in this body, INCLUDING inside its comments -- this instance
+      # substitutes inside shell comments too, and one empty token has rejected an entire
+      # workflow with no diagnostic beyond `action_run.pre_execution_error_details` (`#d21`).
+      # Every value arrives through the `env:` block below.
+      - name: "State what is true right now"
+        env:
+          CANDIDATE_TAG: ${{ inputs.image_tag }}
+          RECORD_RESULT: ${{ needs.record.result }}
+          HISTORY_WRITTEN: ${{ needs.record.outputs.history_written }}
+          CURRENT_WRITTEN: ${{ needs.record.outputs.current_written }}
+        run: |
+          set -euo pipefail
+          BT="$(printf '\140')"
+          {
+            echo "### 🔴 PRE-PROD IS UPDATED. THE REGISTRY IS NOT."
+            echo
+            echo "The deploy job SUCCEEDED and the record job did not (${BT}${RECORD_RESULT}${BT})."
+            echo "Read this before reading the red run status."
+            echo
+            echo "**True right now:**"
+            echo "- The PRE-PROD stand is running ${BT}${CANDIDATE_TAG}${BT}. The deploy is done."
+            echo "- ${BT}preprod-<12hex>${BT} for this commit: **${HISTORY_WRITTEN:-not reported}**."
+            echo "- ${BT}preprod-current${BT}: **${CURRENT_WRITTEN:-not reported}**."
+            echo "  (read from the callee's own workflow_call OUTPUTS, not from a log line --"
+            echo "   this instance's job logs are frequently unreadable when they are needed.)"
+            echo
+            echo "**The write order is history FIRST, pointer second**, so a partial state is"
+            echo "readable: if the history tag is written and the pointer is not, the pointer is"
+            echo "STALE and the history is correct. Empty means the record job died before that"
+            echo "step reported."
+            echo
+            echo "**Repair, and it is safe to repeat:** dispatch ${BT}record-preprod-candidate.yml${BT}"
+            echo "with ${BT}image_tag: ${CANDIDATE_TAG}${BT} and acknowledgement"
+            echo "${BT}RECORD-PREPROD-CANDIDATE${BT}. Every write in that file is"
+            echo "attach-if-absent / no-op-if-identical, so re-running is idempotent."
+            echo
+            echo "**Do NOT redeploy to fix this.** The stand is already correct; only the"
+            echo "registry record is missing. Redeploying would rebuild nothing and risk moving"
+            echo "the stand off an artifact that is already the right one."
+          } | tee -a "${GITHUB_STEP_SUMMARY:-/dev/null}"
+          echo "::error::Deploy succeeded but the record did not (${RECORD_RESULT}). preprod-current is stale. See the job summary."
+          exit 1
