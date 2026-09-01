@@ -347,4 +347,24 @@ describe('CreditLoanDetailPage → паспорт', () => {
     // 14 — это счёт «до среза». Его быть не должно ни при каком «сегодня».
     expect(row?.textContent).not.toContain('14')
   })
+
+  it('деньги показываются ТОЛЬКО из состояния ядра — того же расчёта, что видит клиент', () => {
+    // Клиент в кабинете видит сумму из расчёта модуля. Если оператор возьмёт
+    // её из поля займа, они назовут РАЗНЫЕ деньги — и это хуже, чем не
+    // показать ничего. Поле займа тут вдобавок приходит пустым: живой модуль
+    // отдаёт `balance_total_minor: null` (проверено на FB-000088), так что
+    // прежний «запасной путь» давал правду случайно, а не по замыслу.
+    vi.mocked(hooks.useCreditLoanState).mockReturnValue({
+      ...idle,
+      data: undefined,
+    } as unknown as ReturnType<typeof hooks.useCreditLoanState>)
+    openPassport()
+
+    // 51 000 minor = 510,00 — сумма из ПОЛЯ ЗАЙМА в фикстуре. Именно её и
+    // подставлял прежний запасной путь; на экране её быть не должно.
+    const row = screen.getByText('credit.fields.balance').parentElement
+    expect(row?.textContent).not.toMatch(/510[,.\s]*00/)
+    // И положительная половина: без состояния показываем прочерк, а не число.
+    expect(row?.textContent).toContain('—')
+  })
 })
