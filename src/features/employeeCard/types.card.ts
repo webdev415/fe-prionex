@@ -45,6 +45,7 @@ export interface WorkInformation {
   hired_at: string | null
   asterisk_extension: string | null
   dialer_extension: string | null
+  is_agent: boolean
 }
 
 export interface Relative {
@@ -140,6 +141,7 @@ export interface WorkInformationUpdate {
   /** Null clears one, which is a different request from leaving it out. */
   asterisk_extension?: string | null
   dialer_extension?: string | null
+  is_agent?: boolean
 }
 
 export interface RelativeInput {

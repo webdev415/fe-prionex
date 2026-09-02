@@ -94,6 +94,17 @@ export function CardSections({ card, onEdit }: CardSectionsProps) {
               label: t('pages.employeeCard.fields.dialerExtension'),
               value: card.work.dialer_extension,
             },
+            // Whether they take dialer calls at all. Shown as a word rather
+            // than a tick, because every other value in this grid is read as
+            // text and a lone checkbox here would read as something to click.
+            {
+              label: t('pages.employeeCard.fields.isAgent'),
+              value: t(
+                card.work.is_agent
+                  ? 'pages.employeeCard.fields.isAgentYes'
+                  : 'pages.employeeCard.fields.isAgentNo'
+              ),
+            },
           ]}
         />
       </CardSection>
