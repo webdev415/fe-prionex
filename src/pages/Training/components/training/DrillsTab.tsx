@@ -27,6 +27,7 @@ import type {
   DrillListFilters,
   SkillLevel,
 } from '@/features/training/types/drills'
+import { EmployeeSearchList } from '../dialogue/EmployeeMultiSelect'
 import { TrainingPrimaryButton } from './TrainingToolbar'
 
 const CATEGORIES: DrillCategory[] = [
@@ -377,20 +378,8 @@ function AssignDrillDialog({ drill, onClose }: { drill: DrillCardData; onClose: 
         <p className="text-[11px] text-[#676767]">
           {t('pages.training.drills.assignHint', 'Select operators to assign this drill to.')}
         </p>
-        <div className="max-h-[240px] overflow-y-auto rounded-lg border border-[#EBECE8]">
-          {operators.map((op) => (
-            <label
-              key={op.id}
-              className="flex cursor-pointer items-center gap-2 border-b border-[#F3F4F6] px-3 py-2 text-xs last:border-b-0 hover:bg-[#FAFAFA]"
-            >
-              <input
-                type="checkbox"
-                checked={selected.includes(op.id)}
-                onChange={() => toggle(op.id)}
-              />
-              <span className="text-[#05040D]">{op.full_name}</span>
-            </label>
-          ))}
+        <div className="rounded-lg border border-[#EBECE8]">
+          <EmployeeSearchList operators={operators} selectedIds={selected} onSelect={toggle} />
         </div>
         <label className="flex flex-col gap-1">
           <span className="text-xs font-medium text-[#05040D]">

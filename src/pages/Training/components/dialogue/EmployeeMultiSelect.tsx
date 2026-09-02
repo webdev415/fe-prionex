@@ -80,7 +80,11 @@ export function EmployeeSearchList({
 
   const rows = useMemo(() => {
     const excluded = excludeIds && excludeIds.length > 0 ? new Set(excludeIds) : null
-    const q = query.trim().toLowerCase()
+    // Every typed word must appear somewhere in the name, in any order. The
+    // roster holds the same person as both "Surname Name" and "Name Surname"
+    // (and with doubled inner spaces), so matching the query as one string
+    // finds nothing the moment a trainer types two words the other way round.
+    const terms = query.toLowerCase().split(/\s+/).filter(Boolean)
     return operators
       .map((op, i) => {
         const name = op.full_name ?? `#${op.id}`
@@ -92,7 +96,11 @@ export function EmployeeSearchList({
         }
       })
       .filter((row) => !excluded?.has(row.id))
-      .filter((row) => !q || row.name.toLowerCase().includes(q))
+      .filter((row) => {
+        if (terms.length === 0) return true
+        const name = row.name.toLowerCase()
+        return terms.every((term) => name.includes(term))
+      })
   }, [operators, excludeIds, query])
 
   return (
