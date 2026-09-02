@@ -83,6 +83,7 @@ interface Selected {
   createdAt?: string
   operatorName?: string
   talkDurationSec?: number | null
+  hasRecording: boolean
   clientId: number | null
 }
 
@@ -320,6 +321,7 @@ export function DialogsListTab() {
       createdAt: call.initiated_at,
       operatorName: operatorByExtension.get(call.agent_extension)?.name,
       talkDurationSec: call.talk_duration,
+      hasRecording: !!call.has_recording,
       clientId: call.client_id ?? null,
     })
   }
@@ -541,6 +543,7 @@ export function DialogsListTab() {
           createdAt={selected?.createdAt}
           operatorName={selected?.operatorName}
           talkDurationSec={selected?.talkDurationSec}
+          hasRecording={selected?.hasRecording}
           clientId={selected?.clientId}
           clientName={selected?.clientId != null ? clientNames.get(selected.clientId) : undefined}
           clientDebts={selected?.clientId != null ? clientDebts.get(selected.clientId) : undefined}
