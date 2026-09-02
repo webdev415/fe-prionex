@@ -7,7 +7,6 @@
  */
 import { useTranslation } from 'react-i18next'
 import { SegmentedTabs } from '@/components/ui/SegmentedTabs'
-import { CreditApiKeyPanel } from './components/CreditApiKeyPanel'
 import { TooltipProvider } from '@/components/ui/Tooltip'
 import { useURLState } from '@/hooks/useURLState'
 import { useCreditOverview } from '@/features/credit/hooks/useCredit'
@@ -81,14 +80,10 @@ export function CreditSettingsPage() {
         <div className="mt-4">
           {current === 'products' && <CreditProductsSection canRead={canReadProducts} />}
           {current === 'parameters' && <CreditParametersSection canRead={canReadParameters} />}
-          {current === 'integrations' && (
-            <div className="space-y-4">
-              {/* Ключ стенда — здесь же, где интеграции: это ровно интеграция
-                  с модулем на этапе 1. Раньше вписать его было негде вовсе. */}
-              <CreditApiKeyPanel />
-              <CreditIntegrationsSection overview={overview} />
-            </div>
-          )}
+          {/* Поля служебного ключа здесь больше нет: браузер ходит в модуль
+              пропуском оператора, а не общим ключом. Оставлять форму значило бы
+              предлагать человеку ввести то, что уже никуда не отправляется. */}
+          {current === 'integrations' && <CreditIntegrationsSection overview={overview} />}
           {current === 'switches' && <CreditSwitchesSection overview={overview} />}
         </div>
       </div>
