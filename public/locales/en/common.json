@@ -68,7 +68,8 @@
     "creditModule": "Credit Module",
     "creditApplications": "Applications",
     "creditLoans": "Loans",
-    "creditSettings": "Settings"
+    "creditSettings": "Settings",
+    "creditUnderwriting": "Manual review queue"
   },
   "dialer": {
     "phone": {
@@ -11396,7 +11397,16 @@
       "allocation": "Allocation",
       "totalRow": "Total",
       "interest": "Interest",
-      "fee": "Fee"
+      "fee": "Fee",
+      "lastActivity": "Last activity",
+      "step": "Step",
+      "onStep": "On step",
+      "application": "Application",
+      "reasons": "Review reason",
+      "referred": "Referred",
+      "waiting": "In queue",
+      "assigned": "Assigned",
+      "disbursed": "Disbursed"
     },
     "fields": {
       "name": "Name",
@@ -11483,7 +11493,23 @@
       "signedAt": "Signed at",
       "signHash": "Document SHA-256",
       "signSession": "Session / IP",
-      "templateVersion": "Template version"
+      "templateVersion": "Template version",
+      "disbursementAmount": "Payout amount",
+      "disbursementMethod": "Method",
+      "settledAt": "Settled at",
+      "failedAt": "Failed at",
+      "failureCode": "Reason",
+      "timeSource": "Timestamp source",
+      "provider": "Provider",
+      "providerTxId": "Provider transaction ID",
+      "providerStatus": "Provider status",
+      "clientTransactionId": "Our operation key",
+      "retry": "Retry",
+      "applicationId": "Application ID",
+      "externalApplicationId": "External application ID",
+      "decisionId": "Decision ID",
+      "loanId": "Loan ID",
+      "loanAgeDays": "Days since disbursement"
     },
     "tabs": {
       "form": "Application form",
@@ -11607,7 +11633,23 @@
       "scheduleVersionEmpty": "Version {{version}} ({{reason}}) has no instalments — they are in version {{previous}}.",
       "openPreviousVersion": "Open it",
       "paymentReversedOn": "Reversed on {{date}}",
-      "paymentsReversedHint": "Of the payments listed, {{count}} were reversed for {{amount}} — that amount is not counted towards the debt, the money went back to the bank."
+      "paymentsReversedHint": "Of the payments listed, {{count}} were reversed for {{amount}} — that amount is not counted towards the debt, the money went back to the bank.",
+      "idleFor": "last activity: {{duration}} ago",
+      "outstandingLoans": "Outstanding loans",
+      "cooldownUntil": "Cooldown after decline until {{date}}",
+      "disbursement": "Money transfer progress",
+      "disbursementNotSent": "The payout has never been sent — not a single transfer attempt.",
+      "disbursementUpdated": "updated {{when}}",
+      "disbursementReview": "Awaiting review: {{reason}} — since {{since}}",
+      "disbursementReviewNoDate": "Awaiting review: {{reason}}",
+      "disbursementUnknownCode": "Code «{{code}}» — the provider’s own wording, we have not translated it yet",
+      "disbursementObservedTime": "The provider did not tell us the settlement time — we derived it from the moment we found out. The two-day cancellation window (CA s.124.4) is counted from this date: the client’s deadline is estimated, not known.",
+      "disbursementNoRetryButton": "There is deliberately no retry button here: the resume command accepts only the «failed» state with a closed review, requires no retry reason, accepts no idempotency key and does not record who pressed it. For now a module developer performs the retry on request.",
+      "disbursementRetryContradiction": "The module marks the retry as allowed, but the resume command will refuse it: the module’s flag is wider than the command’s condition. Aligning them is on the module side.",
+      "disbursementUnknown": "Disbursement state is unknown — the core did not answer. This does NOT mean no transfer was made: it may have gone out and failed. Refresh or come back later.",
+      "stagesTitle": "Client path",
+      "stagesHint": "the same five steps the client sees in their cabinet",
+      "identifiers": "Identifiers"
     },
     "stand": {
       "notice": "Stage 1: the module runs outside Kong and does not know CRM roles yet — the role below is a stand mock (WS-20 replaces it with JWT).",
@@ -11619,7 +11661,8 @@
       "tabs": {
         "products": "Credit products",
         "parameters": "Module settings",
-        "integrations": "Integrations"
+        "integrations": "Integrations",
+        "switches": "Kill switches"
       },
       "needRiskManager": "This section is available to the risk manager: it holds the thresholds and the product configuration.",
       "mutationDisabled": "Editing requires a second approver (UW-04) — available once CRM roles land (WS-20).",
@@ -11913,6 +11956,129 @@
       "clear": "Clear",
       "present": "A key is saved for this tab.",
       "absent": "No key saved: the module answers 401."
+    },
+    "idle": {
+      "underHour": "under an hour",
+      "hoursShort": "{{value}} h",
+      "daysShort": "{{value}} d",
+      "sinceCreated": "since creation"
+    },
+    "switches": {
+      "rule": "Turning a switch off stops only what is NEW. Servicing of issued loans never stops: payments are accepted, schedule and documents are served, the two-day right of rescission stands.",
+      "on": "On",
+      "off": "Off",
+      "names": {
+        "applications_intake": "Application intake from the site",
+        "client_cabinet": "Client cabinet",
+        "crm_section": "Module section in CRM"
+      },
+      "effects": {
+        "applications_intake": "Off — no new application is created and no contract is signed. Issued loans are serviced as usual.",
+        "client_cabinet": "Emergency cabinet switch. The client cannot sign in but can still pay: payments, autodebit and accruals keep running.",
+        "crm_section": "The module stores this switch but enforces nothing: CRM hides the section. The operator loses the UI, the API keeps working."
+      },
+      "confirm": {
+        "applications_intake": "New applications and contract signing stop. Issued loans are unaffected.",
+        "client_cabinet": "Clients will not be able to sign in. Paying stays possible.",
+        "crm_section": "The section disappears from the operator menu in CRM. The module and the client cabinet keep working."
+      },
+      "reasonPlaceholder": "Why we are switching off — goes into the history",
+      "reasonRequired": "Without a reason nobody will explain the stop a week later",
+      "turnOff": "Switch off",
+      "readOnly": "Only the risk manager can switch",
+      "saveFailed": "Switching failed — state unchanged",
+      "loadFailed": "Could not read the switch state. Do not assume everything is on.",
+      "historyTitle": "Switching history",
+      "historyEmpty": "No switching yet",
+      "sectionOff": "The section was switched off by the risk manager. Servicing of issued loans is not stopped — contact the risk manager.",
+      "sectionOffHere": "The section is switched off by the “Module section in CRM” switch. This page stays open deliberately — otherwise there would be no way to switch the section back on. Servicing of issued loans is not stopped."
+    },
+    "disbursementState": {
+      "pending": "Money is on its way",
+      "settled": "Settled",
+      "failed": "Not sent",
+      "reversed": "Money came back to the sender",
+      "cancelled": "Operation withdrawn",
+      "unknown": "Unknown where the money is"
+    },
+    "disbursementMethod": {
+      "interac": "Interac e-Transfer",
+      "eft": "EFT — transfer to account"
+    },
+    "disbursementFailure": {
+      "payout_refused_pending_review": "We stopped the payout ourselves pending review",
+      "provider_never_created": "The provider never created the operation",
+      "NSF": "Bank declined: insufficient funds"
+    },
+    "disbursementRetry": {
+      "available": "Possible — underwriter or risk manager",
+      "reviewOpen": "Review first, retry after",
+      "notFailed": "Not possible: resume accepts only the «not sent» state",
+      "settled": "Not needed — the money has been settled",
+      "inFlight": "Too early — the money is still on its way",
+      "unknownState": "Forbidden: we do not know where the money is"
+    },
+    "providerTimeSource": {
+      "provider": "Provider’s own timestamp",
+      "observed": "Estimated from the moment we found out"
+    },
+    "queue": {
+      "title": "Manual review queue",
+      "total": "{{count}} total",
+      "empty": "The queue is empty",
+      "noNumberHint": "The queue endpoint returns only the application id — it carries no application number and no client email. Open the card by clicking a row to see them.",
+      "noAssignmentHint": "Assignment to an underwriter does not exist yet: the mechanism arrives with WS-20, so the “Assigned” column is empty for every row.",
+      "noSortingHint": "The module returns the whole queue as one list in referral order: there is no column sorting and no paging, because the server supports neither."
+    },
+    "railReviewReason": {
+      "payout_account_not_pinned": "The decision did not pin a payout account",
+      "payout_details_changed_after_approval": "Account details changed after approval",
+      "effective_time_corrected": "The settlement time was corrected after observation",
+      "provider_amount_mismatch": "The provider’s amount does not match ours",
+      "provider_amount_unconfirmed": "The provider did not confirm the amount",
+      "provider_contradiction": "The provider contradicts itself",
+      "provider_dishonour_unknown": "The provider reported a reversal without a reason",
+      "provider_foreign_operation": "The provider returned someone else’s operation",
+      "provider_impossible_time": "The provider’s operation time is impossible",
+      "provider_recipient_mismatch": "The provider’s recipient is not the one we named",
+      "provider_unidentified_success": "A success at the provider we could not match to our operation",
+      "provider_unknown_status": "The provider returned a status we do not know"
+    },
+    "referralReason": {
+      "income_not_verified": "Income not verified by the bank",
+      "income_mismatch": "Declared income differs from the bank data",
+      "income_frequency_unverified": "Income frequency not verified",
+      "income_not_plausible": "The bank showed an amount, but no payroll pattern behind it",
+      "login_attribution_unverified": "The provider did not confirm the bank login belongs to this application",
+      "schedule_infeasible": "No schedule can be built for the requested calendar",
+      "manual": "An operator referred the application for review",
+      "RC-04": "An active loan already exists",
+      "RC-08": "Cool-down period after a decline",
+      "RC-11": "Insufficient affordability / income below minimum",
+      "client_not_identifiable": "Client could not be identified"
+    },
+    "stage": {
+      "registration": "Registration",
+      "questionnaire": "Application form",
+      "bank": "Income check",
+      "decision": "Decision",
+      "signing": "Signing"
+    },
+    "stageState": {
+      "done": "done",
+      "current": "current step",
+      "todo": "ahead",
+      "failed": "not passed"
+    },
+    "clientLink": {
+      "byPhone": "matched by phone",
+      "ambiguous": "{{count}} cards matched this phone — pick one manually",
+      "notFound": "not found in CRM by phone",
+      "notSearched": {
+        "no_phone": "not searched: no phone",
+        "loading": "searching…",
+        "failed": "not searched: CRM did not answer"
+      }
     }
   }
 }
