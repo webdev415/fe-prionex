@@ -43,6 +43,7 @@ function card(overrides: Partial<EmployeeCard> = {}): EmployeeCard {
       hired_at: '2024-03-15',
       asterisk_extension: null,
       dialer_extension: null,
+      is_agent: false,
     },
     contacts: [],
     children: [],

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Checkbox } from '@/components/ui/Checkbox'
 import { DateSelect } from '@/components/ui/DateSelect'
 import { Input } from '@/components/ui/Input'
 import '@/components/ui/DateSelect.theme.css'
@@ -65,6 +66,7 @@ export function WorkDialog({ card, projectId, open, onClose }: WorkDialogProps) 
   const [hiredAt, setHiredAt] = useState<string>(card.work.hired_at ?? '')
   const [asterisk, setAsterisk] = useState<string>(card.work.asterisk_extension ?? '')
   const [dialer, setDialer] = useState<string>(card.work.dialer_extension ?? '')
+  const [isAgent, setIsAgent] = useState<boolean>(card.work.is_agent)
 
   const roles = useMemo(() => rolesData?.roles ?? [], [rolesData?.roles])
   /*
@@ -137,6 +139,7 @@ export function WorkDialog({ card, projectId, open, onClose }: WorkDialogProps) 
             // who deletes a number gets it removed instead of silently kept.
             asterisk_extension: asterisk.trim() || null,
             dialer_extension: dialer.trim() || null,
+            is_agent: isAgent,
           })
         }}
       >
@@ -240,6 +243,17 @@ export function WorkDialog({ card, projectId, open, onClose }: WorkDialogProps) 
           onChange={(event) => setDialer(event.target.value)}
           helperText={t('pages.employeeCard.fields.extensionHint')}
         />
+
+        {/*
+          Sits with the dialer extension it gates. An agent with no extension
+          is not provisioned, and an extension on somebody who is not an agent
+          is not either, so editing one without the other is a change that
+          quietly does nothing.
+        */}
+        <label className="flex items-center gap-2 self-end pb-2 sm:col-span-2">
+          <Checkbox checked={isAgent} onCheckedChange={(value) => setIsAgent(value === true)} />
+          <span className="text-foreground text-sm">{t('pages.employeeCard.fields.isAgent')}</span>
+        </label>
       </form>
     </SectionDialog>
   )

@@ -95,6 +95,7 @@ function card(overrides: Partial<EmployeeCard> = {}): EmployeeCard {
       hired_at: null,
       asterisk_extension: null,
       dialer_extension: null,
+      is_agent: false,
     },
     contacts: [],
     children: [],
@@ -217,6 +218,33 @@ describe('WorkDialog', () => {
     await userEvent.click(screen.getByRole('button', { name: 'actions.save' }))
 
     expect(state.saved).toHaveBeenCalledWith(expect.objectContaining({ asterisk_extension: null }))
+  })
+
+  /*
+   * The flag sits with the extension it gates: an agent with no dialer
+   * extension is not provisioned, and an extension on somebody who is not an
+   * agent is not either.
+   */
+  it('opens on whether they take dialer calls', () => {
+    render(
+      <WorkDialog
+        card={card({ work: { ...card().work, is_agent: true } })}
+        projectId={3}
+        open
+        onClose={vi.fn()}
+      />
+    )
+
+    expect(screen.getByRole('checkbox')).toBeChecked()
+  })
+
+  it('sends the agent flag when it is turned on', async () => {
+    render(<WorkDialog card={card()} projectId={3} open onClose={vi.fn()} />)
+
+    await userEvent.click(screen.getByRole('checkbox'))
+    await userEvent.click(screen.getByRole('button', { name: 'actions.save' }))
+
+    expect(state.saved).toHaveBeenCalledWith(expect.objectContaining({ is_agent: true }))
   })
 
   it('never offers somebody as their own manager', async () => {
