@@ -43,6 +43,8 @@ export interface WorkInformation {
   role_id: number | null
   manager: string | null
   hired_at: string | null
+  asterisk_extension: string | null
+  dialer_extension: string | null
 }
 
 export interface Relative {
@@ -135,6 +137,9 @@ export interface WorkInformationUpdate {
   department_id?: number
   manager_user_id?: number | null
   hired_at?: string | null
+  /** Null clears one, which is a different request from leaving it out. */
+  asterisk_extension?: string | null
+  dialer_extension?: string | null
 }
 
 export interface RelativeInput {

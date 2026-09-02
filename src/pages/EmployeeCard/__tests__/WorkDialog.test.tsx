@@ -93,6 +93,8 @@ function card(overrides: Partial<EmployeeCard> = {}): EmployeeCard {
       role_id: 10,
       manager: null,
       hired_at: null,
+      asterisk_extension: null,
+      dialer_extension: null,
     },
     contacts: [],
     children: [],
@@ -174,6 +176,47 @@ describe('WorkDialog', () => {
     await userEvent.click(screen.getByRole('button', { name: 'actions.save' }))
 
     expect(state.saved).toHaveBeenCalledWith(expect.not.objectContaining({ role_id: 10 }))
+  })
+
+  /*
+   * The employees list has carried the Asterisk extension in a column all
+   * along, while the card it links to showed neither number - the detail view
+   * carrying less than the table above it.
+   */
+  it('opens on the extensions already recorded', () => {
+    render(
+      <WorkDialog
+        card={card({
+          work: {
+            ...card().work,
+            asterisk_extension: '1004',
+            dialer_extension: '9001',
+          },
+        })}
+        projectId={3}
+        open
+        onClose={vi.fn()}
+      />
+    )
+
+    expect(screen.getByLabelText('pages.employeeCard.fields.asteriskExtension')).toHaveValue('1004')
+    expect(screen.getByLabelText('pages.employeeCard.fields.dialerExtension')).toHaveValue('9001')
+  })
+
+  it('sends an emptied extension as null, so it is removed rather than kept', async () => {
+    render(
+      <WorkDialog
+        card={card({ work: { ...card().work, asterisk_extension: '1004' } })}
+        projectId={3}
+        open
+        onClose={vi.fn()}
+      />
+    )
+
+    await userEvent.clear(screen.getByLabelText('pages.employeeCard.fields.asteriskExtension'))
+    await userEvent.click(screen.getByRole('button', { name: 'actions.save' }))
+
+    expect(state.saved).toHaveBeenCalledWith(expect.objectContaining({ asterisk_extension: null }))
   })
 
   it('never offers somebody as their own manager', async () => {

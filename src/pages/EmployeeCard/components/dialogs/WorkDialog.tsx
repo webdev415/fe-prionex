@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DateSelect } from '@/components/ui/DateSelect'
+import { Input } from '@/components/ui/Input'
 import '@/components/ui/DateSelect.theme.css'
 import {
   Select,
@@ -62,6 +63,8 @@ export function WorkDialog({ card, projectId, open, onClose }: WorkDialogProps) 
     card.header.manager_user_id ? String(card.header.manager_user_id) : NOBODY
   )
   const [hiredAt, setHiredAt] = useState<string>(card.work.hired_at ?? '')
+  const [asterisk, setAsterisk] = useState<string>(card.work.asterisk_extension ?? '')
+  const [dialer, setDialer] = useState<string>(card.work.dialer_extension ?? '')
 
   const roles = useMemo(() => rolesData?.roles ?? [], [rolesData?.roles])
   /*
@@ -130,6 +133,10 @@ export function WorkDialog({ card, projectId, open, onClose }: WorkDialogProps) 
             ...(departmentId === NOBODY ? {} : { department_id: Number(departmentId) }),
             manager_user_id: managerId === NOBODY ? null : Number(managerId),
             hired_at: hiredAt || null,
+            // Empty clears it. Sent as null rather than omitted, so somebody
+            // who deletes a number gets it removed instead of silently kept.
+            asterisk_extension: asterisk.trim() || null,
+            dialer_extension: dialer.trim() || null,
           })
         }}
       >
@@ -211,6 +218,28 @@ export function WorkDialog({ card, projectId, open, onClose }: WorkDialogProps) 
             placeholder={t('pages.employeeCard.fields.hiredAt')}
           />
         </div>
+
+        {/*
+          Digits only, 3 to 10, matching what the create-user dialog asks for
+          and what the service accepts. Clearing one and saving removes it.
+        */}
+        <Input
+          label={t('pages.employeeCard.fields.asteriskExtension')}
+          value={asterisk}
+          inputMode="numeric"
+          maxLength={10}
+          onChange={(event) => setAsterisk(event.target.value)}
+          helperText={t('pages.employeeCard.fields.extensionHint')}
+        />
+
+        <Input
+          label={t('pages.employeeCard.fields.dialerExtension')}
+          value={dialer}
+          inputMode="numeric"
+          maxLength={10}
+          onChange={(event) => setDialer(event.target.value)}
+          helperText={t('pages.employeeCard.fields.extensionHint')}
+        />
       </form>
     </SectionDialog>
   )

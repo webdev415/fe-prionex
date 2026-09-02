@@ -83,6 +83,17 @@ export function CardSections({ card, onEdit }: CardSectionsProps) {
               label: t('pages.employeeCard.fields.hiredAt'),
               value: day(card.work.hired_at),
             },
+            // Which numbers this person answers on. The employees list has
+            // carried the Asterisk one in a column all along; the card it
+            // links to did not.
+            {
+              label: t('pages.employeeCard.fields.asteriskExtension'),
+              value: card.work.asterisk_extension,
+            },
+            {
+              label: t('pages.employeeCard.fields.dialerExtension'),
+              value: card.work.dialer_extension,
+            },
           ]}
         />
       </CardSection>
