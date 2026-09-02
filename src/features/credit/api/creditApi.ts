@@ -46,64 +46,29 @@ export const CREDIT_API_BASE_URL = import.meta.env.VITE_CREDIT_API_BASE_URL ?? '
 const CREDIT_PREFIX = '/api/v1/credit'
 
 /**
- * Роль этапа 1: до JWT/RBAC (WS-20) credit-service разграничивает доступ
- * заголовком `X-Operator-Role`. Это МАКЕТ, а не защита — сервер всё равно
- * решает сам; заголовок лишь позволяет проверять раздел под разными ролями,
- * пока в CRM нет кредитных ролей. На этапе 2 строка удаляется вместе с
- * ключом стенда.
- */
-const STAND_ROLE_STORAGE_KEY = 'credit.stand.role'
-const STAND_KEY_STORAGE_KEY = 'credit.stand.apiKey'
-
-function readSetting(storage: Storage | undefined, key: string): string {
-  if (!storage) return ''
-  try {
-    return storage.getItem(key) ?? ''
-  } catch {
-    return ''
-  }
-}
-
-/**
- * Роль — не секрет: держим её в localStorage, чтобы не выбирать заново
- * каждую сессию.
- */
-export function getStandRole(): string {
-  if (typeof window === 'undefined') return 'underwriter'
-  return readSetting(window.localStorage, STAND_ROLE_STORAGE_KEY) || 'underwriter'
-}
-
-export function setStandRole(role: string): void {
-  try {
-    window.localStorage.setItem(STAND_ROLE_STORAGE_KEY, role)
-  } catch {
-    /* приватный режим — роль просто не запомнится */
-  }
-}
-
-/**
- * Сервисный ключ стенда — ТОЛЬКО sessionStorage.
+ * Уборка за этапом 1.
  *
- * В localStorage он пережил бы закрытие вкладки и остался бы лежать на общей
- * машине, доступный любому same-origin скрипту или расширению. sessionStorage
- * умирает вместе с вкладкой (SEC L-02, 29.08). На этапе 2 ключа в браузере не
- * будет вовсе: авторизацию берёт на себя JWT CRM.
+ * До перехода на пропуск браузер хранил служебный ключ модуля в
+ * `sessionStorage`, а выбранную роль стенда — в `localStorage`. Ключа больше
+ * никто не читает, но у всех, кто открывал раздел раньше, он ЛЕЖИТ в браузере
+ * до сих пор: перестать отправлять секрет и убрать секрет с машины — разные
+ * вещи. Стираем оба ключа при загрузке модуля, один раз.
+ *
+ * `credit.stand.apiKey` чистим и в session-, и в localStorage: в ранних
+ * версиях он попадал во второй.
  */
-export function getStandApiKey(): string {
-  if (typeof window === 'undefined') return ''
-  return readSetting(window.sessionStorage, STAND_KEY_STORAGE_KEY)
-}
-
-export function setStandApiKey(key: string): void {
+function purgeStandCredentials(): void {
+  if (typeof window === 'undefined') return
   try {
-    if (key) window.sessionStorage.setItem(STAND_KEY_STORAGE_KEY, key)
-    else window.sessionStorage.removeItem(STAND_KEY_STORAGE_KEY)
-    // Подчищаем ключ, если он остался в localStorage от прежних версий.
-    window.localStorage.removeItem(STAND_KEY_STORAGE_KEY)
+    window.sessionStorage.removeItem('credit.stand.apiKey')
+    window.localStorage.removeItem('credit.stand.apiKey')
+    window.localStorage.removeItem('credit.stand.role')
   } catch {
-    /* см. выше */
+    /* приватный режим — хранилище недоступно, чистить нечего */
   }
 }
+
+purgeStandCredentials()
 
 export const creditHttp = axios.create({
   baseURL: CREDIT_API_BASE_URL,
@@ -120,10 +85,19 @@ creditHttp.interceptors.request.use((config: InternalAxiosRequestConfig) => {
     }
   })()
   if (token) config.headers.set('Authorization', `Bearer ${token}`)
-  // Этап 1 (см. комментарий выше): роль и ключ стенда.
-  config.headers.set('X-Operator-Role', getStandRole())
-  const standKey = getStandApiKey()
-  if (standKey) config.headers.set('X-Internal-Api-Key', standKey)
+  // ⚠️ Служебный ключ и роль отсюда УБРАНЫ. Модуль теперь проверяет пропуск
+  // оператора у самой CRM (`POST /api/v1/auth/validate`) и берёт права из его
+  // же тела — они там есть: `jwt_handler.py:123` кладёт `permissions` рядом с
+  // `active_project_id` и `active_role_name`.
+  //
+  // Почему это не «упрощение», а закрытие двери. Пока браузер слал
+  // `X-Internal-Api-Key`, ключ от всего модуля лежал в `sessionStorage` у
+  // каждого, кто открыл раздел, — и любой, кто его знал, назначал себе роль
+  // заголовком `X-Operator-Role` поверх настоящих прав. Роль приходит из
+  // проверенного пропуска, а не из переключателя стенда.
+  //
+  // Служебный ключ у модуля остался — но только для служебных вызовов
+  // (расписания, сверки) и стенда без CRM. Из браузера он не уходит вовсе.
   return config
 })
 
