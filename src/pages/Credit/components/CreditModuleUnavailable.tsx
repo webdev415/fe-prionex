@@ -16,21 +16,37 @@
 import { useTranslation } from 'react-i18next'
 import { Alert } from '@/components/ui/Alert'
 import { CreditApiError } from '@/features/credit/api/creditApi'
-import { CreditApiKeyPanel } from './CreditApiKeyPanel'
 
 export function CreditModuleUnavailable({ error }: { error: unknown }) {
   const { t } = useTranslation('common')
-  // 401 — это НЕ «модуль не развёрнут»: модуль есть, отвечает и требует ключ.
-  // Свалить эти состояния в одно значит отправить человека искать несуществующую
-  // аварию вместо того, чтобы дать ему поле для ключа.
-  const needsKey = error instanceof CreditApiError && error.status === 401
-  if (needsKey) {
+  // Три РАЗНЫХ состояния, и раньше два из них показывались одинаково.
+  //
+  // 401 — модуль есть и отвечает, но НЕ ПРИНЯЛ пропуск оператора. Раньше здесь
+  // предлагалось поле для служебного ключа; теперь ключа у браузера нет вовсе,
+  // и предлагать нечего — человеку надо объяснить, почему его не пустили.
+  //
+  // 403 — пропуск приняли, а прав не хватило. Это не поломка, а ответ по делу,
+  // и чаще всего причина в ПРОЕКТЕ: кредитные права заведены в «Фінбусті», и
+  // оператор другого проекта принесёт права, среди которых кредитных нет.
+  // Сообщение «нет права credit.applications.read» читается как «вам не
+  // выдали», хотя настоящая причина — не тот проект.
+  const status = error instanceof CreditApiError ? error.status : undefined
+  if (status === 401 || status === 403) {
     return (
       <div className="p-6">
         <h1 className="text-foreground mb-4 text-xl font-semibold">
           {t('navigation.creditModule', 'Credit Module')}
         </h1>
-        <CreditApiKeyPanel />
+        <div className="border-border bg-card rounded-xl border p-6 shadow-sm">
+          <p className="text-foreground text-sm font-medium">
+            {t(status === 401 ? 'credit.access.notAuthenticated' : 'credit.access.noRights')}
+          </p>
+          <p className="text-muted-foreground mt-2 text-sm">
+            {t(
+              status === 401 ? 'credit.access.notAuthenticatedHint' : 'credit.access.noRightsHint'
+            )}
+          </p>
+        </div>
       </div>
     )
   }

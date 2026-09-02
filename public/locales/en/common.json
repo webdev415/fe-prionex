@@ -11905,8 +11905,7 @@
       "identifiers": "Identifiers"
     },
     "stand": {
-      "notice": "Stage 1: the module runs outside Kong and does not know CRM roles yet — the role below is a stand mock (WS-20 replaces it with JWT).",
-      "role": "Stand role"
+      "notice": "Stage 1: the module still runs outside the Kong gateway — the browser calls it directly. Rights come from your CRM pass."
     },
     "settings": {
       "title": "Credit module settings",
@@ -12200,16 +12199,6 @@
       "title": "The credit module is not deployed on this stand",
       "hint": "The section is in place, but the credit service is not routed here yet: on stage 1 it runs outside Kong. Locally it is served on localhost:8020; on the dev server the route /api/v1/credit will appear together with the module deployment."
     },
-    "standKey": {
-      "title": "Stand service key",
-      "where": "Ask DevOps for INTERNAL_API_KEY of the credit module on this stand (deploy/.env on the server), and paste it here.",
-      "lifetime": "The key lives until this tab is closed — being asked again after reopening the tab is normal, not a fault.",
-      "placeholder": "X-Internal-Api-Key",
-      "save": "Save key",
-      "clear": "Clear",
-      "present": "A key is saved for this tab.",
-      "absent": "No key saved: the module answers 401."
-    },
     "idle": {
       "underHour": "under an hour",
       "hoursShort": "{{value}} h",
@@ -12332,6 +12321,12 @@
         "loading": "searching…",
         "failed": "not searched: CRM did not answer"
       }
+    },
+    "access": {
+      "notAuthenticated": "The module did not accept your sign-in",
+      "notAuthenticatedHint": "Your session may have expired. Sign in to CRM again; if that does not help, contact an administrator — the module verifies sign-in with CRM.",
+      "noRights": "No access to the credit section",
+      "noRightsHint": "The usual cause is the wrong project: credit permissions live in the “Finboost” project. Check the selected project or ask an administrator to assign a role."
     }
   }
 }
