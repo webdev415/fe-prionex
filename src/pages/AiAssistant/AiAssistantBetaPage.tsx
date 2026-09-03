@@ -559,7 +559,8 @@ const MODE_OPTIONS: {
  * click and renders inline — matching the settings popover in this component.
  *
  * Под списком режимов — тумблер «Показывать раздумья»: раздумья приходят только
- * в режиме «Думает», поэтому настройка их видимости стоит там же, где режим.
+ * в режиме «Думает», поэтому настройка их видимости стоит там же, где режим — и
+ * показывается ровно в этом режиме (на fast и в экспертном ходе прятать нечего).
  */
 function ModeDropdown({
   value,
@@ -763,34 +764,35 @@ function ModeDropdown({
             </div>
           )}
 
-          <div
-            className="border-border/70 mt-1 flex items-start gap-2.5 border-t px-2.5 pt-2.5 pb-1.5"
-            data-testid="assistant-show-reasoning-row"
-          >
-            <Icons.AiBrain03
-              size={16}
-              strokeWidth={1.5}
-              className="text-muted-foreground mt-0.5 shrink-0"
-            />
-            <span className="min-w-0 flex-1">
-              <span className="text-foreground block text-sm font-medium">
-                {t('pages.aiAssistant.showReasoning')}
+          {/* Раздумья приходят только в режиме «Думаючий»: на fast их не бывает,
+              а экспертный ход уходит во внешний Claude. Прятать тумблер честнее,
+              чем показывать настройку, которой в текущем режиме нечего скрывать. */}
+          {isThinking && !isExpert && (
+            <div
+              className="border-border/70 mt-1 flex items-start gap-2.5 border-t px-2.5 pt-2.5 pb-1.5"
+              data-testid="assistant-show-reasoning-row"
+            >
+              <Icons.AiBrain03
+                size={16}
+                strokeWidth={1.5}
+                className="text-muted-foreground mt-0.5 shrink-0"
+              />
+              <span className="min-w-0 flex-1">
+                <span className="text-foreground block text-sm font-medium">
+                  {t('pages.aiAssistant.showReasoning')}
+                </span>
+                <span className="text-muted-foreground mt-0.5 block text-[11px] leading-snug font-light">
+                  {t('pages.aiAssistant.showReasoningHint')}
+                </span>
               </span>
-              <span className="text-muted-foreground mt-0.5 block text-[11px] leading-snug font-light">
-                {/* На fast раздумий не бывает — честно говорим об этом, но тумблер
-                    оставляем живым: оператор настраивает его заранее. */}
-                {isThinking
-                  ? t('pages.aiAssistant.showReasoningHint')
-                  : t('pages.aiAssistant.showReasoningFastHint')}
-              </span>
-            </span>
-            <ToggleSwitch
-              checked={showReasoning}
-              onChange={onShowReasoningChange}
-              ariaLabel={t('pages.aiAssistant.showReasoning')}
-              className="mt-0.5 shrink-0"
-            />
-          </div>
+              <ToggleSwitch
+                checked={showReasoning}
+                onChange={onShowReasoningChange}
+                ariaLabel={t('pages.aiAssistant.showReasoning')}
+                className="mt-0.5 shrink-0"
+              />
+            </div>
+          )}
         </div>
       )}
     </div>

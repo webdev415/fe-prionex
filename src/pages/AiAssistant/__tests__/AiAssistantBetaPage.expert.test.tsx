@@ -10,7 +10,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { AiAssistantBetaPage } from '../AiAssistantBetaPage'
-import { useAiAssistantStore } from '@/stores/aiAssistantStore'
+import { DEFAULT_ASSISTANT_SETTINGS, useAiAssistantStore } from '@/stores/aiAssistantStore'
 import { useAuthStore } from '@/stores/authStore'
 import type { User } from '@/types/api'
 import type { AssistantCapabilities } from '@/features/aiAssistant/api'
@@ -273,6 +273,38 @@ describe('AiAssistantBetaPage expert (Claude) mode', () => {
       expect.objectContaining({ expert: undefined, mode: 'thinking' }),
       expect.anything()
     )
+  })
+
+  it('hides the reasoning toggle while the turn is expert', async () => {
+    const { queryClient } = renderPage()
+    await waitForCapabilitiesSettled(queryClient)
+
+    // В «Думаючому» тумблер раздумий на месте…
+    fireEvent.click(within(openModeMenu()).getByText('pages.aiAssistant.modeThinkingShort'))
+    expect(within(openModeMenu()).getByTestId('assistant-show-reasoning-row')).toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('assistant-mode-trigger'))
+
+    // …а экспертный ход уходит во внешний Claude — прятать нечего.
+    await selectExpertModel('claude-sonnet-5')
+    expect(
+      within(openModeMenu()).queryByTestId('assistant-show-reasoning-row')
+    ).not.toBeInTheDocument()
+  })
+
+  it('hides the reasoning toggle for a stored thinking+expert combination', async () => {
+    // Выбор экспертной модели через меню сбрасывает режим в fast, но пара
+    // «думаючий + експерт» может прийти из localStorage прошлой сессии.
+    useAiAssistantStore.setState({
+      userId: '7',
+      conversationId: null,
+      settings: { ...DEFAULT_ASSISTANT_SETTINGS, mode: 'thinking', expertModel: 'claude-opus-5' },
+    })
+    const { queryClient } = renderPage()
+    await waitForCapabilitiesSettled(queryClient)
+
+    const menu = openModeMenu()
+    expect(within(menu).getByTestId('assistant-expert-section')).toBeInTheDocument()
+    expect(within(menu).queryByTestId('assistant-show-reasoning-row')).not.toBeInTheDocument()
   })
 
   it('ignores a stored expert model once the backend stops allowing the mode', async () => {
