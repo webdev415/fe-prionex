@@ -1643,6 +1643,54 @@ export function ChainExecutor({
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [])
 
+  // KAN-1067 — a hotkey launch must land focus on Save, not Minimize.
+  //
+  // The Minimize button is the first focusable element in the dialog
+  // (ClientDetailPage renders it above <ModalContent>), and Modal.tsx passes
+  // no `onOpenAutoFocus`, so Radix applies its default — focus the first
+  // focusable thing — and the caret lands there. Enter then activates
+  // Minimize, and `decideEnterSave` deliberately stands aside for a focused
+  // button (running both would minimise AND save from one press), so the
+  // modal shrinks and the TA is not written.
+  //
+  // Fixed here rather than in Modal.tsx on purpose: an `onOpenAutoFocus` on
+  // the shared Modal would change where focus lands in EVERY dialog in the
+  // product, and only this one has a Save that is ready the moment it opens.
+  //
+  // Gated on `initialTemplateId` — the hotkey's own marker (KAN-973). A manual
+  // open has the operator picking a template and filling fields, which moves
+  // focus into the panel by itself; the ticket is explicit that those flows
+  // must not change.
+  //
+  // One ref serves both Save buttons: the body renders
+  // `activeInstance ? wizard : isInstantMode ? instant : preview`, so at most
+  // one of them is mounted at a time.
+  const saveButtonRef = useRef<HTMLButtonElement | null>(null)
+  const saveFocusedRef = useRef(false)
+  useEffect(() => {
+    // Latched: Save comes and goes as the wizard advances, and re-focusing it
+    // every time it reappears would yank the caret away from an operator who
+    // has moved on. This is about where focus STARTS, once per mount.
+    if (saveFocusedRef.current) return
+    if (initialTemplateId === null) return
+    if (!canSaveOnEnter) return
+
+    const button = saveButtonRef.current
+    if (!button) return
+
+    saveFocusedRef.current = true
+
+    // The operator got there first — clicked or tabbed into the panel while
+    // the chain was starting. Their caret wins; ours would be a surprise
+    // mid-typing. Focus still parked on Minimize/Close sits OUTSIDE the panel
+    // (those buttons are the modal's, not this component's), which is exactly
+    // the case this exists to correct.
+    const active = document.activeElement
+    if (active instanceof Node && panelRef.current?.contains(active)) return
+
+    button.focus()
+  }, [initialTemplateId, canSaveOnEnter])
+
   // --- Unified panel: chain selector at top, body below adapts ---
   return (
     <div ref={panelRef} className="flex w-full flex-col gap-4">
@@ -2550,6 +2598,7 @@ export function ChainExecutor({
 
                 {!isFinalizing && !isAutoAdvancing && !isDelayBlocked && isLastStep && (
                   <Button
+                    ref={saveButtonRef}
                     variant="primary"
                     onClick={handleSave}
                     disabled={createIntMut.isPending || advanceMut.isPending}
@@ -2732,6 +2781,7 @@ export function ChainExecutor({
                 </label>
               )}
               <Button
+                ref={saveButtonRef}
                 variant="primary"
                 onClick={handleInstantSave}
                 disabled={instantSubmitting}
