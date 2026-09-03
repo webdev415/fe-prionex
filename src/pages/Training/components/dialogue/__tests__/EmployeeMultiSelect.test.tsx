@@ -162,6 +162,34 @@ describe('EmployeeMultiSelect search', () => {
   })
 })
 
+// The two assign dialogs this list replaced used real <input type="checkbox">
+// elements, so screen readers announced each row's checked state. A row is now a
+// button whose tick is a decorative <span>, which would have said nothing at all
+// about what is selected (KAN-1046 review).
+describe('EmployeeSearchList selection semantics', () => {
+  it('exposes each row as a checkbox carrying its checked state', () => {
+    render(<EmployeeMultiSelect value={[43]} onChange={vi.fn()} operators={OPERATORS} />)
+    openDropdown()
+
+    expect(screen.getByRole('checkbox', { name: /Ivan Petrenko/ })).toBeChecked()
+    expect(screen.getByRole('checkbox', { name: /Oleh Bondar/ })).not.toBeChecked()
+  })
+
+  it('names the row by the person, not by their avatar initials', () => {
+    render(<EmployeeMultiSelect value={[]} onChange={vi.fn()} operators={OPERATORS} />)
+    openDropdown()
+
+    expect(screen.getByRole('checkbox', { name: 'Oleh Bondar' })).toBeInTheDocument()
+  })
+
+  it('leaves single-pick rows as plain buttons', () => {
+    render(<EmployeeSearchList operators={OPERATORS} onSelect={vi.fn()} />)
+
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Ivan Petrenko' })).toBeInTheDocument()
+  })
+})
+
 describe('EmployeeSearchList single-pick mode', () => {
   it('hides excluded operators and picks by row click', () => {
     const onSelect = vi.fn()

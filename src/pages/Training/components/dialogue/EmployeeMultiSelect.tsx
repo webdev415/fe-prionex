@@ -131,11 +131,17 @@ export function EmployeeSearchList({
               <li key={row.id}>
                 <button
                   type="button"
+                  // Multi-select rows replaced real checkbox inputs, so the tick
+                  // has to be announced rather than only drawn. Single-pick rows
+                  // really are buttons and stay that way.
+                  role={selectedIds ? 'checkbox' : undefined}
+                  aria-checked={selectedIds ? checked : undefined}
                   onClick={() => onSelect(row.id)}
                   className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-[#F7F7F7]"
                 >
                   {selectedIds ? (
                     <span
+                      aria-hidden="true"
                       className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border ${
                         checked
                           ? 'border-[#204E4D] bg-[#204E4D] text-white'
@@ -146,6 +152,7 @@ export function EmployeeSearchList({
                     </span>
                   ) : null}
                   <div
+                    aria-hidden="true"
                     className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[9px] font-semibold text-[#05040D]"
                     style={{ backgroundColor: row.avatarColor }}
                   >
