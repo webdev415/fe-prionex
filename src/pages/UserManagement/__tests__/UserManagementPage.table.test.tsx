@@ -51,7 +51,7 @@ function employee(overrides: Partial<ApiUser> = {}): ApiUser {
     email: 'olena@test.com',
     first_name: 'Olena',
     last_name: 'Kovalchuk',
-    full_name: 'Olena Kovalchuk',
+    full_name: 'Kovalchuk Olena',
     language: 'uk',
     timezone: 'Europe/Kyiv',
     status: 'active',

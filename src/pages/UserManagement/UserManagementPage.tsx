@@ -24,6 +24,7 @@ import { GoogleAuthenticatorStatusIcon } from './components/GoogleAuthenticatorS
 import { cn } from '@/lib/utils'
 import { UserSearchBar } from './components/UserSearchBar'
 import { UserFiltersBar } from './components/UserFiltersBar'
+import { displayName } from '@/features/employeeCard/lib/displayName'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { FilterTemplatesMenu } from './components/FilterTemplatesMenu'
 import type {
@@ -537,7 +538,7 @@ export function UserManagementPage() {
             className="shrink-0"
           />
           <span className="underline-offset-2 group-hover:underline">
-            {user.full_name || user.username}
+            {displayName(user) || user.username}
           </span>
         </button>
       ),
