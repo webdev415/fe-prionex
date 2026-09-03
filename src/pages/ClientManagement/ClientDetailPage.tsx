@@ -1945,14 +1945,65 @@ export function ClientDetailPage() {
     }
   }, [activeClientCardTab]) // Re-check when tab changes
 
+  // A tab-keyed effect also runs on mount, and again when the card switches to
+  // another client without remounting. Both re-run with a tab the operator
+  // never clicked, so emitting unconditionally recorded card loads as tab
+  // choices. Emit only when the value changes for a client already on screen.
+  const lastTrackedCardTab = useRef<{ id: string; tab: string } | null>(null)
+
   useEffect(() => {
     if (!id) return
+    const previous = lastTrackedCardTab.current
+    lastTrackedCardTab.current = { id, tab: activeClientCardTab }
+    if (!previous || previous.id !== id || previous.tab === activeClientCardTab) return
     const numericId = Number(id)
     trackEvent('client_card_tab_switch', {
       clientId: Number.isFinite(numericId) ? numericId : null,
       meta: { tab: activeClientCardTab },
     })
   }, [activeClientCardTab, id, trackEvent])
+
+  // Main card sections: Loans, Payments, Recommenders, Operators, Calls/SMS,
+  // Tasks, Docs. Same guard as above.
+  const lastTrackedSection = useRef<{ id: string; section: string } | null>(null)
+
+  useEffect(() => {
+    if (!id) return
+    const previous = lastTrackedSection.current
+    lastTrackedSection.current = { id, section: activeRightCardTab }
+    if (!previous || previous.id !== id || previous.section === activeRightCardTab) return
+    const numericId = Number(id)
+    trackEvent('client_card_section_open', {
+      clientId: Number.isFinite(numericId) ? numericId : null,
+      meta: { section: activeRightCardTab },
+    })
+  }, [activeRightCardTab, id, trackEvent])
+
+  // Interaction form = the chain executor. Tracked here rather than at each
+  // call site because it is opened from several places (header button, phone
+  // rows, the auto-open effect). The open timestamp feeds `duration_ms` on
+  // submit, which screen-time reads.
+  const interactionFormOpenedAt = useRef<number | null>(null)
+  const interactionFormWasOpen = useRef(false)
+
+  useEffect(() => {
+    if (!id) return
+    if (!isChainExecutorOpen) {
+      interactionFormWasOpen.current = false
+      interactionFormOpenedAt.current = null
+      return
+    }
+    // Emit on the closed -> open transition only. `trackEvent` is a useCallback
+    // with its own dependencies, so this effect can re-run while the form stays
+    // open; without the guard that would double-count opens and reset the timer.
+    if (interactionFormWasOpen.current) return
+    interactionFormWasOpen.current = true
+    interactionFormOpenedAt.current = Date.now()
+    const numericId = Number(id)
+    trackEvent('interaction_form_open', {
+      clientId: Number.isFinite(numericId) ? numericId : null,
+    })
+  }, [isChainExecutorOpen, id, trackEvent])
 
   // Scroll active tab into view when it changes
   useEffect(() => {
@@ -5482,6 +5533,12 @@ export function ClientDetailPage() {
                 prefilledPhoneSource={chainExecutorPrefilledPhoneSource}
                 initialTemplateId={chainExecutorInitialTemplateId}
                 onSave={() => {
+                  const openedAt = interactionFormOpenedAt.current
+                  const numericId = Number(id)
+                  trackEvent('interaction_form_submit', {
+                    clientId: Number.isFinite(numericId) ? numericId : null,
+                    meta: openedAt ? { duration_ms: Date.now() - openedAt } : null,
+                  })
                   setIsChainExecutorOpen(false)
                   setChainExecutorContactSource(null)
                   setChainExecutorPrefilledPhone(null)

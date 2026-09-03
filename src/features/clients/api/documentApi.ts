@@ -58,8 +58,12 @@ export const documentApi = {
     URL.revokeObjectURL(url)
   },
 
+  // Same endpoint as `download` — the bytes are identical and only the caller's
+  // use of them differs. `inline` is what tells the audit trail apart: viewing a
+  // file and saving a copy of it are different acts when it holds personal data.
   preview: async (clientId: number, docId: number): Promise<Blob> => {
     const response = await api.get(`/api/v1/clients/${clientId}/documents/${docId}`, {
+      params: { inline: true },
       responseType: 'blob',
     })
     return response.data as Blob
