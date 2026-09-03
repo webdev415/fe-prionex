@@ -286,3 +286,85 @@ describe('CreditLoanDetailPage → журнал проводок', () => {
     expect(screen.getByText(/card\.isReversal/)).toBeInTheDocument()
   })
 })
+
+/**
+ * Паспорт кредита: идентификаторы и возраст.
+ *
+ * CEO считал, что «идентификатор кредита» оператору уже виден. Виден был
+ * только номер договора (FB-000074) — а разработчик в логах модуля ищет по
+ * `loan_id`, и UUID существовал единственно в адресной строке. Возраст же
+ * («сколько дней кредит живёт») модуль не отдаёт вообще: единственный счётчик
+ * дней в контракте — просрочка.
+ */
+describe('CreditLoanDetailPage → паспорт', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockHooks(PAYMENTS)
+  })
+
+  function openPassport() {
+    render(
+      <MemoryRouter>
+        <CreditLoanDetailPage />
+      </MemoryRouter>
+    )
+  }
+
+  it('показывает UUID кредита и заявки — их диктуют, а не кликают', () => {
+    openPassport()
+    expect(screen.getByText('e2a959c4-c151-402a-b533-c17b90420c78')).toBeInTheDocument()
+    expect(screen.getByText('a1111111-2222-3333-4444-555555555555')).toBeInTheDocument()
+  })
+
+  it('даёт кнопку копирования на каждый идентификатор', () => {
+    const writeText = vi.fn(() => Promise.resolve())
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+    openPassport()
+    const rows = screen.getByText('credit.card.identifiers').closest('section')
+    const buttons = rows ? [...rows.querySelectorAll('button')] : []
+    expect(buttons).toHaveLength(2)
+    fireEvent.click(buttons[0])
+    expect(writeText).toHaveBeenCalledWith('e2a959c4-c151-402a-b533-c17b90420c78')
+  })
+
+  it('срез сервиса на возраст НЕ влияет — считаем по календарю юрисдикции', () => {
+    // Здесь раньше стоял тест ровно на обратное: «считать до среза `as_of`».
+    // Довод звучал разумно (иначе возраст и просрочка окажутся на разные
+    // даты), но `as_of` равен горизонту ночного расчёта и уходит ВПЕРЁД: на
+    // живом стенде кредиты, выданные 31.08, имели срез 04.10. Оператор увидел
+    // бы «34 днів з видачі» там, где клиент в своём кабинете видит «1 день».
+    //
+    // Правило теперь одно на обе стороны — календарные дни до сегодня в
+    // юрисдикции (web-credit/apps/cabinet/src/components/loan-age.ts). Срез,
+    // ушедший на две недели вперёд, обязан оставить возраст в покое.
+    vi.mocked(hooks.useCreditLoanState).mockReturnValue({
+      ...idle,
+      data: { ...STATE, as_of: '2026-09-12' } as unknown as CreditLoanState,
+    } as unknown as ReturnType<typeof hooks.useCreditLoanState>)
+    openPassport()
+
+    const row = screen.getByText('credit.fields.loanAgeDays').parentElement
+    // 14 — это счёт «до среза». Его быть не должно ни при каком «сегодня».
+    expect(row?.textContent).not.toContain('14')
+  })
+
+  it('деньги показываются ТОЛЬКО из состояния ядра — того же расчёта, что видит клиент', () => {
+    // Клиент в кабинете видит сумму из расчёта модуля. Если оператор возьмёт
+    // её из поля займа, они назовут РАЗНЫЕ деньги — и это хуже, чем не
+    // показать ничего. Поле займа тут вдобавок приходит пустым: живой модуль
+    // отдаёт `balance_total_minor: null` (проверено на FB-000088), так что
+    // прежний «запасной путь» давал правду случайно, а не по замыслу.
+    vi.mocked(hooks.useCreditLoanState).mockReturnValue({
+      ...idle,
+      data: undefined,
+    } as unknown as ReturnType<typeof hooks.useCreditLoanState>)
+    openPassport()
+
+    // 51 000 minor = 510,00 — сумма из ПОЛЯ ЗАЙМА в фикстуре. Именно её и
+    // подставлял прежний запасной путь; на экране её быть не должно.
+    const row = screen.getByText('credit.fields.balance').parentElement
+    expect(row?.textContent).not.toMatch(/510[,.\s]*00/)
+    // И положительная половина: без состояния показываем прочерк, а не число.
+    expect(row?.textContent).toContain('—')
+  })
+})

@@ -111,6 +111,45 @@ describe('EmployeeMultiSelect search', () => {
     expect(screen.getByText('pages.training.dialogue.employee.noMatches')).toBeInTheDocument()
   })
 
+  // The roster genuinely holds the same person both ways round — the database
+  // carries "Богданова Марина" and "Марина  Богданова" under one id, the second
+  // with a doubled inner space. Matching the query as one string finds neither
+  // when the trainer types the two words in the other order (KAN-1046 AC2).
+  it('matches the full name whichever order the words are typed', () => {
+    render(<EmployeeMultiSelect value={[]} onChange={vi.fn()} operators={OPERATORS} />)
+    openDropdown()
+
+    fireEvent.change(screen.getByPlaceholderText(SEARCH_PLACEHOLDER), {
+      target: { value: 'petrenko ivan' },
+    })
+
+    expect(screen.getByText('Ivan Petrenko')).toBeInTheDocument()
+    expect(screen.queryByText('Oleh Bondar')).not.toBeInTheDocument()
+  })
+
+  it('ignores repeated and surrounding whitespace in the query', () => {
+    render(<EmployeeMultiSelect value={[]} onChange={vi.fn()} operators={OPERATORS} />)
+    openDropdown()
+
+    fireEvent.change(screen.getByPlaceholderText(SEARCH_PLACEHOLDER), {
+      target: { value: '  antonova   kateryna  ' },
+    })
+
+    expect(screen.getByText('Kateryna Antonova')).toBeInTheDocument()
+    expect(screen.queryByText('Ivan Petrenko')).not.toBeInTheDocument()
+  })
+
+  it('requires every typed word, not just one of them', () => {
+    render(<EmployeeMultiSelect value={[]} onChange={vi.fn()} operators={OPERATORS} />)
+    openDropdown()
+
+    fireEvent.change(screen.getByPlaceholderText(SEARCH_PLACEHOLDER), {
+      target: { value: 'ivan bondar' },
+    })
+
+    expect(screen.getByText('pages.training.dialogue.employee.noMatches')).toBeInTheDocument()
+  })
+
   it('still toggles a filtered row through onChange', () => {
     const onChange = vi.fn()
     render(<EmployeeMultiSelect value={[]} onChange={onChange} operators={OPERATORS} />)

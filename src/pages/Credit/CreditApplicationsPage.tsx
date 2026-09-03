@@ -39,6 +39,8 @@ import { CreditMetricCards } from './components/CreditMetricCards'
 import { CreditStandBanner } from './components/CreditStandBanner'
 import { CreditModuleUnavailable } from './components/CreditModuleUnavailable'
 import { formatDateTime } from '@/lib/formatters'
+import { formatIdle, idleMinutes } from '@/features/credit/api/idle'
+import { useNowTick } from '@/features/credit/hooks/useNowTick'
 
 /** Строка таблицы = строка контракта + `id`, которого требует DataTable. */
 type ApplicationRow = CreditApplicationSummary & { id: string }
@@ -101,10 +103,23 @@ export function CreditApplicationsPage() {
   // DataTable требует у строки поле `id` (на нём держится выделение и ключи).
   // У модуля идентификатор называется application_id — добавляем алиас, а не
   // переименовываем поле контракта.
+  // Тик минуты: список держат открытым — без него простой замрёт.
+  const now = useNowTick()
+
   const rows: ApplicationRow[] = useMemo(
     () => items.map((row) => ({ ...row, id: row.application_id })),
     [items]
   )
+
+  // Колонку «Крок» показываем, только когда модуль реально отдаёт шаг:
+  // столбец из одних прочерков хуже отсутствующего. Поле приезжает вместе с
+  // лентой переходов (коммит модуля 452cc71) и на стенде пока не развёрнуто —
+  // колонка включится сама, без правки кода, как только данные придут.
+  const hasStep = rows.some((row) => Boolean(row.resume_step))
+  // Время на шаге показываем отдельно от «останнього руху» и НЕ вместо него:
+  // «клиент стоит здесь» и «строку не трогали» — разные факты, и оператор,
+  // привыкший к первому, молча прочитал бы второе как первое.
+  const hasStepTime = rows.some((row) => Boolean(row.step_entered_at))
 
   const columns: Column<ApplicationRow>[] = [
     {
@@ -141,6 +156,50 @@ export function CreditApplicationsPage() {
       header: t('credit.columns.client'),
       render: (row) => row.client_email ?? '—',
     },
+    ...(hasStep
+      ? [
+          {
+            // Лекарство от очереди из неразличимых «Заповнюється»: статус
+            // говорит, что заявка не дошла, шаг — где именно она встала.
+            // Несортируемая осознанно: `step_entered_at` в сортировке модуля
+            // нет (APPLICATION_SORT_FIELDS — created_at, updated_at,
+            // requested_amount_minor), а сортировка на клиенте соврала бы
+            // порядком в пределах страницы.
+            key: 'step',
+            header: t('credit.columns.step'),
+            render: (row: ApplicationRow) =>
+              row.resume_step ? (
+                t(`credit.blocks.${row.resume_step}`, row.resume_step)
+              ) : (
+                <span className="text-muted-foreground">—</span>
+              ),
+          } as Column<ApplicationRow>,
+        ]
+      : []),
+    ...(hasStepTime
+      ? [
+          {
+            key: 'onStep',
+            sortable: true,
+            sortKey: 'step_entered_at',
+            header: t('credit.columns.onStep'),
+            render: (row: ApplicationRow) => {
+              const minutes = idleMinutes(row.step_entered_at ?? undefined, now)
+              if (minutes === null) return <span className="text-muted-foreground text-xs">—</span>
+              // Подстановка времени создания — не измерение. Подписываем её
+              // прямо в ячейке: без подписи «40 дн» читается как «клиент стоит
+              // сорок дней», хотя правда — «ленты переходов тогда не было».
+              const guessed = row.step_entered_at_source === 'created'
+              return (
+                <span className="text-muted-foreground text-xs">
+                  {formatIdle(minutes, t)}
+                  {guessed && <> ({t('credit.idle.sinceCreated')})</>}
+                </span>
+              )
+            },
+          } as Column<ApplicationRow>,
+        ]
+      : []),
     {
       key: 'decision',
       header: t('credit.columns.decision'),
@@ -164,6 +223,23 @@ export function CreditApplicationsPage() {
       render: (row) => (
         <span className="text-muted-foreground text-xs">{formatDateTime(row.created_at)}</span>
       ),
+    },
+    {
+      // «Кто висит дольше всех» — вопрос очереди, а не отдельной карточки.
+      // Сортировка серверная: `updated_at` есть в APPLICATION_SORT_FIELDS
+      // модуля, иначе колонка врала бы порядком в пределах страницы.
+      key: 'idle',
+      sortable: true,
+      sortKey: 'updated_at',
+      header: t('credit.columns.lastActivity'),
+      render: (row) => {
+        const minutes = idleMinutes(row.updated_at, now)
+        return (
+          <span className="text-muted-foreground text-xs" title={formatDateTime(row.updated_at)}>
+            {minutes === null ? '—' : formatIdle(minutes, t)}
+          </span>
+        )
+      },
     },
   ]
 
