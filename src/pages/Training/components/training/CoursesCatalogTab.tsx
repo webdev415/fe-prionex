@@ -14,6 +14,7 @@ import {
   useUpdateCourse,
 } from '@/features/training/hooks/useCourses'
 import type { CourseCardData, CourseLevel, MaterialType } from '@/features/training/types/courses'
+import { EmployeeSearchList } from '../dialogue/EmployeeMultiSelect'
 import { TrainingPrimaryButton, TrainingSearchBar } from './TrainingToolbar'
 
 const CATEGORY_OPTIONS = [
@@ -735,20 +736,13 @@ function AssignCourseDialog({ course, onClose }: { course: CourseCardData; onClo
         <p className="mb-3 text-[11px] text-[#676767]">
           {t('pages.training.training.courses.assignHint', 'Select operators to enroll.')}
         </p>
-        <div className="flex-1 overflow-y-auto rounded-lg border border-[#EBECE8]">
-          {operators.map((op) => (
-            <label
-              key={op.id}
-              className="flex cursor-pointer items-center gap-2 border-b border-[#F3F4F6] px-3 py-2 text-xs last:border-b-0 hover:bg-[#FAFAFA]"
-            >
-              <input
-                type="checkbox"
-                checked={selected.includes(op.id)}
-                onChange={() => toggle(op.id)}
-              />
-              <span className="text-[#05040D]">{op.full_name}</span>
-            </label>
-          ))}
+        <div className="min-h-0 flex-1 rounded-lg border border-[#EBECE8]">
+          <EmployeeSearchList
+            operators={operators}
+            selectedIds={selected}
+            onSelect={toggle}
+            listClassName="max-h-[45vh]"
+          />
         </div>
         <div className="mt-4 flex justify-end gap-2">
           <button
