@@ -11036,7 +11036,9 @@
           "training_completed": "Завершено курс — {{course}}",
           "survey_completed": "Опитування — {{name}} ({{score}})",
           "terminated": "Звільнено — {{reason}}",
-          "terminated_noReason": "Звільнено"
+          "terminated_noReason": "Звільнено",
+          "drill_assigned": "Призначено вправу — {{drill}}",
+          "drill_completed": "Завершено вправу — {{drill}}"
         },
         "from": "Від",
         "to": "До",
