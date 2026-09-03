@@ -14,14 +14,14 @@ const t = ((key: string, opts?: Record<string, unknown>) => {
   )
 }) as never
 
-const ev = (event_type: string): EmployeeEvent =>
-  ({
-    id: 1,
-    category: 'training',
-    event_type,
-    occurred_at: '2026-09-03T10:00:00Z',
-    payload: { drill: 'Objection handling drill' },
-  }) as EmployeeEvent
+const ev = (event_type: string): EmployeeEvent => ({
+  id: 1,
+  category: 'training',
+  event_type,
+  occurred_at: '2026-09-03T10:00:00Z',
+  project_id: 3,
+  payload: { drill: 'Objection handling drill' },
+})
 
 describe('a drill on the chronology', () => {
   it('names the drill, not a course', () => {
