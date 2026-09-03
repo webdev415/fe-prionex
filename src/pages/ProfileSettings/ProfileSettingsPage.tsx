@@ -848,7 +848,7 @@ export function ProfileSettingsPage() {
                     </div>
                   )}
                   <div className="flex w-full flex-col items-start gap-4 self-stretch md:flex-row">
-                    <div className="flex w-full flex-col gap-2 self-stretch">
+                    <div className="flex w-full flex-col justify-end gap-2 self-stretch">
                       <Label htmlFor="date-of-birth">
                         {t('pages.employeeCard.fields.dateOfBirth')}
                       </Label>

@@ -301,7 +301,19 @@ describe('EmployeeCardPage', () => {
     expect(badge?.querySelector('svg')).not.toBeNull()
   })
 
-  it('carries no quick-action buttons', () => {
+  it('reaches the person by mail and by Telegram from the panel', () => {
+    const { container } = renderAt('/dashboard/team-management/users/7')
+
+    const mail = container.querySelector('a[href^="mailto:"]')
+    expect(mail).toHaveAttribute('href', 'mailto:olena@prionex.com')
+
+    const telegram = container.querySelector('a[href^="https://t.me/"]')
+    expect(telegram).toHaveAttribute('href', 'https://t.me/olena')
+    expect(telegram).toHaveAttribute('rel', expect.stringContaining('noopener'))
+  })
+
+  it('offers neither when the person has no address to reach', () => {
+    state.card = card({ header: { ...card().header, email: null, telegram: null } })
     const { container } = renderAt('/dashboard/team-management/users/7')
 
     expect(container.querySelector('a[href^="mailto:"]')).toBeNull()

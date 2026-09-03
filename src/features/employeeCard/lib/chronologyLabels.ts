@@ -68,6 +68,7 @@ export function chronologyLabel(event: EmployeeEvent, t: TFunction): string {
     from: text(payload.from),
     to: text(payload.to),
     course: text(payload.course),
+    drill: text(payload.drill),
     kind: kindOf(payload, t),
     name: text(payload.name),
     score: score(payload),

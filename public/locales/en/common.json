@@ -11026,7 +11026,9 @@
           "training_completed": "Completed course — {{course}}",
           "survey_completed": "Survey — {{name}} ({{score}})",
           "terminated": "Terminated — {{reason}}",
-          "terminated_noReason": "Terminated"
+          "terminated_noReason": "Terminated",
+          "drill_assigned": "Drill assigned — {{drill}}",
+          "drill_completed": "Completed drill — {{drill}}"
         },
         "from": "From",
         "to": "To",

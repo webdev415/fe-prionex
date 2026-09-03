@@ -44,8 +44,15 @@ export function ProfilePanel({
     [t('pages.employeeCard.panel.manager'), header.manager],
     [t('pages.employeeCard.panel.hiredAt'), hired],
     [t('pages.employeeCard.panel.phone'), header.phone],
-    [t('pages.employeeCard.panel.email'), header.email],
   ].filter((entry): entry is [string, string] => Boolean(entry[1]))
+
+  const telegramHandle = header.telegram?.trim().replace(/^@/, '') ?? ''
+  const telegramHref = telegramHandle
+    ? /^https?:\/\//i.test(telegramHandle)
+      ? telegramHandle
+      : `https://t.me/${telegramHandle}`
+    : null
+  const emailHref = header.email ? `mailto:${header.email}` : null
 
   return (
     <aside className="border-border bg-card flex flex-col items-center gap-4 rounded-xl border p-6">
@@ -104,6 +111,33 @@ export function ProfilePanel({
               <p className="text-foreground text-sm font-medium">{value}</p>
             </div>
           ))}
+        </div>
+      )}
+
+      {(emailHref || telegramHref) && (
+        <div className="flex w-full items-center justify-center gap-3">
+          {emailHref && (
+            <a
+              href={emailHref}
+              title={header.email ?? undefined}
+              aria-label={`${t('pages.employeeCard.panel.email')}: ${header.email}`}
+              className="border-border text-muted-foreground hover:text-foreground hover:border-foreground focus-visible:ring-ring inline-flex size-9 items-center justify-center rounded-full border transition-colors focus-visible:ring-2 focus-visible:outline-none"
+            >
+              <Icons.Mail size={16} strokeWidth={1.8} aria-hidden="true" />
+            </a>
+          )}
+          {telegramHref && (
+            <a
+              href={telegramHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={header.telegram ?? undefined}
+              aria-label={`${t('pages.employeeCard.fields.telegram')}: ${header.telegram}`}
+              className="border-border text-muted-foreground hover:text-foreground hover:border-foreground focus-visible:ring-ring inline-flex size-9 items-center justify-center rounded-full border transition-colors focus-visible:ring-2 focus-visible:outline-none"
+            >
+              <Icons.Sent02 size={16} strokeWidth={1.8} aria-hidden="true" />
+            </a>
+          )}
         </div>
       )}
 
