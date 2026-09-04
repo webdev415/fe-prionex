@@ -42,6 +42,9 @@ export interface CallReviewPanelProps {
   canEdit?: boolean
   /** Known talk time, used to position markers before the audio is fetched. */
   talkDurationSec?: number | null
+  /** Whether the call has a recording. Passed through so the player states
+   *  "no recording" instead of offering Play for audio that does not exist. */
+  hasRecording?: boolean
   /** The call's client — shown in the header with the loan-number link
    *  («Навчання» п.8). Absent → the client line is simply not rendered. */
   clientId?: number | null
@@ -61,6 +64,7 @@ export function CallReviewPanel({
   scorecardId,
   canEdit = false,
   talkDurationSec,
+  hasRecording,
   clientId,
   clientName,
   clientDebts,
@@ -122,6 +126,7 @@ export function CallReviewPanel({
           callId={callId}
           active
           lazy
+          hasRecording={hasRecording}
           onDurationChange={setDurationMs}
           markerOverlay={
             <MarkerOverlay

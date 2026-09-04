@@ -5499,6 +5499,7 @@
           "loadFailed": "Could not load this recording. Try again or download if the problem persists.",
           "loadTruncated": "The recording did not download completely. Retry?",
           "loadTimeout": "The server is taking too long — the recording was not loaded. Please try again.",
+          "noRecording": "This call has no recording.",
           "retry": "Retry",
           "downloading": "Downloading the recording…",
           "audioProgress": "Audio progress",

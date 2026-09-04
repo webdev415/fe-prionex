@@ -19,7 +19,7 @@ import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { callService, RecordingTruncatedError } from '@/features/calls/api/callService'
-import { isNetworkError } from '@/lib/errors'
+import { isApiError, isNetworkError } from '@/lib/errors'
 
 export interface CallPlayerHandle {
   seekTo: (ms: number) => void
@@ -38,6 +38,10 @@ export interface CallPlayerProps {
   lazy?: boolean
   /** Overlay rendered on top of the scrub bar (marker timeline). */
   markerOverlay?: ReactNode
+  /** Whether the call has audio at all (the API's `has_recording`). `false`
+   *  shows an explicit "no recording" state and never fetches — a call that
+   *  never had audio is not a failure the trainer can retry away. */
+  hasRecording?: boolean
   /** Emits the recording duration (ms) once metadata loads. */
   onDurationChange?: (durationMs: number) => void
   className?: string
@@ -49,17 +53,21 @@ const formatTime = (seconds: number): string => {
   return `${mins}:${String(secs).padStart(2, '0')}`
 }
 
-type LoadErrorKind = 'truncated' | 'timeout' | 'generic'
+type LoadErrorKind = 'truncated' | 'timeout' | 'missing' | 'generic'
 
 const LOAD_ERROR_KEYS: Record<LoadErrorKind, string> = {
   truncated: 'pages.clients.modals.callRecording.loadTruncated',
   timeout: 'pages.clients.modals.callRecording.loadTimeout',
+  missing: 'pages.clients.modals.callRecording.noRecording',
   generic: 'pages.clients.modals.callRecording.loadFailed',
 }
 
 const classifyLoadError = (error: unknown): LoadErrorKind => {
   if (error instanceof RecordingTruncatedError) return 'truncated'
   if (isNetworkError(error)) return 'timeout'
+  // 404 = the call carries no recording_path. Permanent, so it must not be
+  // offered as retryable.
+  if (isApiError(error) && error.response?.status === 404) return 'missing'
   return 'generic'
 }
 
@@ -73,7 +81,15 @@ const recordingExtensionFromBlob = (blob: Blob): string => {
 }
 
 export const CallPlayer = forwardRef<CallPlayerHandle, CallPlayerProps>(function CallPlayer(
-  { callId, active = true, lazy = false, markerOverlay, onDurationChange, className },
+  {
+    callId,
+    active = true,
+    lazy = false,
+    hasRecording = true,
+    markerOverlay,
+    onDurationChange,
+    className,
+  },
   forwardedRef
 ) {
   const { t } = useTranslation('common')
@@ -114,7 +130,7 @@ export const CallPlayer = forwardRef<CallPlayerHandle, CallPlayerProps>(function
         return el ? Math.floor(el.currentTime * 1000) : 0
       },
       download: async () => {
-        if (!callId) return
+        if (!callId || !hasRecording) return
         let blob = recordingBlobRef.current
         if (!blob) {
           try {
@@ -138,21 +154,22 @@ export const CallPlayer = forwardRef<CallPlayerHandle, CallPlayerProps>(function
         URL.revokeObjectURL(url)
       },
     }),
-    [callId]
+    [callId, hasRecording]
   )
 
   // Load recording with Bearer auth — <audio src="..."> can't send headers.
   // Async data-loading effect: setState here is intentional (loading → blob).
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    if (!active || !callId || !requested) {
+    if (!active || !callId || !requested || !hasRecording) {
       if (recordingObjectUrlRef.current) {
         URL.revokeObjectURL(recordingObjectUrlRef.current)
         recordingObjectUrlRef.current = null
       }
       recordingBlobRef.current = null
       setAudioObjectUrl(null)
-      setLoadErrorKind(null)
+      // A call with no audio states so outright; the other exits are just idle.
+      setLoadErrorKind(active && callId && !hasRecording ? 'missing' : null)
       setIsAudioLoading(false)
       setDownloadPct(null)
       return
@@ -214,7 +231,7 @@ export const CallPlayer = forwardRef<CallPlayerHandle, CallPlayerProps>(function
       recordingBlobRef.current = null
       setAudioObjectUrl(null)
     }
-  }, [active, callId, requested, retryToken])
+  }, [active, callId, requested, retryToken, hasRecording])
   /* eslint-enable react-hooks/set-state-in-effect */
 
   // A new call re-arms the lazy gate so the next recording isn't pre-fetched.
@@ -339,17 +356,20 @@ export const CallPlayer = forwardRef<CallPlayerHandle, CallPlayerProps>(function
         {loadErrorMessage && (
           <div className="mb-2 flex flex-col items-center gap-1.5">
             <p className="text-error-600 text-center text-sm">{loadErrorMessage}</p>
-            <Button
-              variant="secondary"
-              size="sm"
-              type="button"
-              data-testid="call-player-retry"
-              onClick={handleRetry}
-              className="h-[32px] rounded-md text-xs"
-            >
-              <Icons.Reload size={14} className="mr-1" />
-              {t('pages.clients.modals.callRecording.retry')}
-            </Button>
+            {/* Nothing to retry when the call simply has no recording. */}
+            {loadErrorKind !== 'missing' && (
+              <Button
+                variant="secondary"
+                size="sm"
+                type="button"
+                data-testid="call-player-retry"
+                onClick={handleRetry}
+                className="h-[32px] rounded-md text-xs"
+              >
+                <Icons.Reload size={14} className="mr-1" />
+                {t('pages.clients.modals.callRecording.retry')}
+              </Button>
+            )}
           </div>
         )}
         {isAudioLoading && !loadErrorMessage && (
