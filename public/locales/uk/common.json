@@ -6446,7 +6446,7 @@
           "linkCopied": "Посилання скопійовано",
           "linkCopyFailed": "Не вдалося скопіювати посилання. Скористайтеся кнопкою «Посилання» у рядку платежу.",
           "linkUnavailable": "Посилання недоступне. Скасуйте платіж і створіть його знову.",
-          "tender": {
+          "easypayMethods": {
             "card": "Картка",
             "google_pay": "Google Pay",
             "apple_pay": "Apple Pay"

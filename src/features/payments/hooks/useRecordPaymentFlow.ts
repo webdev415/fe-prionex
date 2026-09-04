@@ -76,11 +76,11 @@ export function useRecordPaymentFlow(
       const day = data.date.getDate()
       const paymentDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 
-      // EasyPay is stored as an online_gateway payment carrying a tender
+      // EasyPay is stored as an online_gateway payment carrying an easypay_method
       // (BR1); it is not a payment method of its own on the wire. Keyed on the
-      // method as well as the tender because frontendToBackendPaymentMethod
+      // payment method as well, because frontendToBackendPaymentMethod
       // falls back to 'other' for anything it does not know -- an EasyPay save
-      // that arrived without a tender would otherwise be filed as a manual
+      // that arrived without an easypay_method would otherwise be filed as a manual
       // 'other' payment, with no link and nothing to say so.
       const isEasyPay = data.method === 'EasyPay' || data.easypayMethod != null
       const easypayMethod = isEasyPay ? (data.easypayMethod ?? 'card') : undefined

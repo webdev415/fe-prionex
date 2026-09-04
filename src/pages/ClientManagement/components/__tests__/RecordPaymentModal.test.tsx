@@ -363,25 +363,25 @@ describe('RecordPaymentModal — EasyPay method', () => {
     expect(screen.queryByLabelText(`${K}.card`)).not.toBeInTheDocument()
   })
 
-  it('shows the tender selector only while EasyPay is the method', () => {
+  it('shows the EasyPay method selector only while EasyPay is the payment method', () => {
     renderModal()
 
     // Absent, not merely disabled, for the other methods.
-    expect(screen.queryByLabelText(`${K}.tender.card`)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(`${K}.easypayMethods.card`)).not.toBeInTheDocument()
 
     selectEasyPay()
 
-    expect(screen.getByLabelText(`${K}.tender.card`)).toBeInTheDocument()
-    expect(screen.getByLabelText(`${K}.tender.google_pay`)).toBeInTheDocument()
-    expect(screen.getByLabelText(`${K}.tender.apple_pay`)).toBeInTheDocument()
+    expect(screen.getByLabelText(`${K}.easypayMethods.card`)).toBeInTheDocument()
+    expect(screen.getByLabelText(`${K}.easypayMethods.google_pay`)).toBeInTheDocument()
+    expect(screen.getByLabelText(`${K}.easypayMethods.apple_pay`)).toBeInTheDocument()
   })
 
-  it('sends the chosen tender', () => {
+  it('sends the chosen EasyPay method', () => {
     withPayableRr()
     const { onSave } = renderModal()
 
     selectEasyPay()
-    fireEvent.click(screen.getByLabelText(`${K}.tender.google_pay`))
+    fireEvent.click(screen.getByLabelText(`${K}.easypayMethods.google_pay`))
     fillAmount('100')
     clickSaveAsPending()
 
@@ -510,13 +510,13 @@ describe('RecordPaymentModal — Save & Confirm under EasyPay', () => {
 })
 
 describe('RecordPaymentModal — the EasyPay fields reset with the rest of the form', () => {
-  it('reopens with the copy box ticked and the tender back to card', () => {
+  it('reopens with the copy box ticked and the EasyPay method back to card', () => {
     withPayableRr()
     const onClose = vi.fn()
     const { rerender } = renderModalForReopen({ onClose })
 
     selectEasyPay()
-    fireEvent.click(screen.getByLabelText(`${K}.tender.apple_pay`))
+    fireEvent.click(screen.getByLabelText(`${K}.easypayMethods.apple_pay`))
     fireEvent.click(screen.getByText(`${K}.copyLinkAfterSaving`))
     fireEvent.click(screen.getByText(`${K}.cancel`).closest('button') as HTMLButtonElement)
 
@@ -525,8 +525,8 @@ describe('RecordPaymentModal — the EasyPay fields reset with the rest of the f
     rerender()
     selectEasyPay()
 
-    expect(screen.getByLabelText(`${K}.tender.card`)).toBeChecked()
-    expect(screen.getByLabelText(`${K}.tender.apple_pay`)).not.toBeChecked()
+    expect(screen.getByLabelText(`${K}.easypayMethods.card`)).toBeChecked()
+    expect(screen.getByLabelText(`${K}.easypayMethods.apple_pay`)).not.toBeChecked()
     const checkbox = screen
       .getByText(`${K}.copyLinkAfterSaving`)
       .closest('label')

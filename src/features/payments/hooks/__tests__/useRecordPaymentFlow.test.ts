@@ -112,15 +112,15 @@ describe('useRecordPaymentFlow — EasyPay', () => {
     return request
   }
 
-  it('sends the tender and rides the gateway payment method', () => {
-    // EasyPay is a tender on top of online_gateway, not a method of its own.
+  it('sends the easypay_method and rides the gateway payment method', () => {
+    // EasyPay rides on online_gateway, it is not a payment method of its own.
     const request = saveAndResolve({ method: 'EasyPay', easypayMethod: 'apple_pay' })
 
     expect(request.easypay_method).toBe('apple_pay')
     expect(request.payment_method).toBe('online_gateway')
   })
 
-  it('sends no tender for an ordinary bank transfer', () => {
+  it('sends no easypay_method for an ordinary bank transfer', () => {
     const request = saveAndResolve({ method: 'Bank Transfer' })
 
     expect(request.easypay_method).toBeUndefined()
@@ -186,14 +186,14 @@ describe('useRecordPaymentFlow — EasyPay', () => {
   })
 })
 
-describe('useRecordPaymentFlow — an EasyPay save without a tender', () => {
+describe('useRecordPaymentFlow — an EasyPay save without an easypay_method', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
   it('is still an EasyPay payment, not a manual "other" one', () => {
     // frontendToBackendPaymentMethod falls back to 'other' for unknown names,
-    // so keying only on the tender would file this as a manual payment and
+    // so keying only on easypay_method would file this as a manual payment and
     // quietly skip the gateway.
     const { result } = renderHook(() => useRecordPaymentFlow({ clientId: 42 }))
     result.current.handleRecordPayment(baseInput({ method: 'EasyPay' }))

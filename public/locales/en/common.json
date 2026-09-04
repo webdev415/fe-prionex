@@ -5781,7 +5781,7 @@
           "linkCopied": "Link copied to clipboard",
           "linkCopyFailed": "Could not copy the link. Use the Link button in the payment row.",
           "linkUnavailable": "Link unavailable. Cancel the payment and create it again.",
-          "tender": {
+          "easypayMethods": {
             "card": "Card",
             "google_pay": "Google Pay",
             "apple_pay": "Apple Pay"

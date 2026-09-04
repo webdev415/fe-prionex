@@ -26,7 +26,11 @@ import { cn } from '@/lib/utils'
 import { formatMoneyUAHTwoDecimals } from '@/lib/formatters'
 import type { DebtDetail, RestructuringAgreementSummary } from '@/features/clients/api/types'
 import { useClientRestructuringAgreements } from '@/features/clients/hooks/useClients'
-import { PAYMENT_TYPE_VALUES, type PaymentType } from '@/features/payments/api/types'
+import {
+  PAYMENT_TYPE_VALUES,
+  type EasyPayMethod,
+  type PaymentType,
+} from '@/features/payments/api/types'
 
 /**
  * RR statuses a `payment_by_rr` payment may be recorded against.
@@ -40,11 +44,9 @@ import { PAYMENT_TYPE_VALUES, type PaymentType } from '@/features/payments/api/t
  * Cancelled and the terminal Completed statuses stay out. Cancelled has its own
  * reconnect mechanism (KAN-1011) and the terminal ones are settled.
  */
-// The tender picks the EasyPay service, which decides what
-// the hosted page offers. Stored on payments.easypay_method; the payment method
-// itself stays online_gateway.
-export type EasyPayTender = 'card' | 'google_pay' | 'apple_pay'
-const EASYPAY_TENDERS: EasyPayTender[] = ['card', 'google_pay', 'apple_pay']
+// The EasyPay method picks which service the hosted page offers. Stored on
+// payments.easypay_method; the payment method itself stays online_gateway.
+const EASYPAY_METHODS: EasyPayMethod[] = ['card', 'google_pay', 'apple_pay']
 
 // Regulatory (KYC) ceiling on a single online payment. The remaining-debt
 // cap beside it applies on top of this one.
@@ -99,7 +101,7 @@ export interface RecordPaymentModalProps {
     amount: number
     date: Date
     method: 'Bank Transfer' | 'Online Gateway' | 'EasyPay'
-    easypayMethod?: EasyPayTender
+    easypayMethod?: EasyPayMethod
     copyLinkAfterSave?: boolean
     status: 'Pending Verification' | 'Verified'
     generateReceipt: boolean
@@ -131,9 +133,9 @@ export function RecordPaymentModal({
   const [paymentMethod, setPaymentMethod] = useState<
     'Bank Transfer' | 'Online Gateway' | 'EasyPay'
   >('Bank Transfer')
-  // The tender decides which EasyPay service the hosted page offers.
-  // Card by default, and meaningless unless EasyPay is the method.
-  const [easypayMethod, setEasypayMethod] = useState<EasyPayTender>('card')
+  // Decides which EasyPay service the hosted page offers. Card by default,
+  // and meaningless unless EasyPay is the payment method.
+  const [easypayMethod, setEasypayMethod] = useState<EasyPayMethod>('card')
   const [copyLinkAfterSave, setCopyLinkAfterSave] = useState(true)
   const [paymentStatus, setPaymentStatus] = useState<'Pending Verification' | 'Verified'>(
     'Pending Verification'
@@ -543,22 +545,22 @@ export function RecordPaymentModal({
                   </div>
                 </RadioGroup>
 
-                {/* Tender sub-selector. Only meaningful for EasyPay, so it is
-                    absent rather than disabled for every other method. */}
+                {/* Only meaningful for EasyPay, so it is absent rather than
+                    disabled for every other payment method. */}
                 {paymentMethod === 'EasyPay' && (
                   <RadioGroup
                     value={easypayMethod}
-                    onValueChange={(value) => setEasypayMethod(value as EasyPayTender)}
+                    onValueChange={(value) => setEasypayMethod(value as EasyPayMethod)}
                     className="mt-3 flex flex-wrap items-center gap-4 pl-6"
                   >
-                    {EASYPAY_TENDERS.map((tender) => (
-                      <div key={tender} className="flex items-center gap-2">
-                        <RadioItem value={tender} id={`tender-${tender}`} />
+                    {EASYPAY_METHODS.map((method) => (
+                      <div key={method} className="flex items-center gap-2">
+                        <RadioItem value={method} id={`easypay-method-${method}`} />
                         <Label
-                          htmlFor={`tender-${tender}`}
+                          htmlFor={`easypay-method-${method}`}
                           className="text-foreground cursor-pointer text-sm font-light"
                         >
-                          {t(`pages.clients.modals.recordPayment.tender.${tender}`)}
+                          {t(`pages.clients.modals.recordPayment.easypayMethods.${method}`)}
                         </Label>
                       </div>
                     ))}

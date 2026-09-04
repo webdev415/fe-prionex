@@ -22,7 +22,7 @@ export type EasyPayLinkAction = { kind: 'copy'; url: string } | { kind: 'unavail
 
 /** The two enablement conditions do not imply a stored link: the gateway call
  *  sits between creating the payment and saving the URL, so a payment can be
- *  pending, carry a tender, and have nothing to copy. Report that rather than
+ *  pending, carry an EasyPay method, and have nothing to copy. Report that rather than
  *  writing an empty string. */
 export function easypayLinkAction(payment: EasyPayLinkRow): EasyPayLinkAction {
   const url = payment.easypayLink?.trim()
