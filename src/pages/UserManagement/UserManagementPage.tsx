@@ -14,6 +14,7 @@ import { useUsers } from '@/features/users/hooks/useUsers'
 import { useURLState, useAutoPersistedState } from '@/hooks'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
+import { useHasPermission } from '@/hooks/usePermissions'
 import { CreateUserModal } from './components/CreateUserModal'
 import { EditUserModal } from './components/EditUserModal'
 import ChangeStatusModal from './components/ChangeStatusModal'
@@ -223,7 +224,7 @@ export function UserManagementPage() {
     if (!raw) return
     const id = Number(raw)
     if (Number.isFinite(id) && id > 0) {
-      navigate(`/dashboard/team-management/users/${id}`, { replace: true })
+      navigate(`/dashboard/team-management/users/${id}`)
     }
   }, [searchParams, navigate])
 
@@ -303,7 +304,10 @@ export function UserManagementPage() {
    * to show, and to send the reader back to the list they came from rather
    * than to a reset one.
    */
+  const canOpenCard = useHasPermission(PERMISSIONS.EMPLOYEE_CARD.VIEW)
+
   const openEmployeeCard = (user: ApiUser) => {
+    if (!canOpenCard) return
     const query = searchParams.toString()
     navigate(`/dashboard/team-management/users/${user.id}${query ? `?${query}` : ''}`)
   }
@@ -526,7 +530,12 @@ export function UserManagementPage() {
         <button
           type="button"
           onClick={() => openEmployeeCard(user)}
-          className="text-foreground hover:text-primary group flex cursor-pointer items-center gap-3 text-left font-medium"
+          disabled={!canOpenCard}
+          className={
+            canOpenCard
+              ? 'text-foreground hover:text-primary group flex cursor-pointer items-center gap-3 text-left font-medium'
+              : 'text-foreground flex items-center gap-3 text-left font-medium'
+          }
         >
           <UserAvatar
             userId={user.id}
@@ -537,7 +546,7 @@ export function UserManagementPage() {
             size={32}
             className="shrink-0"
           />
-          <span className="underline-offset-2 group-hover:underline">
+          <span className={canOpenCard ? 'underline-offset-2 group-hover:underline' : ''}>
             {displayName(user) || user.username}
           </span>
         </button>

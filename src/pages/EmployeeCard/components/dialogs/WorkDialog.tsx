@@ -73,18 +73,20 @@ export function WorkDialog({ card, projectId, open, onClose }: WorkDialogProps) 
    * Nobody is an option, and it heads the list rather than being buried among
    * the names: removing a manager is a thing somebody comes here to do.
    */
-  const managers = useMemo(
-    () => [
-      { id: NOBODY, name: t('pages.employeeCard.dialogs.noManager') },
-      ...(peopleData?.users ?? [])
-        .filter((person) => person.id !== card.header.id)
-        .map((person) => ({
-          id: String(person.id),
-          name: person.full_name || person.username,
-        })),
-    ],
-    [peopleData, card.header.id, t]
-  )
+  const managers = useMemo(() => {
+    const loaded = (peopleData?.users ?? [])
+      .filter((person) => person.id !== card.header.id)
+      .map((person) => ({
+        id: String(person.id),
+        name: person.full_name || person.username,
+      }))
+    const current = card.header.manager_user_id
+    const held =
+      current && !loaded.some((one) => one.id === String(current))
+        ? [{ id: String(current), name: card.header.manager ?? String(current) }]
+        : []
+    return [{ id: NOBODY, name: t('pages.employeeCard.dialogs.noManager') }, ...held, ...loaded]
+  }, [peopleData, card.header.id, card.header.manager_user_id, card.header.manager, t])
 
   /*
    * The department is not a field on the employee - it follows from their

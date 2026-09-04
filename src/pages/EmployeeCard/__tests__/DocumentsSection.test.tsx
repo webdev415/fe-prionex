@@ -294,6 +294,29 @@ describe('SurveysSection', () => {
     expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'))
   })
 
+  it('refuses a link that would run code rather than open a page', () => {
+    render(
+      <SurveysSection
+        card={card({
+          surveys: [
+            {
+              id: 5,
+              name: 'Q2 2024 Satisfaction Survey',
+              completed_on: '2024-06-15',
+              status: 'completed',
+              score: 87,
+              max_score: 100,
+              details_url: 'javascript:alert(1)',
+            },
+          ],
+        })}
+      />
+    )
+
+    expect(screen.queryByRole('link')).toBeNull()
+    expect(screen.getByText('Q2 2024 Satisfaction Survey')).toBeInTheDocument()
+  })
+
   it('shows no link for an answer that came without one', () => {
     render(
       <SurveysSection

@@ -48,7 +48,7 @@ export function EmployeeCardPage() {
   const [searchParams] = useSearchParams()
 
   const employeeId = Number(userId)
-  const projectId = Number(searchParams.get('project_id')) || null
+  const projectId = Number(searchParams.get('project') ?? searchParams.get('project_id')) || null
   const listQuery = searchParams.toString()
 
   const { data, isLoading, isError } = useEmployeeCard(employeeId, projectId)
