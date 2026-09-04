@@ -36,6 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/Select'
+import { ClientActivityLogTab } from './components/ClientActivityLogTab'
 import { EditInteractionModal } from './components/EditInteractionModal'
 import { AddTaskModal } from './components/AddTaskModal'
 import { AssignClientModal } from './components/AssignClientModal'
@@ -418,6 +419,7 @@ export function ClientDetailPage() {
     | 'call-sms-history'
     | 'tasks'
     | 'documents'
+    | 'activity'
     | 'ta-chains'
   >('loans')
   const [activeCallSmsTab, setActiveCallSmsTab] = useState<'all' | 'calls' | 'sms' | 'messaging'>(
@@ -771,6 +773,9 @@ export function ClientDetailPage() {
     [messagingOperators]
   )
   const canViewTasks = useHasPermission(PERMISSIONS.CLIENTS.VIEW_TASKS)
+  // Not implied by view_clients: seeing a client and seeing who else
+  // looked at them are separate grants.
+  const canViewActivityLog = useHasPermission(PERMISSIONS.CLIENTS.VIEW_ACTIVITY_LOG)
   const { data: tasks = [], isLoading: isTasksLoading } = useClientTasks(
     clientId,
     isValidClientId && canViewTasks && activeRightCardTab === 'tasks'
@@ -1946,36 +1951,45 @@ export function ClientDetailPage() {
   }, [activeClientCardTab]) // Re-check when tab changes
 
   // A tab-keyed effect also runs on mount, and again when the card switches to
-  // another client without remounting. Both re-run with a tab the operator
-  // never clicked, so emitting unconditionally recorded card loads as tab
-  // choices. Emit only when the value changes for a client already on screen.
+  // another client without remounting — both with a tab the operator never
+  // clicked. The event still has to fire then, because screen-time derives its
+  // per-tab durations purely from this stream: one event opens a tab window and
+  // the next one closes it, so dropping the mount event would both lose all
+  // time spent on the default tab and leave the previous card's window open
+  // across the switch. It is marked `initial` instead, so consumers that want
+  // deliberate choices only (the client activity feed) can skip it while
+  // screen-time keeps the boundaries it needs.
   const lastTrackedCardTab = useRef<{ id: string; tab: string } | null>(null)
 
   useEffect(() => {
     if (!id) return
     const previous = lastTrackedCardTab.current
     lastTrackedCardTab.current = { id, tab: activeClientCardTab }
-    if (!previous || previous.id !== id || previous.tab === activeClientCardTab) return
+    // A re-run with an unchanged tab for the same client is neither a click nor
+    // a card load — `trackEvent` is a useCallback and its identity can change.
+    if (previous && previous.id === id && previous.tab === activeClientCardTab) return
+    const isInitial = !previous || previous.id !== id
     const numericId = Number(id)
     trackEvent('client_card_tab_switch', {
       clientId: Number.isFinite(numericId) ? numericId : null,
-      meta: { tab: activeClientCardTab },
+      meta: { tab: activeClientCardTab, ...(isInitial ? { initial: true } : {}) },
     })
   }, [activeClientCardTab, id, trackEvent])
 
   // Main card sections: Loans, Payments, Recommenders, Operators, Calls/SMS,
-  // Tasks, Docs. Same guard as above.
+  // Tasks, Docs. Same shape as above, including the `initial` marking.
   const lastTrackedSection = useRef<{ id: string; section: string } | null>(null)
 
   useEffect(() => {
     if (!id) return
     const previous = lastTrackedSection.current
     lastTrackedSection.current = { id, section: activeRightCardTab }
-    if (!previous || previous.id !== id || previous.section === activeRightCardTab) return
+    if (previous && previous.id === id && previous.section === activeRightCardTab) return
+    const isInitial = !previous || previous.id !== id
     const numericId = Number(id)
     trackEvent('client_card_section_open', {
       clientId: Number.isFinite(numericId) ? numericId : null,
-      meta: { section: activeRightCardTab },
+      meta: { section: activeRightCardTab, ...(isInitial ? { initial: true } : {}) },
     })
   }, [activeRightCardTab, id, trackEvent])
 
@@ -4059,6 +4073,25 @@ export function ClientDetailPage() {
                       +
                     </span>
                   </button>
+                  {/* Tab 7: Activity */}
+                  {canViewActivityLog && (
+                    <button
+                      type="button"
+                      data-tab="activity"
+                      onClick={() => setActiveRightCardTab('activity')}
+                      className={cn(
+                        'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
+                        activeRightCardTab === 'activity'
+                          ? 'border-primary-300 text-primary-700 bg-primary-300/10'
+                          : 'hover:text-primary-700 text-muted-foreground border-transparent'
+                      )}
+                    >
+                      <Icons.Activity01 size={20} className="shrink-0 text-current" />
+                      <span className="text-xs font-medium whitespace-nowrap md:text-sm">
+                        {t('pages.clients.detail.tabs.activity')}
+                      </span>
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -5395,6 +5428,16 @@ export function ClientDetailPage() {
                         clientId={clientId}
                       />
                     )}
+                  </div>
+                )}
+
+                {/* Tab 7: Activity */}
+                {canViewActivityLog && activeRightCardTab === 'activity' && (
+                  <div className="flex w-full flex-col gap-0">
+                    <ClientActivityLogTab
+                      clientId={isValidClientId ? clientId : null}
+                      isActive={activeRightCardTab === 'activity'}
+                    />
                   </div>
                 )}
               </div>

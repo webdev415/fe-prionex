@@ -27,6 +27,7 @@ export const PERMISSIONS = {
     DELETE_INTERACTIONS: 'delete_interactions',
     CREATE_TASKS: 'create_tasks',
     VIEW_TASKS: 'view_tasks',
+    VIEW_ACTIVITY_LOG: 'view_client_activity_log',
   },
 
   /**
@@ -533,6 +534,7 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   delete_interactions: 'Delete existing TA interactions on the client profile',
   create_tasks: 'Create and manage tasks for clients',
   view_tasks: 'View tasks for clients',
+  view_client_activity_log: 'View the activity log tab in a client card',
 
   // Communication
   make_calls: 'Make outbound phone calls to clients',

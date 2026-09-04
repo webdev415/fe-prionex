@@ -5791,7 +5791,8 @@
           "docs": "Документи",
           "callSms": "Дзвінок / SMS",
           "taChains": "Ланцюжки ЦД",
-          "searcherComments": "Коментарі пошуковика"
+          "searcherComments": "Коментарі пошуковика",
+          "activity": "Активність"
         },
         "relatedTags": {
           "loading": "Завантаження пов'язаних тегів...",
@@ -5943,6 +5944,25 @@
           "card": "Картка",
           "google_pay": "Google Pay",
           "apple_pay": "Apple Pay"
+        },
+        "activityLog": {
+          "title": "Активність по клієнту",
+          "empty": "Для цього клієнта ще немає записів активності.",
+          "loadError": "Не вдалося завантажити журнал активності.",
+          "degraded": "Деякі джерела недоступні: {{sources}}. Стрічка неповна.",
+          "filters": {
+            "from": "З",
+            "to": "По",
+            "operator": "Оператор",
+            "allOperators": "Усі оператори",
+            "reset": "Скинути"
+          },
+          "sources": {
+            "events": "Дії в інтерфейсі",
+            "audit": "Зміни даних",
+            "calls": "Дзвінки"
+          },
+          "recording": "Запис"
         }
       },
       "modals": {
