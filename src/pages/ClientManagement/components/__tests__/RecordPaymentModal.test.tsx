@@ -300,3 +300,237 @@ describe('RecordPaymentModal — Payment Type (KAN-507)', () => {
     expect(onSave).not.toHaveBeenCalled()
   })
 })
+
+const K = 'pages.clients.modals.recordPayment'
+
+/** A Connected RR on the default debt, so Payment Type auto-selects and the
+ *  save path is reachable — the same setup the RR tests above rely on. */
+function withPayableRr() {
+  mockRrList.mockReturnValue([
+    { id: 8, debt_id: 901, status_id: 1, status_name: 'Connected' },
+  ] as RestructuringAgreementSummary[])
+}
+
+/** Render with a real close->reopen cycle, so the reset paths actually run. */
+function renderModalForReopen(
+  props: Partial<React.ComponentProps<typeof RecordPaymentModal>> = {}
+) {
+  const view = render(
+    <RecordPaymentModal
+      open={true}
+      onClose={vi.fn()}
+      customerName="Test Client"
+      currentDebt={5000}
+      debts={[makeDebt()]}
+      clientId={42}
+      onSave={vi.fn()}
+      {...props}
+    />
+  )
+  const rerender = () =>
+    view.rerender(
+      <RecordPaymentModal
+        open={true}
+        onClose={vi.fn()}
+        customerName="Test Client"
+        currentDebt={5000}
+        debts={[makeDebt()]}
+        clientId={42}
+        onSave={vi.fn()}
+        {...props}
+      />
+    )
+  return { rerender }
+}
+
+function selectEasyPay() {
+  fireEvent.click(screen.getByLabelText(`${K}.easypay`))
+}
+
+function clickSaveAsPending() {
+  fireEvent.click(screen.getByText(`${K}.saveAsPending`).closest('button') as HTMLButtonElement)
+}
+
+function amountInput() {
+  return screen.getAllByRole('spinbutton')[0]
+}
+
+describe('RecordPaymentModal — EasyPay method', () => {
+  it('offers EasyPay in place of the retired Card option', () => {
+    renderModal()
+
+    expect(screen.getByLabelText(`${K}.easypay`)).toBeInTheDocument()
+    expect(screen.queryByLabelText(`${K}.card`)).not.toBeInTheDocument()
+  })
+
+  it('shows the tender selector only while EasyPay is the method', () => {
+    renderModal()
+
+    // Absent, not merely disabled, for the other methods.
+    expect(screen.queryByLabelText(`${K}.tender.card`)).not.toBeInTheDocument()
+
+    selectEasyPay()
+
+    expect(screen.getByLabelText(`${K}.tender.card`)).toBeInTheDocument()
+    expect(screen.getByLabelText(`${K}.tender.google_pay`)).toBeInTheDocument()
+    expect(screen.getByLabelText(`${K}.tender.apple_pay`)).toBeInTheDocument()
+  })
+
+  it('sends the chosen tender', () => {
+    withPayableRr()
+    const { onSave } = renderModal()
+
+    selectEasyPay()
+    fireEvent.click(screen.getByLabelText(`${K}.tender.google_pay`))
+    fillAmount('100')
+    clickSaveAsPending()
+
+    expect(onSave.mock.calls[0][0]).toMatchObject({
+      method: 'EasyPay',
+      easypayMethod: 'google_pay',
+    })
+  })
+
+  it('leaves easypayMethod undefined for a bank transfer', () => {
+    withPayableRr()
+    const { onSave } = renderModal()
+
+    fillAmount('100')
+    clickSaveAsPending()
+
+    expect(onSave.mock.calls[0][0].method).toBe('Bank Transfer')
+    expect(onSave.mock.calls[0][0].easypayMethod).toBeUndefined()
+  })
+})
+
+describe('RecordPaymentModal — EasyPay amount ceiling', () => {
+  it('clips an over-limit amount when the method changes underneath it', () => {
+    // 50,000 is valid against a 60,000 debt until EasyPay lowers the ceiling.
+    renderModal({
+      currentDebt: 60000,
+      debts: [makeDebt({ remaining_debt_amount: '60000.00' })],
+    })
+
+    fillAmount('50000')
+    selectEasyPay()
+
+    expect(amountInput()).toHaveValue(29999)
+  })
+
+  it('keeps the debt ceiling when it is below the KYC threshold', () => {
+    renderModal({ currentDebt: 5000, debts: [makeDebt({ remaining_debt_amount: '5000.00' })] })
+
+    fillAmount('5000')
+    selectEasyPay()
+
+    // 5,000 is under both caps, so nothing is rewritten.
+    expect(amountInput()).toHaveValue(5000)
+  })
+
+  it('blocks the save rather than rewriting a figure typed over the limit', () => {
+    withPayableRr()
+    const { onSave } = renderModal({
+      currentDebt: 60000,
+      debts: [makeDebt({ remaining_debt_amount: '60000.00' })],
+    })
+
+    selectEasyPay()
+    fillAmount('50000')
+
+    // The operator can see the limit they typed past, so it is an ordinary
+    // validation error: the value stands and the save is refused.
+    expect(amountInput()).toHaveValue(50000)
+    clickSaveAsPending()
+    expect(onSave).not.toHaveBeenCalled()
+  })
+})
+
+describe('RecordPaymentModal — EasyPay impact preview', () => {
+  it('announces the link and offers to copy it, ticked by default', () => {
+    withPayableRr()
+    const { onSave } = renderModal()
+
+    expect(screen.queryByText(`${K}.easypayLinkWillBeCreated`)).not.toBeInTheDocument()
+
+    selectEasyPay()
+
+    expect(screen.getByText(`${K}.easypayLinkWillBeCreated`)).toBeInTheDocument()
+    fillAmount('100')
+    clickSaveAsPending()
+
+    expect(onSave.mock.calls[0][0].copyLinkAfterSave).toBe(true)
+  })
+
+  it('honours unticking the copy checkbox', () => {
+    withPayableRr()
+    const { onSave } = renderModal()
+
+    selectEasyPay()
+    fireEvent.click(screen.getByText(`${K}.copyLinkAfterSaving`))
+    fillAmount('100')
+    clickSaveAsPending()
+
+    expect(onSave.mock.calls[0][0].copyLinkAfterSave).toBe(false)
+  })
+
+  it('sends no copy instruction for a non-EasyPay payment', () => {
+    withPayableRr()
+    const { onSave } = renderModal()
+
+    fillAmount('100')
+    clickSaveAsPending()
+
+    expect(onSave.mock.calls[0][0].copyLinkAfterSave).toBeUndefined()
+  })
+})
+
+describe('RecordPaymentModal — Save & Confirm under EasyPay', () => {
+  it('disables rather than hides it, so a missing button still means no permission', () => {
+    withPayableRr()
+    renderModal({ canVerify: true })
+    fillAmount('100')
+
+    expect(screen.getByText(`${K}.saveAndVerify`).closest('button')).toBeEnabled()
+
+    selectEasyPay()
+
+    // Nothing is confirmed until the gateway callback arrives.
+    expect(screen.getByText(`${K}.saveAndVerify`).closest('button')).toBeDisabled()
+  })
+
+  it('still never renders it for a user without the permission', () => {
+    withPayableRr()
+    renderModal({ canVerify: false })
+    fillAmount('100')
+
+    selectEasyPay()
+
+    expect(screen.queryByText(`${K}.saveAndVerify`)).not.toBeInTheDocument()
+  })
+})
+
+describe('RecordPaymentModal — the EasyPay fields reset with the rest of the form', () => {
+  it('reopens with the copy box ticked and the tender back to card', () => {
+    withPayableRr()
+    const onClose = vi.fn()
+    const { rerender } = renderModalForReopen({ onClose })
+
+    selectEasyPay()
+    fireEvent.click(screen.getByLabelText(`${K}.tender.apple_pay`))
+    fireEvent.click(screen.getByText(`${K}.copyLinkAfterSaving`))
+    fireEvent.click(screen.getByText(`${K}.cancel`).closest('button') as HTMLButtonElement)
+
+    // Reopen: every other field resets here, and these must not be the
+    // exception -- "ticked by default" has to survive the operator's last use.
+    rerender()
+    selectEasyPay()
+
+    expect(screen.getByLabelText(`${K}.tender.card`)).toBeChecked()
+    expect(screen.getByLabelText(`${K}.tender.apple_pay`)).not.toBeChecked()
+    const checkbox = screen
+      .getByText(`${K}.copyLinkAfterSaving`)
+      .closest('label')
+      ?.querySelector('[role="checkbox"]')
+    expect(checkbox).toHaveAttribute('data-state', 'checked')
+  })
+})

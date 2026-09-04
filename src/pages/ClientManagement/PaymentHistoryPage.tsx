@@ -44,6 +44,7 @@ import { ReassignPaymentEmployeeModal } from './components/ReassignPaymentEmploy
 import { useClient } from '@/features/clients/hooks/useClients'
 import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
 import { useCallStore } from '@/stores/callStore'
+import { canOfferEasyPayLink, easypayLinkAction } from '@/features/payments/utils/easypayLink'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
 import { useCallOrigination } from '@/features/calls/hooks/useCallOrigination'
@@ -80,6 +81,8 @@ interface Payment {
   method: BackendPaymentMethod
   /** EasyPay rows only: which service the payer picked on the portal. */
   easypayMethod?: string | null
+  /** EasyPay rows only: the checkout URL, absent if the gateway call failed. */
+  easypayLink?: string | null
   status: BackendPaymentStatus
   receipt?: string
   reference?: string
@@ -361,11 +364,30 @@ export function PaymentHistoryPage() {
       contractNumber: backendPayment.debt_contract_number || undefined,
       method: backendPayment.payment_method,
       easypayMethod: backendPayment.easypay_method,
+      easypayLink: backendPayment.easypay_link,
       status: backendPayment.status,
       receipt: backendPayment.receipt_url,
       reference: backendPayment.bank_reference || backendPayment.payment_number,
     }
   }, [])
+
+  // The row conditions (EasyPay method + pending) do not guarantee a stored
+  // link: the gateway call sits between creating the payment and saving the
+  // URL, so report the gap rather than copying an empty string.
+  const handleCopyEasyPayLink = useCallback(
+    (payment: Payment) => {
+      const action = easypayLinkAction(payment)
+      if (action.kind === 'unavailable') {
+        toast.error(t('pages.clients.paymentHistory.easypayLink.unavailable'))
+        return
+      }
+      void navigator.clipboard.writeText(action.url).then(
+        () => toast.success(t('pages.clients.paymentHistory.easypayLink.copied')),
+        () => toast.error(t('pages.clients.paymentHistory.easypayLink.copyFailed'))
+      )
+    },
+    [t]
+  )
 
   // Convert payment history data to frontend format
   const paymentHistory = useMemo(() => {
@@ -1647,6 +1669,22 @@ export function PaymentHistoryPage() {
                                         </LinkButton>
                                       </PermissionGuard>
                                     )}
+                                  {canOfferEasyPayLink(payment) && (
+                                    <LinkButton
+                                      variant="regular-black"
+                                      size="xs"
+                                      leftIcon={
+                                        <Icons.Link01
+                                          size={16}
+                                          className="text-foreground"
+                                          strokeWidth={1.5}
+                                        />
+                                      }
+                                      onClick={() => handleCopyEasyPayLink(payment)}
+                                    >
+                                      {t('pages.clients.paymentHistory.actions.link')}
+                                    </LinkButton>
+                                  )}
                                   <LinkButton
                                     variant="regular-black"
                                     size="xs"
@@ -1736,6 +1774,20 @@ export function PaymentHistoryPage() {
                                             </DropdownMenuItem>
                                           </PermissionGuard>
                                         )}
+                                      {canOfferEasyPayLink(payment) && (
+                                        <DropdownMenuItem
+                                          onClick={() => {
+                                            handleCopyEasyPayLink(payment)
+                                            setOpenDropdownPaymentId(null)
+                                          }}
+                                          className="text-foreground flex cursor-pointer items-center gap-2 text-sm"
+                                        >
+                                          <Icons.Link01 size={16} strokeWidth={1.5} />
+                                          <span>
+                                            {t('pages.clients.paymentHistory.actions.link')}
+                                          </span>
+                                        </DropdownMenuItem>
+                                      )}
                                       <DropdownMenuItem
                                         onClick={() => {
                                           handleViewDetails(payment)

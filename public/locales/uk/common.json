@@ -6439,7 +6439,18 @@
           "validationPaymentExceedsDebt": "Платіж не може перевищувати поточний борг ({{amount}})",
           "validationPaymentMustBePositive": "Сума платежу повинна бути позитивною.",
           "closedDebtBadge": "Закрито",
-          "closedDebtCorrectionHint": "Цей борг закрито. Платіж записується як технічне коригування і не відкриває борг повторно."
+          "closedDebtCorrectionHint": "Цей борг закрито. Платіж записується як технічне коригування і не відкриває борг повторно.",
+          "easypay": "EasyPay",
+          "easypayLinkWillBeCreated": "Буде створено платіжне посилання EasyPay.",
+          "copyLinkAfterSaving": "Скопіювати посилання після збереження",
+          "linkCopied": "Посилання скопійовано",
+          "linkCopyFailed": "Не вдалося скопіювати посилання. Скористайтеся кнопкою «Посилання» у рядку платежу.",
+          "linkUnavailable": "Посилання недоступне. Скасуйте платіж і створіть його знову.",
+          "tender": {
+            "card": "Картка",
+            "google_pay": "Google Pay",
+            "apple_pay": "Apple Pay"
+          }
         },
         "editPayment": {
           "title": "Редагувати платіж #{{paymentId}}",
@@ -6764,9 +6775,15 @@
         "actions": {
           "pdf": "PDF",
           "verify": "Підтвердити",
-          "view": "Переглянути"
+          "view": "Переглянути",
+          "link": "Посилання"
         },
-        "noPaymentHistory": "Історія платежів не знайдена"
+        "noPaymentHistory": "Історія платежів не знайдена",
+        "easypayLink": {
+          "copied": "Посилання скопійовано",
+          "copyFailed": "Не вдалося скопіювати посилання",
+          "unavailable": "Посилання недоступне. Скасуйте платіж і створіть його знову."
+        }
       },
       "tasks": {
         "addTask": "Додати завдання",
