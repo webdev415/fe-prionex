@@ -16,7 +16,7 @@ import { useDepartments } from '@/features/departments'
 import { useUpdateWork } from '@/features/employeeCard/hooks/useEmployeeCard'
 import type { EmployeeCard } from '@/features/employeeCard/types.card'
 import { useRoles } from '@/features/roles'
-import { useUsers } from '@/features/users/hooks/useUsers'
+import { useOperators } from '@/features/users/hooks/useUsers'
 import { formatPickerDateAsYMD, parsePickerYMD } from '@/lib/dateUtils'
 import { SectionDialog } from './SectionDialog'
 import { useSectionSave } from './useSectionSave'
@@ -54,7 +54,7 @@ export function WorkDialog({ card, projectId, open, onClose }: WorkDialogProps) 
     is_active: true,
   })
   const { data: rolesData } = useRoles({ page: 1, page_size: 100, is_active: true })
-  const { data: peopleData } = useUsers({ page: 1, page_size: 100, status: 'active' })
+  const { data: people } = useOperators(projectId ?? card.work.project_id)
 
   const [departmentId, setDepartmentId] = useState<string>(
     card.work.department_id ? String(card.work.department_id) : NOBODY
@@ -74,7 +74,7 @@ export function WorkDialog({ card, projectId, open, onClose }: WorkDialogProps) 
    * the names: removing a manager is a thing somebody comes here to do.
    */
   const managers = useMemo(() => {
-    const loaded = (peopleData?.users ?? [])
+    const loaded = (people ?? [])
       .filter((person) => person.id !== card.header.id)
       .map((person) => ({
         id: String(person.id),
@@ -86,7 +86,7 @@ export function WorkDialog({ card, projectId, open, onClose }: WorkDialogProps) 
         ? [{ id: String(current), name: card.header.manager ?? String(current) }]
         : []
     return [{ id: NOBODY, name: t('pages.employeeCard.dialogs.noManager') }, ...held, ...loaded]
-  }, [peopleData, card.header.id, card.header.manager_user_id, card.header.manager, t])
+  }, [people, card.header.id, card.header.manager_user_id, card.header.manager, t])
 
   /*
    * The department is not a field on the employee - it follows from their
@@ -201,11 +201,11 @@ export function WorkDialog({ card, projectId, open, onClose }: WorkDialogProps) 
             manager out of it by scrolling means knowing where in the order
             they fall.
 
-            The filtering is local over the first page of active employees, so
-            somebody past that page cannot be picked yet - the card's own
-            manager is added to the list so at least the current answer is
-            never shown as empty. The real fix is a server-side search, as the
-            course and drill pickers were given in KAN-1046.
+            The roster is every user on the project, unpaginated, so the
+            filtering can stay local and nobody falls off the end of a page.
+            The card's own manager is added on top of it, because somebody who
+            has since left the project must still show as the current answer
+            rather than as an empty field.
           */}
           <SearchableSelect
             id={MANAGER_FIELD}
