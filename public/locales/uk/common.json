@@ -11038,7 +11038,8 @@
           "terminated": "Звільнено — {{reason}}",
           "terminated_noReason": "Звільнено",
           "drill_assigned": "Призначено вправу — {{drill}}",
-          "drill_completed": "Завершено вправу — {{drill}}"
+          "drill_completed": "Завершено вправу — {{drill}}",
+          "survey_completed_noScore": "Опитування — {{name}} ({{pending}})"
         },
         "from": "Від",
         "to": "До",

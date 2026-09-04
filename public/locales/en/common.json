@@ -11017,7 +11017,8 @@
           "terminated": "Terminated — {{reason}}",
           "terminated_noReason": "Terminated",
           "drill_assigned": "Drill assigned — {{drill}}",
-          "drill_completed": "Completed drill — {{drill}}"
+          "drill_completed": "Completed drill — {{drill}}",
+          "survey_completed_noScore": "Survey — {{name}} ({{pending}})"
         },
         "from": "From",
         "to": "To",
