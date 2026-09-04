@@ -55,6 +55,7 @@ function wording(eventType: string, values: Record<string, string>): string | un
   if (eventType === 'hired' && !values.department) return 'noDepartment'
   if (eventType === 'terminated' && !values.reason) return 'noReason'
   if (eventType.endsWith('_changed') && !values.from) return 'noFrom'
+  if (eventType === 'survey_completed' && !values.score) return 'noScore'
   return undefined
 }
 
@@ -72,6 +73,7 @@ export function chronologyLabel(event: EmployeeEvent, t: TFunction): string {
     kind: kindOf(payload, t),
     name: text(payload.name),
     score: score(payload),
+    pending: t('pages.employeeCard.surveys.pending'),
     // The departure carries its reason as the slug the card stores, so it is
     // spelled here the way the Termination section spells it - a timeline
     // reading "personal_desire" beside a card reading "Personal Desire" is two
