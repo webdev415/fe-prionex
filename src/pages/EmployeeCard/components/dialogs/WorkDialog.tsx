@@ -199,7 +199,13 @@ export function WorkDialog({ card, projectId, open, onClose }: WorkDialogProps) 
             Searchable, unlike the two above it. Department and position are
             short lists somebody can read; every employee is not, and picking a
             manager out of it by scrolling means knowing where in the order
-            they fall. The names are already loaded, so the filtering is local.
+            they fall.
+
+            The filtering is local over the first page of active employees, so
+            somebody past that page cannot be picked yet - the card's own
+            manager is added to the list so at least the current answer is
+            never shown as empty. The real fix is a server-side search, as the
+            course and drill pickers were given in KAN-1046.
           */}
           <SearchableSelect
             id={MANAGER_FIELD}

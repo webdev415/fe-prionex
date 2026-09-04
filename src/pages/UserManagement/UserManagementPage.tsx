@@ -214,7 +214,8 @@ export function UserManagementPage() {
   const [resetPasswordUser, setResetPasswordUser] = useState<ApiUser | null>(null)
   const [toggleTwoFactorUser, setToggleTwoFactorUser] = useState<ApiUser | null>(null)
   const [unlockUser, setUnlockUser] = useState<ApiUser | null>(null)
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const canOpenCard = useHasPermission(PERMISSIONS.EMPLOYEE_CARD.VIEW)
 
   // Deep-link: arriving with ?user_id=<id> (e.g. from an Audit Log Entity
   // link) goes straight to that employee's card, which is where a user's
@@ -223,10 +224,15 @@ export function UserManagementPage() {
     const raw = searchParams.get('user_id')
     if (!raw) return
     const id = Number(raw)
-    if (Number.isFinite(id) && id > 0) {
-      navigate(`/dashboard/team-management/users/${id}`)
+    if (!Number.isFinite(id) || id <= 0) return
+    if (!canOpenCard) {
+      const rest = new URLSearchParams(searchParams)
+      rest.delete('user_id')
+      setSearchParams(rest, { replace: true })
+      return
     }
-  }, [searchParams, navigate])
+    navigate(`/dashboard/team-management/users/${id}`, { replace: true })
+  }, [searchParams, setSearchParams, navigate, canOpenCard])
 
   // Close dropdown when screen size crosses breakpoint (in either direction)
   useEffect(() => {
@@ -304,8 +310,6 @@ export function UserManagementPage() {
    * to show, and to send the reader back to the list they came from rather
    * than to a reset one.
    */
-  const canOpenCard = useHasPermission(PERMISSIONS.EMPLOYEE_CARD.VIEW)
-
   const openEmployeeCard = (user: ApiUser) => {
     if (!canOpenCard) return
     const query = searchParams.toString()
