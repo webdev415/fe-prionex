@@ -6646,14 +6646,45 @@
             "to": "To",
             "operator": "Operator",
             "allOperators": "All operators",
-            "reset": "Reset"
+            "reset": "Reset",
+            "dateRange": "Date Range",
+            "selectStartDate": "Select start date",
+            "selectEndDate": "Select end date"
           },
           "sources": {
             "events": "UI events",
             "audit": "Data changes",
             "calls": "Calls"
           },
-          "recording": "Recording"
+          "recording": "Recording",
+          "openedTab": "Opened '{{tab}}' tab",
+          "openedForm": "Opened the interaction form",
+          "submittedForm": "Submitted the interaction form",
+          "openedCard": "Opened the client card",
+          "openedModal": "Opened '{{modal}}'",
+          "modals": {
+            "connect_rr": "Connect restructuring",
+            "writeoff": "Write-off",
+            "reversal": "Payment reversal",
+            "assign_client": "Assign client",
+            "record_payment": "Record payment",
+            "task": "Task",
+            "call_recording": "Call recording",
+            "tag": "Tags",
+            "edit_client": "Edit client",
+            "edit_interaction": "Edit interaction",
+            "view_sms": "View SMS",
+            "send_sms": "Send SMS",
+            "send_message": "Send message",
+            "upload_document": "Upload document",
+            "view_message": "View message"
+          },
+          "openedCardFrom": "Opened the client card from {{origin}}",
+          "origins": {
+            "list": "the client list",
+            "search": "search",
+            "dialer": "the dialer"
+          }
         }
       },
       "debtSummary": {

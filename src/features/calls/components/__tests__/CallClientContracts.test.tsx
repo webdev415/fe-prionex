@@ -119,7 +119,11 @@ describe('CallClientContracts', () => {
     // needs these to talk about while the caller is on the line.
     expect(screen.getByText('№1234567')).toBeVisible()
     expect(screen.getByText('№7654321')).toBeVisible()
-    expect(screen.getByRole('link')).toHaveAttribute('href', '/dashboard/clients/25')
+    expect(screen.getByRole('link')).toHaveAttribute(
+      'href',
+      // ?from=dialer tags the card-open event with where the operator came from
+      '/dashboard/clients/25?from=dialer'
+    )
   })
 
   it('links to the client in a new tab without leaving the call', () => {

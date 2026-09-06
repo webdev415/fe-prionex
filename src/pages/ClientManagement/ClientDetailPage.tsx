@@ -5,7 +5,7 @@
  */
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useQueries, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
@@ -269,6 +269,24 @@ export function ClientDetailPage() {
   const navigate = useNavigate()
   const trackEvent = useTrackEvent()
 
+  // Where the operator came from. The destination cannot work this out for
+  // itself — React Router does not expose the previous route and
+  // `document.referrer` is empty for client-side navigation — so the three
+  // entry points named in the requirement tag themselves with `?from=`.
+  // A query param rather than router state because the dialer link opens in a
+  // new tab, which router state does not survive.
+  //
+  // Anything else reads as `other` rather than being folded into `list`: there
+  // are ~49 places that link to a client card, and reporting the other 46 as a
+  // list click would be a wrong answer rather than a missing one.
+  const [searchParams] = useSearchParams()
+  const cardOpenOrigin = useMemo(() => {
+    const from = searchParams.get('from')
+    return from === 'list' || from === 'search' || from === 'dialer' ? from : 'other'
+  }, [searchParams])
+
+  const lastTrackedCardOpen = useRef<string | null>(null)
+
   useEffect(() => {
     if (!id) return
     const numericId = Number(id)
@@ -284,11 +302,18 @@ export function ClientDetailPage() {
       navigate('/dashboard/clients', { replace: true })
       return
     }
+    // Once per card, not once per effect run. `trackEvent` and `navigate` are
+    // both in the dependency list and both change identity, and StrictMode
+    // double-invokes effects in development — without this guard a single open
+    // recorded three to six times, milliseconds apart. The validation above
+    // stays outside the guard: a bad id must bounce on every run.
+    if (lastTrackedCardOpen.current === id) return
+    lastTrackedCardOpen.current = id
     trackEvent('client_card_open', {
       clientId: numericId,
-      meta: { client_id: id },
+      meta: { client_id: id, origin: cardOpenOrigin },
     })
-  }, [id, trackEvent, navigate])
+  }, [id, trackEvent, navigate, cardOpenOrigin])
 
   // Returns true if the value looks like a Ukrainian phone number,
   // regardless of the contact type's isPhone flag
@@ -1993,26 +2018,88 @@ export function ClientDetailPage() {
     })
   }, [activeRightCardTab, id, trackEvent])
 
+  // Every other modal in the card. The ones that change data leave an audit
+  // entry when they succeed, but a form opened and abandoned leaves no trace at
+  // all — that gap is what this closes. Driven off the open flags in one place
+  // rather than ~15 call sites, so a modal added later needs one map line.
+  //
+  // A separate type from interaction_form_*: those feed screen-time's "avg form
+  // submit", and folding fifteen more modals into that average would quietly
+  // redefine the metric. The modal is named in meta so per-modal timings stay
+  // possible later without another schema change.
+  const modalOpenFlags = useMemo(
+    () => ({
+      connect_rr: isConnectRrOpen,
+      writeoff: isWriteoffOpen,
+      reversal: isReversalOpen,
+      assign_client: isAssignClientOpen,
+      record_payment: isRecordPaymentModalOpen,
+      task: isTaskModalOpen,
+      call_recording: isCallRecordingModalOpen,
+      tag: isTagModalOpen,
+      edit_client: isEditModalOpen,
+      edit_interaction: isEditInteractionModalOpen,
+      view_sms: isViewSMSModalOpen,
+      send_sms: isSendSMSModalOpen,
+      send_message: isSendMessageModalOpen,
+      upload_document: isUploadDocModalOpen,
+      view_message: isViewMessageModalOpen,
+    }),
+    [
+      isConnectRrOpen,
+      isWriteoffOpen,
+      isReversalOpen,
+      isAssignClientOpen,
+      isRecordPaymentModalOpen,
+      isTaskModalOpen,
+      isCallRecordingModalOpen,
+      isTagModalOpen,
+      isEditModalOpen,
+      isEditInteractionModalOpen,
+      isViewSMSModalOpen,
+      isSendSMSModalOpen,
+      isSendMessageModalOpen,
+      isUploadDocModalOpen,
+      isViewMessageModalOpen,
+    ]
+  )
+  const previousModalOpenFlags = useRef<Record<string, boolean> | null>(null)
+
+  useEffect(() => {
+    if (!id) return
+    const previous = previousModalOpenFlags.current
+    previousModalOpenFlags.current = modalOpenFlags
+    // First run records the baseline only — nothing was "opened" by anyone yet.
+    if (!previous) return
+    const numericId = Number(id)
+    for (const [modal, isOpen] of Object.entries(modalOpenFlags)) {
+      if (isOpen && !previous[modal]) {
+        trackEvent('client_modal_open', {
+          clientId: Number.isFinite(numericId) ? numericId : null,
+          meta: { modal },
+        })
+      }
+    }
+  }, [modalOpenFlags, id, trackEvent])
+
   // Interaction form = the chain executor. Tracked here rather than at each
   // call site because it is opened from several places (header button, phone
-  // rows, the auto-open effect). The open timestamp feeds `duration_ms` on
-  // submit, which screen-time reads.
-  const interactionFormOpenedAt = useRef<number | null>(null)
+  // rows, the auto-open effect). Open only, like every other modal — the save
+  // itself is already recorded by audit-service, in more detail than an event
+  // here could carry.
   const interactionFormWasOpen = useRef(false)
 
   useEffect(() => {
     if (!id) return
     if (!isChainExecutorOpen) {
       interactionFormWasOpen.current = false
-      interactionFormOpenedAt.current = null
       return
     }
     // Emit on the closed -> open transition only. `trackEvent` is a useCallback
     // with its own dependencies, so this effect can re-run while the form stays
-    // open; without the guard that would double-count opens and reset the timer.
+    // open; without the guard that would double-count opens.
     if (interactionFormWasOpen.current) return
     interactionFormWasOpen.current = true
-    interactionFormOpenedAt.current = Date.now()
     const numericId = Number(id)
     trackEvent('interaction_form_open', {
       clientId: Number.isFinite(numericId) ? numericId : null,
@@ -5576,12 +5663,6 @@ export function ClientDetailPage() {
                 prefilledPhoneSource={chainExecutorPrefilledPhoneSource}
                 initialTemplateId={chainExecutorInitialTemplateId}
                 onSave={() => {
-                  const openedAt = interactionFormOpenedAt.current
-                  const numericId = Number(id)
-                  trackEvent('interaction_form_submit', {
-                    clientId: Number.isFinite(numericId) ? numericId : null,
-                    meta: openedAt ? { duration_ms: Date.now() - openedAt } : null,
-                  })
                   setIsChainExecutorOpen(false)
                   setChainExecutorContactSource(null)
                   setChainExecutorPrefilledPhone(null)

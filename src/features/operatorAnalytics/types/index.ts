@@ -5,6 +5,7 @@ export type AnalyticsEventType =
   | 'client_card_open'
   | 'client_card_tab_switch'
   | 'client_card_section_open'
+  | 'client_modal_open'
   | 'interaction_form_open'
   | 'interaction_form_submit'
   | 'call_player_action'

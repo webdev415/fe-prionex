@@ -8,12 +8,13 @@
  * were complete would be worse than showing nothing.
  */
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
+import { DateSelect } from '@/components/ui/DateSelect'
 import {
   Select,
   SelectContent,
@@ -38,13 +39,19 @@ const SOURCE_STYLES: Record<ActivitySource, string> = {
   calls: 'bg-emerald-500/15 text-emerald-700',
 }
 
-/** A date input gives a bare day. Widen it to cover the whole day, in UTC. */
-function dayStart(value: string): string | null {
-  return value ? new Date(`${value}T00:00:00.000Z`).toISOString() : null
+/** The picker yields a bare day. Widen it to cover the whole of that day. */
+function dayStart(value: Date | null): string | null {
+  if (!value) return null
+  const d = new Date(value)
+  d.setHours(0, 0, 0, 0)
+  return d.toISOString()
 }
 
-function dayEnd(value: string): string | null {
-  return value ? new Date(`${value}T23:59:59.999Z`).toISOString() : null
+function dayEnd(value: Date | null): string | null {
+  if (!value) return null
+  const d = new Date(value)
+  d.setHours(23, 59, 59, 999)
+  return d.toISOString()
 }
 
 function formatTimestamp(ts: string, locale: string): string {
@@ -64,10 +71,79 @@ function recordingPath(entry: ActivityEntry): string | null {
   return typeof value === 'string' && value ? value : null
 }
 
+/**
+ * Tab identifiers as stored in the event, mapped to the label the operator
+ * actually sees on the tab. The raw values ("documents", "call-sms-history")
+ * are internal state names and mean nothing to a reader of this feed. Reusing
+ * the tab strip's own translation keys keeps the two from drifting apart, and
+ * gives the feed a Ukrainian rendering for free.
+ */
+const TAB_LABEL_KEYS: Record<string, string> = {
+  // Main card sections
+  loans: 'pages.clients.detail.tabs.loans',
+  payments: 'pages.clients.detail.payments',
+  recommenders: 'pages.clients.detail.tabs.recommenders',
+  operators: 'pages.clients.detail.operators',
+  'call-sms-history': 'pages.clients.detail.tabs.callSms',
+  tasks: 'pages.clients.detail.tabs.tasks',
+  documents: 'pages.clients.detail.tabs.docs',
+  activity: 'pages.clients.detail.tabs.activity',
+  // Personal-details sub-tabs
+  personal: 'pages.clients.detail.tabs.personal',
+  related: 'pages.clients.detail.tabs.relatedTags',
+  passport: 'pages.clients.detail.tabs.passport',
+  work: 'pages.clients.detail.tabs.work',
+}
+
+/**
+ * Render a UI event in the reader's language, falling back to the summary the
+ * backend built for anything not recognised here.
+ */
+function entrySummary(entry: ActivityEntry, t: TFunction): string {
+  const meta = (entry.detail?.meta ?? {}) as Record<string, unknown>
+  const p = 'pages.clients.detail.activityLog'
+
+  const tabValue =
+    entry.kind === 'client_card_section_open'
+      ? meta.section
+      : entry.kind === 'client_card_tab_switch'
+        ? meta.tab
+        : null
+
+  if (typeof tabValue === 'string') {
+    const labelKey = TAB_LABEL_KEYS[tabValue]
+    // An unmapped tab shows its raw value rather than nothing — a tab added
+    // later should still be legible here before anyone updates this map.
+    return t(`${p}.openedTab`, { tab: labelKey ? t(labelKey) : tabValue })
+  }
+
+  if (entry.kind === 'client_modal_open') {
+    const modal = typeof meta.modal === 'string' ? meta.modal : null
+    // `defaultValue` keeps an unlabelled modal legible as its raw key rather
+    // than rendering the translation path itself.
+    const label = modal ? t(`${p}.modals.${modal}`, { defaultValue: modal }) : null
+    if (label) return t(`${p}.openedModal`, { modal: label })
+  }
+
+  if (entry.kind === 'client_card_open') {
+    // `other` and older events without an origin both fall back to the plain
+    // sentence — only the three tagged entry points claim a source.
+    const origin = typeof meta.origin === 'string' ? meta.origin : null
+    if (origin && origin !== 'other') {
+      return t(`${p}.openedCardFrom`, { origin: t(`${p}.origins.${origin}`, origin) })
+    }
+    return t(`${p}.openedCard`)
+  }
+  if (entry.kind === 'interaction_form_open') return t(`${p}.openedForm`)
+  if (entry.kind === 'interaction_form_submit') return t(`${p}.submittedForm`)
+
+  return entry.summary ?? entry.kind
+}
+
 export function ClientActivityLogTab({ clientId, isActive }: ClientActivityLogTabProps) {
   const { t, i18n } = useTranslation('common')
-  const [from, setFrom] = useState('')
-  const [to, setTo] = useState('')
+  const [from, setFrom] = useState<Date | null>(null)
+  const [to, setTo] = useState<Date | null>(null)
   const [operator, setOperator] = useState<string>(ALL_OPERATORS)
 
   const filters = useMemo(
@@ -81,42 +157,68 @@ export function ClientActivityLogTab({ clientId, isActive }: ClientActivityLogTa
 
   const { data, isLoading, isError } = useClientActivityLog(clientId, filters, isActive)
 
-  // The operator list is built from what the feed actually contains rather than
-  // fetched: only people who touched this client can appear in it anyway, and a
-  // separate user lookup would list hundreds who never did.
-  const operators = useMemo(() => {
-    const seen = new Map<number, string>()
+  // The operator list comes from what the feed contains rather than a user
+  // lookup: only people who touched this client can appear in it anyway, and
+  // fetching users would list hundreds who never did.
+  //
+  // It ACCUMULATES rather than being rebuilt per response. Selecting an
+  // operator narrows the feed to that person, so a list derived from the
+  // current response would collapse to the one already chosen — leaving no way
+  // to switch to anyone else without clearing the filter first. A date range
+  // does the same. The first load is unfiltered, so the list starts complete.
+  const seenOperators = useRef(new Map<number, string>())
+  const [operators, setOperators] = useState<[number, string][]>([])
+
+  useEffect(() => {
+    const seen = seenOperators.current
+    let added = false
     for (const entry of data?.entries ?? []) {
       if (entry.operator_id != null && !seen.has(entry.operator_id)) {
         seen.set(entry.operator_id, entry.operator_name ?? String(entry.operator_id))
+        added = true
       }
     }
-    return [...seen.entries()].sort((a, b) => a[1].localeCompare(b[1]))
+    if (added) {
+      setOperators([...seen.entries()].sort((a, b) => a[1].localeCompare(b[1])))
+    }
   }, [data?.entries])
 
-  const hasFilters = from !== '' || to !== '' || operator !== ALL_OPERATORS
+  const hasFilters = from !== null || to !== null || operator !== ALL_OPERATORS
 
   return (
     <div className="flex flex-col gap-4 p-4">
       <div className="flex flex-wrap items-end gap-3">
-        <label className="flex flex-col gap-1">
-          <span className="text-muted-foreground text-xs font-medium">
-            {t('pages.clients.detail.activityLog.filters.from')}
+        {/* Same shape as the Action Analysis filter bar — a labelled pair of
+            DateSelects bounded by each other, so the range stays valid without
+            a validation message. */}
+        <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+          <span className="text-foreground shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
+            {t('pages.clients.detail.activityLog.filters.dateRange')}:
           </span>
-          <Input
-            type="date"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-            className="w-40"
-          />
-        </label>
-
-        <label className="flex flex-col gap-1">
-          <span className="text-muted-foreground text-xs font-medium">
-            {t('pages.clients.detail.activityLog.filters.to')}
-          </span>
-          <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="w-40" />
-        </label>
+          <div className="flex flex-1 items-center gap-2">
+            <DateSelect
+              value={from}
+              onChange={({ value }: { value: Date | null }) => setFrom(value)}
+              placeholder={t('pages.clients.detail.activityLog.filters.selectStartDate')}
+              max={to ?? undefined}
+              allowManualInput
+              format="dd.MM.yyyy"
+              className="flex-1 [&_input]:h-9 [&_input]:text-xs"
+            />
+            <span className="text-foreground text-base leading-[150%] font-medium tracking-[-0.28px]">
+              -
+            </span>
+            <DateSelect
+              value={to}
+              onChange={({ value }: { value: Date | null }) => setTo(value)}
+              placeholder={t('pages.clients.detail.activityLog.filters.selectEndDate')}
+              min={from ?? undefined}
+              allowManualInput
+              format="dd.MM.yyyy"
+              className="flex-1 [&_input]:h-9 [&_input]:text-xs"
+            />
+          </div>
+        </div>
 
         <label className="flex flex-col gap-1">
           <span className="text-muted-foreground text-xs font-medium">
@@ -143,8 +245,8 @@ export function ClientActivityLogTab({ clientId, isActive }: ClientActivityLogTa
           <Button
             variant="outline"
             onClick={() => {
-              setFrom('')
-              setTo('')
+              setFrom(null)
+              setTo(null)
               setOperator(ALL_OPERATORS)
             }}
           >
@@ -203,7 +305,7 @@ export function ClientActivityLogTab({ clientId, isActive }: ClientActivityLogTa
               </span>
 
               <span className="text-foreground min-w-0 flex-1 text-sm break-words">
-                {entry.summary ?? entry.kind}
+                {entrySummary(entry, t)}
               </span>
 
               {entry.operator_name && (
