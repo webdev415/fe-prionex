@@ -1,7 +1,7 @@
 /**
  * ReportsDashboardPage Component
  *
- * Main page for viewing reports. Hosts ten tabs (active tab in the URL via
+ * Main page for viewing reports. Hosts eleven tabs (active tab in the URL via
  * `?tab=…`): the reports dashboard with KPIs and agent performance metrics
  * (default), the "Відпрацювання за ЦД" client processing report, the
  * "Верифікація 3-х осіб" third-party verification report, the
@@ -10,8 +10,9 @@
  * follow-up work list (its semantic twin — same source column shape, hence
  * its neighbour in the strip), the "Контакт/Неконтакт" tagged-client work
  * list, the "Великий розрив" communication-gap work list, the
- * "Обіцянки по операторах" operator promises report and the
- * "Вихідні дзвінки" outbound calls report.
+ * "Обіцянки по операторах" operator promises report, the
+ * "Вихідні дзвінки" outbound calls report and the
+ * "Обіцянки до кінця місяця" daily promises report.
  */
 
 import { useState, useMemo, useEffect, useCallback } from 'react'
@@ -55,6 +56,7 @@ import { ContactTagFeedTab } from '@/features/contactTag'
 import { CommunicationGapFeedTab } from '@/features/communicationGap'
 import { OperatorPromisesTab } from '@/features/operatorPromises'
 import { OutboundCallsTab } from '@/features/outboundCalls'
+import { PromisesDailyTab } from '@/features/promisesDaily'
 import { SegmentedTabs, segmentedTabId, segmentedTabPanelId } from '@/components/ui/SegmentedTabs'
 
 // ============================================================================
@@ -464,6 +466,7 @@ const REPORT_TABS = [
   'communication-gap',
   'operator-promises',
   'outbound-calls',
+  'promises-daily',
 ] as const
 type ReportsTab = (typeof REPORT_TABS)[number]
 
@@ -585,6 +588,8 @@ export function ReportsDashboardPage() {
           <OperatorPromisesTab />
         ) : activeTab === 'outbound-calls' ? (
           <OutboundCallsTab />
+        ) : activeTab === 'promises-daily' ? (
+          <PromisesDailyTab />
         ) : (
           <DashboardTab />
         )}
