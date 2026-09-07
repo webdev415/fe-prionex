@@ -7033,7 +7033,8 @@
         "active": "Active",
         "closed": "Closed"
       },
-      "sendMessageEmailRefOptional": "Optional: add an email contact step to pick the address from chain data. Otherwise the client primary email is used."
+      "sendMessageEmailRefOptional": "Optional: add an email contact step to pick the address from chain data. Otherwise the client primary email is used.",
+      "sendMessageNoDraftPermission": "Reading drafts needs a messaging send or launch permission. Ask an administrator to grant one."
     },
     "quickPicks": {
       "title": "Quick Picks",
@@ -9542,7 +9543,8 @@
       },
       "deleted": {
         "title": "Deleted drafts"
-      }
+      },
+      "noReadPermission": "Drafts are readable with a messaging send or launch permission, which this role does not hold. Ask an administrator to grant one."
     },
     "messagingIntegrations": {
       "description": "Configure provider credentials, enable channels per service, and verify connection health.",

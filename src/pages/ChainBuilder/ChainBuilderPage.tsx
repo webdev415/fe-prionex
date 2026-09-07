@@ -1156,32 +1156,38 @@ export function ChainBuilderPage() {
                                     ))}
                                   </select>
                                 )}
-                                <Select
-                                  disabled={!newEffectConfig.service || !canReadDrafts}
-                                  value={newEffectConfig.draft_id ?? ''}
-                                  onValueChange={(v) =>
-                                    setNewEffectConfig({
-                                      ...newEffectConfig,
-                                      channel: messageChannel,
-                                      draft_id: v,
-                                    })
-                                  }
-                                >
-                                  <SelectTrigger className="h-8 text-xs">
-                                    <SelectValue
-                                      placeholder={t(
-                                        'pages.chainBuilder.placeholders.selectMessagingDraft'
-                                      )}
-                                    />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {messagingDrafts.map((draft) => (
-                                      <SelectItem key={draft.id} value={String(draft.id)}>
-                                        {draft.name}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                                {!canReadDrafts ? (
+                                  <div className="border-warning-200 bg-warning-100 text-warning-700 rounded-md border px-2 py-1.5 text-[11px]">
+                                    {t('pages.chainBuilder.sendMessageNoDraftPermission')}
+                                  </div>
+                                ) : (
+                                  <Select
+                                    disabled={!newEffectConfig.service}
+                                    value={newEffectConfig.draft_id ?? ''}
+                                    onValueChange={(v) =>
+                                      setNewEffectConfig({
+                                        ...newEffectConfig,
+                                        channel: messageChannel,
+                                        draft_id: v,
+                                      })
+                                    }
+                                  >
+                                    <SelectTrigger className="h-8 text-xs">
+                                      <SelectValue
+                                        placeholder={t(
+                                          'pages.chainBuilder.placeholders.selectMessagingDraft'
+                                        )}
+                                      />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {messagingDrafts.map((draft) => (
+                                        <SelectItem key={draft.id} value={String(draft.id)}>
+                                          {draft.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                )}
                                 {(messageChannel === 'sms' || messageChannel === 'viber') &&
                                   (phoneContactSteps.length === 0 ? (
                                     <div className="border-warning-200 bg-warning-100 text-warning-700 rounded-md border px-2 py-1.5 text-[11px]">

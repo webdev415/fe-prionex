@@ -30,6 +30,7 @@ import {
   type MessagingViberImageAttachment,
   useCreateMessagingDraft,
   useDeletedMessagingDrafts,
+  useCanReadMessagingDrafts,
   useMessagingDrafts,
   useRestoreMessagingDraft,
   useUpdateMessagingDraft,
@@ -438,6 +439,7 @@ export function MessagingDraftsPage() {
   const [deleteDraft, setDeleteDraft] = useState<MessagingDraft | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
 
+  const canReadDrafts = useCanReadMessagingDrafts()
   const { data: drafts = [], isLoading } = useMessagingDrafts(
     channelFilter === 'all' ? undefined : (channelFilter as MessagingChannel)
   )
@@ -607,7 +609,11 @@ export function MessagingDraftsPage() {
           <DataTable
             columns={columns}
             data={filteredDrafts}
-            emptyMessage={t('pages.messagingDrafts.empty', 'No drafts matched the current filters')}
+            emptyMessage={
+              canReadDrafts
+                ? t('pages.messagingDrafts.empty', 'No drafts matched the current filters')
+                : t('pages.messagingDrafts.noReadPermission')
+            }
           />
         )}
       </div>

@@ -47,6 +47,15 @@ describe('the drafts query and the permission it needs', () => {
     await waitFor(() => expect(listDrafts).toHaveBeenCalledTimes(1))
   })
 
+  it('managing drafts is not the same as reading them', async () => {
+    signIn(['manage_drafts'])
+
+    renderHook(() => useMessagingDrafts(), { wrapper })
+
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(listDrafts).not.toHaveBeenCalled()
+  })
+
   it('a launch permission alone is enough', async () => {
     signIn(['launch_campaign_email'])
 
