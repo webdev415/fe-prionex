@@ -53,6 +53,10 @@ export function useCanReadMessagingDrafts(): boolean {
   return useHasAnyPermission(DRAFT_READ_PERMISSIONS)
 }
 
+export function useCanManageDrafts(): boolean {
+  return useHasAnyPermission([PERMISSIONS.MESSAGING.MANAGE_DRAFTS])
+}
+
 export function useMessagingDrafts(channel?: MessagingChannel) {
   const canRead = useCanReadMessagingDrafts()
   return useQuery({

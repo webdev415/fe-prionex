@@ -4,12 +4,14 @@ import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const listDrafts = vi.hoisted(() => vi.fn(async () => []))
+const listDeletedDrafts = vi.hoisted(() => vi.fn(async () => ({ total: 0, drafts: [] })))
 
 vi.mock('../api/messagingApi', () => ({
-  messagingApi: { listDrafts },
+  messagingApi: { listDrafts, listDeletedDrafts },
 }))
 
-const { useMessagingDrafts } = await import('../hooks/useMessaging')
+const { useMessagingDrafts, useDeletedMessagingDrafts, useCanManageDrafts } =
+  await import('../hooks/useMessaging')
 const { useAuthStore } = await import('@/stores/authStore')
 
 function wrapper({ children }: { children: ReactNode }) {
@@ -62,5 +64,32 @@ describe('the drafts query and the permission it needs', () => {
     renderHook(() => useMessagingDrafts(), { wrapper })
 
     await waitFor(() => expect(listDrafts).toHaveBeenCalledTimes(1))
+  })
+})
+
+describe('the trash and the permission it needs', () => {
+  beforeEach(() => {
+    listDeletedDrafts.mockClear()
+  })
+
+  it('is asked for by somebody who manages drafts', async () => {
+    signIn(['manage_drafts'])
+
+    const { result } = renderHook(() => useCanManageDrafts(), { wrapper })
+    expect(result.current).toBe(true)
+
+    renderHook(() => useDeletedMessagingDrafts(undefined, true), { wrapper })
+    await waitFor(() => expect(listDeletedDrafts).toHaveBeenCalledTimes(1))
+  })
+
+  it('is not asked for by somebody who only sends', async () => {
+    signIn(['send_message_sms'])
+
+    const { result } = renderHook(() => useCanManageDrafts(), { wrapper })
+    expect(result.current).toBe(false)
+
+    renderHook(() => useDeletedMessagingDrafts(undefined, false), { wrapper })
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(listDeletedDrafts).not.toHaveBeenCalled()
   })
 })

@@ -30,6 +30,7 @@ import {
   type MessagingViberImageAttachment,
   useCreateMessagingDraft,
   useDeletedMessagingDrafts,
+  useCanManageDrafts,
   useCanReadMessagingDrafts,
   useMessagingDrafts,
   useRestoreMessagingDraft,
@@ -446,8 +447,13 @@ export function MessagingDraftsPage() {
 
   // The channel filter applies to the deleted list too, so the two tables on
   // the page are always describing the same slice.
+  // The trash is guarded by manage_drafts, not by the send/launch permissions
+  // the live list needs, so the two tables ask for different things and are
+  // gated apart.
+  const canManageDrafts = useCanManageDrafts()
   const deletedDrafts = useDeletedMessagingDrafts(
-    channelFilter === 'all' ? undefined : { channel: channelFilter as MessagingChannel }
+    channelFilter === 'all' ? undefined : { channel: channelFilter as MessagingChannel },
+    canManageDrafts
   )
   const restoreDraft = useRestoreMessagingDraft()
   const expiryLabel = useExpiryLabel()
