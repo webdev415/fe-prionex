@@ -44,13 +44,11 @@ vi.mock('@/features/roles', () => ({
 }))
 
 vi.mock('@/features/users/hooks/useUsers', () => ({
-  useUsers: () => ({
-    data: {
-      users: [
-        { id: 7, full_name: 'Olena Kovalchuk', username: 'olena' },
-        { id: 9, full_name: 'Serhiy Lytvyn', username: 'serhiy' },
-      ],
-    },
+  useOperators: () => ({
+    data: [
+      { id: 7, full_name: 'Olena Kovalchuk', username: 'olena' },
+      { id: 9, full_name: 'Serhiy Lytvyn', username: 'serhiy' },
+    ],
   }),
 }))
 

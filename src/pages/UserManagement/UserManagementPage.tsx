@@ -14,8 +14,10 @@ import { useUsers } from '@/features/users/hooks/useUsers'
 import { useURLState, useAutoPersistedState } from '@/hooks'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
+import { useHasPermission } from '@/hooks/usePermissions'
 import { CreateUserModal } from './components/CreateUserModal'
 import { EditUserModal } from './components/EditUserModal'
+import { UserDetailModal } from './components/UserDetailModal'
 import ChangeStatusModal from './components/ChangeStatusModal'
 import { ResetPasswordConfirmModal } from './components/ResetPasswordConfirmModal'
 import { AdminToggleTwoFactorModal } from './components/AdminToggleTwoFactorModal'
@@ -206,6 +208,7 @@ export function UserManagementPage() {
 
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editUserId, setEditUserId] = useState<number | null>(null)
+  const [detailUserId, setDetailUserId] = useState<number | null>(null)
   const [changeStatusUser, setChangeStatusUser] = useState<ApiUser | null>(null)
   const [newStatus, setNewStatus] = useState<'active' | 'inactive'>('active')
   const [impersonatingUserId, setImpersonatingUserId] = useState<number | null>(null)
@@ -213,7 +216,8 @@ export function UserManagementPage() {
   const [resetPasswordUser, setResetPasswordUser] = useState<ApiUser | null>(null)
   const [toggleTwoFactorUser, setToggleTwoFactorUser] = useState<ApiUser | null>(null)
   const [unlockUser, setUnlockUser] = useState<ApiUser | null>(null)
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const canOpenCard = useHasPermission(PERMISSIONS.EMPLOYEE_CARD.VIEW)
 
   // Deep-link: arriving with ?user_id=<id> (e.g. from an Audit Log Entity
   // link) goes straight to that employee's card, which is where a user's
@@ -222,10 +226,16 @@ export function UserManagementPage() {
     const raw = searchParams.get('user_id')
     if (!raw) return
     const id = Number(raw)
-    if (Number.isFinite(id) && id > 0) {
-      navigate(`/dashboard/team-management/users/${id}`, { replace: true })
+    if (!Number.isFinite(id) || id <= 0) return
+    if (!canOpenCard) {
+      setDetailUserId(id)
+      const rest = new URLSearchParams(searchParams)
+      rest.delete('user_id')
+      setSearchParams(rest, { replace: true })
+      return
     }
-  }, [searchParams, navigate])
+    navigate(`/dashboard/team-management/users/${id}`, { replace: true })
+  }, [searchParams, setSearchParams, navigate, canOpenCard])
 
   // Close dropdown when screen size crosses breakpoint (in either direction)
   useEffect(() => {
@@ -304,6 +314,10 @@ export function UserManagementPage() {
    * than to a reset one.
    */
   const openEmployeeCard = (user: ApiUser) => {
+    if (!canOpenCard) {
+      setDetailUserId(user.id)
+      return
+    }
     const query = searchParams.toString()
     navigate(`/dashboard/team-management/users/${user.id}${query ? `?${query}` : ''}`)
   }
@@ -884,6 +898,14 @@ export function UserManagementPage() {
             open={showCreateModal}
             onClose={() => setShowCreateModal(false)}
             onSuccess={handleCreateSuccess}
+          />
+        )}
+
+        {detailUserId && (
+          <UserDetailModal
+            open={detailUserId !== null}
+            userId={detailUserId}
+            onClose={() => setDetailUserId(null)}
           />
         )}
 

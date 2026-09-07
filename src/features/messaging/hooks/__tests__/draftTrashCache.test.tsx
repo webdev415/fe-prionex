@@ -18,7 +18,11 @@ const mockApi = vi.hoisted(() => ({
 
 const toastFns = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }))
 
-vi.mock('@/lib/api', () => ({ api: mockApi, default: mockApi }))
+vi.mock('@/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/api')>()),
+  api: mockApi,
+  default: mockApi,
+}))
 vi.mock('sonner', () => ({ toast: toastFns }))
 
 const { messagingKeys } = await import('../useMessaging')

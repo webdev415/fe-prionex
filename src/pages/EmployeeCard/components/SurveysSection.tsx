@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { mayWrite } from '@/features/employeeCard/lib/mayWrite'
+import { safeExternalUrl } from '@/features/employeeCard/lib/safeExternalUrl'
 import type { EmployeeCard } from '@/features/employeeCard/types.card'
 import { Icons } from '@/lib/icons'
 import { CardSection } from './CardSection'
@@ -74,9 +75,9 @@ export function SurveysSection({ card, onAdd, onEditSurvey, onRemoveSurvey }: Su
                   </span>
                 )}
 
-                {survey.details_url && (
+                {safeExternalUrl(survey.details_url) && (
                   <a
-                    href={survey.details_url}
+                    href={safeExternalUrl(survey.details_url)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-primary text-sm hover:underline"

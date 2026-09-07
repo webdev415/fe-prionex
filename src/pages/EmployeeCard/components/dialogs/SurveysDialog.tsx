@@ -80,11 +80,11 @@ export function SurveysDialog({ card, projectId, surveyId, open, onClose }: Surv
     // 100, so a score entered here is out of 100 as a matter of fact rather
     // than assumption. An import still states its own total, which is why the
     // column stays - a quiz marked out of twenty is still a quiz.
-    max_score: values.score.trim() ? OUT_OF : null,
+    max_score: values.score.trim() ? (editing?.max_score ?? OUT_OF) : null,
     // Inferred rather than asked for: a result with a score is one that came
     // back, and a question about it on top of the score is a question nobody
     // needs to answer twice.
-    status: values.score.trim() ? 'completed' : 'pending',
+    status: values.score.trim() || editing?.status === 'completed' ? 'completed' : 'pending',
     details_url: values.details_url.trim() || null,
   })
 
