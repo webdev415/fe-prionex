@@ -67,6 +67,19 @@ describe('PromisesDailyTable', () => {
     expect(within(bodyRows()[1] as HTMLElement).getByText('5.00')).toBeInTheDocument()
   })
 
+  it('labels a whitespace-only department name «Без відділу», not an empty header', () => {
+    // The auth-service directory yields whitespace rather than null for an
+    // unfilled entry (the same reason orgLabel in outboundCalls trims), so a
+    // `?? t(...)` fallback alone would render a blank column head.
+    renderTable({
+      departments: [{ name: '   ', values: ['100.00', '0', '0'], total: '100.00' }],
+    })
+
+    expect(
+      screen.getByRole('columnheader', { name: 'pages.reports.promisesDaily.columns.noDepartment' })
+    ).toBeInTheDocument()
+  })
+
   it('sums the per-day «Разом» cell client-side across the departments', () => {
     renderTable()
 

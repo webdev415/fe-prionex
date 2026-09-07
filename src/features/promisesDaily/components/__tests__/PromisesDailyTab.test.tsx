@@ -103,6 +103,10 @@ function makeHttpError(status: number, data?: unknown) {
   })
 }
 
+function makeNetworkError(code: string) {
+  return Object.assign(new Error(code), { isAxiosError: true, code })
+}
+
 /** Exposes the current ?search so tests can assert URL-state side effects. */
 function LocationProbe() {
   const location = useLocation()
@@ -397,6 +401,36 @@ describe('PromisesDailyTab', () => {
     expect(screen.getByText('pages.reports.promisesDaily.generatedAt')).toBeInTheDocument()
   })
 
+  it('marks the previous window’s matrix as busy while a new one loads', async () => {
+    let resolveSecond: (value: PromisesDailyReportResponse) => void = () => {}
+    mockGetReport
+      .mockResolvedValueOnce(makeResponse())
+      .mockImplementationOnce(
+        () => new Promise<PromisesDailyReportResponse>((resolve) => (resolveSecond = resolve))
+      )
+
+    renderTab(['/?pdf=2026-07-01&pdt=2026-07-31'])
+    await screen.findByText('Стягнення')
+
+    fireEvent.change(dateInputs()[0], { target: { value: '2026-07-02' } })
+
+    // keepPreviousData shows the OLD window's matrix while the new one loads —
+    // it must not look final, hence the busy overlay over the stale rows.
+    expect(await screen.findByTestId('promises-daily-refreshing')).toBeInTheDocument()
+    expect(screen.getByText('Стягнення')).toBeInTheDocument()
+
+    resolveSecond(
+      makeResponse({
+        departments: [{ name: 'Оновлений відділ', values: ['1.00', '0', '0'], total: '1.00' }],
+      })
+    )
+
+    expect(await screen.findByText('Оновлений відділ')).toBeInTheDocument()
+    await waitFor(() =>
+      expect(screen.queryByTestId('promises-daily-refreshing')).not.toBeInTheDocument()
+    )
+  })
+
   it('shows the calm period message for a genuinely empty answer', async () => {
     mockGetReport.mockResolvedValue(makeResponse({ dates: [], departments: [], total: '0.00' }))
 
@@ -484,6 +518,43 @@ describe('PromisesDailyTab', () => {
     renderTab()
 
     expect(await screen.findByText('Unknown IANA timezone: Mars/Olympus')).toBeInTheDocument()
+  })
+
+  it.each([502, 503, 504])(
+    'shows the dedicated unavailability message on transient %d errors',
+    async (status) => {
+      mockGetReport.mockRejectedValue(makeHttpError(status))
+
+      renderTab()
+
+      expect(await screen.findByText('pages.reports.promisesDaily.unavailable')).toBeInTheDocument()
+    }
+  )
+
+  it('shows the 503 detail under the localized unavailability message', async () => {
+    // The endpoint words its 503s distinctly (the auth-service org directory
+    // being down vs the lookup blowing its deadline) because the remedies can
+    // differ; the server's own sentence stays visible UNDER the localized one,
+    // never instead of it.
+    mockGetReport.mockRejectedValue(
+      makeHttpError(503, { detail: 'Promise statistics are unavailable' })
+    )
+
+    renderTab()
+
+    expect(await screen.findByText('pages.reports.promisesDaily.unavailable')).toBeInTheDocument()
+    expect(screen.getByText('Promise statistics are unavailable')).toBeInTheDocument()
+  })
+
+  it('treats network failures as transient unavailability, with no detail line', async () => {
+    mockGetReport.mockRejectedValue(makeNetworkError('ERR_NETWORK'))
+
+    renderTab()
+
+    expect(await screen.findByText('pages.reports.promisesDaily.unavailable')).toBeInTheDocument()
+    // A dropped connection carries no body — there is no server sentence to
+    // show, and axios' own code must not leak under the message.
+    expect(screen.queryByText('ERR_NETWORK')).not.toBeInTheDocument()
   })
 
   it('retries the report when the Retry button is used', async () => {

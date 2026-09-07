@@ -79,13 +79,25 @@ export function PromisesDailyTable({
             >
               {t('pages.reports.promisesDaily.columns.date')}
             </th>
+            {/* Position IS the identity of a series (`values` aligns with the
+                day axis by index, and the server may legitimately ship two
+                departments under the same name), so the index is the honest
+                React key — a name-based key would collide on duplicates. Same
+                in the body and footer loops below. */}
             {departments.map((department, index) => (
               <th
-                key={department.name ?? `no-department-${index}`}
+                key={index}
                 scope="col"
                 className={`${HEADER_CELL} border-border text-foreground border-r text-right`}
               >
-                {department.name ?? t('pages.reports.promisesDaily.columns.noDepartment')}
+                {/* Blank counts as missing, not as a name: the auth-service
+                    directory yields whitespace rather than null for an
+                    unfilled entry (same reason orgLabel in
+                    src/features/outboundCalls/utils/format.ts trims), and
+                    `?? t(...)` alone would render an empty header. */}
+                {department.name?.trim()
+                  ? department.name
+                  : t('pages.reports.promisesDaily.columns.noDepartment')}
               </th>
             ))}
             <th scope="col" className={`${HEADER_CELL} text-foreground text-right`}>
@@ -114,7 +126,7 @@ export function PromisesDailyTable({
                 </th>
                 {departments.map((department, index) => (
                   <td
-                    key={department.name ?? `no-department-${index}`}
+                    key={index}
                     className={`${BODY_CELL} border-border border-r text-right tabular-nums`}
                   >
                     {formatMoney(department.values[dayIndex], language)}
@@ -135,7 +147,7 @@ export function PromisesDailyTable({
               </th>
               {departments.map((department, index) => (
                 <td
-                  key={department.name ?? `no-department-${index}`}
+                  key={index}
                   className={`${FOOTER_CELL} border-border border-r text-right tabular-nums`}
                 >
                   {formatMoney(department.total, language)}

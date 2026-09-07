@@ -121,6 +121,12 @@ export function PromisesDailyTab() {
   // «Весь місяць» is a STATE of the window, not a filter of its own: it reads
   // as checked exactly when the window IS the whole current month, however it
   // got there (the checkbox, hand-set pickers, a shared link).
+  //
+  // On the 1st of the month the default window (today → end of month) IS the
+  // whole month, so the box is checked with no keys in the URL and unchecking
+  // produces no visible change. Accepted as-is: the two states are genuinely
+  // the same window, and writing the explicit whole-month keys instead would
+  // not change the checked reading either — only add keys nobody chose.
   const isWholeMonth = dateFrom === monthStart && dateTo === monthEnd
 
   // Filter updates never create history entries (page-tab switches do). The
