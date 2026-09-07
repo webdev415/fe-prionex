@@ -52,6 +52,7 @@ import { useTargetActions } from '@/features/targetActions/hooks/useTargetAction
 import type { TargetAction } from '@/features/targetActions/api/types'
 import { useSMSTemplates } from '@/features/sms'
 import {
+  useCanReadMessagingDrafts,
   useMessagingDrafts,
   useMessagingIntegrations,
 } from '@/features/messaging/hooks/useMessaging'
@@ -180,6 +181,7 @@ export function ChainBuilderPage() {
     [smsTemplatesData?.templates]
   )
   const [messageChannel, setMessageChannel] = useState<MessagingChannel>('sms')
+  const canReadDrafts = useCanReadMessagingDrafts()
   const { data: messagingDrafts = [] } = useMessagingDrafts(messageChannel)
   const { data: messagingIntegrations = [] } = useMessagingIntegrations(!!projectId)
   const usableMessagingServices = useMemo(
@@ -1155,6 +1157,7 @@ export function ChainBuilderPage() {
                                   </select>
                                 )}
                                 <Select
+                                  disabled={!newEffectConfig.service || !canReadDrafts}
                                   value={newEffectConfig.draft_id ?? ''}
                                   onValueChange={(v) =>
                                     setNewEffectConfig({
@@ -1163,7 +1166,6 @@ export function ChainBuilderPage() {
                                       draft_id: v,
                                     })
                                   }
-                                  disabled={!newEffectConfig.service}
                                 >
                                   <SelectTrigger className="h-8 text-xs">
                                     <SelectValue
