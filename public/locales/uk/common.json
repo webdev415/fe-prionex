@@ -3227,7 +3227,10 @@
         "trainer": "Тренер",
         "type": "Тип",
         "typePlaceholder": "Необов’язкова мітка",
-        "unlimited": "Без обмежень"
+        "unlimited": "Без обмежень",
+        "description": "Опис",
+        "descriptionPlaceholder": "Про що заняття — це бачать учасники.",
+        "joinMeeting": "Приєднатися до зустрічі"
       },
       "leaks": {
         "chips": {

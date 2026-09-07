@@ -8,6 +8,7 @@ export interface GroupTrainingCardData {
   title: string
   type?: string | null
   location?: string | null
+  description?: string | null
   trainer_id: number
   scheduled_at: string
   duration_minutes: number
@@ -34,6 +35,7 @@ export interface GroupTrainingCreatePayload {
   title: string
   type?: string | null
   location?: string | null
+  description?: string | null
   scheduled_at: string
   duration_minutes?: number
   max_participants?: number | null
@@ -44,6 +46,7 @@ export interface GroupTrainingUpdatePayload {
   title?: string
   type?: string | null
   location?: string | null
+  description?: string | null
   scheduled_at?: string
   duration_minutes?: number
   max_participants?: number | null
