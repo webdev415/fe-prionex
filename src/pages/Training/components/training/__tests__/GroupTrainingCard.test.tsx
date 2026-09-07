@@ -74,6 +74,12 @@ describe('GroupTrainingCard — what the participant can see', () => {
     ]).toEqual(participantSees)
   })
 
+  it('shows the type label, which was stored but never rendered', () => {
+    renderCard()
+    // "webinar · Zoom · Trainer: Olena"
+    expect(screen.getByText(/webinar/)).toBeInTheDocument()
+  })
+
   it('omits the description and the link when the trainer left them empty', () => {
     renderCard({ description: null, meeting_url: null })
     expect(screen.queryByRole('link')).not.toBeInTheDocument()

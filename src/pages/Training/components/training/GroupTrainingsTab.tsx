@@ -134,6 +134,9 @@ export function GroupTrainingCard({
 
   // Figma subtitle: "Location · Trainer: Name" — omit missing parts.
   const subtitleParts = [
+    // `type` is a free-text label the trainer types. It was stored and returned
+    // by the API but rendered nowhere, so nobody — not even its author — saw it.
+    training.type ?? undefined,
     training.location ?? undefined,
     trainerName
       ? `${t('pages.training.groupTrainings.trainer', 'Trainer')}: ${trainerName}`
@@ -290,7 +293,7 @@ export function GroupTrainingCard({
   )
 }
 
-function ScheduleTrainingDialog({ onClose }: { onClose: () => void }) {
+export function ScheduleTrainingDialog({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation('common')
   const create = useCreateGroupTraining()
 
@@ -369,6 +372,23 @@ function ScheduleTrainingDialog({ onClose }: { onClose: () => void }) {
                 'e.g. Objection-handling workshop'
               )}
               className={field}
+            />
+          </label>
+
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-[#05040D]">
+              {t('pages.training.groupTrainings.description', 'Description')}
+            </span>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+              maxLength={2000}
+              placeholder={t(
+                'pages.training.groupTrainings.descriptionPlaceholder',
+                'What the session covers — participants see this.'
+              )}
+              className="rounded-lg border border-[#EBECE8] bg-white px-3 py-2 text-xs text-[#05040D] focus:outline-none"
             />
           </label>
 
@@ -453,23 +473,6 @@ function ScheduleTrainingDialog({ onClose }: { onClose: () => void }) {
               onChange={(e) => setMeetingUrl(e.target.value)}
               placeholder="https://…"
               className={field}
-            />
-          </label>
-
-          <label className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-[#05040D]">
-              {t('pages.training.groupTrainings.description', 'Description')}
-            </span>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              maxLength={2000}
-              placeholder={t(
-                'pages.training.groupTrainings.descriptionPlaceholder',
-                'What the session covers — participants see this.'
-              )}
-              className="rounded-lg border border-[#EBECE8] bg-white px-3 py-2 text-xs text-[#05040D] focus:outline-none"
             />
           </label>
         </div>
