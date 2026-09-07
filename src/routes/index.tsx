@@ -603,7 +603,17 @@ export const router = createBrowserRouter([
       {
         path: 'system-settings/messaging-drafts',
         element: (
-          <PermissionRoute requiredPermission={PERMISSIONS.MESSAGING.MANAGE_DRAFTS}>
+          <PermissionRoute
+            requiredPermissions={[
+              PERMISSIONS.MESSAGING.SEND_MESSAGE_SMS,
+              PERMISSIONS.MESSAGING.SEND_MESSAGE_VIBER,
+              PERMISSIONS.MESSAGING.SEND_MESSAGE_EMAIL,
+              PERMISSIONS.MESSAGING.LAUNCH_CAMPAIGN_SMS,
+              PERMISSIONS.MESSAGING.LAUNCH_CAMPAIGN_VIBER,
+              PERMISSIONS.MESSAGING.LAUNCH_CAMPAIGN_EMAIL,
+            ]}
+            mode="any"
+          >
             {withSuspense(<MessagingDraftsPage />)}
           </PermissionRoute>
         ),

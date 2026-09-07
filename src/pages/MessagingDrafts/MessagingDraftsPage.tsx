@@ -447,14 +447,12 @@ export function MessagingDraftsPage() {
 
   // The channel filter applies to the deleted list too, so the two tables on
   // the page are always describing the same slice.
-  // The trash endpoint is guarded by manage_drafts while the live list is
-  // guarded by the send/launch permissions, so asking needs both: manage on
-  // its own would 403, and read on its own would put every deleted draft's
-  // name in front of somebody the page has just told it cannot read drafts.
+  // The trash is guarded by manage_drafts, which the route no longer requires,
+  // so it is asked for only by somebody who holds it.
   const canManageDrafts = useCanManageDrafts()
   const deletedDrafts = useDeletedMessagingDrafts(
     channelFilter === 'all' ? undefined : { channel: channelFilter as MessagingChannel },
-    canManageDrafts && canReadDrafts
+    canManageDrafts
   )
   const restoreDraft = useRestoreMessagingDraft()
   const expiryLabel = useExpiryLabel()

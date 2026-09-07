@@ -72,7 +72,7 @@ describe('the trash and the permission it needs', () => {
     listDeletedDrafts.mockClear()
   })
 
-  it('is asked for by somebody who both manages and may read', async () => {
+  it('is asked for by somebody who manages drafts', async () => {
     signIn(['manage_drafts', 'send_message_sms'])
 
     const { result } = renderHook(() => useCanManageDrafts(), { wrapper })
@@ -82,11 +82,13 @@ describe('the trash and the permission it needs', () => {
     await waitFor(() => expect(listDeletedDrafts).toHaveBeenCalledTimes(1))
   })
 
-  it('is not asked for by somebody who manages but may not read', async () => {
-    signIn(['manage_drafts'])
+  it('is not asked for by somebody who may read but not manage', async () => {
+    signIn(['send_message_sms'])
+
+    const { result } = renderHook(() => useCanManageDrafts(), { wrapper })
+    expect(result.current).toBe(false)
 
     renderHook(() => useDeletedMessagingDrafts(undefined, false), { wrapper })
-
     await new Promise((resolve) => setTimeout(resolve, 20))
     expect(listDeletedDrafts).not.toHaveBeenCalled()
   })

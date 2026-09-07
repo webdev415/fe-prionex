@@ -558,7 +558,8 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   manage_dialer_queues: 'Create, edit, delete, and activate dialer campaign queues',
 
   // Messaging
-  manage_drafts: 'Create, edit, and delete messaging drafts; open the Message Drafts settings page',
+  manage_drafts:
+    'Create, edit, and delete messaging drafts, and restore deleted ones. Opening the Message Drafts page and reading the list need a messaging send or launch permission.',
   view_campaign_analytics:
     'View campaign analytics, campaign recipients, CSV exports, and unified client message history',
   manage_messaging_integrations:
