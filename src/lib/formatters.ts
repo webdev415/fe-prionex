@@ -140,9 +140,20 @@ export function formatIsoDate(dateStr?: string | null): string {
 
 /**
  * Format date for display → DD-MM-YYYY
+ *
+ * A calendar date is not an instant. `new Date('2026-10-02')` parses a
+ * date-only string as UTC midnight, and `toDMY` then reads it with local
+ * getters — so every timezone behind UTC renders the PREVIOUS day. A payment
+ * reversed on the 2nd showed as the 1st, a due date of the 10th as the 9th.
+ * Invisible from Kyiv (UTC+2/+3), wrong for anyone west of Greenwich.
+ *
+ * Date-only values therefore go through `formatIsoDate`, which reads the parts
+ * off the string and never builds a Date. Values carrying a time component are
+ * genuine instants and keep their local-time rendering.
  */
 export function formatDate(dateStr?: string): string {
   if (!dateStr) return '—'
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return formatIsoDate(dateStr)
   const d = new Date(dateStr)
   if (isNaN(d.getTime())) return '—'
   return toDMY(d)
