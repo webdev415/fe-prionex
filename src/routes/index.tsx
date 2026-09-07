@@ -8,7 +8,7 @@ import { useTabTracker } from '@/features/auth/hooks/useTabTracker'
 import { DashboardLayout } from '@/components/layout'
 import { RouteErrorElement } from '@/components/RouteErrorElement'
 import { V3CutoverRoute } from '@/features/scoring/components/V3CutoverRoute'
-import { PERMISSIONS } from '@/constants/permissions'
+import { DRAFT_PAGE_PERMISSIONS, PERMISSIONS } from '@/constants/permissions'
 import { BulkOperatorAssignmentPageSkeleton } from '@/pages/Operations/BulkOperatorAssignmentPageSkeleton'
 import { BulkTagAssignmentPageSkeleton } from '@/pages/Operations/BulkTagAssignmentPageSkeleton'
 import { BulkContactTagAssignmentPageSkeleton } from '@/pages/Operations/BulkContactTagAssignmentPageSkeleton'
@@ -603,17 +603,7 @@ export const router = createBrowserRouter([
       {
         path: 'system-settings/messaging-drafts',
         element: (
-          <PermissionRoute
-            requiredPermissions={[
-              PERMISSIONS.MESSAGING.SEND_MESSAGE_SMS,
-              PERMISSIONS.MESSAGING.SEND_MESSAGE_VIBER,
-              PERMISSIONS.MESSAGING.SEND_MESSAGE_EMAIL,
-              PERMISSIONS.MESSAGING.LAUNCH_CAMPAIGN_SMS,
-              PERMISSIONS.MESSAGING.LAUNCH_CAMPAIGN_VIBER,
-              PERMISSIONS.MESSAGING.LAUNCH_CAMPAIGN_EMAIL,
-            ]}
-            mode="any"
-          >
+          <PermissionRoute requiredPermissions={DRAFT_PAGE_PERMISSIONS} mode="any">
             {withSuspense(<MessagingDraftsPage />)}
           </PermissionRoute>
         ),

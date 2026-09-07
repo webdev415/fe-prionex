@@ -447,8 +447,6 @@ export function MessagingDraftsPage() {
 
   // The channel filter applies to the deleted list too, so the two tables on
   // the page are always describing the same slice.
-  // The trash is guarded by manage_drafts, which the route no longer requires,
-  // so it is asked for only by somebody who holds it.
   const canManageDrafts = useCanManageDrafts()
   const deletedDrafts = useDeletedMessagingDrafts(
     channelFilter === 'all' ? undefined : { channel: channelFilter as MessagingChannel },

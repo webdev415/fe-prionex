@@ -16,7 +16,7 @@ import { MinimizedCallBubble } from './MinimizedCallBubble'
 import { MinimizedChainExecutorBubble } from './MinimizedChainExecutorBubble'
 import { NotificationBell } from './NotificationBell'
 import { ThemeModeToggle } from './ThemeModeToggle'
-import { PERMISSIONS } from '@/constants/permissions'
+import { DRAFT_PAGE_PERMISSIONS, PERMISSIONS } from '@/constants/permissions'
 import type { Permission } from '@/constants/permissions'
 import { useHasPermission } from '@/hooks/usePermissions'
 import { SearchResults, type SearchResult } from '@/components/ui/SearchResults'
@@ -970,14 +970,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             path: '/dashboard/system-settings/messaging-drafts',
             label: t('navigation.messagingDrafts', 'Message Drafts'),
             icon: 'bubble-chat-edit',
-            requiredPermissions: [
-              PERMISSIONS.MESSAGING.SEND_MESSAGE_SMS,
-              PERMISSIONS.MESSAGING.SEND_MESSAGE_VIBER,
-              PERMISSIONS.MESSAGING.SEND_MESSAGE_EMAIL,
-              PERMISSIONS.MESSAGING.LAUNCH_CAMPAIGN_SMS,
-              PERMISSIONS.MESSAGING.LAUNCH_CAMPAIGN_VIBER,
-              PERMISSIONS.MESSAGING.LAUNCH_CAMPAIGN_EMAIL,
-            ],
+            requiredPermissions: DRAFT_PAGE_PERMISSIONS,
             mode: 'any',
           },
         ],

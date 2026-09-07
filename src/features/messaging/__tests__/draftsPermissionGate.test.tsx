@@ -13,6 +13,9 @@ vi.mock('../api/messagingApi', () => ({
 const { useMessagingDrafts, useDeletedMessagingDrafts, useCanManageDrafts } =
   await import('../hooks/useMessaging')
 const { useAuthStore } = await import('@/stores/authStore')
+const { DRAFT_PAGE_PERMISSIONS, DRAFT_READ_PERMISSIONS, PERMISSIONS } =
+  await import('@/constants/permissions')
+const { useHasAnyPermission } = await import('@/hooks/usePermissions')
 
 function wrapper({ children }: { children: ReactNode }) {
   const client = new QueryClient({
@@ -92,15 +95,38 @@ describe('the trash and the permission it needs', () => {
     await new Promise((resolve) => setTimeout(resolve, 20))
     expect(listDeletedDrafts).not.toHaveBeenCalled()
   })
+})
 
-  it('is not asked for by somebody who only sends', async () => {
+describe('who may open the Message Drafts page', () => {
+  it('lets a manager in even though it may not read the list', () => {
+    signIn(['manage_drafts'])
+
+    const { result } = renderHook(() => useHasAnyPermission(DRAFT_PAGE_PERMISSIONS), { wrapper })
+
+    expect(result.current).toBe(true)
+  })
+
+  it('lets a sender in even though it may not manage', () => {
     signIn(['send_message_sms'])
 
-    const { result } = renderHook(() => useCanManageDrafts(), { wrapper })
-    expect(result.current).toBe(false)
+    const { result } = renderHook(() => useHasAnyPermission(DRAFT_PAGE_PERMISSIONS), { wrapper })
 
-    renderHook(() => useDeletedMessagingDrafts(undefined, false), { wrapper })
-    await new Promise((resolve) => setTimeout(resolve, 20))
-    expect(listDeletedDrafts).not.toHaveBeenCalled()
+    expect(result.current).toBe(true)
+  })
+
+  it('keeps everybody else out', () => {
+    signIn(['view_clients'])
+
+    const { result } = renderHook(() => useHasAnyPermission(DRAFT_PAGE_PERMISSIONS), { wrapper })
+
+    expect(result.current).toBe(false)
+  })
+
+  it('opens the page on manage_drafts without widening what may be read', () => {
+    expect(DRAFT_PAGE_PERMISSIONS).toEqual([
+      PERMISSIONS.MESSAGING.MANAGE_DRAFTS,
+      ...DRAFT_READ_PERMISSIONS,
+    ])
+    expect(DRAFT_READ_PERMISSIONS).not.toContain(PERMISSIONS.MESSAGING.MANAGE_DRAFTS)
   })
 })

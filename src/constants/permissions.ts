@@ -516,6 +516,20 @@ export const PERMISSION_CATEGORIES = {
 /**
  * Permission descriptions for display in UI
  */
+export const DRAFT_READ_PERMISSIONS = [
+  PERMISSIONS.MESSAGING.SEND_MESSAGE_SMS,
+  PERMISSIONS.MESSAGING.SEND_MESSAGE_VIBER,
+  PERMISSIONS.MESSAGING.SEND_MESSAGE_EMAIL,
+  PERMISSIONS.MESSAGING.LAUNCH_CAMPAIGN_SMS,
+  PERMISSIONS.MESSAGING.LAUNCH_CAMPAIGN_VIBER,
+  PERMISSIONS.MESSAGING.LAUNCH_CAMPAIGN_EMAIL,
+]
+
+export const DRAFT_PAGE_PERMISSIONS = [
+  PERMISSIONS.MESSAGING.MANAGE_DRAFTS,
+  ...DRAFT_READ_PERMISSIONS,
+]
+
 export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   // Credit module (WS-20)
   'credit.applications.read': 'View credit applications and their cards',
@@ -559,7 +573,7 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
 
   // Messaging
   manage_drafts:
-    'Create, edit, and delete messaging drafts, and restore deleted ones. Opening the Message Drafts page and reading the list need a messaging send or launch permission.',
+    'Open the Message Drafts page; create, edit, and delete messaging drafts, restore deleted ones, and view the trash. Reading the draft list itself needs a messaging send or launch permission.',
   view_campaign_analytics:
     'View campaign analytics, campaign recipients, CSV exports, and unified client message history',
   manage_messaging_integrations:
