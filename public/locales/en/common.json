@@ -9544,7 +9544,7 @@
       "deleted": {
         "title": "Deleted drafts"
       },
-      "noReadPermission": "Drafts are readable with a messaging send or launch permission, which this role does not hold. Ask an administrator to grant one."
+      "noReadPermission": "The draft list needs a messaging send or launch permission, which this role does not hold. Ask an administrator to grant one."
     },
     "messagingIntegrations": {
       "description": "Configure provider credentials, enable channels per service, and verify connection health.",
