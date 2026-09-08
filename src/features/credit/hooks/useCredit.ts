@@ -4,11 +4,15 @@
  * Ключи кэша строятся так же, как у клиентов (`clientKeys`): общий корень →
  * списки → детали, чтобы инвалидация после решения била точечно.
  */
+import { useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { creditApi } from '../api/creditApi'
+import { creditApi, newIdempotencyKey } from '../api/creditApi'
 import type {
   CreditApplicationsParams,
   CreditLoansParams,
+  CreditQueueStatus,
+  CreditSwitchName,
+  CreditSwitchPayload,
   ManualDecisionPayload,
 } from '../api/types'
 
@@ -26,6 +30,7 @@ export const creditKeys = {
   loanState: (id: string) => [...creditKeys.loans(), 'state', id] as const,
   loanSchedule: (id: string) => [...creditKeys.loans(), 'schedule', id] as const,
   loanJournal: (id: string) => [...creditKeys.loans(), 'journal', id] as const,
+  switches: () => [...creditKeys.all, 'switches'] as const,
 }
 
 /** Доступность модуля и права роли; молчит об ошибке — раздел просто пуст. */
@@ -51,6 +56,26 @@ export function useCreditApplication(applicationId: string | undefined) {
     queryKey: creditKeys.application(applicationId ?? ''),
     queryFn: () => creditApi.application(applicationId as string),
     enabled: Boolean(applicationId),
+  })
+}
+
+/**
+ * Очередь ручного разбора.
+ *
+ * `status` уходит В ЗАПРОС, а не режет уже полученный список: очередь — это
+ * все referred-решения за всё время, без окна и без границы, и локальный
+ * фильтр показывал бы андеррайтеру подмножество того, что модуль уже успел
+ * прислать. Ручка отдаёт всё одним ответом (`next_cursor` захардкожен `null`),
+ * так что страницы здесь не подключаются — нечего листать.
+ *
+ * `placeholderData` намеренно нет: между «в очереди» и «разобрано» состав
+ * меняется целиком, и придержанный прежний список выглядел бы как ответ на
+ * новый фильтр.
+ */
+export function useCreditUnderwritingQueue(status?: CreditQueueStatus) {
+  return useQuery({
+    queryKey: creditKeys.queue(status),
+    queryFn: () => creditApi.underwritingQueue(status),
   })
 }
 
@@ -156,6 +181,99 @@ export function useCreditManualDecision(applicationId: string) {
       void queryClient.invalidateQueries({ queryKey: creditKeys.application(applicationId) })
       void queryClient.invalidateQueries({ queryKey: creditKeys.applications() })
       void queryClient.invalidateQueries({ queryKey: creditKeys.overview() })
+    },
+  })
+}
+
+/**
+ * Положение рубильников продукта.
+ *
+ * `retry: false` и короткий `staleTime`: рубильник дёргает риск-менеджер в
+ * рабочее время, и раздел должен узнать об этом в пределах минуты, а не после
+ * перезагрузки страницы. Повторов нет намеренно — раздел обязан пережить
+ * недоступность модуля, а не висеть на ретраях.
+ */
+export function useCreditSwitches(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: creditKeys.switches(),
+    queryFn: () => creditApi.switches(),
+    staleTime: 30_000,
+    retry: false,
+    enabled: options?.enabled ?? true,
+  })
+}
+
+/**
+ * Показывать ли раздел кредита в CRM.
+ *
+ * Спрашиваем модуль ТОЛЬКО у тех, кто раздел и так видит по правам: иначе
+ * каждый пользователь CRM ходил бы за положением рубильника в чужой сервис,
+ * которым не пользуется.
+ *
+ * **Отвечаем «показывать» на всё, кроме явного `false`.** Ошибка сети, недоступный
+ * модуль, ещё не пришедший ответ — не повод убирать раздел из меню: пропавший
+ * пункт читается как поломка CRM, а не как решение риск-менеджера. Скрываем
+ * только тогда, когда модуль прямо сказал, что раздел выключен.
+ */
+export function useCreditSectionEnabled(canSeeSection: boolean): boolean {
+  const { data } = useCreditSwitches({ enabled: canSeeSection })
+  return data?.switches.crm_section !== false
+}
+
+/** Переключение рубильника. Право `credit.switches.write` — у риск-менеджера. */
+export function useSetCreditSwitch() {
+  const queryClient = useQueryClient()
+
+  /**
+   * Ключ идемпотентности живёт на ОДНО ДЕЙСТВИЕ пользователя, а не на один
+   * вызов.
+   *
+   * Раньше ключ минтился внутри клиента при каждой отправке, и защита от
+   * повтора не работала вообще: сеть моргнула на ответе, человек нажал ещё
+   * раз — модуль видел новый ключ, выполнял переключение второй раз и писал в
+   * append-only историю вторую запись. История и есть весь наш аудит
+   * рубильников (отдельного журнала нет намеренно), так что дубль в ней —
+   * навсегда, и разобрать потом, было переключение одно или два, уже нельзя.
+   *
+   * Границу действия задаёт его содержание: рубильник + новое положение +
+   * причина. Ту же тройку модуль кладёт в отпечаток тела, поэтому повтор с
+   * сохранённым ключом гарантированно совпадёт по отпечатку и получит реплей,
+   * а не 409. Сменил причину — это уже другое действие, и ключ обязан быть
+   * другим, иначе модуль ответил бы «ключ использован для другого запроса».
+   *
+   * После успеха ключ сбрасываем: следующее такое же переключение (выключил →
+   * включил → снова выключил с той же причиной) — новое действие, и реплей
+   * старого ответа сделал бы рубильник «залипшим».
+   */
+  // КАРТА по имени рубильника, а не одна ячейка. Один вызов хука обслуживает
+  // все три переключателя сразу, и одной ячейки хватало ровно до такого
+  // сценария: A отказал → человек тронул B → повторил A. Ячейка к этому
+  // моменту принадлежит B, повтор A уходит с НОВЫМ ключом, и модуль пишет
+  // вторую строку в append-only историю о переключении, которого не было.
+  // История — весь наш аудит рубильников, дубли в ней и есть то, ради чего
+  // ключ заводился.
+  const attempts = useRef(new Map<CreditSwitchName, { signature: string; key: string }>())
+
+  return useMutation({
+    mutationFn: ({ name, payload }: { name: CreditSwitchName; payload: CreditSwitchPayload }) => {
+      // `?? null`, а не `?? ''`: пустая причина и её отсутствие дают разные
+      // тела запроса, значит и разные отпечатки на стороне модуля.
+      const signature = JSON.stringify([name, payload.enabled, payload.reason ?? null])
+      const previous = attempts.current.get(name)
+      const attempt =
+        previous?.signature === signature
+          ? previous
+          : { signature, key: newIdempotencyKey(`fe-switch:${name}`) }
+      attempts.current.set(name, attempt)
+      return creditApi.setSwitch(name, payload, attempt.key)
+    },
+    onSuccess: (state, variables) => {
+      // Сбрасываем ключ ТОЛЬКО того рубильника, что переключили: соседний мог
+      // в этот момент ждать своего повтора.
+      attempts.current.delete(variables.name)
+      // Ответ уже содержит новое положение обоих рубильников — кладём его в
+      // кэш, чтобы экран не мигал старым значением до перезапроса.
+      queryClient.setQueryData(creditKeys.switches(), state)
     },
   })
 }
