@@ -8657,7 +8657,8 @@
         "contact-tag": "Contact / No contact",
         "communication-gap": "Communication gap",
         "operator-promises": "Operator promises",
-        "outbound-calls": "Outbound calls"
+        "outbound-calls": "Outbound calls",
+        "promises-daily": "Promises till end of month"
       },
       "processing": {
         "dateFrom": "Date from",
@@ -8948,6 +8949,29 @@
         "empty": "No calls for the selected period",
         "forbidden": "You don't have permission to view this report",
         "unavailable": "Employee or call data is temporarily unavailable. Please try again later.",
+        "error": {
+          "title": "Failed to load the report",
+          "retry": "Retry"
+        }
+      },
+      "promisesDaily": {
+        "dateFrom": "Date from",
+        "dateTo": "Date to",
+        "invalidDate": "The date is not a real calendar date — pick a date to replace it",
+        "invalidRange": "Start date is later than end date",
+        "rangeTooLong": "Date range must not exceed 366 days",
+        "wholeMonth": "Whole month",
+        "possiblePayments": "Include possible payments",
+        "columns": {
+          "date": "Date",
+          "noDepartment": "No department",
+          "total": "Total"
+        },
+        "totalsRow": "Whole period",
+        "generatedAt": "Data as of {{value}}",
+        "empty": "No promises for the selected period",
+        "forbidden": "You don't have permission to view this report",
+        "unavailable": "Employee or promise data is temporarily unavailable. Please try again later.",
         "error": {
           "title": "Failed to load the report",
           "retry": "Retry"

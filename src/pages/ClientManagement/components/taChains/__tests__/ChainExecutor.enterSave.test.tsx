@@ -11,168 +11,23 @@
  * button actually on screen, and that Enter reaches the same mutation the
  * button does.
  */
-import { describe, expect, it, vi, afterAll, beforeAll, beforeEach } from 'vitest'
+import { describe, expect, it, afterAll, beforeAll, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-
-const createInteraction = vi.fn().mockResolvedValue({ id: 1 })
-const advanceInstance = vi.fn().mockResolvedValue({})
-
-const chain = {
-  id: 1,
-  name: 'One step chain',
-  description: null,
-  chain_type: 'manual',
-  department_ids: [1],
-  is_active: true,
-  is_system_hidden: false,
-  is_pinned: false,
-  step_count: 1,
-  created_by: 1,
-  created_at: '',
-  updated_at: '',
-  steps: [
-    {
-      id: 10,
-      chain_id: 1,
-      target_action_id: 3,
-      target_action_name: 'Результат',
-      target_action_field_type: 'dropdown',
-      step_order: 1,
-      is_required: false,
-      delay_minutes: 0,
-      not_in_the_past: false,
-      contact_source: null,
-      show_closed_credits: false,
-      position_x: null,
-      position_y: null,
-    },
-  ],
-}
-
-const activeInstance = {
-  id: 9,
-  chain_id: 1,
-  client_id: 100,
-  status: 'active',
-  current_step_order: 1,
-  step_data: {},
-  created_at: '',
-  updated_at: '',
-}
-
-vi.mock('@/features/taInteractions/hooks/useTAInteractions', () => ({
-  useStartChainInstance: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useCreateTAInteraction: () => ({ mutateAsync: createInteraction, isPending: false }),
-  useAdvanceChainInstance: () => ({ mutateAsync: advanceInstance, isPending: false }),
-  useClientChainInstances: () => ({ data: [activeInstance], isLoading: false }),
-  useCancelChainInstance: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useClientPinnedChainIds: () => ({ data: [] }),
-  useRewindChainInstance: () => ({ mutateAsync: vi.fn(), isPending: false }),
-}))
-// Controllable so the two outer render guards — the loading skeleton and the
-// "no chains" message — can be driven; Enter must not save behind either.
-const chainList = { items: [chain] as unknown[], isLoading: false }
-
-vi.mock('@/features/taChains/hooks/useTAChains', () => ({
-  useTAChains: () => ({ data: { items: chainList.items }, isLoading: chainList.isLoading }),
-  useTAChain: () => ({ data: chain }),
-  usePinTAChain: () => ({ mutateAsync: vi.fn() }),
-  useUnpinTAChain: () => ({ mutateAsync: vi.fn() }),
-}))
-vi.mock('@/features/targetActions/hooks/useTargetActions', () => ({
-  useTargetActions: () => ({
-    data: {
-      items: [
-        {
-          id: 3,
-          name: 'Результат',
-          field_type: 'dropdown',
-          is_hidden: false,
-          dropdown_values: [{ id: 7, value: 'Домовленість', sort_order: 0, is_hidden: false }],
-        },
-      ],
-    },
-  }),
-}))
-vi.mock('@/features/chainBuilder/hooks/useChainBuilder', () => ({
-  useBuilderData: () => ({ data: { branches: [], effects: [], blockers: [] } }),
-}))
-vi.mock('@/features/quickPicks/hooks/useQuickPicks', () => ({
-  useQuickPicks: () => ({ data: [] }),
-}))
-vi.mock('@/features/tags/hooks/useTags', () => ({ useTags: () => ({ data: [] }) }))
-vi.mock('@/features/clients/hooks/useClientEmails', () => ({
-  useClientEmails: () => ({ data: [] }),
-}))
-vi.mock('@/features/clients/hooks/useClientPhones', () => ({
-  useClientPhones: () => ({ data: [] }),
-}))
-// Called both with and without a selector in this component, so the mock has
-// to support each form rather than assuming one.
-vi.mock('@/stores/authStore', () => ({
-  useAuthStore: (sel?: (s: unknown) => unknown) => {
-    const state = { user: { active_project_id: '1', timezone: 'Europe/Kiev' } }
-    return sel ? sel(state) : state
-  },
-}))
-vi.mock('@/stores/chainExecutorStore', () => ({
-  useChainExecutorStore: Object.assign(
-    (sel?: (s: unknown) => unknown) => {
-      const state = { minimized: null, setMinimized: vi.fn(), clear: vi.fn() }
-      return sel ? sel(state) : state
-    },
-    { getState: () => ({ minimized: null }) }
-  ),
-}))
-vi.mock('react-i18next', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('react-i18next')>()
-  return {
-    ...actual,
-    // The second argument is a default string in some calls and an
-    // interpolation object in others; only the string form is a default.
-    useTranslation: () => ({
-      t: (k: string, d?: unknown) => (typeof d === 'string' ? d : k),
-      i18n: { language: 'en' },
-    }),
-  }
-})
-vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn(), info: vi.fn() } }))
-
+// Before ../ChainExecutor: this registers the module mocks it is rendered with.
+import {
+  createInteraction,
+  getClientRects,
+  harness,
+  installDomStubs,
+  resetHarness,
+  restoreDomStubs,
+} from './chainExecutorHarness'
 import { ChainExecutor } from '../ChainExecutor'
 
-// Held in a variable so a test can assert it is NOT consulted on ordinary
-// typing — reading layout is the expensive part of the scoping check.
-const getClientRects = vi.fn(() => [{ width: 100, height: 100 }] as unknown as DOMRectList)
-const originalPrototypeMethods = {
-  scrollIntoView: Element.prototype.scrollIntoView,
-  hasPointerCapture: Element.prototype.hasPointerCapture,
-  releasePointerCapture: Element.prototype.releasePointerCapture,
-  setPointerCapture: Element.prototype.setPointerCapture,
-  getClientRects: Element.prototype.getClientRects,
-}
-
-beforeAll(() => {
-  Element.prototype.scrollIntoView = vi.fn()
-  Element.prototype.hasPointerCapture = vi.fn(() => false)
-  Element.prototype.releasePointerCapture = vi.fn()
-  Element.prototype.setPointerCapture = vi.fn()
-  // jsdom lays nothing out, so the panel would read as off screen.
-  Element.prototype.getClientRects = getClientRects
-})
-
-// Restored so these stubs cannot leak if file isolation is ever turned off.
-afterAll(() => {
-  Object.assign(Element.prototype, originalPrototypeMethods)
-})
-
-beforeEach(() => {
-  createInteraction.mockClear()
-  advanceInstance.mockClear()
-  getClientRects.mockClear()
-  chainList.items = [chain]
-  chainList.isLoading = false
-})
+beforeAll(installDomStubs)
+afterAll(restoreDomStubs)
+beforeEach(resetHarness)
 
 /** Wraps the executor the way the client card does: inside a role="dialog". */
 function renderInDialog() {
@@ -240,7 +95,7 @@ describe('ChainExecutor — Enter to save (KAN-974)', () => {
     // `activeChain` can resolve from the by-id query while the LIST is still
     // loading, so the panel shows a skeleton with no Save button — but the
     // wizard state alone would have said "yes, save".
-    chainList.isLoading = true
+    harness.isLoadingChains = true
     const user = userEvent.setup()
     renderInDialog()
 
@@ -254,7 +109,7 @@ describe('ChainExecutor — Enter to save (KAN-974)', () => {
   it('does not save when the operator has no manual chains', async () => {
     // The panel renders a "no chains" message instead of the body; an
     // auto-launched instance can still make the wizard state look savable.
-    chainList.items = []
+    harness.chains = []
     const user = userEvent.setup()
     renderInDialog()
 

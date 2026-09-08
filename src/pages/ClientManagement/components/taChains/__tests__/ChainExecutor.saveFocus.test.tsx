@@ -16,165 +16,24 @@ import { describe, expect, it, vi, afterAll, beforeAll, beforeEach } from 'vites
 import { render, screen, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import userEvent from '@testing-library/user-event'
-
-const createInteraction = vi.fn().mockResolvedValue({ id: 1 })
-const advanceInstance = vi.fn().mockResolvedValue({})
-
-const chain = {
-  id: 1,
-  name: 'One step chain',
-  description: null,
-  chain_type: 'manual',
-  department_ids: [1],
-  is_active: true,
-  is_system_hidden: false,
-  is_pinned: false,
-  step_count: 1,
-  created_by: 1,
-  created_at: '',
-  updated_at: '',
-  steps: [
-    {
-      id: 10,
-      chain_id: 1,
-      target_action_id: 3,
-      target_action_name: 'Результат',
-      target_action_field_type: 'dropdown',
-      step_order: 1,
-      is_required: false,
-      delay_minutes: 0,
-      not_in_the_past: false,
-      contact_source: null,
-      show_closed_credits: false,
-      position_x: null,
-      position_y: null,
-    },
-  ],
-}
-
-const activeInstance = {
-  id: 9,
-  chain_id: 1,
-  client_id: 100,
-  status: 'active',
-  current_step_order: 1,
-  step_data: {},
-  created_at: '',
-  updated_at: '',
-}
-
-vi.mock('@/features/taInteractions/hooks/useTAInteractions', () => ({
-  useStartChainInstance: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useCreateTAInteraction: () => ({ mutateAsync: createInteraction, isPending: false }),
-  useAdvanceChainInstance: () => ({ mutateAsync: advanceInstance, isPending: false }),
-  useClientChainInstances: () => ({ data: [activeInstance], isLoading: false }),
-  useCancelChainInstance: () => ({ mutateAsync: vi.fn(), isPending: false }),
-  useClientPinnedChainIds: () => ({ data: [] }),
-  useRewindChainInstance: () => ({ mutateAsync: vi.fn(), isPending: false }),
-}))
-// Controllable so the two outer render guards — the loading skeleton and the
-// "no chains" message — can be driven; Enter must not save behind either.
-const chainList = { items: [chain] as unknown[], isLoading: false }
-
-vi.mock('@/features/taChains/hooks/useTAChains', () => ({
-  useTAChains: () => ({ data: { items: chainList.items }, isLoading: chainList.isLoading }),
-  useTAChain: () => ({ data: chain }),
-  usePinTAChain: () => ({ mutateAsync: vi.fn() }),
-  useUnpinTAChain: () => ({ mutateAsync: vi.fn() }),
-}))
-vi.mock('@/features/targetActions/hooks/useTargetActions', () => ({
-  useTargetActions: () => ({
-    data: {
-      items: [
-        {
-          id: 3,
-          name: 'Результат',
-          field_type: 'dropdown',
-          is_hidden: false,
-          dropdown_values: [{ id: 7, value: 'Домовленість', sort_order: 0, is_hidden: false }],
-        },
-      ],
-    },
-  }),
-}))
-vi.mock('@/features/chainBuilder/hooks/useChainBuilder', () => ({
-  useBuilderData: () => ({ data: { branches: [], effects: [], blockers: [] } }),
-}))
-vi.mock('@/features/quickPicks/hooks/useQuickPicks', () => ({
-  useQuickPicks: () => ({ data: [] }),
-}))
-vi.mock('@/features/tags/hooks/useTags', () => ({ useTags: () => ({ data: [] }) }))
-vi.mock('@/features/clients/hooks/useClientEmails', () => ({
-  useClientEmails: () => ({ data: [] }),
-}))
-vi.mock('@/features/clients/hooks/useClientPhones', () => ({
-  useClientPhones: () => ({ data: [] }),
-}))
-// Called both with and without a selector in this component, so the mock has
-// to support each form rather than assuming one.
-vi.mock('@/stores/authStore', () => ({
-  useAuthStore: (sel?: (s: unknown) => unknown) => {
-    const state = { user: { active_project_id: '1', timezone: 'Europe/Kiev' } }
-    return sel ? sel(state) : state
-  },
-}))
-vi.mock('@/stores/chainExecutorStore', () => ({
-  useChainExecutorStore: Object.assign(
-    (sel?: (s: unknown) => unknown) => {
-      const state = { minimized: null, setMinimized: vi.fn(), clear: vi.fn() }
-      return sel ? sel(state) : state
-    },
-    { getState: () => ({ minimized: null }) }
-  ),
-}))
-vi.mock('react-i18next', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('react-i18next')>()
-  return {
-    ...actual,
-    // The second argument is a default string in some calls and an
-    // interpolation object in others; only the string form is a default.
-    useTranslation: () => ({
-      t: (k: string, d?: unknown) => (typeof d === 'string' ? d : k),
-      i18n: { language: 'en' },
-    }),
-  }
-})
-vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn(), info: vi.fn() } }))
-
+// Before ../ChainExecutor: this registers the module mocks it is rendered with.
+import {
+  createInteraction,
+  harness,
+  installDomStubs,
+  resetHarness,
+  restoreDomStubs,
+  scrollIntoView,
+  twoStepChain,
+} from './chainExecutorHarness'
 import { ChainExecutor } from '../ChainExecutor'
 
-// Held in a variable so a test can assert it is NOT consulted on ordinary
-// typing — reading layout is the expensive part of the scoping check.
-const getClientRects = vi.fn(() => [{ width: 100, height: 100 }] as unknown as DOMRectList)
-const originalPrototypeMethods = {
-  scrollIntoView: Element.prototype.scrollIntoView,
-  hasPointerCapture: Element.prototype.hasPointerCapture,
-  releasePointerCapture: Element.prototype.releasePointerCapture,
-  setPointerCapture: Element.prototype.setPointerCapture,
-  getClientRects: Element.prototype.getClientRects,
-}
+beforeAll(installDomStubs)
+afterAll(restoreDomStubs)
+beforeEach(resetHarness)
 
-beforeAll(() => {
-  Element.prototype.scrollIntoView = vi.fn()
-  Element.prototype.hasPointerCapture = vi.fn(() => false)
-  Element.prototype.releasePointerCapture = vi.fn()
-  Element.prototype.setPointerCapture = vi.fn()
-  // jsdom lays nothing out, so the panel would read as off screen.
-  Element.prototype.getClientRects = getClientRects
-})
-
-// Restored so these stubs cannot leak if file isolation is ever turned off.
-afterAll(() => {
-  Object.assign(Element.prototype, originalPrototypeMethods)
-})
-
-beforeEach(() => {
-  createInteraction.mockClear()
-  advanceInstance.mockClear()
-  getClientRects.mockClear()
-  chainList.items = [chain]
-  chainList.isLoading = false
-})
+const findSave = () => screen.findByRole('button', { name: /saveInteraction/i })
+const panel = () => document.querySelector('[data-ta-panel]') as HTMLDivElement
 
 /**
  * Reproduces the real opening sequence in two mounts.
@@ -187,17 +46,17 @@ beforeEach(() => {
  * Rendering both at once would be wrong in a way that HIDES the bug: the
  * executor mounts and focuses Save before the test can put focus on Minimize,
  * so the assertion would pass against code that does nothing.
+ *
+ * `rerender()` builds a FRESH element every call. Re-passing the identical one
+ * lets React bail out of the render entirely, which is how the earlier version
+ * of the latch test came to pass against a build with no latch in it.
  */
 function openModal(initialTemplateId: number | null = null) {
-  const chrome = (
-    <>
-      <button data-testid="minimize" aria-label="Minimize modal" />
-      <button data-testid="close" aria-label="Close modal" />
-    </>
-  )
+  const onMinimize = vi.fn()
   const shell = (children: ReactNode) => (
     <div role="dialog" tabIndex={-1} data-testid="dialog">
-      {chrome}
+      <button data-testid="minimize" aria-label="Minimize modal" onClick={onMinimize} />
+      <button data-testid="close" aria-label="Close modal" />
       {children}
     </div>
   )
@@ -207,34 +66,84 @@ function openModal(initialTemplateId: number | null = null) {
   minimize.focus()
   expect(document.activeElement).toBe(minimize)
 
-  const withExecutor = shell(
-    <ChainExecutor clientId={100} clientName="Test client" initialTemplateId={initialTemplateId} />
-  )
-  rerender(withExecutor)
+  const mount = () =>
+    rerender(
+      shell(
+        <ChainExecutor
+          clientId={100}
+          clientName="Test client"
+          initialTemplateId={initialTemplateId}
+        />
+      )
+    )
+  mount()
 
-  return { minimize, rerender: () => rerender(withExecutor) }
+  return { minimize, onMinimize, rerender: mount }
+}
+
+/**
+ * Drives `canSaveOnEnter` false and back to true, the way a save in flight
+ * does. That is a real change in the opening-focus effect's dependency array,
+ * so the effect actually re-runs — without it a re-render proves nothing about
+ * whether focus would be grabbed a second time.
+ */
+async function cycleSaveAvailability(rerender: () => void) {
+  harness.createPending = true
+  rerender()
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: /saveInteraction/i })).toBeDisabled()
+  )
+  harness.createPending = false
+  rerender()
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: /saveInteraction/i })).toBeEnabled()
+  )
 }
 
 describe('ChainExecutor — opening focus (KAN-1067)', () => {
   it('moves focus off Minimize and onto Save for a hotkey launch', async () => {
     const { minimize } = openModal(5)
 
-    const save = await screen.findByRole('button', { name: /saveInteraction/i })
+    const save = await findSave()
     await waitFor(() => expect(document.activeElement).toBe(save))
     expect(document.activeElement).not.toBe(minimize)
   })
 
   it('so the first Enter saves instead of minimizing', async () => {
     const user = userEvent.setup()
-    openModal(5)
+    const { onMinimize } = openModal(5)
 
-    const save = await screen.findByRole('button', { name: /saveInteraction/i })
+    const save = await findSave()
     await waitFor(() => expect(document.activeElement).toBe(save))
 
     // No click, no tab — the operator's very first keystroke, which is the
     // whole complaint in the ticket.
     await user.keyboard('{Enter}')
     await waitFor(() => expect(createInteraction).toHaveBeenCalledTimes(1))
+    expect(onMinimize).not.toHaveBeenCalled()
+  })
+
+  it('focuses Save without dragging the modal body down to it', async () => {
+    // Save is the last element of a column inside ModalContent, which is
+    // `overflow-auto max-h-[calc(90vh-140px)]`. A plain focus() scrolls that
+    // container to the bottom, so a panel taller than the viewport would open
+    // on the end of a form the operator has not filled in yet.
+    const focusSpy = vi.spyOn(HTMLElement.prototype, 'focus')
+    try {
+      openModal(5)
+      const save = await findSave()
+      await waitFor(() => expect(document.activeElement).toBe(save))
+
+      const saveFocusIndex = focusSpy.mock.contexts.indexOf(save)
+      expect(saveFocusIndex).toBeGreaterThanOrEqual(0)
+      expect(focusSpy.mock.calls[saveFocusIndex][0]).toEqual({ preventScroll: true })
+    } finally {
+      focusSpy.mockRestore()
+    }
+
+    // ...and the panel is brought to its own top instead, so the form still
+    // reads from the beginning.
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'start' })
   })
 
   it('leaves a manual open alone', async () => {
@@ -242,40 +151,74 @@ describe('ChainExecutor — opening focus (KAN-1067)', () => {
     // and moving it here would be a new bug rather than a fix.
     const { minimize } = openModal(null)
 
-    await screen.findByRole('button', { name: /saveInteraction/i })
+    await findSave()
     await waitFor(() => expect(document.activeElement).toBe(minimize))
   })
 
-  it('does not grab focus again once the operator has moved on', async () => {
-    // Latched to the opening. Save comes and goes as the wizard advances, and
-    // re-focusing it on every reappearance would yank the caret out of
-    // whatever the operator is typing in.
+  it('does not pull the caret out of a field when Save comes back', async () => {
+    // Save comes and goes as the wizard advances and as a save flies. Focus
+    // the operator has moved INTO the panel is theirs; re-focusing Save on
+    // every reappearance would interrupt whatever they are typing.
     const { rerender } = openModal(5)
 
-    const save = await screen.findByRole('button', { name: /saveInteraction/i })
+    const save = await findSave()
     await waitFor(() => expect(document.activeElement).toBe(save))
 
     const notes = document.querySelector('[data-ta-notes]') as HTMLTextAreaElement
     expect(notes).toBeTruthy()
     notes.focus()
-    rerender()
+    await cycleSaveAvailability(rerender)
 
-    await waitFor(() => expect(document.activeElement).toBe(notes))
+    expect(document.activeElement).toBe(notes)
+  })
+
+  it('does not chase focus back once the operator has left the panel', async () => {
+    // The latch, on its own. Focus outside the panel is exactly what the
+    // opening effect exists to correct, so the "operator got there first"
+    // guard does NOT cover this case — only the once-per-mount latch does.
+    // An operator who tabbed back to Minimize while a save was in flight must
+    // not have the caret yanked to Save when the button re-enables.
+    const { minimize, rerender } = openModal(5)
+
+    const save = await findSave()
+    await waitFor(() => expect(document.activeElement).toBe(save))
+
+    minimize.focus()
+    await cycleSaveAvailability(rerender)
+
+    expect(document.activeElement).toBe(minimize)
+  })
+
+  it('still moves focus off Minimize when the chain has more steps to go', async () => {
+    // `canSaveOnEnter` needs `isLastStep`, so on step 1 of 2 there is no Save
+    // button to focus. Leaving the caret where Radix put it would leave the
+    // ticket's complaint intact for every multi-step chain, so focus is parked
+    // on the panel itself: focusable, but nothing Enter can activate.
+    harness.chain = twoStepChain
+    harness.chains = [twoStepChain]
+    const user = userEvent.setup()
+    const { minimize, onMinimize } = openModal(5)
+
+    await waitFor(() => expect(panel()).toBeInTheDocument())
+    expect(screen.queryByRole('button', { name: /saveInteraction/i })).not.toBeInTheDocument()
+
+    await waitFor(() => expect(document.activeElement).toBe(panel()))
+    expect(document.activeElement).not.toBe(minimize)
+
+    // The point of all of it: the first Enter no longer minimizes the modal,
+    // and it does not save from a step that has no Save either.
+    await user.keyboard('{Enter}')
+    expect(onMinimize).not.toHaveBeenCalled()
+    expect(createInteraction).not.toHaveBeenCalled()
   })
 
   it('still lets Minimize be clicked normally', async () => {
     // Fourth criterion: the button keeps working, it just no longer starts
     // with the caret on it.
     const user = userEvent.setup()
-    const onMinimize = vi.fn()
-    render(
-      <div role="dialog" tabIndex={-1}>
-        <button data-testid="minimize" aria-label="Minimize modal" onClick={onMinimize} />
-        <ChainExecutor clientId={100} clientName="Test client" initialTemplateId={5} />
-      </div>
-    )
+    const { onMinimize } = openModal(5)
 
-    await screen.findByRole('button', { name: /saveInteraction/i })
+    await findSave()
     await user.click(screen.getByTestId('minimize'))
     expect(onMinimize).toHaveBeenCalledTimes(1)
   })
