@@ -249,7 +249,7 @@ export function CallLogCard({
             </>
           ) : (
             <>
-              <div className="flex min-w-0 shrink-0 items-center gap-2">
+              <div className="flex min-w-0 items-center gap-2">
                 <span
                   className={cn(
                     'flex h-3 w-3 shrink-0 items-center justify-center rounded-full',
@@ -261,6 +261,14 @@ export function CallLogCard({
                 <span className={cn('shrink-0 text-sm', palette.text)}>
                   {status ? translatedStatus : ''}
                 </span>
+                {phone && phone !== '-' && (
+                  <span className="text-muted-foreground min-w-0 truncate text-sm">
+                    {phone}
+                    {destinationOwnerLabel ? (
+                      <span className="text-muted-foreground"> · {destinationOwnerLabel}</span>
+                    ) : null}
+                  </span>
+                )}
               </div>
 
               <div className="text-foreground truncate text-sm font-bold">
@@ -270,14 +278,6 @@ export function CallLogCard({
               <div className="text-muted-foreground line-clamp-2 overflow-hidden text-sm break-words">
                 {message}
               </div>
-              {phone && phone !== '-' && (
-                <div className="text-muted-foreground truncate text-sm">
-                  {phone}
-                  {destinationOwnerLabel ? (
-                    <span className="text-muted-foreground"> · {destinationOwnerLabel}</span>
-                  ) : null}
-                </div>
-              )}
             </>
           )}
         </div>
