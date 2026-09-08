@@ -513,9 +513,6 @@ export const PERMISSION_CATEGORIES = {
   AI_ASSISTANT: 'AI Assistant',
 } as const
 
-/**
- * Permission descriptions for display in UI
- */
 export const DRAFT_READ_PERMISSIONS = [
   PERMISSIONS.MESSAGING.SEND_MESSAGE_SMS,
   PERMISSIONS.MESSAGING.SEND_MESSAGE_VIBER,
@@ -530,6 +527,9 @@ export const DRAFT_PAGE_PERMISSIONS = [
   ...DRAFT_READ_PERMISSIONS,
 ]
 
+/**
+ * Permission descriptions for display in UI
+ */
 export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   // Credit module (WS-20)
   'credit.applications.read': 'View credit applications and their cards',

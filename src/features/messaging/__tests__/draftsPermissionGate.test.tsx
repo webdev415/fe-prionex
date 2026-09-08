@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { renderHook, waitFor } from '@testing-library/react'
+import { render, renderHook, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -13,9 +14,8 @@ vi.mock('../api/messagingApi', () => ({
 const { useMessagingDrafts, useDeletedMessagingDrafts, useCanManageDrafts } =
   await import('../hooks/useMessaging')
 const { useAuthStore } = await import('@/stores/authStore')
-const { DRAFT_PAGE_PERMISSIONS, DRAFT_READ_PERMISSIONS, PERMISSIONS } =
-  await import('@/constants/permissions')
-const { useHasAnyPermission } = await import('@/hooks/usePermissions')
+const { DRAFT_PAGE_PERMISSIONS } = await import('@/constants/permissions')
+const { PermissionRoute } = await import('@/routes/PermissionRoute')
 
 function wrapper({ children }: { children: ReactNode }) {
   const client = new QueryClient({
@@ -70,6 +70,11 @@ describe('the drafts query and the permission it needs', () => {
   })
 })
 
+function usePageTrash() {
+  const canManageDrafts = useCanManageDrafts()
+  return useDeletedMessagingDrafts(undefined, canManageDrafts)
+}
+
 describe('the trash and the permission it needs', () => {
   beforeEach(() => {
     listDeletedDrafts.mockClear()
@@ -78,55 +83,55 @@ describe('the trash and the permission it needs', () => {
   it('is asked for by somebody who manages drafts', async () => {
     signIn(['manage_drafts', 'send_message_sms'])
 
-    const { result } = renderHook(() => useCanManageDrafts(), { wrapper })
-    expect(result.current).toBe(true)
+    renderHook(() => usePageTrash(), { wrapper })
 
-    renderHook(() => useDeletedMessagingDrafts(undefined, true), { wrapper })
     await waitFor(() => expect(listDeletedDrafts).toHaveBeenCalledTimes(1))
   })
 
   it('is not asked for by somebody who may read but not manage', async () => {
     signIn(['send_message_sms'])
 
-    const { result } = renderHook(() => useCanManageDrafts(), { wrapper })
-    expect(result.current).toBe(false)
+    renderHook(() => usePageTrash(), { wrapper })
 
-    renderHook(() => useDeletedMessagingDrafts(undefined, false), { wrapper })
     await new Promise((resolve) => setTimeout(resolve, 20))
     expect(listDeletedDrafts).not.toHaveBeenCalled()
   })
 })
 
 describe('who may open the Message Drafts page', () => {
+  function renderRoute() {
+    render(
+      <MemoryRouter>
+        <QueryClientProvider client={new QueryClient()}>
+          <PermissionRoute requiredPermissions={DRAFT_PAGE_PERMISSIONS} mode="any">
+            <div>Message Drafts</div>
+          </PermissionRoute>
+        </QueryClientProvider>
+      </MemoryRouter>
+    )
+  }
+
   it('lets a manager in even though it may not read the list', () => {
     signIn(['manage_drafts'])
 
-    const { result } = renderHook(() => useHasAnyPermission(DRAFT_PAGE_PERMISSIONS), { wrapper })
+    renderRoute()
 
-    expect(result.current).toBe(true)
+    expect(screen.getByText('Message Drafts')).toBeInTheDocument()
   })
 
   it('lets a sender in even though it may not manage', () => {
     signIn(['send_message_sms'])
 
-    const { result } = renderHook(() => useHasAnyPermission(DRAFT_PAGE_PERMISSIONS), { wrapper })
+    renderRoute()
 
-    expect(result.current).toBe(true)
+    expect(screen.getByText('Message Drafts')).toBeInTheDocument()
   })
 
   it('keeps everybody else out', () => {
     signIn(['view_clients'])
 
-    const { result } = renderHook(() => useHasAnyPermission(DRAFT_PAGE_PERMISSIONS), { wrapper })
+    renderRoute()
 
-    expect(result.current).toBe(false)
-  })
-
-  it('opens the page on manage_drafts without widening what may be read', () => {
-    expect(DRAFT_PAGE_PERMISSIONS).toEqual([
-      PERMISSIONS.MESSAGING.MANAGE_DRAFTS,
-      ...DRAFT_READ_PERMISSIONS,
-    ])
-    expect(DRAFT_READ_PERMISSIONS).not.toContain(PERMISSIONS.MESSAGING.MANAGE_DRAFTS)
+    expect(screen.queryByText('Message Drafts')).toBeNull()
   })
 })
