@@ -626,7 +626,6 @@ export function MessagingDraftsPage() {
         total={deletedDrafts.data?.total ?? 0}
         columns={deletedColumns}
         title={t('pages.messagingDrafts.deleted.title', 'Deleted drafts')}
-        hint={canReadDrafts ? undefined : t('pages.messagingDrafts.deleted.manageOnlyHint')}
       />
 
       <DraftFormModal

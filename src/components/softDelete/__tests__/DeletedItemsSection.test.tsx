@@ -60,21 +60,4 @@ describe('DeletedItemsSection', () => {
     )
     expect(screen.getByRole('region', { name: 'Deleted templates' })).toBeInTheDocument()
   })
-
-  it('lets a page replace the hint with its own', () => {
-    render(
-      <DeletedItemsSection
-        items={[{ id: 1, name: 'Reminder' }]}
-        total={1}
-        columns={columns}
-        title="Deleted drafts"
-        hint="Deleted drafts stay visible with the manage drafts permission."
-      />
-    )
-
-    expect(
-      screen.getByText('Deleted drafts stay visible with the manage drafts permission.')
-    ).toBeInTheDocument()
-    expect(screen.queryByText(/can still be restored until the date shown/)).toBeNull()
-  })
 })
