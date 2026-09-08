@@ -43,13 +43,11 @@ describe('a message card in the Call/SMS history', () => {
     expect(screen.getAllByText(/\+380501234567/)).toHaveLength(1)
   })
 
-  it('keeps the owner alongside the number it belongs to', () => {
-    renderMessageCard({ destinationOwnerLabel: 'Referrer' })
+  it('gives the number the whole line rather than sharing it with a label', () => {
+    renderMessageCard({ phone: '+380501234567' })
 
-    const status = screen.getByText('Delivered')
-    const owner = screen.getByText(/Referrer/)
-
-    expect(status.parentElement?.contains(owner)).toBe(true)
+    expect(screen.getByText('+380501234567')).toBeInTheDocument()
+    expect(screen.queryByText(/·/)).toBeNull()
   })
 
   it('leaves the rest of the card alone', () => {
