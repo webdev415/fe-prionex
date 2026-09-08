@@ -1643,7 +1643,7 @@ export function ChainExecutor({
     return () => document.removeEventListener('keydown', onKeyDown)
   }, [])
 
-  // KAN-1067 — a hotkey launch must land focus on Save, not Minimize.
+  // KAN-1067 — a hotkey launch must land focus inside the panel, not on Minimize.
   //
   // The Minimize button is the first focusable element in the dialog
   // (ClientDetailPage renders it above <ModalContent>), and Modal.tsx passes
@@ -1655,45 +1655,87 @@ export function ChainExecutor({
   //
   // Fixed here rather than in Modal.tsx on purpose: an `onOpenAutoFocus` on
   // the shared Modal would change where focus lands in EVERY dialog in the
-  // product, and only this one has a Save that is ready the moment it opens.
+  // product, and only this one knows whether its Save is ready yet.
   //
   // Gated on `initialTemplateId` — the hotkey's own marker (KAN-973). A manual
   // open has the operator picking a template and filling fields, which moves
   // focus into the panel by itself; the ticket is explicit that those flows
   // must not change.
   //
-  // One ref serves both Save buttons: the body renders
-  // `activeInstance ? wizard : isInstantMode ? instant : preview`, so at most
-  // one of them is mounted at a time.
-  const saveButtonRef = useRef<HTMLButtonElement | null>(null)
-  const saveFocusedRef = useRef(false)
+  // A ref per Save button rather than one shared between them. The body
+  // renders `activeInstance ? wizard : isInstantMode ? instant : preview`, so
+  // only one is ever mounted — but with a single ref that exclusivity is an
+  // invariant asserted in a comment and relied on 900 lines away, and a future
+  // change that renders both would let React's commit order silently pick the
+  // button. Two refs and an explicit choice below fail visibly instead.
+  const wizardSaveRef = useRef<HTMLButtonElement | null>(null)
+  const instantSaveRef = useRef<HTMLButtonElement | null>(null)
+  // 'pending' — nothing done yet. 'parked' — focus sits on the panel container
+  // because Save was not mounted yet, and may still be upgraded to Save.
+  // 'done' — the opening decision is made and this effect stays out of it.
+  const openFocusRef = useRef<'pending' | 'parked' | 'done'>('pending')
   useEffect(() => {
     // Latched: Save comes and goes as the wizard advances, and re-focusing it
     // every time it reappears would yank the caret away from an operator who
     // has moved on. This is about where focus STARTS, once per mount.
-    if (saveFocusedRef.current) return
+    if (openFocusRef.current === 'done') return
     if (initialTemplateId === null) return
-    if (!canSaveOnEnter) return
-
-    const button = saveButtonRef.current
-    if (!button) return
-
-    saveFocusedRef.current = true
 
     // The operator got there first — clicked or tabbed into the panel while
     // the chain was starting. Their caret wins; ours would be a surprise
     // mid-typing. Focus still parked on Minimize/Close sits OUTSIDE the panel
     // (those buttons are the modal's, not this component's), which is exactly
-    // the case this exists to correct.
+    // the case this exists to correct. Focus we parked on the panel container
+    // ourselves is not the operator's doing, so it does not count.
     const active = document.activeElement
-    if (active instanceof Node && panelRef.current?.contains(active)) return
+    const inPanel = active instanceof Node && panelRef.current?.contains(active)
+    if (inPanel && !(openFocusRef.current === 'parked' && active === panelRef.current)) {
+      openFocusRef.current = 'done'
+      return
+    }
 
-    button.focus()
-  }, [initialTemplateId, canSaveOnEnter])
+    const saveButton = canSaveOnEnter ? (wizardSaveRef.current ?? instantSaveRef.current) : null
+    if (saveButton) {
+      openFocusRef.current = 'done'
+      // `preventScroll` because Save is the last element of a column inside
+      // ModalContent, which is `overflow-auto max-h-[calc(90vh-140px)]`: a
+      // default focus() scrolls that container to the bottom, so on a panel
+      // taller than the viewport the operator opens onto the end of a form
+      // they have not filled in yet. Focus goes to Save, the view stays at the
+      // top of the panel — Enter still saves, and the fields are still read in
+      // order.
+      saveButton.focus({ preventScroll: true })
+      panelRef.current?.scrollIntoView({ block: 'start' })
+      return
+    }
+
+    // Save is not on screen yet — the usual case for a multi-step chain, where
+    // `canSaveOnEnter` needs `isLastStep`. Leaving focus alone would leave it
+    // on Minimize and the operator's first Enter would minimise the modal:
+    // the ticket's exact complaint, narrowed to longer chains. So park the
+    // caret on the panel container, which is focusable but not activatable —
+    // Enter there does nothing rather than the wrong thing.
+    //
+    // Not latched to 'done': if Save appears before the operator touches
+    // anything (a single-step chain whose instance was still loading on the
+    // first pass), the next run upgrades this to the real target.
+    if (isPanelBodyRendered && panelRef.current) {
+      openFocusRef.current = 'parked'
+      panelRef.current.focus({ preventScroll: true })
+    }
+  }, [initialTemplateId, canSaveOnEnter, isPanelBodyRendered])
 
   // --- Unified panel: chain selector at top, body below adapts ---
   return (
-    <div ref={panelRef} className="flex w-full flex-col gap-4">
+    <div
+      ref={panelRef}
+      // tabIndex/-1 so a hotkey launch can park the caret here when Save is not
+      // mounted yet; not reachable by Tab, and no ring, because this is a
+      // holding spot rather than a control.
+      tabIndex={-1}
+      data-ta-panel
+      className="flex w-full flex-col gap-4 outline-none"
+    >
       {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-foreground text-base font-semibold">
@@ -2598,7 +2640,7 @@ export function ChainExecutor({
 
                 {!isFinalizing && !isAutoAdvancing && !isDelayBlocked && isLastStep && (
                   <Button
-                    ref={saveButtonRef}
+                    ref={wizardSaveRef}
                     variant="primary"
                     onClick={handleSave}
                     disabled={createIntMut.isPending || advanceMut.isPending}
@@ -2781,7 +2823,7 @@ export function ChainExecutor({
                 </label>
               )}
               <Button
-                ref={saveButtonRef}
+                ref={instantSaveRef}
                 variant="primary"
                 onClick={handleInstantSave}
                 disabled={instantSubmitting}

@@ -13,6 +13,16 @@ import path from 'path'
 // inherit this env) so ICU resolves to en-US everywhere — matching CI exactly.
 process.env.LC_ALL = 'C.UTF-8'
 
+// Pin the test-run timezone for the same reason: `new Date(...)` and every
+// local-date read (getFullYear/getMonth/getDate) resolve against the process
+// zone, so a suite that is green on a UTC/Kyiv machine can fail west of
+// Greenwich (a bare "YYYY-MM-DD" parses as UTC midnight = the previous local
+// day). Defaulted, not forced: with TZ unset (the usual case — CI and dev
+// boxes alike) every run agrees on UTC, while an EXPLICIT
+// `TZ=America/New_York npx vitest run …` still works as the way to hunt for
+// exactly this class of bug.
+process.env.TZ ??= 'UTC'
+
 export default defineConfig({
   plugins: [react()],
   test: {
