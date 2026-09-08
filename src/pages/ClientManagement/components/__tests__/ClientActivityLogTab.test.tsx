@@ -38,10 +38,22 @@ vi.mock('react-i18next', () => ({
         'pages.clients.detail.activityLog.sources.calls': 'Calls',
         'pages.clients.detail.activityLog.filters.allOperators': 'All operators',
         'pages.clients.detail.activityLog.filters.reset': 'Reset',
+        'pages.clients.detail.activityLog.entryCount': '{{count}} entries',
         'pages.clients.detail.tabs.docs': 'Docs',
         'pages.clients.detail.tabs.callSms': 'Call / SMS',
+        // The pagination control names its page buttons through aria-label, so
+        // without these every button would answer to the same bare key.
+        'components.pagination.goToPage': 'Go to page {{page}}',
+        'components.pagination.previousPage': 'Previous page',
+        'components.pagination.nextPage': 'Next page',
       }
-      let out = table[key] ?? (typeof opts === 'string' ? opts : key)
+      const fallback =
+        opts && typeof opts === 'object' && typeof opts.defaultValue === 'string'
+          ? opts.defaultValue
+          : typeof opts === 'string'
+            ? opts
+            : key
+      let out = table[key] ?? fallback
       if (opts && typeof opts === 'object') {
         for (const [k, v] of Object.entries(opts)) {
           out = out.replace(new RegExp(`{{\\s*${k}\\s*}}`, 'g'), String(v))
@@ -75,11 +87,27 @@ function renderTab() {
 }
 
 function response(over: Partial<ActivityLogResponse> = {}): ActivityLogResponse {
-  return { client_id: 2, entries: [], degraded: [], ...over }
+  const entries = over.entries ?? []
+  return {
+    client_id: 2,
+    entries: [],
+    degraded: [],
+    // Enough for one page unless a test says otherwise, so the pagination
+    // control stays out of the way of assertions that are not about it.
+    total: entries.length,
+    page: 1,
+    page_size: 50,
+    ...over,
+  }
 }
+
+let nextEntryId = 0
 
 function entry(over: Partial<ActivityLogResponse['entries'][number]> = {}) {
   return {
+    // Unique per call: the list keys on it, and duplicate keys would collapse
+    // rows the test expects to count.
+    id: `events:${nextEntryId++}`,
     ts: '2026-09-01T10:00:00Z',
     source: 'events' as const,
     kind: 'client_card_open',
@@ -209,5 +237,80 @@ describe('ClientActivityLogTab', () => {
       </QueryClientProvider>
     )
     expect(getSpy).not.toHaveBeenCalled()
+  })
+
+  it('says how much history sits behind the filters', async () => {
+    // Without it the operator has to page to the end to learn how much there
+    // is, which is the question the bar should answer before they start.
+    getSpy.mockResolvedValue(response({ entries: [entry()], total: 639 }))
+    renderTab()
+    expect(await screen.findByText('639 entries')).toBeVisible()
+  })
+
+  it('keeps Reset in place instead of making the row jump', async () => {
+    // Rendering it only once a filter was active shifted every other control
+    // sideways the moment someone picked a date.
+    getSpy.mockResolvedValue(response({ entries: [entry()], total: 1 }))
+    renderTab()
+    const reset = await screen.findByRole('button', { name: 'Reset' })
+    expect(reset).toBeVisible()
+    expect(reset).toBeDisabled()
+  })
+
+  it('offers the rest of the history rather than ending at the first page', async () => {
+    // The feed used to stop at its page size and say nothing about the rest,
+    // so a client with 500 entries looked like a client with 200.
+    getSpy.mockResolvedValue(response({ entries: [entry()], total: 500, page: 1, page_size: 50 }))
+    renderTab()
+
+    // 500 / 50 = 10 pages, so a page 10 must be reachable.
+    expect(await screen.findByRole('button', { name: 'Go to page 10' })).toBeVisible()
+  })
+
+  it('hides the control when everything already fits on one page', async () => {
+    getSpy.mockResolvedValue(response({ entries: [entry()], total: 1 }))
+    renderTab()
+    await screen.findByText('Opened the client card')
+    expect(screen.queryByRole('button', { name: 'Go to page 1' })).toBeNull()
+  })
+
+  it('asks the server for the page the operator picked', async () => {
+    getSpy.mockResolvedValue(response({ entries: [entry()], total: 500, page: 1, page_size: 50 }))
+    renderTab()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Go to page 2' }))
+
+    // Paging is server-side: three sources with independent clocks cannot be
+    // sliced in the browser, so the page number has to reach the endpoint.
+    await waitFor(() =>
+      expect(getSpy).toHaveBeenCalledWith(2, expect.objectContaining({ page: 2 }))
+    )
+  })
+
+  it('returns to page one when a filter changes', async () => {
+    // Narrowing the feed while on a deep page lands on a page the filtered
+    // result no longer has, which renders as "no activity" and reads as a bug.
+    getSpy.mockResolvedValue(response({ entries: [entry()], total: 500, page: 1, page_size: 50 }))
+    renderTab()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Go to page 3' }))
+    await waitFor(() =>
+      expect(getSpy).toHaveBeenCalledWith(2, expect.objectContaining({ page: 3 }))
+    )
+
+    getSpy.mockClear()
+    // Two comboboxes are on screen once paging shows: the operator filter and
+    // the page-size picker. Pick the one showing the operator placeholder.
+    const operatorSelect = screen
+      .getAllByRole('combobox')
+      .find((el) => el.textContent?.includes('All operators'))
+    expect(operatorSelect).toBeDefined()
+    await userEvent.click(operatorSelect!)
+    await userEvent.click(await screen.findByRole('option', { name: 'Seven Operator' }))
+
+    await waitFor(() =>
+      expect(getSpy).toHaveBeenCalledWith(2, expect.objectContaining({ page: 1 }))
+    )
+    expect(getSpy).not.toHaveBeenCalledWith(2, expect.objectContaining({ page: 3 }))
   })
 })

@@ -4,7 +4,7 @@
  * Displays customer debt summary with payment progress and payment history.
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   convertUTCToUserTimezone,
@@ -13,6 +13,7 @@ import {
   formatMoneyUAHTwoDecimals,
 } from '@/lib/formatters'
 import { useAuthStore } from '@/stores/authStore'
+import { useTrackEvent } from '@/features/operatorAnalytics'
 import { useParams, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
@@ -181,6 +182,48 @@ export function DebtSummaryPage() {
   const { mutate: reassignEmployeeMutation, isPending: isReassigning } =
     useReassignPaymentAssignedUser()
   const [isReassignModalOpen, setIsReassignModalOpen] = useState(false)
+
+  // The payment modals this page owns. Audit only hears about the ones that
+  // succeed -- a form opened and abandoned leaves no trace at all, and the
+  // details view leaves none either, though it is where an operator reads a
+  // client's whole debt breakdown. That gap is what this closes. Same event
+  // type the client card emits, so the activity feed renders them identically.
+  // No edit modal here: this page never gained one.
+  //
+  // ``record_payment`` uses the same key the client card emits. The modal is
+  // mounted on both, so keying them apart would split one action into two
+  // names in the feed for no reason an operator could see.
+  const trackEvent = useTrackEvent()
+  const previousPaymentModalFlags = useRef<Record<string, boolean> | null>(null)
+  const paymentModalFlags = useMemo(
+    () => ({
+      payment_details: isPaymentDetailsModalOpen,
+      record_payment: isRecordPaymentModalOpen,
+      cancel_payment: isCancelModalOpen,
+      reassign_payment: isReassignModalOpen,
+      verify_payment: isVerificationModalOpen,
+    }),
+    [
+      isPaymentDetailsModalOpen,
+      isRecordPaymentModalOpen,
+      isCancelModalOpen,
+      isReassignModalOpen,
+      isVerificationModalOpen,
+    ]
+  )
+
+  useEffect(() => {
+    if (!clientId) return
+    const previous = previousPaymentModalFlags.current
+    previousPaymentModalFlags.current = paymentModalFlags
+    // First run records the baseline only -- nothing was "opened" by anyone yet.
+    if (!previous) return
+    for (const [modal, isOpen] of Object.entries(paymentModalFlags)) {
+      if (isOpen && !previous[modal]) {
+        trackEvent('client_modal_open', { clientId, meta: { modal } })
+      }
+    }
+  }, [paymentModalFlags, clientId, trackEvent])
 
   // Call functionality state
   const { isCallActive, setOpenCallModal } = useCallStore()

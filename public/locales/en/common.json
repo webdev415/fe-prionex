@@ -6677,14 +6677,22 @@
             "send_sms": "Send SMS",
             "send_message": "Send message",
             "upload_document": "Upload document",
-            "view_message": "View message"
+            "view_message": "View message",
+            "edit_payment": "Edit payment",
+            "cancel_payment": "Cancel payment",
+            "reassign_payment": "Reassign payment employee",
+            "verify_payment": "Payment verification queue",
+            "export_payments": "Export payments",
+            "payment_details": "Payment details"
           },
           "openedCardFrom": "Opened the client card from {{origin}}",
           "origins": {
             "list": "the client list",
             "search": "search",
             "dialer": "the dialer"
-          }
+          },
+          "entryCount_one": "{{count}} entry",
+          "entryCount_other": "{{count}} entries"
         }
       },
       "debtSummary": {

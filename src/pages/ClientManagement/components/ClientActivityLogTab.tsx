@@ -15,6 +15,7 @@ import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
 import { DateSelect } from '@/components/ui/DateSelect'
+import { Pagination } from '@/components/ui/Pagination'
 import {
   Select,
   SelectContent,
@@ -23,7 +24,11 @@ import {
   SelectValue,
 } from '@/components/ui/Select'
 import { useClientActivityLog } from '@/features/clients/hooks/useClientActivityLog'
-import type { ActivityEntry, ActivitySource } from '@/features/clients/api/activityLogApi'
+import {
+  DEFAULT_PAGE_SIZE,
+  type ActivityEntry,
+  type ActivitySource,
+} from '@/features/clients/api/activityLogApi'
 
 interface ClientActivityLogTabProps {
   clientId: number | null
@@ -140,8 +145,10 @@ function entrySummary(entry: ActivityEntry, t: TFunction): string {
   }
 
   if (entry.kind === 'client_card_open') {
-    // `other` and older events without an origin both fall back to the plain
-    // sentence — only the three tagged entry points claim a source.
+    // Only three entry points are tracked at all now, so a new event always
+    // names one of them. `other` survives on rows recorded before that, when
+    // every open was logged; those keep the plain sentence rather than
+    // claiming a source nobody captured.
     const origin = typeof meta.origin === 'string' ? meta.origin : null
     if (origin && origin !== 'other') {
       return t(`${p}.openedCardFrom`, { origin: t(`${p}.origins.${origin}`, origin) })
@@ -159,14 +166,40 @@ export function ClientActivityLogTab({ clientId, isActive }: ClientActivityLogTa
   const [from, setFrom] = useState<Date | null>(null)
   const [to, setTo] = useState<Date | null>(null)
   const [operator, setOperator] = useState<string>(ALL_OPERATORS)
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
+
+  // Every filter resets the page. Narrowing the feed while sitting on page 9
+  // lands on a page the filtered result no longer has, which renders as "no
+  // activity" and reads as a bug. Done in the setters rather than an effect so
+  // the change is one render, not a render on the dead page and then a second
+  // one -- the effect version also fired a request for that dead page.
+  const applyFrom = (value: Date | null) => {
+    setFrom(value)
+    setPage(1)
+  }
+  const applyTo = (value: Date | null) => {
+    setTo(value)
+    setPage(1)
+  }
+  const applyOperator = (value: string) => {
+    setOperator(value)
+    setPage(1)
+  }
+  const applyPageSize = (value: number) => {
+    setPageSize(value)
+    setPage(1)
+  }
 
   const filters = useMemo(
     () => ({
       fromTs: dayStart(from),
       toTs: dayEnd(to),
       operatorId: operator === ALL_OPERATORS ? null : Number(operator),
+      page,
+      pageSize,
     }),
-    [from, to, operator]
+    [from, to, operator, page, pageSize]
   )
 
   const { data, isLoading, isError } = useClientActivityLog(clientId, filters, isActive)
@@ -199,37 +232,47 @@ export function ClientActivityLogTab({ clientId, isActive }: ClientActivityLogTa
 
   const hasFilters = from !== null || to !== null || operator !== ALL_OPERATORS
 
+  // A degraded source reports no total, so the count covers only what actually
+  // answered. Understating it is the safe direction: every page it offers holds
+  // rows, and the banner already says the feed is short.
+  const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / pageSize))
+
   return (
     <div className="flex flex-col gap-4 p-4">
-      <div className="flex flex-wrap items-end gap-3">
-        {/* Same shape as the Action Analysis filter bar — a labelled pair of
-            DateSelects bounded by each other, so the range stays valid without
-            a validation message. */}
-        <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-          <span className="text-foreground shrink-0 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
-            {t('pages.clients.detail.activityLog.filters.dateRange')}:
+      {/* One row, one pattern: every control carries a small label above it and
+          sits at its own width. The dates used to be `flex-1` with an inline
+          label while the operator was a stacked one, so two mostly-empty
+          pickers took three quarters of the bar and nothing shared a baseline.
+
+          Reset holds its place instead of appearing with the first filter --
+          rendering it conditionally shifted every other control sideways the
+          moment an operator picked a date. */}
+      <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
+        <div className="flex flex-col gap-1">
+          <span className="text-muted-foreground text-xs font-medium">
+            {t('pages.clients.detail.activityLog.filters.dateRange')}
           </span>
-          <div className="flex flex-1 items-center gap-2">
+          {/* Bounded by each other, so the range stays valid without needing a
+              validation message. */}
+          <div className="flex items-center gap-2">
             <DateSelect
               value={from}
-              onChange={({ value }: { value: Date | null }) => setFrom(value)}
+              onChange={({ value }: { value: Date | null }) => applyFrom(value)}
               placeholder={t('pages.clients.detail.activityLog.filters.selectStartDate')}
               max={to ?? undefined}
               allowManualInput
               format="dd.MM.yyyy"
-              className="flex-1 [&_input]:h-9 [&_input]:text-xs"
+              className="w-36 [&_input]:h-9 [&_input]:text-xs"
             />
-            <span className="text-foreground text-base leading-[150%] font-medium tracking-[-0.28px]">
-              -
-            </span>
+            <span className="text-muted-foreground text-sm">-</span>
             <DateSelect
               value={to}
-              onChange={({ value }: { value: Date | null }) => setTo(value)}
+              onChange={({ value }: { value: Date | null }) => applyTo(value)}
               placeholder={t('pages.clients.detail.activityLog.filters.selectEndDate')}
               min={from ?? undefined}
               allowManualInput
               format="dd.MM.yyyy"
-              className="flex-1 [&_input]:h-9 [&_input]:text-xs"
+              className="w-36 [&_input]:h-9 [&_input]:text-xs"
             />
           </div>
         </div>
@@ -238,8 +281,8 @@ export function ClientActivityLogTab({ clientId, isActive }: ClientActivityLogTa
           <span className="text-muted-foreground text-xs font-medium">
             {t('pages.clients.detail.activityLog.filters.operator')}
           </span>
-          <Select value={operator} onValueChange={setOperator}>
-            <SelectTrigger className="w-56">
+          <Select value={operator} onValueChange={applyOperator}>
+            <SelectTrigger className="h-9 w-48">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -255,17 +298,27 @@ export function ClientActivityLogTab({ clientId, isActive }: ClientActivityLogTa
           </Select>
         </label>
 
-        {hasFilters && (
-          <Button
-            variant="outline"
-            onClick={() => {
-              setFrom(null)
-              setTo(null)
-              setOperator(ALL_OPERATORS)
-            }}
-          >
-            {t('pages.clients.detail.activityLog.filters.reset')}
-          </Button>
+        <Button
+          variant="outline"
+          className="h-9"
+          disabled={!hasFilters}
+          onClick={() => {
+            setFrom(null)
+            setTo(null)
+            setOperator(ALL_OPERATORS)
+            setPage(1)
+          }}
+        >
+          {t('pages.clients.detail.activityLog.filters.reset')}
+        </Button>
+
+        {/* How much history is behind the filters, before anyone starts paging.
+            Sits at the far end so it does not push the controls around as the
+            number changes. */}
+        {data !== undefined && (
+          <span className="text-muted-foreground ml-auto pb-2 text-xs tabular-nums">
+            {t('pages.clients.detail.activityLog.entryCount', { count: data.total })}
+          </span>
         )}
       </div>
 
@@ -298,11 +351,11 @@ export function ClientActivityLogTab({ clientId, isActive }: ClientActivityLogTa
       )}
 
       <ul className="flex flex-col gap-2">
-        {(data?.entries ?? []).map((entry, index) => {
+        {(data?.entries ?? []).map((entry) => {
           const recording = recordingPath(entry)
           return (
             <li
-              key={`${entry.source}-${entry.ts}-${index}`}
+              key={entry.id}
               className="border-border flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border px-3 py-2"
             >
               <span
@@ -342,6 +395,19 @@ export function ClientActivityLogTab({ clientId, isActive }: ClientActivityLogTa
           )
         })}
       </ul>
+
+      {/* The three sources hold thousands of entries for an active client. A
+          feed that stopped at the first page said nothing about the rest, so
+          the history it hid read as history that did not exist. */}
+      {!isLoading && !isError && totalPages > 1 && (
+        <Pagination
+          currentPage={page}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          onPageChange={setPage}
+          onPageSizeChange={applyPageSize}
+        />
+      )}
     </div>
   )
 }

@@ -10,6 +10,7 @@ import { intlLocaleForUiLanguage } from '@/lib/i18n'
 import { convertUTCToUserTimezone, formatClientFullName, formatIsoDate } from '@/lib/formatters'
 import { getDateStringInTimezone } from '@/lib/dateUtils'
 import { useAuthStore } from '@/stores/authStore'
+import { useTrackEvent } from '@/features/operatorAnalytics'
 import { useParams, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useURLState, useAutoPersistedState, useHasPermission } from '@/hooks'
@@ -295,6 +296,7 @@ export function PaymentHistoryPage() {
 
   // Fetch client data from API (same as DebtSummaryPage)
   const clientId = id ? Number(id) : 0
+
   const {
     data: apiClient,
     isLoading: isLoadingClient,
@@ -449,6 +451,47 @@ export function PaymentHistoryPage() {
 
   const canReassignEmployee = useHasPermission(PERMISSIONS.CLIENTS.VERIFY_PAYMENT)
   const [isReassignModalOpen, setIsReassignModalOpen] = useState(false)
+
+  // The payment modals this page owns. Audit only hears about the ones that
+  // succeed -- a form opened and abandoned leaves no trace at all, and the
+  // details view leaves none either, though it is where an operator reads a
+  // client's whole debt breakdown. That gap is what this closes. Same event
+  // type the client card emits, so the activity feed renders them identically.
+  // Driven off a flags map rather than each call site, so a modal added later
+  // needs one line here.
+  const trackEvent = useTrackEvent()
+  const previousPaymentModalFlags = useRef<Record<string, boolean> | null>(null)
+  const paymentModalFlags = useMemo(
+    () => ({
+      payment_details: isPaymentDetailsModalOpen,
+      edit_payment: isEditModalOpen,
+      cancel_payment: isCancelModalOpen,
+      reassign_payment: isReassignModalOpen,
+      verify_payment: isVerificationModalOpen,
+      export_payments: isExportModalOpen,
+    }),
+    [
+      isPaymentDetailsModalOpen,
+      isEditModalOpen,
+      isCancelModalOpen,
+      isReassignModalOpen,
+      isVerificationModalOpen,
+      isExportModalOpen,
+    ]
+  )
+
+  useEffect(() => {
+    if (!clientId) return
+    const previous = previousPaymentModalFlags.current
+    previousPaymentModalFlags.current = paymentModalFlags
+    // First run records the baseline only -- nothing was "opened" by anyone yet.
+    if (!previous) return
+    for (const [modal, isOpen] of Object.entries(paymentModalFlags)) {
+      if (isOpen && !previous[modal]) {
+        trackEvent('client_modal_open', { clientId, meta: { modal } })
+      }
+    }
+  }, [paymentModalFlags, clientId, trackEvent])
 
   // Fetch payment details when selectedPayment changes
   const backendPayment = paymentHistoryData?.payments.find((p) => p.id === selectedPayment?.id)

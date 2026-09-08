@@ -276,13 +276,16 @@ export function ClientDetailPage() {
   // A query param rather than router state because the dialer link opens in a
   // new tab, which router state does not survive.
   //
-  // Anything else reads as `other` rather than being folded into `list`: there
-  // are ~49 places that link to a client card, and reporting the other 46 as a
-  // list click would be a wrong answer rather than a missing one.
+  // These three are the entry points worth recording. There are ~49 places
+  // that link to a client card; the rest are not tracked at all, so an open
+  // from one of them produces no event rather than an event that cannot say
+  // where it came from. The feed therefore answers "who opened this from the
+  // list, search or dialer", not "who opened this" -- a reload or a pasted URL
+  // carries no `from` either and is likewise silent.
   const [searchParams, setSearchParams] = useSearchParams()
   const cardOpenOrigin = useMemo(() => {
     const from = searchParams.get('from')
-    return from === 'list' || from === 'search' || from === 'dialer' ? from : 'other'
+    return from === 'list' || from === 'search' || from === 'dialer' ? from : null
   }, [searchParams])
 
   const lastTrackedCardOpen = useRef<string | null>(null)
@@ -309,10 +312,12 @@ export function ClientDetailPage() {
     // stays outside the guard: a bad id must bounce on every run.
     if (lastTrackedCardOpen.current === id) return
     lastTrackedCardOpen.current = id
-    trackEvent('client_card_open', {
-      clientId: numericId,
-      meta: { client_id: id, origin: cardOpenOrigin },
-    })
+    if (cardOpenOrigin) {
+      trackEvent('client_card_open', {
+        clientId: numericId,
+        meta: { client_id: id, origin: cardOpenOrigin },
+      })
+    }
 
     // Drop `?from=` once it has been recorded. It is a one-shot signal, not
     // state: leaving it in the address bar means a copied or bookmarked link

@@ -16,5 +16,6 @@ export function useClientActivityLog(
     queryKey: ['client-activity-log', clientId, filters],
     queryFn: () => activityLogApi.get(clientId!, filters),
     enabled: enabled && clientId !== null,
+    staleTime: 0,
   })
 }

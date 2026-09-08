@@ -5986,14 +5986,23 @@
             "send_sms": "Надсилання SMS",
             "send_message": "Надсилання повідомлення",
             "upload_document": "Завантаження документа",
-            "view_message": "Перегляд повідомлення"
+            "view_message": "Перегляд повідомлення",
+            "edit_payment": "Редагування платежу",
+            "cancel_payment": "Скасування платежу",
+            "reassign_payment": "Перепризначення співробітника платежу",
+            "verify_payment": "Черга верифікації платежів",
+            "export_payments": "Експорт платежів",
+            "payment_details": "Деталі платежу"
           },
           "openedCardFrom": "Відкрито картку клієнта з: {{origin}}",
           "origins": {
             "list": "списку клієнтів",
             "search": "пошуку",
             "dialer": "дозвону"
-          }
+          },
+          "entryCount_one": "{{count}} запис",
+          "entryCount_few": "{{count}} записи",
+          "entryCount_many": "{{count}} записів"
         }
       },
       "modals": {

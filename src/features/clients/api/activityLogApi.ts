@@ -4,6 +4,8 @@ import { api } from '@/lib/api'
 export type ActivitySource = 'events' | 'audit' | 'calls'
 
 export interface ActivityEntry {
+  /** `source:rowId` — unique in the feed and stable across pages. */
+  id: string
   ts: string
   source: ActivitySource
   kind: string
@@ -18,14 +20,22 @@ export interface ActivityLogResponse {
   entries: ActivityEntry[]
   /** Sources that failed. The feed is incomplete when this is non-empty. */
   degraded: ActivitySource[]
+  /** Merged count across all three sources — what the page count is built on. */
+  total: number
+  page: number
+  page_size: number
 }
 
 export interface ActivityLogFilters {
   fromTs?: string | null
   toTs?: string | null
   operatorId?: number | null
-  limit?: number
+  page?: number
+  pageSize?: number
 }
+
+/** Matches the endpoint's own default, so page one asks for what it returns. */
+export const DEFAULT_PAGE_SIZE = 50
 
 export const activityLogApi = {
   get: (clientId: number, filters: ActivityLogFilters = {}): Promise<ActivityLogResponse> => {
@@ -35,7 +45,8 @@ export const activityLogApi = {
     if (filters.fromTs) params.from_ts = filters.fromTs
     if (filters.toTs) params.to_ts = filters.toTs
     if (filters.operatorId != null) params.operator_id = filters.operatorId
-    params.limit = filters.limit ?? 200
+    params.page = filters.page ?? 1
+    params.page_size = filters.pageSize ?? DEFAULT_PAGE_SIZE
 
     return api
       .get<ActivityLogResponse>(`/api/v1/clients/${clientId}/activity-log`, { params })
