@@ -9542,7 +9542,8 @@
         "deleted": "Draft deleted successfully"
       },
       "deleted": {
-        "title": "Deleted drafts"
+        "title": "Deleted drafts",
+        "manageOnlyHint": "Deleted drafts stay visible with the manage drafts permission, and can still be restored until the date shown."
       },
       "noReadPermission": "The draft list needs a messaging send or launch permission, which this role does not hold. Ask an administrator to grant one.",
       "createdOutOfSight": "Draft saved. It will not appear in the list below, which needs a messaging send or launch permission."

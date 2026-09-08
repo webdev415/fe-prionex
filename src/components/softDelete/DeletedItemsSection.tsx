@@ -19,6 +19,8 @@ interface DeletedItemsSectionProps<T extends { id: string | number }> {
   columns: Column<T>[]
   /** Section heading, e.g. "Deleted templates". */
   title: string
+  /** Replaces the default hint when a page needs to explain its own access rules. */
+  hint?: string
 }
 
 export function DeletedItemsSection<T extends { id: string | number }>({
@@ -26,6 +28,7 @@ export function DeletedItemsSection<T extends { id: string | number }>({
   total,
   columns,
   title,
+  hint,
 }: DeletedItemsSectionProps<T>) {
   const { t } = useTranslation('common')
 
@@ -40,10 +43,11 @@ export function DeletedItemsSection<T extends { id: string | number }>({
         <span className="text-muted-foreground text-sm">({total})</span>
       </div>
       <p className="text-muted-foreground mb-3 text-sm">
-        {t(
-          'softDelete.sectionHint',
-          'These were deleted and can still be restored until the date shown.'
-        )}
+        {hint ??
+          t(
+            'softDelete.sectionHint',
+            'These were deleted and can still be restored until the date shown.'
+          )}
       </p>
       <DataTable columns={columns} data={items} className="w-full" />
     </section>
