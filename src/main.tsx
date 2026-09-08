@@ -29,11 +29,19 @@ const isMutationRetryable = (error: unknown): boolean => {
   return Boolean(axiosError.code && MUTATION_NETWORK_ERROR_CODES.has(axiosError.code))
 }
 
+// A refused read is refused for good: the role will not have gained the
+// permission by the time a retry lands, so the second request only doubles
+// the rejected traffic and the noise in the gateway log.
+const isQueryRetryable = (error: unknown): boolean => {
+  const status = (error as AxiosError | undefined)?.response?.status
+  return status !== 401 && status !== 403
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: QUERY.STALE_TIME,
-      retry: QUERY.RETRY_COUNT,
+      retry: (failureCount, error) => failureCount < QUERY.RETRY_COUNT && isQueryRetryable(error),
       refetchOnWindowFocus: false,
     },
     mutations: {

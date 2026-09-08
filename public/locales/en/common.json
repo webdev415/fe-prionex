@@ -7033,7 +7033,8 @@
         "active": "Active",
         "closed": "Closed"
       },
-      "sendMessageEmailRefOptional": "Optional: add an email contact step to pick the address from chain data. Otherwise the client primary email is used."
+      "sendMessageEmailRefOptional": "Optional: add an email contact step to pick the address from chain data. Otherwise the client primary email is used.",
+      "sendMessageNoDraftPermission": "Reading drafts needs a messaging send or launch permission. Ask an administrator to grant one."
     },
     "quickPicks": {
       "title": "Quick Picks",
@@ -9566,7 +9567,9 @@
       },
       "deleted": {
         "title": "Deleted drafts"
-      }
+      },
+      "noReadPermission": "This role can manage drafts but not browse the list, which needs a messaging send or launch permission. Deleted drafts stay visible below and can still be restored.",
+      "createdOutOfSight": "Draft saved. It will not appear in the list below, which needs a messaging send or launch permission."
     },
     "messagingIntegrations": {
       "description": "Configure provider credentials, enable channels per service, and verify connection health.",
