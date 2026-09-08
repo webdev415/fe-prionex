@@ -62,6 +62,7 @@ describe('REPORTS_URL_KEYS', () => {
         pageSize: 'kps',
       },
       outboundCalls: { dateFrom: 'ocf', dateTo: 'oct' },
+      promisesDaily: { dateFrom: 'pdf', dateTo: 'pdt', possiblePayment: 'pdp' },
     })
   })
 
