@@ -129,6 +129,7 @@ export function PromisesFeedTable({ rows, timezone, emptyMessage }: PromisesFeed
       {
         key: 'promise_amount',
         header: t('pages.reports.promisesFeed.columns.promiseAmount'),
+        align: 'right',
         render: (row) => (
           <span className="tabular-nums">{formatMoneyAmount(row.promise_amount, language)}</span>
         ),
@@ -164,6 +165,7 @@ export function PromisesFeedTable({ rows, timezone, emptyMessage }: PromisesFeed
       {
         key: 'payment_amount',
         header: t('pages.reports.promisesFeed.columns.paymentAmount'),
+        align: 'right',
         render: (row) => (
           <span className="tabular-nums">{formatMoneyAmount(row.payment_amount, language)}</span>
         ),
