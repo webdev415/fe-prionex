@@ -611,3 +611,53 @@ describe('RecordPaymentModal — exceeding the EasyPay cap explains itself', () 
     expect(screen.getByText(new RegExp(`${K}.max`))).toBeInTheDocument()
   })
 })
+
+describe('RecordPaymentModal — the ceiling moves in both directions', () => {
+  it('clears a cap error when switching away from EasyPay', () => {
+    // Introduced by making the cap set an error: switching back raised the
+    // ceiling but left the message standing, so both Save buttons stayed
+    // disabled behind a limit that no longer applied and the only way out was
+    // to re-edit the field.
+    withPayableRr()
+    renderModal({ currentDebt: 60000, debts: [makeDebt({ remaining_debt_amount: '60000.00' })] })
+
+    selectEasyPay()
+    fillAmount('40000')
+    expect(screen.getByText(`${K}.validationPaymentExceedsEasypayLimit`)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByLabelText(`${K}.bankTransfer`))
+
+    expect(screen.queryByText(`${K}.validationPaymentExceedsEasypayLimit`)).not.toBeInTheDocument()
+    expect(screen.getByText(`${K}.saveAsPending`).closest('button')).toBeEnabled()
+  })
+
+  it('still reports the debt ceiling after switching away', () => {
+    // Raising the ceiling does not make every amount legal: the debt still
+    // applies, so the error changes rather than disappearing.
+    withPayableRr()
+    renderModal({ currentDebt: 5000, debts: [makeDebt({ remaining_debt_amount: '5000.00' })] })
+
+    selectEasyPay()
+    fillAmount('9000')
+    fireEvent.click(screen.getByLabelText(`${K}.bankTransfer`))
+
+    expect(screen.getByText(`${K}.validationPaymentExceedsDebt`)).toBeInTheDocument()
+  })
+
+  it('does not carry the capping notice into a reopened form', () => {
+    withPayableRr()
+    const { rerender } = renderModalForReopen({
+      currentDebt: 60000,
+      debts: [makeDebt({ remaining_debt_amount: '60000.00' })],
+    })
+
+    fillAmount('50000')
+    selectEasyPay()
+    expect(screen.getByText(`${K}.amountCappedToEasypayLimit`)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByText(`${K}.cancel`).closest('button') as HTMLButtonElement)
+    rerender()
+
+    expect(screen.queryByText(`${K}.amountCappedToEasypayLimit`)).not.toBeInTheDocument()
+  })
+})

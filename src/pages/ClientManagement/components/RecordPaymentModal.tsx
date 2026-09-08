@@ -235,9 +235,12 @@ export function RecordPaymentModal({
   const minAmount = 0.01
   const debtCeiling = isClosedDebtCorrection ? Number.POSITIVE_INFINITY : currentDebt
   // EasyPay is capped by the KYC threshold as well as by what is owed, so the
-  // hint and the Save guard both move when the method changes.
-  const maxAmount =
-    paymentMethod === 'EasyPay' ? Math.min(EASYPAY_MAX_AMOUNT_UAH, debtCeiling) : debtCeiling
+  // hint and the Save guard both move when the method changes. Parameterised
+  // by method because handlePaymentMethodChange runs before the re-render and
+  // has to reason about the method being switched TO, not the stale one.
+  const ceilingFor = (method: 'Bank Transfer' | 'Online Gateway' | 'EasyPay') =>
+    method === 'EasyPay' ? Math.min(EASYPAY_MAX_AMOUNT_UAH, debtCeiling) : debtCeiling
+  const maxAmount = ceilingFor(paymentMethod)
   const newDebt = currentDebt - amountValue
   const hasDebt = newDebt > 0
 
@@ -258,7 +261,8 @@ export function RecordPaymentModal({
     // stays an ordinary error with Save disabled.
     setAmountCappedNotice(null)
 
-    if (newMethod === 'EasyPay') {
+    let nextAmount = amountValue
+    if (newMethod === 'EasyPay' && amountValue > EASYPAY_MAX_AMOUNT_UAH) {
       // Only the KYC ceiling justifies rewriting what the operator typed: it
       // appears on its own when the method changes. An over-debt amount is a
       // limit they could already see, and it already shows an error, so it
@@ -267,17 +271,20 @@ export function RecordPaymentModal({
       //
       // debtCeiling, not maxAmount: this runs before the re-render, so
       // maxAmount is still derived from the method being switched away from.
-      if (amountValue > EASYPAY_MAX_AMOUNT_UAH) {
-        const capped = Math.min(EASYPAY_MAX_AMOUNT_UAH, debtCeiling)
-        setPaymentAmount(String(capped))
-        setAmountError(null)
-        setAmountCappedNotice(
-          t('pages.clients.modals.recordPayment.amountCappedToEasypayLimit', {
-            amount: formatMoneyUAHTwoDecimals(capped),
-          })
-        )
-      }
+      nextAmount = Math.min(EASYPAY_MAX_AMOUNT_UAH, debtCeiling)
+      setPaymentAmount(String(nextAmount))
+      setAmountCappedNotice(
+        t('pages.clients.modals.recordPayment.amountCappedToEasypayLimit', {
+          amount: formatMoneyUAHTwoDecimals(nextAmount),
+        })
+      )
     }
+
+    // The ceiling moved with the method, in both directions. Switching away
+    // from EasyPay raises it, so an error about the KYC cap no longer applies
+    // -- left standing it kept both Save buttons disabled behind a limit that
+    // was no longer in force, with re-editing the field the only way out.
+    setAmountError(amountLimitError(nextAmount, newMethod))
   }
 
   // Check if there are validation errors
@@ -296,15 +303,19 @@ export function RecordPaymentModal({
   // folds the KYC cap in with the debt, but it only ever fed the disabled
   // state -- nothing set an error for it, so exceeding the cap left both Save
   // buttons dead with no explanation at all.
-  const amountLimitError = (value: number): string | null => {
+  const amountLimitError = (
+    value: number,
+    method: 'Bank Transfer' | 'Online Gateway' | 'EasyPay' = paymentMethod
+  ): string | null => {
     if (!isClosedDebtCorrection && value > currentDebt) {
       return t('pages.clients.modals.recordPayment.validationPaymentExceedsDebt', {
         amount: formatMoneyUAHTwoDecimals(currentDebt),
       })
     }
-    if (value > maxAmount) {
+    const ceiling = ceilingFor(method)
+    if (value > ceiling) {
       return t('pages.clients.modals.recordPayment.validationPaymentExceedsEasypayLimit', {
-        amount: formatMoneyUAHTwoDecimals(maxAmount),
+        amount: formatMoneyUAHTwoDecimals(ceiling),
       })
     }
     return null
@@ -382,6 +393,7 @@ export function RecordPaymentModal({
     setPaymentMethod('Bank Transfer')
     setEasypayMethod('card')
     setCopyLinkAfterSave(true)
+    setAmountCappedNotice(null)
     setPaymentStatus('Pending Verification')
     setGenerateReceipt(true)
     setUpdateBalance(false)
@@ -401,6 +413,7 @@ export function RecordPaymentModal({
     setPaymentMethod('Bank Transfer')
     setEasypayMethod('card')
     setCopyLinkAfterSave(true)
+    setAmountCappedNotice(null)
     setPaymentStatus('Pending Verification')
     setGenerateReceipt(true)
     setUpdateBalance(false)
