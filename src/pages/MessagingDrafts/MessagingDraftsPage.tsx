@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -147,6 +148,7 @@ function DraftFormModal({ draft, open, onClose }: DraftFormModalProps) {
   const { t } = useTranslation('common')
   const createDraftMutation = useCreateMessagingDraft()
   const updateDraftMutation = useUpdateMessagingDraft()
+  const canReadDrafts = useCanReadMessagingDrafts()
   const isEditing = Boolean(draft)
 
   const [name, setName] = useState('')
@@ -249,6 +251,9 @@ function DraftFormModal({ draft, open, onClose }: DraftFormModalProps) {
       await updateDraftMutation.mutateAsync({ draftId: draft.id, payload })
     } else {
       await createDraftMutation.mutateAsync(payload)
+      if (!canReadDrafts) {
+        toast.success(t('pages.messagingDrafts.createdOutOfSight'))
+      }
     }
 
     onClose()
