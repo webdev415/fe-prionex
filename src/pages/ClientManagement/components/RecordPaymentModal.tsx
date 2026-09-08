@@ -284,7 +284,7 @@ export function RecordPaymentModal({
     // from EasyPay raises it, so an error about the KYC cap no longer applies
     // -- left standing it kept both Save buttons disabled behind a limit that
     // was no longer in force, with re-editing the field the only way out.
-    setAmountError(amountLimitError(nextAmount, newMethod))
+    setAmountError(amountValidationError(nextAmount, newMethod))
   }
 
   // Check if there are validation errors
@@ -298,15 +298,19 @@ export function RecordPaymentModal({
     (selectableDebts.length > 1 && !selectedDebtId) ||
     paymentType === ''
 
-  // Validate payment amount on change
-  // Which ceiling an amount breaks, and the message for it. maxAmount already
-  // folds the KYC cap in with the debt, but it only ever fed the disabled
-  // state -- nothing set an error for it, so exceeding the cap left both Save
-  // buttons dead with no explanation at all.
-  const amountLimitError = (
+  // Every question about an amount, answered in one place. Two definitions
+  // disagreeing is what let a method switch clear "must be positive" while
+  // hasValidationErrors stayed true: the message vanished and both Save
+  // buttons sat disabled with nothing to explain them. handleAmountChange,
+  // handleSave and handlePaymentMethodChange all come through here, so they
+  // cannot drift apart again.
+  const amountValidationError = (
     value: number,
     method: 'Bank Transfer' | 'Online Gateway' | 'EasyPay' = paymentMethod
   ): string | null => {
+    if (value < 0) {
+      return t('pages.clients.modals.recordPayment.validationPaymentMustBePositive')
+    }
     if (!isClosedDebtCorrection && value > currentDebt) {
       return t('pages.clients.modals.recordPayment.validationPaymentExceedsDebt', {
         amount: formatMoneyUAHTwoDecimals(currentDebt),
@@ -326,33 +330,13 @@ export function RecordPaymentModal({
     setPaymentAmount(value)
     const numValue = parseFloat(value) || 0
 
-    // Clear previous error
-    setAmountError(null)
-
-    // Validate: must be positive
-    if (numValue < 0) {
-      setAmountError(t('pages.clients.modals.recordPayment.validationPaymentMustBePositive'))
-      return
-    }
-
-    // Whichever ceiling applies: the debt, or the EasyPay cap when it is lower.
-    const limitError = amountLimitError(numValue)
-    if (limitError) {
-      setAmountError(limitError)
-      return
-    }
+    setAmountError(amountValidationError(numValue))
   }
 
   const handleSave = (status: 'Pending Verification' | 'Verified') => {
-    // Validate payment amount
-    if (amountValue < 0) {
-      setAmountError(t('pages.clients.modals.recordPayment.validationPaymentMustBePositive'))
-      return
-    }
-
-    const limitError = amountLimitError(amountValue)
-    if (limitError) {
-      setAmountError(limitError)
+    const amountProblem = amountValidationError(amountValue)
+    if (amountProblem) {
+      setAmountError(amountProblem)
       return
     }
 

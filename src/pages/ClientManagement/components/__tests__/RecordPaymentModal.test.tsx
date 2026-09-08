@@ -661,3 +661,34 @@ describe('RecordPaymentModal — the ceiling moves in both directions', () => {
     expect(screen.queryByText(`${K}.amountCappedToEasypayLimit`)).not.toBeInTheDocument()
   })
 })
+
+describe('RecordPaymentModal — a method switch does not swallow an unrelated error', () => {
+  it('keeps "must be positive" standing when the method changes underneath it', () => {
+    // The switch handler re-ran the ceiling check and wrote its answer over
+    // whatever was showing. A negative amount breaks no ceiling, so the answer
+    // was null: the message disappeared while hasValidationErrors stayed true
+    // on amountValue < 0, leaving both Save buttons dead with nothing on
+    // screen to explain them. One helper answers for every caller now.
+    withPayableRr()
+    renderModal({ currentDebt: 60000, debts: [makeDebt({ remaining_debt_amount: '60000.00' })] })
+
+    fillAmount('-100')
+    expect(screen.getByText(`${K}.validationPaymentMustBePositive`)).toBeInTheDocument()
+
+    selectEasyPay()
+
+    expect(screen.getByText(`${K}.validationPaymentMustBePositive`)).toBeInTheDocument()
+    expect(screen.getByText(`${K}.saveAsPending`).closest('button')).toBeDisabled()
+  })
+
+  it('survives the switch back as well', () => {
+    withPayableRr()
+    renderModal({ currentDebt: 60000, debts: [makeDebt({ remaining_debt_amount: '60000.00' })] })
+
+    selectEasyPay()
+    fillAmount('-100')
+    fireEvent.click(screen.getByLabelText(`${K}.bankTransfer`))
+
+    expect(screen.getByText(`${K}.validationPaymentMustBePositive`)).toBeInTheDocument()
+  })
+})
