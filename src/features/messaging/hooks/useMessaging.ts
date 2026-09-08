@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
-import { PERMISSIONS } from '@/constants/permissions'
+import { DRAFT_READ_PERMISSIONS, PERMISSIONS } from '@/constants/permissions'
 import { useHasAnyPermission } from '@/hooks/usePermissions'
 import { messagingApi } from '../api/messagingApi'
 import type { MessagingChannel } from '../api/types'
+
+export { DRAFT_READ_PERMISSIONS }
 
 export const messagingKeys = {
   all: ['messaging'] as const,
@@ -40,17 +42,12 @@ export const messagingKeys = {
     [...messagingKeys.all, 'rate', 'destination', destination] as const,
 } as const
 
-export const DRAFT_READ_PERMISSIONS = [
-  PERMISSIONS.MESSAGING.SEND_MESSAGE_SMS,
-  PERMISSIONS.MESSAGING.SEND_MESSAGE_VIBER,
-  PERMISSIONS.MESSAGING.SEND_MESSAGE_EMAIL,
-  PERMISSIONS.MESSAGING.LAUNCH_CAMPAIGN_SMS,
-  PERMISSIONS.MESSAGING.LAUNCH_CAMPAIGN_VIBER,
-  PERMISSIONS.MESSAGING.LAUNCH_CAMPAIGN_EMAIL,
-]
-
 export function useCanReadMessagingDrafts(): boolean {
   return useHasAnyPermission(DRAFT_READ_PERMISSIONS)
+}
+
+export function useCanManageDrafts(): boolean {
+  return useHasAnyPermission([PERMISSIONS.MESSAGING.MANAGE_DRAFTS])
 }
 
 export function useMessagingDrafts(channel?: MessagingChannel) {

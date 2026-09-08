@@ -16,7 +16,7 @@ import { MinimizedCallBubble } from './MinimizedCallBubble'
 import { MinimizedChainExecutorBubble } from './MinimizedChainExecutorBubble'
 import { NotificationBell } from './NotificationBell'
 import { ThemeModeToggle } from './ThemeModeToggle'
-import { PERMISSIONS } from '@/constants/permissions'
+import { DRAFT_PAGE_PERMISSIONS, PERMISSIONS } from '@/constants/permissions'
 import type { Permission } from '@/constants/permissions'
 import { useHasPermission, useHasAnyPermission } from '@/hooks/usePermissions'
 import { useCreditSectionEnabled } from '@/features/credit/hooks/useCredit'
@@ -996,7 +996,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             path: '/dashboard/system-settings/messaging-drafts',
             label: t('navigation.messagingDrafts', 'Message Drafts'),
             icon: 'bubble-chat-edit',
-            requiredPermission: PERMISSIONS.MESSAGING.MANAGE_DRAFTS,
+            requiredPermissions: DRAFT_PAGE_PERMISSIONS,
+            mode: 'any',
           },
         ],
       },
