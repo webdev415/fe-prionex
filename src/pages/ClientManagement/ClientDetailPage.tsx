@@ -279,7 +279,7 @@ export function ClientDetailPage() {
   // Anything else reads as `other` rather than being folded into `list`: there
   // are ~49 places that link to a client card, and reporting the other 46 as a
   // list click would be a wrong answer rather than a missing one.
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const cardOpenOrigin = useMemo(() => {
     const from = searchParams.get('from')
     return from === 'list' || from === 'search' || from === 'dialer' ? from : 'other'
@@ -313,7 +313,17 @@ export function ClientDetailPage() {
       clientId: numericId,
       meta: { client_id: id, origin: cardOpenOrigin },
     })
-  }, [id, trackEvent, navigate, cardOpenOrigin])
+
+    // Drop `?from=` once it has been recorded. It is a one-shot signal, not
+    // state: leaving it in the address bar means a copied or bookmarked link
+    // claims an origin it did not come from, and a refresh re-reports it.
+    // `replace` so it does not add a history entry the back button lands on.
+    if (searchParams.has('from')) {
+      const next = new URLSearchParams(searchParams)
+      next.delete('from')
+      setSearchParams(next, { replace: true })
+    }
+  }, [id, trackEvent, navigate, cardOpenOrigin, searchParams, setSearchParams])
 
   // Returns true if the value looks like a Ukrainian phone number,
   // regardless of the contact type's isPhone flag

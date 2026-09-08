@@ -39,6 +39,20 @@ const SOURCE_STYLES: Record<ActivitySource, string> = {
   calls: 'bg-emerald-500/15 text-emerald-700',
 }
 
+/**
+ * Audit actions that are reads, not changes.
+ *
+ * They arrive from the audit service because that is where document access is
+ * recorded, but opening a file changes nothing — badging them "Data changes"
+ * alongside a status edit or a payment tells the reader the wrong thing. The
+ * badge follows what the entry IS, not which service supplied it.
+ */
+const AUDIT_READ_ACTIONS = new Set(['document.viewed', 'document.downloaded'])
+
+function badgeSource(entry: ActivityEntry): ActivitySource {
+  return entry.source === 'audit' && AUDIT_READ_ACTIONS.has(entry.kind) ? 'events' : entry.source
+}
+
 /** The picker yields a bare day. Widen it to cover the whole of that day. */
 function dayStart(value: Date | null): string | null {
   if (!value) return null
@@ -294,10 +308,10 @@ export function ClientActivityLogTab({ clientId, isActive }: ClientActivityLogTa
               <span
                 className={cn(
                   'rounded px-2 py-0.5 text-[11px] font-medium whitespace-nowrap',
-                  SOURCE_STYLES[entry.source]
+                  SOURCE_STYLES[badgeSource(entry)]
                 )}
               >
-                {t(`pages.clients.detail.activityLog.sources.${entry.source}`)}
+                {t(`pages.clients.detail.activityLog.sources.${badgeSource(entry)}`)}
               </span>
 
               <span className="text-muted-foreground text-xs whitespace-nowrap tabular-nums">
