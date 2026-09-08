@@ -534,3 +534,80 @@ describe('RecordPaymentModal — the EasyPay fields reset with the rest of the f
     expect(checkbox).toHaveAttribute('data-state', 'checked')
   })
 })
+
+describe('RecordPaymentModal — switching to EasyPay only clips the ceiling that appeared', () => {
+  it('caps an over-cap amount and says so', () => {
+    // 50,000 is valid against a 60,000 debt until EasyPay lowers the ceiling
+    // to the KYC threshold without the operator touching the field.
+    renderModal({ currentDebt: 60000, debts: [makeDebt({ remaining_debt_amount: '60000.00' })] })
+
+    fillAmount('50000')
+    selectEasyPay()
+
+    expect(amountInput()).toHaveValue(29999)
+    expect(screen.getByText(`${K}.amountCappedToEasypayLimit`)).toBeInTheDocument()
+  })
+
+  it('leaves an over-debt amount alone, error and all', () => {
+    // The debt ceiling was already visible and already showing an error. It is
+    // theirs to correct: rewriting it would change a monetary figure silently
+    // and clear the warning that explained why it was wrong.
+    renderModal({ currentDebt: 5000, debts: [makeDebt({ remaining_debt_amount: '5000.00' })] })
+
+    fillAmount('9000')
+    selectEasyPay()
+
+    expect(amountInput()).toHaveValue(9000)
+    expect(screen.queryByText(`${K}.amountCappedToEasypayLimit`)).not.toBeInTheDocument()
+  })
+
+  it('clears the notice once the operator types again', () => {
+    renderModal({ currentDebt: 60000, debts: [makeDebt({ remaining_debt_amount: '60000.00' })] })
+
+    fillAmount('50000')
+    selectEasyPay()
+    expect(screen.getByText(`${K}.amountCappedToEasypayLimit`)).toBeInTheDocument()
+
+    fillAmount('100')
+    expect(screen.queryByText(`${K}.amountCappedToEasypayLimit`)).not.toBeInTheDocument()
+  })
+})
+
+describe('RecordPaymentModal — exceeding the EasyPay cap explains itself', () => {
+  it('shows an error rather than only disabling Save', () => {
+    // maxAmount fed hasValidationErrors but nothing ever set an error for it,
+    // so an over-cap amount left both buttons dead with no explanation.
+    withPayableRr()
+    renderModal({ currentDebt: 60000, debts: [makeDebt({ remaining_debt_amount: '60000.00' })] })
+
+    selectEasyPay()
+    fillAmount('40000')
+
+    expect(screen.getByText(`${K}.validationPaymentExceedsEasypayLimit`)).toBeInTheDocument()
+    expect(screen.getByText(`${K}.saveAsPending`).closest('button')).toBeDisabled()
+  })
+
+  it('still reports the debt ceiling when that is the lower one', () => {
+    withPayableRr()
+    renderModal({ currentDebt: 5000, debts: [makeDebt({ remaining_debt_amount: '5000.00' })] })
+
+    fillAmount('9000')
+
+    expect(screen.getByText(`${K}.validationPaymentExceedsDebt`)).toBeInTheDocument()
+  })
+
+  it('shows the max hint for a closed-debt correction paid via EasyPay', () => {
+    // debtCeiling is Infinity there, so the old code hid the max half of the
+    // hint -- while the 29999 cap still applied. No limit, no error, two dead
+    // buttons.
+    withPayableRr()
+    renderModal({
+      currentDebt: 0,
+      debts: [makeDebt({ remaining_debt_amount: '0.00', status: 'closed' })],
+    })
+
+    selectEasyPay()
+
+    expect(screen.getByText(new RegExp(`${K}.max`))).toBeInTheDocument()
+  })
+})

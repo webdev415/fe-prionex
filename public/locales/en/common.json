@@ -5785,7 +5785,9 @@
             "card": "Card",
             "google_pay": "Google Pay",
             "apple_pay": "Apple Pay"
-          }
+          },
+          "amountCappedToEasypayLimit": "Amount capped to the EasyPay limit ({{amount}})",
+          "validationPaymentExceedsEasypayLimit": "Payment cannot exceed the EasyPay limit ({{amount}})"
         },
         "editPayment": {
           "title": "Edit Payment #{{paymentId}}",

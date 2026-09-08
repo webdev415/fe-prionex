@@ -6450,7 +6450,9 @@
             "card": "Картка",
             "google_pay": "Google Pay",
             "apple_pay": "Apple Pay"
-          }
+          },
+          "amountCappedToEasypayLimit": "Суму обмежено лімітом EasyPay ({{amount}})",
+          "validationPaymentExceedsEasypayLimit": "Платіж не може перевищувати ліміт EasyPay ({{amount}})"
         },
         "editPayment": {
           "title": "Редагувати платіж #{{paymentId}}",

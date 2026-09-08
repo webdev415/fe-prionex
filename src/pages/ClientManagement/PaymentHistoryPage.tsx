@@ -44,7 +44,11 @@ import { ReassignPaymentEmployeeModal } from './components/ReassignPaymentEmploy
 import { useClient } from '@/features/clients/hooks/useClients'
 import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
 import { useCallStore } from '@/stores/callStore'
-import { canOfferEasyPayLink, easypayLinkAction } from '@/features/payments/utils/easypayLink'
+import {
+  canOfferEasyPayLink,
+  copyToClipboard,
+  easypayLinkAction,
+} from '@/features/payments/utils/easypayLink'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
 import { useCallOrigination } from '@/features/calls/hooks/useCallOrigination'
@@ -381,9 +385,10 @@ export function PaymentHistoryPage() {
         toast.error(t('pages.clients.paymentHistory.easypayLink.unavailable'))
         return
       }
-      void navigator.clipboard.writeText(action.url).then(
-        () => toast.success(t('pages.clients.paymentHistory.easypayLink.copied')),
-        () => toast.error(t('pages.clients.paymentHistory.easypayLink.copyFailed'))
+      void copyToClipboard(action.url).then((copied) =>
+        copied
+          ? toast.success(t('pages.clients.paymentHistory.easypayLink.copied'))
+          : toast.error(t('pages.clients.paymentHistory.easypayLink.copyFailed'))
       )
     },
     [t]

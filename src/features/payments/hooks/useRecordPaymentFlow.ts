@@ -21,6 +21,7 @@ import { useRecordPayment, useVerifyPayment } from '@/features/payments'
 import type { PaymentType } from '@/features/payments/api/types'
 import { frontendToBackendPaymentMethod } from '@/features/payments/utils'
 import { PERMISSIONS } from '@/constants/permissions'
+import { copyToClipboard } from '@/features/payments/utils/easypayLink'
 import { useHasPermission } from '@/hooks/usePermissions'
 
 export interface RecordPaymentInput {
@@ -116,9 +117,10 @@ export function useRecordPaymentFlow(
             // be refused. Claiming success there would have the operator paste
             // whatever was on the clipboard before.
             if (data.copyLinkAfterSave && payment.easypay_link) {
-              void navigator.clipboard.writeText(payment.easypay_link).then(
-                () => toast.success(t('pages.clients.modals.recordPayment.linkCopied')),
-                () => toast.warning(t('pages.clients.modals.recordPayment.linkCopyFailed'))
+              void copyToClipboard(payment.easypay_link).then((copied) =>
+                copied
+                  ? toast.success(t('pages.clients.modals.recordPayment.linkCopied'))
+                  : toast.warning(t('pages.clients.modals.recordPayment.linkCopyFailed'))
               )
             } else if (isEasyPay && !payment.easypay_link) {
               // Pending with no link: the gateway call did not return one.

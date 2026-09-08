@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { canOfferEasyPayLink, easypayLinkAction } from '../easypayLink'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { canOfferEasyPayLink, copyToClipboard, easypayLinkAction } from '../easypayLink'
 
 const row = (over: Partial<Parameters<typeof canOfferEasyPayLink>[0]> = {}) => ({
   easypayMethod: 'card',
@@ -39,5 +39,43 @@ describe('easypayLinkAction', () => {
     expect(easypayLinkAction(row({ easypayLink: undefined }))).toEqual({ kind: 'unavailable' })
     expect(easypayLinkAction(row({ easypayLink: '' }))).toEqual({ kind: 'unavailable' })
     expect(easypayLinkAction(row({ easypayLink: '   ' }))).toEqual({ kind: 'unavailable' })
+  })
+})
+
+describe('copyToClipboard', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('reports success when the write goes through', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    vi.stubGlobal('navigator', { clipboard: { writeText } })
+
+    await expect(copyToClipboard('https://easypay.ua/x')).resolves.toBe(true)
+    expect(writeText).toHaveBeenCalledWith('https://easypay.ua/x')
+  })
+
+  it('reports failure when the browser refuses the write', async () => {
+    vi.stubGlobal('navigator', {
+      clipboard: { writeText: vi.fn().mockRejectedValue(new Error('denied')) },
+    })
+
+    await expect(copyToClipboard('https://easypay.ua/x')).resolves.toBe(false)
+  })
+
+  it('reports failure rather than throwing when there is no clipboard', async () => {
+    // Plain http: the API is absent and calling writeText on it throws
+    // synchronously, which no rejection handler catches. Returning false is
+    // the whole point -- in the save flow that throw escaped inside the
+    // mutation's onSuccess and took the modal-close with it.
+    vi.stubGlobal('navigator', {})
+
+    await expect(copyToClipboard('https://easypay.ua/x')).resolves.toBe(false)
+  })
+
+  it('reports failure when clipboard exists but writeText does not', async () => {
+    vi.stubGlobal('navigator', { clipboard: {} })
+
+    await expect(copyToClipboard('https://easypay.ua/x')).resolves.toBe(false)
   })
 })

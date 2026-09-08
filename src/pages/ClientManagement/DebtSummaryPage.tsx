@@ -15,7 +15,11 @@ import {
 import { useAuthStore } from '@/stores/authStore'
 import { useParams, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { canOfferEasyPayLink, easypayLinkAction } from '@/features/payments/utils/easypayLink'
+import {
+  canOfferEasyPayLink,
+  copyToClipboard,
+  easypayLinkAction,
+} from '@/features/payments/utils/easypayLink'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
 import { LinkButton } from '@/components/ui/LinkButton'
@@ -593,9 +597,10 @@ export function DebtSummaryPage() {
       toast.error(t('pages.clients.paymentHistory.easypayLink.unavailable'))
       return
     }
-    void navigator.clipboard.writeText(action.url).then(
-      () => toast.success(t('pages.clients.paymentHistory.easypayLink.copied')),
-      () => toast.error(t('pages.clients.paymentHistory.easypayLink.copyFailed'))
+    void copyToClipboard(action.url).then((copied) =>
+      copied
+        ? toast.success(t('pages.clients.paymentHistory.easypayLink.copied'))
+        : toast.error(t('pages.clients.paymentHistory.easypayLink.copyFailed'))
     )
   }
 

@@ -28,3 +28,28 @@ export function easypayLinkAction(payment: EasyPayLinkRow): EasyPayLinkAction {
   const url = payment.easypayLink?.trim()
   return url ? { kind: 'copy', url } : { kind: 'unavailable' }
 }
+
+/** Copy `text`, resolving to whether it actually reached the clipboard.
+ *
+ *  Two ways a copy fails, and they fail differently. A refusal rejects the
+ *  promise: browsers gate clipboard writes on user activation and that grant
+ *  expires, so a write after an awaited request can be turned down. Absence
+ *  throws synchronously instead -- the API exists only in a secure context, so
+ *  on a plain-http stand `navigator.clipboard` is undefined and `.writeText`
+ *  is a call on nothing, which no rejection handler sees. Left unguarded in
+ *  the save flow that throw escapes inside the mutation's onSuccess and takes
+ *  the rest of the callback with it: the modal never closes.
+ *
+ *  One boolean covers both, because the operator needs the same thing either
+ *  way: to be told the link is not on their clipboard.
+ */
+export async function copyToClipboard(text: string): Promise<boolean> {
+  const clipboard = navigator.clipboard
+  if (!clipboard?.writeText) return false
+  try {
+    await clipboard.writeText(text)
+    return true
+  } catch {
+    return false
+  }
+}

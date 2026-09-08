@@ -1,5 +1,5 @@
 import { renderHook } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   recordMutate: vi.fn(),
@@ -201,5 +201,37 @@ describe('useRecordPaymentFlow — an EasyPay save without an easypay_method', (
     const request = mocks.recordMutate.mock.calls[0][0]
     expect(request.payment_method).toBe('online_gateway')
     expect(request.easypay_method).toBe('card')
+  })
+})
+
+describe('useRecordPaymentFlow — a save on a stand with no clipboard', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('still finishes the save when the clipboard does not exist', () => {
+    // The stands run plain http, where navigator.clipboard is undefined.
+    // Dereferencing it threw synchronously inside the mutation's onSuccess,
+    // which aborted the rest of that callback: onSuccess?.() never ran and the
+    // modal stayed open after a payment that had in fact been created.
+    vi.stubGlobal('navigator', {})
+    const onSuccess = vi.fn()
+
+    const { result } = renderHook(() => useRecordPaymentFlow({ clientId: 42, onSuccess }))
+    result.current.handleRecordPayment(
+      baseInput({ method: 'EasyPay', easypayMethod: 'card', copyLinkAfterSave: true })
+    )
+    const [, handlers] = mocks.recordMutate.mock.calls[0]
+    handlers.onSuccess({
+      id: 1,
+      payment_number: 'PAY-1',
+      easypay_link: 'https://easypay.ua/ua/wp2/abc',
+    })
+
+    expect(onSuccess).toHaveBeenCalled()
   })
 })

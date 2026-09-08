@@ -143,6 +143,9 @@ export function RecordPaymentModal({
   const [generateReceipt, setGenerateReceipt] = useState(true)
   const [updateBalance, setUpdateBalance] = useState(false)
   const [amountError, setAmountError] = useState<string | null>(null)
+  // Set when switching method rewrote the operator's figure, so the change is
+  // visible rather than silent. Cleared the moment they type again.
+  const [amountCappedNotice, setAmountCappedNotice] = useState<string | null>(null)
   const [paymentMethodDetails, setPaymentMethodDetails] = useState<string>('')
 
   // KAN-507: Payment Type controlled-vocabulary dropdown. Required at the
@@ -253,13 +256,26 @@ export function RecordPaymentModal({
     // so leaving the old value would fail validation for a limit that appeared
     // on its own. Typing over a limit you can already see is different -- that
     // stays an ordinary error with Save disabled.
+    setAmountCappedNotice(null)
+
     if (newMethod === 'EasyPay') {
+      // Only the KYC ceiling justifies rewriting what the operator typed: it
+      // appears on its own when the method changes. An over-debt amount is a
+      // limit they could already see, and it already shows an error, so it
+      // stays theirs to correct -- clipping it too would silently change a
+      // figure and clear the warning explaining why it was wrong.
+      //
       // debtCeiling, not maxAmount: this runs before the re-render, so
       // maxAmount is still derived from the method being switched away from.
-      const capped = Math.min(EASYPAY_MAX_AMOUNT_UAH, debtCeiling)
-      if (amountValue > capped) {
+      if (amountValue > EASYPAY_MAX_AMOUNT_UAH) {
+        const capped = Math.min(EASYPAY_MAX_AMOUNT_UAH, debtCeiling)
         setPaymentAmount(String(capped))
         setAmountError(null)
+        setAmountCappedNotice(
+          t('pages.clients.modals.recordPayment.amountCappedToEasypayLimit', {
+            amount: formatMoneyUAHTwoDecimals(capped),
+          })
+        )
       }
     }
   }
@@ -276,7 +292,26 @@ export function RecordPaymentModal({
     paymentType === ''
 
   // Validate payment amount on change
+  // Which ceiling an amount breaks, and the message for it. maxAmount already
+  // folds the KYC cap in with the debt, but it only ever fed the disabled
+  // state -- nothing set an error for it, so exceeding the cap left both Save
+  // buttons dead with no explanation at all.
+  const amountLimitError = (value: number): string | null => {
+    if (!isClosedDebtCorrection && value > currentDebt) {
+      return t('pages.clients.modals.recordPayment.validationPaymentExceedsDebt', {
+        amount: formatMoneyUAHTwoDecimals(currentDebt),
+      })
+    }
+    if (value > maxAmount) {
+      return t('pages.clients.modals.recordPayment.validationPaymentExceedsEasypayLimit', {
+        amount: formatMoneyUAHTwoDecimals(maxAmount),
+      })
+    }
+    return null
+  }
+
   const handleAmountChange = (value: string) => {
+    setAmountCappedNotice(null)
     setPaymentAmount(value)
     const numValue = parseFloat(value) || 0
 
@@ -289,13 +324,10 @@ export function RecordPaymentModal({
       return
     }
 
-    // Validate: cannot exceed current debt (skipped for closed-debt corrections)
-    if (!isClosedDebtCorrection && numValue > currentDebt) {
-      setAmountError(
-        t('pages.clients.modals.recordPayment.validationPaymentExceedsDebt', {
-          amount: formatMoneyUAHTwoDecimals(currentDebt),
-        })
-      )
+    // Whichever ceiling applies: the debt, or the EasyPay cap when it is lower.
+    const limitError = amountLimitError(numValue)
+    if (limitError) {
+      setAmountError(limitError)
       return
     }
   }
@@ -307,12 +339,9 @@ export function RecordPaymentModal({
       return
     }
 
-    if (!isClosedDebtCorrection && amountValue > currentDebt) {
-      setAmountError(
-        t('pages.clients.modals.recordPayment.validationPaymentExceedsDebt', {
-          amount: formatMoneyUAHTwoDecimals(currentDebt),
-        })
-      )
+    const limitError = amountLimitError(amountValue)
+    if (limitError) {
+      setAmountError(limitError)
       return
     }
 
@@ -436,15 +465,23 @@ export function RecordPaymentModal({
                     className="rounded-md"
                     error={amountError || undefined}
                   />
+                  {amountCappedNotice && !amountError && (
+                    <div className="flex items-center gap-2 self-stretch">
+                      <Icons.Warning size={20} className="text-warning-500 shrink-0" />
+                      <span className="text-warning-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                        {amountCappedNotice}
+                      </span>
+                    </div>
+                  )}
                   {!amountError && (
                     <div className="flex items-center gap-2 self-stretch">
                       <Icons.Money01 size={20} className="text-foreground" />
                       <span className="text-foreground text-sm leading-[150%] font-light tracking-[-0.28px]">
                         ({t('pages.clients.modals.recordPayment.min')}{' '}
                         {formatMoneyUAHTwoDecimals(minAmount)}
-                        {isClosedDebtCorrection
-                          ? ''
-                          : `, ${t('pages.clients.modals.recordPayment.max')} ${formatMoneyUAHTwoDecimals(maxAmount)}`}
+                        {Number.isFinite(maxAmount)
+                          ? `, ${t('pages.clients.modals.recordPayment.max')} ${formatMoneyUAHTwoDecimals(maxAmount)}`
+                          : ''}
                         )
                       </span>
                     </div>
