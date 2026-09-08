@@ -114,7 +114,7 @@ export function ViewSMSModal({ open, onClose, smsData }: ViewSMSModalProps) {
         {/* SMS Details */}
         <ModalContent>
           <div className="flex flex-col gap-3 sm:gap-4">
-            {/* Date/Time, Template, Operator, Status */}
+            {/* Date/Time, Phone, Template, Operator, Status */}
             <div className="flex flex-col items-start gap-2 self-stretch sm:gap-3">
               <div className="flex flex-col items-start gap-2 self-stretch sm:flex-row sm:gap-6">
                 <span className="text-foreground w-full shrink-0 text-xs leading-[155%] font-light tracking-[-0.32px] sm:w-[120px] sm:text-base">
@@ -122,6 +122,14 @@ export function ViewSMSModal({ open, onClose, smsData }: ViewSMSModalProps) {
                 </span>
                 <span className="text-foreground flex-1 text-xs leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
                   {dateTime}
+                </span>
+              </div>
+              <div className="flex flex-col items-start gap-2 self-stretch sm:flex-row sm:gap-6">
+                <span className="text-foreground w-full shrink-0 text-xs leading-[155%] font-light tracking-[-0.32px] sm:w-[120px] sm:text-base">
+                  {t('pages.clients.modals.viewSMS.phone')}:
+                </span>
+                <span className="text-foreground flex-1 text-xs leading-[155%] font-medium tracking-[-0.32px] sm:text-base">
+                  {smsData.phone || '-'}
                 </span>
               </div>
               <div className="flex flex-col items-start gap-2 self-stretch sm:flex-row sm:gap-6">
