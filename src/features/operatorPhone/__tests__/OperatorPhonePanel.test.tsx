@@ -1,12 +1,10 @@
 import { render, screen } from '@testing-library/react'
+import { createRef } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // The panel must never frame a guessed origin: useOperatorPhone posts the
 // operator's phone JWT to it. These tests pin that an unconfigured build
 // renders nothing at all rather than falling back to some default host.
-vi.mock('../hooks/useOperatorPhone', () => ({
-  useOperatorPhone: () => ({ status: 'ready', aor: 'operator-c22-u4' }),
-}))
 
 const constantsMock = vi.hoisted(() => ({
   OPERATOR_PHONE_URL: 'https://webrtc.example.test',
@@ -16,6 +14,12 @@ const constantsMock = vi.hoisted(() => ({
 
 vi.mock('../constants', () => constantsMock)
 
+const props = () => ({
+  iframeRef: createRef<HTMLIFrameElement>(),
+  status: 'ready' as const,
+  aor: 'operator-c22-u4',
+})
+
 describe('OperatorPhonePanel', () => {
   beforeEach(() => {
     vi.resetModules()
@@ -24,7 +28,7 @@ describe('OperatorPhonePanel', () => {
 
   it('mounts the hidden iframe at the configured phone origin', async () => {
     const { OperatorPhonePanel } = await import('../components/OperatorPhonePanel')
-    const { container } = render(<OperatorPhonePanel />)
+    const { container } = render(<OperatorPhonePanel {...props()} />)
 
     const iframe = container.querySelector('iframe')
     expect(iframe).not.toBeNull()
@@ -35,7 +39,7 @@ describe('OperatorPhonePanel', () => {
   it('renders nothing when no phone origin is configured', async () => {
     constantsMock.OPERATOR_PHONE_CONFIGURED = false
     const { OperatorPhonePanel } = await import('../components/OperatorPhonePanel')
-    const { container } = render(<OperatorPhonePanel />)
+    const { container } = render(<OperatorPhonePanel {...props()} />)
 
     expect(container.querySelector('iframe')).toBeNull()
     expect(container).toBeEmptyDOMElement()

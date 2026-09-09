@@ -620,6 +620,21 @@ describe('DateSelect (a blocked "today" still reads as blocked)', () => {
   // A value on another day matters: with none, react-datepicker marks today
   // ``--keyboard-selected``, which the today rule already excludes — so the
   // accent case would never be exercised.
+  // Часы фиксируем серединой месяца. Тест про то, КАКОЕ правило каскада
+  // красит заблокированный «сегодня», а не про календарь — но в последний
+  // день месяца «завтра» уезжает в следующий, react-datepicker показывает
+  // уже его, а сегодняшнее число рисует днём соседнего месяца. Тогда
+  // выигрывает `--outside-month`, а не `--disabled`, и тест краснеет, ничего
+  // не сломав в коде: 31.08.2026 он положил прогон всего репозитория.
+  // Подменяем только `Date`: userEvent нужны настоящие таймеры.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 2, 12, 12, 0, 0))
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   const openWithMin = async (min: Date, value: Date | null = null) => {
     render(<DateSelect value={value} min={min} onChange={() => {}} />)
     await userEvent.click(screen.getByRole('textbox'))

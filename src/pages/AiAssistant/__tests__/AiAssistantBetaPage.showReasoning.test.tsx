@@ -1,10 +1,15 @@
 /**
- * Тумблер «Показывать раздумья» (в меню выбора режима у поля ввода).
+ * Переключатель «Міркування 31B» (в меню выбора режима у поля ввода) — три
+ * позиции: «Сервер» (не выбирали, режим решает сервер), «Увімк.», «Вимк.».
  *
- * Раздумья приходят отдельным SSE-кадром (`reasoning`), поэтому их видимость —
- * чисто клиентская настройка: запрос к мозгу не меняется. Снятый тумблер убирает
- * ход рассуждения (плашку в бабле и одноимённую секцию панели «Активность»), но
- * НЕ источники факт-сносок — по ним оператор проверяет числа в ответе.
+ * Здесь — видимость переключателя, его дефолт и то, как выбор гасит поверхности
+ * раздумий: «Вимк.» убирает ход рассуждения (плашку в бабле и одноимённую
+ * секцию панели «Активность»), но НЕ источники факт-сносок — по ним оператор
+ * проверяет числа в ответе. Что уходит в тело запроса — в
+ * AiAssistantBetaPage.thinkingFlag.test.tsx.
+ *
+ * Сам переключатель показывается только в режиме «Думаючий»: на fast раздумий
+ * не бывает, поэтому настройке там нечем управлять.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -81,15 +86,13 @@ function closeModeMenu() {
   fireEvent.click(screen.getByTestId('assistant-mode-trigger'))
 }
 
-function getShowReasoningSwitch(): HTMLElement {
-  return within(openModeMenu()).getByRole('switch', {
-    name: 'pages.aiAssistant.showReasoning',
-  })
+/** Переключатель «Міркування 31B» в открытом меню режима. */
+function getThinkingChoice(): HTMLElement {
+  return within(openModeMenu()).getByTestId('assistant-thinking-choice')
 }
 
-function setShowReasoning(show: boolean) {
-  const toggle = getShowReasoningSwitch()
-  if (toggle.getAttribute('aria-checked') !== String(show)) fireEvent.click(toggle)
+function setThinkingChoice(choice: 'server' | 'on' | 'off') {
+  fireEvent.click(within(getThinkingChoice()).getByTestId(`assistant-thinking-choice-${choice}`))
   closeModeMenu()
 }
 
@@ -178,7 +181,7 @@ function mockFastTurnWithCitations() {
   )
 }
 
-describe('AiAssistantBetaPage — тумблер «Показывать раздумья»', () => {
+describe('AiAssistantBetaPage — переключатель «Міркування 31B»', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     localStorage.clear()
@@ -199,15 +202,43 @@ describe('AiAssistantBetaPage — тумблер «Показывать разд
     vi.unstubAllGlobals()
   })
 
-  it('по умолчанию раздумья показываются: тумблер включён, плашка и окно рассуждения на месте', async () => {
+  it('переключатель есть только в «Думаючому» и по умолчанию стоит на «Сервер»', async () => {
+    renderPage()
+
+    // Быстрый режим: раздумий не бывает — настройки в меню нет вовсе.
+    const fastMenu = openModeMenu()
+    expect(within(fastMenu).queryByTestId('assistant-show-reasoning-row')).not.toBeInTheDocument()
+    expect(within(fastMenu).queryByTestId('assistant-thinking-choice')).not.toBeInTheDocument()
+    closeModeMenu()
+
+    selectThinkingMode()
+
+    // «Думаючий»: переключатель появился, позиция — «Сервер»: оператор ничего
+    // не выбирал, поле `thinking` в запрос не уходит, режим решает сервер.
+    const thinkingMenu = openModeMenu()
+    expect(within(thinkingMenu).getByTestId('assistant-show-reasoning-row')).toBeInTheDocument()
+    const choice = within(thinkingMenu).getByTestId('assistant-thinking-choice')
+    expect(choice).toHaveAttribute('data-choice', 'server')
+    expect(
+      within(choice).getByRole('radiogroup', { name: 'pages.aiAssistant.showReasoning' })
+    ).toBeInTheDocument()
+    expect(
+      within(choice).getByRole('radio', { name: 'pages.aiAssistant.thinkingChoiceServer' })
+    ).toHaveAttribute('aria-checked', 'true')
+    expect(useAiAssistantStore.getState().settingsFor(USER_ID)?.thinkingChoice).toBeNull()
+    // Прежняя настройка видимости при этом — как и была: показывать.
+    expect(useAiAssistantStore.getState().settingsFor(USER_ID)?.showReasoning).toBe(true)
+  })
+
+  it('по умолчанию раздумья показываются: позиция «Сервер», плашка и окно рассуждения на месте', async () => {
     mockThinkingTurn('Сверяю таблицу долгов.')
     renderPage()
     selectThinkingMode()
     send('думай')
     await screen.findByText('Готово')
 
-    // Дефолт — «показывать», привычное поведение не меняется молча.
-    expect(getShowReasoningSwitch()).toHaveAttribute('aria-checked', 'true')
+    // Дефолт — «показывать, если пришло», привычное поведение не меняется молча.
+    expect(getThinkingChoice()).toHaveAttribute('data-choice', 'server')
     closeModeMenu()
 
     await openActivityPanel()
@@ -216,7 +247,7 @@ describe('AiAssistantBetaPage — тумблер «Показывать разд
     )
   })
 
-  it('выключение тумблера убирает и плашку, и окно рассуждения', async () => {
+  it('«Вимк.» убирает и плашку, и окно рассуждения', async () => {
     mockThinkingTurn('Внутренняя мысль модели.')
     renderPage()
     selectThinkingMode()
@@ -226,7 +257,7 @@ describe('AiAssistantBetaPage — тумблер «Показывать разд
     await openActivityPanel()
     await screen.findByTestId('assistant-reasoning-text')
 
-    setShowReasoning(false)
+    setThinkingChoice('off')
 
     // У этого хода нет ни шагов, ни источников — вся поверхность раздумий уходит.
     await waitFor(() => expect(screen.queryByTestId('assistant-reasoning')).not.toBeInTheDocument())
@@ -243,7 +274,7 @@ describe('AiAssistantBetaPage — тумблер «Показывать разд
         state: {
           userId: USER_ID,
           conversationId: null,
-          settings: { ...DEFAULT_ASSISTANT_SETTINGS, mode: 'thinking', showReasoning: false },
+          settings: { ...DEFAULT_ASSISTANT_SETTINGS, mode: 'thinking', thinkingChoice: 'off' },
           historySidebarCollapsed: false,
           reasoningPanelWidth: DEFAULT_REASONING_PANEL_WIDTH,
         },
@@ -259,15 +290,50 @@ describe('AiAssistantBetaPage — тумблер «Показывать разд
 
     // Настройка поднялась из хранилища — раздумья скрыты сразу, без клика.
     expect(screen.queryByTestId('assistant-reasoning')).not.toBeInTheDocument()
-    expect(getShowReasoningSwitch()).toHaveAttribute('aria-checked', 'false')
+    expect(getThinkingChoice()).toHaveAttribute('data-choice', 'off')
     closeModeMenu()
 
     // Обратное переключение сохраняется в тот же стор (переживёт перезагрузку).
-    setShowReasoning(true)
+    setThinkingChoice('on')
     await waitFor(() =>
-      expect(useAiAssistantStore.getState().settingsFor(USER_ID)?.showReasoning).toBe(true)
+      expect(useAiAssistantStore.getState().settingsFor(USER_ID)?.thinkingChoice).toBe('on')
     )
+    expect(useAiAssistantStore.getState().settingsFor(USER_ID)?.showReasoning).toBe(true)
     expect(await screen.findByTestId('assistant-reasoning')).toBeInTheDocument()
+  })
+
+  it('запись старого фронта с «не показывать» уважается: раздумья скрыты, но выбора по серверу нет', async () => {
+    // Старый тумблер «Показувати міркування» прятал ход рассуждения — это
+    // клиентская настройка, она поднимается как была. Позиция переключателя
+    // при этом «Сервер»: просьбы «не думай» оператор не делал.
+    localStorage.setItem(
+      AI_ASSISTANT_STORAGE_KEY,
+      JSON.stringify({
+        state: {
+          userId: USER_ID,
+          conversationId: null,
+          settings: (({ thinkingChoice: _omit, ...legacy }) => ({
+            ...legacy,
+            mode: 'thinking',
+            showReasoning: false,
+          }))(DEFAULT_ASSISTANT_SETTINGS),
+          historySidebarCollapsed: false,
+          reasoningPanelWidth: DEFAULT_REASONING_PANEL_WIDTH,
+        },
+        version: 0,
+      })
+    )
+    await useAiAssistantStore.persist.rehydrate()
+
+    mockThinkingTurn('Мысль, которую оператор видеть не хочет.')
+    renderPage()
+    send('думай')
+    await screen.findByText('Готово')
+
+    expect(screen.queryByTestId('assistant-reasoning')).not.toBeInTheDocument()
+    expect(screen.queryByText('Мысль, которую оператор видеть не хочет.')).not.toBeInTheDocument()
+    expect(getThinkingChoice()).toHaveAttribute('data-choice', 'server')
+    closeModeMenu()
   })
 
   it('в открытой панели скрывается только «Ход рассуждения» — источники остаются', async () => {
@@ -281,7 +347,7 @@ describe('AiAssistantBetaPage — тумблер «Показывать разд
     await screen.findByTestId('assistant-reasoning-text')
     await screen.findByTestId('assistant-citations', undefined, { timeout: 5000 })
 
-    setShowReasoning(false)
+    setThinkingChoice('off')
 
     // Панель остаётся открытой (в ней есть источники), но окно рассуждения ушло.
     await waitFor(() =>
@@ -291,22 +357,37 @@ describe('AiAssistantBetaPage — тумблер «Показывать разд
     expect(screen.getByTestId('assistant-citations')).toBeInTheDocument()
   })
 
-  it('на fast: подсказка про отсутствие раздумий, источники факт-сносок не страдают', async () => {
+  it('на fast переключателя нет, а «Вимк.» не трогает источники факт-сносок', async () => {
+    // Оператор выбрал «Вимк.» раньше, в «Думаючому»; сохранённое значение уважаем.
+    localStorage.setItem(
+      AI_ASSISTANT_STORAGE_KEY,
+      JSON.stringify({
+        state: {
+          userId: USER_ID,
+          conversationId: null,
+          settings: {
+            ...DEFAULT_ASSISTANT_SETTINGS,
+            mode: 'fast',
+            thinkingChoice: 'off',
+            showReasoning: false,
+          },
+          historySidebarCollapsed: false,
+          reasoningPanelWidth: DEFAULT_REASONING_PANEL_WIDTH,
+        },
+        version: 0,
+      })
+    )
+    await useAiAssistantStore.persist.rehydrate()
+
     mockFastTurnWithCitations()
     renderPage()
 
-    // Быстрый режим раздумий не присылает — меню честно говорит об этом, но
-    // тумблер остаётся живым (настроить можно заранее).
+    // Быстрый режим раздумий не присылает — переключателя в меню нет.
     const fastMenu = openModeMenu()
-    expect(
-      within(fastMenu).getByText('pages.aiAssistant.showReasoningFastHint')
-    ).toBeInTheDocument()
-    expect(
-      within(fastMenu).getByRole('switch', { name: 'pages.aiAssistant.showReasoning' })
-    ).not.toBeDisabled()
+    expect(within(fastMenu).queryByTestId('assistant-show-reasoning-row')).not.toBeInTheDocument()
+    expect(within(fastMenu).queryByTestId('assistant-thinking-choice')).not.toBeInTheDocument()
     closeModeMenu()
 
-    setShowReasoning(false)
     send('быстрый ответ')
     await screen.findByText(/Остаток долга/)
 

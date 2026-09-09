@@ -26,7 +26,11 @@ import { cn } from '@/lib/utils'
 import { formatMoneyUAHTwoDecimals } from '@/lib/formatters'
 import type { DebtDetail, RestructuringAgreementSummary } from '@/features/clients/api/types'
 import { useClientRestructuringAgreements } from '@/features/clients/hooks/useClients'
-import { PAYMENT_TYPE_VALUES, type PaymentType } from '@/features/payments/api/types'
+import {
+  PAYMENT_TYPE_VALUES,
+  type EasyPayMethod,
+  type PaymentType,
+} from '@/features/payments/api/types'
 
 /**
  * RR statuses a `payment_by_rr` payment may be recorded against.
@@ -40,6 +44,14 @@ import { PAYMENT_TYPE_VALUES, type PaymentType } from '@/features/payments/api/t
  * Cancelled and the terminal Completed statuses stay out. Cancelled has its own
  * reconnect mechanism (KAN-1011) and the terminal ones are settled.
  */
+// The EasyPay method picks which service the hosted page offers. Stored on
+// payments.easypay_method; the payment method itself stays online_gateway.
+const EASYPAY_METHODS: EasyPayMethod[] = ['card', 'google_pay', 'apple_pay']
+
+// Regulatory (KYC) ceiling on a single online payment. The remaining-debt
+// cap beside it applies on top of this one.
+const EASYPAY_MAX_AMOUNT_UAH = 29999
+
 const RR_STATUS_CONNECTED = 1
 const RR_STATUS_VIOLATED = 2
 const RR_STATUSES_ELIGIBLE_FOR_RR_PAYMENT = new Set([RR_STATUS_CONNECTED, RR_STATUS_VIOLATED])
@@ -88,12 +100,13 @@ export interface RecordPaymentModalProps {
   onSave: (data: {
     amount: number
     date: Date
-    method: 'Bank Transfer' | 'Online Gateway' | 'Card'
+    method: 'Bank Transfer' | 'Online Gateway' | 'EasyPay'
+    easypayMethod?: EasyPayMethod
+    copyLinkAfterSave?: boolean
     status: 'Pending Verification' | 'Verified'
     generateReceipt: boolean
     updateBalance: boolean
     referenceNumber?: string
-    last4Digits?: string
     paymentMethodDetails?: string
     debtId?: number
     /** KAN-507: required at the form layer; always set when onSave fires. */
@@ -117,18 +130,23 @@ export function RecordPaymentModal({
   const { t } = useTranslation('common')
   const [paymentAmount, setPaymentAmount] = useState<string>('')
   const [paymentDate, setPaymentDate] = useState<Date | null>(getTodayAtMidnight)
-  const [paymentMethod, setPaymentMethod] = useState<'Bank Transfer' | 'Online Gateway' | 'Card'>(
-    'Bank Transfer'
-  )
+  const [paymentMethod, setPaymentMethod] = useState<
+    'Bank Transfer' | 'Online Gateway' | 'EasyPay'
+  >('Bank Transfer')
+  // Decides which EasyPay service the hosted page offers. Card by default,
+  // and meaningless unless EasyPay is the payment method.
+  const [easypayMethod, setEasypayMethod] = useState<EasyPayMethod>('card')
+  const [copyLinkAfterSave, setCopyLinkAfterSave] = useState(true)
   const [paymentStatus, setPaymentStatus] = useState<'Pending Verification' | 'Verified'>(
     'Pending Verification'
   )
   const [generateReceipt, setGenerateReceipt] = useState(true)
   const [updateBalance, setUpdateBalance] = useState(false)
   const [amountError, setAmountError] = useState<string | null>(null)
-  const [last4Digits, setLast4Digits] = useState<string>('')
+  // Set when switching method rewrote the operator's figure, so the change is
+  // visible rather than silent. Cleared the moment they type again.
+  const [amountCappedNotice, setAmountCappedNotice] = useState<string | null>(null)
   const [paymentMethodDetails, setPaymentMethodDetails] = useState<string>('')
-  const [last4DigitsError, setLast4DigitsError] = useState<string | null>(null)
 
   // KAN-507: Payment Type controlled-vocabulary dropdown. Required at the
   // form layer; backend keeps it Optional on the wire for back-compat.
@@ -215,7 +233,14 @@ export function RecordPaymentModal({
 
   const amountValue = parseFloat(paymentAmount) || 0
   const minAmount = 0.01
-  const maxAmount = isClosedDebtCorrection ? Number.POSITIVE_INFINITY : currentDebt
+  const debtCeiling = isClosedDebtCorrection ? Number.POSITIVE_INFINITY : currentDebt
+  // EasyPay is capped by the KYC threshold as well as by what is owed, so the
+  // hint and the Save guard both move when the method changes. Parameterised
+  // by method because handlePaymentMethodChange runs before the re-render and
+  // has to reason about the method being switched TO, not the stale one.
+  const ceilingFor = (method: 'Bank Transfer' | 'Online Gateway' | 'EasyPay') =>
+    method === 'EasyPay' ? Math.min(EASYPAY_MAX_AMOUNT_UAH, debtCeiling) : debtCeiling
+  const maxAmount = ceilingFor(paymentMethod)
   const newDebt = currentDebt - amountValue
   const hasDebt = newDebt > 0
 
@@ -226,76 +251,92 @@ export function RecordPaymentModal({
 
   // Handle payment method change - clear related fields
   const handlePaymentMethodChange = (value: string) => {
-    const newMethod = value as 'Bank Transfer' | 'Online Gateway' | 'Card'
+    const newMethod = value as 'Bank Transfer' | 'Online Gateway' | 'EasyPay'
     setPaymentMethod(newMethod)
 
-    // Clear card fields when switching away from Card
-    if (newMethod !== 'Card') {
-      setLast4Digits('')
-      setLast4DigitsError(null)
+    // Clip an amount that was valid a moment ago. Switching to EasyPay lowers
+    // the ceiling to the KYC threshold without the operator touching the field,
+    // so leaving the old value would fail validation for a limit that appeared
+    // on its own. Typing over a limit you can already see is different -- that
+    // stays an ordinary error with Save disabled.
+    setAmountCappedNotice(null)
+
+    let nextAmount = amountValue
+    if (newMethod === 'EasyPay' && amountValue > EASYPAY_MAX_AMOUNT_UAH) {
+      // Only the KYC ceiling justifies rewriting what the operator typed: it
+      // appears on its own when the method changes. An over-debt amount is a
+      // limit they could already see, and it already shows an error, so it
+      // stays theirs to correct -- clipping it too would silently change a
+      // figure and clear the warning explaining why it was wrong.
+      //
+      // debtCeiling, not maxAmount: this runs before the re-render, so
+      // maxAmount is still derived from the method being switched away from.
+      nextAmount = Math.min(EASYPAY_MAX_AMOUNT_UAH, debtCeiling)
+      setPaymentAmount(String(nextAmount))
+      setAmountCappedNotice(
+        t('pages.clients.modals.recordPayment.amountCappedToEasypayLimit', {
+          amount: formatMoneyUAHTwoDecimals(nextAmount),
+        })
+      )
     }
 
-    // Re-validate if switching to Card
-    if (newMethod === 'Card') {
-      if (!last4Digits) {
-        setLast4DigitsError(t('pages.clients.modals.recordPayment.last4DigitsRequired'))
-      } else if (last4Digits.length !== 4) {
-        setLast4DigitsError(t('pages.clients.modals.recordPayment.last4DigitsMustBe4'))
-      }
-    }
+    // The ceiling moved with the method, in both directions. Switching away
+    // from EasyPay raises it, so an error about the KYC cap no longer applies
+    // -- left standing it kept both Save buttons disabled behind a limit that
+    // was no longer in force, with re-editing the field the only way out.
+    setAmountError(amountValidationError(nextAmount, newMethod))
   }
 
   // Check if there are validation errors
   const hasValidationErrors =
     !!amountError ||
-    !!last4DigitsError ||
     !!paymentTypeError ||
     !paymentDate ||
     amountValue < 0 ||
     amountValue < minAmount ||
     amountValue > maxAmount ||
-    (paymentMethod === 'Card' && last4Digits.length !== 4) ||
     (selectableDebts.length > 1 && !selectedDebtId) ||
     paymentType === ''
 
-  // Validate payment amount on change
+  // Every question about an amount, answered in one place. Two definitions
+  // disagreeing is what let a method switch clear "must be positive" while
+  // hasValidationErrors stayed true: the message vanished and both Save
+  // buttons sat disabled with nothing to explain them. handleAmountChange,
+  // handleSave and handlePaymentMethodChange all come through here, so they
+  // cannot drift apart again.
+  const amountValidationError = (
+    value: number,
+    method: 'Bank Transfer' | 'Online Gateway' | 'EasyPay' = paymentMethod
+  ): string | null => {
+    if (value < 0) {
+      return t('pages.clients.modals.recordPayment.validationPaymentMustBePositive')
+    }
+    if (!isClosedDebtCorrection && value > currentDebt) {
+      return t('pages.clients.modals.recordPayment.validationPaymentExceedsDebt', {
+        amount: formatMoneyUAHTwoDecimals(currentDebt),
+      })
+    }
+    const ceiling = ceilingFor(method)
+    if (value > ceiling) {
+      return t('pages.clients.modals.recordPayment.validationPaymentExceedsEasypayLimit', {
+        amount: formatMoneyUAHTwoDecimals(ceiling),
+      })
+    }
+    return null
+  }
+
   const handleAmountChange = (value: string) => {
+    setAmountCappedNotice(null)
     setPaymentAmount(value)
     const numValue = parseFloat(value) || 0
 
-    // Clear previous error
-    setAmountError(null)
-
-    // Validate: must be positive
-    if (numValue < 0) {
-      setAmountError(t('pages.clients.modals.recordPayment.validationPaymentMustBePositive'))
-      return
-    }
-
-    // Validate: cannot exceed current debt (skipped for closed-debt corrections)
-    if (!isClosedDebtCorrection && numValue > currentDebt) {
-      setAmountError(
-        t('pages.clients.modals.recordPayment.validationPaymentExceedsDebt', {
-          amount: formatMoneyUAHTwoDecimals(currentDebt),
-        })
-      )
-      return
-    }
+    setAmountError(amountValidationError(numValue))
   }
 
   const handleSave = (status: 'Pending Verification' | 'Verified') => {
-    // Validate payment amount
-    if (amountValue < 0) {
-      setAmountError(t('pages.clients.modals.recordPayment.validationPaymentMustBePositive'))
-      return
-    }
-
-    if (!isClosedDebtCorrection && amountValue > currentDebt) {
-      setAmountError(
-        t('pages.clients.modals.recordPayment.validationPaymentExceedsDebt', {
-          amount: formatMoneyUAHTwoDecimals(currentDebt),
-        })
-      )
+    const amountProblem = amountValidationError(amountValue)
+    if (amountProblem) {
+      setAmountError(amountProblem)
       return
     }
 
@@ -322,7 +363,8 @@ export function RecordPaymentModal({
       status,
       generateReceipt,
       updateBalance,
-      last4Digits: paymentMethod === 'Card' ? last4Digits : undefined,
+      easypayMethod: paymentMethod === 'EasyPay' ? easypayMethod : undefined,
+      copyLinkAfterSave: paymentMethod === 'EasyPay' ? copyLinkAfterSave : undefined,
       paymentMethodDetails: paymentMethodDetails.trim() || undefined,
       debtId: selectedDebtId ?? undefined,
       paymentType,
@@ -333,13 +375,14 @@ export function RecordPaymentModal({
     setPaymentAmount('')
     setPaymentDate(getTodayAtMidnight())
     setPaymentMethod('Bank Transfer')
+    setEasypayMethod('card')
+    setCopyLinkAfterSave(true)
+    setAmountCappedNotice(null)
     setPaymentStatus('Pending Verification')
     setGenerateReceipt(true)
     setUpdateBalance(false)
     setAmountError(null)
-    setLast4Digits('')
     setPaymentMethodDetails('')
-    setLast4DigitsError(null)
     setSelectedDebtId(selectableDebts[0]?.id ?? null)
     setPaymentType('')
     setPaymentTypeDirty(false)
@@ -352,13 +395,14 @@ export function RecordPaymentModal({
     setPaymentAmount('')
     setPaymentDate(getTodayAtMidnight())
     setPaymentMethod('Bank Transfer')
+    setEasypayMethod('card')
+    setCopyLinkAfterSave(true)
+    setAmountCappedNotice(null)
     setPaymentStatus('Pending Verification')
     setGenerateReceipt(true)
     setUpdateBalance(false)
     setAmountError(null)
-    setLast4Digits('')
     setPaymentMethodDetails('')
-    setLast4DigitsError(null)
     setSelectedDebtId(selectableDebts[0]?.id ?? null)
     setPaymentType('')
     setPaymentTypeDirty(false)
@@ -418,15 +462,23 @@ export function RecordPaymentModal({
                     className="rounded-md"
                     error={amountError || undefined}
                   />
+                  {amountCappedNotice && !amountError && (
+                    <div className="flex items-center gap-2 self-stretch">
+                      <Icons.Warning size={20} className="text-warning-500 shrink-0" />
+                      <span className="text-warning-500 text-sm leading-[150%] font-light tracking-[-0.28px]">
+                        {amountCappedNotice}
+                      </span>
+                    </div>
+                  )}
                   {!amountError && (
                     <div className="flex items-center gap-2 self-stretch">
                       <Icons.Money01 size={20} className="text-foreground" />
                       <span className="text-foreground text-sm leading-[150%] font-light tracking-[-0.28px]">
                         ({t('pages.clients.modals.recordPayment.min')}{' '}
                         {formatMoneyUAHTwoDecimals(minAmount)}
-                        {isClosedDebtCorrection
-                          ? ''
-                          : `, ${t('pages.clients.modals.recordPayment.max')} ${formatMoneyUAHTwoDecimals(maxAmount)}`}
+                        {Number.isFinite(maxAmount)
+                          ? `, ${t('pages.clients.modals.recordPayment.max')} ${formatMoneyUAHTwoDecimals(maxAmount)}`
+                          : ''}
                         )
                       </span>
                     </div>
@@ -517,15 +569,37 @@ export function RecordPaymentModal({
                     </Label>
                   </div>
                   <div className="flex items-center gap-2">
-                    <RadioItem value="Card" id="method-card" disabled />
+                    <RadioItem value="EasyPay" id="method-easypay" />
                     <Label
-                      htmlFor="method-card"
-                      className="text-foreground cursor-not-allowed text-sm font-light opacity-50"
+                      htmlFor="method-easypay"
+                      className="text-foreground cursor-pointer text-sm font-light"
                     >
-                      {t('pages.clients.modals.recordPayment.card')}
+                      {t('pages.clients.modals.recordPayment.easypay', 'EasyPay')}
                     </Label>
                   </div>
                 </RadioGroup>
+
+                {/* Only meaningful for EasyPay, so it is absent rather than
+                    disabled for every other payment method. */}
+                {paymentMethod === 'EasyPay' && (
+                  <RadioGroup
+                    value={easypayMethod}
+                    onValueChange={(value) => setEasypayMethod(value as EasyPayMethod)}
+                    className="mt-3 flex flex-wrap items-center gap-4 pl-6"
+                  >
+                    {EASYPAY_METHODS.map((method) => (
+                      <div key={method} className="flex items-center gap-2">
+                        <RadioItem value={method} id={`easypay-method-${method}`} />
+                        <Label
+                          htmlFor={`easypay-method-${method}`}
+                          className="text-foreground cursor-pointer text-sm font-light"
+                        >
+                          {t(`pages.clients.modals.recordPayment.easypayMethods.${method}`)}
+                        </Label>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                )}
               </div>
 
               {/* Payment Type (KAN-507) — required dropdown with auto-prefill */}
@@ -633,6 +707,29 @@ export function RecordPaymentModal({
                   </div>
                 </div>
               </div>
+
+              {/* Saving an EasyPay payment also generates a live
+                  checkout URL, which a payment-method radio does not convey.
+                  Hidden entirely for every other method. */}
+              {paymentMethod === 'EasyPay' && (
+                <div className="flex flex-col items-start gap-3 self-stretch">
+                  <div className="flex items-center gap-2 self-stretch">
+                    <Icons.Link01 size={16} className="text-muted-foreground shrink-0" />
+                    <span className="text-foreground text-sm leading-[150%] font-light tracking-[-0.28px]">
+                      {t('pages.clients.modals.recordPayment.easypayLinkWillBeCreated')}
+                    </span>
+                  </div>
+                  <label className="flex cursor-pointer items-center gap-2 self-stretch">
+                    <Checkbox
+                      checked={copyLinkAfterSave}
+                      onCheckedChange={(checked) => setCopyLinkAfterSave(checked === true)}
+                    />
+                    <span className="text-foreground text-sm leading-[150%] font-light tracking-[-0.28px]">
+                      {t('pages.clients.modals.recordPayment.copyLinkAfterSaving')}
+                    </span>
+                  </label>
+                </div>
+              )}
 
               <div className="flex flex-col items-start justify-center gap-3 self-stretch">
                 <span className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
@@ -773,7 +870,11 @@ export function RecordPaymentModal({
               leftIcon={<Icons.CheckmarkSquare03 size={18} />}
               onClick={() => handleSave('Verified')}
               className="h-12 w-full rounded-md sm:w-auto"
-              disabled={hasValidationErrors}
+              // Disabled, not hidden, for EasyPay: the button's absence means
+              // "you lack the permission" and that must keep meaning only that.
+              // Nothing is confirmed until the gateway callback arrives, so
+              // there is nothing here for an operator to attest to.
+              disabled={hasValidationErrors || paymentMethod === 'EasyPay'}
             >
               {t('pages.clients.modals.recordPayment.saveAndVerify')}
             </Button>

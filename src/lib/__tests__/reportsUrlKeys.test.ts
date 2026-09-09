@@ -63,7 +63,28 @@ describe('REPORTS_URL_KEYS', () => {
       },
       outboundCalls: { dateFrom: 'ocf', dateTo: 'oct' },
       promisesDaily: { dateFrom: 'pdf', dateTo: 'pdt', possiblePayment: 'pdp' },
+      promisesFeed: {
+        dateFrom: 'prf',
+        dateTo: 'prt',
+        hideWorked: 'prw',
+        hidePaid: 'prp',
+        page: 'prpg',
+        pageSize: 'prps',
+      },
     })
+  })
+
+  it('keeps the promises feed clear of the `p…`/`pd…` spellings it would naturally take', () => {
+    // `pf`/`pt`/`pg`/`ps` are the low-verification feed's and `pdf`/`pdt`/`pdp`
+    // the daily promises report's — a feed about promises would reach for both
+    // prefixes first. The collision test above already fails on a reused key;
+    // this one records WHY the set is spelled `pr…`, so a later "tidy-up"
+    // rename cannot quietly walk it back into a taken prefix.
+    const promisesFeedKeys = Object.values<string>(REPORTS_URL_KEYS.promisesFeed)
+    for (const taken of ['pf', 'pt', 'pg', 'ps', 'pdf', 'pdt', 'pdp']) {
+      expect(promisesFeedKeys).not.toContain(taken)
+    }
+    expect(promisesFeedKeys.every((key) => key.startsWith('pr'))).toBe(true)
   })
 
   it('keeps the contact-tag set clear of the `c…` spellings it would naturally take', () => {
