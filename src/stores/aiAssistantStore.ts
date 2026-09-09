@@ -50,14 +50,22 @@ export interface AssistantSettings {
    * «Активность»). Раньше настройка была чисто клиентской; теперь снятый
    * тумблер ещё и экономит время ответа — 31B отвечает без раздумий.
    *
+   * Три значения, а не два — по контракту шлюза (`ASSISTANT_MODES.md`, флаг
+   * `thinking`): поле уходит в запрос ТОЛЬКО когда оператор выбрал сам.
+   * - `null` — тумблер не трогали: поле не шлём, режим решает сервер (его
+   *   дефолт сейчас «с раздумьями»), а всё, что приходит, показываем;
+   * - `true` / `false` — явный выбор: уходит как есть.
+   * В UI `null` выглядит как включённый тумблер — так же, как серверный дефолт.
+   *
    * Имя поля намеренно прежнее: у оператора, снявшего тумблер до этой правки,
-   * выбор обязан пережить обновление — переименование потребовало бы миграции
-   * localStorage ради того же самого смысла.
+   * выбор обязан пережить обновление. Хранившееся раньше `true` значило лишь
+   * «показывать, если пришло» — ровно нынешний `null`, в него оно и мигрирует
+   * (см. `migrate` ниже), чтобы фронт не пришпиливал серверный дефолт.
    *
    * Шаги оркестратора и «Источники» тумблер не прячет — по ним оператор
    * проверяет факты ответа.
    */
-  showReasoning: boolean
+  showReasoning: boolean | null
   responseMode: AssistantResponseMode
   outputFormat: AssistantOutputFormat
   voiceInputEnabled: boolean
@@ -80,7 +88,7 @@ export interface AssistantSettings {
 export const DEFAULT_ASSISTANT_SETTINGS: AssistantSettings = {
   mode: 'fast',
   expertModel: null,
-  showReasoning: true,
+  showReasoning: null,
   responseMode: 'short',
   outputFormat: 'mixed',
   voiceInputEnabled: true,
@@ -94,6 +102,45 @@ export const DEFAULT_ASSISTANT_SETTINGS: AssistantSettings = {
 }
 
 export const AI_ASSISTANT_STORAGE_KEY = 'ai-assistant-storage'
+
+/**
+ * Версия схемы localStorage. 0 → 1: `showReasoning` стал трёхзначным, прежнее
+ * `true` («показывать, если пришло») переводится в `null` («сервер решает»).
+ */
+export const AI_ASSISTANT_STORAGE_VERSION = 1
+
+/**
+ * Показывать ли оператору ход рассуждения при текущем значении тумблера: прячет
+ * только явное «выключено»; `null` (не трогали) и `true` показывают.
+ */
+export function isReasoningShown(showReasoning: boolean | null | undefined): boolean {
+  return showReasoning !== false
+}
+
+/** Форма записи в localStorage (см. `partialize` ниже) — то, что видит `migrate`. */
+type PersistedAiAssistantState = {
+  userId?: string | null
+  conversationId?: number | null
+  settings?: (Partial<AssistantSettings> & { showReasoning?: unknown }) | null
+  historySidebarCollapsed?: boolean
+  reasoningPanelWidth?: number
+}
+
+/**
+ * Миграция записи со старой схемой. Версия 0 хранила `showReasoning: boolean`,
+ * где `true` было и дефолтом, и «показывать» — ни то, ни другое не означало
+ * просьбы к серверу думать, поэтому `true` → `null`. Явное `false` остаётся:
+ * оператор прятал раздумья, теперь он их ещё и выключает (быстрее ответ), а чип
+ * факта хода покажет, чем ход шёл на самом деле.
+ */
+export function migrateAiAssistantState(persisted: unknown, version: number): unknown {
+  if (version >= AI_ASSISTANT_STORAGE_VERSION) return persisted
+  if (!persisted || typeof persisted !== 'object') return persisted
+  const state = persisted as PersistedAiAssistantState
+  if (!state.settings || typeof state.settings !== 'object') return persisted
+  if (state.settings.showReasoning !== true) return persisted
+  return { ...state, settings: { ...state.settings, showReasoning: null } }
+}
 
 interface AiAssistantState {
   userId: string | null
@@ -166,6 +213,14 @@ export const useAiAssistantStore = create<AiAssistantState>()(
     }),
     {
       name: AI_ASSISTANT_STORAGE_KEY,
+      version: AI_ASSISTANT_STORAGE_VERSION,
+      migrate: migrateAiAssistantState as (
+        persisted: unknown,
+        version: number
+      ) => Pick<
+        AiAssistantState,
+        'userId' | 'conversationId' | 'settings' | 'historySidebarCollapsed' | 'reasoningPanelWidth'
+      >,
       partialize: (state) => ({
         userId: state.userId,
         conversationId: state.conversationId,

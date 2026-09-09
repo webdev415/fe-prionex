@@ -221,6 +221,10 @@ describe('AiAssistantBetaPage — тумблер «Показывать разд
     expect(
       within(thinkingMenu).getByRole('switch', { name: 'pages.aiAssistant.showReasoning' })
     ).toHaveAttribute('aria-checked', 'true')
+    // «Включён» здесь — вид, а не выбор: в хранилище остаётся `null` (оператор
+    // тумблер не трогал), и поле `thinking` в запрос не уходит — режим решает
+    // сервер, чей дефолт и есть «с раздумьями».
+    expect(useAiAssistantStore.getState().settingsFor(USER_ID)?.showReasoning).toBeNull()
   })
 
   it('по умолчанию раздумья показываются: тумблер включён, плашка и окно рассуждения на месте', async () => {

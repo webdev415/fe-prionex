@@ -25,6 +25,7 @@ import type {
 import type { SseDonePayload } from '@/features/aiAssistant/sse'
 import {
   AI_ASSISTANT_STORAGE_KEY,
+  AI_ASSISTANT_STORAGE_VERSION,
   DEFAULT_ASSISTANT_SETTINGS,
   useAiAssistantStore,
 } from '@/stores/aiAssistantStore'
@@ -74,8 +75,15 @@ function send(text: string) {
   fireEvent.keyDown(getTextarea(), { key: 'Enter' })
 }
 
-/** Поднять сохранённые настройки (режим + тумблер) до рендера страницы. */
-async function withStoredSettings(settings: { mode: 'fast' | 'thinking'; showReasoning: boolean }) {
+/**
+ * Поднять сохранённые настройки (режим + тумблер) до рендера страницы.
+ * `showReasoning: null` — тумблер не трогали. `version` — схема записи: по
+ * умолчанию текущая, `0` — запись старого фронта (тумблер был двузначным).
+ */
+async function withStoredSettings(
+  settings: { mode: 'fast' | 'thinking'; showReasoning: boolean | null },
+  version: number = AI_ASSISTANT_STORAGE_VERSION
+) {
   localStorage.setItem(
     AI_ASSISTANT_STORAGE_KEY,
     JSON.stringify({
@@ -86,10 +94,17 @@ async function withStoredSettings(settings: { mode: 'fast' | 'thinking'; showRea
         historySidebarCollapsed: false,
         reasoningPanelWidth: DEFAULT_REASONING_PANEL_WIDTH,
       },
-      version: 0,
+      version,
     })
   )
   await useAiAssistantStore.persist.rehydrate()
+}
+
+/** Ключ `thinking` физически отсутствует в теле (не просто `undefined`). */
+function expectNoThinkingKey(payload: AssistantChatRequest) {
+  expect(payload.thinking).toBeUndefined()
+  // Искать надо КЛЮЧ: значение `"mode":"thinking"` в теле законно.
+  expect(JSON.stringify(payload)).not.toContain('"thinking":')
 }
 
 /** Ход, который отвечает текстом и (опционально) фактом хода в кадре `done`. */
@@ -134,7 +149,36 @@ describe('AiAssistantBetaPage — переключатель «Міркуван�
     vi.unstubAllGlobals()
   })
 
-  it('включённый тумблер просит раздумья: в теле thinking: true', async () => {
+  it('тумблер не трогали: поля thinking в теле нет — режим решает сервер', async () => {
+    // Свежий оператор: настроек в хранилище нет вовсе, тумблер по умолчанию
+    // выглядит включённым, но выбора он не делал.
+    mockedSendChatMessage.mockImplementation(() => new Promise(() => {}))
+    renderPage()
+    fireEvent.click(screen.getByTestId('assistant-mode-trigger'))
+    fireEvent.click(screen.getByText('pages.aiAssistant.modeThinkingShort'))
+    send('думай')
+
+    await waitFor(() => expect(mockedSendChatMessage).toHaveBeenCalled())
+    expect(sentPayload().mode).toBe('thinking')
+    expectNoThinkingKey(sentPayload())
+    // Серверный дефолт — с раздумьями: окно раздумий открывается сразу, как и
+    // при явно включённом тумблере.
+    expect(await screen.findByTestId('assistant-reasoning')).toBeInTheDocument()
+    // В хранилище выбор так и не появился — поле не пришпилено к дефолту.
+    expect(useAiAssistantStore.getState().settingsFor(USER_ID)?.showReasoning).toBeNull()
+  })
+
+  it('сохранённое «не трогали» (null) тоже уходит без поля', async () => {
+    await withStoredSettings({ mode: 'thinking', showReasoning: null })
+    mockTurn()
+    renderPage()
+    send('думай')
+    await screen.findByText('Готово')
+
+    expectNoThinkingKey(sentPayload())
+  })
+
+  it('явно включённый тумблер просит раздумья: в теле thinking: true', async () => {
     await withStoredSettings({ mode: 'thinking', showReasoning: true })
     mockTurn()
     renderPage()
@@ -142,6 +186,55 @@ describe('AiAssistantBetaPage — переключатель «Міркуван�
     await screen.findByText('Готово')
 
     expect(sentPayload().thinking).toBe(true)
+  })
+
+  it('запись старого фронта (v0) с showReasoning: true мигрирует в «не трогали»: поля нет', async () => {
+    // До этой правки `true` было и дефолтом, и «показывать, если пришло» —
+    // просьбой к серверу думать оно не было, пришпиливать его нельзя.
+    await withStoredSettings({ mode: 'thinking', showReasoning: true }, 0)
+    mockTurn()
+    renderPage()
+    send('думай')
+    await screen.findByText('Готово')
+
+    expectNoThinkingKey(sentPayload())
+    expect(useAiAssistantStore.getState().settingsFor(USER_ID)?.showReasoning).toBeNull()
+  })
+
+  it('запись старого фронта (v0) с showReasoning: false остаётся выключенной: thinking: false', async () => {
+    await withStoredSettings({ mode: 'thinking', showReasoning: false }, 0)
+    mockTurn()
+    renderPage()
+    send('думай')
+    await screen.findByText('Готово')
+
+    expect(sentPayload().thinking).toBe(false)
+  })
+
+  it('щелчок тумблера — явный выбор: выключил → false, включил обратно → true', async () => {
+    await withStoredSettings({ mode: 'thinking', showReasoning: null })
+    mockTurn()
+    renderPage()
+
+    const toggleReasoning = () => {
+      fireEvent.click(screen.getByTestId('assistant-mode-trigger'))
+      fireEvent.click(screen.getByRole('switch', { name: 'pages.aiAssistant.showReasoning' }))
+      fireEvent.click(screen.getByTestId('assistant-mode-trigger'))
+    }
+
+    toggleReasoning()
+    send('раз')
+    await screen.findByText('Готово')
+    expect(sentPayload(0).thinking).toBe(false)
+
+    toggleReasoning()
+    send('два')
+    await waitFor(() => expect(mockedSendChatMessage).toHaveBeenCalledTimes(2))
+    expect(sentPayload(1).thinking).toBe(true)
+    // Выбор лёг в localStorage: переживёт перезагрузку.
+    await waitFor(() =>
+      expect(useAiAssistantStore.getState().settingsFor(USER_ID)?.showReasoning).toBe(true)
+    )
   })
 
   it('снятый тумблер уходит как thinking: false и не открывает панель раздумий', async () => {
@@ -174,12 +267,9 @@ describe('AiAssistantBetaPage — переключатель «Міркуван�
     send('быстро')
     await screen.findByText('Готово')
 
-    const payload = sentPayload()
-    expect(payload.thinking).toBeUndefined()
     // Не только «undefined», но и физически не уходит на провод: прокси старой
     // версии отвергает незнакомое поле, и fast-ход обязан остаться прежним.
-    // Искать надо КЛЮЧ: значение `"mode":"thinking"` в теле законно.
-    expect(JSON.stringify(payload)).not.toContain('"thinking":')
+    expectNoThinkingKey(sentPayload())
   })
 
   it('после ответа чип говорит, чем ход шёл на самом деле', async () => {

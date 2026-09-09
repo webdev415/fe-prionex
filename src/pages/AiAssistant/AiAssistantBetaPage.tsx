@@ -73,6 +73,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useAiAssistantSettings } from '@/features/aiSettings/hooks/useAiAssistantSettings'
 import {
   DEFAULT_ASSISTANT_SETTINGS,
+  isReasoningShown,
   useAiAssistantStore,
   type AssistantSettings,
   type AssistantVoiceMaxDuration,
@@ -1018,6 +1019,12 @@ export function AiAssistantBetaPage() {
   const [assistantSettings, setAssistantSettings] = useState<AssistantSettings>(
     () => useAiAssistantStore.getState().settingsFor(userId) ?? DEFAULT_ASSISTANT_SETTINGS
   )
+  /**
+   * Показывать ли ход рассуждения: тумблер «Міркування 31B» трёхзначный
+   * (`null` — не трогали, сервер решает), а поверхностям раздумий нужен ответ
+   * «да/нет» — прячем только по явному «выключено».
+   */
+  const reasoningShown = isReasoningShown(assistantSettings.showReasoning)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isHistoryDrawerOpen, setIsHistoryDrawerOpen] = useState(false)
   // An explicit click in the history panel must load the conversation even
@@ -2069,9 +2076,12 @@ export function AiAssistantBetaPage() {
       // Экспертный ход идёт во внешнюю модель — «думающего» окна раздумий у
       // него нет, поэтому режим раздумий на него не распространяется.
       const isThinking = !isExpertTurn && assistantSettings.mode === 'thinking'
-      // Тумблер «Міркування 31B»: просим ли 31B рассуждать в этом ходе. Только у
+      // Тумблер «Міркування 31B»: `null` — оператор его не трогал (сервер решает,
+      // его дефолт — с раздумьями), `true`/`false` — явный выбор. Только у
       // «думающего» хода — fast и эксперт про это поле ничего не знают.
-      const wantsReasoning = isThinking && assistantSettings.showReasoning
+      const reasoningPreference = assistantSettings.showReasoning
+      // Ждать ли раздумий в этом ходе: всё, кроме явного «выключено».
+      const wantsReasoning = isThinking && isReasoningShown(reasoningPreference)
       const reasoningStartedAt = Date.now()
       const loadingId = appendChatMessage({
         role: 'assistant',
@@ -2239,12 +2249,15 @@ export function AiAssistantBetaPage() {
         })
 
       try {
-        // Поле уходит только у «думающего» хода и только пока шлюз его
-        // понимает. Отказ ровно по этому полю (422) означает старый прокси:
-        // повторяем ход без поля, говорим об этом один раз и дальше в этой
-        // сессии поле не шлём вовсе.
+        // Поле уходит только у «думающего» хода, только когда оператор выбрал
+        // сам (тумблер не трогали → поля нет, режим решает сервер) и только пока
+        // шлюз его понимает. Отказ ровно по этому полю (422) означает старый
+        // прокси: повторяем ход без поля, говорим об этом один раз и дальше в
+        // этой сессии поле не шлём вовсе.
         const thinkingFlag =
-          isThinking && !thinkingFlagUnsupportedRef.current ? wantsReasoning : undefined
+          isThinking && !thinkingFlagUnsupportedRef.current
+            ? (reasoningPreference ?? undefined)
+            : undefined
         const result = await sendTurn(thinkingFlag).catch(async (error: unknown) => {
           const turnStarted = receivedDelta || streamedReasoning !== '' || toolSteps.length > 0
           if (thinkingFlag === undefined || turnStarted || !isUnknownThinkingField(error)) {
@@ -2752,11 +2765,11 @@ export function AiAssistantBetaPage() {
     for (let i = chatMessages.length - 1; i >= 0; i -= 1) {
       const item = chatMessages[i]
       if (item.role !== 'assistant' || item.isError) continue
-      if (!messageHasActivity(item, assistantSettings.showReasoning)) continue
+      if (!messageHasActivity(item, reasoningShown)) continue
       if (isReasoningOpen(item)) return item
     }
     return null
-  }, [chatMessages, isReasoningOpen, assistantSettings.showReasoning])
+  }, [chatMessages, isReasoningOpen, reasoningShown])
 
   const isReasoningPanelOpen = activeReasoningMessage != null
   // Номер источника для подсветки в панели — только если фокус принадлежит
@@ -2960,7 +2973,7 @@ export function AiAssistantBetaPage() {
     // есть — без чипа они после гидратации/перезагрузки истории становятся
     // недоступны (панель нельзя открыть). Чип корректно деградирует на пустом
     // reasoning + нулевом stepCount (см. ReasoningInlineChip).
-    if (!messageHasActivity(item, assistantSettings.showReasoning)) return null
+    if (!messageHasActivity(item, reasoningShown)) return null
     const elapsed = reasoningElapsedMs(item, reasoningNow)
     return (
       <ReasoningInlineChip
@@ -2968,7 +2981,7 @@ export function AiAssistantBetaPage() {
         streaming={Boolean(item.isStreamingReasoning)}
         // Раздумья скрыты — не отдаём их и в тизер плашки (иначе последняя мысль
         // всё равно попадала бы оператору на глаза).
-        reasoning={assistantSettings.showReasoning ? (item.reasoning ?? '') : ''}
+        reasoning={reasoningShown ? (item.reasoning ?? '') : ''}
         stepCount={item.toolSteps?.length ?? 0}
         elapsedLabel={elapsed != null ? formatReasoningDuration(elapsed) : null}
         onToggle={() => toggleReasoning(item)}
@@ -3145,7 +3158,7 @@ export function AiAssistantBetaPage() {
                 const hasReasoningSurface =
                   item.role === 'assistant' &&
                   !item.isError &&
-                  messageHasActivity(item, assistantSettings.showReasoning)
+                  messageHasActivity(item, reasoningShown)
                 return (
                   <div
                     key={item.id}
@@ -3671,7 +3684,7 @@ export function AiAssistantBetaPage() {
                   // Выбор обычного режима снимает экспертный: пункты меню
                   // взаимоисключающие, «Швидкий + Експерт» одновременно не бывает.
                   onChange={(mode) => applySettings((s) => ({ ...s, mode, expertModel: null }))}
-                  showReasoning={assistantSettings.showReasoning}
+                  showReasoning={reasoningShown}
                   onShowReasoningChange={(show) =>
                     applySettings((s) => ({ ...s, showReasoning: show }))
                   }
@@ -3785,7 +3798,7 @@ export function AiAssistantBetaPage() {
           activeReasoningMessage?.thinkingPlaceholder &&
           activeReasoningMessage?.isStreamingReasoning
         )}
-        showReasoning={assistantSettings.showReasoning}
+        showReasoning={reasoningShown}
         reasoning={activeReasoningMessage?.reasoning ?? ''}
         toolSteps={activeReasoningMessage?.toolSteps ?? []}
         citations={activeReasoningMessage?.citations ?? []}
