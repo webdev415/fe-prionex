@@ -5665,6 +5665,7 @@
         "viewSMS": {
           "title": "View SMS",
           "dateTime": "Date/Time",
+          "phone": "Phone",
           "template": "Template",
           "operator": "Operator",
           "status": "Status",
