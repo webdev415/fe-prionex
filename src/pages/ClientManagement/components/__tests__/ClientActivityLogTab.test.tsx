@@ -19,7 +19,7 @@ import { describe, expect, it, vi, beforeAll, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ClientActivityLogTab } from '../ClientActivityLogTab'
+import { ClientActivityLogTab, type ActivityCallRef } from '../ClientActivityLogTab'
 import { activityLogApi, type ActivityLogResponse } from '@/features/clients/api/activityLogApi'
 
 vi.mock('react-i18next', () => ({
@@ -38,6 +38,7 @@ vi.mock('react-i18next', () => ({
         'pages.clients.detail.activityLog.sources.calls': 'Calls',
         'pages.clients.detail.activityLog.filters.allOperators': 'All operators',
         'pages.clients.detail.activityLog.filters.reset': 'Reset',
+        'pages.clients.detail.activityLog.recording': 'Recording',
         'pages.clients.detail.activityLog.entryCount': '{{count}} entries',
         'pages.clients.detail.tabs.docs': 'Docs',
         'pages.clients.detail.tabs.callSms': 'Call / SMS',
@@ -77,13 +78,29 @@ beforeAll(() => {
 
 const getSpy = vi.spyOn(activityLogApi, 'get')
 
-function renderTab() {
+function renderTab(onPlayRecording?: (call: ActivityCallRef) => void) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={client}>
-      <ClientActivityLogTab clientId={2} isActive />
+      <ClientActivityLogTab clientId={2} isActive onPlayRecording={onPlayRecording} />
     </QueryClientProvider>
   )
+}
+
+/** One call entry as the aggregator returns it. */
+function callEntry(over: Record<string, unknown> = {}) {
+  return entry({
+    source: 'calls' as const,
+    kind: 'call',
+    summary: 'Outbound call — promise_to_pay — 145s',
+    detail: {
+      call_id: 'a1000001-0000-4000-8000-000000000007',
+      direction: 'outbound',
+      talk_duration: 145,
+      recording_path: '/var/spool/asterisk/monitor/outbound/20260909-071000.wav',
+    },
+    ...over,
+  })
 }
 
 function response(over: Partial<ActivityLogResponse> = {}): ActivityLogResponse {
@@ -239,6 +256,51 @@ describe('ClientActivityLogTab', () => {
     expect(getSpy).not.toHaveBeenCalled()
   })
 
+  it('hands the call up to be played rather than linking the file path', async () => {
+    // `recording_path` names a file on the telephony host, and the endpoint
+    // that serves it needs a Bearer token an <a href> cannot send. Every other
+    // screen fetches the bytes through CallPlayer for that reason; this tab
+    // used to render the raw path as a link, which resolved to nothing.
+    const onPlay = vi.fn()
+    getSpy.mockResolvedValue(response({ entries: [callEntry()], total: 1 }))
+    renderTab(onPlay)
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Recording' }))
+
+    expect(onPlay).toHaveBeenCalledWith(
+      expect.objectContaining({
+        callId: 'a1000001-0000-4000-8000-000000000007',
+        direction: 'outbound',
+        talkDurationSeconds: 145,
+      })
+    )
+    // Nothing navigates: a link here would 404 on the telephony path.
+    expect(screen.queryByRole('link', { name: 'Recording' })).toBeNull()
+  })
+
+  it('offers nothing to play for a call with no recording', async () => {
+    const onPlay = vi.fn()
+    getSpy.mockResolvedValue(
+      response({
+        entries: [
+          callEntry({
+            detail: {
+              call_id: 'a1000001-0000-4000-8000-000000000003',
+              direction: 'outbound',
+              talk_duration: 0,
+              recording_path: null,
+            },
+          }),
+        ],
+        total: 1,
+      })
+    )
+    renderTab(onPlay)
+    await screen.findByText('Outbound call — promise_to_pay — 145s')
+    // A dead control is worse than none: it promises audio that was never kept.
+    expect(screen.queryByRole('button', { name: 'Recording' })).toBeNull()
+  })
+
   it('says how much history sits behind the filters', async () => {
     // Without it the operator has to page to the end to learn how much there
     // is, which is the question the bar should answer before they start.
@@ -285,6 +347,28 @@ describe('ClientActivityLogTab', () => {
     await waitFor(() =>
       expect(getSpy).toHaveBeenCalledWith(2, expect.objectContaining({ page: 2 }))
     )
+  })
+
+  it('keeps paginating when a later page reports no total', async () => {
+    // Counting audit's match set is the expensive half of the request, so only
+    // page one asks for it. If the tab did not keep that answer, moving to
+    // page two would compute zero pages and the control would vanish under the
+    // operator mid-browse.
+    getSpy.mockResolvedValueOnce(
+      response({ entries: [entry()], total: 500, page: 1, page_size: 50 })
+    )
+    renderTab()
+    await screen.findByRole('button', { name: 'Go to page 10' })
+
+    getSpy.mockResolvedValue(response({ entries: [entry()], total: null, page: 2, page_size: 50 }))
+    await userEvent.click(screen.getByRole('button', { name: 'Go to page 2' }))
+
+    await waitFor(() =>
+      expect(getSpy).toHaveBeenCalledWith(2, expect.objectContaining({ page: 2 }))
+    )
+    // Still ten pages, and still saying how much history there is.
+    expect(await screen.findByRole('button', { name: 'Go to page 10' })).toBeVisible()
+    expect(screen.getByText('500 entries')).toBeVisible()
   })
 
   it('returns to page one when a filter changes', async () => {

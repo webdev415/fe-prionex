@@ -9,6 +9,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
@@ -27,13 +28,34 @@ import { useClientActivityLog } from '@/features/clients/hooks/useClientActivity
 import {
   DEFAULT_PAGE_SIZE,
   type ActivityEntry,
+  type ActivityLogResponse,
   type ActivitySource,
 } from '@/features/clients/api/activityLogApi'
+import { activityLogQueryKey } from '@/features/clients/hooks/useClientActivityLog'
 
 interface ClientActivityLogTabProps {
   clientId: number | null
   /** The tab is mounted but inactive elsewhere in the card — don't fetch then. */
   isActive: boolean
+  /**
+   * Play a call's recording. The card owns `CallRecordingModal`, so the tab
+   * hands the call up rather than mounting a second copy of it.
+   *
+   * A link cannot do this job: `recording_path` is a path on the telephony
+   * host, and the endpoint that serves it needs a Bearer token an `<a href>`
+   * cannot send. Every other screen in the app fetches the bytes through
+   * `CallPlayer` for that reason.
+   */
+  onPlayRecording?: (call: ActivityCallRef) => void
+}
+
+/** What the card needs to open the player for one call from this feed. */
+export interface ActivityCallRef {
+  callId: string
+  direction: string | null
+  operatorName: string | null
+  talkDurationSeconds: number | null
+  ts: string
 }
 
 const ALL_OPERATORS = '__all__'
@@ -85,9 +107,28 @@ function formatTimestamp(ts: string, locale: string): string {
   })
 }
 
-function recordingPath(entry: ActivityEntry): string | null {
-  const value = entry.detail?.recording_path
-  return typeof value === 'string' && value ? value : null
+/**
+ * The call behind this entry, when it has a recording to play.
+ *
+ * `recording_path` decides whether audio exists at all -- the same signal the
+ * Call List uses through the API's `has_recording`. It is never used as a URL:
+ * it names a file on the telephony host, and the bytes come from the call
+ * service instead.
+ */
+function playableCall(entry: ActivityEntry): ActivityCallRef | null {
+  if (entry.source !== 'calls') return null
+  const path = entry.detail?.recording_path
+  const callId = entry.detail?.call_id
+  if (typeof path !== 'string' || !path) return null
+  if (typeof callId !== 'string' || !callId) return null
+  const seconds = entry.detail?.talk_duration
+  return {
+    callId,
+    direction: typeof entry.detail?.direction === 'string' ? entry.detail.direction : null,
+    operatorName: entry.operator_name,
+    talkDurationSeconds: typeof seconds === 'number' ? seconds : null,
+    ts: entry.ts,
+  }
 }
 
 /**
@@ -161,7 +202,11 @@ function entrySummary(entry: ActivityEntry, t: TFunction): string {
   return entry.summary ?? entry.kind
 }
 
-export function ClientActivityLogTab({ clientId, isActive }: ClientActivityLogTabProps) {
+export function ClientActivityLogTab({
+  clientId,
+  isActive,
+  onPlayRecording,
+}: ClientActivityLogTabProps) {
   const { t, i18n } = useTranslation('common')
   const [from, setFrom] = useState<Date | null>(null)
   const [to, setTo] = useState<Date | null>(null)
@@ -235,7 +280,25 @@ export function ClientActivityLogTab({ clientId, isActive }: ClientActivityLogTa
   // A degraded source reports no total, so the count covers only what actually
   // answered. Understating it is the safe direction: every page it offers holds
   // rows, and the banner already says the feed is short.
-  const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / pageSize))
+  //
+  // Only page one carries a total -- counting audit's match set is the one
+  // expensive part of the request and cannot change within a view, so it is
+  // asked for once and kept here. Every filter resets to page one, so a view
+  // always starts by learning its own total.
+  // Only the first page carries a total: counting audit's match set is the one
+  // expensive part of the request, and the number cannot change within a view,
+  // so it is asked for once. Read back from the cache rather than mirrored
+  // into local state -- the cache already holds it, and a second copy would
+  // have to be kept in step with it.
+  //
+  // Every filter resets to page one, so a view always starts by learning its
+  // own total, and `activityLogQueryKey` builds the same key the hook used.
+  const cache = useQueryClient()
+  const firstPage = cache.getQueryData<ActivityLogResponse>(
+    activityLogQueryKey(clientId, { ...filters, page: 1 })
+  )
+  const total = data?.total ?? firstPage?.total ?? 0
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
   return (
     <div className="flex flex-col gap-4 p-4">
@@ -317,7 +380,7 @@ export function ClientActivityLogTab({ clientId, isActive }: ClientActivityLogTa
             number changes. */}
         {data !== undefined && (
           <span className="text-muted-foreground ml-auto pb-2 text-xs tabular-nums">
-            {t('pages.clients.detail.activityLog.entryCount', { count: data.total })}
+            {t('pages.clients.detail.activityLog.entryCount', { count: total })}
           </span>
         )}
       </div>
@@ -352,7 +415,7 @@ export function ClientActivityLogTab({ clientId, isActive }: ClientActivityLogTa
 
       <ul className="flex flex-col gap-2">
         {(data?.entries ?? []).map((entry) => {
-          const recording = recordingPath(entry)
+          const call = playableCall(entry)
           return (
             <li
               key={entry.id}
@@ -371,25 +434,30 @@ export function ClientActivityLogTab({ clientId, isActive }: ClientActivityLogTa
                 {formatTimestamp(entry.ts, i18n.language)}
               </span>
 
-              <span className="text-foreground min-w-0 flex-1 text-sm break-words">
+              {/* The play control sits with the sentence it acts on, not out
+                  past the operator name. Only call rows carry one, so a
+                  trailing column would have left it stranded at the row's edge
+                  reading as though it belonged to the person rather than the
+                  call. */}
+              <span className="text-foreground flex min-w-0 flex-1 items-center gap-1.5 text-sm break-words">
                 {entrySummary(entry, t)}
+                {call && onPlayRecording && (
+                  <button
+                    type="button"
+                    onClick={() => onPlayRecording(call)}
+                    aria-label={t('pages.clients.detail.activityLog.recording')}
+                    title={t('pages.clients.detail.activityLog.recording')}
+                    className="text-secondary-700 hover:bg-secondary-50 inline-flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors"
+                  >
+                    <Icons.Play size={14} strokeWidth={1.5} />
+                  </button>
+                )}
               </span>
 
               {entry.operator_name && (
                 <span className="text-muted-foreground text-xs whitespace-nowrap">
                   {entry.operator_name}
                 </span>
-              )}
-
-              {recording && (
-                <a
-                  href={recording}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-primary-700 text-xs underline"
-                >
-                  {t('pages.clients.detail.activityLog.recording')}
-                </a>
               )}
             </li>
           )

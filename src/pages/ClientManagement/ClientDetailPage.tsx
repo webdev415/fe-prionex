@@ -3,7 +3,7 @@
  *
  * Full page view for displaying detailed client information.
  */
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useQueries, useQueryClient } from '@tanstack/react-query'
@@ -36,7 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/Select'
-import { ClientActivityLogTab } from './components/ClientActivityLogTab'
+import { ClientActivityLogTab, type ActivityCallRef } from './components/ClientActivityLogTab'
 import { EditInteractionModal } from './components/EditInteractionModal'
 import { AddTaskModal } from './components/AddTaskModal'
 import { AssignClientModal } from './components/AssignClientModal'
@@ -1695,6 +1695,46 @@ export function ClientDetailPage() {
     direction?: string | null
     telephony_type?: string | null
   } | null>(null)
+
+  /**
+   * Play a recording the activity feed offered.
+   *
+   * The feed is a merged list, not a call log, so it carries only what a row
+   * needs to describe itself. Everything the player actually reads it does
+   * have -- ``call_id`` fetches the audio, and the rest is labelling. The
+   * client's own name and phone come from the card, which knows them better
+   * than the feed does.
+   */
+  const handlePlayActivityRecording = useCallback(
+    (call: ActivityCallRef) => {
+      const when = new Date(call.ts)
+      const valid = !Number.isNaN(when.getTime())
+      setSelectedCallData({
+        type:
+          call.direction === 'inbound'
+            ? t('pages.clients.modals.callLogCard.callTypes.incoming')
+            : t('pages.clients.modals.callLogCard.callTypes.outgoing'),
+        clientName: client?.fullName ?? '',
+        date: valid ? when.toLocaleDateString(i18n.language) : '',
+        time: valid ? when.toLocaleTimeString(i18n.language) : '',
+        operator: call.operatorName ?? '',
+        // The modal takes a display string, not seconds -- every other call
+        // site hands it one already formatted.
+        duration:
+          call.talkDurationSeconds != null
+            ? `${Math.floor(call.talkDurationSeconds / 60)}:${String(
+                call.talkDurationSeconds % 60
+              ).padStart(2, '0')}`
+            : '',
+        phone: client?.phones?.[0]?.number ?? '',
+        call_id: call.callId,
+        direction: call.direction,
+      })
+      setOpenCallModal('call-recording')
+      setIsCallRecordingModalOpen(true)
+    },
+    [client, i18n.language, t, setOpenCallModal]
+  )
   const [isViewSMSModalOpen, setIsViewSMSModalOpen] = useState(false)
   const [selectedSMSData, setSelectedSMSData] = useState<{
     date: string
@@ -5539,6 +5579,7 @@ export function ClientDetailPage() {
                     <ClientActivityLogTab
                       clientId={isValidClientId ? clientId : null}
                       isActive={activeRightCardTab === 'activity'}
+                      onPlayRecording={handlePlayActivityRecording}
                     />
                   </div>
                 )}

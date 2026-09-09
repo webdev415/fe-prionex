@@ -20,8 +20,14 @@ export interface ActivityLogResponse {
   entries: ActivityEntry[]
   /** Sources that failed. The feed is incomplete when this is non-empty. */
   degraded: ActivitySource[]
-  /** Merged count across all three sources — what the page count is built on. */
-  total: number
+  /**
+   * Merged count across all three sources — what the page count is built on.
+   *
+   * `null` on pages after the first: the expensive half of that count is
+   * skipped there, since the number cannot change within one view. Callers
+   * keep what page one reported.
+   */
+  total: number | null
   page: number
   page_size: number
 }
