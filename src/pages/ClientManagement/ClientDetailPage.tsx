@@ -4791,7 +4791,6 @@ export function ClientDetailPage() {
                                                 ? destDisplay.destination
                                                 : undefined
                                             }
-                                            destinationOwnerLabel={destDisplay.ownerSuffix}
                                             sent_at={msg.sent_at ?? undefined}
                                             delivered_at={msg.delivered_at ?? undefined}
                                             icon={
@@ -5273,7 +5272,6 @@ export function ClientDetailPage() {
                                                     ? destDisplay.destination
                                                     : undefined
                                                 }
-                                                destinationOwnerLabel={destDisplay.ownerSuffix}
                                                 sent_at={item.sent_at ?? undefined}
                                                 delivered_at={item.delivered_at ?? undefined}
                                                 icon={
