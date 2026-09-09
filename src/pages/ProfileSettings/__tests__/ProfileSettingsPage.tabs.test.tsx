@@ -50,6 +50,10 @@ vi.mock('@/stores/authStore', () => {
 })
 vi.mock('@tanstack/react-query', () => ({ useMutation: () => ({ mutateAsync: vi.fn() }) }))
 vi.mock('../AppearanceSettings', () => ({ AppearanceSettings: () => <div>Appearance</div> }))
+vi.mock('@/features/auth/hooks/useMyPersonalInformation', () => ({
+  useMyPersonalInformation: () => ({ data: undefined }),
+  useUpdateMyPersonalInformation: () => ({ mutateAsync: vi.fn() }),
+}))
 vi.mock('@/components/layout/LanguageSwitcher', () => ({ LanguageSwitcher: () => null }))
 vi.mock('@/components/layout/ProjectSelector', () => ({ ProjectSelector: () => null }))
 // The tab's own behaviour is covered in the taHotkeys tests; here it only needs

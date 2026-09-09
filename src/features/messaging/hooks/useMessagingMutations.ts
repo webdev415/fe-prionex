@@ -15,7 +15,7 @@ import type {
   MessagingSelectionPayload,
   MessagingSingleSendRequest,
 } from '../api/types'
-import { messagingKeys } from './useMessaging'
+import { messagingKeys, useCanReadMessagingDrafts } from './useMessaging'
 
 const messagingToast = (
   key: string,
@@ -25,13 +25,19 @@ const messagingToast = (
 
 export function useCreateMessagingDraft() {
   const queryClient = useQueryClient()
+  const canReadDrafts = useCanReadMessagingDrafts()
 
   return useMutation({
     mutationFn: (payload: MessagingDraftCreate) => messagingApi.createDraft(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: messagingKeys.drafts() })
       toast.success(
-        messagingToast('pages.messagingDrafts.toasts.created', 'Draft created successfully')
+        canReadDrafts
+          ? messagingToast('pages.messagingDrafts.toasts.created', 'Draft created successfully')
+          : messagingToast(
+              'pages.messagingDrafts.createdOutOfSight',
+              'Draft saved. It will not appear in the list below, which needs a messaging send or launch permission.'
+            )
       )
     },
     onError: (error) => toast.error(getErrorMessage(error)),

@@ -31,6 +31,7 @@ import {
   resolveDestinationPhone,
   sendPermissionForChannel,
   useDestinationQuota,
+  useCanReadMessagingDrafts,
   useMessagingDrafts,
   useMessagingIntegrations,
   useSendMessage,
@@ -139,6 +140,7 @@ export function SendMessageModal({
   const lastFocusedRef = useRef<MessagingTemplateFocusField>('body')
 
   const { data: integrations = [], isLoading: integrationsLoading } = useMessagingIntegrations(open)
+  const canReadDrafts = useCanReadMessagingDrafts()
   const { data: channelDrafts = [], isLoading: draftsLoading } = useMessagingDrafts(
     open ? channel : undefined
   )
@@ -633,7 +635,7 @@ export function SendMessageModal({
               )}
             </div>
 
-            <div>
+            <div className={canReadDrafts ? undefined : 'hidden'}>
               <label className="text-foreground mb-1.5 block text-sm font-light">
                 {t('pages.clients.modals.sendMessage.draft', 'Draft')}
               </label>

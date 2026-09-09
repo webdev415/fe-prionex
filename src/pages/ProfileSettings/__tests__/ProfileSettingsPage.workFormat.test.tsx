@@ -50,6 +50,10 @@ vi.mock('@/features/auth/api/authApi', () => ({
 }))
 vi.mock('@/components/layout/ProjectSelector', () => ({ ProjectSelector: () => null }))
 vi.mock('../AppearanceSettings', () => ({ AppearanceSettings: () => null }))
+vi.mock('@/features/auth/hooks/useMyPersonalInformation', () => ({
+  useMyPersonalInformation: () => ({ data: undefined }),
+  useUpdateMyPersonalInformation: () => ({ mutateAsync: vi.fn() }),
+}))
 vi.mock('@tanstack/react-query', () => ({
   useMutation: () => ({ mutateAsync: vi.fn() }),
 }))

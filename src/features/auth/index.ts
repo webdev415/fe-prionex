@@ -16,6 +16,9 @@ export {
 export {
   useAuth,
   useUpdateMyProfile,
+  MY_PERSONAL_INFORMATION_QUERY_KEY,
+  useMyPersonalInformation,
+  useUpdateMyPersonalInformation,
   TWO_FACTOR_QUERY_KEY,
   useTwoFactorStatus,
   useTwoFactorSetup,

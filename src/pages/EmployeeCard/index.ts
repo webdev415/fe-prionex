@@ -1,0 +1,1 @@
+export { EmployeeCardPage } from './EmployeeCardPage'

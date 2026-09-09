@@ -30,6 +30,7 @@ import {
   isMessagingIntegrationUsable,
   launchPermissionForChannel,
   useCreateMessagingCampaign,
+  useCanReadMessagingDrafts,
   useMessagingDrafts,
   useMessagingIntegrations,
   insertMessagingVariableAtCursor,
@@ -116,6 +117,7 @@ export function CsvCampaignLaunchModal({ open, onClose, onLaunched }: CsvCampaig
   const lastFocusedRef = useRef<MessagingTemplateFocusField>('body')
 
   const { data: integrations = [], isLoading: integrationsLoading } = useMessagingIntegrations(open)
+  const canReadDrafts = useCanReadMessagingDrafts()
   const { data: drafts = [], isLoading: draftsLoading } = useMessagingDrafts(
     open ? channel : undefined
   )
@@ -637,7 +639,7 @@ export function CsvCampaignLaunchModal({ open, onClose, onLaunched }: CsvCampaig
                   </Select>
                 </div>
 
-                <div>
+                <div className={canReadDrafts ? undefined : 'hidden'}>
                   <label className="text-foreground mb-1.5 block text-sm font-light">
                     {t('pages.clients.modals.bulkSendMessage.draft', 'Draft')}
                   </label>

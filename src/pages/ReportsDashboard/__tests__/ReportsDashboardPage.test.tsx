@@ -78,6 +78,16 @@ vi.mock('@/features/outboundCalls', () => ({
   OutboundCallsTab: () => <div data-testid="outbound-calls-tab" />,
 }))
 
+// …and for the daily promises report (features/promisesDaily).
+vi.mock('@/features/promisesDaily', () => ({
+  PromisesDailyTab: () => <div data-testid="promises-daily-tab" />,
+}))
+
+// …and for the promises feed (features/promisesFeed).
+vi.mock('@/features/promisesFeed', () => ({
+  PromisesFeedTab: () => <div data-testid="promises-feed-tab" />,
+}))
+
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: (selector: (s: unknown) => unknown) =>
     selector({
@@ -156,6 +166,9 @@ const operatorPromisesTab = () =>
   screen.getByRole('tab', { name: 'pages.reports.tabs.operator-promises' })
 const outboundCallsTab = () =>
   screen.getByRole('tab', { name: 'pages.reports.tabs.outbound-calls' })
+const promisesDailyTab = () =>
+  screen.getByRole('tab', { name: 'pages.reports.tabs.promises-daily' })
+const promisesFeedTab = () => screen.getByRole('tab', { name: 'pages.reports.tabs.promises-feed' })
 
 describe('ReportsDashboardPage (tab host)', () => {
   it('renders the processing report panel for ?tab=processing', () => {
@@ -489,7 +502,84 @@ describe('ReportsDashboardPage (tab host)', () => {
     expect(search()).toContain('oct=2026-08-27')
   })
 
-  it('offers all ten report tabs in a fixed order', () => {
+  it('renders the daily promises report panel for ?tab=promises-daily', () => {
+    renderPage(['/reports?tab=promises-daily'])
+
+    expect(screen.getByTestId('promises-daily-tab')).toBeInTheDocument()
+    expect(screen.queryByTestId('outbound-calls-tab')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('agent-performance-table')).not.toBeInTheDocument()
+    expect(promisesDailyTab()).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'reports-panel-promises-daily')
+  })
+
+  it('keeps the daily promises filters when switching tabs', async () => {
+    renderPage(['/reports?tab=promises-daily&pdf=2026-08-01&pdt=2026-08-31&pdp=1'])
+    expect(screen.getByTestId('promises-daily-tab')).toBeInTheDocument()
+
+    await userEvent.click(dashboardTab())
+
+    // Same documented contract as the other report tabs: the filters survive a
+    // round-trip through the dashboard, and no key set collides with another
+    // tab's (`pdf/pdt/pdp` vs the low-verification `pf/pt/pg/ps` — the closest
+    // spelling in the registry).
+    expect(screen.getByTestId('agent-performance-table')).toBeInTheDocument()
+    expect(search()).not.toContain('tab=')
+    expect(search()).toContain('pdf=2026-08-01')
+    expect(search()).toContain('pdt=2026-08-31')
+    expect(search()).toContain('pdp=1')
+  })
+
+  it('renders the promises feed panel for ?tab=promises-feed', () => {
+    renderPage(['/reports?tab=promises-feed'])
+
+    expect(screen.getByTestId('promises-feed-tab')).toBeInTheDocument()
+    // Its neighbour migrates the same promise universe (Cards 103/119) — the
+    // two must not be confusable at the routing level.
+    expect(screen.queryByTestId('promises-daily-tab')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('agent-performance-table')).not.toBeInTheDocument()
+    expect(promisesFeedTab()).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'reports-panel-promises-feed')
+  })
+
+  it('keeps the promises feed filters when switching tabs', async () => {
+    renderPage([
+      '/reports?tab=promises-feed&prf=2026-09-01&prt=2026-09-07&prw=1&prp=1&prpg=2&prps=100',
+    ])
+    expect(screen.getByTestId('promises-feed-tab')).toBeInTheDocument()
+
+    await userEvent.click(dashboardTab())
+
+    // Same documented contract as the other report tabs: the filters survive a
+    // round-trip through the dashboard, and no key set collides with another
+    // tab's (`prf/prt/prw/prp/prpg/prps` vs the daily promises `pdf/pdt/pdp`
+    // and the low-verification `pf/pt/pg/ps` — the closest spellings in the
+    // registry).
+    expect(screen.getByTestId('agent-performance-table')).toBeInTheDocument()
+    expect(search()).not.toContain('tab=')
+    expect(search()).toContain('prf=2026-09-01')
+    expect(search()).toContain('prt=2026-09-07')
+    expect(search()).toContain('prw=1')
+    expect(search()).toContain('prp=1')
+    expect(search()).toContain('prpg=2')
+    expect(search()).toContain('prps=100')
+  })
+
+  it('keeps the two promises tabs’ params apart in one URL', () => {
+    // `pdf/pdt/pdp` and `prf/prt/prp` are one letter apart, and both tabs are
+    // about promises — the registry is what keeps them from transplanting
+    // into each other. Opening one with both sets present must mount only
+    // that one; the sibling's keys are inert here.
+    renderPage([
+      '/reports?tab=promises-feed&pdf=2026-08-01&pdt=2026-08-31&pdp=1&prf=2026-09-01&prt=2026-09-07',
+    ])
+
+    expect(screen.getByTestId('promises-feed-tab')).toBeInTheDocument()
+    expect(screen.queryByTestId('promises-daily-tab')).not.toBeInTheDocument()
+    expect(search()).toContain('pdf=2026-08-01')
+    expect(search()).toContain('prf=2026-09-01')
+  })
+
+  it('offers all twelve report tabs in a fixed order', () => {
     // The strip is the only place the tab set is visible at a glance; a new
     // report must be ADDED here rather than replace a sibling.
     renderPage()
@@ -509,6 +599,9 @@ describe('ReportsDashboardPage (tab host)', () => {
       'pages.reports.tabs.communication-gap',
       'pages.reports.tabs.operator-promises',
       'pages.reports.tabs.outbound-calls',
+      'pages.reports.tabs.promises-daily',
+      // …and the promises feed right after the daily matrix it details.
+      'pages.reports.tabs.promises-feed',
     ])
   })
 
