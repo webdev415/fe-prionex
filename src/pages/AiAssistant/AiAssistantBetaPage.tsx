@@ -73,8 +73,10 @@ import { useAuthStore } from '@/stores/authStore'
 import { useAiAssistantSettings } from '@/features/aiSettings/hooks/useAiAssistantSettings'
 import {
   DEFAULT_ASSISTANT_SETTINGS,
+  thinkingFlagFor,
   useAiAssistantStore,
   type AssistantSettings,
+  type AssistantThinkingChoice,
   type AssistantVoiceMaxDuration,
   type AssistantVoiceSilenceTimeout,
 } from '@/stores/aiAssistantStore'
@@ -242,6 +244,13 @@ type ChatMessage = {
   expertWaitingModel?: string
   /** Расход экспертного хода (фрейм `result`) — бейдж «Sonnet · $0.05». */
   expert?: AssistantExpertUsage
+  /**
+   * Факт хода 31B из кадра `done`: о чём попросили и что модель сделала. Оба
+   * поля есть только у «думающего» хода и только когда шлюз их прислал —
+   * `thinkingUsed == null` означает «фактом не делились», чипа тогда нет.
+   */
+  thinkingRequested?: boolean
+  thinkingUsed?: boolean
 }
 
 /**
@@ -289,6 +298,44 @@ function formatRecordingTime(totalSec: number): string {
   const seconds = totalSec % 60
   return `${minutes}:${String(seconds).padStart(2, '0')}`
 }
+
+/**
+ * Отказ «не знаю поле `thinking`»: прокси старой версии не умеет выключать
+ * раздумья и отвергает тело по схеме. Имя поля живёт в `detail[].loc` — текст
+ * у FastAPI один на любое лишнее поле, поэтому смотрим на `fields`; прокси,
+ * отказавший своими словами, ловится по упоминанию поля в тексте.
+ */
+function isUnknownThinkingField(error: unknown): boolean {
+  if (!(error instanceof AssistantChatStreamError) || error.status !== 422) return false
+  if (error.fields?.includes('thinking')) return true
+  return /\bthinking\b/i.test(error.serverDetail ?? '')
+}
+
+/**
+ * Будет ли «думающий» ход рассуждать — насколько это известно клиенту: явный
+ * выбор оператора («Увімк.»/«Вимк.») отвечает сам, «Сервер» (`null`) — по
+ * факту последнего хода (`thinking_used` из кадра `done`), а до первого ответа
+ * — неизвестно (`null`). Серверный дефолт здесь не домысливается: у CRM не
+ * должно быть второго дефолта, расходящегося с мозгом.
+ */
+function resolveThinkingExpectation(
+  choice: AssistantThinkingChoice | null,
+  lastServerFact: boolean | null
+): boolean | null {
+  if (choice === 'on') return true
+  if (choice === 'off') return false
+  return lastServerFact
+}
+
+const THINKING_CHOICE_OPTIONS: {
+  choice: AssistantThinkingChoice | null
+  key: 'server' | 'on' | 'off'
+  labelKey: string
+}[] = [
+  { choice: null, key: 'server', labelKey: 'pages.aiAssistant.thinkingChoiceServer' },
+  { choice: 'on', key: 'on', labelKey: 'pages.aiAssistant.thinkingChoiceOn' },
+  { choice: 'off', key: 'off', labelKey: 'pages.aiAssistant.thinkingChoiceOff' },
+]
 
 /**
  * Reasoning elapsed for the chip/panel timer: the frozen duration once settled,
@@ -513,9 +560,18 @@ function AssistFilterDropdown({ ariaLabel, value, options, onChange }: AssistDro
 type ModeDropdownProps = {
   value: AssistantMode
   onChange: (mode: AssistantMode) => void
-  /** Настройка «показывать раздумья» — живёт рядом с выбором режима. */
-  showReasoning: boolean
-  onShowReasoningChange: (show: boolean) => void
+  /**
+   * Переключатель «Міркування 31B» — живёт рядом с выбором режима. `null` —
+   * «Сервер»: оператор не выбирал, режим решает сервер.
+   */
+  thinkingChoice: AssistantThinkingChoice | null
+  /**
+   * Чем реально шёл последний «думающий» ход (`thinking_used` из `done`) или
+   * `null`, пока ответа не было. Позиция «Сервер» показывает его оператору:
+   * иначе «решает сервер» ничего не говорило бы о том, что именно он решил.
+   */
+  lastServerThinking: boolean | null
+  onThinkingChoiceChange: (choice: AssistantThinkingChoice | null) => void
   /**
    * Экспертный режим этого сотрудника. Пункт «Експерт (Claude)» рисуется только
    * когда режим включён И разрешён: у оператора его в меню нет вовсе.
@@ -558,14 +614,19 @@ const MODE_OPTIONS: {
  * Implemented as a small controlled popover (not Radix) so it opens on a plain
  * click and renders inline — matching the settings popover in this component.
  *
- * Под списком режимов — тумблер «Показывать раздумья»: раздумья приходят только
- * в режиме «Думает», поэтому настройка их видимости стоит там же, где режим.
+ * Под списком режимов — переключатель «Міркування 31B» на три позиции:
+ * «Сервер» (поле `thinking` в запрос не уходит, режим решает сервер),
+ * «Увімк.» (`thinking: true`), «Вимк.» (`thinking: false`, ответ без хода
+ * рассуждения — быстрее). Раздумья бывают только в режиме «Думает», поэтому
+ * переключатель стоит там же, где режим, и показывается ровно в этом режиме
+ * (на fast и в экспертном ходе нечем управлять).
  */
 function ModeDropdown({
   value,
   onChange,
-  showReasoning,
-  onShowReasoningChange,
+  thinkingChoice,
+  lastServerThinking,
+  onThinkingChoiceChange,
   expert,
   expertModel,
   onSelectExpert,
@@ -763,34 +824,85 @@ function ModeDropdown({
             </div>
           )}
 
-          <div
-            className="border-border/70 mt-1 flex items-start gap-2.5 border-t px-2.5 pt-2.5 pb-1.5"
-            data-testid="assistant-show-reasoning-row"
-          >
-            <Icons.AiBrain03
-              size={16}
-              strokeWidth={1.5}
-              className="text-muted-foreground mt-0.5 shrink-0"
-            />
-            <span className="min-w-0 flex-1">
-              <span className="text-foreground block text-sm font-medium">
-                {t('pages.aiAssistant.showReasoning')}
+          {/* Раздумья бывают только в режиме «Думаючий»: на fast их не бывает,
+              а экспертный ход уходит во внешний Claude. Прятать тумблер честнее,
+              чем показывать переключатель, которому в текущем режиме нечем
+              управлять. */}
+          {isThinking && !isExpert && (
+            <div
+              className="border-border/70 mt-1 flex items-start gap-2.5 border-t px-2.5 pt-2.5 pb-1.5"
+              data-testid="assistant-show-reasoning-row"
+            >
+              <Icons.AiBrain03
+                size={16}
+                strokeWidth={1.5}
+                className="text-muted-foreground mt-0.5 shrink-0"
+              />
+              <span className="min-w-0 flex-1">
+                <span className="text-foreground block text-sm font-medium">
+                  {t('pages.aiAssistant.showReasoning')}
+                </span>
+                <span className="text-muted-foreground mt-0.5 block text-[11px] leading-snug font-light">
+                  {t('pages.aiAssistant.showReasoningHint')}
+                </span>
+                {/* Три позиции, а не тумблер: у «не выбирали» нет стороны, в
+                    которую его можно «щёлкнуть», — оператор называет выбор сам,
+                    а «Сервер» возвращает решение серверу. */}
+                <span
+                  className="mt-2 block"
+                  data-testid="assistant-thinking-choice"
+                  data-choice={thinkingChoice ?? 'server'}
+                  data-server-fact={
+                    lastServerThinking == null ? 'unknown' : lastServerThinking ? 'on' : 'off'
+                  }
+                >
+                  <span
+                    role="radiogroup"
+                    aria-label={t('pages.aiAssistant.showReasoning')}
+                    className="bg-muted/60 border-border/70 inline-flex w-full rounded-lg border p-0.5"
+                  >
+                    {THINKING_CHOICE_OPTIONS.map(({ choice, key, labelKey }) => {
+                      const selected = thinkingChoice === choice
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          role="radio"
+                          aria-checked={selected}
+                          data-testid={`assistant-thinking-choice-${key}`}
+                          onClick={() => onThinkingChoiceChange(choice)}
+                          className={cn(
+                            'min-w-0 flex-1 rounded-md px-1.5 py-1 text-[11px] leading-none font-medium transition-colors',
+                            'focus-visible:ring-primary-500 focus-visible:ring-2 focus-visible:outline-none',
+                            selected
+                              ? 'bg-card text-foreground shadow-sm'
+                              : 'text-muted-foreground hover:text-foreground'
+                          )}
+                        >
+                          {t(labelKey)}
+                        </button>
+                      )
+                    })}
+                  </span>
+                  {/* «Сервер» без факта — сухое «решает сервер»; после ответа —
+                      чем он решил в последний раз. При явном выборе строки нет:
+                      факт хода и так стоит чипом под каждым ответом. */}
+                  {thinkingChoice == null && (
+                    <span
+                      className="text-muted-foreground mt-1 block text-[11px] leading-snug font-light"
+                      data-testid="assistant-thinking-choice-status"
+                    >
+                      {lastServerThinking == null
+                        ? t('pages.aiAssistant.thinkingChoiceServerHint')
+                        : lastServerThinking
+                          ? t('pages.aiAssistant.thinkingChoiceFactOn')
+                          : t('pages.aiAssistant.thinkingChoiceFactOff')}
+                    </span>
+                  )}
+                </span>
               </span>
-              <span className="text-muted-foreground mt-0.5 block text-[11px] leading-snug font-light">
-                {/* На fast раздумий не бывает — честно говорим об этом, но тумблер
-                    оставляем живым: оператор настраивает его заранее. */}
-                {isThinking
-                  ? t('pages.aiAssistant.showReasoningHint')
-                  : t('pages.aiAssistant.showReasoningFastHint')}
-              </span>
-            </span>
-            <ToggleSwitch
-              checked={showReasoning}
-              onChange={onShowReasoningChange}
-              ariaLabel={t('pages.aiAssistant.showReasoning')}
-              className="mt-0.5 shrink-0"
-            />
-          </div>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -994,6 +1106,14 @@ export function AiAssistantBetaPage() {
   const [assistantSettings, setAssistantSettings] = useState<AssistantSettings>(
     () => useAiAssistantStore.getState().settingsFor(userId) ?? DEFAULT_ASSISTANT_SETTINGS
   )
+  /**
+   * Показывать ли ход рассуждения: прежняя настройка видимости, но «Вимк.»
+   * переключателя «Міркування 31B» прячет раздумья и сама — оператор попросил
+   * ход без них, и показывать их, если сервер всё же думал, значило бы спорить
+   * с его выбором (о расхождении скажет чип факта под ответом).
+   */
+  const reasoningShown =
+    assistantSettings.showReasoning && assistantSettings.thinkingChoice !== 'off'
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isHistoryDrawerOpen, setIsHistoryDrawerOpen] = useState(false)
   // An explicit click in the history panel must load the conversation even
@@ -1045,7 +1165,28 @@ export function AiAssistantBetaPage() {
    * `await`, so the second one bounces off the same guard.
    */
   const respondingRef = useRef(false)
+  /**
+   * Шлюз этой версии не знает поля `thinking` (ответил 422 на него). Взводится
+   * один раз за сессию страницы после успешного повтора без поля: дальше ходы
+   * уходят сразу без него, а не платят лишним запросом за один и тот же отказ.
+   */
+  const thinkingFlagUnsupportedRef = useRef(false)
   const hasConversation = chatMessages.length > 0
+  /**
+   * Чем реально шёл последний «думающий» ход — `thinking_used` из кадра `done`
+   * (`null`, пока такого ответа в ленте нет). Живёт только в этой сессии
+   * страницы: гидратация истории факт не несёт. Показывается на позиции
+   * «Сервер» и решает, ждать ли окна раздумий у следующего хода без выбора.
+   */
+  const lastServerThinking = useMemo<boolean | null>(() => {
+    for (let i = chatMessages.length - 1; i >= 0; i -= 1) {
+      const item = chatMessages[i]
+      if (item.role === 'assistant' && typeof item.thinkingUsed === 'boolean') {
+        return item.thinkingUsed
+      }
+    }
+    return null
+  }, [chatMessages])
 
   const { mutateAsync: sendChat } = useSendAssistantMessage()
   const { mutate: mutateFeedback } = useSendFeedback()
@@ -2039,6 +2180,11 @@ export function AiAssistantBetaPage() {
       // Экспертный ход идёт во внешнюю модель — «думающего» окна раздумий у
       // него нет, поэтому режим раздумий на него не распространяется.
       const isThinking = !isExpertTurn && assistantSettings.mode === 'thinking'
+      // Ждать ли раздумий в этом ходе: явный выбор оператора, иначе факт
+      // последнего хода; неизвестно — ждём, как и раньше в «Думаючому».
+      const expectsReasoning =
+        isThinking &&
+        resolveThinkingExpectation(assistantSettings.thinkingChoice, lastServerThinking) !== false
       const reasoningStartedAt = Date.now()
       const loadingId = appendChatMessage({
         role: 'assistant',
@@ -2061,7 +2207,10 @@ export function AiAssistantBetaPage() {
         // Thinking mode: open the reasoning window immediately (spinner +
         // placeholder) before any reasoning delta. Fast mode shows the light
         // typing dots and only reveals the panel if reasoning actually streams.
-        thinkingPlaceholder: isThinking,
+        // «Вимк.» (или сервер в прошлый раз не думал) — раздумий не будет:
+        // окно не открываем, иначе оператор ждал бы содержимое, которого
+        // модель не произведёт.
+        thinkingPlaceholder: expectsReasoning,
       })
       window.setTimeout(() => scrollToConversationBottom('smooth'), 0)
 
@@ -2082,8 +2231,13 @@ export function AiAssistantBetaPage() {
       // accumulated locally and pushed into the in-flight bubble on each event.
       let streamedReasoning = ''
       let toolSteps: ToolStep[] = []
-      try {
-        const result = await sendChat({
+      /**
+       * Один ход к мозгу. Вынесен в функцию ради повтора тем же телом минус
+       * поле `thinking`: прокси, ещё не знающий поля, отвечает на него 422, и
+       * оператор должен получить ответ, а не отказ (см. ниже).
+       */
+      const sendTurn = (thinking: boolean | undefined) =>
+        sendChat({
           payload: {
             // The feed bubble above shows `prompt`; what goes to the brain may
             // carry the fenced OneX page-context block after it.
@@ -2097,6 +2251,9 @@ export function AiAssistantBetaPage() {
             // Send the deep-research flag only when on (forward-compatible: the
             // gateway ignores it until it ships support).
             deep_research: assistantSettings.deepResearch ? true : undefined,
+            // Раздумья 31B — только у «думающего» хода (см. thinkingFlag ниже);
+            // fast и экспертный запрос уходят без поля, как раньше.
+            thinking,
             attachments:
               attachmentList.length > 0 ? toChatAttachmentPayload(attachmentList) : undefined,
             // Поле уходит только у экспертного хода — обычный запрос остаётся
@@ -2179,8 +2336,41 @@ export function AiAssistantBetaPage() {
               // показание не менялось, затирать прежнее нечем.
               const snapshot = extractContextUsage(done)
               if (snapshot) setContextUsage(snapshot)
+              // Факт хода 31B — что модель РЕАЛЬНО сделала. Берём его только у
+              // «думающего» хода и только когда шлюз им поделился: у fast и
+              // эксперта чипа нет, а старый шлюз полей не шлёт.
+              if (isThinking && typeof done.thinking_used === 'boolean') {
+                patchLoadingMessage({
+                  thinkingUsed: done.thinking_used,
+                  thinkingRequested:
+                    typeof done.thinking_requested === 'boolean'
+                      ? done.thinking_requested
+                      : undefined,
+                })
+              }
             },
           },
+        })
+
+      try {
+        // Поле уходит только у «думающего» хода, только когда оператор выбрал
+        // сам («Сервер» → поля нет, режим решает сервер) и только пока шлюз
+        // его понимает. Отказ ровно по этому полю (422) означает старый прокси:
+        // повторяем ход без поля, говорим об этом один раз и дальше в этой
+        // сессии поле не шлём вовсе.
+        const thinkingFlag =
+          isThinking && !thinkingFlagUnsupportedRef.current
+            ? thinkingFlagFor(assistantSettings.thinkingChoice)
+            : undefined
+        const result = await sendTurn(thinkingFlag).catch(async (error: unknown) => {
+          const turnStarted = receivedDelta || streamedReasoning !== '' || toolSteps.length > 0
+          if (thinkingFlag === undefined || turnStarted || !isUnknownThinkingField(error)) {
+            throw error
+          }
+          thinkingFlagUnsupportedRef.current = true
+          const retried = await sendTurn(undefined)
+          toast.info(t('pages.aiAssistant.thinkingFlagUnsupported'))
+          return retried
         })
         // The turn reached the brain, so the page context it carried is spent —
         // a conversation must not be re-stamped with the same page on every
@@ -2326,11 +2516,13 @@ export function AiAssistantBetaPage() {
       assistantSettings.outputFormat,
       assistantSettings.rememberConversationContext,
       assistantSettings.responseMode,
+      assistantSettings.thinkingChoice,
       consumeOnexContext,
       conversationId,
       handleNewChat,
       isAssistantResponding,
       isEmbedded,
+      lastServerThinking,
       onexContext,
       queryClient,
       scrollToConversationBottom,
@@ -2678,11 +2870,11 @@ export function AiAssistantBetaPage() {
     for (let i = chatMessages.length - 1; i >= 0; i -= 1) {
       const item = chatMessages[i]
       if (item.role !== 'assistant' || item.isError) continue
-      if (!messageHasActivity(item, assistantSettings.showReasoning)) continue
+      if (!messageHasActivity(item, reasoningShown)) continue
       if (isReasoningOpen(item)) return item
     }
     return null
-  }, [chatMessages, isReasoningOpen, assistantSettings.showReasoning])
+  }, [chatMessages, isReasoningOpen, reasoningShown])
 
   const isReasoningPanelOpen = activeReasoningMessage != null
   // Номер источника для подсветки в панели — только если фокус принадлежит
@@ -2824,10 +3016,46 @@ export function AiAssistantBetaPage() {
     </span>
   )
 
+  /**
+   * Факт «думающего» хода: «31B · з міркуваннями» / «31B · без міркувань».
+   * Показывает, чем ход шёл НА САМОМ ДЕЛЕ, а не что стоит в тумблере: сервер
+   * вправе ответить иначе, чем его просили, и без чипа оператор списал бы чужое
+   * решение на свою настройку. Расхождение помечается отдельно — жёлтым и
+   * подсказкой при наведении.
+   */
+  const renderThinkingFact = (item: ChatMessage) => {
+    if (item.thinkingUsed == null) return null
+    const mismatched =
+      item.thinkingRequested != null && item.thinkingRequested !== item.thinkingUsed
+    return (
+      <span
+        data-testid="assistant-thinking-fact"
+        data-mismatch={mismatched ? 'true' : 'false'}
+        title={mismatched ? t('pages.aiAssistant.thinkingUsedMismatch') : undefined}
+        className={cn(
+          'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-light',
+          mismatched
+            ? 'border-warning-200 bg-warning-50 text-warning-700'
+            : 'border-border bg-muted/60 text-muted-foreground'
+        )}
+      >
+        {mismatched ? (
+          <Icons.Warning size={12} strokeWidth={1.5} className="text-warning-600 shrink-0" />
+        ) : (
+          <Icons.AiBrain03 size={12} strokeWidth={1.5} className="text-primary-500 shrink-0" />
+        )}
+        {item.thinkingUsed
+          ? t('pages.aiAssistant.thinkingUsedOn')
+          : t('pages.aiAssistant.thinkingUsedOff')}
+      </span>
+    )
+  }
+
   /** TTS playback + feedback in one row under an assistant bubble. */
   const renderAssistantActions = (item: ChatMessage) => (
     <div className="mt-1.5 flex flex-wrap items-center gap-1.5 px-1">
       {renderTtsButton(item)}
+      {renderThinkingFact(item)}
       {item.expert && renderExpertCost(item.expert)}
       {item.serverMessageId != null && (
         <>
@@ -2850,7 +3078,7 @@ export function AiAssistantBetaPage() {
     // есть — без чипа они после гидратации/перезагрузки истории становятся
     // недоступны (панель нельзя открыть). Чип корректно деградирует на пустом
     // reasoning + нулевом stepCount (см. ReasoningInlineChip).
-    if (!messageHasActivity(item, assistantSettings.showReasoning)) return null
+    if (!messageHasActivity(item, reasoningShown)) return null
     const elapsed = reasoningElapsedMs(item, reasoningNow)
     return (
       <ReasoningInlineChip
@@ -2858,7 +3086,7 @@ export function AiAssistantBetaPage() {
         streaming={Boolean(item.isStreamingReasoning)}
         // Раздумья скрыты — не отдаём их и в тизер плашки (иначе последняя мысль
         // всё равно попадала бы оператору на глаза).
-        reasoning={assistantSettings.showReasoning ? (item.reasoning ?? '') : ''}
+        reasoning={reasoningShown ? (item.reasoning ?? '') : ''}
         stepCount={item.toolSteps?.length ?? 0}
         elapsedLabel={elapsed != null ? formatReasoningDuration(elapsed) : null}
         onToggle={() => toggleReasoning(item)}
@@ -3035,7 +3263,7 @@ export function AiAssistantBetaPage() {
                 const hasReasoningSurface =
                   item.role === 'assistant' &&
                   !item.isError &&
-                  messageHasActivity(item, assistantSettings.showReasoning)
+                  messageHasActivity(item, reasoningShown)
                 return (
                   <div
                     key={item.id}
@@ -3554,16 +3782,24 @@ export function AiAssistantBetaPage() {
                   options={periodOptions}
                 />
 
-                {/* Reasoning-mode picker (source of truth for `mode`) + тумблер
-                    видимости раздумий. */}
+                {/* Reasoning-mode picker (source of truth for `mode`) +
+                    переключатель «Міркування 31B». */}
                 <ModeDropdown
                   value={assistantSettings.mode}
                   // Выбор обычного режима снимает экспертный: пункты меню
                   // взаимоисключающие, «Швидкий + Експерт» одновременно не бывает.
                   onChange={(mode) => applySettings((s) => ({ ...s, mode, expertModel: null }))}
-                  showReasoning={assistantSettings.showReasoning}
-                  onShowReasoningChange={(show) =>
-                    applySettings((s) => ({ ...s, showReasoning: show }))
+                  thinkingChoice={assistantSettings.thinkingChoice}
+                  lastServerThinking={lastServerThinking}
+                  // Прежний boolean «показывать раздумья» идёт следом за выбором:
+                  // «Вимк.» прячет их, остальное показывает, если придут. Так
+                  // сборка до этой правки (откат) прочтёт запись как свою.
+                  onThinkingChoiceChange={(choice) =>
+                    applySettings((s) => ({
+                      ...s,
+                      thinkingChoice: choice,
+                      showReasoning: choice !== 'off',
+                    }))
                   }
                   expert={expertCapability}
                   expertModel={activeExpertModel}
@@ -3675,7 +3911,7 @@ export function AiAssistantBetaPage() {
           activeReasoningMessage?.thinkingPlaceholder &&
           activeReasoningMessage?.isStreamingReasoning
         )}
-        showReasoning={assistantSettings.showReasoning}
+        showReasoning={reasoningShown}
         reasoning={activeReasoningMessage?.reasoning ?? ''}
         toolSteps={activeReasoningMessage?.toolSteps ?? []}
         citations={activeReasoningMessage?.citations ?? []}

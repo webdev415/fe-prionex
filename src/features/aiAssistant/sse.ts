@@ -291,6 +291,11 @@ export interface SseErrorPayload {
   /** HTTP-equivalent status when the gateway tunnels an error in-band. */
   status?: number
   code?: string
+  /**
+   * Поля тела, на которые ругается схема (FastAPI `detail[].loc`) — по ним
+   * видно, что 422 именно про незнакомое серверу поле, а не про вложение.
+   */
+  fields?: string[]
   [key: string]: unknown
 }
 
@@ -298,6 +303,16 @@ export interface SseDonePayload {
   session_id?: number | string
   /** Token usage / accounting block (opaque to the UI). */
   usage?: Record<string, unknown>
+  /**
+   * Факт хода 31B: что клиент ПОПРОСИЛ (`thinking` в теле запроса) и что модель
+   * реально сделала. Два поля, а не одно: сервер вправе ответить иначе, чем его
+   * просили (раздумья принудительно включены/выключены на его стороне), и
+   * оператор должен видеть расхождение, а не свою настройку.
+   *
+   * Необязательны: старый шлюз их не шлёт — чип факта просто не появляется.
+   */
+  thinking_requested?: boolean
+  thinking_used?: boolean
   [key: string]: unknown
 }
 
