@@ -242,8 +242,14 @@ export function ViewMessageModal({ open, onClose, messageData }: ViewMessageModa
           ) : null}
         </ModalContent>
 
-        <ModalFooter className="bg-muted mt-auto shrink-0 flex-col">
-          <Button type="button" variant="cancel" onClick={onClose} className="w-full">
+        <ModalFooter className="mt-auto shrink-0 flex-col gap-2 sm:flex-row sm:gap-3">
+          <Button
+            type="button"
+            variant="cancel"
+            size="sm"
+            onClick={onClose}
+            className="w-full rounded-md"
+          >
             {t('actions.close', 'Close')}
           </Button>
         </ModalFooter>

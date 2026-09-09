@@ -15,6 +15,11 @@ import {
 import { useAuthStore } from '@/stores/authStore'
 import { useParams, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
+import {
+  canOfferEasyPayLink,
+  copyToClipboard,
+  easypayLinkAction,
+} from '@/features/payments/utils/easypayLink'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
 import { LinkButton } from '@/components/ui/LinkButton'
@@ -60,6 +65,8 @@ interface Payment {
   method: BackendPaymentMethod
   /** EasyPay rows only: which service the payer picked on the portal. */
   easypayMethod?: string | null
+  /** EasyPay rows only: the checkout URL, absent if the gateway call failed. */
+  easypayLink?: string | null
   status: BackendPaymentStatus
   receipt?: string
   reference?: string
@@ -359,6 +366,7 @@ export function DebtSummaryPage() {
         contractNumber: p.debt_contract_number || undefined,
         method: p.payment_method,
         easypayMethod: p.easypay_method,
+        easypayLink: p.easypay_link,
         status: p.status,
         receipt: p.receipt_url ? 'PDF' : undefined,
         reference: p.bank_reference || p.payment_number,
@@ -578,6 +586,22 @@ export function DebtSummaryPage() {
         setIsCancelModalOpen(true)
       }
     }
+  }
+
+  // Same two decisions as the Payment History table: offer the link only while
+  // it can still be paid, and report a missing one rather than copying an empty
+  // string. A pending EasyPay row does not guarantee a stored link.
+  const handleCopyEasyPayLink = (payment: Payment) => {
+    const action = easypayLinkAction(payment)
+    if (action.kind === 'unavailable') {
+      toast.error(t('pages.clients.paymentHistory.easypayLink.unavailable'))
+      return
+    }
+    void copyToClipboard(action.url).then((copied) =>
+      copied
+        ? toast.success(t('pages.clients.paymentHistory.easypayLink.copied'))
+        : toast.error(t('pages.clients.paymentHistory.easypayLink.copyFailed'))
+    )
   }
 
   const handleViewDetails = (payment: Payment) => {
@@ -1338,6 +1362,17 @@ export function DebtSummaryPage() {
                                       </LinkButton>
                                     </PermissionGuard>
                                   )}
+                                {canOfferEasyPayLink(payment) && (
+                                  <LinkButton
+                                    variant="regular-secondary"
+                                    size="xs"
+                                    leftIcon={<Icons.Link01 size={14} />}
+                                    onClick={() => handleCopyEasyPayLink(payment)}
+                                    className="text-xs"
+                                  >
+                                    <span>{t('pages.clients.paymentHistory.actions.link')}</span>
+                                  </LinkButton>
+                                )}
                                 {(payment.status === 'pending' ||
                                   payment.status === 'verified') && (
                                   <PermissionGuard permission={PERMISSIONS.CLIENTS.VERIFY_PAYMENT}>

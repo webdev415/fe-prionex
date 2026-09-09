@@ -30,6 +30,8 @@ import {
   type MessagingViberImageAttachment,
   useCreateMessagingDraft,
   useDeletedMessagingDrafts,
+  useCanManageDrafts,
+  useCanReadMessagingDrafts,
   useMessagingDrafts,
   useRestoreMessagingDraft,
   useUpdateMessagingDraft,
@@ -438,14 +440,17 @@ export function MessagingDraftsPage() {
   const [deleteDraft, setDeleteDraft] = useState<MessagingDraft | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
 
+  const canReadDrafts = useCanReadMessagingDrafts()
   const { data: drafts = [], isLoading } = useMessagingDrafts(
     channelFilter === 'all' ? undefined : (channelFilter as MessagingChannel)
   )
 
   // The channel filter applies to the deleted list too, so the two tables on
   // the page are always describing the same slice.
+  const canManageDrafts = useCanManageDrafts()
   const deletedDrafts = useDeletedMessagingDrafts(
-    channelFilter === 'all' ? undefined : { channel: channelFilter as MessagingChannel }
+    channelFilter === 'all' ? undefined : { channel: channelFilter as MessagingChannel },
+    canManageDrafts
   )
   const restoreDraft = useRestoreMessagingDraft()
   const expiryLabel = useExpiryLabel()
@@ -607,7 +612,11 @@ export function MessagingDraftsPage() {
           <DataTable
             columns={columns}
             data={filteredDrafts}
-            emptyMessage={t('pages.messagingDrafts.empty', 'No drafts matched the current filters')}
+            emptyMessage={
+              canReadDrafts
+                ? t('pages.messagingDrafts.empty', 'No drafts matched the current filters')
+                : t('pages.messagingDrafts.noReadPermission')
+            }
           />
         )}
       </div>

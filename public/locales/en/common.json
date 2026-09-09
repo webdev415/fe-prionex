@@ -5782,7 +5782,20 @@
           "validationPaymentExceedsDebt": "Payment cannot exceed current debt ({{amount}})",
           "validationPaymentMustBePositive": "Payment amount must be positive.",
           "closedDebtBadge": "Closed",
-          "closedDebtCorrectionHint": "This debt is closed. The payment is recorded as a technical correction and will not reopen the debt."
+          "closedDebtCorrectionHint": "This debt is closed. The payment is recorded as a technical correction and will not reopen the debt.",
+          "easypay": "EasyPay",
+          "easypayLinkWillBeCreated": "An EasyPay payment link will be created.",
+          "copyLinkAfterSaving": "Copy link to clipboard after saving",
+          "linkCopied": "Link copied to clipboard",
+          "linkCopyFailed": "Could not copy the link. Use the Link button in the payment row.",
+          "linkUnavailable": "Link unavailable. Cancel the payment and create it again.",
+          "easypayMethods": {
+            "card": "Card",
+            "google_pay": "Google Pay",
+            "apple_pay": "Apple Pay"
+          },
+          "amountCappedToEasypayLimit": "Amount capped to the EasyPay limit ({{amount}})",
+          "validationPaymentExceedsEasypayLimit": "Payment cannot exceed the EasyPay limit ({{amount}})"
         },
         "editPayment": {
           "title": "Edit Payment #{{paymentId}}",
@@ -6733,9 +6746,15 @@
         "actions": {
           "pdf": "PDF",
           "verify": "Verify",
-          "view": "View"
+          "view": "View",
+          "link": "Link"
         },
-        "noPaymentHistory": "No payment history found"
+        "noPaymentHistory": "No payment history found",
+        "easypayLink": {
+          "copied": "Link copied to clipboard",
+          "copyFailed": "Could not copy the link",
+          "unavailable": "Link unavailable. Cancel the payment and create it again."
+        }
       },
       "tasks": {
         "addTask": "Add Task",
@@ -7033,7 +7052,8 @@
         "active": "Active",
         "closed": "Closed"
       },
-      "sendMessageEmailRefOptional": "Optional: add an email contact step to pick the address from chain data. Otherwise the client primary email is used."
+      "sendMessageEmailRefOptional": "Optional: add an email contact step to pick the address from chain data. Otherwise the client primary email is used.",
+      "sendMessageNoDraftPermission": "Reading drafts needs a messaging send or launch permission. Ask an administrator to grant one."
     },
     "quickPicks": {
       "title": "Quick Picks",
@@ -9599,7 +9619,9 @@
       },
       "deleted": {
         "title": "Deleted drafts"
-      }
+      },
+      "noReadPermission": "This role can manage drafts but not browse the list, which needs a messaging send or launch permission. Deleted drafts stay visible below and can still be restored.",
+      "createdOutOfSight": "Draft saved. It will not appear in the list below, which needs a messaging send or launch permission."
     },
     "messagingIntegrations": {
       "description": "Configure provider credentials, enable channels per service, and verify connection health.",
