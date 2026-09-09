@@ -48,6 +48,11 @@ export interface Payment {
   payment_method: PaymentMethod
   /** EasyPay rows only: which service the payer chose. Null elsewhere. */
   easypay_method?: EasyPayMethod | null
+  /** The gateway checkout URL, joined from the order. Null for a non-EasyPay
+      row and also for an EasyPay row whose gateway call returned no link --
+      an easypay_method and a pending status do not guarantee one exists, so
+      treat absence as "no link" rather than pasting an empty string. */
+  easypay_link?: string | null
   payment_method_details?: string
   payment_type?: PaymentType | null
   payment_comment?: string | null
