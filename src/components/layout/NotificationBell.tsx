@@ -1241,12 +1241,6 @@ function RRPaymentNotificationItem({
   )
 }
 
-// `meeting_url` is free text a trainer types when scheduling a group
-// training, so it reaches us unvalidated. Render it as a link only when
-// it is http(s): a `javascript:` href would execute on click, and
-// `data:`/`blob:` open an opaque origin — both are phishing vectors even
-// from an internal author. Anything else is dropped (the card still
-// shows topic and time).
 // ─── Training notification item ──────────────────────────────────
 // Coaching & training assignments (1-on-1s, courses, drills,
 // correction tasks). 1-on-1 cards surface who/when from metadata when

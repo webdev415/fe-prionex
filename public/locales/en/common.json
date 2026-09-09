@@ -3174,14 +3174,18 @@
         "cancel": "Cancel session",
         "createFailed": "Could not schedule the training.",
         "created": "Group training scheduled.",
+        "description": "Description",
+        "descriptionPlaceholder": "What the session covers — participants see this.",
         "durationMinutes": "Duration (min)",
         "empty": "No scheduled trainings.",
         "full": "Full",
+        "joinMeeting": "Join the meeting",
         "loadFailed": "Failed to load trainings.",
         "location": "Location",
         "locationPlaceholder": "e.g. Conference Room A / Zoom",
         "maxParticipants": "Max participants",
         "meetingUrl": "Meeting URL",
+        "meetingUrlInvalid": "Include https:// — a link without it cannot be opened.",
         "noParticipants": "No one registered yet.",
         "participants": "Participants",
         "participantsFailed": "Failed to load participants.",
@@ -3204,10 +3208,7 @@
         "trainer": "Trainer",
         "type": "Type",
         "typePlaceholder": "Optional label",
-        "unlimited": "Unlimited",
-        "description": "Description",
-        "descriptionPlaceholder": "What the session covers — participants see this.",
-        "joinMeeting": "Join the meeting"
+        "unlimited": "Unlimited"
       },
       "leaks": {
         "chips": {
