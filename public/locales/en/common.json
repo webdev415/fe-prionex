@@ -5795,7 +5795,20 @@
           "validationPaymentExceedsDebt": "Payment cannot exceed current debt ({{amount}})",
           "validationPaymentMustBePositive": "Payment amount must be positive.",
           "closedDebtBadge": "Closed",
-          "closedDebtCorrectionHint": "This debt is closed. The payment is recorded as a technical correction and will not reopen the debt."
+          "closedDebtCorrectionHint": "This debt is closed. The payment is recorded as a technical correction and will not reopen the debt.",
+          "easypay": "EasyPay",
+          "easypayLinkWillBeCreated": "An EasyPay payment link will be created.",
+          "copyLinkAfterSaving": "Copy link to clipboard after saving",
+          "linkCopied": "Link copied to clipboard",
+          "linkCopyFailed": "Could not copy the link. Use the Link button in the payment row.",
+          "linkUnavailable": "Link unavailable. Cancel the payment and create it again.",
+          "easypayMethods": {
+            "card": "Card",
+            "google_pay": "Google Pay",
+            "apple_pay": "Apple Pay"
+          },
+          "amountCappedToEasypayLimit": "Amount capped to the EasyPay limit ({{amount}})",
+          "validationPaymentExceedsEasypayLimit": "Payment cannot exceed the EasyPay limit ({{amount}})"
         },
         "editPayment": {
           "title": "Edit Payment #{{paymentId}}",
@@ -6746,9 +6759,15 @@
         "actions": {
           "pdf": "PDF",
           "verify": "Verify",
-          "view": "View"
+          "view": "View",
+          "link": "Link"
         },
-        "noPaymentHistory": "No payment history found"
+        "noPaymentHistory": "No payment history found",
+        "easypayLink": {
+          "copied": "Link copied to clipboard",
+          "copyFailed": "Could not copy the link",
+          "unavailable": "Link unavailable. Cancel the payment and create it again."
+        }
       },
       "tasks": {
         "addTask": "Add Task",
@@ -8659,7 +8678,8 @@
         "communication-gap": "Communication gap",
         "operator-promises": "Operator promises",
         "outbound-calls": "Outbound calls",
-        "promises-daily": "Promises till end of month"
+        "promises-daily": "Promises till end of month",
+        "promises-feed": "Promises"
       },
       "processing": {
         "dateFrom": "Date from",
@@ -8975,6 +8995,38 @@
         "unavailable": "Employee or promise data is temporarily unavailable. Please try again later.",
         "error": {
           "title": "Failed to load the report",
+          "retry": "Retry"
+        }
+      },
+      "promisesFeed": {
+        "dateFrom": "Promised date from",
+        "dateTo": "Promised date to",
+        "invalidDate": "The date is not a real calendar date — pick a date to replace it",
+        "invalidRange": "Start date is later than end date",
+        "rangeTooLong": "Date range must not exceed 366 days",
+        "hideWorked": "Hide worked",
+        "hidePaid": "Hide paid",
+        "openClient": "Open client {{id}}",
+        "columns": {
+          "inn": "Tax ID",
+          "interactionDate": "Interaction date",
+          "interactionType": "Result",
+          "promiseDate": "Promised date",
+          "promiseAmount": "Promised amount",
+          "employeeInteracted": "Employee who commented",
+          "employeeResponsible": "Responsible employee",
+          "link": "Link",
+          "paymentAmount": "Payments amount",
+          "lastResult": "Worked today",
+          "department": "Department",
+          "noDepartment": "No department",
+          "group": "Group"
+        },
+        "empty": "No promises in the selected window",
+        "forbidden": "You don't have permission to view this report",
+        "unavailable": "Employee, promise or payment data is temporarily unavailable. Please try again later.",
+        "error": {
+          "title": "Failed to load the data",
           "retry": "Retry"
         }
       },
