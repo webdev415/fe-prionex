@@ -6769,7 +6769,8 @@
         "violated": "Violated",
         "cancelled": "Cancelled",
         "completed": "Completed",
-        "completedEarly": "Completed early"
+        "completedEarly": "Completed early",
+        "withoutRr": "Without RR"
       }
     },
     "clientChains": {

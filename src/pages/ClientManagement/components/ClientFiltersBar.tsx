@@ -20,7 +20,7 @@ import {
 import { Icons } from '@/lib/icons'
 import { PortfolioDropdown } from './PortfolioDropdown'
 import { TagsDropdown } from './TagsDropdown'
-import { RR_STATUS_FILTER_OPTIONS, rrStatusMeta } from '@/features/clients/constants/rrStatus'
+import { RR_STATUS_FILTER_OPTIONS, rrFilterMeta } from '@/features/clients/constants/rrStatus'
 import { getTagTriState, type TagFilterSelection } from '@/features/tags/utils/tagFilterState'
 import { TagFilterTriState } from './TagFilterTriState'
 import {
@@ -758,7 +758,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
               </label>
               <div className="flex w-full flex-1 flex-wrap items-start gap-2 sm:gap-3">
                 {RR_STATUS_FILTER_OPTIONS.map((statusId) => {
-                  const meta = rrStatusMeta[statusId]
+                  const meta = rrFilterMeta[statusId]
                   return (
                     <label
                       key={statusId}

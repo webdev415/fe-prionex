@@ -50,6 +50,35 @@ export const rrStatusMeta: Record<number, RRStatusMeta> = {
   },
 }
 
+/**
+ * "Without RR" — clients with no restructuring record at all (KAN-1054).
+ *
+ * Deliberately NOT a member of `RR_STATUS`: there is no row 0 in
+ * `restructuring_statuses`, and nothing will ever carry it as a value. It is a
+ * filter option only, riding in the same `rr_status_in` list so it keeps the
+ * multi-select's OR semantics for free — "0,1" reads as "no RR at all, or an
+ * RR that is Connected".
+ */
+export const RR_WITHOUT = 0
+
+/**
+ * Labels for the filter checkboxes.
+ *
+ * Separate from `rrStatusMeta` on purpose. That map feeds `rrBadgeClass`, which
+ * paints the badge on the client card and the loan card — putting a
+ * pseudo-status in there would make "Without RR" renderable as though a record
+ * could be in that state. Filter options and real statuses are different sets
+ * that happen to overlap.
+ */
+export const rrFilterMeta: Record<number, { labelKey: string; fallbackLabel: string }> = {
+  ...rrStatusMeta,
+  [RR_WITHOUT]: {
+    labelKey: 'pages.clients.rrStatus.withoutRr',
+    fallbackLabel: 'Without RR',
+  },
+}
+
+/** Checkbox order in the client-list filter. "Without RR" sits last. */
 export const RR_STATUS_FILTER_OPTIONS: number[] = [
   RR_STATUS.Draft,
   RR_STATUS.Connected,
@@ -57,6 +86,7 @@ export const RR_STATUS_FILTER_OPTIONS: number[] = [
   RR_STATUS.Cancelled,
   RR_STATUS.Completed,
   RR_STATUS.CompletedEarly,
+  RR_WITHOUT,
 ]
 
 export function rrBadgeClass(statusId?: number | null): string {

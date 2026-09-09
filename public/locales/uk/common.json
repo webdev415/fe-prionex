@@ -6808,7 +6808,8 @@
         "violated": "Порушено",
         "cancelled": "Скасовано",
         "completed": "Завершено",
-        "completedEarly": "Завершено достроково"
+        "completedEarly": "Завершено достроково",
+        "withoutRr": "Без РР"
       }
     },
     "clientChains": {
