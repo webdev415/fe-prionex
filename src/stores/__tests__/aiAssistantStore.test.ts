@@ -1,11 +1,13 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import {
   DEFAULT_ASSISTANT_SETTINGS,
   useAiAssistantStore,
   AI_ASSISTANT_STORAGE_KEY,
   AI_ASSISTANT_STORAGE_VERSION,
-  isReasoningShown,
-  migrateAiAssistantState,
+  thinkingFlagFor,
+  type AssistantSettings,
 } from '../aiAssistantStore'
 
 /** Запись localStorage в форме `persist` (state + version). */
@@ -110,75 +112,119 @@ describe('aiAssistantStore', () => {
     expect(parsed.version).toBe(AI_ASSISTANT_STORAGE_VERSION)
   })
 
-  describe('тумблер «Міркування 31B» (showReasoning)', () => {
-    it('по умолчанию не выбран (null): поле thinking сервер решает сам, раздумья показываются', () => {
-      expect(DEFAULT_ASSISTANT_SETTINGS.showReasoning).toBeNull()
-      expect(isReasoningShown(null)).toBe(true)
-      expect(isReasoningShown(true)).toBe(true)
-      expect(isReasoningShown(false)).toBe(false)
-      // Настроек нет вовсе (первый вход) — тоже показываем.
-      expect(isReasoningShown(undefined)).toBe(true)
+  describe('раздумья 31B: thinkingChoice рядом с прежним showReasoning', () => {
+    it('по умолчанию выбора нет (null), а showReasoning остаётся прежним boolean-дефолтом', () => {
+      expect(DEFAULT_ASSISTANT_SETTINGS.thinkingChoice).toBeNull()
+      expect(DEFAULT_ASSISTANT_SETTINGS.showReasoning).toBe(true)
     })
 
-    it('migrate v0→v1: прежнее true («показывать, если пришло») становится null', () => {
-      const migrated = migrateAiAssistantState(
-        JSON.parse(storedRecord({ showReasoning: true }, 0)).state,
-        0
-      ) as { settings: { showReasoning: unknown; mode: string } }
-      expect(migrated.settings.showReasoning).toBeNull()
-      // Остальные настройки записи не трогаются.
-      expect(migrated.settings.mode).toBe('fast')
+    it('thinkingFlagFor: поле уходит только при явном выборе', () => {
+      expect(thinkingFlagFor('on')).toBe(true)
+      expect(thinkingFlagFor('off')).toBe(false)
+      expect(thinkingFlagFor(null)).toBeUndefined()
+      // Настроек нет вовсе (первый вход) — поля тоже нет.
+      expect(thinkingFlagFor(undefined)).toBeUndefined()
     })
 
-    it('migrate v0→v1: явное false остаётся false', () => {
-      const migrated = migrateAiAssistantState(
-        JSON.parse(storedRecord({ showReasoning: false }, 0)).state,
-        0
-      ) as { settings: { showReasoning: unknown } }
-      expect(migrated.settings.showReasoning).toBe(false)
+    it('схема хранилища остаётся версии 0: откат фронта не должен сбрасывать настройки', () => {
+      expect(AI_ASSISTANT_STORAGE_VERSION).toBe(0)
+      useAiAssistantStore.getState().saveSettings('7', {
+        ...DEFAULT_ASSISTANT_SETTINGS,
+        thinkingChoice: 'off',
+      })
+      const parsed = JSON.parse(localStorage.getItem(AI_ASSISTANT_STORAGE_KEY) as string) as {
+        version: number
+      }
+      expect(parsed.version).toBe(0)
     })
 
-    it('migrate: запись текущей версии и записи без настроек возвращаются как есть', () => {
-      const current = JSON.parse(storedRecord({ showReasoning: true }, 1)).state
-      expect(migrateAiAssistantState(current, AI_ASSISTANT_STORAGE_VERSION)).toBe(current)
-      const noSettings = { userId: null, conversationId: null, settings: null }
-      expect(migrateAiAssistantState(noSettings, 0)).toBe(noSettings)
-      expect(migrateAiAssistantState(undefined, 0)).toBeUndefined()
-    })
-
-    it('rehydrate поднимает запись старого фронта через миграцию и пишет назад новую версию', async () => {
-      localStorage.setItem(
-        AI_ASSISTANT_STORAGE_KEY,
-        storedRecord({ mode: 'thinking', showReasoning: true }, 0)
-      )
+    it('запись старого фронта (без thinkingChoice) поднимается как «не выбирали», showReasoning как было', async () => {
+      const legacy = JSON.parse(storedRecord({ mode: 'thinking', showReasoning: false }, 0)) as {
+        state: { settings: Record<string, unknown> }
+      }
+      delete legacy.state.settings.thinkingChoice
+      localStorage.setItem(AI_ASSISTANT_STORAGE_KEY, JSON.stringify(legacy))
       await useAiAssistantStore.persist.rehydrate()
 
       const settings = useAiAssistantStore.getState().settingsFor('7')
       expect(settings?.mode).toBe('thinking')
-      expect(settings?.showReasoning).toBeNull()
-
-      // Любая запись после миграции идёт уже под новой версией.
-      useAiAssistantStore.getState().saveSettings('7', { ...settings!, showReasoning: false })
-      const parsed = JSON.parse(localStorage.getItem(AI_ASSISTANT_STORAGE_KEY) as string) as {
-        state: { settings: { showReasoning: unknown } | null }
-        version: number
-      }
-      expect(parsed.version).toBe(AI_ASSISTANT_STORAGE_VERSION)
-      expect(parsed.state.settings?.showReasoning).toBe(false)
+      expect(settings?.thinkingChoice).toBeNull()
+      expect(settings?.showReasoning).toBe(false)
     })
 
-    it('settingsFor не подменяет сохранённый null дефолтом и хранит явный выбор', () => {
+    it('запись новой сборки читается старой схемой (version 0, без migrate) без потери полей', async () => {
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+      useAiAssistantStore.getState().setActiveConversation('7', 42)
       useAiAssistantStore.getState().saveSettings('7', {
         ...DEFAULT_ASSISTANT_SETTINGS,
-        showReasoning: null,
+        mode: 'thinking',
+        responseMode: 'detailed',
+        voiceMaxDurationSec: 30,
+        thinkingChoice: 'off',
+        showReasoning: false,
       })
-      expect(useAiAssistantStore.getState().settingsFor('7')?.showReasoning).toBeNull()
+
+      // Сборка до этой правки: та же запись, схема без thinkingChoice,
+      // showReasoning — boolean, version 0 и никакого migrate.
+      type LegacySettings = Omit<AssistantSettings, 'thinkingChoice'>
+      type LegacyState = {
+        userId: string | null
+        conversationId: number | null
+        settings: LegacySettings | null
+        settingsFor: (userId: string | null) => LegacySettings | null
+      }
+      const legacyDefaults: LegacySettings = (({ thinkingChoice: _omit, ...rest }) => rest)(
+        DEFAULT_ASSISTANT_SETTINGS
+      )
+      const useLegacyStore = create<LegacyState>()(
+        persist(
+          (_set, get) => ({
+            userId: null,
+            conversationId: null,
+            settings: null,
+            settingsFor: (userId) => {
+              const state = get()
+              if (userId == null || state.userId !== userId || state.settings == null) return null
+              return { ...legacyDefaults, ...state.settings }
+            },
+          }),
+          {
+            name: AI_ASSISTANT_STORAGE_KEY,
+            partialize: (state) => ({
+              userId: state.userId,
+              conversationId: state.conversationId,
+              settings: state.settings,
+            }),
+          }
+        )
+      )
+      await useLegacyStore.persist.rehydrate()
+
+      const legacy = useLegacyStore.getState()
+      expect(consoleError).not.toHaveBeenCalled()
+      expect(legacy.conversationId).toBe(42)
+      const settings = legacy.settingsFor('7')
+      expect(settings).not.toBeNull()
+      expect(settings?.mode).toBe('thinking')
+      expect(settings?.responseMode).toBe('detailed')
+      expect(settings?.voiceMaxDurationSec).toBe(30)
+      // Прежний тумблер видимости старая сборка читает как раньше — boolean.
+      expect(settings?.showReasoning).toBe(false)
+      consoleError.mockRestore()
+    })
+
+    it('settingsFor хранит явный выбор и не подменяет null дефолтом', () => {
+      useAiAssistantStore.getState().saveSettings('7', {
+        ...DEFAULT_ASSISTANT_SETTINGS,
+        thinkingChoice: 'on',
+      })
+      expect(useAiAssistantStore.getState().settingsFor('7')?.thinkingChoice).toBe('on')
 
       useAiAssistantStore.getState().saveSettings('7', {
         ...DEFAULT_ASSISTANT_SETTINGS,
-        showReasoning: true,
+        thinkingChoice: null,
       })
-      expect(useAiAssistantStore.getState().settingsFor('7')?.showReasoning).toBe(true)
+      expect(useAiAssistantStore.getState().settingsFor('7')?.thinkingChoice).toBeNull()
     })
   })
 })

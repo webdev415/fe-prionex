@@ -1,17 +1,19 @@
 /**
- * Переключатель «Міркування 31B» — тот же тумблер, что скрывал раздумья, но
- * теперь он ещё и УПРАВЛЯЕТ ими: снятый уходит в тело запроса как
- * `thinking: false`, и 31B отвечает без хода рассуждения (быстрее).
+ * Переключатель «Міркування 31B» — трёхпозиционный выбор оператора по контракту
+ * шлюза (`thinking: true | false | null`): «Сервер» (не выбирали — поля в теле
+ * нет, режим решает сервер), «Увімк.» (`thinking: true`), «Вимк.»
+ * (`thinking: false`, 31B отвечает без хода рассуждения — быстрее).
  *
  * Здесь проверяется всё, что видно снаружи страницы: тело запроса, панель
- * раздумий, чип факта хода из кадра `done` и мягкая деградация на прокси, ещё
- * не знающем поля. Видимость самого тумблера и его дефолт живут в
+ * раздумий, чип факта хода из кадра `done`, то, как позиция «Сервер» отражает
+ * факт последнего хода, и мягкая деградация на прокси, ещё не знающем поля.
+ * Видимость самого переключателя и его дефолт живут в
  * AiAssistantBetaPage.showReasoning.test.tsx — там же, где остальная логика
  * меню режима.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
@@ -25,9 +27,9 @@ import type {
 import type { SseDonePayload } from '@/features/aiAssistant/sse'
 import {
   AI_ASSISTANT_STORAGE_KEY,
-  AI_ASSISTANT_STORAGE_VERSION,
   DEFAULT_ASSISTANT_SETTINGS,
   useAiAssistantStore,
+  type AssistantThinkingChoice,
 } from '@/stores/aiAssistantStore'
 import { useAuthStore } from '@/stores/authStore'
 import type { User } from '@/types/api'
@@ -76,25 +78,29 @@ function send(text: string) {
 }
 
 /**
- * Поднять сохранённые настройки (режим + тумблер) до рендера страницы.
- * `showReasoning: null` — тумблер не трогали. `version` — схема записи: по
- * умолчанию текущая, `0` — запись старого фронта (тумблер был двузначным).
+ * Поднять сохранённые настройки до рендера страницы. Запись — всегда схемы
+ * версии 0: другой у хранилища нет и быть не должно (откат фронта обязан
+ * читать запись новой сборки как свою). `thinkingChoice` не задан — запись
+ * старого фронта, где поля ещё не было.
  */
-async function withStoredSettings(
-  settings: { mode: 'fast' | 'thinking'; showReasoning: boolean | null },
-  version: number = AI_ASSISTANT_STORAGE_VERSION
-) {
+async function withStoredSettings(settings: {
+  mode: 'fast' | 'thinking'
+  thinkingChoice?: AssistantThinkingChoice | null
+  showReasoning?: boolean
+}) {
+  const stored: Record<string, unknown> = { ...DEFAULT_ASSISTANT_SETTINGS, ...settings }
+  if (!('thinkingChoice' in settings)) delete stored.thinkingChoice
   localStorage.setItem(
     AI_ASSISTANT_STORAGE_KEY,
     JSON.stringify({
       state: {
         userId: USER_ID,
         conversationId: null,
-        settings: { ...DEFAULT_ASSISTANT_SETTINGS, ...settings },
+        settings: stored,
         historySidebarCollapsed: false,
         reasoningPanelWidth: DEFAULT_REASONING_PANEL_WIDTH,
       },
-      version,
+      version: 0,
     })
   )
   await useAiAssistantStore.persist.rehydrate()
@@ -128,6 +134,30 @@ function sentPayload(call = 0): AssistantChatRequest {
   return mockedSendChatMessage.mock.calls[call][0]
 }
 
+function openModeMenu(): HTMLElement {
+  fireEvent.click(screen.getByTestId('assistant-mode-trigger'))
+  return screen.getByTestId('assistant-mode-menu')
+}
+
+function closeModeMenu() {
+  fireEvent.click(screen.getByTestId('assistant-mode-trigger'))
+}
+
+/** Переключатель в открытом меню режима. */
+function getThinkingChoice(menu: HTMLElement): HTMLElement {
+  return within(menu).getByTestId('assistant-thinking-choice')
+}
+
+function pickThinkingChoice(choice: 'server' | 'on' | 'off') {
+  const menu = openModeMenu()
+  fireEvent.click(within(menu).getByTestId(`assistant-thinking-choice-${choice}`))
+  closeModeMenu()
+}
+
+function storedSettings() {
+  return useAiAssistantStore.getState().settingsFor(USER_ID)
+}
+
 describe('AiAssistantBetaPage — переключатель «Міркування 31B»', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -149,223 +179,329 @@ describe('AiAssistantBetaPage — переключатель «Міркуван�
     vi.unstubAllGlobals()
   })
 
-  it('тумблер не трогали: поля thinking в теле нет — режим решает сервер', async () => {
-    // Свежий оператор: настроек в хранилище нет вовсе, тумблер по умолчанию
-    // выглядит включённым, но выбора он не делал.
-    mockedSendChatMessage.mockImplementation(() => new Promise(() => {}))
-    renderPage()
-    fireEvent.click(screen.getByTestId('assistant-mode-trigger'))
-    fireEvent.click(screen.getByText('pages.aiAssistant.modeThinkingShort'))
-    send('думай')
-
-    await waitFor(() => expect(mockedSendChatMessage).toHaveBeenCalled())
-    expect(sentPayload().mode).toBe('thinking')
-    expectNoThinkingKey(sentPayload())
-    // Серверный дефолт — с раздумьями: окно раздумий открывается сразу, как и
-    // при явно включённом тумблере.
-    expect(await screen.findByTestId('assistant-reasoning')).toBeInTheDocument()
-    // В хранилище выбор так и не появился — поле не пришпилено к дефолту.
-    expect(useAiAssistantStore.getState().settingsFor(USER_ID)?.showReasoning).toBeNull()
-  })
-
-  it('сохранённое «не трогали» (null) тоже уходит без поля', async () => {
-    await withStoredSettings({ mode: 'thinking', showReasoning: null })
-    mockTurn()
-    renderPage()
-    send('думай')
-    await screen.findByText('Готово')
-
-    expectNoThinkingKey(sentPayload())
-  })
-
-  it('явно включённый тумблер просит раздумья: в теле thinking: true', async () => {
-    await withStoredSettings({ mode: 'thinking', showReasoning: true })
-    mockTurn()
-    renderPage()
-    send('думай')
-    await screen.findByText('Готово')
-
-    expect(sentPayload().thinking).toBe(true)
-  })
-
-  it('запись старого фронта (v0) с showReasoning: true мигрирует в «не трогали»: поля нет', async () => {
-    // До этой правки `true` было и дефолтом, и «показывать, если пришло» —
-    // просьбой к серверу думать оно не было, пришпиливать его нельзя.
-    await withStoredSettings({ mode: 'thinking', showReasoning: true }, 0)
-    mockTurn()
-    renderPage()
-    send('думай')
-    await screen.findByText('Готово')
-
-    expectNoThinkingKey(sentPayload())
-    expect(useAiAssistantStore.getState().settingsFor(USER_ID)?.showReasoning).toBeNull()
-  })
-
-  it('запись старого фронта (v0) с showReasoning: false остаётся выключенной: thinking: false', async () => {
-    await withStoredSettings({ mode: 'thinking', showReasoning: false }, 0)
-    mockTurn()
-    renderPage()
-    send('думай')
-    await screen.findByText('Готово')
-
-    expect(sentPayload().thinking).toBe(false)
-  })
-
-  it('щелчок тумблера — явный выбор: выключил → false, включил обратно → true', async () => {
-    await withStoredSettings({ mode: 'thinking', showReasoning: null })
-    mockTurn()
-    renderPage()
-
-    const toggleReasoning = () => {
+  describe('тело запроса', () => {
+    it('не выбирали: поля thinking в теле нет — режим решает сервер', async () => {
+      // Свежий оператор: настроек в хранилище нет вовсе, переключатель стоит
+      // на «Сервер», выбора он не делал.
+      mockedSendChatMessage.mockImplementation(() => new Promise(() => {}))
+      renderPage()
       fireEvent.click(screen.getByTestId('assistant-mode-trigger'))
-      fireEvent.click(screen.getByRole('switch', { name: 'pages.aiAssistant.showReasoning' }))
-      fireEvent.click(screen.getByTestId('assistant-mode-trigger'))
-    }
+      fireEvent.click(screen.getByText('pages.aiAssistant.modeThinkingShort'))
+      send('думай')
 
-    toggleReasoning()
-    send('раз')
-    await screen.findByText('Готово')
-    expect(sentPayload(0).thinking).toBe(false)
+      await waitFor(() => expect(mockedSendChatMessage).toHaveBeenCalled())
+      expect(sentPayload().mode).toBe('thinking')
+      expectNoThinkingKey(sentPayload())
+      // Факт сервера ещё не известен — ждём раздумий, как и раньше: окно
+      // открывается сразу.
+      expect(await screen.findByTestId('assistant-reasoning')).toBeInTheDocument()
+      // В хранилище выбор так и не появился — поле не пришпилено к дефолту.
+      expect(storedSettings()?.thinkingChoice).toBeNull()
+    })
 
-    toggleReasoning()
-    send('два')
-    await waitFor(() => expect(mockedSendChatMessage).toHaveBeenCalledTimes(2))
-    expect(sentPayload(1).thinking).toBe(true)
-    // Выбор лёг в localStorage: переживёт перезагрузку.
-    await waitFor(() =>
-      expect(useAiAssistantStore.getState().settingsFor(USER_ID)?.showReasoning).toBe(true)
-    )
+    it('сохранённое «не выбирали» (null) тоже уходит без поля', async () => {
+      await withStoredSettings({ mode: 'thinking', thinkingChoice: null })
+      mockTurn()
+      renderPage()
+      send('думай')
+      await screen.findByText('Готово')
+
+      expectNoThinkingKey(sentPayload())
+    })
+
+    it('«Увімк.» просит раздумья: в теле thinking: true', async () => {
+      await withStoredSettings({ mode: 'thinking', thinkingChoice: 'on' })
+      mockTurn()
+      renderPage()
+      send('думай')
+      await screen.findByText('Готово')
+
+      expect(sentPayload().thinking).toBe(true)
+    })
+
+    it('«Вимк.» уходит как thinking: false и не открывает панель раздумий', async () => {
+      await withStoredSettings({ mode: 'thinking', thinkingChoice: 'off' })
+      // Ход, который не отвечает: проверяем состояние страницы, пока он идёт.
+      mockedSendChatMessage.mockImplementation(() => new Promise(() => {}))
+      renderPage()
+      send('думай')
+
+      await waitFor(() => expect(mockedSendChatMessage).toHaveBeenCalled())
+      expect(sentPayload().thinking).toBe(false)
+      // Раздумий не будет вовсе — окно ждать нечего, плашки нет.
+      expect(screen.queryByTestId('assistant-reasoning')).not.toBeInTheDocument()
+    })
+
+    it('«Увімк.», наоборот, открывает окно раздумий сразу', async () => {
+      await withStoredSettings({ mode: 'thinking', thinkingChoice: 'on' })
+      mockedSendChatMessage.mockImplementation(() => new Promise(() => {}))
+      renderPage()
+      send('думай')
+
+      await waitFor(() => expect(mockedSendChatMessage).toHaveBeenCalled())
+      expect(await screen.findByTestId('assistant-reasoning')).toBeInTheDocument()
+    })
+
+    it('в быстром режиме поля thinking в теле нет даже при явном выборе', async () => {
+      await withStoredSettings({ mode: 'fast', thinkingChoice: 'off' })
+      mockTurn()
+      renderPage()
+      send('быстро')
+      await screen.findByText('Готово')
+
+      // Не только «undefined», но и физически не уходит на провод: прокси старой
+      // версии отвергает незнакомое поле, и fast-ход обязан остаться прежним.
+      expectNoThinkingKey(sentPayload())
+    })
   })
 
-  it('снятый тумблер уходит как thinking: false и не открывает панель раздумий', async () => {
-    await withStoredSettings({ mode: 'thinking', showReasoning: false })
-    // Ход, который не отвечает: проверяем состояние страницы, пока он идёт.
-    mockedSendChatMessage.mockImplementation(() => new Promise(() => {}))
-    renderPage()
-    send('думай')
+  describe('запись старого фронта (поля thinkingChoice ещё не было)', () => {
+    it('showReasoning: true — выбора нет, поля нет', async () => {
+      await withStoredSettings({ mode: 'thinking', showReasoning: true })
+      mockTurn()
+      renderPage()
+      send('думай')
+      await screen.findByText('Готово')
 
-    await waitFor(() => expect(mockedSendChatMessage).toHaveBeenCalled())
-    expect(sentPayload().thinking).toBe(false)
-    // Раздумий не будет вовсе — окно ждать нечего, плашки нет.
-    expect(screen.queryByTestId('assistant-reasoning')).not.toBeInTheDocument()
+      expectNoThinkingKey(sentPayload())
+      expect(storedSettings()?.thinkingChoice).toBeNull()
+    })
+
+    it('showReasoning: false — прежняя настройка видимости, а не просьба к серверу: поля нет, раздумья скрыты', async () => {
+      // Старый тумблер «Показувати міркування» был чисто клиентским: оператор
+      // прятал ход рассуждения, сервер при этом думал. Домысливать из этого
+      // «выключи раздумья» нельзя — поле уходит только по явному выбору.
+      await withStoredSettings({ mode: 'thinking', showReasoning: false })
+      mockTurn()
+      renderPage()
+      send('думай')
+      await screen.findByText('Готово')
+
+      expectNoThinkingKey(sentPayload())
+      expect(storedSettings()?.thinkingChoice).toBeNull()
+      expect(storedSettings()?.showReasoning).toBe(false)
+      expect(screen.queryByTestId('assistant-reasoning')).not.toBeInTheDocument()
+    })
   })
 
-  it('включённый тумблер, наоборот, открывает окно раздумий сразу', async () => {
-    await withStoredSettings({ mode: 'thinking', showReasoning: true })
-    mockedSendChatMessage.mockImplementation(() => new Promise(() => {}))
-    renderPage()
-    send('думай')
+  describe('явный выбор в меню', () => {
+    it('«Вимк.» → false, «Увімк.» → true; выбор и прежний showReasoning ложатся в хранилище схемы 0', async () => {
+      await withStoredSettings({ mode: 'thinking', thinkingChoice: null })
+      mockTurn()
+      renderPage()
 
-    await waitFor(() => expect(mockedSendChatMessage).toHaveBeenCalled())
-    expect(await screen.findByTestId('assistant-reasoning')).toBeInTheDocument()
+      pickThinkingChoice('off')
+      send('раз')
+      await screen.findByText('Готово')
+      expect(sentPayload(0).thinking).toBe(false)
+      await waitFor(() => expect(storedSettings()?.thinkingChoice).toBe('off'))
+      // Прежний boolean-тумблер видимости идёт следом: откат фронта увидит
+      // «раздумья скрыты», а не сброс настроек.
+      expect(storedSettings()?.showReasoning).toBe(false)
+
+      pickThinkingChoice('on')
+      send('два')
+      await waitFor(() => expect(mockedSendChatMessage).toHaveBeenCalledTimes(2))
+      expect(sentPayload(1).thinking).toBe(true)
+      await waitFor(() => expect(storedSettings()?.thinkingChoice).toBe('on'))
+      expect(storedSettings()?.showReasoning).toBe(true)
+
+      // Запись в localStorage — та же схема, что у сборки до этой правки.
+      const record = JSON.parse(localStorage.getItem(AI_ASSISTANT_STORAGE_KEY) as string) as {
+        state: { settings: { thinkingChoice: unknown; showReasoning: unknown } }
+        version: number
+      }
+      expect(record.version).toBe(0)
+      expect(record.state.settings.thinkingChoice).toBe('on')
+      expect(record.state.settings.showReasoning).toBe(true)
+    })
+
+    it('«Сервер» снимает выбор: поля снова нет, раздумья показываются, если придут', async () => {
+      await withStoredSettings({ mode: 'thinking', thinkingChoice: 'off' })
+      mockTurn()
+      renderPage()
+
+      pickThinkingChoice('server')
+      send('думай')
+      await screen.findByText('Готово')
+
+      expectNoThinkingKey(sentPayload())
+      await waitFor(() => expect(storedSettings()?.thinkingChoice).toBeNull())
+      expect(storedSettings()?.showReasoning).toBe(true)
+    })
   })
 
-  it('в быстром режиме поля thinking в теле нет вовсе', async () => {
-    await withStoredSettings({ mode: 'fast', showReasoning: false })
-    mockTurn()
-    renderPage()
-    send('быстро')
-    await screen.findByText('Готово')
+  describe('позиция «Сервер» показывает факт последнего хода', () => {
+    it('до первого ответа факт неизвестен: нейтрально', async () => {
+      await withStoredSettings({ mode: 'thinking', thinkingChoice: null })
+      renderPage()
 
-    // Не только «undefined», но и физически не уходит на провод: прокси старой
-    // версии отвергает незнакомое поле, и fast-ход обязан остаться прежним.
-    expectNoThinkingKey(sentPayload())
-  })
-
-  it('после ответа чип говорит, чем ход шёл на самом деле', async () => {
-    await withStoredSettings({ mode: 'thinking', showReasoning: false })
-    mockTurn({ thinking_requested: false, thinking_used: false })
-    renderPage()
-    send('думай')
-    await screen.findByText('Готово')
-
-    const chip = await screen.findByTestId('assistant-thinking-fact')
-    expect(chip).toHaveTextContent('pages.aiAssistant.thinkingUsedOff')
-    expect(chip).toHaveAttribute('data-mismatch', 'false')
-    expect(chip).not.toHaveAttribute('title')
-  })
-
-  it('ответ с раздумьями показывает свой чип', async () => {
-    await withStoredSettings({ mode: 'thinking', showReasoning: true })
-    mockTurn({ thinking_requested: true, thinking_used: true })
-    renderPage()
-    send('думай')
-    await screen.findByText('Готово')
-
-    expect(await screen.findByTestId('assistant-thinking-fact')).toHaveTextContent(
-      'pages.aiAssistant.thinkingUsedOn'
-    )
-  })
-
-  it('сервер ответил иначе, чем просили — чип предупреждает', async () => {
-    await withStoredSettings({ mode: 'thinking', showReasoning: false })
-    // Просили без раздумий, а сервер всё равно думал.
-    mockTurn({ thinking_requested: false, thinking_used: true })
-    renderPage()
-    send('думай')
-    await screen.findByText('Готово')
-
-    const chip = await screen.findByTestId('assistant-thinking-fact')
-    expect(chip).toHaveTextContent('pages.aiAssistant.thinkingUsedOn')
-    expect(chip).toHaveAttribute('data-mismatch', 'true')
-    expect(chip).toHaveAttribute('title', 'pages.aiAssistant.thinkingUsedMismatch')
-  })
-
-  it('у быстрого хода чипа нет, даже если сервер прислал факт', async () => {
-    await withStoredSettings({ mode: 'fast', showReasoning: true })
-    mockTurn({ thinking_requested: false, thinking_used: false })
-    renderPage()
-    send('быстро')
-    await screen.findByText('Готово')
-
-    expect(screen.queryByTestId('assistant-thinking-fact')).not.toBeInTheDocument()
-  })
-
-  it('старый шлюз не знает поля: ход повторяется без него и оператора предупреждают', async () => {
-    await withStoredSettings({ mode: 'thinking', showReasoning: false })
-    mockedSendChatMessage
-      .mockRejectedValueOnce(
-        new AssistantChatStreamError({
-          status: 422,
-          message: 'Extra inputs are not permitted',
-          fields: ['thinking'],
-        })
+      const choice = getThinkingChoice(openModeMenu())
+      expect(choice).toHaveAttribute('data-choice', 'server')
+      expect(choice).toHaveAttribute('data-server-fact', 'unknown')
+      expect(
+        within(choice).getByRole('radio', { name: 'pages.aiAssistant.thinkingChoiceServer' })
+      ).toHaveAttribute('aria-checked', 'true')
+      expect(screen.getByTestId('assistant-thinking-choice-status')).toHaveTextContent(
+        'pages.aiAssistant.thinkingChoiceServerHint'
       )
-      .mockImplementation(
-        async (_payload, callbacks?: SendChatMessageCallbacks): Promise<AssistantChatResponse> => {
-          callbacks?.onText?.('Готово')
-          return {
-            conversation_id: 1,
-            message_id: 5,
-            response: 'Готово',
-            coverage_flag: null,
-            tool_calls: [],
+    })
+
+    it('сервер ответил без раздумий: «Сервер» показывает это и следующий ход окна раздумий не ждёт', async () => {
+      await withStoredSettings({ mode: 'thinking', thinkingChoice: null })
+      mockTurn({ thinking_requested: false, thinking_used: false })
+      renderPage()
+      send('раз')
+      await screen.findByText('Готово')
+
+      const choice = getThinkingChoice(openModeMenu())
+      expect(choice).toHaveAttribute('data-choice', 'server')
+      expect(choice).toHaveAttribute('data-server-fact', 'off')
+      expect(screen.getByTestId('assistant-thinking-choice-status')).toHaveTextContent(
+        'pages.aiAssistant.thinkingChoiceFactOff'
+      )
+      closeModeMenu()
+
+      // Второй ход: поля по-прежнему нет, а окно раздумий не открываем —
+      // сервер их не производит.
+      mockedSendChatMessage.mockImplementation(() => new Promise(() => {}))
+      send('два')
+      await waitFor(() => expect(mockedSendChatMessage).toHaveBeenCalledTimes(2))
+      expectNoThinkingKey(sentPayload(1))
+      expect(screen.queryByTestId('assistant-reasoning')).not.toBeInTheDocument()
+    })
+
+    it('сервер ответил с раздумьями: «Сервер» показывает это', async () => {
+      await withStoredSettings({ mode: 'thinking', thinkingChoice: null })
+      mockTurn({ thinking_requested: true, thinking_used: true })
+      renderPage()
+      send('раз')
+      await screen.findByText('Готово')
+
+      const choice = getThinkingChoice(openModeMenu())
+      expect(choice).toHaveAttribute('data-server-fact', 'on')
+      expect(screen.getByTestId('assistant-thinking-choice-status')).toHaveTextContent(
+        'pages.aiAssistant.thinkingChoiceFactOn'
+      )
+    })
+
+    it('при явном выборе факт сервера позицию не подменяет', async () => {
+      await withStoredSettings({ mode: 'thinking', thinkingChoice: 'on' })
+      mockTurn({ thinking_requested: true, thinking_used: false })
+      renderPage()
+      send('раз')
+      await screen.findByText('Готово')
+
+      const choice = getThinkingChoice(openModeMenu())
+      expect(choice).toHaveAttribute('data-choice', 'on')
+      expect(
+        within(choice).getByRole('radio', { name: 'pages.aiAssistant.thinkingChoiceOn' })
+      ).toHaveAttribute('aria-checked', 'true')
+      expect(screen.queryByTestId('assistant-thinking-choice-status')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('чип факта хода', () => {
+    it('после ответа чип говорит, чем ход шёл на самом деле', async () => {
+      await withStoredSettings({ mode: 'thinking', thinkingChoice: 'off' })
+      mockTurn({ thinking_requested: false, thinking_used: false })
+      renderPage()
+      send('думай')
+      await screen.findByText('Готово')
+
+      const chip = await screen.findByTestId('assistant-thinking-fact')
+      expect(chip).toHaveTextContent('pages.aiAssistant.thinkingUsedOff')
+      expect(chip).toHaveAttribute('data-mismatch', 'false')
+      expect(chip).not.toHaveAttribute('title')
+    })
+
+    it('ответ с раздумьями показывает свой чип', async () => {
+      await withStoredSettings({ mode: 'thinking', thinkingChoice: 'on' })
+      mockTurn({ thinking_requested: true, thinking_used: true })
+      renderPage()
+      send('думай')
+      await screen.findByText('Готово')
+
+      expect(await screen.findByTestId('assistant-thinking-fact')).toHaveTextContent(
+        'pages.aiAssistant.thinkingUsedOn'
+      )
+    })
+
+    it('сервер ответил иначе, чем просили — чип предупреждает', async () => {
+      await withStoredSettings({ mode: 'thinking', thinkingChoice: 'off' })
+      // Просили без раздумий, а сервер всё равно думал.
+      mockTurn({ thinking_requested: false, thinking_used: true })
+      renderPage()
+      send('думай')
+      await screen.findByText('Готово')
+
+      const chip = await screen.findByTestId('assistant-thinking-fact')
+      expect(chip).toHaveTextContent('pages.aiAssistant.thinkingUsedOn')
+      expect(chip).toHaveAttribute('data-mismatch', 'true')
+      expect(chip).toHaveAttribute('title', 'pages.aiAssistant.thinkingUsedMismatch')
+    })
+
+    it('у быстрого хода чипа нет, даже если сервер прислал факт', async () => {
+      await withStoredSettings({ mode: 'fast', thinkingChoice: 'on' })
+      mockTurn({ thinking_requested: false, thinking_used: false })
+      renderPage()
+      send('быстро')
+      await screen.findByText('Готово')
+
+      expect(screen.queryByTestId('assistant-thinking-fact')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('прокси, не знающий поля', () => {
+    it('старый шлюз не знает поля: ход повторяется без него и оператора предупреждают', async () => {
+      await withStoredSettings({ mode: 'thinking', thinkingChoice: 'off' })
+      mockedSendChatMessage
+        .mockRejectedValueOnce(
+          new AssistantChatStreamError({
+            status: 422,
+            message: 'Extra inputs are not permitted',
+            fields: ['thinking'],
+          })
+        )
+        .mockImplementation(
+          async (
+            _payload,
+            callbacks?: SendChatMessageCallbacks
+          ): Promise<AssistantChatResponse> => {
+            callbacks?.onText?.('Готово')
+            return {
+              conversation_id: 1,
+              message_id: 5,
+              response: 'Готово',
+              coverage_flag: null,
+              tool_calls: [],
+            }
           }
-        }
+        )
+      renderPage()
+      send('думай')
+
+      // Оператор получает ответ, а не отказ: повтор ушёл тем же телом минус поле.
+      await screen.findByText('Готово')
+      expect(mockedSendChatMessage).toHaveBeenCalledTimes(2)
+      expect(sentPayload(0).thinking).toBe(false)
+      expect(JSON.stringify(sentPayload(1))).not.toContain('"thinking":')
+      expect(toast.info).toHaveBeenCalledWith('pages.aiAssistant.thinkingFlagUnsupported')
+      expect(toast.error).not.toHaveBeenCalled()
+    })
+
+    it('чужой отказ 422 не превращается в повтор', async () => {
+      await withStoredSettings({ mode: 'thinking', thinkingChoice: 'off' })
+      // 422 про вложение — поле `thinking` тут ни при чём, повторять нечего.
+      mockedSendChatMessage.mockRejectedValue(
+        new AssistantChatStreamError({ status: 422, message: 'Файл не підходить' })
       )
-    renderPage()
-    send('думай')
+      renderPage()
+      send('думай')
 
-    // Оператор получает ответ, а не отказ: повтор ушёл тем же телом минус поле.
-    await screen.findByText('Готово')
-    expect(mockedSendChatMessage).toHaveBeenCalledTimes(2)
-    expect(sentPayload(0).thinking).toBe(false)
-    expect(JSON.stringify(sentPayload(1))).not.toContain('"thinking":')
-    expect(toast.info).toHaveBeenCalledWith('pages.aiAssistant.thinkingFlagUnsupported')
-    expect(toast.error).not.toHaveBeenCalled()
-  })
-
-  it('чужой отказ 422 не превращается в повтор', async () => {
-    await withStoredSettings({ mode: 'thinking', showReasoning: false })
-    // 422 про вложение — поле `thinking` тут ни при чём, повторять нечего.
-    mockedSendChatMessage.mockRejectedValue(
-      new AssistantChatStreamError({ status: 422, message: 'Файл не підходить' })
-    )
-    renderPage()
-    send('думай')
-
-    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Файл не підходить'))
-    expect(mockedSendChatMessage).toHaveBeenCalledTimes(1)
-    expect(toast.info).not.toHaveBeenCalled()
+      await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Файл не підходить'))
+      expect(mockedSendChatMessage).toHaveBeenCalledTimes(1)
+      expect(toast.info).not.toHaveBeenCalled()
+    })
   })
 })
