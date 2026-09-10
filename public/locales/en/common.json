@@ -8728,7 +8728,8 @@
       },
       "tabs": {
         "account": "Account",
-        "shortcuts": "Keyboard Shortcuts"
+        "shortcuts": "Keyboard Shortcuts",
+        "presets": "Filter Presets"
       },
       "shortcuts": {
         "intro": "Assign a keyboard shortcut to any quick template you use often. Trigger the shortcut while on a client's profile page to open that Target Action (TA) modal instantly, adjust amount or date if needed, and save it — all without the mouse.",
@@ -8754,6 +8755,20 @@
         "clear": "Clear Selection",
         "saved": "Shortcut saved",
         "reassigned": "Shortcut moved from \"{{name}}\""
+      },
+      "presets": {
+        "title": "Filter Presets",
+        "new": "New preset",
+        "newTitle": "New preset",
+        "editTitle": "Edit preset",
+        "name": "Preset name",
+        "nameRequired": "Enter a name for the preset",
+        "save": "Save preset",
+        "clearFields": "Clear all fields",
+        "saved": "Preset saved",
+        "edit": "Edit preset",
+        "delete": "Delete preset",
+        "empty": "No presets yet. Create one to apply a set of client list filters in a single click."
       }
     },
     "reports": {
