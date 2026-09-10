@@ -16,6 +16,7 @@ import {
   useUnregisterFromTraining,
 } from '@/features/training/hooks/useGroupTrainings'
 import type { GroupTrainingCardData } from '@/features/training/types/groupTrainings'
+import { safeHttpUrl } from '@/lib/safeUrl'
 import { EmployeeSearchList } from '../dialogue/EmployeeMultiSelect'
 import { TrainingPrimaryButton } from './TrainingToolbar'
 
@@ -105,7 +106,7 @@ export function GroupTrainingsTab() {
   )
 }
 
-function GroupTrainingCard({
+export function GroupTrainingCard({
   training,
   canManage,
   trainerName,
@@ -123,14 +124,19 @@ function GroupTrainingCard({
   const unregister = useUnregisterFromTraining()
   const cancel = useCancelGroupTraining()
   const { date, time } = formatDateTime(training.scheduled_at, i18n.language)
+  // Trainer-typed free text — never rendered as an href without this.
+  const meetingHref = safeHttpUrl(training.meeting_url)
   const seatsLeft =
     training.max_participants != null ? training.max_participants - training.registered_count : null
   const isFull = seatsLeft != null && seatsLeft <= 0
   const isCompleted = training.status === 'completed'
   const isCancelled = training.status === 'cancelled'
 
-  // Figma subtitle: "Location · Trainer: Name" — omit missing parts.
+  // Subtitle: "Type · Location · Trainer: Name" — omit missing parts.
   const subtitleParts = [
+    // `type` is a free-text label the trainer types. It was stored and returned
+    // by the API but rendered nowhere, so nobody — not even its author — saw it.
+    training.type ?? undefined,
     training.location ?? undefined,
     trainerName
       ? `${t('pages.training.groupTrainings.trainer', 'Trainer')}: ${trainerName}`
@@ -172,6 +178,27 @@ function GroupTrainingCard({
             <span className="text-[11px] text-[#6B7280]">{subtitleParts.join(' · ')}</span>
           ) : null}
         </div>
+
+        {/* Description and meeting link sit outside every `canManage` branch on
+            purpose: a participant has to see what the session is and how to
+            join it, which is the whole of this ticket. */}
+        {training.description ? (
+          <p className="line-clamp-3 text-[11px] whitespace-pre-line text-[#4B5563]">
+            {training.description}
+          </p>
+        ) : null}
+
+        {meetingHref ? (
+          <a
+            href={meetingHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-[11px] font-medium text-[#204E4D] hover:underline"
+          >
+            <Icons.Link01 size={12} />
+            {t('pages.training.groupTrainings.joinMeeting', 'Join the meeting')}
+          </a>
+        ) : null}
 
         <div className="grid grid-cols-2 gap-2">
           <div className="flex flex-col items-center rounded-lg bg-[#F7F7F7] py-2">
@@ -268,7 +295,7 @@ function GroupTrainingCard({
   )
 }
 
-function ScheduleTrainingDialog({ onClose }: { onClose: () => void }) {
+export function ScheduleTrainingDialog({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation('common')
   const create = useCreateGroupTraining()
 
@@ -279,8 +306,14 @@ function ScheduleTrainingDialog({ onClose }: { onClose: () => void }) {
   const [durationMinutes, setDurationMinutes] = useState('60')
   const [maxParticipants, setMaxParticipants] = useState('')
   const [meetingUrl, setMeetingUrl] = useState('')
+  const [description, setDescription] = useState('')
 
-  const canSubmit = title.trim().length > 0 && scheduledAt.length > 0
+  // The card renders the meeting link through safeHttpUrl, which rejects a
+  // scheme-less value. Gate saving on the same predicate: otherwise a trainer
+  // pastes "meet.google.com/abc" — the usual way people copy a link — gets a
+  // success toast, and the join link silently never appears for anyone.
+  const meetingUrlInvalid = meetingUrl.trim().length > 0 && !safeHttpUrl(meetingUrl)
+  const canSubmit = title.trim().length > 0 && scheduledAt.length > 0 && !meetingUrlInvalid
   const field =
     'h-9 rounded-lg border border-[#EBECE8] bg-white px-3 text-xs text-[#05040D] focus:outline-none'
 
@@ -297,6 +330,7 @@ function ScheduleTrainingDialog({ onClose }: { onClose: () => void }) {
         duration_minutes: Number.isFinite(duration) && duration > 0 ? duration : 60,
         max_participants: seats != null && Number.isFinite(seats) && seats > 0 ? seats : null,
         meeting_url: meetingUrl.trim() || null,
+        description: description.trim() || null,
       },
       {
         onSuccess: () => {
@@ -345,6 +379,23 @@ function ScheduleTrainingDialog({ onClose }: { onClose: () => void }) {
                 'e.g. Objection-handling workshop'
               )}
               className={field}
+            />
+          </label>
+
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-[#05040D]">
+              {t('pages.training.groupTrainings.description', 'Description')}
+            </span>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+              maxLength={2000}
+              placeholder={t(
+                'pages.training.groupTrainings.descriptionPlaceholder',
+                'What the session covers — participants see this.'
+              )}
+              className="rounded-lg border border-[#EBECE8] bg-white px-3 py-2 text-xs text-[#05040D] focus:outline-none"
             />
           </label>
 
@@ -430,6 +481,14 @@ function ScheduleTrainingDialog({ onClose }: { onClose: () => void }) {
               placeholder="https://…"
               className={field}
             />
+            {meetingUrlInvalid ? (
+              <span className="text-[11px] text-[#B91C1C]">
+                {t(
+                  'pages.training.groupTrainings.meetingUrlInvalid',
+                  'Include https:// — a link without it cannot be opened.'
+                )}
+              </span>
+            ) : null}
           </label>
         </div>
 
