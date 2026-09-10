@@ -138,5 +138,9 @@ the first time this table is genuinely used — the same reasoning `docs/preprod
 
 | Date (UTC) | image_tag | Candidate | prod_tag | Dispatched by (account) | Waiver? | Dispatch start (UTC) | Deploy end (UTC) | Deploy run id | Note |
 |---|---|---|---|---|---|---|---|---|---|
+| 2026-08-27 | `prod-current` | `—` | `prod-current` | platform-admin |  | 2026-08-27 14:41:49Z | 2026-08-27 14:41:51Z | 744 | **ROLLBACK** — restoring a tag already recorded here is not a new release and needs no new approval (see the regulation). NOT an approval row. |
+| 2026-08-27 | `sha-cfbad1797d5e-prod` | `preprod-cfbad1797d5e` | `sha-cfbad1797d5e-prod` | platform-admin |  | 2026-08-27 14:59:11Z | 2026-08-27 15:03:11Z | 747 |  |
+| 2026-08-27 | `sha-14ebdecb6d88-prod` | `preprod-14ebdecb6d88` | `sha-14ebdecb6d88-prod` | platform-admin |  | 2026-08-27 18:09:45Z | 2026-08-27 18:13:27Z | 766 |  |
+| 2026-09-07 | `sha-e8d8fc15c067-preprod` | `—` | `sha-e8d8fc15c067-preprod` | platform-admin | none | 2026-09-07 18:11:03Z | 2026-09-07 18:25:21Z | 932 | Release of preprod-branch head e8d8fc15c067 (merge PR #115 main->preprod). PROD image sha-e8d8fc15c067-prod digest sha256:c99d87fd395356c17da35ded38bd4c1710762151902a584e025b742d76540c30; prod-current now resolves to the same digest. Run 932 green end to end (derive, guard, build, deploy, smoke, record). Public https://crm.prod.crm-prionex.online returns 200, the served bundle carries VITE_API_BASE_URL_PROD and a missing asset returns 404. RVC-v1.1 was NOT executed for this candidate: no pass/fail verdict exists, only the technical preprod-e8d8fc15c067 marker, and no waiver was issued; dispatched on Oleg's direct instruction. Rollback target: sha-14ebdecb6d88-prod digest sha256:5d705a9fdb713466bc56125444f6417d183b29ba4aa6b2a2c5a696d1b790433f from run 766. |
 
 <!-- END GENERATED LEDGER -->
