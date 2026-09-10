@@ -6325,6 +6325,7 @@
         "viewSMS": {
           "title": "Переглянути SMS",
           "dateTime": "Дата/Час",
+          "phone": "Телефон",
           "template": "Шаблон",
           "operator": "Оператор",
           "status": "Статус",

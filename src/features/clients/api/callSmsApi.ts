@@ -30,6 +30,7 @@ export async function getClientCalls(
 interface BackendSmsItem {
   message_id: string
   operator_name?: string | null
+  phone_number?: string | null
   message_text?: string | null
   status: string
   sent_at?: string | null
@@ -71,7 +72,7 @@ export async function getClientSms(
     id: index + 1, // Backend doesn't return numeric ID, use index
     client_id: data.client_id,
     direction: 'outbound' as const, // SMS service only handles outbound
-    phone_number: '', // Not provided by backend
+    phone_number: item.phone_number ?? '',
     status: item.status,
     content: item.message_text ?? null,
     template_name: item.template_name ?? null,
