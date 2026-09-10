@@ -43,6 +43,20 @@ export interface ActivityLogFilters {
 /** Matches the endpoint's own default, so page one asks for what it returns. */
 export const DEFAULT_PAGE_SIZE = 50
 
+/**
+ * The deepest the endpoint will read, in rows — its `_MAX_FETCH`.
+ *
+ * Building a page means fetching everything up to it from each source, so the
+ * work grows with depth and the endpoint refuses to go past this. Mirrored
+ * here so the pagination control offers only pages that can actually load:
+ * derived from `total` alone it advertised 301 pages against a ceiling of 200,
+ * and every page past that answered 422.
+ *
+ * Older entries stay reachable through the date filter, which makes them the
+ * newest rows of a smaller set.
+ */
+export const MAX_PAGED_ENTRIES = 10_000
+
 export const activityLogApi = {
   get: (clientId: number, filters: ActivityLogFilters = {}): Promise<ActivityLogResponse> => {
     // Unset filters are omitted rather than sent as null: axios serialises null

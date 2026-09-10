@@ -39,6 +39,8 @@ vi.mock('react-i18next', () => ({
         'pages.clients.detail.activityLog.filters.allOperators': 'All operators',
         'pages.clients.detail.activityLog.filters.reset': 'Reset',
         'pages.clients.detail.activityLog.recording': 'Recording',
+        'pages.clients.detail.activityLog.pagingLimit':
+          'Showing the {{count}} most recent entries. Set a date range to reach older activity.',
         'pages.clients.detail.activityLog.entryCount': '{{count}} entries',
         'pages.clients.detail.tabs.docs': 'Docs',
         'pages.clients.detail.tabs.callSms': 'Call / SMS',
@@ -299,6 +301,36 @@ describe('ClientActivityLogTab', () => {
     await screen.findByText('Outbound call — promise_to_pay — 145s')
     // A dead control is worse than none: it promises audio that was never kept.
     expect(screen.queryByRole('button', { name: 'Recording' })).toBeNull()
+  })
+
+  it('offers no page the endpoint would refuse', async () => {
+    // Building a page means reading everything up to it, so the endpoint stops
+    // at 10000 rows. A control derived from the total alone advertised 301
+    // pages against that ceiling, and every page past 200 answered 422.
+    getSpy.mockResolvedValue(response({ entries: [entry()], total: 15012, page: 1, page_size: 50 }))
+    renderTab()
+
+    expect(await screen.findByRole('button', { name: 'Go to page 200' })).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'Go to page 301' })).toBeNull()
+  })
+
+  it('says that older entries need a date range rather than hiding them', async () => {
+    // Capping the control silently would repeat the failure the feed began
+    // with: a history that ends without admitting it was cut.
+    getSpy.mockResolvedValue(response({ entries: [entry()], total: 15012, page: 1, page_size: 50 }))
+    renderTab()
+    expect(
+      await screen.findByText(
+        'Showing the 10000 most recent entries. Set a date range to reach older activity.'
+      )
+    ).toBeVisible()
+  })
+
+  it('says nothing about a limit a client is nowhere near', async () => {
+    getSpy.mockResolvedValue(response({ entries: [entry()], total: 500 }))
+    renderTab()
+    await screen.findByText('Opened the client card')
+    expect(screen.queryByText(/most recent entries/)).toBeNull()
   })
 
   it('says how much history sits behind the filters', async () => {

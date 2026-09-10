@@ -6692,7 +6692,8 @@
             "dialer": "the dialer"
           },
           "entryCount_one": "{{count}} entry",
-          "entryCount_other": "{{count}} entries"
+          "entryCount_other": "{{count}} entries",
+          "pagingLimit": "Showing the {{count}} most recent entries. Set a date range to reach older activity."
         }
       },
       "debtSummary": {

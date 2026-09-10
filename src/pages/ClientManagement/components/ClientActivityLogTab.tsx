@@ -27,6 +27,7 @@ import {
 import { useClientActivityLog } from '@/features/clients/hooks/useClientActivityLog'
 import {
   DEFAULT_PAGE_SIZE,
+  MAX_PAGED_ENTRIES,
   type ActivityEntry,
   type ActivityLogResponse,
   type ActivitySource,
@@ -298,7 +299,12 @@ export function ClientActivityLogTab({
     activityLogQueryKey(clientId, { ...filters, page: 1 })
   )
   const total = data?.total ?? firstPage?.total ?? 0
-  const totalPages = Math.max(1, Math.ceil(total / pageSize))
+  // Capped at what the endpoint will actually serve. It refuses to read past
+  // MAX_PAGED_ENTRIES rows, so offering a page beyond that advertised a click
+  // that could only fail.
+  const reachablePages = Math.floor(MAX_PAGED_ENTRIES / pageSize)
+  const totalPages = Math.max(1, Math.min(Math.ceil(total / pageSize), reachablePages))
+  const hasUnreachableHistory = total > MAX_PAGED_ENTRIES
 
   return (
     <div className="flex flex-col gap-4 p-4">
@@ -467,6 +473,17 @@ export function ClientActivityLogTab({
       {/* The three sources hold thousands of entries for an active client. A
           feed that stopped at the first page said nothing about the rest, so
           the history it hid read as history that did not exist. */}
+      {/* Capping the control silently would have been the same failure the
+          feed started with: a history that ends without saying it was cut.
+          The date filter is how the rest is reached, so the notice names it. */}
+      {hasUnreachableHistory && !isLoading && !isError && (
+        <p className="text-muted-foreground text-xs">
+          {t('pages.clients.detail.activityLog.pagingLimit', {
+            count: MAX_PAGED_ENTRIES,
+          })}
+        </p>
+      )}
+
       {!isLoading && !isError && totalPages > 1 && (
         <Pagination
           currentPage={page}
