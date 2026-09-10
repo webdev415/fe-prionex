@@ -3551,6 +3551,7 @@
           }
         },
         "materials": {
+          "addLink": "Add a link",
           "archive": "Archive",
           "attach": "Attach",
           "attachMaterial": "Attach material",
@@ -3575,6 +3576,7 @@
             "createCategory": "Could not create the category.",
             "detach": "Could not detach the material.",
             "download": "Could not download the file.",
+            "link": "Could not save the link.",
             "noFile": "Choose a file to upload.",
             "noTitle": "Give the material a title.",
             "update": "Could not update the material.",
@@ -3584,6 +3586,9 @@
           "filters": {
             "all": "All types"
           },
+          "linkSaved": "Link added to the library.",
+          "linkUrl": "Link",
+          "linkUrlInvalid": "Include https:// — a link without it cannot be opened.",
           "loadError": "Failed to load materials.",
           "loading": "Loading materials...",
           "newCategory": "New",
@@ -3596,6 +3601,7 @@
           "previewError": "Could not load the preview.",
           "previewLoading": "Loading preview…",
           "previewUnsupported": "Preview is available for PDFs and video only. Download the file to view it.",
+          "saveLink": "Save link",
           "saving": "Saving…",
           "searchPlaceholder": "Search...",
           "tags": "Tags (comma-separated)",
@@ -3603,17 +3609,18 @@
           "title": "Materials library",
           "titleField": "Title",
           "titlePlaceholder": "Defaults to the file name",
+          "type": {
+            "audio": "AUDIO",
+            "docx": "DOCX",
+            "link": "LINK",
+            "other": "FILE",
+            "pdf": "PDF",
+            "video": "VIDEO"
+          },
           "updateSuccess": "Material updated.",
           "upload": "Upload material",
           "uploadSuccess": "Material uploaded.",
-          "uploading": "Uploading…",
-          "type": {
-            "pdf": "PDF",
-            "docx": "DOCX",
-            "video": "VIDEO",
-            "audio": "AUDIO",
-            "other": "FILE"
-          }
+          "uploading": "Uploading…"
         },
         "subTabs": {
           "assignments": "Assignments",
