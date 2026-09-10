@@ -132,7 +132,7 @@ export function GroupTrainingCard({
   const isCompleted = training.status === 'completed'
   const isCancelled = training.status === 'cancelled'
 
-  // Figma subtitle: "Location · Trainer: Name" — omit missing parts.
+  // Subtitle: "Type · Location · Trainer: Name" — omit missing parts.
   const subtitleParts = [
     // `type` is a free-text label the trainer types. It was stored and returned
     // by the API but rendered nowhere, so nobody — not even its author — saw it.
@@ -183,7 +183,9 @@ export function GroupTrainingCard({
             purpose: a participant has to see what the session is and how to
             join it, which is the whole of this ticket. */}
         {training.description ? (
-          <p className="text-[11px] whitespace-pre-line text-[#4B5563]">{training.description}</p>
+          <p className="line-clamp-3 text-[11px] whitespace-pre-line text-[#4B5563]">
+            {training.description}
+          </p>
         ) : null}
 
         {meetingHref ? (
@@ -306,7 +308,12 @@ export function ScheduleTrainingDialog({ onClose }: { onClose: () => void }) {
   const [meetingUrl, setMeetingUrl] = useState('')
   const [description, setDescription] = useState('')
 
-  const canSubmit = title.trim().length > 0 && scheduledAt.length > 0
+  // The card renders the meeting link through safeHttpUrl, which rejects a
+  // scheme-less value. Gate saving on the same predicate: otherwise a trainer
+  // pastes "meet.google.com/abc" — the usual way people copy a link — gets a
+  // success toast, and the join link silently never appears for anyone.
+  const meetingUrlInvalid = meetingUrl.trim().length > 0 && !safeHttpUrl(meetingUrl)
+  const canSubmit = title.trim().length > 0 && scheduledAt.length > 0 && !meetingUrlInvalid
   const field =
     'h-9 rounded-lg border border-[#EBECE8] bg-white px-3 text-xs text-[#05040D] focus:outline-none'
 
@@ -474,6 +481,14 @@ export function ScheduleTrainingDialog({ onClose }: { onClose: () => void }) {
               placeholder="https://…"
               className={field}
             />
+            {meetingUrlInvalid ? (
+              <span className="text-[11px] text-[#B91C1C]">
+                {t(
+                  'pages.training.groupTrainings.meetingUrlInvalid',
+                  'Include https:// — a link without it cannot be opened.'
+                )}
+              </span>
+            ) : null}
           </label>
         </div>
 

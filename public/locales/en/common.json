@@ -3193,14 +3193,18 @@
         "cancel": "Cancel session",
         "createFailed": "Could not schedule the training.",
         "created": "Group training scheduled.",
+        "description": "Description",
+        "descriptionPlaceholder": "What the session covers — participants see this.",
         "durationMinutes": "Duration (min)",
         "empty": "No scheduled trainings.",
         "full": "Full",
+        "joinMeeting": "Join the meeting",
         "loadFailed": "Failed to load trainings.",
         "location": "Location",
         "locationPlaceholder": "e.g. Conference Room A / Zoom",
         "maxParticipants": "Max participants",
         "meetingUrl": "Meeting URL",
+        "meetingUrlInvalid": "Include https:// — a link without it cannot be opened.",
         "noParticipants": "No one registered yet.",
         "participants": "Participants",
         "participantsFailed": "Failed to load participants.",
@@ -8749,7 +8753,8 @@
         "operator-promises": "Operator promises",
         "outbound-calls": "Outbound calls",
         "promises-daily": "Promises till end of month",
-        "promises-feed": "Promises"
+        "promises-feed": "Promises",
+        "callbacks": "Callbacks"
       },
       "processing": {
         "dateFrom": "Date from",
@@ -9095,6 +9100,37 @@
         "empty": "No promises in the selected window",
         "forbidden": "You don't have permission to view this report",
         "unavailable": "Employee, promise or payment data is temporarily unavailable. Please try again later.",
+        "error": {
+          "title": "Failed to load the data",
+          "retry": "Retry"
+        }
+      },
+      "callbacksFeed": {
+        "dateFrom": "Callback date from",
+        "dateTo": "Callback date to",
+        "invalidDate": "The date is not a real calendar date — pick a date to replace it",
+        "invalidRange": "Start date is later than end date",
+        "rangeTooLong": "Date range must not exceed 366 days",
+        "hideCalledToday": "Hide clients already contacted today",
+        "hideWorked": "Hide worked callbacks",
+        "openClient": "Open client {{id}}",
+        "columns": {
+          "inn": "Tax ID",
+          "interactionDate": "Interaction date",
+          "interactionType": "Result",
+          "promiseDate": "Promised date",
+          "employeeInteracted": "Employee who commented",
+          "employeeResponsible": "Responsible employee",
+          "link": "Link",
+          "lastInteractionDate": "Last interaction date",
+          "lastResult": "Worked today",
+          "department": "Department",
+          "noDepartment": "No department",
+          "group": "Group"
+        },
+        "empty": "No callbacks in the selected window",
+        "forbidden": "You don't have permission to view this report",
+        "unavailable": "Employee data is temporarily unavailable. Please try again later.",
         "error": {
           "title": "Failed to load the data",
           "retry": "Retry"
