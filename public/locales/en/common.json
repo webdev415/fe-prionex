@@ -9024,7 +9024,7 @@
         "invalidDate": "The date is not a real calendar date — pick a date to replace it",
         "invalidRange": "Start date is later than end date",
         "rangeTooLong": "Date range must not exceed 366 days",
-        "hideCalledToday": "Hide worked today",
+        "hideCalledToday": "Hide clients already contacted today",
         "hideWorked": "Hide worked callbacks",
         "openClient": "Open client {{id}}",
         "columns": {

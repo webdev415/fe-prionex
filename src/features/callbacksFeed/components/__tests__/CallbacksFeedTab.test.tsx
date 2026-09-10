@@ -1024,5 +1024,13 @@ describe('CallbacksFeed locale keys', () => {
     // collapse back into each other.
     expect(uk.hideCalledToday).not.toBe(uk.hideWorked)
     expect(en.hideCalledToday).not.toBe(en.hideWorked)
+
+    // `not.toBe` alone passes on «Приховати відпрацьованих сьогодні» vs
+    // «Приховати відпрацьовані перезвони» — different strings that still read
+    // as the same switch when skimmed (review of #172). The labels must differ from
+    // their FIRST words on, so require the leading two words to differ.
+    const lead = (label: string) => label.split(/\s+/).slice(0, 2).join(' ')
+    expect(lead(uk.hideCalledToday)).not.toBe(lead(uk.hideWorked))
+    expect(lead(en.hideCalledToday)).not.toBe(lead(en.hideWorked))
   })
 })

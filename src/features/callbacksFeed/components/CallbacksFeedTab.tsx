@@ -28,7 +28,8 @@
  * here — see utils/window.ts) and answers 400 on an inverted pair (guarded
  * here before any request leaves).
  *
- * «Приховати дзвонених сьогодні» / «Приховати відпрацьованих» are SERVER-side
+ * «Приховати тих, з ким уже спілкувались сьогодні» / «Приховати
+ * відпрацьовані перезвони» are SERVER-side
  * filters (`hide_called_today`/`hide_worked`): the feed is paginated, so
  * hiding client-side would tear holes in pages. Toggling one is a filter
  * change — it resets the page in the same URL update and refetches. The off
@@ -40,7 +41,11 @@
  * where `hide_worked` — a DATE comparison, `promise_date::date <=
  * last_interaction_date` — drops three quarters of the rows. Techno-Finance
  * labels both of them «Скрыть отработанные…», which is exactly what makes
- * them look like one idea; the labels here name what each actually does.
+ * them look like one idea. The labels here name each predicate instead, and
+ * deliberately do NOT share a leading phrase: one is about the CLIENT having
+ * been contacted at all today, the other about THIS callback's scheduled day
+ * having been reached — a reader who skims the first two words must still end
+ * up on the right switch (review of #172).
  */
 
 import { useEffect, useMemo, useState } from 'react'
