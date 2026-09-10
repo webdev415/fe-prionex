@@ -10,15 +10,12 @@ import { render, screen, fireEvent } from '@testing-library/react'
 
 const createMutate = vi.fn()
 
-vi.mock('@/features/training/hooks/useGroupTrainings', () => ({
+// Spread the real module so the mock cannot drift from it: naming a hook that
+// does not exist, or omitting one the component imports, would otherwise sit
+// here undetected until someone renders a part of the tab this test does not.
+vi.mock('@/features/training/hooks/useGroupTrainings', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/features/training/hooks/useGroupTrainings')>()),
   useCreateGroupTraining: () => ({ mutate: createMutate, isPending: false }),
-  useGroupTrainings: () => ({ data: undefined, isLoading: false }),
-  useCancelGroupTraining: () => ({ mutate: vi.fn(), isPending: false }),
-  useGroupTrainingParticipants: () => ({ data: undefined, isLoading: false }),
-  useAssignParticipants: () => ({ mutate: vi.fn(), isPending: false }),
-  useRegisterForTraining: () => ({ mutate: vi.fn(), isPending: false }),
-  useUnregisterFromTraining: () => ({ mutate: vi.fn(), isPending: false }),
-  useUpdateGroupTraining: () => ({ mutate: vi.fn(), isPending: false }),
 }))
 
 import { ScheduleTrainingDialog } from '../GroupTrainingsTab'
@@ -57,5 +54,36 @@ describe('ScheduleTrainingDialog', () => {
     fireEvent.click(screen.getByText('pages.training.groupTrainings.scheduleConfirm'))
 
     expect(createMutate.mock.calls[0][0]).toMatchObject({ description: null })
+  })
+
+  // safeHttpUrl rejects a scheme-less value when rendering, so saving one would
+  // store a link nobody can ever see — worse than the bug it replaced, because
+  // the trainer gets a success toast either way.
+  it('refuses to save a meeting URL with no scheme', () => {
+    render(<ScheduleTrainingDialog onClose={vi.fn()} />)
+
+    fill('pages.training.groupTrainings.title', 'Objection handling')
+    fill('pages.training.groupTrainings.scheduledAt', '2026-09-10T09:00')
+    fill('pages.training.groupTrainings.meetingUrl', 'meet.google.com/abc')
+
+    expect(screen.getByText('pages.training.groupTrainings.meetingUrlInvalid')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('pages.training.groupTrainings.scheduleConfirm'))
+    expect(createMutate).not.toHaveBeenCalled()
+  })
+
+  it('saves a meeting URL that carries its scheme', () => {
+    render(<ScheduleTrainingDialog onClose={vi.fn()} />)
+
+    fill('pages.training.groupTrainings.title', 'Objection handling')
+    fill('pages.training.groupTrainings.scheduledAt', '2026-09-10T09:00')
+    fill('pages.training.groupTrainings.meetingUrl', 'https://meet.google.com/abc')
+
+    expect(
+      screen.queryByText('pages.training.groupTrainings.meetingUrlInvalid')
+    ).not.toBeInTheDocument()
+    fireEvent.click(screen.getByText('pages.training.groupTrainings.scheduleConfirm'))
+    expect(createMutate.mock.calls[0][0]).toMatchObject({
+      meeting_url: 'https://meet.google.com/abc',
+    })
   })
 })
