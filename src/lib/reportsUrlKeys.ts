@@ -106,6 +106,23 @@ export const REPORTS_URL_KEYS = {
     page: 'prpg',
     pageSize: 'prps',
   },
+  /**
+   * «Перезвони» feed (callbacksFeed). "cb…" for CallBacks: the bare `c…`
+   * spellings are the verification tab's (`cf`/`ct` — count from/to), which
+   * are exactly the two a feed with a date pair would reach for first, and
+   * `ct` doubles as the obvious abbreviation of "callback to". `cbc`/`cbw`
+   * carry the two server-side toggles (hide called today / hide worked):
+   * present-as-"1" is on, absent is the backend default (off) — a shared link
+   * carries only choices somebody made.
+   */
+  callbacksFeed: {
+    dateFrom: 'cbf',
+    dateTo: 'cbt',
+    hideCalledToday: 'cbc',
+    hideWorked: 'cbw',
+    page: 'cbpg',
+    pageSize: 'cbps',
+  },
 } as const
 
 export type ReportsUrlKeyOwner = keyof typeof REPORTS_URL_KEYS

@@ -71,7 +71,28 @@ describe('REPORTS_URL_KEYS', () => {
         page: 'prpg',
         pageSize: 'prps',
       },
+      callbacksFeed: {
+        dateFrom: 'cbf',
+        dateTo: 'cbt',
+        hideCalledToday: 'cbc',
+        hideWorked: 'cbw',
+        page: 'cbpg',
+        pageSize: 'cbps',
+      },
     })
+  })
+
+  it('keeps the callbacks feed clear of the `c…` spellings it would naturally take', () => {
+    // `cf`/`ct` are the verification tab's "count from/to" — and `ct` is also
+    // the obvious abbreviation of a callbacks feed's own "to" bound, so this
+    // set is the likeliest transplant on the page. The collision test above
+    // already fails on a reused key; this one records WHY the set is spelled
+    // `cb…`, so a later "tidy-up" rename cannot quietly walk it back.
+    const callbacksFeedKeys = Object.values<string>(REPORTS_URL_KEYS.callbacksFeed)
+    for (const taken of ['cf', 'ct']) {
+      expect(callbacksFeedKeys).not.toContain(taken)
+    }
+    expect(callbacksFeedKeys.every((key) => key.startsWith('cb'))).toBe(true)
   })
 
   it('keeps the promises feed clear of the `p…`/`pd…` spellings it would naturally take', () => {
