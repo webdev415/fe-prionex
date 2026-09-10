@@ -714,7 +714,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const handleResultClick = (result: SearchResult) => {
     // Navigate to client detail page
-    navigate(`/dashboard/clients/${result.id}`)
+    navigate(`/dashboard/clients/${result.id}?from=search`)
     setLocalSearchQuery('')
     setSearchResults([])
     setShowSearchDropdown(false)

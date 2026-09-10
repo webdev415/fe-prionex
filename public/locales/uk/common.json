@@ -5813,7 +5813,8 @@
           "docs": "Документи",
           "callSms": "Дзвінок / SMS",
           "taChains": "Ланцюжки ЦД",
-          "searcherComments": "Коментарі пошуковика"
+          "searcherComments": "Коментарі пошуковика",
+          "activity": "Активність"
         },
         "relatedTags": {
           "loading": "Завантаження пов'язаних тегів...",
@@ -5965,6 +5966,66 @@
           "card": "Картка",
           "google_pay": "Google Pay",
           "apple_pay": "Apple Pay"
+        },
+        "activityLog": {
+          "title": "Активність по клієнту",
+          "empty": "Для цього клієнта ще немає записів активності.",
+          "loadError": "Не вдалося завантажити журнал активності.",
+          "degraded": "Деякі джерела недоступні: {{sources}}. Стрічка неповна.",
+          "filters": {
+            "from": "З",
+            "to": "По",
+            "operator": "Оператор",
+            "allOperators": "Усі оператори",
+            "reset": "Скинути",
+            "dateRange": "Період",
+            "selectStartDate": "Оберіть початкову дату",
+            "selectEndDate": "Оберіть кінцеву дату"
+          },
+          "sources": {
+            "events": "Дії в інтерфейсі",
+            "audit": "Зміни даних",
+            "calls": "Дзвінки"
+          },
+          "recording": "Запис",
+          "openedTab": "Відкрито вкладку '{{tab}}'",
+          "openedForm": "Відкрито форму взаємодії",
+          "submittedForm": "Надіслано форму взаємодії",
+          "openedCard": "Відкрито картку клієнта",
+          "openedModal": "Відкрито '{{modal}}'",
+          "modals": {
+            "connect_rr": "Підключення реструктуризації",
+            "writeoff": "Списання",
+            "reversal": "Сторнування платежу",
+            "assign_client": "Призначення клієнта",
+            "record_payment": "Внесення платежу",
+            "task": "Завдання",
+            "call_recording": "Запис дзвінка",
+            "tag": "Теги",
+            "edit_client": "Редагування клієнта",
+            "edit_interaction": "Редагування взаємодії",
+            "view_sms": "Перегляд SMS",
+            "send_sms": "Надсилання SMS",
+            "send_message": "Надсилання повідомлення",
+            "upload_document": "Завантаження документа",
+            "view_message": "Перегляд повідомлення",
+            "edit_payment": "Редагування платежу",
+            "cancel_payment": "Скасування платежу",
+            "reassign_payment": "Перепризначення співробітника платежу",
+            "verify_payment": "Черга верифікації платежів",
+            "export_payments": "Експорт платежів",
+            "payment_details": "Деталі платежу"
+          },
+          "openedCardFrom": "Відкрито картку клієнта з: {{origin}}",
+          "origins": {
+            "list": "списку клієнтів",
+            "search": "пошуку",
+            "dialer": "дозвону"
+          },
+          "entryCount_one": "{{count}} запис",
+          "entryCount_few": "{{count}} записи",
+          "entryCount_many": "{{count}} записів",
+          "pagingLimit": "Показано {{count}} останніх записів. Вкажіть діапазон дат, щоб побачити давнішу активність."
         }
       },
       "modals": {

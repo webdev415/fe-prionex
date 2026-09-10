@@ -6543,7 +6543,8 @@
           "docs": "Docs",
           "callSms": "Call / SMS",
           "taChains": "TA Chains",
-          "searcherComments": "Searcher Comments"
+          "searcherComments": "Searcher Comments",
+          "activity": "Activity"
         },
         "relatedTags": {
           "loading": "Loading related tags...",
@@ -6670,6 +6671,65 @@
           "card": "Card",
           "google_pay": "Google Pay",
           "apple_pay": "Apple Pay"
+        },
+        "activityLog": {
+          "title": "Client activity",
+          "empty": "No activity recorded for this client yet.",
+          "loadError": "Could not load the activity log.",
+          "degraded": "Some sources are unavailable: {{sources}}. This feed is incomplete.",
+          "filters": {
+            "from": "From",
+            "to": "To",
+            "operator": "Operator",
+            "allOperators": "All operators",
+            "reset": "Reset",
+            "dateRange": "Date Range",
+            "selectStartDate": "Select start date",
+            "selectEndDate": "Select end date"
+          },
+          "sources": {
+            "events": "UI events",
+            "audit": "Data changes",
+            "calls": "Calls"
+          },
+          "recording": "Recording",
+          "openedTab": "Opened '{{tab}}' tab",
+          "openedForm": "Opened the interaction form",
+          "submittedForm": "Submitted the interaction form",
+          "openedCard": "Opened the client card",
+          "openedModal": "Opened '{{modal}}'",
+          "modals": {
+            "connect_rr": "Connect restructuring",
+            "writeoff": "Write-off",
+            "reversal": "Payment reversal",
+            "assign_client": "Assign client",
+            "record_payment": "Record payment",
+            "task": "Task",
+            "call_recording": "Call recording",
+            "tag": "Tags",
+            "edit_client": "Edit client",
+            "edit_interaction": "Edit interaction",
+            "view_sms": "View SMS",
+            "send_sms": "Send SMS",
+            "send_message": "Send message",
+            "upload_document": "Upload document",
+            "view_message": "View message",
+            "edit_payment": "Edit payment",
+            "cancel_payment": "Cancel payment",
+            "reassign_payment": "Reassign payment employee",
+            "verify_payment": "Payment verification queue",
+            "export_payments": "Export payments",
+            "payment_details": "Payment details"
+          },
+          "openedCardFrom": "Opened the client card from {{origin}}",
+          "origins": {
+            "list": "the client list",
+            "search": "search",
+            "dialer": "the dialer"
+          },
+          "entryCount_one": "{{count}} entry",
+          "entryCount_other": "{{count}} entries",
+          "pagingLimit": "Showing the {{count}} most recent entries. Set a date range to reach older activity."
         }
       },
       "debtSummary": {
