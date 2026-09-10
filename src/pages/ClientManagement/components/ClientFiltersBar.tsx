@@ -751,6 +751,25 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
             <div className="hidden sm:flex sm:min-w-[220px] sm:flex-1" />
           </div>
 
+          {/* Between Tags and RR status. A lone checkbox with no
+              label column: the row it sits in carries the whole control, and
+              the wording says what ticking it does. */}
+          <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:gap-10">
+            <div className="flex w-full flex-col gap-2 sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
+              <label className="flex cursor-pointer items-center gap-1.5 sm:gap-2">
+                <Checkbox
+                  checked={!!filters.hasVerifiedPayment}
+                  onCheckedChange={(checked) => {
+                    onFilterChange({ ...filters, hasVerifiedPayment: checked === true })
+                  }}
+                />
+                <span className="text-foreground text-xs sm:text-sm">
+                  {t('pages.clients.filters.hasVerifiedPayment', 'Has verified payment(s)')}
+                </span>
+              </label>
+            </div>
+          </div>
+
           <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:gap-10">
             <div className="flex w-full flex-col gap-2 sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
               <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[100px] sm:text-sm sm:tracking-[-0.28px]">

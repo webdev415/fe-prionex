@@ -5239,6 +5239,7 @@
         "noMatches": "Немає збігів",
         "noMatchingUsers": "Немає збігів",
         "promiseDate": "Дата обіцянки",
+        "hasVerifiedPayment": "Має підтверджені оплати",
         "rrStatus": "Статус РР",
         "searchPlaceholder": "Пошук...",
         "selectAll": "Вибрати всіх",

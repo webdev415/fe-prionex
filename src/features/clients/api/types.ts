@@ -370,6 +370,10 @@ export interface GetClientsParams {
   // Filter: Portfolio/Sellers
   seller_ids?: string // Comma-separated seller IDs (e.g., "1,5,12")
   rr_status_in?: string // Comma-separated RR status IDs (e.g., "6,1")
+  /** Sent only when ticked. Narrows to clients with at least one
+   *  verified, non-deleted, non-pre-acquisition payment; existence only, so
+   *  payment date and amount are not considered. */
+  has_verified_payment?: boolean
 
   // Filter: Date Range
   sale_date_from?: string // YYYY-MM-DD format
