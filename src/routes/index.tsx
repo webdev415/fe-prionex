@@ -8,7 +8,12 @@ import { useTabTracker } from '@/features/auth/hooks/useTabTracker'
 import { DashboardLayout } from '@/components/layout'
 import { RouteErrorElement } from '@/components/RouteErrorElement'
 import { V3CutoverRoute } from '@/features/scoring/components/V3CutoverRoute'
-import { PERMISSIONS } from '@/constants/permissions'
+import { DRAFT_PAGE_PERMISSIONS, PERMISSIONS } from '@/constants/permissions'
+// Рубильник раздела кредита закрывает и МАРШРУТЫ, а не только пункт меню:
+// прямая ссылка на выключенный раздел обязана объяснить, а не открыть его.
+// Импорт точечный, не через бочку `@/pages/Credit`: та тянет все страницы
+// раздела в главный чанк и убила бы их ленивую загрузку.
+import { CreditSectionGate } from '@/pages/Credit/components/CreditSectionGate'
 import { BulkOperatorAssignmentPageSkeleton } from '@/pages/Operations/BulkOperatorAssignmentPageSkeleton'
 import { BulkTagAssignmentPageSkeleton } from '@/pages/Operations/BulkTagAssignmentPageSkeleton'
 import { BulkContactTagAssignmentPageSkeleton } from '@/pages/Operations/BulkContactTagAssignmentPageSkeleton'
@@ -23,6 +28,9 @@ const PublicPaymentsPage = lazy(() =>
   import('@/pages/PublicPayments').then((m) => ({ default: m.PublicPaymentsPage }))
 )
 const ForceChangePasswordPage = lazy(() => import('@/pages/auth/ForceChangePasswordPage'))
+const EmployeeCardPage = lazy(() =>
+  import('@/pages/EmployeeCard').then((m) => ({ default: m.EmployeeCardPage }))
+)
 const UserManagementPage = lazy(() =>
   import('@/pages/UserManagement').then((m) => ({ default: m.UserManagementPage }))
 )
@@ -77,6 +85,9 @@ const CreditApplicationsPage = lazy(() =>
 )
 const CreditApplicationDetailPage = lazy(() =>
   import('@/pages/Credit').then((m) => ({ default: m.CreditApplicationDetailPage }))
+)
+const CreditUnderwritingQueuePage = lazy(() =>
+  import('@/pages/Credit').then((m) => ({ default: m.CreditUnderwritingQueuePage }))
 )
 const CreditLoansPage = lazy(() =>
   import('@/pages/Credit').then((m) => ({ default: m.CreditLoansPage }))
@@ -333,6 +344,11 @@ export const router = createBrowserRouter([
       // API. Права credit.* появятся в auth-service вместе с ролями WS-20;
       // до тех пор раздел доступен и по системному праву, иначе его не увидит
       // никто, включая администратора, который его и принимает.
+      //
+      // `CreditSectionGate` стоит ВНУТРИ проверки прав, а не снаружи: у кого
+      // прав нет — тому 403, это про доступ; у кого права есть — тому
+      // объяснение про выключенный рубильник, это про решение риск-менеджера.
+      // Порядок наоборот показывал бы постороннему внутреннюю причину.
       {
         path: 'credit',
         element: <Navigate to="/dashboard/credit/applications" replace />,
@@ -347,7 +363,7 @@ export const router = createBrowserRouter([
             ]}
             mode="any"
           >
-            {withSuspense(<CreditApplicationsPage />)}
+            <CreditSectionGate>{withSuspense(<CreditApplicationsPage />)}</CreditSectionGate>
           </PermissionRoute>
         ),
       },
@@ -361,7 +377,25 @@ export const router = createBrowserRouter([
             ]}
             mode="any"
           >
-            {withSuspense(<CreditApplicationDetailPage />)}
+            <CreditSectionGate>{withSuspense(<CreditApplicationDetailPage />)}</CreditSectionGate>
+          </PermissionRoute>
+        ),
+      },
+      {
+        // Очередь ручного разбора — та же выборка заявок, что и список, только
+        // отобранная по решению «referred». Право то же, что у списка заявок
+        // (`credit.applications.read`): очередь читают все три операторские
+        // роли модуля, отдельной проверки на фронте быть не должно.
+        path: 'credit/underwriting',
+        element: (
+          <PermissionRoute
+            requiredPermissions={[
+              PERMISSIONS.CREDIT.APPLICATIONS_VIEW,
+              PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+            ]}
+            mode="any"
+          >
+            <CreditSectionGate>{withSuspense(<CreditUnderwritingQueuePage />)}</CreditSectionGate>
           </PermissionRoute>
         ),
       },
@@ -375,7 +409,7 @@ export const router = createBrowserRouter([
             ]}
             mode="any"
           >
-            {withSuspense(<CreditLoansPage />)}
+            <CreditSectionGate>{withSuspense(<CreditLoansPage />)}</CreditSectionGate>
           </PermissionRoute>
         ),
       },
@@ -393,6 +427,13 @@ export const router = createBrowserRouter([
             ]}
             mode="any"
           >
+            {/* ⚠️ Настройки калиткой НЕ закрыты, и это не упущение.
+                Именно здесь живёт сам рубильник. Закрыв эту страницу, мы
+                запираем риск-менеджера снаружи: выключил раздел «на полчаса» —
+                и включить обратно нечем, кроме прямого запроса к модулю с
+                внутренним ключом. Односторонний выключатель хуже отсутствующего.
+                Само содержимое настроек при выключенном разделе объясняет
+                положение — см. CreditSettingsPage. */}
             {withSuspense(<CreditSettingsPage />)}
           </PermissionRoute>
         ),
@@ -407,7 +448,15 @@ export const router = createBrowserRouter([
             ]}
             mode="any"
           >
-            {withSuspense(<CreditLoanDetailPage />)}
+            <CreditSectionGate>{withSuspense(<CreditLoanDetailPage />)}</CreditSectionGate>
+          </PermissionRoute>
+        ),
+      },
+      {
+        path: 'team-management/users/:userId',
+        element: (
+          <PermissionRoute requiredPermission={PERMISSIONS.EMPLOYEE_CARD.VIEW}>
+            {withSuspense(<EmployeeCardPage />)}
           </PermissionRoute>
         ),
       },
@@ -592,7 +641,7 @@ export const router = createBrowserRouter([
       {
         path: 'system-settings/messaging-drafts',
         element: (
-          <PermissionRoute requiredPermission={PERMISSIONS.MESSAGING.MANAGE_DRAFTS}>
+          <PermissionRoute requiredPermissions={DRAFT_PAGE_PERMISSIONS} mode="any">
             {withSuspense(<MessagingDraftsPage />)}
           </PermissionRoute>
         ),

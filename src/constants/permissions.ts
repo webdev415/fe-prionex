@@ -166,6 +166,17 @@ export const PERMISSIONS = {
   },
 
   /**
+   * The employee card is gated separately from the employees list. It holds
+   * addresses, family and service details, so being able to manage the list
+   * is deliberately not enough to open one, and editing does not follow from
+   * viewing.
+   */
+  EMPLOYEE_CARD: {
+    VIEW: 'view_employee_card',
+    EDIT: 'edit_employee_card',
+  },
+
+  /**
    * System Category (5 permissions)
    * Controls access to system administration
    */
@@ -503,6 +514,20 @@ export const PERMISSION_CATEGORIES = {
   AI_ASSISTANT: 'AI Assistant',
 } as const
 
+export const DRAFT_READ_PERMISSIONS = [
+  PERMISSIONS.MESSAGING.SEND_MESSAGE_SMS,
+  PERMISSIONS.MESSAGING.SEND_MESSAGE_VIBER,
+  PERMISSIONS.MESSAGING.SEND_MESSAGE_EMAIL,
+  PERMISSIONS.MESSAGING.LAUNCH_CAMPAIGN_SMS,
+  PERMISSIONS.MESSAGING.LAUNCH_CAMPAIGN_VIBER,
+  PERMISSIONS.MESSAGING.LAUNCH_CAMPAIGN_EMAIL,
+]
+
+export const DRAFT_PAGE_PERMISSIONS = [
+  PERMISSIONS.MESSAGING.MANAGE_DRAFTS,
+  ...DRAFT_READ_PERMISSIONS,
+]
+
 /**
  * Permission descriptions for display in UI
  */
@@ -549,7 +574,8 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   manage_dialer_queues: 'Create, edit, delete, and activate dialer campaign queues',
 
   // Messaging
-  manage_drafts: 'Create, edit, and delete messaging drafts; open the Message Drafts settings page',
+  manage_drafts:
+    'Open the Message Drafts page; create, edit, and delete messaging drafts, restore deleted ones, and view the trash. Reading the draft list itself needs a messaging send or launch permission.',
   view_campaign_analytics:
     'View campaign analytics, campaign recipients, CSV exports, and unified client message history',
   manage_messaging_integrations:
@@ -580,6 +606,8 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   edit_users: 'Edit user accounts and assignments',
   delete_users: 'Deactivate user accounts',
   impersonate_users: 'View application as another user',
+  view_employee_card: 'Open an employee card and read its sections',
+  edit_employee_card: 'Change an employee card, including identity documents',
 
   // System
   manage_settings: 'Configure system settings',

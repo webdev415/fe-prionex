@@ -103,6 +103,12 @@ export interface DateSelectProps {
   format?: string
   /** Month-year picker: a grid of months + year navigation, no day grid. */
   showMonthYearPicker?: boolean
+  /**
+   * Pick a year and nothing else. For a field that stores a year rather than a
+   * day - a graduation year, say - where offering a month and a day invites
+   * somebody to choose two values that are then thrown away.
+   */
+  showYearPicker?: boolean
   showTimeSelect?: boolean
   timeFormat?: string
   timeIntervals?: number
@@ -233,6 +239,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
       max,
       format = 'MM/dd/yyyy',
       showMonthYearPicker = false,
+      showYearPicker = false,
       showTimeSelect,
       timeFormat = 'HH:mm',
       timeIntervals = 15,
@@ -493,6 +500,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
               filterTime={filterTime}
               calendarStartDay={1}
               showMonthYearPicker={showMonthYearPicker}
+              showYearPicker={showYearPicker}
               showYearDropdown
               scrollableYearDropdown
               yearDropdownItemNumber={10}

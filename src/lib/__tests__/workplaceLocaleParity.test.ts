@@ -4,7 +4,7 @@ import ukCommon from '@/../public/locales/uk/common.json'
 
 type Json = Record<string, unknown>
 
-const SUBTREES = ['pages.lawyerWorkplace.', 'pages.training.'] as const
+const SUBTREES = ['pages.lawyerWorkplace.', 'pages.training.', 'pages.aiAssistant.'] as const
 
 const PLURAL_SUFFIX = /_(zero|one|two|few|many|other)$/
 

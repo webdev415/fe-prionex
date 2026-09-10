@@ -276,6 +276,22 @@ export function formatPickerDateAsYMD(date: Date): string {
 }
 
 /**
+ * The other direction: a stored ``YYYY-MM-DD`` back into the Date a picker
+ * shows.
+ *
+ * Built from the parts rather than handed to ``new Date(string)``, which reads
+ * a bare date as UTC midnight and then displays it in local time - west of
+ * Greenwich that renders as the day before, so a date of birth drifts back one
+ * day every time somebody opens the dialog and saves it again.
+ */
+export function parsePickerYMD(value: string | null | undefined): Date | null {
+  if (!value) return null
+  const [year, month, day] = value.split('-').map(Number)
+  if (!year || !month || !day) return null
+  return new Date(year, month - 1, day)
+}
+
+/**
  * Format a UTC Date object as a "YYYY-MM-DDTHH:mm" string in the given IANA timezone.
  * Used for datetime fields (Promise date, Callback date) that include time component.
  */

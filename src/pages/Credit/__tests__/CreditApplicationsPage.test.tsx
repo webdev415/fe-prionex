@@ -107,4 +107,68 @@ describe('CreditApplicationsPage', () => {
     renderPage()
     expect(await screen.findByText('credit.stand.notice')).toBeInTheDocument()
   })
+
+  // Колонка шага. Модуль начал отдавать `resume_step` в сводке позже самого
+  // раздела, поэтому колонка обязана появляться ПО ДАННЫМ, а не по релизу
+  // фронта: столбец из одних прочерков хуже отсутствующего.
+  it('колонки шага нет, пока модуль шаг не отдаёт', async () => {
+    renderPage()
+    await screen.findByText('DEMO-202608-03A17C')
+    expect(screen.queryByText('credit.columns.step')).not.toBeInTheDocument()
+  })
+
+  it('колонка шага появляется сама, как только шаг приходит', async () => {
+    vi.mocked(useCreditApplications).mockReturnValue({
+      data: {
+        items: [{ ...ROW, status: 'in_progress', resume_step: 'bank_verification' }],
+        next_cursor: null,
+        total: 1,
+      },
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useCreditApplications>)
+
+    renderPage()
+    expect(await screen.findByText('credit.columns.step')).toBeInTheDocument()
+    // Название шага — из словаря блоков анкеты, а не машинным именем.
+    expect(screen.getByText('credit.blocks.bank_verification')).toBeInTheDocument()
+  })
+
+  // Время на шаге. Модуль отдаёт его вместе с признаком, ИЗМЕРЕНО оно или
+  // подставлено от создания заявки. Подстановка обязана быть подписана:
+  // иначе «40 дн» читается как «клиент стоит сорок дней», хотя правда —
+  // «ленты переходов тогда не было».
+  const withStepTime = (source: 'step' | 'created') => {
+    vi.mocked(useCreditApplications).mockReturnValue({
+      data: {
+        items: [
+          {
+            ...ROW,
+            status: 'in_progress',
+            resume_step: 'bank_verification',
+            step_entered_at: '2026-08-29T06:00:00Z',
+            step_entered_at_source: source,
+          },
+        ],
+        next_cursor: null,
+        total: 1,
+      },
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useCreditApplications>)
+  }
+
+  it('измеренное время на шаге показывается без оговорки', async () => {
+    withStepTime('step')
+    renderPage()
+    expect(await screen.findByText('credit.columns.onStep')).toBeInTheDocument()
+    expect(screen.queryByText(/credit\.idle\.sinceCreated/)).not.toBeInTheDocument()
+  })
+
+  it('подставленное время подписано «з моменту створення», а не выдано за измерение', async () => {
+    withStepTime('created')
+    renderPage()
+    await screen.findByText('credit.columns.onStep')
+    expect(screen.getByText(/credit\.idle\.sinceCreated/)).toBeInTheDocument()
+  })
 })
