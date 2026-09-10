@@ -3,9 +3,9 @@
  *
  * Full page view for displaying detailed client information.
  */
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useQueries, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
@@ -36,6 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/Select'
+import { ClientActivityLogTab, type ActivityCallRef } from './components/ClientActivityLogTab'
 import { EditInteractionModal } from './components/EditInteractionModal'
 import { AddTaskModal } from './components/AddTaskModal'
 import { AssignClientModal } from './components/AssignClientModal'
@@ -268,6 +269,27 @@ export function ClientDetailPage() {
   const navigate = useNavigate()
   const trackEvent = useTrackEvent()
 
+  // Where the operator came from. The destination cannot work this out for
+  // itself — React Router does not expose the previous route and
+  // `document.referrer` is empty for client-side navigation — so the three
+  // entry points named in the requirement tag themselves with `?from=`.
+  // A query param rather than router state because the dialer link opens in a
+  // new tab, which router state does not survive.
+  //
+  // These three are the entry points worth recording. There are ~49 places
+  // that link to a client card; the rest are not tracked at all, so an open
+  // from one of them produces no event rather than an event that cannot say
+  // where it came from. The feed therefore answers "who opened this from the
+  // list, search or dialer", not "who opened this" -- a reload or a pasted URL
+  // carries no `from` either and is likewise silent.
+  const [searchParams, setSearchParams] = useSearchParams()
+  const cardOpenOrigin = useMemo(() => {
+    const from = searchParams.get('from')
+    return from === 'list' || from === 'search' || from === 'dialer' ? from : null
+  }, [searchParams])
+
+  const lastTrackedCardOpen = useRef<string | null>(null)
+
   useEffect(() => {
     if (!id) return
     const numericId = Number(id)
@@ -283,11 +305,30 @@ export function ClientDetailPage() {
       navigate('/dashboard/clients', { replace: true })
       return
     }
-    trackEvent('client_card_open', {
-      clientId: numericId,
-      meta: { client_id: id },
-    })
-  }, [id, trackEvent, navigate])
+    // Once per card, not once per effect run. `trackEvent` and `navigate` are
+    // both in the dependency list and both change identity, and StrictMode
+    // double-invokes effects in development — without this guard a single open
+    // recorded three to six times, milliseconds apart. The validation above
+    // stays outside the guard: a bad id must bounce on every run.
+    if (lastTrackedCardOpen.current === id) return
+    lastTrackedCardOpen.current = id
+    if (cardOpenOrigin) {
+      trackEvent('client_card_open', {
+        clientId: numericId,
+        meta: { client_id: id, origin: cardOpenOrigin },
+      })
+    }
+
+    // Drop `?from=` once it has been recorded. It is a one-shot signal, not
+    // state: leaving it in the address bar means a copied or bookmarked link
+    // claims an origin it did not come from, and a refresh re-reports it.
+    // `replace` so it does not add a history entry the back button lands on.
+    if (searchParams.has('from')) {
+      const next = new URLSearchParams(searchParams)
+      next.delete('from')
+      setSearchParams(next, { replace: true })
+    }
+  }, [id, trackEvent, navigate, cardOpenOrigin, searchParams, setSearchParams])
 
   // Returns true if the value looks like a Ukrainian phone number,
   // regardless of the contact type's isPhone flag
@@ -418,6 +459,7 @@ export function ClientDetailPage() {
     | 'call-sms-history'
     | 'tasks'
     | 'documents'
+    | 'activity'
     | 'ta-chains'
   >('loans')
   const [activeCallSmsTab, setActiveCallSmsTab] = useState<'all' | 'calls' | 'sms' | 'messaging'>(
@@ -771,6 +813,9 @@ export function ClientDetailPage() {
     [messagingOperators]
   )
   const canViewTasks = useHasPermission(PERMISSIONS.CLIENTS.VIEW_TASKS)
+  // Not implied by view_clients: seeing a client and seeing who else
+  // looked at them are separate grants.
+  const canViewActivityLog = useHasPermission(PERMISSIONS.CLIENTS.VIEW_ACTIVITY_LOG)
   const { data: tasks = [], isLoading: isTasksLoading } = useClientTasks(
     clientId,
     isValidClientId && canViewTasks && activeRightCardTab === 'tasks'
@@ -1650,6 +1695,46 @@ export function ClientDetailPage() {
     direction?: string | null
     telephony_type?: string | null
   } | null>(null)
+
+  /**
+   * Play a recording the activity feed offered.
+   *
+   * The feed is a merged list, not a call log, so it carries only what a row
+   * needs to describe itself. Everything the player actually reads it does
+   * have -- ``call_id`` fetches the audio, and the rest is labelling. The
+   * client's own name and phone come from the card, which knows them better
+   * than the feed does.
+   */
+  const handlePlayActivityRecording = useCallback(
+    (call: ActivityCallRef) => {
+      const when = new Date(call.ts)
+      const valid = !Number.isNaN(when.getTime())
+      setSelectedCallData({
+        type:
+          call.direction === 'inbound'
+            ? t('pages.clients.modals.callLogCard.callTypes.incoming')
+            : t('pages.clients.modals.callLogCard.callTypes.outgoing'),
+        clientName: client?.fullName ?? '',
+        date: valid ? when.toLocaleDateString(i18n.language) : '',
+        time: valid ? when.toLocaleTimeString(i18n.language) : '',
+        operator: call.operatorName ?? '',
+        // The modal takes a display string, not seconds -- every other call
+        // site hands it one already formatted.
+        duration:
+          call.talkDurationSeconds != null
+            ? `${Math.floor(call.talkDurationSeconds / 60)}:${String(
+                call.talkDurationSeconds % 60
+              ).padStart(2, '0')}`
+            : '',
+        phone: client?.phones?.[0]?.number ?? '',
+        call_id: call.callId,
+        direction: call.direction,
+      })
+      setOpenCallModal('call-recording')
+      setIsCallRecordingModalOpen(true)
+    },
+    [client, i18n.language, t, setOpenCallModal]
+  )
   const [isViewSMSModalOpen, setIsViewSMSModalOpen] = useState(false)
   const [selectedSMSData, setSelectedSMSData] = useState<{
     date: string
@@ -1945,14 +2030,136 @@ export function ClientDetailPage() {
     }
   }, [activeClientCardTab]) // Re-check when tab changes
 
+  // A tab-keyed effect also runs on mount, and again when the card switches to
+  // another client without remounting — both with a tab the operator never
+  // clicked. The event still has to fire then, because screen-time derives its
+  // per-tab durations purely from this stream: one event opens a tab window and
+  // the next one closes it, so dropping the mount event would both lose all
+  // time spent on the default tab and leave the previous card's window open
+  // across the switch. It is marked `initial` instead, so consumers that want
+  // deliberate choices only (the client activity feed) can skip it while
+  // screen-time keeps the boundaries it needs.
+  const lastTrackedCardTab = useRef<{ id: string; tab: string } | null>(null)
+
   useEffect(() => {
     if (!id) return
+    const previous = lastTrackedCardTab.current
+    lastTrackedCardTab.current = { id, tab: activeClientCardTab }
+    // A re-run with an unchanged tab for the same client is neither a click nor
+    // a card load — `trackEvent` is a useCallback and its identity can change.
+    if (previous && previous.id === id && previous.tab === activeClientCardTab) return
+    const isInitial = !previous || previous.id !== id
     const numericId = Number(id)
     trackEvent('client_card_tab_switch', {
       clientId: Number.isFinite(numericId) ? numericId : null,
-      meta: { tab: activeClientCardTab },
+      meta: { tab: activeClientCardTab, ...(isInitial ? { initial: true } : {}) },
     })
   }, [activeClientCardTab, id, trackEvent])
+
+  // Main card sections: Loans, Payments, Recommenders, Operators, Calls/SMS,
+  // Tasks, Docs. Same shape as above, including the `initial` marking.
+  const lastTrackedSection = useRef<{ id: string; section: string } | null>(null)
+
+  useEffect(() => {
+    if (!id) return
+    const previous = lastTrackedSection.current
+    lastTrackedSection.current = { id, section: activeRightCardTab }
+    if (previous && previous.id === id && previous.section === activeRightCardTab) return
+    const isInitial = !previous || previous.id !== id
+    const numericId = Number(id)
+    trackEvent('client_card_section_open', {
+      clientId: Number.isFinite(numericId) ? numericId : null,
+      meta: { section: activeRightCardTab, ...(isInitial ? { initial: true } : {}) },
+    })
+  }, [activeRightCardTab, id, trackEvent])
+
+  // Every other modal in the card. The ones that change data leave an audit
+  // entry when they succeed, but a form opened and abandoned leaves no trace at
+  // all — that gap is what this closes. Driven off the open flags in one place
+  // rather than ~15 call sites, so a modal added later needs one map line.
+  //
+  // A separate type from interaction_form_*: those feed screen-time's "avg form
+  // submit", and folding fifteen more modals into that average would quietly
+  // redefine the metric. The modal is named in meta so per-modal timings stay
+  // possible later without another schema change.
+  const modalOpenFlags = useMemo(
+    () => ({
+      connect_rr: isConnectRrOpen,
+      writeoff: isWriteoffOpen,
+      reversal: isReversalOpen,
+      assign_client: isAssignClientOpen,
+      record_payment: isRecordPaymentModalOpen,
+      task: isTaskModalOpen,
+      call_recording: isCallRecordingModalOpen,
+      tag: isTagModalOpen,
+      edit_client: isEditModalOpen,
+      edit_interaction: isEditInteractionModalOpen,
+      view_sms: isViewSMSModalOpen,
+      send_sms: isSendSMSModalOpen,
+      send_message: isSendMessageModalOpen,
+      upload_document: isUploadDocModalOpen,
+      view_message: isViewMessageModalOpen,
+    }),
+    [
+      isConnectRrOpen,
+      isWriteoffOpen,
+      isReversalOpen,
+      isAssignClientOpen,
+      isRecordPaymentModalOpen,
+      isTaskModalOpen,
+      isCallRecordingModalOpen,
+      isTagModalOpen,
+      isEditModalOpen,
+      isEditInteractionModalOpen,
+      isViewSMSModalOpen,
+      isSendSMSModalOpen,
+      isSendMessageModalOpen,
+      isUploadDocModalOpen,
+      isViewMessageModalOpen,
+    ]
+  )
+  const previousModalOpenFlags = useRef<Record<string, boolean> | null>(null)
+
+  useEffect(() => {
+    if (!id) return
+    const previous = previousModalOpenFlags.current
+    previousModalOpenFlags.current = modalOpenFlags
+    // First run records the baseline only — nothing was "opened" by anyone yet.
+    if (!previous) return
+    const numericId = Number(id)
+    for (const [modal, isOpen] of Object.entries(modalOpenFlags)) {
+      if (isOpen && !previous[modal]) {
+        trackEvent('client_modal_open', {
+          clientId: Number.isFinite(numericId) ? numericId : null,
+          meta: { modal },
+        })
+      }
+    }
+  }, [modalOpenFlags, id, trackEvent])
+
+  // Interaction form = the chain executor. Tracked here rather than at each
+  // call site because it is opened from several places (header button, phone
+  // rows, the auto-open effect). Open only, like every other modal — the save
+  // itself is already recorded by audit-service, in more detail than an event
+  // here could carry.
+  const interactionFormWasOpen = useRef(false)
+
+  useEffect(() => {
+    if (!id) return
+    if (!isChainExecutorOpen) {
+      interactionFormWasOpen.current = false
+      return
+    }
+    // Emit on the closed -> open transition only. `trackEvent` is a useCallback
+    // with its own dependencies, so this effect can re-run while the form stays
+    // open; without the guard that would double-count opens.
+    if (interactionFormWasOpen.current) return
+    interactionFormWasOpen.current = true
+    const numericId = Number(id)
+    trackEvent('interaction_form_open', {
+      clientId: Number.isFinite(numericId) ? numericId : null,
+    })
+  }, [isChainExecutorOpen, id, trackEvent])
 
   // Scroll active tab into view when it changes
   useEffect(() => {
@@ -4008,6 +4215,25 @@ export function ClientDetailPage() {
                       +
                     </span>
                   </button>
+                  {/* Tab 7: Activity */}
+                  {canViewActivityLog && (
+                    <button
+                      type="button"
+                      data-tab="activity"
+                      onClick={() => setActiveRightCardTab('activity')}
+                      className={cn(
+                        'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
+                        activeRightCardTab === 'activity'
+                          ? 'border-primary-300 text-primary-700 bg-primary-300/10'
+                          : 'hover:text-primary-700 text-muted-foreground border-transparent'
+                      )}
+                    >
+                      <Icons.Activity01 size={20} className="shrink-0 text-current" />
+                      <span className="text-xs font-medium whitespace-nowrap md:text-sm">
+                        {t('pages.clients.detail.tabs.activity')}
+                      </span>
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -5342,6 +5568,17 @@ export function ClientDetailPage() {
                         clientId={clientId}
                       />
                     )}
+                  </div>
+                )}
+
+                {/* Tab 7: Activity */}
+                {canViewActivityLog && activeRightCardTab === 'activity' && (
+                  <div className="flex w-full flex-col gap-0">
+                    <ClientActivityLogTab
+                      clientId={isValidClientId ? clientId : null}
+                      isActive={activeRightCardTab === 'activity'}
+                      onPlayRecording={handlePlayActivityRecording}
+                    />
                   </div>
                 )}
               </div>
