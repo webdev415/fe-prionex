@@ -6229,6 +6229,7 @@
           "clientName": "Ім'я клієнта",
           "debtAmount": "Сума боргу",
           "loanNumber": "Номер позики",
+          "noOpenLoans": "Немає відкритих кредитів",
           "templateVariables": "Змінні шаблону",
           "sending": "Відправка...",
           "smsSentSuccessfully": "SMS успішно відправлено",
