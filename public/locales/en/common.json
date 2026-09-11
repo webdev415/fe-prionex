@@ -6793,6 +6793,11 @@
         "cancelled": "Cancelled",
         "completed": "Completed",
         "completedEarly": "Completed early"
+      },
+      "presets": {
+        "label": "Filter Presets",
+        "empty": "You can set up presets in your profile",
+        "applied": "Applied"
       }
     },
     "clientChains": {

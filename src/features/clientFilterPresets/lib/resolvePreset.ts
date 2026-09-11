@@ -123,8 +123,12 @@ export function resolvePresetToFilters(
   const interaction = resolveDateRange(params.interactionDate, now)
 
   const filters: ClientFilters = {
-    amountOfDebtRangeFrom: totalDebt.from,
-    amountOfDebtRangeTo: totalDebt.to,
+    // `debtRangeFrom/To`, not `amountOfDebtRange*`: the latter pair is declared
+    // on ClientFilters but read nowhere — the client list's total-debt inputs
+    // are bound to debtRange, and only the row's *label* key is named
+    // "amountOfDebtRange". Writing the dead pair would apply no filter at all.
+    debtRangeFrom: totalDebt.from,
+    debtRangeTo: totalDebt.to,
     principalRangeFrom: principal.from,
     principalRangeTo: principal.to,
     dpdRangeFrom: dpd.from,
