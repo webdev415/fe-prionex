@@ -77,17 +77,14 @@ function TableIconButton({
   )
 }
 
+const SMS_BODY_MAX_LENGTH = 350
+
 // Per-channel form rules. Drives subject visibility, body limits / char
 // counter, sender-name constraints, placeholders, and helper text.
 interface ChannelSpec {
   showSubject: boolean
   subjectRequired: boolean
   bodyMaxLength: number
-  // SMS-only segmentation thresholds; ignored for other channels.
-  gsmSingleLimit?: number
-  cyrillicSingleLimit?: number
-  gsmConcatLimit?: number
-  cyrillicConcatLimit?: number
   senderMaxLength: number
 }
 
@@ -95,11 +92,7 @@ const CHANNEL_SPECS: Record<MessagingChannel, ChannelSpec> = {
   sms: {
     showSubject: false,
     subjectRequired: false,
-    bodyMaxLength: 1071, // 7 SMS segments (153 chars each, GSM-7)
-    gsmSingleLimit: 160,
-    cyrillicSingleLimit: 70,
-    gsmConcatLimit: 153,
-    cyrillicConcatLimit: 67,
+    bodyMaxLength: SMS_BODY_MAX_LENGTH,
     senderMaxLength: 11,
   },
   viber: {
@@ -114,27 +107,6 @@ const CHANNEL_SPECS: Record<MessagingChannel, ChannelSpec> = {
     bodyMaxLength: 50000,
     senderMaxLength: 100,
   },
-}
-
-// Crude but reliable Cyrillic / non-GSM detector: any code point above U+007F
-// forces UCS-2 encoding on SMS, which slashes single-segment capacity 160 → 70.
-const hasNonGsmChar = (text: string) => {
-  for (let i = 0; i < text.length; i += 1) {
-    if (text.charCodeAt(i) > 0x7f) return true
-  }
-  return false
-}
-
-const getSmsSegmentInfo = (body: string, spec: ChannelSpec) => {
-  if (!spec.gsmSingleLimit || !spec.cyrillicSingleLimit) return null
-  const cyrillic = hasNonGsmChar(body)
-  const single = cyrillic ? spec.cyrillicSingleLimit : spec.gsmSingleLimit
-  const concat = cyrillic
-    ? (spec.cyrillicConcatLimit ?? spec.cyrillicSingleLimit)
-    : (spec.gsmConcatLimit ?? spec.gsmSingleLimit)
-  const length = body.length
-  const segments = length === 0 ? 0 : length <= single ? 1 : Math.ceil(length / concat)
-  return { cyrillic, single, concat, segments }
 }
 
 interface DraftFormModalProps {
@@ -210,9 +182,7 @@ function DraftFormModal({ draft, open, onClose }: DraftFormModalProps) {
   const trimmedBody = body.trim()
   const trimmedSubject = subject.trim()
 
-  const smsSegments = channel === 'sms' ? getSmsSegmentInfo(body, spec) : null
-  // SMS counter uses one-part limits (160 GSM-7 / 70 UCS-2), not multi-part totals.
-  const bodyCharLimit = channel === 'sms' && smsSegments ? smsSegments.single : spec.bodyMaxLength
+  const bodyCharLimit = spec.bodyMaxLength
   const bodyTooShort = trimmedBody.length === 0
   const bodyTooLong = body.length > bodyCharLimit
 
