@@ -5226,6 +5226,7 @@
         "noMatches": "No matches",
         "noMatchingUsers": "No matches",
         "promiseDate": "Promise Date",
+        "payments": "Payments",
         "hasVerifiedPayment": "Has verified payment(s)",
         "rrStatus": "RR status",
         "searchPlaceholder": "Search...",
