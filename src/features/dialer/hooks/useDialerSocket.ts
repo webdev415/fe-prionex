@@ -18,6 +18,13 @@ interface DialerEvent<T> {
 
 export interface DialerSocketState {
   routedCall: RoutedCall | null
+  /**
+   * The call the engine has reported as over. The routed call is kept rather
+   * than dropped, for the same reason as on the phone path: unmounting the
+   * active-call panel the moment the leg goes down discards the operator's
+   * unsaved interaction note before wrap-up has run.
+   */
+  endedCallId: string | null
   queueComplete: boolean
   clearRoutedCall: () => void
   connected: boolean
@@ -26,10 +33,20 @@ export interface DialerSocketState {
 export function useDialerSocket(enabled: boolean): DialerSocketState {
   const socketRef = useRef<Socket | null>(null)
   const [routedCall, setRoutedCall] = useState<RoutedCall | null>(null)
+  const [endedCallId, setEndedCallId] = useState<string | null>(null)
   const [queueComplete, setQueueComplete] = useState(false)
   const [connected, setConnected] = useState(false)
 
-  const clearRoutedCall = useCallback(() => setRoutedCall(null), [])
+  // The end event carries no id of its own, and one call is routed at a time.
+  const currentCallIdRef = useRef<string | null>(null)
+  useEffect(() => {
+    currentCallIdRef.current = routedCall?.call_id ?? null
+  }, [routedCall])
+
+  const clearRoutedCall = useCallback(() => {
+    setRoutedCall(null)
+    setEndedCallId(null)
+  }, [])
 
   useEffect(() => {
     if (!enabled) {
@@ -56,10 +73,11 @@ export function useDialerSocket(enabled: boolean): DialerSocketState {
     socket.on('dialer.call_routed', (event: DialerEvent<RoutedCall>) => {
       setQueueComplete(false)
       setRoutedCall(event.data)
+      setEndedCallId(null)
     })
 
-    socket.on('dialer.call_ended', () => {
-      setRoutedCall(null)
+    socket.on('dialer.call_ended', (event?: DialerEvent<{ call_id?: string }>) => {
+      setEndedCallId(event?.data?.call_id ?? currentCallIdRef.current)
     })
 
     socket.on('dialer.queue_completed', () => {
@@ -72,5 +90,5 @@ export function useDialerSocket(enabled: boolean): DialerSocketState {
     }
   }, [enabled])
 
-  return { routedCall, queueComplete, clearRoutedCall, connected }
+  return { routedCall, endedCallId, queueComplete, clearRoutedCall, connected }
 }

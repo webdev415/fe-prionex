@@ -82,25 +82,46 @@ describe('401 — это не «модуль не развёрнут»', () => {
     vi.mocked(useCreditLoans).mockReturnValue({ ...idle, error: UNAUTHORIZED } as never)
   })
 
-  it('предлагает вписать ключ, а не сообщает о неразвёрнутом модуле', () => {
+  it('пропуск не принят — объясняет вход, а не предлагает служебный ключ', () => {
+    // Здесь раньше показывалось поле для служебного ключа. Ключа у браузера
+    // больше нет вовсе: модуль проверяет пропуск оператора у самой CRM.
+    // Предлагать поле было бы предложением того, чего не существует, — а
+    // человеку надо объяснить, почему его не пустили.
     render(
       <MemoryRouter>
         <CreditLoansPage />
       </MemoryRouter>
     )
-    expect(screen.getByText(/standKey\.title/)).toBeInTheDocument()
+    // Точное совпадение, не подстрока: ключ подсказки начинается так же,
+    // и регулярка нашла бы оба узла.
+    expect(screen.getByText('credit.access.notAuthenticated')).toBeInTheDocument()
+    // Про сам ключ здесь больше не утверждаем: панели и её строк в проекте
+    // нет, проверка не смогла бы покраснеть ни при каком коде. Настоящий
+    // страж — `features/credit/api/__tests__/credentials.test.ts`: он ловит
+    // и возврат заголовка, и ключ, забытый в хранилище.
     expect(screen.queryByText(/unavailable\.title/)).not.toBeInTheDocument()
   })
 
-  it('говорит, где взять ключ и что он живёт до закрытия вкладки', () => {
-    // Подсказка «обратитесь к администратору» бесполезна: человек не знает
-    // ни что просить, ни почему ключ исчез после перезапуска браузера.
+  it('прав не хватило — называет самую частую причину: не тот проект', () => {
+    // 403 отличается от 401 по смыслу: пропуск ПРИНЯЛИ, прав не нашлось.
+    // Кредитные права заведены в одном проекте, и оператор другого принесёт
+    // права, среди которых кредитных нет. Сообщение «нет права
+    // credit.applications.read» читается как «вам не выдали», хотя причина —
+    // выбран не тот проект. Раньше 403 попадал в общую ветку «модуль не
+    // развёрнут» и отправлял человека искать несуществующую аварию.
+    const FORBIDDEN = new CreditApiError('forbidden', 403, 'forbidden')
+    vi.mocked(useCreditOverview).mockReturnValue({
+      ...idle,
+      error: FORBIDDEN,
+    } as unknown as ReturnType<typeof useCreditOverview>)
+    vi.mocked(useCreditLoans).mockReturnValue({ ...idle, error: FORBIDDEN } as never)
+
     render(
       <MemoryRouter>
         <CreditLoansPage />
       </MemoryRouter>
     )
-    expect(screen.getByText(/standKey\.where/)).toBeInTheDocument()
-    expect(screen.getByText(/standKey\.lifetime/)).toBeInTheDocument()
+    expect(screen.getByText('credit.access.noRights')).toBeInTheDocument()
+    expect(screen.queryByText(/unavailable\.title/)).not.toBeInTheDocument()
   })
 })

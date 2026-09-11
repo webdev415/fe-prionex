@@ -1,12 +1,15 @@
 /**
- * Плашка этапа 1: модуль ещё не за Kong и не знает ролей CRM.
+ * Плашка: модуль ещё не за Kong (этап 2, WS-20 — не сделан).
  *
- * Показываем честно, где мы находимся, и даём переключить роль стенда — иначе
- * оператор увидит 403 и решит, что раздел сломан. На этапе 2 (WS-20) компонент
- * удаляется целиком: роль будет приходить из JWT.
+ * Переключатель роли отсюда убран. Он менял заголовок `X-Operator-Role`,
+ * которого браузер больше не шлёт: права приходят из пропуска оператора, и
+ * выбор в списке уже ничего бы не менял. Оставить его — значит показывать
+ * рычаг, не соединённый ни с чем: человек «сменил роль», увидел тот же 403 и
+ * пошёл искать поломку не там.
+ *
+ * Сама плашка остаётся, пока остаётся её повод: модуль отвечает мимо шлюза.
  */
 import { useTranslation } from 'react-i18next'
-import { getStandRole, setStandRole } from '@/features/credit/api/creditApi'
 import type { CreditOverview } from '@/features/credit/api/types'
 
 interface CreditStandBannerProps {
@@ -20,23 +23,6 @@ export function CreditStandBanner({ overview }: CreditStandBannerProps) {
   return (
     <div className="bg-warning-100 text-warning-800 mb-4 flex flex-wrap items-center gap-3 rounded-lg px-4 py-2.5 text-xs">
       <span>{t('credit.stand.notice')}</span>
-      <label className="flex items-center gap-2">
-        {t('credit.stand.role')}
-        <select
-          className="border-warning-800/30 bg-card text-foreground h-8 rounded-md border px-2 text-xs"
-          defaultValue={getStandRole()}
-          onChange={(event) => {
-            setStandRole(event.target.value)
-            window.location.reload()
-          }}
-        >
-          {overview.roles_available.map((role) => (
-            <option key={role} value={role}>
-              {t(`credit.roles.${role}`, role)}
-            </option>
-          ))}
-        </select>
-      </label>
     </div>
   )
 }

@@ -106,7 +106,7 @@ export function CallClientContracts({
         />
         <span className="text-foreground truncate text-xs font-medium sm:text-sm">{label}</span>
         <a
-          href={`/dashboard/clients/${client.clientId}`}
+          href={`/dashboard/clients/${client.clientId}?from=dialer`}
           target="_blank"
           rel="noopener noreferrer"
           className="text-primary-700 ml-auto shrink-0 text-xs font-medium"
