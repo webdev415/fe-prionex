@@ -5,7 +5,7 @@
  */
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQueries, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
@@ -156,6 +156,12 @@ import type { InteractionResponse } from '@/features/clients/api/types'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { ClientDetailPageSkeleton } from './components/ClientDetailPageSkeleton'
 import { useTrackEvent } from '@/features/operatorAnalytics'
+import { useClientCardOpenTracking } from './hooks/useClientCardOpenTracking'
+import {
+  useCardSelectionTracking,
+  useInteractionFormOpenTracking,
+  useModalOpenTracking,
+} from './hooks/useClientCardInteractionTracking'
 import { useCallStore } from '@/stores/callStore'
 import { useClientTags } from '@/features/tags/hooks/useTags'
 import { TagSelectorModal } from './components/TagSelectorModal'
@@ -269,66 +275,7 @@ export function ClientDetailPage() {
   const navigate = useNavigate()
   const trackEvent = useTrackEvent()
 
-  // Where the operator came from. The destination cannot work this out for
-  // itself — React Router does not expose the previous route and
-  // `document.referrer` is empty for client-side navigation — so the three
-  // entry points named in the requirement tag themselves with `?from=`.
-  // A query param rather than router state because the dialer link opens in a
-  // new tab, which router state does not survive.
-  //
-  // These three are the entry points worth recording. There are ~49 places
-  // that link to a client card; the rest are not tracked at all, so an open
-  // from one of them produces no event rather than an event that cannot say
-  // where it came from. The feed therefore answers "who opened this from the
-  // list, search or dialer", not "who opened this" -- a reload or a pasted URL
-  // carries no `from` either and is likewise silent.
-  const [searchParams, setSearchParams] = useSearchParams()
-  const cardOpenOrigin = useMemo(() => {
-    const from = searchParams.get('from')
-    return from === 'list' || from === 'search' || from === 'dialer' ? from : null
-  }, [searchParams])
-
-  const lastTrackedCardOpen = useRef<string | null>(null)
-
-  useEffect(() => {
-    if (!id) return
-    const numericId = Number(id)
-    // Client IDs are PostgreSQL INTEGER (int32, max 2_147_483_647) across all
-    // services that consume this ID downstream. An out-of-range value (e.g.
-    // a 13-digit Date.now()-style value from a stale URL or a paste error)
-    // would 500 every backend call AND poison the analytics tracking_events
-    // pipeline (its client_id column is also int32). Guard at the boundary:
-    // bounce the operator back to the list with a toast instead of letting
-    // the bad value spread.
-    if (!Number.isFinite(numericId) || numericId < 1 || numericId > 2147483647) {
-      toast.error(`Invalid client ID: ${id}`)
-      navigate('/dashboard/clients', { replace: true })
-      return
-    }
-    // Once per card, not once per effect run. `trackEvent` and `navigate` are
-    // both in the dependency list and both change identity, and StrictMode
-    // double-invokes effects in development — without this guard a single open
-    // recorded three to six times, milliseconds apart. The validation above
-    // stays outside the guard: a bad id must bounce on every run.
-    if (lastTrackedCardOpen.current === id) return
-    lastTrackedCardOpen.current = id
-    if (cardOpenOrigin) {
-      trackEvent('client_card_open', {
-        clientId: numericId,
-        meta: { client_id: id, origin: cardOpenOrigin },
-      })
-    }
-
-    // Drop `?from=` once it has been recorded. It is a one-shot signal, not
-    // state: leaving it in the address bar means a copied or bookmarked link
-    // claims an origin it did not come from, and a refresh re-reports it.
-    // `replace` so it does not add a history entry the back button lands on.
-    if (searchParams.has('from')) {
-      const next = new URLSearchParams(searchParams)
-      next.delete('from')
-      setSearchParams(next, { replace: true })
-    }
-  }, [id, trackEvent, navigate, cardOpenOrigin, searchParams, setSearchParams])
+  useClientCardOpenTracking(id, trackEvent)
 
   // Returns true if the value looks like a Ukrainian phone number,
   // regardless of the contact type's isPhone flag
@@ -2039,58 +1986,19 @@ export function ClientDetailPage() {
     }
   }, [activeClientCardTab]) // Re-check when tab changes
 
-  // A tab-keyed effect also runs on mount, and again when the card switches to
-  // another client without remounting — both with a tab the operator never
-  // clicked. The event still has to fire then, because screen-time derives its
-  // per-tab durations purely from this stream: one event opens a tab window and
-  // the next one closes it, so dropping the mount event would both lose all
-  // time spent on the default tab and leave the previous card's window open
-  // across the switch. It is marked `initial` instead, so consumers that want
-  // deliberate choices only (the client activity feed) can skip it while
-  // screen-time keeps the boundaries it needs.
-  const lastTrackedCardTab = useRef<{ id: string; tab: string } | null>(null)
+  // Card tabs and main sections: see useCardSelectionTracking for why a card
+  // load is recorded too, marked `initial`.
+  useCardSelectionTracking('client_card_tab_switch', 'tab', id, activeClientCardTab, trackEvent)
+  useCardSelectionTracking(
+    'client_card_section_open',
+    'section',
+    id,
+    activeRightCardTab,
+    trackEvent
+  )
 
-  useEffect(() => {
-    if (!id) return
-    const previous = lastTrackedCardTab.current
-    lastTrackedCardTab.current = { id, tab: activeClientCardTab }
-    // A re-run with an unchanged tab for the same client is neither a click nor
-    // a card load — `trackEvent` is a useCallback and its identity can change.
-    if (previous && previous.id === id && previous.tab === activeClientCardTab) return
-    const isInitial = !previous || previous.id !== id
-    const numericId = Number(id)
-    trackEvent('client_card_tab_switch', {
-      clientId: Number.isFinite(numericId) ? numericId : null,
-      meta: { tab: activeClientCardTab, ...(isInitial ? { initial: true } : {}) },
-    })
-  }, [activeClientCardTab, id, trackEvent])
-
-  // Main card sections: Loans, Payments, Recommenders, Operators, Calls/SMS,
-  // Tasks, Docs. Same shape as above, including the `initial` marking.
-  const lastTrackedSection = useRef<{ id: string; section: string } | null>(null)
-
-  useEffect(() => {
-    if (!id) return
-    const previous = lastTrackedSection.current
-    lastTrackedSection.current = { id, section: activeRightCardTab }
-    if (previous && previous.id === id && previous.section === activeRightCardTab) return
-    const isInitial = !previous || previous.id !== id
-    const numericId = Number(id)
-    trackEvent('client_card_section_open', {
-      clientId: Number.isFinite(numericId) ? numericId : null,
-      meta: { section: activeRightCardTab, ...(isInitial ? { initial: true } : {}) },
-    })
-  }, [activeRightCardTab, id, trackEvent])
-
-  // Every other modal in the card. The ones that change data leave an audit
-  // entry when they succeed, but a form opened and abandoned leaves no trace at
-  // all — that gap is what this closes. Driven off the open flags in one place
-  // rather than ~15 call sites, so a modal added later needs one map line.
-  //
-  // A separate type from interaction_form_*: those feed screen-time's "avg form
-  // submit", and folding fifteen more modals into that average would quietly
-  // redefine the metric. The modal is named in meta so per-modal timings stay
-  // possible later without another schema change.
+  // Every other modal in the card, by the name its open event carries. A modal
+  // added later needs one line here; see useModalOpenTracking for the rest.
   const modalOpenFlags = useMemo(
     () => ({
       connect_rr: isConnectRrOpen,
@@ -2127,48 +2035,10 @@ export function ClientDetailPage() {
       isViewMessageModalOpen,
     ]
   )
-  const previousModalOpenFlags = useRef<Record<string, boolean> | null>(null)
+  useModalOpenTracking(id, modalOpenFlags, trackEvent)
 
-  useEffect(() => {
-    if (!id) return
-    const previous = previousModalOpenFlags.current
-    previousModalOpenFlags.current = modalOpenFlags
-    // First run records the baseline only — nothing was "opened" by anyone yet.
-    if (!previous) return
-    const numericId = Number(id)
-    for (const [modal, isOpen] of Object.entries(modalOpenFlags)) {
-      if (isOpen && !previous[modal]) {
-        trackEvent('client_modal_open', {
-          clientId: Number.isFinite(numericId) ? numericId : null,
-          meta: { modal },
-        })
-      }
-    }
-  }, [modalOpenFlags, id, trackEvent])
-
-  // Interaction form = the chain executor. Tracked here rather than at each
-  // call site because it is opened from several places (header button, phone
-  // rows, the auto-open effect). Open only, like every other modal — the save
-  // itself is already recorded by audit-service, in more detail than an event
-  // here could carry.
-  const interactionFormWasOpen = useRef(false)
-
-  useEffect(() => {
-    if (!id) return
-    if (!isChainExecutorOpen) {
-      interactionFormWasOpen.current = false
-      return
-    }
-    // Emit on the closed -> open transition only. `trackEvent` is a useCallback
-    // with its own dependencies, so this effect can re-run while the form stays
-    // open; without the guard that would double-count opens.
-    if (interactionFormWasOpen.current) return
-    interactionFormWasOpen.current = true
-    const numericId = Number(id)
-    trackEvent('interaction_form_open', {
-      clientId: Number.isFinite(numericId) ? numericId : null,
-    })
-  }, [isChainExecutorOpen, id, trackEvent])
+  // Interaction form = the chain executor.
+  useInteractionFormOpenTracking(id, isChainExecutorOpen, trackEvent)
 
   // Scroll active tab into view when it changes
   useEffect(() => {
