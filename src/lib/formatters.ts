@@ -1,4 +1,5 @@
 import i18n, { intlLocaleForUiLanguage } from './i18n'
+import { isRealCalendarDate } from './calendarDate'
 
 /**
  * Formatting utilities for display
@@ -138,11 +139,33 @@ export function formatIsoDate(dateStr?: string | null): string {
   return `${day}-${month}-${year}`
 }
 
+/** A bare calendar date — no time, no zone: "2026-10-02". */
+const ISO_DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/
+
 /**
  * Format date for display → DD-MM-YYYY
+ *
+ * A bare `YYYY-MM-DD` is a calendar date, not an instant, so it is split as a
+ * string. `new Date('2026-10-02')` parses as UTC midnight, and reading that
+ * back through the local getters yields 01-10 for every viewer west of UTC:
+ * the loan card rendered a payment due 10-10 as 09-10 in America/*. Kyiv
+ * (UTC+2/+3) rounds the other way and never saw it, which is how this lasted.
+ *
+ * The string path is taken only for a day that REALLY EXISTS, not for anything
+ * merely shaped like one, and a shape match that fails the existence check is
+ * answered with '—' rather than handed to `new Date`. `formatIsoDate` matches
+ * on shape alone, so routing every `\d{4}-\d{2}-\d{2}` there would render the
+ * backend's zero-date `0000-00-00` as `00-00-0000`; and `new Date` is no
+ * fallback either, because it rejects `0000-00-00` and `2026-13-45` but
+ * silently ROLLS OVER `2026-02-31` into 02-03-2026. Neither is a date the
+ * operator can act on, so both read '—'.
+ *
+ * Strings that carry a time keep the Date path — there the instant is the
+ * point, and the caller wants it in the viewer's own zone.
  */
 export function formatDate(dateStr?: string): string {
   if (!dateStr) return '—'
+  if (ISO_DATE_ONLY.test(dateStr)) return isRealCalendarDate(dateStr) ? formatIsoDate(dateStr) : '—'
   const d = new Date(dateStr)
   if (isNaN(d.getTime())) return '—'
   return toDMY(d)

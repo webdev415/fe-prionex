@@ -14,9 +14,10 @@ import { useUsers } from '@/features/users/hooks/useUsers'
 import { useURLState, useAutoPersistedState } from '@/hooks'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
+import { useHasPermission } from '@/hooks/usePermissions'
 import { CreateUserModal } from './components/CreateUserModal'
-import { UserDetailModal } from './components/UserDetailModal'
 import { EditUserModal } from './components/EditUserModal'
+import { UserDetailModal } from './components/UserDetailModal'
 import ChangeStatusModal from './components/ChangeStatusModal'
 import { ResetPasswordConfirmModal } from './components/ResetPasswordConfirmModal'
 import { AdminToggleTwoFactorModal } from './components/AdminToggleTwoFactorModal'
@@ -25,6 +26,7 @@ import { GoogleAuthenticatorStatusIcon } from './components/GoogleAuthenticatorS
 import { cn } from '@/lib/utils'
 import { UserSearchBar } from './components/UserSearchBar'
 import { UserFiltersBar } from './components/UserFiltersBar'
+import { displayName } from '@/features/employeeCard/lib/displayName'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { FilterTemplatesMenu } from './components/FilterTemplatesMenu'
 import type {
@@ -205,8 +207,8 @@ export function UserManagementPage() {
   )
 
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [viewUserId, setViewUserId] = useState<number | null>(null)
   const [editUserId, setEditUserId] = useState<number | null>(null)
+  const [detailUserId, setDetailUserId] = useState<number | null>(null)
   const [changeStatusUser, setChangeStatusUser] = useState<ApiUser | null>(null)
   const [newStatus, setNewStatus] = useState<'active' | 'inactive'>('active')
   const [impersonatingUserId, setImpersonatingUserId] = useState<number | null>(null)
@@ -215,17 +217,25 @@ export function UserManagementPage() {
   const [toggleTwoFactorUser, setToggleTwoFactorUser] = useState<ApiUser | null>(null)
   const [unlockUser, setUnlockUser] = useState<ApiUser | null>(null)
   const [searchParams, setSearchParams] = useSearchParams()
+  const canOpenCard = useHasPermission(PERMISSIONS.EMPLOYEE_CARD.VIEW)
 
-  // Deep-link: open a user's detail when arrived with ?user_id=<id> (e.g. from
-  // an Audit Log Entity link). Closing the modal clears the param.
+  // Deep-link: arriving with ?user_id=<id> (e.g. from an Audit Log Entity
+  // link) goes straight to that employee's card, which is where a user's
+  // detail lives now.
   useEffect(() => {
     const raw = searchParams.get('user_id')
     if (!raw) return
     const id = Number(raw)
-    if (Number.isFinite(id) && id > 0) {
-      setViewUserId(id)
+    if (!Number.isFinite(id) || id <= 0) return
+    if (!canOpenCard) {
+      setDetailUserId(id)
+      const rest = new URLSearchParams(searchParams)
+      rest.delete('user_id')
+      setSearchParams(rest, { replace: true })
+      return
     }
-  }, [searchParams])
+    navigate(`/dashboard/team-management/users/${id}`, { replace: true })
+  }, [searchParams, setSearchParams, navigate, canOpenCard])
 
   // Close dropdown when screen size crosses breakpoint (in either direction)
   useEffect(() => {
@@ -284,15 +294,6 @@ export function UserManagementPage() {
   const totalUsers = data?.pagination.total_count || 0
   const totalPages = data?.pagination.total_pages || 0
 
-  const handleCloseView = () => {
-    setViewUserId(null)
-    if (searchParams.has('user_id')) {
-      const next = new URLSearchParams(searchParams)
-      next.delete('user_id')
-      setSearchParams(next, { replace: true })
-    }
-  }
-
   const handleCloseEdit = () => {
     setEditUserId(null)
   }
@@ -305,8 +306,20 @@ export function UserManagementPage() {
     setEditUserId(null)
   }
 
-  const handleView = (user: ApiUser) => {
-    setViewUserId(user.id)
+  /**
+   * Open somebody's card, carrying the list's own filters with it.
+   *
+   * The card reads them back to know which project's department and position
+   * to show, and to send the reader back to the list they came from rather
+   * than to a reset one.
+   */
+  const openEmployeeCard = (user: ApiUser) => {
+    if (!canOpenCard) {
+      setDetailUserId(user.id)
+      return
+    }
+    const query = searchParams.toString()
+    navigate(`/dashboard/team-management/users/${user.id}${query ? `?${query}` : ''}`)
   }
 
   const handleImpersonate = async (user: ApiUser) => {
@@ -526,7 +539,7 @@ export function UserManagementPage() {
       render: (user) => (
         <button
           type="button"
-          onClick={() => handleView(user)}
+          onClick={() => openEmployeeCard(user)}
           className="text-foreground hover:text-primary group flex cursor-pointer items-center gap-3 text-left font-medium"
         >
           <UserAvatar
@@ -539,7 +552,7 @@ export function UserManagementPage() {
             className="shrink-0"
           />
           <span className="underline-offset-2 group-hover:underline">
-            {user.full_name || user.username}
+            {displayName(user) || user.username}
           </span>
         </button>
       ),
@@ -888,15 +901,11 @@ export function UserManagementPage() {
           />
         )}
 
-        {viewUserId && (
+        {detailUserId && (
           <UserDetailModal
-            open={viewUserId !== null}
-            userId={viewUserId}
-            onClose={handleCloseView}
-            onEdit={() => {
-              setViewUserId(null)
-              setEditUserId(viewUserId)
-            }}
+            open={detailUserId !== null}
+            userId={detailUserId}
+            onClose={() => setDetailUserId(null)}
           />
         )}
 

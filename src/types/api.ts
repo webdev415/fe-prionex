@@ -146,6 +146,24 @@ export interface UpdateMyProfileInput {
   work_format?: 'office' | 'remote'
 }
 
+/**
+ * GET/PATCH /api/v1/users/me/personal — the slice of the employee card
+ * somebody keeps about themselves.
+ *
+ * Smaller than the card on purpose. Where you live and how to reach you is
+ * yours to keep current; military service, visa status and how you came to be
+ * hired are records held about you, and stay with HR.
+ */
+export interface MyPersonalInformation {
+  date_of_birth: string | null
+  telegram: string | null
+  city: string | null
+  address: string | null
+  nova_poshta_branch: string | null
+}
+
+export type MyPersonalInformationInput = Partial<MyPersonalInformation>
+
 export interface LoginRequest {
   username: string
   password: string

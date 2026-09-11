@@ -83,6 +83,46 @@ export const REPORTS_URL_KEYS = {
    * spellings are already that tab's.
    */
   outboundCalls: { dateFrom: 'ocf', dateTo: 'oct' },
+  /**
+   * «Обіцянки до кінця місяця» (promisesDaily). "pd…" for Promises-Daily —
+   * the bare `p…` spellings are the low-verification feed's (`pf`/`pt`/`pg`/
+   * `ps`). `pdp` carries the possible-payment switch: present-as-"1" is on,
+   * absent is the backend default (off).
+   */
+  promisesDaily: { dateFrom: 'pdf', dateTo: 'pdt', possiblePayment: 'pdp' },
+  /**
+   * «Обіцянки» feed (promisesFeed). "pr…" for PRomises: the bare `p…`
+   * spellings are the low-verification feed's (`pf`/`pt`/`pg`/`ps`) and
+   * `pd…` is the daily promises report's — the two sets this feed would have
+   * reached for first. `prw`/`prp` carry the two server-side toggles (hide
+   * worked / hide paid): present-as-"1" is on, absent is the backend default
+   * (off) — a shared link carries only choices somebody made.
+   */
+  promisesFeed: {
+    dateFrom: 'prf',
+    dateTo: 'prt',
+    hideWorked: 'prw',
+    hidePaid: 'prp',
+    page: 'prpg',
+    pageSize: 'prps',
+  },
+  /**
+   * «Перезвони» feed (callbacksFeed). "cb…" for CallBacks: the bare `c…`
+   * spellings are the verification tab's (`cf`/`ct` — count from/to), which
+   * are exactly the two a feed with a date pair would reach for first, and
+   * `ct` doubles as the obvious abbreviation of "callback to". `cbc`/`cbw`
+   * carry the two server-side toggles (hide called today / hide worked):
+   * present-as-"1" is on, absent is the backend default (off) — a shared link
+   * carries only choices somebody made.
+   */
+  callbacksFeed: {
+    dateFrom: 'cbf',
+    dateTo: 'cbt',
+    hideCalledToday: 'cbc',
+    hideWorked: 'cbw',
+    page: 'cbpg',
+    pageSize: 'cbps',
+  },
 } as const
 
 export type ReportsUrlKeyOwner = keyof typeof REPORTS_URL_KEYS

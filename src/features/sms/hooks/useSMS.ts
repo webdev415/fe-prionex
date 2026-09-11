@@ -4,6 +4,8 @@
  */
 
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { PERMISSIONS } from '@/constants/permissions'
+import { useHasAnyPermission } from '@/hooks/usePermissions'
 import {
   getClientSMSHistory,
   getDeletedTemplates,
@@ -16,10 +18,21 @@ import type { SMSHistoryParams } from '../api/types'
 /**
  * Get SMS templates list
  */
+export const SMS_READ_PERMISSIONS = [
+  PERMISSIONS.COMMUNICATION.SEND_SMS,
+  PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+]
+
+export function useCanReadSMSSettings(): boolean {
+  return useHasAnyPermission(SMS_READ_PERMISSIONS)
+}
+
 export function useSMSTemplates(params?: { project_id?: number; category?: string }) {
+  const canRead = useCanReadSMSSettings()
   return useQuery({
     queryKey: ['sms', 'templates', params],
     queryFn: () => getTemplates(params),
+    enabled: canRead,
     placeholderData: keepPreviousData,
   })
 }
@@ -68,8 +81,10 @@ export function useSMSHistory(clientId: number | null, params?: SMSHistoryParams
  * Get SMS configuration
  */
 export function useSMSConfig(projectId?: number) {
+  const canRead = useCanReadSMSSettings()
   return useQuery({
     queryKey: ['sms', 'config', projectId],
     queryFn: () => getSMSConfig(projectId),
+    enabled: canRead,
   })
 }

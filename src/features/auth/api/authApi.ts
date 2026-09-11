@@ -8,6 +8,8 @@ import type {
   ExitImpersonationResponse,
   SwitchProjectResponse,
   UpdateMyProfileInput,
+  MyPersonalInformation,
+  MyPersonalInformationInput,
   VerifyTwoFactorRequest,
   TwoFactorStatusResponse,
   TwoFactorSetupResponse,
@@ -31,6 +33,21 @@ export const authApi = {
   validate: () => api.post<TokenValidateResponse>('/api/v1/auth/validate'),
 
   me: () => api.get<CurrentUserResponse>('/api/v1/users/me'),
+
+  /**
+   * The part of the employee card somebody keeps about themselves.
+   *
+   * A separate call from the profile because it answers from a different
+   * table: the rest of the card is a record about somebody rather than by
+   * them, and stays with HR.
+   */
+  myPersonalInformation: () =>
+    api.get<MyPersonalInformation>('/api/v1/users/me/personal').then((response) => response.data),
+
+  updateMyPersonalInformation: (data: MyPersonalInformationInput) =>
+    api
+      .patch<MyPersonalInformation>('/api/v1/users/me/personal', data)
+      .then((response) => response.data),
 
   myProjects: () =>
     api.get<{
