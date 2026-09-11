@@ -26,6 +26,7 @@ import {
 import { TagBadge } from '@/components/ui/TagBadge'
 import { TooltipProvider } from '@/components/ui/Tooltip'
 import { ClientFiltersBar } from './components/ClientFiltersBar'
+import { ClientFilterPresetsMenu } from '@/features/clientFilterPresets/components/ClientFilterPresetsMenu'
 import { AssignClientModal } from './components/AssignClientModal'
 import { BulkAssignClientModal } from './components/BulkAssignClientModal'
 import { formatClientFullName, formatDate, formatDateTime } from '@/lib/formatters'
@@ -2141,6 +2142,16 @@ export function ClientManagementPage() {
                 </span>
               </button>
             )}
+            {/* Applying a preset hands over a complete filter set, which
+                handleFilterChange already treats as a replacement: every field
+                it reads falls back to its cleared default when the incoming key
+                is absent. So there is no need to clear first — and doing so
+                would be wrong, since the diff below compares against this
+                render's values, not the cleared ones. */}
+            <ClientFilterPresetsMenu
+              projectId={user?.active_project_id ? Number(user.active_project_id) : null}
+              onApply={handleFilterChange}
+            />
             <button
               onClick={() => setIsFiltersOpen(!isFiltersOpen)}
               className="border-border bg-card/50 flex flex-col items-start gap-2.5 rounded-lg border px-5 py-3 shadow-sm"

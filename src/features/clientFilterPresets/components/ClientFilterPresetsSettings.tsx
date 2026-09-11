@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 
+import { useClientFilterPresets } from '../hooks/useClientFilterPresets'
 import type { ClientFilterPreset, ClientFilterPresetParams } from '../types'
 import { ClientFilterPresetEditor } from './ClientFilterPresetEditor'
 
@@ -34,9 +35,7 @@ const emptyEditor = (): EditorState => ({ editingId: null, name: '', params: {} 
 export function ClientFilterPresetsSettings() {
   const { t } = useTranslation('common')
 
-  // Local until the storage decision is made; the list and editor behaviour is
-  // the same either way, so it is wired to state rather than blocked on it.
-  const [presets, setPresets] = useState<ClientFilterPreset[]>([])
+  const { presets, create, update, remove: removePreset } = useClientFilterPresets()
   const [editor, setEditor] = useState<EditorState | null>(null)
   const [nameError, setNameError] = useState(false)
   const [savedNotice, setSavedNotice] = useState(false)
@@ -52,7 +51,7 @@ export function ClientFilterPresetsSettings() {
   }
 
   const remove = (id: number) => {
-    setPresets((current) => current.filter((p) => p.id !== id))
+    removePreset(id)
     // Deleting the preset being edited leaves the form describing something
     // that no longer exists, so the editor closes with it.
     setEditor((current) => (current?.editingId === id ? null : current))
@@ -69,13 +68,8 @@ export function ClientFilterPresetsSettings() {
       return
     }
     setNameError(false)
-    setPresets((current) =>
-      editor.editingId === null
-        ? [...current, { id: Date.now(), name, params: editor.params }]
-        : current.map((p) =>
-            p.id === editor.editingId ? { ...p, name, params: editor.params } : p
-          )
-    )
+    if (editor.editingId === null) create(name, editor.params)
+    else update(editor.editingId, name, editor.params)
     setSavedNotice(true)
     window.setTimeout(() => setSavedNotice(false), SAVED_NOTICE_MS)
   }

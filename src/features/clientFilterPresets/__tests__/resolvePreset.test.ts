@@ -118,8 +118,11 @@ describe('resolvePresetToFilters', () => {
     }
     const f = resolvePresetToFilters(params, { now: NOW, resolveEmployeeScope: noScopes })
 
-    expect(f.amountOfDebtRangeFrom).toBe(100)
-    expect(f.amountOfDebtRangeTo).toBe(900)
+    // debtRange, not amountOfDebtRange: the latter is declared on ClientFilters
+    // but nothing reads it, so a preset written there would filter nothing.
+    expect(f.debtRangeFrom).toBe(100)
+    expect(f.debtRangeTo).toBe(900)
+    expect(f.amountOfDebtRangeFrom).toBeUndefined()
     expect(f.principalRangeFrom).toBe(50)
     expect(f.dpdRangeTo).toBe(30)
     expect(f.dateOfSaleFrom).toBe('2026-09-01')

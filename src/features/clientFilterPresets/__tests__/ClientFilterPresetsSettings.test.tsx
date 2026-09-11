@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeAll, describe, expect, it, vi } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // The editor reads the operator's own project and fetches the option lists
 // behind its dropdowns. Neither is what this file is about — it covers the shell
@@ -8,6 +8,9 @@ import { beforeAll, describe, expect, it, vi } from 'vitest'
 // editor's several react-query hooks out of these tests entirely.
 vi.mock('@/features/auth', () => ({
   useAuth: () => ({ user: { active_project_id: '1' }, isLoading: false }),
+}))
+vi.mock('@/stores/authStore', () => ({
+  useAuthStore: (selector: (s: unknown) => unknown) => selector({ user: { id: '1' } }),
 }))
 vi.mock('../hooks/usePresetFilterOptions', () => ({
   usePresetFilterOptions: () => ({
@@ -22,6 +25,7 @@ vi.mock('../hooks/usePresetFilterOptions', () => ({
 }))
 
 const { ClientFilterPresetsSettings } = await import('../components/ClientFilterPresetsSettings')
+const { useClientFilterPresetStore } = await import('../store/clientFilterPresetStore')
 
 // Radix measures and scrolls its triggers; jsdom implements neither.
 beforeAll(() => {
@@ -29,6 +33,12 @@ beforeAll(() => {
     Element.prototype.hasPointerCapture = vi.fn(() => false)
   }
   Element.prototype.scrollIntoView = vi.fn()
+})
+
+// Presets now live in a persisted store, which is a module singleton — without
+// this, each test starts with whatever the previous one saved.
+beforeEach(() => {
+  useClientFilterPresetStore.setState({ byUser: {} })
 })
 
 // The ticket is specific about this screen's behaviour, and most of it is easy
