@@ -2,18 +2,22 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
 
-// The editor reads the operator's own project to build its employee options.
-// Neither that nor the option query is what this file is about — it covers the
-// shell around the form — so both are stubbed to their simplest shape.
+// The editor reads the operator's own project and fetches the option lists
+// behind its dropdowns. Neither is what this file is about — it covers the shell
+// around the form — so both are stubbed at their own seam, which also keeps the
+// editor's several react-query hooks out of these tests entirely.
 vi.mock('@/features/auth', () => ({
   useAuth: () => ({ user: { active_project_id: '1' }, isLoading: false }),
 }))
-vi.mock('@/pages/ClientManagement/hooks/useOperatorFilterOptions', () => ({
-  useOperatorFilterOptions: () => ({
-    employeeOptions: [],
-    interactionUserOptions: [],
-    searcherOptions: [],
-    isReady: true,
+vi.mock('../hooks/usePresetFilterOptions', () => ({
+  usePresetFilterOptions: () => ({
+    portfolios: [],
+    tags: [],
+    rrStatuses: [],
+    chains: [],
+    employees: [],
+    interactionUsers: [],
+    searchers: [],
   }),
 }))
 
