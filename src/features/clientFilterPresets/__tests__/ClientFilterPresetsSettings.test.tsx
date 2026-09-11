@@ -1,8 +1,31 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it, vi } from 'vitest'
 
-import { ClientFilterPresetsSettings } from '../components/ClientFilterPresetsSettings'
+// The editor reads the operator's own project to build its employee options.
+// Neither that nor the option query is what this file is about — it covers the
+// shell around the form — so both are stubbed to their simplest shape.
+vi.mock('@/features/auth', () => ({
+  useAuth: () => ({ user: { active_project_id: '1' }, isLoading: false }),
+}))
+vi.mock('@/pages/ClientManagement/hooks/useOperatorFilterOptions', () => ({
+  useOperatorFilterOptions: () => ({
+    employeeOptions: [],
+    interactionUserOptions: [],
+    searcherOptions: [],
+    isReady: true,
+  }),
+}))
+
+const { ClientFilterPresetsSettings } = await import('../components/ClientFilterPresetsSettings')
+
+// Radix measures and scrolls its triggers; jsdom implements neither.
+beforeAll(() => {
+  if (!Element.prototype.hasPointerCapture) {
+    Element.prototype.hasPointerCapture = vi.fn(() => false)
+  }
+  Element.prototype.scrollIntoView = vi.fn()
+})
 
 // The ticket is specific about this screen's behaviour, and most of it is easy
 // to get subtly wrong: the editor must stay hidden until asked for, the card

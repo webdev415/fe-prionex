@@ -8768,7 +8768,50 @@
         "saved": "Preset saved",
         "edit": "Edit preset",
         "delete": "Delete preset",
-        "empty": "No presets yet. Create one to apply a set of client list filters in a single click."
+        "empty": "No presets yet. Create one to apply a set of client list filters in a single click.",
+        "dates": {
+          "from": "From",
+          "to": "To",
+          "days": "Days",
+          "result": "Result",
+          "pick": "Select date",
+          "modes": {
+            "any": "Any date",
+            "today": "Today",
+            "startOfMonth": "Start of month",
+            "minusDays": "Today minus N days",
+            "plusDays": "Today plus N days",
+            "custom": "Custom date"
+          }
+        },
+        "range": {
+          "from": "From",
+          "to": "To"
+        },
+        "employees": {
+          "allLabel": "All employees",
+          "scopes": {
+            "any": "Anyone",
+            "myGroup": "My group",
+            "myDepartment": "My department",
+            "everyoneExceptMe": "Everyone except me",
+            "everyoneExceptMyGroup": "Everyone except my group",
+            "everyoneExceptMyDepartment": "Everyone except my department",
+            "custom": "Selected employees"
+          }
+        },
+        "fields": {
+          "totalDebt": "Total debt",
+          "principalDebt": "Principal debt",
+          "dpd": "DPD",
+          "dateOfSale": "Date of sale",
+          "assignmentDate": "Assignment date",
+          "targetActionDate": "Target action date",
+          "interactionDate": "Interaction date",
+          "interactionCreated": "Interaction created by",
+          "responsibleEmployee": "Responsible employee",
+          "onlyLastChain": "Only last TA chain"
+        }
       }
     },
     "reports": {
