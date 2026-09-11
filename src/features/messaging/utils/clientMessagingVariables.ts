@@ -27,12 +27,24 @@ export function buildClientMessagingVariables(options: {
   currentUser?: CurrentUserResponse | null
   username?: string
   selectedLoan?: { loanNumber: string; totalToRepay: number } | null
+  hasLoanContext?: boolean
 }): Record<string, string> {
-  const { clientName, clientDisplayName, clientData, currentUser, username, selectedLoan } = options
+  const {
+    clientName,
+    clientDisplayName,
+    clientData,
+    currentUser,
+    username,
+    selectedLoan,
+    hasLoanContext,
+  } = options
 
-  const contractNumber =
-    selectedLoan?.loanNumber ??
-    (clientData?.debts && clientData.debts.length > 0 ? clientData.debts[0].contract_number : '')
+  const debtFallback =
+    !hasLoanContext && clientData?.debts && clientData.debts.length > 0
+      ? clientData.debts[0].contract_number
+      : ''
+
+  const contractNumber = selectedLoan?.loanNumber ?? debtFallback
 
   const matchedDebt =
     clientData?.debts?.find((debt) => debt.contract_number === contractNumber) ??

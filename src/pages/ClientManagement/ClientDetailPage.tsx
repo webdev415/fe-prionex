@@ -128,6 +128,7 @@ import {
   pickDefaultActiveContactTypeId,
   pickDefaultActiveContactTypeIdForSection,
 } from '@/features/clients/utils/contactTypeLabel'
+import { isOpenLoan } from '@/features/clients/utils/loanStatus'
 import {
   requiresDigitsOnly,
   hasNonDigitChars,
@@ -576,10 +577,7 @@ export function ClientDetailPage() {
   // hook + query key the Debt Summary page uses, so react-query dedupes the call.
   // Powers the RecordPaymentModal's ``currentDebt`` prop with the identical value.
   const { data: clientDetail } = useClient(clientId, isValidClientId)
-  const eligibleLoansForRr = useMemo(
-    () => (loans ?? []).filter((loan) => (loan.status ?? '').trim().toLowerCase() !== 'closed'),
-    [loans]
-  )
+  const eligibleLoansForRr = useMemo(() => (loans ?? []).filter(isOpenLoan), [loans])
   const hasEligibleLoansForRr = eligibleLoansForRr.length > 0
   const { data: restructuringAgreements = [] } = useClientRestructuringAgreements(
     clientId,
@@ -5986,7 +5984,7 @@ export function ClientDetailPage() {
           clientId={clientId}
           clientName={client.fullName}
           phoneNumber={selectedPhoneForSMS || client.phones?.[0]?.number || ''}
-          loans={client.loans?.map((l) => ({
+          loans={(client.loans ?? []).filter(isOpenLoan).map((l) => ({
             id: l.id,
             loanNumber: l.loanNumber,
             totalToRepay: l.remainingDebtAmount,
@@ -6018,7 +6016,7 @@ export function ClientDetailPage() {
           }
           email={profile?.email ?? null}
           initialPhone={selectedPhoneForMessage || undefined}
-          loans={client.loans?.map((l) => ({
+          loans={(client.loans ?? []).filter(isOpenLoan).map((l) => ({
             id: l.id,
             loanNumber: l.loanNumber,
             totalToRepay: l.remainingDebtAmount,

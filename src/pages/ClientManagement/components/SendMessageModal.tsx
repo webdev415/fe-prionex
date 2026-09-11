@@ -109,7 +109,7 @@ export function SendMessageModal({
   onClose,
   clientId,
   clientName,
-  loans = [],
+  loans: loansProp,
   phones: phonesProp,
   phoneOptions: phoneOptionsProp,
   workPhone,
@@ -152,6 +152,8 @@ export function SendMessageModal({
     enabled: open,
     staleTime: 5 * 60 * 1000,
   })
+
+  const loans = useMemo(() => loansProp ?? [], [loansProp])
 
   const [selectedLoanId, setSelectedLoanId] = useState<number | null>(
     loans.length > 0 ? loans[0].id : null
@@ -231,8 +233,17 @@ export function SendMessageModal({
               totalToRepay: selectedLoan.totalToRepay,
             }
           : null,
+        hasLoanContext: loansProp !== undefined,
       }),
-    [clientData, clientDisplayName, clientName, currentUser, selectedLoan, user?.username]
+    [
+      clientData,
+      clientDisplayName,
+      clientName,
+      currentUser,
+      selectedLoan,
+      loansProp,
+      user?.username,
+    ]
   )
 
   const previewBody = useMemo(
@@ -662,28 +673,33 @@ export function SendMessageModal({
               </Select>
             </div>
 
-            {loans.length > 0 && (
-              <div>
-                <label className="text-foreground mb-1.5 block text-sm font-light">
-                  {t('pages.clients.modals.sendSMS.loanNumber', 'Loan number')}
-                </label>
-                <Select
-                  value={selectedLoanId?.toString() ?? ''}
-                  onValueChange={(value) => setSelectedLoanId(Number(value))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="—" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {loans.map((loan) => (
-                      <SelectItem key={loan.id} value={loan.id.toString()}>
-                        {loan.loanNumber} — {formatMoneyUAHTwoDecimals(loan.totalToRepay)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            <div>
+              <label className="text-foreground mb-1.5 block text-sm font-light">
+                {t('pages.clients.modals.sendSMS.loanNumber', 'Loan number')}
+              </label>
+              <Select
+                value={selectedLoanId?.toString() ?? ''}
+                onValueChange={(value) => setSelectedLoanId(Number(value))}
+                disabled={loans.length === 0}
+              >
+                <SelectTrigger>
+                  <SelectValue
+                    placeholder={
+                      loans.length === 0
+                        ? t('pages.clients.modals.sendSMS.noOpenLoans', 'No open credits')
+                        : '—'
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {loans.map((loan) => (
+                    <SelectItem key={loan.id} value={loan.id.toString()}>
+                      {loan.loanNumber} — {formatMoneyUAHTwoDecimals(loan.totalToRepay)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
             {showSubject && (
               <Input

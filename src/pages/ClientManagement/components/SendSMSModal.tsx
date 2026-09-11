@@ -81,7 +81,7 @@ export function SendSMSModal({
   clientId,
   clientName,
   phoneNumber,
-  loans = [],
+  loans: loansProp,
   onSent,
 }: SendSMSModalProps) {
   const { t } = useTranslation('common')
@@ -126,6 +126,8 @@ export function SendSMSModal({
   const [clientNameField, setClientNameField] = useState<string>(
     formatClientNameInitials(clientName)
   )
+  const loans = useMemo(() => loansProp ?? [], [loansProp])
+
   const [selectedLoanId, setSelectedLoanId] = useState<number | null>(
     loans.length > 0 ? loans[0].id : null
   )
@@ -178,9 +180,11 @@ export function SendSMSModal({
   const variableValues = useMemo(() => {
     // Prefer the currently selected loan for contract_number.
     // Fallback to first debt for backwards-compatibility when loans aren't provided.
-    const contractNumber =
-      selectedLoan?.loanNumber ??
-      (clientData?.debts && clientData.debts.length > 0 ? clientData.debts[0].contract_number : '')
+    const debtFallback =
+      loansProp === undefined && clientData?.debts && clientData.debts.length > 0
+        ? clientData.debts[0].contract_number
+        : ''
+    const contractNumber = selectedLoan?.loanNumber ?? debtFallback
 
     // {due_date} = max promise_to_pay_date across this client's interactions (DD.MM.YYYY)
     const dueDate = formatDateDotDMY(clientData?.max_promise_to_pay_date ?? null)
@@ -196,7 +200,7 @@ export function SendSMSModal({
       due_date: dueDate,
       contract_number: contractNumber,
     }
-  }, [clientData, clientNameField, selectedLoan, user?.username, currentUserData])
+  }, [clientData, clientNameField, selectedLoan, loansProp, user?.username, currentUserData])
 
   // Render template message with variables replaced, or use custom message
   // If message was manually edited, use it as-is (don't re-render)
