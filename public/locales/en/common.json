@@ -8709,7 +8709,21 @@
           "interactionDate": "Interaction date",
           "interactionCreated": "Interaction created by",
           "responsibleEmployee": "Responsible employee",
-          "onlyLastChain": "Only last TA chain"
+          "onlyLastChain": "Only last TA chain",
+          "portfolio": "Portfolio",
+          "rrStatus": "Restructuring status",
+          "chain": "TA chain",
+          "chainStep": "Chain step",
+          "chainStepHint": "Choose a chain first",
+          "responsibleSearcher": "Responsible searcher",
+          "tags": "Tags"
+        },
+        "multi": {
+          "all": "Any"
+        },
+        "tags": {
+          "none": "No tags available",
+          "hint": "Click a tag to include it, again to exclude it"
         }
       }
     },

@@ -18,13 +18,23 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { Input } from '@/components/ui/Input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/Select'
 import { useAuth } from '@/features/auth'
-import { useOperatorFilterOptions } from '@/pages/ClientManagement/hooks/useOperatorFilterOptions'
+import { buildChainStepOptions } from '@/pages/ClientManagement/components/chainStepOptions'
 
+import { usePresetFilterOptions } from '../hooks/usePresetFilterOptions'
 import type { ClientFilterPresetParams } from '../types'
 import { PresetDateRangeRow } from './PresetDateRangeRow'
 import { PresetEmployeeScopeRow } from './PresetEmployeeScopeRow'
+import { PresetMultiSelectRow } from './PresetMultiSelectRow'
 import { PresetNumericRangeRow } from './PresetNumericRangeRow'
+import { PresetTagsRow } from './PresetTagsRow'
 
 export interface ClientFilterPresetEditorProps {
   /** null = creating; a number = editing that saved preset. */
@@ -65,26 +75,43 @@ export function ClientFilterPresetEditor({
   const clock = now ?? mountedAt
 
   const projectId = user?.active_project_id ? Number(user.active_project_id) : null
-  const { employeeOptions, interactionUserOptions } = useOperatorFilterOptions(projectId)
+  const { portfolios, tags, rrStatuses, chains, employees, interactionUsers, searchers } =
+    usePresetFilterOptions(projectId)
 
-  const employees = useMemo(
-    () => employeeOptions.map((o) => ({ id: o.id, name: o.name })),
-    [employeeOptions]
+  // Steps belong to the chosen chains, exactly as on the client list: with
+  // several chains picked the list is their union, labelled per chain.
+  const chainSteps = useMemo(() => {
+    const chosen = params.chainIds ?? []
+    return buildChainStepOptions(chains.filter((c) => chosen.includes(c.id)))
+  }, [chains, params.chainIds])
+
+  const stepOptions = useMemo(
+    () => chainSteps.map((step) => ({ value: step.id, label: step.target_action_name ?? '' })),
+    [chainSteps]
   )
-  const interactionUsers = useMemo(
-    () => interactionUserOptions.map((o) => ({ id: o.id, name: o.name })),
-    [interactionUserOptions]
-  )
+
+  /**
+   * Applies several parameters at once, dropping every key a row cleared. Two
+   * rows need more than one key in a single update — tags carry include and
+   * exclude, and a chain change has to prune the steps that went with the old
+   * chains — and doing those as separate calls would write one onto a stale copy
+   * of the other.
+   */
+  const patchParams = (patch: Partial<ClientFilterPresetParams>) => {
+    const next: Record<string, unknown> = { ...params }
+    for (const [key, value] of Object.entries(patch)) {
+      if (value === undefined) delete next[key]
+      else next[key] = value
+    }
+    onParamsChange(next as ClientFilterPresetParams)
+  }
 
   /** Sets one parameter, dropping the key entirely when the row clears it. */
   const setParam = <K extends keyof ClientFilterPresetParams>(
     key: K,
     value: ClientFilterPresetParams[K] | undefined
   ) => {
-    const next = { ...params }
-    if (value === undefined) delete next[key]
-    else next[key] = value
-    onParamsChange(next)
+    patchParams({ [key]: value } as Partial<ClientFilterPresetParams>)
   }
 
   return (
@@ -161,7 +188,91 @@ export function ClientFilterPresetEditor({
           onChange={(v) => setParam('responsibleEmployee', v)}
           options={employees}
         />
+
+        <PresetMultiSelectRow
+          label={t('pages.profile.presets.fields.portfolio', 'Portfolio')}
+          options={portfolios}
+          value={params.portfolioIds}
+          onChange={(v) => setParam('portfolioIds', v)}
+          testId="preset-portfolio"
+        />
+        <PresetMultiSelectRow
+          label={t('pages.profile.presets.fields.rrStatus', 'Restructuring status')}
+          options={rrStatuses}
+          value={params.rrStatusIds}
+          onChange={(v) => setParam('rrStatusIds', v)}
+          testId="preset-rr-status"
+        />
+        <PresetMultiSelectRow
+          label={t('pages.profile.presets.fields.chain', 'TA chain')}
+          options={chains.map((c) => ({ value: c.id, label: c.name }))}
+          value={params.chainIds}
+          onChange={(chainIds) => {
+            // Steps belong to chains. Left alone, a step from a chain that is no
+            // longer selected stays in the preset and silently narrows every
+            // result it is applied to.
+            const keep = buildChainStepOptions(
+              chains.filter((c) => (chainIds ?? []).includes(c.id))
+            ).map((s) => s.id)
+            const survivors = (params.chainStepIds ?? []).filter((id) => keep.includes(id))
+            patchParams({
+              chainIds,
+              chainStepIds: survivors.length > 0 ? survivors : undefined,
+            })
+          }}
+          testId="preset-chain"
+        />
+        <PresetMultiSelectRow
+          label={t('pages.profile.presets.fields.chainStep', 'Chain step')}
+          options={stepOptions}
+          value={params.chainStepIds}
+          onChange={(v) => setParam('chainStepIds', v)}
+          disabledHint={
+            stepOptions.length === 0
+              ? t('pages.profile.presets.fields.chainStepHint', 'Choose a chain first')
+              : undefined
+          }
+          testId="preset-chain-step"
+        />
+
+        <fieldset className="flex w-full flex-col gap-2 self-stretch">
+          <legend className="text-foreground text-sm font-medium">
+            {t('pages.profile.presets.fields.responsibleSearcher', 'Responsible searcher')}
+          </legend>
+          <Select
+            value={params.responsibleSearcher || undefined}
+            onValueChange={(v) => setParam('responsibleSearcher', v === 'none' ? undefined : v)}
+            onClear={() => setParam('responsibleSearcher', undefined)}
+          >
+            <SelectTrigger
+              aria-label={t(
+                'pages.profile.presets.fields.responsibleSearcher',
+                'Responsible searcher'
+              )}
+            >
+              <SelectValue placeholder={t('pages.profile.presets.multi.all', 'Any')} />
+            </SelectTrigger>
+            <SelectContent searchable>
+              <SelectItem value="none">{t('pages.profile.presets.multi.all', 'Any')}</SelectItem>
+              {searchers.map((s) => (
+                <SelectItem key={s.value} value={s.value}>
+                  {s.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </fieldset>
       </div>
+
+      <PresetTagsRow
+        label={t('pages.profile.presets.fields.tags', 'Tags')}
+        options={tags}
+        include={params.tagIds}
+        exclude={params.excludeTagIds}
+        onChange={({ include, exclude }) =>
+          patchParams({ tagIds: include, excludeTagIds: exclude })
+        }
+      />
 
       {/* Defaulted to on to match the client list, which reads an absent value
           as true — a box shown unticked here would apply as ticked. */}
