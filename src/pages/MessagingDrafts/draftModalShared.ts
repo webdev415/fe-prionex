@@ -1,5 +1,21 @@
 import type { MessagingChannel, MessagingDraft } from '@/features/messaging'
 
+/**
+ * SMS bodies are capped differently depending on where they are typed, and the
+ * two numbers are deliberate rather than drift.
+ *
+ * A draft is capped at 350 (KAN-1101). The cap used to be recalculated on every
+ * keystroke as the single-segment capacity, so one character above U+007F
+ * dropped it from 160 to 70 and made ordinary Cyrillic templates unsaveable.
+ * 350 replaced that: flat, content-independent, and chosen by product rather
+ * than by any provider or database constraint - the body column is unbounded
+ * text and the API enforces no maximum.
+ *
+ * The ad-hoc send and campaign composers keep 1071 (seven GSM-7 segments), the
+ * limit they have always had. Lowering them to 350 would take away message
+ * length that works today, which KAN-1101 did not ask for; raising drafts to
+ * 1071 would undo the product decision. Change either only on purpose.
+ */
 export const SMS_DRAFT_BODY_MAX_LENGTH = 350
 export const SMS_COMPOSER_BODY_MAX_LENGTH = 1071
 
