@@ -1,5 +1,8 @@
 import type { MessagingChannel, MessagingDraft } from '@/features/messaging'
 
+export const SMS_DRAFT_BODY_MAX_LENGTH = 350
+export const SMS_COMPOSER_BODY_MAX_LENGTH = 1071
+
 export const CHANNEL_SPECS: Record<
   MessagingChannel,
   {
@@ -13,7 +16,7 @@ export const CHANNEL_SPECS: Record<
     showSubject: false,
     subjectRequired: false,
     senderMaxLength: 11,
-    bodyMaxLength: 1071,
+    bodyMaxLength: SMS_COMPOSER_BODY_MAX_LENGTH,
   },
   viber: {
     showSubject: false,

@@ -4,6 +4,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MessagingDraftsPage } from '../MessagingDraftsPage'
 import { useAuthStore } from '@/stores/authStore'
+import { SMS_COMPOSER_BODY_MAX_LENGTH, SMS_DRAFT_BODY_MAX_LENGTH } from '../draftModalShared'
 
 vi.mock('@/features/messaging/api/messagingApi', () => ({
   messagingApi: {
@@ -100,5 +101,11 @@ describe('the SMS body limit in a message draft', () => {
     fireEvent.change(body, { target: { value: 'Ї'.repeat(351) } })
 
     expect(screen.getByText(/exceeds the 350-character limit/)).toBeInTheDocument()
+  })
+
+  it('is the one the composers do not share, and both live in one file', () => {
+    expect(SMS_DRAFT_BODY_MAX_LENGTH).toBe(350)
+    expect(SMS_COMPOSER_BODY_MAX_LENGTH).toBe(1071)
+    expect(SMS_DRAFT_BODY_MAX_LENGTH).not.toBe(SMS_COMPOSER_BODY_MAX_LENGTH)
   })
 })

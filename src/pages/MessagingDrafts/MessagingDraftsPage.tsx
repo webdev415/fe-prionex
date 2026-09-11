@@ -14,6 +14,7 @@ import {
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
 import { PermissionGuard } from '@/components/auth'
 import { DeletedItemsSection, useExpiryLabel } from '@/components/softDelete'
+import { SMS_DRAFT_BODY_MAX_LENGTH } from './draftModalShared'
 import { PERMISSIONS } from '@/constants/permissions'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
@@ -77,8 +78,6 @@ function TableIconButton({
   )
 }
 
-const SMS_BODY_MAX_LENGTH = 350
-
 // Per-channel form rules. Drives subject visibility, body limits / char
 // counter, sender-name constraints, placeholders, and helper text.
 interface ChannelSpec {
@@ -92,7 +91,7 @@ const CHANNEL_SPECS: Record<MessagingChannel, ChannelSpec> = {
   sms: {
     showSubject: false,
     subjectRequired: false,
-    bodyMaxLength: SMS_BODY_MAX_LENGTH,
+    bodyMaxLength: SMS_DRAFT_BODY_MAX_LENGTH,
     senderMaxLength: 11,
   },
   viber: {
