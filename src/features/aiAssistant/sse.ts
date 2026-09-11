@@ -111,6 +111,17 @@ export interface SseMetaPayload {
   conversation_id?: number
 }
 
+/**
+ * CRM-side frame `persisted` — приходит ПОСЛЕ терминального `done`, когда прокси
+ * записал ход в БД. Несёт `message_id` ассистентского сообщения: без него оценить
+ * ответ нечем — кнопки «корисно / не корисно» привязаны именно к этому id.
+ */
+export interface SsePersistedPayload {
+  conversation_id?: number
+  message_id?: number
+  coverage_flag?: string | null
+}
+
 /** Callbacks invoked as the assistant stream is consumed. */
 export interface SseStreamCallbacks {
   /**
@@ -123,6 +134,16 @@ export interface SseStreamCallbacks {
    * this frame right before relaying the brain — read the id from here.
    */
   onMeta?: (payload: SseMetaPayload) => void
+  /**
+   * CRM `persisted` — ход записан в БД, вот id его ассистентского сообщения.
+   *
+   * Кадр приходит ПОСЛЕ `done`, поэтому читать его можно только пока поток
+   * дочитывается (см. {@link consumeSseStream}). Пока этого не делали, фронт
+   * возвращал `message_id: 0`, кнопки оценки не рисовались вовсе, и ни одна
+   * жалоба оператора не уезжала на сервер (замер прода 11.09.2026 — ноль
+   * запросов `feedback` за 23 дня при 34 завершённых ходах).
+   */
+  onPersisted?: (payload: SsePersistedPayload) => void
   /** First frame: identifies the session the stream belongs to. */
   onSession?: (payload: SseSessionPayload) => void
   /** A text delta — accumulate to build the streamed answer. */
@@ -442,6 +463,11 @@ export function dispatchSseEvent(
     case 'meta':
       callbacks.onMeta?.(parseFrameData<SseMetaPayload>(frame) ?? {})
       return undefined
+    case 'persisted':
+      // НЕ терминатор: кадр приходит уже после `done` и только сообщает id
+      // записанного сообщения.
+      callbacks.onPersisted?.(parseFrameData<SsePersistedPayload>(frame) ?? {})
+      return undefined
     case 'session':
       callbacks.onSession?.(parseFrameData<SseSessionPayload>(frame) ?? {})
       return undefined
@@ -511,41 +537,115 @@ export function dispatchSseEvent(
 }
 
 /**
+ * Сколько ждать хвост потока после `done`, мс.
+ *
+ * Прокси кладёт `persisted` (id записанного сообщения) ПОСЛЕ терминального `done`
+ * — сначала ход должен закоммититься. Значит, оборвав чтение на `done`, клиент
+ * физически не может узнать id: ровно это и делал фронт до 11.09.2026, и кнопки
+ * оценки не появлялись ни разу за весь ход.
+ *
+ * Окно ограничено, а не «до EOF любой ценой»: прокси, который после `done` не
+ * закрыл соединение (сбой персиста, зависший keepalive), иначе подвесил бы окно
+ * ассистента на таймаут сети. 5 с с запасом кроют коммит в БД.
+ */
+export const POST_DONE_DRAIN_MS = 5000
+
+/** Внутренний маркер «окно дочитывания истекло» — не путать с кадром. */
+const DRAIN_TIMED_OUT = Symbol('drain-timed-out')
+
+/**
  * Drive a `ReadableStream` of SSE bytes through the parser and callbacks until
  * a terminator frame or end-of-stream. Decoding state (multi-byte split) is
  * handled by a streaming `TextDecoder`.
+ *
+ * `done` больше НЕ обрывает чтение мгновенно: он фиксирует исход и открывает
+ * окно дочитывания (`postDoneDrainMs`), в котором приезжает `persisted`. Поток
+ * закрывается по EOF, по приходу `persisted` или по истечении окна — что раньше.
+ * `error` обрывает как прежде: за ним оператору нужен текст ошибки, а не id.
  */
 export async function consumeSseStream(
   stream: ReadableStream<Uint8Array>,
-  callbacks: SseStreamCallbacks
+  callbacks: SseStreamCallbacks,
+  options: { postDoneDrainMs?: number } = {}
 ): Promise<'done' | 'error' | 'eof'> {
+  const drainMs = options.postDoneDrainMs ?? POST_DONE_DRAIN_MS
   const reader = stream.getReader()
   const decoder = new TextDecoder()
   const parser = new SseParser()
   let outcome: 'done' | 'error' | 'eof' = 'eof'
+  let drainDeadline: number | null = null
+  let sawPersisted = false
+
+  const wrapped: SseStreamCallbacks = {
+    ...callbacks,
+    onPersisted: (payload) => {
+      sawPersisted = true
+      callbacks.onPersisted?.(payload)
+    },
+    // Ошибка ПОСЛЕ `done` — это провал записи хода в БД (прокси шлёт её вместо
+    // `persisted`), а не провал ответа: текст оператор уже получил и прочитал.
+    // Пробрасывать её наверх значило бы превратить удавшийся ход в «Асистент
+    // недоступний» и стереть готовый ответ с экрана.
+    onError: (error) => {
+      if (drainDeadline != null) return
+      callbacks.onError?.(error)
+    },
+  }
+
+  /** Одна порция байт, с учётом окна дочитывания. */
+  const readChunk = async (): Promise<
+    ReadableStreamReadResult<Uint8Array> | typeof DRAIN_TIMED_OUT
+  > => {
+    if (drainDeadline == null) return reader.read()
+    const remaining = drainDeadline - Date.now()
+    if (remaining <= 0) return DRAIN_TIMED_OUT
+    const pending = reader.read()
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const expiry = new Promise<typeof DRAIN_TIMED_OUT>((resolve) => {
+      timer = setTimeout(() => resolve(DRAIN_TIMED_OUT), remaining)
+    })
+    try {
+      return await Promise.race([pending, expiry])
+    } finally {
+      if (timer != null) clearTimeout(timer)
+    }
+  }
+
+  /** Прогнать кадры; true — пора выходить из цикла чтения. */
+  const dispatchFrames = (frames: SseFrame[]): boolean => {
+    for (const frame of frames) {
+      const terminator = dispatchSseEvent(frame, wrapped)
+      if (terminator === 'error') {
+        // После `done` исход уже «done» и таким остаётся — см. wrapped.onError.
+        if (drainDeadline == null) outcome = 'error'
+        return true
+      }
+      if (terminator === 'done') {
+        outcome = 'done'
+        drainDeadline = Date.now() + drainMs
+        continue
+      }
+      // Хвост дочитан — больше ждать нечего.
+      if (sawPersisted && drainDeadline != null) return true
+    }
+    return false
+  }
 
   try {
     for (;;) {
-      const { done, value } = await reader.read()
-      if (done) break
-      const text = decoder.decode(value, { stream: true })
-      if (!text) continue
-      for (const frame of parser.push(text)) {
-        const terminator = dispatchSseEvent(frame, callbacks)
-        if (terminator) {
-          outcome = terminator
-          return outcome
-        }
-      }
-    }
-    // Stream closed — flush a trailing un-terminated frame, if any.
-    for (const frame of parser.flush()) {
-      const terminator = dispatchSseEvent(frame, callbacks)
-      if (terminator) {
-        outcome = terminator
+      const chunk = await readChunk()
+      if (chunk === DRAIN_TIMED_OUT) {
+        // Поток после `done` не закрылся. Отменяем чтение, исход уже известен.
+        await reader.cancel().catch(() => undefined)
         return outcome
       }
+      if (chunk.done) break
+      const text = decoder.decode(chunk.value, { stream: true })
+      if (!text) continue
+      if (dispatchFrames(parser.push(text))) return outcome
     }
+    // Stream closed — flush a trailing un-terminated frame, if any.
+    dispatchFrames(parser.flush())
   } finally {
     reader.releaseLock()
   }

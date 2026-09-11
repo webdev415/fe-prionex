@@ -10,6 +10,7 @@ import {
   type SseDonePayload,
   type SseErrorPayload,
   type SseMetaPayload,
+  type SsePersistedPayload,
   type SseSessionPayload,
 } from './sse'
 
@@ -168,6 +169,11 @@ export interface SendChatMessageCallbacks {
    * сервере и без указателя его негде показать).
    */
   onMeta?: (meta: SseMetaPayload) => void
+  /**
+   * CRM `persisted` — ход записан в БД, вот id его сообщения. Приходит ПОСЛЕ
+   * `done`; по нему включаются кнопки оценки этого ответа.
+   */
+  onPersisted?: (payload: SsePersistedPayload) => void
   onSession?: (payload: SseSessionPayload) => void
   onText?: (delta: string) => void
   /** Reasoning deltas ("Ход рассуждения"); forwarded, never part of the answer. */
@@ -311,6 +317,11 @@ export async function sendChatMessage(
   let citations: AssistantCitation[] = []
   let expert: AssistantExpertUsage | undefined
   let streamError: SseErrorPayload | null = null
+  // id записанного ассистентского сообщения и его флаг покрытия — приезжают
+  // кадром `persisted` уже ПОСЛЕ `done`. 0 = «неизвестен» (старый прокси кадра
+  // не шлёт): на этом значении фронт честно говорит, что оценить нечем.
+  let persistedMessageId = 0
+  let coverageFlag: string | null = null
 
   const applySessionId = (value: number | string | undefined) => {
     if (typeof value === 'number') {
@@ -331,6 +342,14 @@ export async function sendChatMessage(
     onMeta: (meta) => {
       applySessionId(meta.conversation_id)
       callbacks.onMeta?.(meta)
+    },
+    onPersisted: (payload) => {
+      applySessionId(payload.conversation_id)
+      if (typeof payload.message_id === 'number' && payload.message_id > 0) {
+        persistedMessageId = payload.message_id
+      }
+      if (typeof payload.coverage_flag === 'string') coverageFlag = payload.coverage_flag
+      callbacks.onPersisted?.(payload)
     },
     onSession: (session) => {
       applySessionId(session.session_id)
@@ -381,11 +400,13 @@ export async function sendChatMessage(
   return {
     conversation_id: conversationId,
     // The streamed `done` frame carries no per-message id (ASSISTANT_MODES.md
-    // §4 — only session_id + usage). 0 signals "unknown"; the real id is
-    // learned on conversation hydration, which is what gates the feedback UI.
-    message_id: 0,
+    // §4 — only session_id + usage). The CRM proxy sends it separately, in a
+    // `persisted` frame AFTER `done`; 0 still means "unknown" (old proxy, or the
+    // persist never landed) and the feedback row then says so out loud instead
+    // of silently disappearing.
+    message_id: persistedMessageId,
     response: accumulatedText,
-    coverage_flag: null,
+    coverage_flag: coverageFlag,
     tool_calls: toolCalls,
     citations,
     expert,
