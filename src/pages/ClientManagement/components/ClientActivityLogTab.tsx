@@ -33,6 +33,8 @@ import {
   type ActivitySource,
 } from '@/features/clients/api/activityLogApi'
 import { activityLogQueryKey } from '@/features/clients/hooks/useClientActivityLog'
+import { pickerDayEndUtcIso, pickerDayStartUtcIso } from '@/lib/dateUtils'
+import { useAuthStore } from '@/stores/authStore'
 
 interface ClientActivityLogTabProps {
   clientId: number | null
@@ -81,31 +83,41 @@ function badgeSource(entry: ActivityEntry): ActivitySource {
   return entry.source === 'audit' && AUDIT_READ_ACTIONS.has(entry.kind) ? 'events' : entry.source
 }
 
-/** The picker yields a bare day. Widen it to cover the whole of that day. */
-function dayStart(value: Date | null): string | null {
-  if (!value) return null
-  const d = new Date(value)
-  d.setHours(0, 0, 0, 0)
-  return d.toISOString()
+/**
+ * The picker yields a bare day. Widen it to cover the whole of that day in the
+ * profile timezone -- the one the rows are shown in -- so a picked day returns
+ * exactly the rows displayed under that date.
+ */
+function dayStart(value: Date | null, timezone?: string | null): string | null {
+  return value ? pickerDayStartUtcIso(value, timezone) : null
 }
 
-function dayEnd(value: Date | null): string | null {
-  if (!value) return null
-  const d = new Date(value)
-  d.setHours(23, 59, 59, 999)
-  return d.toISOString()
+function dayEnd(value: Date | null, timezone?: string | null): string | null {
+  return value ? pickerDayEndUtcIso(value, timezone) : null
 }
 
-function formatTimestamp(ts: string, locale: string): string {
+/**
+ * In the profile timezone, like every other time on the client card. The
+ * browser's would show one call at two different times in two tabs whenever
+ * the two zones differ.
+ */
+function formatTimestamp(ts: string, locale: string, timezone?: string | null): string {
   const parsed = new Date(ts)
   if (Number.isNaN(parsed.getTime())) return ts
-  return parsed.toLocaleString(locale, {
+  const options: Intl.DateTimeFormatOptions = {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
-  })
+  }
+  try {
+    return parsed.toLocaleString(locale, { ...options, timeZone: timezone || undefined })
+  } catch {
+    // An unknown zone name throws a RangeError; the browser's zone beats a
+    // blank row.
+    return parsed.toLocaleString(locale, options)
+  }
 }
 
 /**
@@ -203,12 +215,28 @@ function entrySummary(entry: ActivityEntry, t: TFunction): string {
   return entry.summary ?? entry.kind
 }
 
-export function ClientActivityLogTab({
+/**
+ * One instance per client.
+ *
+ * The card does not remount when it moves to another client -- a linked
+ * contact is a link to another card -- so everything this tab accumulates
+ * (page, filters, the operators seen so far) would carry over to a client it
+ * does not describe: the dropdown offering people who never touched this
+ * client, a deep page landing past this client's last one and reading as "no
+ * activity". Keying on the client gives each one a fresh tab at every call
+ * site, without an effect that resets state one render too late.
+ */
+export function ClientActivityLogTab(props: ClientActivityLogTabProps) {
+  return <ClientActivityLogTabBody key={props.clientId ?? 'none'} {...props} />
+}
+
+function ClientActivityLogTabBody({
   clientId,
   isActive,
   onPlayRecording,
 }: ClientActivityLogTabProps) {
   const { t, i18n } = useTranslation('common')
+  const userTimezone = useAuthStore((state) => state.user?.timezone)
   const [from, setFrom] = useState<Date | null>(null)
   const [to, setTo] = useState<Date | null>(null)
   const [operator, setOperator] = useState<string>(ALL_OPERATORS)
@@ -239,13 +267,13 @@ export function ClientActivityLogTab({
 
   const filters = useMemo(
     () => ({
-      fromTs: dayStart(from),
-      toTs: dayEnd(to),
+      fromTs: dayStart(from, userTimezone),
+      toTs: dayEnd(to, userTimezone),
       operatorId: operator === ALL_OPERATORS ? null : Number(operator),
       page,
       pageSize,
     }),
-    [from, to, operator, page, pageSize]
+    [from, to, operator, page, pageSize, userTimezone]
   )
 
   const { data, isLoading, isError } = useClientActivityLog(clientId, filters, isActive)
@@ -437,7 +465,7 @@ export function ClientActivityLogTab({
               </span>
 
               <span className="text-muted-foreground text-xs whitespace-nowrap tabular-nums">
-                {formatTimestamp(entry.ts, i18n.language)}
+                {formatTimestamp(entry.ts, i18n.language, userTimezone)}
               </span>
 
               {/* The play control sits with the sentence it acts on, not out

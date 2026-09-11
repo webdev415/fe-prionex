@@ -1709,14 +1709,23 @@ export function ClientDetailPage() {
     (call: ActivityCallRef) => {
       const when = new Date(call.ts)
       const valid = !Number.isNaN(when.getTime())
+      // Profile timezone, as in the Activity row this was opened from; the
+      // browser's would show the modal a different time than the row.
+      const inProfileZone = (fmt: (options: Intl.DateTimeFormatOptions) => string) => {
+        try {
+          return fmt({ timeZone: userTimezone || undefined })
+        } catch {
+          return fmt({})
+        }
+      }
       setSelectedCallData({
         type:
           call.direction === 'inbound'
             ? t('pages.clients.modals.callLogCard.callTypes.incoming')
             : t('pages.clients.modals.callLogCard.callTypes.outgoing'),
         clientName: client?.fullName ?? '',
-        date: valid ? when.toLocaleDateString(i18n.language) : '',
-        time: valid ? when.toLocaleTimeString(i18n.language) : '',
+        date: valid ? inProfileZone((o) => when.toLocaleDateString(i18n.language, o)) : '',
+        time: valid ? inProfileZone((o) => when.toLocaleTimeString(i18n.language, o)) : '',
         operator: call.operatorName ?? '',
         // The modal takes a display string, not seconds -- every other call
         // site hands it one already formatted.
@@ -1733,7 +1742,7 @@ export function ClientDetailPage() {
       setOpenCallModal('call-recording')
       setIsCallRecordingModalOpen(true)
     },
-    [client, i18n.language, t, setOpenCallModal]
+    [client, i18n.language, t, setOpenCallModal, userTimezone]
   )
   const [isViewSMSModalOpen, setIsViewSMSModalOpen] = useState(false)
   const [selectedSMSData, setSelectedSMSData] = useState<{
