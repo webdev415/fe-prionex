@@ -11,6 +11,7 @@ import { convertUTCToUserTimezone, formatClientFullName, formatIsoDate } from '@
 import { getDateStringInTimezone } from '@/lib/dateUtils'
 import { useAuthStore } from '@/stores/authStore'
 import { useTrackEvent } from '@/features/operatorAnalytics'
+import { useModalOpenTracking } from './hooks/useClientCardInteractionTracking'
 import { useParams, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useURLState, useAutoPersistedState, useHasPermission } from '@/hooks'
@@ -487,7 +488,6 @@ export function PaymentHistoryPage() {
   // Driven off a flags map rather than each call site, so a modal added later
   // needs one line here.
   const trackEvent = useTrackEvent()
-  const previousPaymentModalFlags = useRef<Record<string, boolean> | null>(null)
   const paymentModalFlags = useMemo(
     () => ({
       payment_details: isPaymentDetailsModalOpen,
@@ -507,18 +507,9 @@ export function PaymentHistoryPage() {
     ]
   )
 
-  useEffect(() => {
-    if (!clientId) return
-    const previous = previousPaymentModalFlags.current
-    previousPaymentModalFlags.current = paymentModalFlags
-    // First run records the baseline only -- nothing was "opened" by anyone yet.
-    if (!previous) return
-    for (const [modal, isOpen] of Object.entries(paymentModalFlags)) {
-      if (isOpen && !previous[modal]) {
-        trackEvent('client_modal_open', { clientId, meta: { modal } })
-      }
-    }
-  }, [paymentModalFlags, clientId, trackEvent])
+  // Same baseline-then-transition rule as the client card, from the same
+  // tested hook rather than a hand-kept copy of it.
+  useModalOpenTracking(id, paymentModalFlags, trackEvent)
 
   // Fetch payment details when selectedPayment changes
   const backendPayment = paymentHistoryData?.payments.find((p) => p.id === selectedPayment?.id)

@@ -78,6 +78,17 @@ describe('useCardSelectionTracking', () => {
     })
   })
 
+  it('sends an id no client can have as no client', () => {
+    // A stale 13-digit URL: the card bounces it, but this effect runs in the
+    // same commit, before the bounce lands.
+    renderHook<void, TabProps>(useTab, { initialProps: { id: '99999999999999', tab: 'personal' } })
+
+    expect(trackEvent).toHaveBeenCalledWith('client_card_tab_switch', {
+      clientId: null,
+      meta: { tab: 'personal', initial: true },
+    })
+  })
+
   it('records nothing without a client', () => {
     renderHook<void, TabProps>(useTab, { initialProps: { id: undefined, tab: 'personal' } })
 

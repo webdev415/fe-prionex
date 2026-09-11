@@ -1,12 +1,7 @@
 import { useEffect, useRef } from 'react'
-import type { useTrackEvent } from '@/features/operatorAnalytics'
+import { toTrackableClientId, type useTrackEvent } from '@/features/operatorAnalytics'
 
 type TrackEvent = ReturnType<typeof useTrackEvent>
-
-function toClientId(id: string): number | null {
-  const numericId = Number(id)
-  return Number.isFinite(numericId) ? numericId : null
-}
 
 /**
  * Records the card tab or section on screen: once per change, and once when a
@@ -45,7 +40,7 @@ export function useCardSelectionTracking(
     if (previous && previous.id === id && previous.selected === selected) return
     const isInitial = !previous || previous.id !== id
     trackEvent(eventType, {
-      clientId: toClientId(id),
+      clientId: toTrackableClientId(id),
       meta: { [metaKey]: selected, ...(isInitial ? { initial: true } : {}) },
     })
   }, [eventType, metaKey, selected, id, trackEvent])
@@ -80,7 +75,7 @@ export function useModalOpenTracking(
     for (const [modal, isOpen] of Object.entries(modalOpenFlags)) {
       if (isOpen && !previous[modal]) {
         trackEvent('client_modal_open', {
-          clientId: toClientId(id),
+          clientId: toTrackableClientId(id),
           meta: { modal },
         })
       }
@@ -114,6 +109,6 @@ export function useInteractionFormOpenTracking(
     // open; without the guard that would double-count opens.
     if (interactionFormWasOpen.current) return
     interactionFormWasOpen.current = true
-    trackEvent('interaction_form_open', { clientId: toClientId(id) })
+    trackEvent('interaction_form_open', { clientId: toTrackableClientId(id) })
   }, [isOpen, id, trackEvent])
 }

@@ -15,6 +15,7 @@
  *  - document reads badged as UI events, not "Data changes"
  *  - times in the profile timezone, like the rest of the card, not the browser's
  *  - a fresh tab per client: the card stays mounted across a client switch
+ *  - card-load tab/section events (`initial`) never shown as clicks
  */
 
 import { afterEach, describe, expect, it, vi, beforeAll, beforeEach } from 'vitest'
@@ -432,6 +433,51 @@ describe('ClientActivityLogTab', () => {
       expect(getSpy).toHaveBeenCalledWith(2, expect.objectContaining({ page: 1 }))
     )
     expect(getSpy).not.toHaveBeenCalledWith(2, expect.objectContaining({ page: 3 }))
+  })
+})
+
+describe('ClientActivityLogTab — card-load events', () => {
+  // The card sends a tab and a section event when it loads, marked `initial`,
+  // because screen-time needs the boundary. They are not clicks. The endpoint
+  // drops them; the tab must not show one even if it arrives.
+  beforeEach(() => {
+    getSpy.mockReset()
+  })
+
+  const tabSwitch = (tab: string, initial?: boolean | string) =>
+    entry({
+      kind: 'client_card_tab_switch',
+      summary: null,
+      detail: { meta: { tab, ...(initial !== undefined ? { initial } : {}) } },
+    })
+
+  it('does not show a tab the card opened on load as a click', async () => {
+    getSpy.mockResolvedValue(
+      response({ entries: [tabSwitch('call-sms-history', true), tabSwitch('documents')] })
+    )
+    renderTab()
+
+    // The operator's own click is shown...
+    expect(await screen.findByText("Opened 'Docs' tab")).toBeInTheDocument()
+    // ...the card's load is not.
+    expect(screen.queryByText("Opened 'Call / SMS' tab")).not.toBeInTheDocument()
+  })
+
+  it('treats the flag written as text the same way', async () => {
+    getSpy.mockResolvedValue(
+      response({ entries: [tabSwitch('call-sms-history', 'true'), tabSwitch('documents')] })
+    )
+    renderTab()
+
+    await screen.findByText("Opened 'Docs' tab")
+    expect(screen.queryByText("Opened 'Call / SMS' tab")).not.toBeInTheDocument()
+  })
+
+  it('reads as empty when card loads are all there is', async () => {
+    getSpy.mockResolvedValue(response({ entries: [tabSwitch('call-sms-history', true)] }))
+    renderTab()
+
+    expect(await screen.findByText('No activity recorded')).toBeInTheDocument()
   })
 })
 

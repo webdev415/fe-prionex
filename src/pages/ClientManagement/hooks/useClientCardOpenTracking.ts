@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
-import type { useTrackEvent } from '@/features/operatorAnalytics'
+import { toTrackableClientId, type useTrackEvent } from '@/features/operatorAnalytics'
 
 /**
  * Records a client card being opened, and bounces an id no service can hold.
@@ -35,7 +35,7 @@ export function useClientCardOpenTracking(
 
   useEffect(() => {
     if (!id) return
-    const numericId = Number(id)
+    const clientId = toTrackableClientId(id)
     // Client IDs are PostgreSQL INTEGER (int32, max 2_147_483_647) across all
     // services that consume this ID downstream. An out-of-range value (e.g.
     // a 13-digit Date.now()-style value from a stale URL or a paste error)
@@ -43,7 +43,7 @@ export function useClientCardOpenTracking(
     // pipeline (its client_id column is also int32). Guard at the boundary:
     // bounce the operator back to the list with a toast instead of letting
     // the bad value spread.
-    if (!Number.isFinite(numericId) || numericId < 1 || numericId > 2147483647) {
+    if (clientId === null) {
       toast.error(`Invalid client ID: ${id}`)
       navigate('/dashboard/clients', { replace: true })
       return
@@ -72,7 +72,7 @@ export function useClientCardOpenTracking(
     lastTrackedCardOpen.current = id
     if (cardOpenOrigin) {
       trackEvent('client_card_open', {
-        clientId: numericId,
+        clientId,
         meta: { client_id: id, origin: cardOpenOrigin },
       })
     }

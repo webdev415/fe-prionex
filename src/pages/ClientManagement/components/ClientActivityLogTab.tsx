@@ -79,6 +79,20 @@ const SOURCE_STYLES: Record<ActivitySource, string> = {
  */
 const AUDIT_READ_ACTIONS = new Set(['document.viewed', 'document.downloaded'])
 
+/**
+ * A tab or section event fired by the card loading, not by a click.
+ *
+ * The card marks those `initial` so screen-time keeps its tab boundaries while
+ * this feed, which reports what the operator chose to do, leaves them out. The
+ * endpoint already drops them; this is the feed's own guarantee of the same,
+ * so a row reading "Opened 'Loans' tab" never stands for a click nobody made.
+ */
+function isCardLoadEvent(entry: ActivityEntry): boolean {
+  if (entry.source !== 'events') return false
+  const meta = entry.detail?.meta as { initial?: unknown } | null | undefined
+  return meta?.initial === true || meta?.initial === 'true'
+}
+
 function badgeSource(entry: ActivityEntry): ActivitySource {
   return entry.source === 'audit' && AUDIT_READ_ACTIONS.has(entry.kind) ? 'events' : entry.source
 }
@@ -277,6 +291,10 @@ function ClientActivityLogTabBody({
   )
 
   const { data, isLoading, isError } = useClientActivityLog(clientId, filters, isActive)
+  const entries = useMemo(
+    () => (data?.entries ?? []).filter((entry) => !isCardLoadEvent(entry)),
+    [data?.entries]
+  )
 
   // The operator list comes from what the feed contains rather than a user
   // lookup: only people who touched this client can appear in it anyway, and
@@ -293,7 +311,7 @@ function ClientActivityLogTabBody({
   useEffect(() => {
     const seen = seenOperators.current
     let added = false
-    for (const entry of data?.entries ?? []) {
+    for (const entry of entries) {
       if (entry.operator_id != null && !seen.has(entry.operator_id)) {
         seen.set(entry.operator_id, entry.operator_name ?? String(entry.operator_id))
         added = true
@@ -302,7 +320,7 @@ function ClientActivityLogTabBody({
     if (added) {
       setOperators([...seen.entries()].sort((a, b) => a[1].localeCompare(b[1])))
     }
-  }, [data?.entries])
+  }, [entries])
 
   const hasFilters = from !== null || to !== null || operator !== ALL_OPERATORS
 
@@ -441,14 +459,14 @@ function ClientActivityLogTabBody({
         </div>
       )}
 
-      {!isLoading && !isError && (data?.entries.length ?? 0) === 0 && (
+      {!isLoading && !isError && entries.length === 0 && (
         <div className="text-muted-foreground py-8 text-center text-sm">
           {t('pages.clients.detail.activityLog.empty')}
         </div>
       )}
 
       <ul className="flex flex-col gap-2">
-        {(data?.entries ?? []).map((entry) => {
+        {entries.map((entry) => {
           const call = playableCall(entry)
           return (
             <li

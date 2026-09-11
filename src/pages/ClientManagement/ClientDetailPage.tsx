@@ -157,6 +157,7 @@ import { LinkButton } from '@/components/ui/LinkButton'
 import { ClientDetailPageSkeleton } from './components/ClientDetailPageSkeleton'
 import { useTrackEvent } from '@/features/operatorAnalytics'
 import { useClientCardOpenTracking } from './hooks/useClientCardOpenTracking'
+import { activityCallToRecordingModal } from './components/activityCallToRecordingModal'
 import {
   useCardSelectionTracking,
   useInteractionFormOpenTracking,
@@ -1654,38 +1655,15 @@ export function ClientDetailPage() {
    */
   const handlePlayActivityRecording = useCallback(
     (call: ActivityCallRef) => {
-      const when = new Date(call.ts)
-      const valid = !Number.isNaN(when.getTime())
-      // Profile timezone, as in the Activity row this was opened from; the
-      // browser's would show the modal a different time than the row.
-      const inProfileZone = (fmt: (options: Intl.DateTimeFormatOptions) => string) => {
-        try {
-          return fmt({ timeZone: userTimezone || undefined })
-        } catch {
-          return fmt({})
-        }
-      }
-      setSelectedCallData({
-        type:
-          call.direction === 'inbound'
-            ? t('pages.clients.modals.callLogCard.callTypes.incoming')
-            : t('pages.clients.modals.callLogCard.callTypes.outgoing'),
-        clientName: client?.fullName ?? '',
-        date: valid ? inProfileZone((o) => when.toLocaleDateString(i18n.language, o)) : '',
-        time: valid ? inProfileZone((o) => when.toLocaleTimeString(i18n.language, o)) : '',
-        operator: call.operatorName ?? '',
-        // The modal takes a display string, not seconds -- every other call
-        // site hands it one already formatted.
-        duration:
-          call.talkDurationSeconds != null
-            ? `${Math.floor(call.talkDurationSeconds / 60)}:${String(
-                call.talkDurationSeconds % 60
-              ).padStart(2, '0')}`
-            : '',
-        phone: client?.phones?.[0]?.number ?? '',
-        call_id: call.callId,
-        direction: call.direction,
-      })
+      setSelectedCallData(
+        activityCallToRecordingModal(call, {
+          t,
+          locale: i18n.language,
+          timezone: userTimezone,
+          clientName: client?.fullName,
+          phone: client?.phones?.[0]?.number,
+        })
+      )
       setOpenCallModal('call-recording')
       setIsCallRecordingModalOpen(true)
     },
