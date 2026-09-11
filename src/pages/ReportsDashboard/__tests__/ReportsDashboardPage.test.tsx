@@ -88,6 +88,11 @@ vi.mock('@/features/promisesFeed', () => ({
   PromisesFeedTab: () => <div data-testid="promises-feed-tab" />,
 }))
 
+// …and for the callbacks feed (features/callbacksFeed).
+vi.mock('@/features/callbacksFeed', () => ({
+  CallbacksFeedTab: () => <div data-testid="callbacks-feed-tab" />,
+}))
+
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: (selector: (s: unknown) => unknown) =>
     selector({
@@ -169,6 +174,7 @@ const outboundCallsTab = () =>
 const promisesDailyTab = () =>
   screen.getByRole('tab', { name: 'pages.reports.tabs.promises-daily' })
 const promisesFeedTab = () => screen.getByRole('tab', { name: 'pages.reports.tabs.promises-feed' })
+const callbacksFeedTab = () => screen.getByRole('tab', { name: 'pages.reports.tabs.callbacks' })
 
 describe('ReportsDashboardPage (tab host)', () => {
   it('renders the processing report panel for ?tab=processing', () => {
@@ -579,7 +585,52 @@ describe('ReportsDashboardPage (tab host)', () => {
     expect(search()).toContain('prf=2026-09-01')
   })
 
-  it('offers all twelve report tabs in a fixed order', () => {
+  it('renders the callbacks feed panel for ?tab=callbacks', () => {
+    renderPage(['/reports?tab=callbacks'])
+
+    expect(screen.getByTestId('callbacks-feed-tab')).toBeInTheDocument()
+    // Its neighbour is the promises feed it shares a frame with — the two
+    // must not be confusable at the routing level.
+    expect(screen.queryByTestId('promises-feed-tab')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('agent-performance-table')).not.toBeInTheDocument()
+    expect(callbacksFeedTab()).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'reports-panel-callbacks')
+  })
+
+  it('keeps the callbacks feed filters when switching tabs', async () => {
+    renderPage(['/reports?tab=callbacks&cbf=2026-09-01&cbt=2026-09-07&cbc=1&cbw=1&cbpg=2&cbps=100'])
+    expect(screen.getByTestId('callbacks-feed-tab')).toBeInTheDocument()
+
+    await userEvent.click(dashboardTab())
+
+    // Same documented contract as the other report tabs: the filters survive a
+    // round-trip through the dashboard, and no key set collides with another
+    // tab's (`cbf/cbt/cbc/cbw/cbpg/cbps` vs the verification tab's `cf`/`ct` —
+    // the closest spellings in the registry).
+    expect(screen.getByTestId('agent-performance-table')).toBeInTheDocument()
+    expect(search()).not.toContain('tab=')
+    expect(search()).toContain('cbf=2026-09-01')
+    expect(search()).toContain('cbt=2026-09-07')
+    expect(search()).toContain('cbc=1')
+    expect(search()).toContain('cbw=1')
+    expect(search()).toContain('cbpg=2')
+    expect(search()).toContain('cbps=100')
+  })
+
+  it('keeps the callbacks feed apart from the verification tab’s `c…` params in one URL', () => {
+    // `cf`/`ct` are the verification tab's "count from/to" and the two keys a
+    // CallbacKs feed would reach for first — the registry is what keeps them
+    // from transplanting into each other. Opening the feed with both sets
+    // present must mount only it; the sibling's keys are inert here.
+    renderPage(['/reports?tab=callbacks&cf=2026-01-01&ct=2026-01-31&cbf=2026-09-01&cbt=2026-09-07'])
+
+    expect(screen.getByTestId('callbacks-feed-tab')).toBeInTheDocument()
+    expect(search()).toContain('cf=2026-01-01')
+    expect(search()).toContain('ct=2026-01-31')
+    expect(search()).toContain('cbf=2026-09-01')
+  })
+
+  it('offers all thirteen report tabs in a fixed order', () => {
     // The strip is the only place the tab set is visible at a glance; a new
     // report must be ADDED here rather than replace a sibling.
     renderPage()
@@ -602,6 +653,9 @@ describe('ReportsDashboardPage (tab host)', () => {
       'pages.reports.tabs.promises-daily',
       // …and the promises feed right after the daily matrix it details.
       'pages.reports.tabs.promises-feed',
+      // …and the call plan last, next to the promises feed it shares a frame
+      // with: same operators, but «whom do I RING, and at what time».
+      'pages.reports.tabs.callbacks',
     ])
   })
 
