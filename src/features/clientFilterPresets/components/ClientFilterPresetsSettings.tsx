@@ -5,19 +5,19 @@
  * hidden until they choose to create or edit one. Presets are personal — this
  * screen never shows anyone else's.
  *
- * The editor's filter fields are added incrementally; this file owns the shell
- * (list, open/close, name, save/delete, status) so each filter row can land
- * separately without reworking the surrounding behaviour.
+ * This file owns the shell — the list, open/close, save/delete and status. The
+ * form itself is ClientFilterPresetEditor, which mounts only while something is
+ * being edited.
  */
 
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
 import { Icons } from '@/lib/icons'
 
 import type { ClientFilterPreset, ClientFilterPresetParams } from '../types'
+import { ClientFilterPresetEditor } from './ClientFilterPresetEditor'
 
 /** How long the "Preset saved" confirmation stays up, per the ticket. */
 const SAVED_NOTICE_MS = 1800
@@ -151,42 +151,20 @@ export function ClientFilterPresetsSettings() {
       </div>
 
       {editor && (
-        <div className="border-border flex w-full flex-col items-start gap-4 self-stretch border-t pt-6">
-          <span className="text-foreground self-stretch text-base leading-[150%] font-medium tracking-[-0.36px]">
-            {editor.editingId === null
-              ? t('pages.profile.presets.newTitle', 'New preset')
-              : t('pages.profile.presets.editTitle', 'Edit preset')}
-          </span>
-
-          <Input
-            id="preset-name"
-            label={t('pages.profile.presets.name', 'Preset name')}
-            value={editor.name}
-            onChange={(e) => {
-              setEditor({ ...editor, name: e.target.value })
-              if (nameError) setNameError(false)
-            }}
-            error={
-              nameError
-                ? t('pages.profile.presets.nameRequired', 'Enter a name for the preset')
-                : undefined
-            }
-          />
-
-          <div className="flex w-full flex-wrap items-center gap-2 self-stretch">
-            <Button variant="primary" size="sm" onClick={save}>
-              {t('pages.profile.presets.save', 'Save preset')}
-            </Button>
-            <Button variant="secondary" size="sm" onClick={clearFields}>
-              {t('pages.profile.presets.clearFields', 'Clear all fields')}
-            </Button>
-            {savedNotice && (
-              <span role="status" className="text-success-500 text-sm font-medium">
-                {t('pages.profile.presets.saved', 'Preset saved')}
-              </span>
-            )}
-          </div>
-        </div>
+        <ClientFilterPresetEditor
+          editingId={editor.editingId}
+          name={editor.name}
+          params={editor.params}
+          nameError={nameError}
+          saved={savedNotice}
+          onNameChange={(name) => {
+            setEditor({ ...editor, name })
+            if (nameError) setNameError(false)
+          }}
+          onParamsChange={(params) => setEditor({ ...editor, params })}
+          onSave={save}
+          onClearFields={clearFields}
+        />
       )}
     </div>
   )

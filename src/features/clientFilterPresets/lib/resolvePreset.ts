@@ -12,6 +12,7 @@
  * client list treats `undefined` and `[]` differently in its query string.
  */
 
+import { formatPickerDateAsYMD } from '@/lib/dateUtils'
 import type { ClientFilters } from '@/pages/ClientManagement/ClientManagementPage'
 
 import {
@@ -34,13 +35,11 @@ export interface PresetResolutionContext {
   resolveEmployeeScope: (scope: RelativeEmployeeScope) => number[]
 }
 
-/** Local-time `YYYY-MM-DD`, matching what the filter bar stores. */
-function toYMD(date: Date): string {
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const d = String(date.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
-}
+/**
+ * Local-time `YYYY-MM-DD`. The same helper the filter bar formats its pickers
+ * with, so a resolved bound and a hand-picked one are byte-identical.
+ */
+const toYMD = formatPickerDateAsYMD
 
 function addDays(date: Date, days: number): Date {
   const next = new Date(date)
