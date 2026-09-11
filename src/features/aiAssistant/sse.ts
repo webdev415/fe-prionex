@@ -615,6 +615,10 @@ export async function consumeSseStream(
     const remaining = drainDeadline - Date.now()
     if (remaining <= 0) return DRAIN_TIMED_OUT
     const pending = reader.read()
+    // Победил таймер — `pending` остаётся висеть. Обычно его резолвит
+    // `reader.cancel()`, но если тело ответа в этот момент упадёт с сетевой
+    // ошибкой, необработанный отказ вылезет предупреждением в консоль оператора.
+    pending.catch(() => undefined)
     let timer: ReturnType<typeof setTimeout> | undefined
     const expiry = new Promise<typeof DRAIN_TIMED_OUT>((resolve) => {
       timer = setTimeout(() => resolve(DRAIN_TIMED_OUT), remaining)
