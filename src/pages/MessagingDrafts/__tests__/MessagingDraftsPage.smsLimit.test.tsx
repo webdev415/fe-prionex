@@ -4,7 +4,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MessagingDraftsPage } from '../MessagingDraftsPage'
 import { useAuthStore } from '@/stores/authStore'
-import { SMS_COMPOSER_BODY_MAX_LENGTH, SMS_DRAFT_BODY_MAX_LENGTH } from '../draftModalShared'
+import { CHANNEL_SPECS, SMS_DRAFT_BODY_MAX_LENGTH } from '../draftModalShared'
 
 vi.mock('@/features/messaging/api/messagingApi', () => ({
   messagingApi: {
@@ -98,14 +98,33 @@ describe('the SMS body limit in a message draft', () => {
   it('rejects a body of 351 characters', () => {
     const body = openNewDraft()
 
+    fireEvent.change(screen.getByLabelText(/Draft name/), {
+      target: { value: 'Payment reminder' },
+    })
     fireEvent.change(body, { target: { value: 'Ї'.repeat(351) } })
 
     expect(screen.getByText(/exceeds the 350-character limit/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled()
   })
 
-  it('is the one the composers do not share, and both live in one file', () => {
+  it('keeps the submit button usable at exactly 350', () => {
+    const body = openNewDraft()
+
+    fireEvent.change(screen.getByLabelText(/Draft name/), {
+      target: { value: 'Payment reminder' },
+    })
+    fireEvent.change(body, { target: { value: 'Ї'.repeat(350) } })
+
+    expect(screen.getByRole('button', { name: 'Create' })).toBeEnabled()
+  })
+
+  it('does not follow the table the send and campaign composers read', () => {
+    expect(CHANNEL_SPECS.sms.bodyMaxLength).toBe(1071)
     expect(SMS_DRAFT_BODY_MAX_LENGTH).toBe(350)
-    expect(SMS_COMPOSER_BODY_MAX_LENGTH).toBe(1071)
-    expect(SMS_DRAFT_BODY_MAX_LENGTH).not.toBe(SMS_COMPOSER_BODY_MAX_LENGTH)
+  })
+
+  it('overrides only sms, leaving the other channels on the shared values', () => {
+    expect(CHANNEL_SPECS.viber.bodyMaxLength).toBe(1000)
+    expect(CHANNEL_SPECS.email.bodyMaxLength).toBe(50000)
   })
 })

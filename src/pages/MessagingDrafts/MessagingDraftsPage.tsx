@@ -14,7 +14,10 @@ import {
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
 import { PermissionGuard } from '@/components/auth'
 import { DeletedItemsSection, useExpiryLabel } from '@/components/softDelete'
-import { SMS_DRAFT_BODY_MAX_LENGTH } from './draftModalShared'
+import {
+  CHANNEL_SPECS as SHARED_CHANNEL_SPECS,
+  SMS_DRAFT_BODY_MAX_LENGTH,
+} from './draftModalShared'
 import { PERMISSIONS } from '@/constants/permissions'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
@@ -80,32 +83,9 @@ function TableIconButton({
 
 // Per-channel form rules. Drives subject visibility, body limits / char
 // counter, sender-name constraints, placeholders, and helper text.
-interface ChannelSpec {
-  showSubject: boolean
-  subjectRequired: boolean
-  bodyMaxLength: number
-  senderMaxLength: number
-}
-
-const CHANNEL_SPECS: Record<MessagingChannel, ChannelSpec> = {
-  sms: {
-    showSubject: false,
-    subjectRequired: false,
-    bodyMaxLength: SMS_DRAFT_BODY_MAX_LENGTH,
-    senderMaxLength: 11,
-  },
-  viber: {
-    showSubject: false,
-    subjectRequired: false,
-    bodyMaxLength: 1000,
-    senderMaxLength: 20,
-  },
-  email: {
-    showSubject: true,
-    subjectRequired: true,
-    bodyMaxLength: 50000,
-    senderMaxLength: 100,
-  },
+const CHANNEL_SPECS: typeof SHARED_CHANNEL_SPECS = {
+  ...SHARED_CHANNEL_SPECS,
+  sms: { ...SHARED_CHANNEL_SPECS.sms, bodyMaxLength: SMS_DRAFT_BODY_MAX_LENGTH },
 }
 
 interface DraftFormModalProps {
@@ -181,9 +161,8 @@ function DraftFormModal({ draft, open, onClose }: DraftFormModalProps) {
   const trimmedBody = body.trim()
   const trimmedSubject = subject.trim()
 
-  const bodyCharLimit = spec.bodyMaxLength
   const bodyTooShort = trimmedBody.length === 0
-  const bodyTooLong = body.length > bodyCharLimit
+  const bodyTooLong = body.length > spec.bodyMaxLength
 
   const subjectInvalid = spec.subjectRequired && !trimmedSubject
 
@@ -243,9 +222,9 @@ function DraftFormModal({ draft, open, onClose }: DraftFormModalProps) {
       })
     : bodyTooLong
       ? t('pages.messagingDrafts.form.bodyTooLong', {
-          max: bodyCharLimit,
+          max: spec.bodyMaxLength,
           channel: channel.toUpperCase(),
-          defaultValue: `Body exceeds the ${bodyCharLimit}-character limit for ${channel.toUpperCase()}.`,
+          defaultValue: `Body exceeds the ${spec.bodyMaxLength}-character limit for ${channel.toUpperCase()}.`,
         })
       : undefined
 
@@ -327,8 +306,8 @@ function DraftFormModal({ draft, open, onClose }: DraftFormModalProps) {
             <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
               {t('pages.messagingDrafts.form.charCount', {
                 count: body.length,
-                max: bodyCharLimit,
-                defaultValue: `${body.length} / ${bodyCharLimit}`,
+                max: spec.bodyMaxLength,
+                defaultValue: `${body.length} / ${spec.bodyMaxLength}`,
               })}
             </span>
           </div>

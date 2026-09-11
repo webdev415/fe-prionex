@@ -7,9 +7,11 @@ import type { MessagingChannel, MessagingDraft } from '@/features/messaging'
  * A draft is capped at 350 (KAN-1101). The cap used to be recalculated on every
  * keystroke as the single-segment capacity, so one character above U+007F
  * dropped it from 160 to 70 and made ordinary Cyrillic templates unsaveable.
- * 350 replaced that: flat, content-independent, and chosen by product rather
- * than by any provider or database constraint - the body column is unbounded
- * text and the API enforces no maximum.
+ * 350 replaced that: flat, content-independent, and a client-side product rule
+ * rather than a limit the backend imposes. Checked while implementing KAN-1101
+ * (api-prionex services/messaging: schemas/draft.py declares body with
+ * min_length only, models/messaging_draft.py stores it as Text), so if the API
+ * ever adds a maximum below 350 this cap stops being the binding one.
  *
  * The ad-hoc send and campaign composers keep 1071 (seven GSM-7 segments), the
  * limit they have always had. Lowering them to 350 would take away message
