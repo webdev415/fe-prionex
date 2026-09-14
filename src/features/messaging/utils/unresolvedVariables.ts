@@ -23,8 +23,8 @@ export function unresolvedVariables(
   return missing
 }
 
-const CREDIT_DERIVED = ['contract_number', 'debt_amount', 'due_date']
+const FILLED_BY_CHOOSING_A_CREDIT = ['contract_number', 'debt_amount']
 
 export function blockingVariables(missing: string[]): string[] {
-  return missing.filter((name) => CREDIT_DERIVED.includes(name))
+  return missing.filter((name) => FILLED_BY_CHOOSING_A_CREDIT.includes(name))
 }

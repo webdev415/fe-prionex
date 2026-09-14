@@ -69,11 +69,15 @@ describe('finding the variables a message still has no value for', () => {
   })
 
   it('blocks only on variables that choosing a credit can fill', () => {
-    expect(blockingVariables(['contract_number', 'debt_amount', 'due_date'])).toEqual([
+    expect(blockingVariables(['contract_number', 'debt_amount'])).toEqual([
       'contract_number',
       'debt_amount',
-      'due_date',
     ])
+  })
+
+  it('does not block on due_date, which a credit cannot always supply', () => {
+    expect(blockingVariables(['due_date'])).toEqual([])
+    expect(blockingVariables(['contract_number', 'due_date'])).toEqual(['contract_number'])
   })
 
   it('does not block on a variable the operator cannot supply here', () => {
