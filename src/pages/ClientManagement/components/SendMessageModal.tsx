@@ -48,6 +48,10 @@ import {
 } from '@/features/messaging'
 import type { MessagingChannel, MessagingDraft } from '@/features/messaging'
 import { CHANNEL_SPECS } from '@/pages/MessagingDrafts/draftModalShared'
+import {
+  blockingVariables,
+  unresolvedVariables,
+} from '@/features/messaging/utils/unresolvedVariables'
 import { SendMessageModalSkeleton } from './SendMessageModalSkeleton'
 
 const formatClientNameInitials = (fullName: string): string => {
@@ -382,12 +386,24 @@ export function SendMessageModal({
     ((viberAddImage && viberPublicUrls(viberImages).length > 0) ||
       (viberAddButton && viberButtonName.trim() && viberButtonUrl.trim()))
 
+  const missingVariables = useMemo(
+    () => [
+      ...new Set([
+        ...unresolvedVariables(body, variableValues, 'double'),
+        ...(showSubject ? unresolvedVariables(subject, variableValues, 'double') : []),
+      ]),
+    ],
+    [body, showSubject, subject, variableValues]
+  )
+  const hasUnresolvedVariables = missingVariables.length > 0
+  const blocksSending = blockingVariables(missingVariables).length > 0
   const canSend =
     clientId > 0 &&
     !!service &&
     hasDestination &&
     (body.trim().length > 0 || hasViberRich) &&
     (!channelSpec.subjectRequired || subject.trim().length > 0) &&
+    !blocksSending &&
     !quotaExceeded &&
     !sendMessageMutation.isPending
 
@@ -699,6 +715,14 @@ export function SendMessageModal({
                   ))}
                 </SelectContent>
               </Select>
+              {hasUnresolvedVariables && (
+                <p className="text-error-500 mt-1.5 text-xs">
+                  {t('pages.clients.modals.sendSMS.unresolvedVariables', {
+                    names: missingVariables.join(', '),
+                    defaultValue: `These variables have no value yet: ${missingVariables.join(', ')}`,
+                  })}
+                </p>
+              )}
             </div>
 
             {showSubject && (
@@ -742,24 +766,6 @@ export function SendMessageModal({
               )}
             />
 
-            <MessagingVariablesPalette onInsert={handleInsertVariable} disabled={!hasDestination} />
-
-            {isMy2Viber && (
-              <ViberRichContentFields
-                addImage={viberAddImage}
-                onAddImageChange={setViberAddImage}
-                images={viberImages}
-                onImagesChange={setViberImages}
-                addButton={viberAddButton}
-                onAddButtonChange={setViberAddButton}
-                buttonName={viberButtonName}
-                onButtonNameChange={setViberButtonName}
-                buttonUrl={viberButtonUrl}
-                onButtonUrlChange={setViberButtonUrl}
-                disabled={!hasDestination}
-              />
-            )}
-
             <div className="border-border bg-muted rounded-xl border p-4">
               <div className="mb-3 flex flex-wrap items-center gap-2">
                 <span className="text-foreground text-sm font-medium">
@@ -796,6 +802,24 @@ export function SendMessageModal({
                 </div>
               </div>
             </div>
+
+            <MessagingVariablesPalette onInsert={handleInsertVariable} disabled={!hasDestination} />
+
+            {isMy2Viber && (
+              <ViberRichContentFields
+                addImage={viberAddImage}
+                onAddImageChange={setViberAddImage}
+                images={viberImages}
+                onImagesChange={setViberImages}
+                addButton={viberAddButton}
+                onAddButtonChange={setViberAddButton}
+                buttonName={viberButtonName}
+                onButtonNameChange={setViberButtonName}
+                buttonUrl={viberButtonUrl}
+                onButtonUrlChange={setViberButtonUrl}
+                disabled={!hasDestination}
+              />
+            )}
           </div>
         )}
       </ModalContent>

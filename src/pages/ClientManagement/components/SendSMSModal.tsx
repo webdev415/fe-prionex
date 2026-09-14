@@ -26,6 +26,11 @@ import { authApi } from '@/features/auth/api/authApi'
 import { useQuery } from '@tanstack/react-query'
 import { getErrorMessage } from '@/lib/errors'
 import { formatDateDotDMY, formatMoneyUAHTwoDecimals } from '@/lib/formatters'
+import {
+  blockingVariables,
+  unresolvedVariables,
+} from '@/features/messaging/utils/unresolvedVariables'
+import { resolveOperatorPhone } from '@/features/messaging/utils/operatorPhone'
 
 export interface SendSMSModalProps {
   open: boolean
@@ -68,6 +73,7 @@ const renderTemplateMessage = (
   let rendered = templateText
   // Replace all variables in format {variable_name}
   rendered = rendered.replace(/\{(\w+)\}/g, (match, varName) => {
+    if (!Object.prototype.hasOwnProperty.call(variables, varName)) return match
     return variables[varName] !== undefined && variables[varName] !== ''
       ? variables[varName]!
       : match
@@ -187,10 +193,12 @@ export function SendSMSModal({
     const contractNumber = selectedLoan?.loanNumber ?? debtFallback
 
     // {due_date} = max promise_to_pay_date across this client's interactions (DD.MM.YYYY)
-    const dueDate = formatDateDotDMY(clientData?.max_promise_to_pay_date ?? null)
+    const dueDate =
+      formatDateDotDMY(clientData?.max_promise_to_pay_date ?? null) ||
+      formatDateDotDMY(new Date().toISOString())
 
     // Get operator_phone from user API response
-    const operatorPhone = currentUserData?.data?.phone || ''
+    const operatorPhone = resolveOperatorPhone(currentUserData?.data)
 
     return {
       client_name: clientNameField,
@@ -217,8 +225,17 @@ export function SendSMSModal({
   }, [selectedTemplateId, message, messageEdited, customMessage, variableValues])
 
   const isDailyLimitReached = smsSentToday >= dailyLimit
+  const missingVariables = useMemo(
+    () => unresolvedVariables(displayMessage, variableValues, 'single'),
+    [displayMessage, variableValues]
+  )
+  const hasUnresolvedVariables = missingVariables.length > 0
+  const blocksSending = blockingVariables(missingVariables).length > 0
   const canSend =
-    !isDailyLimitReached && displayMessage.trim().length > 0 && !sendSMSMutation.isPending
+    !isDailyLimitReached &&
+    displayMessage.trim().length > 0 &&
+    !blocksSending &&
+    !sendSMSMutation.isPending
 
   const handleSend = async () => {
     if (!canSend) return
@@ -232,7 +249,7 @@ export function SendSMSModal({
               template_id: selectedTemplateId,
               variables: {
                 client_name: variableValues.client_name,
-                debt_amount: variableValues.debt_amount || '0',
+                debt_amount: variableValues.debt_amount,
                 operator_name: variableValues.operator_name,
                 operator_phone: variableValues.operator_phone,
                 due_date: variableValues.due_date,
@@ -440,10 +457,18 @@ export function SendSMSModal({
                   ) : (
                     <input
                       type="text"
-                      value="—"
+                      value={t('pages.clients.modals.sendSMS.noOpenLoans', 'No open credits')}
                       readOnly
-                      className="text-foreground border-border bg-card h-[45px] w-full rounded-lg border px-3 py-2 text-xs font-light sm:text-sm"
+                      className="text-muted-foreground border-border bg-card h-[45px] w-full rounded-lg border px-3 py-2 text-xs font-light sm:text-sm"
                     />
+                  )}
+                  {hasUnresolvedVariables && (
+                    <p className="text-error-500 text-xs">
+                      {t('pages.clients.modals.sendSMS.unresolvedVariables', {
+                        names: missingVariables.join(', '),
+                        defaultValue: `These variables have no value yet: ${missingVariables.join(', ')}`,
+                      })}
+                    </p>
                   )}
                 </div>
               </div>

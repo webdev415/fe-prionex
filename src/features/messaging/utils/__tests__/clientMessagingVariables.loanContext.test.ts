@@ -57,4 +57,41 @@ describe('credit variables when the client has no open credit', () => {
 
     expect(vars.contract_number).toBe('CLOSED-001')
   })
+
+  it('does not date the message from a credit that was not selected', () => {
+    const withClosedDebt = {
+      debts: [
+        {
+          contract_number: 'CLOSED-001',
+          debt_close_date: '2024-01-31',
+          credit_closed_date: '2024-01-31',
+        },
+      ],
+      max_promise_to_pay_date: null,
+    } as never
+
+    const vars = buildClientMessagingVariables({
+      clientName: 'Kovalchuk Olena',
+      clientDisplayName: 'Olena',
+      clientData: withClosedDebt,
+      selectedLoan: null,
+      hasLoanContext: true,
+    })
+
+    expect(vars.due_date).not.toBe('31.01.2024')
+    expect(renderMessagingTemplate('{{due_date}}', vars)).not.toContain('2024')
+  })
+
+  it('never renders an inherited object member into a message', () => {
+    const vars = buildClientMessagingVariables({
+      clientName: 'Kovalchuk Olena',
+      clientDisplayName: 'Olena',
+      clientData,
+      selectedLoan: null,
+      hasLoanContext: true,
+    })
+
+    expect(renderMessagingTemplate('Hello {{constructor}}', vars)).toBe('Hello {{constructor}}')
+    expect(renderMessagingTemplate('{{toString}}', vars)).toBe('{{toString}}')
+  })
 })
