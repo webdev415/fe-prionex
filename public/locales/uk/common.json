@@ -7175,6 +7175,10 @@
         "required": "Обов'язково",
         "notInPast": "Дата не може бути в минулому",
         "showClosedCredits": "Показувати закриті кредити",
+        "countAsPromiseDate": "Враховувати як дату обіцянки",
+        "countAsPromiseAmount": "Враховувати як суму обіцянки",
+        "promiseDateTaken": "Крок {{step}} уже враховується як дата обіцянки. Спершу зніміть позначку з нього.",
+        "promiseAmountTaken": "Крок {{step}} уже враховується як сума обіцянки. Спершу зніміть позначку з нього.",
         "contactSource": "Джерело контакту",
         "contactSourceClient": "Контакти клієнта",
         "contactSourceRecommender": "Контакти поручителя"
