@@ -273,7 +273,15 @@ export function ChainExecutor({
     department_id: seesAllDepartments ? undefined : operatorDepartmentId,
   })
   const manualChains = useMemo(() => {
-    const all = (chainsData?.items ?? []).filter((c) => c.chain_type === 'manual')
+    // Two independent settings, per KAN-318: Chain Type says who launches a
+    // chain, Visibility says who may see it. Filtering on type alone left the
+    // second unchecked — a System (hidden) chain that happened to be Manual
+    // would have been offered here (KAN-1045). The server now withholds hidden
+    // chains from operators too; this is the half that also holds for an admin,
+    // who legitimately receives them for the settings screen.
+    const all = (chainsData?.items ?? []).filter(
+      (c) => c.chain_type === 'manual' && !c.is_system_hidden
+    )
     // Strict context filter (refactor ticket): when this executor was
     // opened from a specific phone row, only show chains whose contact
     // steps target that phone's source. A chain qualifies when *any*
@@ -323,9 +331,24 @@ export function ChainExecutor({
     return (quickPicksData ?? []).filter((qp) => manualIds.has(qp.chain_id))
   }, [quickPicksData, manualChains])
 
-  // Active instance
+  // Active instance.
+  //
+  // "Active" is not enough on its own (KAN-1045). A chain whose Visibility is
+  // System (hidden) is launched by its trigger and filled from that event's
+  // payload; KAN-318 is explicit that it must never be visible or reachable by
+  // a user "in any form at all". But an instance of one still exists on the
+  // client while it runs — and if it is ever left active (the `email_confirmed`
+  // chain was), this lookup used to adopt it as the operator's own unfinished
+  // work: the picker below is hidden whenever `activeInstance` is set, so Log
+  // Interaction opened straight into a system fill-in form nobody chose, whose
+  // save then failed for want of the triggering event.
+  //
+  // Skipping those here rather than at each use is deliberate — it is the one
+  // place that decides "is a chain running for this client", and every branch
+  // downstream (picker, wizard, Enter-to-save, auto-advance) follows from it.
   const { data: instances } = useClientChainInstances(clientId)
-  const activeInstance = instances?.find((i) => i.status === 'active') ?? null
+  const activeInstance =
+    instances?.find((i) => i.status === 'active' && !i.is_system_hidden) ?? null
 
   const [selectedChainId, setSelectedChainId] = useState<string>('')
 

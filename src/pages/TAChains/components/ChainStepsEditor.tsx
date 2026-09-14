@@ -8,6 +8,7 @@
  */
 
 import { useEffect, useMemo } from 'react'
+import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { Input } from '@/components/ui/Input'
@@ -99,6 +100,46 @@ export function ChainStepsEditor({ steps, onChange, disabled }: ChainStepsEditor
     onChange(next)
   }
 
+  /**
+   * Tick / untick a promise flag (KAN-1069).
+   *
+   * Ticking a second field of the same type is REFUSED, not applied — the
+   * ticket is explicit that the earlier choice must not be silently undone.
+   * The server enforces the same rule; doing it here too means the admin finds
+   * out on the click rather than after filling in the rest of the form.
+   *
+   * The pairing rule ("both flags or neither") is deliberately NOT enforced
+   * here: it cannot be, because ticking the first of a pair is always a step
+   * through an invalid state on the way to a valid one. The server refuses the
+   * save and its message is what the admin reads.
+   */
+  const togglePromiseFlag = (
+    index: number,
+    field: 'is_promise_date' | 'is_promise_amount',
+    checked: boolean
+  ) => {
+    if (checked) {
+      const takenBy = steps.findIndex((s, i) => i !== index && s[field])
+      if (takenBy !== -1) {
+        toast.error(
+          field === 'is_promise_date'
+            ? t(
+                'pages.taChains.steps.promiseDateTaken',
+                'Step {{step}} is already counted as the promise date. Untick it first.',
+                { step: takenBy + 1 }
+              )
+            : t(
+                'pages.taChains.steps.promiseAmountTaken',
+                'Step {{step}} is already counted as the promise amount. Untick it first.',
+                { step: takenBy + 1 }
+              )
+        )
+        return
+      }
+    }
+    update(index, { [field]: checked })
+  }
+
   const addStep = () => {
     const firstTA = allTAs[0]
     if (!firstTA) return
@@ -112,6 +153,8 @@ export function ChainStepsEditor({ steps, onChange, disabled }: ChainStepsEditor
         contact_source: firstTA.field_type === 'contact' ? 'client' : null,
         contact_medium: firstTA.field_type === 'contact' ? 'phone' : undefined,
         show_closed_credits: false,
+        is_promise_date: false,
+        is_promise_amount: false,
       },
     ])
   }
@@ -263,6 +306,32 @@ export function ChainStepsEditor({ steps, onChange, disabled }: ChainStepsEditor
                       disabled={disabled}
                     />
                     {t('pages.taChains.steps.notInPast')}
+                  </label>
+                )}
+                {ta?.field_type === 'date' && (
+                  <label className="flex items-center gap-1">
+                    <input
+                      type="checkbox"
+                      checked={step.is_promise_date ?? false}
+                      onChange={(e) =>
+                        togglePromiseFlag(index, 'is_promise_date', e.target.checked)
+                      }
+                      disabled={disabled}
+                    />
+                    {t('pages.taChains.steps.countAsPromiseDate', 'Count as promise date')}
+                  </label>
+                )}
+                {ta?.field_type === 'amount' && (
+                  <label className="flex items-center gap-1">
+                    <input
+                      type="checkbox"
+                      checked={step.is_promise_amount ?? false}
+                      onChange={(e) =>
+                        togglePromiseFlag(index, 'is_promise_amount', e.target.checked)
+                      }
+                      disabled={disabled}
+                    />
+                    {t('pages.taChains.steps.countAsPromiseAmount', 'Count as promise amount')}
                   </label>
                 )}
               </div>

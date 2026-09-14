@@ -21,6 +21,12 @@ export function taChainStepsToInput(steps?: TAChainStep[]): TAChainStepIn[] {
       not_in_the_past: s.not_in_the_past,
       contact_source: s.contact_source,
       show_closed_credits: s.show_closed_credits ?? false,
+      // KAN-1069. Every field here is copied one by one, so a new step setting
+      // that is not listed silently reads back as its default — the chain saves
+      // correctly and reopens showing the boxes unticked, which is what the
+      // admin reports as "it did not save".
+      is_promise_date: s.is_promise_date ?? false,
+      is_promise_amount: s.is_promise_amount ?? false,
     })) ?? []
   )
 }

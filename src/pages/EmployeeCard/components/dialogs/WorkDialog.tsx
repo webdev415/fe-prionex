@@ -15,6 +15,7 @@ import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { useDepartments } from '@/features/departments'
 import { useUpdateWork } from '@/features/employeeCard/hooks/useEmployeeCard'
 import type { EmployeeCard } from '@/features/employeeCard/types.card'
+import { useGroups } from '@/features/groups'
 import { useRoles } from '@/features/roles'
 import { useOperators } from '@/features/users/hooks/useUsers'
 import { formatPickerDateAsYMD, parsePickerYMD } from '@/lib/dateUtils'
@@ -60,6 +61,9 @@ export function WorkDialog({ card, projectId, open, onClose }: WorkDialogProps) 
     card.work.department_id ? String(card.work.department_id) : NOBODY
   )
   const [roleId, setRoleId] = useState<string>(card.work.role_id ? String(card.work.role_id) : '')
+  const [groupId, setGroupId] = useState<string>(
+    card.work.group_id ? String(card.work.group_id) : NOBODY
+  )
   const [managerId, setManagerId] = useState<string>(
     card.header.manager_user_id ? String(card.header.manager_user_id) : NOBODY
   )
@@ -67,6 +71,21 @@ export function WorkDialog({ card, projectId, open, onClose }: WorkDialogProps) 
   const [asterisk, setAsterisk] = useState<string>(card.work.asterisk_extension ?? '')
   const [dialer, setDialer] = useState<string>(card.work.dialer_extension ?? '')
   const [isAgent, setIsAgent] = useState<boolean>(card.work.is_agent)
+
+  /*
+   * The same narrowing the user-management screen applies: the active groups
+   * of the chosen department. A group is never outside a department, so with
+   * none chosen there is nothing to ask for.
+   */
+  const { data: groupsData } = useGroups(
+    {
+      department_id: departmentId === NOBODY ? undefined : Number(departmentId),
+      page: 1,
+      page_size: 100,
+      is_active: true,
+    },
+    departmentId !== NOBODY
+  )
 
   const roles = useMemo(() => rolesData?.roles ?? [], [rolesData?.roles])
   /*
@@ -117,6 +136,37 @@ export function WorkDialog({ card, projectId, open, onClose }: WorkDialogProps) 
     [roles, departmentId]
   )
 
+  /*
+   * "No group" heads the list, like "no manager": leaving a group is a thing
+   * somebody comes here to do.
+   *
+   * The person's own group is kept on top of the loaded ones while their
+   * department is still the one chosen, the way the manager is. A group that
+   * has since been deactivated is not in the active list, and without this the
+   * field would open empty rather than on where they actually sit.
+   */
+  const groups = useMemo(() => {
+    const loaded = (groupsData?.groups ?? []).map((group) => ({
+      id: String(group.id),
+      name: group.name,
+    }))
+    const current = card.work.group_id
+    const held =
+      current &&
+      departmentId === String(card.work.department_id ?? '') &&
+      !loaded.some((one) => one.id === String(current))
+        ? [{ id: String(current), name: card.work.group ?? String(current) }]
+        : []
+    return [{ id: NOBODY, name: t('pages.employeeCard.dialogs.noGroup') }, ...held, ...loaded]
+  }, [
+    groupsData?.groups,
+    card.work.group_id,
+    card.work.group,
+    card.work.department_id,
+    departmentId,
+    t,
+  ])
+
   return (
     <SectionDialog
       open={open}
@@ -135,6 +185,10 @@ export function WorkDialog({ card, projectId, open, onClose }: WorkDialogProps) 
             ...(projectId ? { project_id: projectId } : {}),
             ...(roleId ? { role_id: Number(roleId) } : {}),
             ...(departmentId === NOBODY ? {} : { department_id: Number(departmentId) }),
+            // The group sits on the assignment beside the position, so it is
+            // sent with one. Null rather than omitted, so choosing "no group"
+            // removes it instead of leaving the old one in place.
+            ...(roleId ? { group_id: groupId === NOBODY ? null : Number(groupId) } : {}),
             manager_user_id: managerId === NOBODY ? null : Number(managerId),
             hired_at: hiredAt || null,
             // Empty clears it. Sent as null rather than omitted, so somebody
@@ -154,6 +208,7 @@ export function WorkDialog({ card, projectId, open, onClose }: WorkDialogProps) 
             onValueChange={(value) => {
               setDepartmentId(value)
               setRoleId('')
+              setGroupId(NOBODY)
             }}
           >
             <SelectTrigger>
@@ -186,6 +241,28 @@ export function WorkDialog({ card, projectId, open, onClose }: WorkDialogProps) 
             </SelectContent>
           </Select>
         </div>
+
+        {/* Hidden rather than disabled with no department, as on the
+            user-management screen: there is no group it could hold. */}
+        {departmentId !== NOBODY && (
+          <div className="space-y-1.5">
+            <span className="text-muted-foreground text-xs">
+              {t('pages.employeeCard.fields.group')}
+            </span>
+            <Select value={groupId} onValueChange={setGroupId}>
+              <SelectTrigger>
+                <SelectValue placeholder={t('pages.employeeCard.dialogs.choose')} />
+              </SelectTrigger>
+              <SelectContent>
+                {groups.map((group) => (
+                  <SelectItem key={group.id} value={group.id}>
+                    {group.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         <div className="space-y-1.5">
           {/* A real label, not a span beside it: the picker is a button rather

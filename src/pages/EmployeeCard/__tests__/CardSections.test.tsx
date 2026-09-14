@@ -37,6 +37,8 @@ function card(overrides: Partial<EmployeeCard> = {}): EmployeeCard {
       project_name: 'Technofinance',
       department: 'Collection Department',
       department_id: 1,
+      group: null,
+      group_id: null,
       position: 'Senior Operator',
       role_id: 2,
       manager: 'Serhiy Lytvyn',
@@ -153,6 +155,20 @@ describe('CardSections', () => {
     expect(screen.getByText('KNU')).toBeInTheDocument()
     expect(screen.getByText('School 5')).toBeInTheDocument()
     expect(screen.getByText('Economic / Finance')).toBeInTheDocument()
+  })
+
+  it('shows the group in the work section', () => {
+    render(
+      <CardSections
+        card={card({ work: { ...card().work, group: 'Morning shift', group_id: 4 } })}
+      />
+    )
+
+    const section = screen.getByRole('region', {
+      name: 'pages.employeeCard.sections.work-information',
+    })
+    expect(within(section).getByText('pages.employeeCard.fields.group')).toBeInTheDocument()
+    expect(within(section).getByText('Morning shift')).toBeInTheDocument()
   })
 
   it('keeps an empty field in place instead of collapsing the layout', () => {

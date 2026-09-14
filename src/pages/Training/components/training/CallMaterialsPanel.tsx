@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
+import { safeHttpUrl } from '@/lib/safeUrl'
 import { useHasPermission } from '@/hooks'
 import { downloadMaterial } from '@/features/training/api/materialsService'
 import {
@@ -10,6 +11,7 @@ import {
 } from '@/features/training/hooks/useMaterials'
 import {
   isPreviewable,
+  materialSubtitle,
   type Material,
   type MaterialType,
 } from '@/features/training/types/materials'
@@ -31,14 +33,8 @@ const TYPE_LABEL: Record<MaterialType, string> = {
   docx: 'DOCX',
   video: 'VIDEO',
   audio: 'AUDIO',
+  link: 'LINK',
   other: 'FILE',
-}
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`
-  return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`
 }
 
 function triggerBlobDownload(blob: Blob, filename: string) {
@@ -69,10 +65,18 @@ export function CallMaterialsPanel({ callId }: CallMaterialsPanelProps) {
   if (!canView || !callId) return null
 
   const handleDownload = async (m: Material) => {
+    if (m.kind === 'link') {
+      // No file behind it: the download endpoint answers 409. Opening the url is
+      // the equivalent action, and safeHttpUrl is what keeps a stored
+      // `javascript:` out of window.open.
+      const href = safeHttpUrl(m.url)
+      if (href) window.open(href, '_blank', 'noopener,noreferrer')
+      return
+    }
     setDownloadingId(m.id)
     try {
       const blob = await downloadMaterial(m.id)
-      triggerBlobDownload(blob, m.original_filename)
+      triggerBlobDownload(blob, m.original_filename ?? m.title)
     } catch {
       toast.error(
         t('pages.training.training.materials.errors.download', 'Could not download the file.')
@@ -123,7 +127,7 @@ export function CallMaterialsPanel({ callId }: CallMaterialsPanelProps) {
               <div className="flex min-w-0 flex-1 flex-col">
                 <span className="truncate text-sm text-[#05040D]">{m.title}</span>
                 <span className="text-[10px] text-[#6B7280]">
-                  {TYPE_LABEL[m.type]} · {formatSize(m.size_bytes)}
+                  {TYPE_LABEL[m.type]} · {materialSubtitle(m)}
                 </span>
               </div>
               {isPreviewable(m.type) && (

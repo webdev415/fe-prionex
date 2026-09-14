@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
 import { useHasPermission } from '@/hooks'
 import { useAuthStore } from '@/stores/authStore'
@@ -13,7 +14,10 @@ import {
   useEnrollCourse,
   useUpdateCourse,
 } from '@/features/training/hooks/useCourses'
-import type { CourseCardData, CourseLevel, MaterialType } from '@/features/training/types/courses'
+import type { CourseCardData, CourseLevel } from '@/features/training/types/courses'
+import { safeHttpUrl } from '@/lib/safeUrl'
+import { useAttachMaterial, useMaterialsForTarget } from '@/features/training/hooks/useMaterials'
+import { CourseMaterialSelect } from './CourseMaterialSelect'
 import { EmployeeSearchList } from '../dialogue/EmployeeMultiSelect'
 import { TrainingPrimaryButton, TrainingSearchBar } from './TrainingToolbar'
 
@@ -52,7 +56,6 @@ const LEVEL_STARS: Record<CourseLevel, number> = {
   intermediate: 2,
   advanced: 3,
 }
-const MATERIAL_TYPES: MaterialType[] = ['pdf', 'docx', 'video', 'audio', 'link']
 
 function formatDuration(t: TFn, minutes?: number | null): string {
   if (!minutes) return '—'
@@ -301,14 +304,10 @@ function CourseCard({
 interface ModuleDraft {
   title: string
 }
-interface MaterialDraft {
-  type: MaterialType
-  name: string
-}
-
 function CreateCoursePanel({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation('common')
   const createCourse = useCreateCourse()
+  const attachMaterial = useAttachMaterial()
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
   const projectIdNum = activeProjectId ? Number(activeProjectId) : null
   const { data: operators = [] } = useOperators(projectIdNum)
@@ -320,7 +319,7 @@ function CreateCoursePanel({ onClose }: { onClose: () => void }) {
   const [duration, setDuration] = useState('')
   const [description, setDescription] = useState('')
   const [modules, setModules] = useState<ModuleDraft[]>([])
-  const [materials, setMaterials] = useState<MaterialDraft[]>([])
+  const [materialIds, setMaterialIds] = useState<number[]>([])
 
   const submit = () => {
     if (!title.trim()) return
@@ -336,11 +335,32 @@ function CreateCoursePanel({ onClose }: { onClose: () => void }) {
         lessons: modules
           .filter((m) => m.title.trim())
           .map((m, i) => ({ ordinal: i, title: m.title.trim(), content_type: 'text' as const })),
-        materials: materials
-          .filter((m) => m.name.trim())
-          .map((m) => ({ type: m.type, name: m.name.trim() })),
       },
-      { onSuccess: onClose }
+      {
+        onSuccess: async (created) => {
+          // The course has no id until it exists, so the picked materials are
+          // attached here rather than sent with the payload. A failure leaves a
+          // created course with fewer materials — said out loud rather than
+          // swallowed, because the trainer can re-attach from the course.
+          try {
+            for (const materialId of materialIds) {
+              await attachMaterial.mutateAsync({
+                materialId,
+                targetType: 'course',
+                targetId: created.id,
+              })
+            }
+          } catch {
+            toast.error(
+              t(
+                'pages.training.training.courses.attachFailed',
+                'The course was created, but its materials could not be attached.'
+              )
+            )
+          }
+          onClose()
+        },
+      }
     )
   }
 
@@ -498,62 +518,14 @@ function CreateCoursePanel({ onClose }: { onClose: () => void }) {
             ))}
           </div>
 
-          {/* Materials */}
+          {/* Materials — picked from the library (KAN-1049). Typing a name in
+              place is gone: that list belonged to one course and could be reused
+              nowhere, which is what the library replaces. */}
           <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-[#05040D]">
-                {t('pages.training.training.courses.materials', 'Materials')}
-              </span>
-              <button
-                type="button"
-                onClick={() => setMaterials((m) => [...m, { type: 'pdf', name: '' }])}
-                className="inline-flex items-center gap-1 rounded-md bg-[#204E4D] px-2.5 py-1 text-[11px] font-medium text-white"
-              >
-                <Icons.Add size={12} className="text-white" />
-                {t('common.add', 'Add')}
-              </button>
-            </div>
-            {materials.map((m, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <select
-                  value={m.type}
-                  onChange={(e) =>
-                    setMaterials((arr) =>
-                      arr.map((x, j) =>
-                        j === i ? { ...x, type: e.target.value as MaterialType } : x
-                      )
-                    )
-                  }
-                  className={`w-24 ${field} uppercase`}
-                >
-                  {MATERIAL_TYPES.map((mt) => (
-                    <option key={mt} value={mt}>
-                      {mt.toUpperCase()}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  value={m.name}
-                  onChange={(e) =>
-                    setMaterials((arr) =>
-                      arr.map((x, j) => (j === i ? { ...x, name: e.target.value } : x))
-                    )
-                  }
-                  placeholder={t('pages.training.training.courses.materialName', 'Material name')}
-                  className={`flex-1 ${field}`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setMaterials((arr) => arr.filter((_, j) => j !== i))}
-                  aria-label={t(
-                    'pages.training.training.courses.removeMaterial',
-                    'Remove material'
-                  )}
-                >
-                  <Icons.Close size={14} className="text-[#9CA3AF]" />
-                </button>
-              </div>
-            ))}
+            <span className="text-sm font-semibold text-[#05040D]">
+              {t('pages.training.training.courses.materials', 'Materials')}
+            </span>
+            <CourseMaterialSelect selectedIds={materialIds} onChange={setMaterialIds} />
           </div>
         </div>
 
@@ -594,7 +566,12 @@ function CourseDetailsDialog({
   const archiveCourse = useArchiveCourse()
   const detail = full ?? course
   const lessons = detail.lessons ?? []
-  const materials = detail.materials ?? []
+  // Attachments, not `detail.materials`: the course's own list is legacy and
+  // 047 moved its contents into the library. It is still populated so that
+  // migration stays reversible, so reading it here would show each material
+  // twice once a trainer attaches anything new.
+  const { data: attached } = useMaterialsForTarget('course', course.id)
+  const materials = attached?.data ?? []
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
@@ -665,14 +642,31 @@ function CourseDetailsDialog({
               <span className="text-sm font-semibold text-[#05040D]">
                 {t('pages.training.training.courses.materials', 'Materials')}
               </span>
-              {materials.map((m, i) => (
-                <div key={i} className="flex items-center gap-2 rounded-lg bg-[#F7F7F7] px-3 py-2">
-                  <span className="rounded bg-white px-1.5 py-0.5 text-[9px] font-semibold text-[#204E4D] uppercase">
-                    {m.type}
-                  </span>
-                  <span className="flex-1 truncate text-xs text-[#05040D]">{m.name}</span>
-                </div>
-              ))}
+              {materials.map((m) => {
+                const href = m.kind === 'link' ? safeHttpUrl(m.url) : undefined
+                return (
+                  <div
+                    key={m.id}
+                    className="flex items-center gap-2 rounded-lg bg-[#F7F7F7] px-3 py-2"
+                  >
+                    <span className="rounded bg-white px-1.5 py-0.5 text-[9px] font-semibold text-[#204E4D] uppercase">
+                      {m.type}
+                    </span>
+                    {href ? (
+                      <a
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 truncate text-xs font-medium text-[#204E4D] hover:underline"
+                      >
+                        {m.title}
+                      </a>
+                    ) : (
+                      <span className="flex-1 truncate text-xs text-[#05040D]">{m.title}</span>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           ) : null}
         </div>
