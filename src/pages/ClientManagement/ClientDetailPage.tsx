@@ -3,7 +3,7 @@
  *
  * Full page view for displaying detailed client information.
  */
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQueries, useQueryClient } from '@tanstack/react-query'
@@ -36,6 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/Select'
+import { ClientActivityLogTab, type ActivityCallRef } from './components/ClientActivityLogTab'
 import { EditInteractionModal } from './components/EditInteractionModal'
 import { AddTaskModal } from './components/AddTaskModal'
 import { AssignClientModal } from './components/AssignClientModal'
@@ -155,6 +156,13 @@ import type { InteractionResponse } from '@/features/clients/api/types'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { ClientDetailPageSkeleton } from './components/ClientDetailPageSkeleton'
 import { useTrackEvent } from '@/features/operatorAnalytics'
+import { useClientCardOpenTracking } from './hooks/useClientCardOpenTracking'
+import { activityCallToRecordingModal } from './components/activityCallToRecordingModal'
+import {
+  useCardSelectionTracking,
+  useInteractionFormOpenTracking,
+  useModalOpenTracking,
+} from './hooks/useClientCardInteractionTracking'
 import { useCallStore } from '@/stores/callStore'
 import { useClientTags } from '@/features/tags/hooks/useTags'
 import { TagSelectorModal } from './components/TagSelectorModal'
@@ -268,26 +276,7 @@ export function ClientDetailPage() {
   const navigate = useNavigate()
   const trackEvent = useTrackEvent()
 
-  useEffect(() => {
-    if (!id) return
-    const numericId = Number(id)
-    // Client IDs are PostgreSQL INTEGER (int32, max 2_147_483_647) across all
-    // services that consume this ID downstream. An out-of-range value (e.g.
-    // a 13-digit Date.now()-style value from a stale URL or a paste error)
-    // would 500 every backend call AND poison the analytics tracking_events
-    // pipeline (its client_id column is also int32). Guard at the boundary:
-    // bounce the operator back to the list with a toast instead of letting
-    // the bad value spread.
-    if (!Number.isFinite(numericId) || numericId < 1 || numericId > 2147483647) {
-      toast.error(`Invalid client ID: ${id}`)
-      navigate('/dashboard/clients', { replace: true })
-      return
-    }
-    trackEvent('client_card_open', {
-      clientId: numericId,
-      meta: { client_id: id },
-    })
-  }, [id, trackEvent, navigate])
+  useClientCardOpenTracking(id, trackEvent)
 
   // Returns true if the value looks like a Ukrainian phone number,
   // regardless of the contact type's isPhone flag
@@ -418,6 +407,7 @@ export function ClientDetailPage() {
     | 'call-sms-history'
     | 'tasks'
     | 'documents'
+    | 'activity'
     | 'ta-chains'
   >('loans')
   const [activeCallSmsTab, setActiveCallSmsTab] = useState<'all' | 'calls' | 'sms' | 'messaging'>(
@@ -771,6 +761,9 @@ export function ClientDetailPage() {
     [messagingOperators]
   )
   const canViewTasks = useHasPermission(PERMISSIONS.CLIENTS.VIEW_TASKS)
+  // Not implied by view_clients: seeing a client and seeing who else
+  // looked at them are separate grants.
+  const canViewActivityLog = useHasPermission(PERMISSIONS.CLIENTS.VIEW_ACTIVITY_LOG)
   const { data: tasks = [], isLoading: isTasksLoading } = useClientTasks(
     clientId,
     isValidClientId && canViewTasks && activeRightCardTab === 'tasks'
@@ -1650,6 +1643,32 @@ export function ClientDetailPage() {
     direction?: string | null
     telephony_type?: string | null
   } | null>(null)
+
+  /**
+   * Play a recording the activity feed offered.
+   *
+   * The feed is a merged list, not a call log, so it carries only what a row
+   * needs to describe itself. Everything the player actually reads it does
+   * have -- ``call_id`` fetches the audio, and the rest is labelling. The
+   * client's own name and phone come from the card, which knows them better
+   * than the feed does.
+   */
+  const handlePlayActivityRecording = useCallback(
+    (call: ActivityCallRef) => {
+      setSelectedCallData(
+        activityCallToRecordingModal(call, {
+          t,
+          locale: i18n.language,
+          timezone: userTimezone,
+          clientName: client?.fullName,
+          phone: client?.phones?.[0]?.number,
+        })
+      )
+      setOpenCallModal('call-recording')
+      setIsCallRecordingModalOpen(true)
+    },
+    [client, i18n.language, t, setOpenCallModal, userTimezone]
+  )
   const [isViewSMSModalOpen, setIsViewSMSModalOpen] = useState(false)
   const [selectedSMSData, setSelectedSMSData] = useState<{
     date: string
@@ -1945,14 +1964,59 @@ export function ClientDetailPage() {
     }
   }, [activeClientCardTab]) // Re-check when tab changes
 
-  useEffect(() => {
-    if (!id) return
-    const numericId = Number(id)
-    trackEvent('client_card_tab_switch', {
-      clientId: Number.isFinite(numericId) ? numericId : null,
-      meta: { tab: activeClientCardTab },
-    })
-  }, [activeClientCardTab, id, trackEvent])
+  // Card tabs and main sections: see useCardSelectionTracking for why a card
+  // load is recorded too, marked `initial`.
+  useCardSelectionTracking('client_card_tab_switch', 'tab', id, activeClientCardTab, trackEvent)
+  useCardSelectionTracking(
+    'client_card_section_open',
+    'section',
+    id,
+    activeRightCardTab,
+    trackEvent
+  )
+
+  // Every other modal in the card, by the name its open event carries. A modal
+  // added later needs one line here; see useModalOpenTracking for the rest.
+  const modalOpenFlags = useMemo(
+    () => ({
+      connect_rr: isConnectRrOpen,
+      writeoff: isWriteoffOpen,
+      reversal: isReversalOpen,
+      assign_client: isAssignClientOpen,
+      record_payment: isRecordPaymentModalOpen,
+      task: isTaskModalOpen,
+      call_recording: isCallRecordingModalOpen,
+      tag: isTagModalOpen,
+      edit_client: isEditModalOpen,
+      edit_interaction: isEditInteractionModalOpen,
+      view_sms: isViewSMSModalOpen,
+      send_sms: isSendSMSModalOpen,
+      send_message: isSendMessageModalOpen,
+      upload_document: isUploadDocModalOpen,
+      view_message: isViewMessageModalOpen,
+    }),
+    [
+      isConnectRrOpen,
+      isWriteoffOpen,
+      isReversalOpen,
+      isAssignClientOpen,
+      isRecordPaymentModalOpen,
+      isTaskModalOpen,
+      isCallRecordingModalOpen,
+      isTagModalOpen,
+      isEditModalOpen,
+      isEditInteractionModalOpen,
+      isViewSMSModalOpen,
+      isSendSMSModalOpen,
+      isSendMessageModalOpen,
+      isUploadDocModalOpen,
+      isViewMessageModalOpen,
+    ]
+  )
+  useModalOpenTracking(id, modalOpenFlags, trackEvent)
+
+  // Interaction form = the chain executor.
+  useInteractionFormOpenTracking(id, isChainExecutorOpen, trackEvent)
 
   // Scroll active tab into view when it changes
   useEffect(() => {
@@ -4008,6 +4072,25 @@ export function ClientDetailPage() {
                       +
                     </span>
                   </button>
+                  {/* Tab 7: Activity */}
+                  {canViewActivityLog && (
+                    <button
+                      type="button"
+                      data-tab="activity"
+                      onClick={() => setActiveRightCardTab('activity')}
+                      className={cn(
+                        'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
+                        activeRightCardTab === 'activity'
+                          ? 'border-primary-300 text-primary-700 bg-primary-300/10'
+                          : 'hover:text-primary-700 text-muted-foreground border-transparent'
+                      )}
+                    >
+                      <Icons.Activity01 size={20} className="shrink-0 text-current" />
+                      <span className="text-xs font-medium whitespace-nowrap md:text-sm">
+                        {t('pages.clients.detail.tabs.activity')}
+                      </span>
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -5342,6 +5425,17 @@ export function ClientDetailPage() {
                         clientId={clientId}
                       />
                     )}
+                  </div>
+                )}
+
+                {/* Tab 7: Activity */}
+                {canViewActivityLog && activeRightCardTab === 'activity' && (
+                  <div className="flex w-full flex-col gap-0">
+                    <ClientActivityLogTab
+                      clientId={isValidClientId ? clientId : null}
+                      isActive={activeRightCardTab === 'activity'}
+                      onPlayRecording={handlePlayActivityRecording}
+                    />
                   </div>
                 )}
               </div>
