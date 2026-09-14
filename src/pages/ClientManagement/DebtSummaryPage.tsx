@@ -13,6 +13,8 @@ import {
   formatMoneyUAHTwoDecimals,
 } from '@/lib/formatters'
 import { useAuthStore } from '@/stores/authStore'
+import { useTrackEvent } from '@/features/operatorAnalytics'
+import { useModalOpenTracking } from './hooks/useClientCardInteractionTracking'
 import { useParams, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
@@ -188,6 +190,38 @@ export function DebtSummaryPage() {
   const { mutate: reassignEmployeeMutation, isPending: isReassigning } =
     useReassignPaymentAssignedUser()
   const [isReassignModalOpen, setIsReassignModalOpen] = useState(false)
+
+  // The payment modals this page owns. Audit only hears about the ones that
+  // succeed -- a form opened and abandoned leaves no trace at all, and the
+  // details view leaves none either, though it is where an operator reads a
+  // client's whole debt breakdown. That gap is what this closes. Same event
+  // type the client card emits, so the activity feed renders them identically.
+  // No edit modal here: this page never gained one.
+  //
+  // ``record_payment`` uses the same key the client card emits. The modal is
+  // mounted on both, so keying them apart would split one action into two
+  // names in the feed for no reason an operator could see.
+  const trackEvent = useTrackEvent()
+  const paymentModalFlags = useMemo(
+    () => ({
+      payment_details: isPaymentDetailsModalOpen,
+      record_payment: isRecordPaymentModalOpen,
+      cancel_payment: isCancelModalOpen,
+      reassign_payment: isReassignModalOpen,
+      verify_payment: isVerificationModalOpen,
+    }),
+    [
+      isPaymentDetailsModalOpen,
+      isRecordPaymentModalOpen,
+      isCancelModalOpen,
+      isReassignModalOpen,
+      isVerificationModalOpen,
+    ]
+  )
+
+  // Same baseline-then-transition rule as the client card, from the same
+  // tested hook rather than a hand-kept copy of it.
+  useModalOpenTracking(id, paymentModalFlags, trackEvent)
 
   // Call functionality state
   const { isCallActive, setOpenCallModal } = useCallStore()

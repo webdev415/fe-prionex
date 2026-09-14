@@ -1796,7 +1796,7 @@ export function ClientManagementPage() {
       sortKey: 'fullName',
       render: (client) => (
         <Link
-          to={`/dashboard/clients/${client.id}`}
+          to={`/dashboard/clients/${client.id}?from=list`}
           className="text-primary-700 hover:text-primary-600 cursor-pointer text-left hover:underline"
         >
           {client.fullName}
@@ -1811,7 +1811,7 @@ export function ClientManagementPage() {
       sortKey: 'taxIdNumber',
       render: (client) => (
         <Link
-          to={`/dashboard/clients/${client.id}`}
+          to={`/dashboard/clients/${client.id}?from=list`}
           className="text-primary-700 hover:text-primary-600 cursor-pointer text-left hover:underline"
         >
           {client.taxIdNumber}
