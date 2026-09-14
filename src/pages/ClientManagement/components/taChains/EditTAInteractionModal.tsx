@@ -221,8 +221,6 @@ export function EditTAInteractionModal({
   // which would collide and lose values on lookup AND on save.
   const [seenInteractionId, setSeenInteractionId] = useState<number | null>(null)
   const [stepValues, setStepValues] = useState<Record<string, string>>({})
-  const [promiseDate, setPromiseDate] = useState<string>('')
-  const [promiseAmount, setPromiseAmount] = useState<string>('')
   const [creditId, setCreditId] = useState<string>('')
   const [notes, setNotes] = useState<string>('')
   // step.id values whose date field currently holds invalid/incomplete text.
@@ -269,8 +267,6 @@ export function EditTAInteractionModal({
       )
     }
     setStepValues(next)
-    setPromiseDate(interaction.promise_date ? interaction.promise_date.slice(0, 10) : '')
-    setPromiseAmount(interaction.promise_amount ?? '')
     setCreditId(interaction.credit_id != null ? String(interaction.credit_id) : '')
     setNotes(interaction.notes ?? '')
   }
@@ -285,23 +281,17 @@ export function EditTAInteractionModal({
   // the saved interaction has a value for it, so admins can clear stale data
   // even if the chain definition has since changed.
   const chainCapabilities = useMemo(() => {
-    let promiseDate = false
-    let promiseAmount = false
     let credit = false
     for (const step of orderedSteps) {
       const ta = taById.get(step.target_action_id)
       if (!ta || ta.field_type !== 'dropdown') continue
       for (const dv of ta.dropdown_values) {
-        if (dv.require_promise_date) promiseDate = true
-        if (dv.require_promise_amount) promiseAmount = true
         if (dv.require_credit) credit = true
       }
     }
-    return { promiseDate, promiseAmount, credit }
+    return { credit }
   }, [orderedSteps, taById])
 
-  const showPromiseDate = chainCapabilities.promiseDate || !!interaction?.promise_date
-  const showPromiseAmount = chainCapabilities.promiseAmount || !!interaction?.promise_amount
   const showCredit = chainCapabilities.credit || interaction?.credit_id != null
 
   const handleSave = async () => {
@@ -356,10 +346,13 @@ export function EditTAInteractionModal({
         id: interaction.id,
         payload: {
           step_data: cleanedStepData,
-          promise_date: promiseDate ? `${promiseDate}T00:00:00` : undefined,
-          clear_promise_date: !promiseDate,
-          promise_amount: promiseAmount ? parseFloat(promiseAmount) : undefined,
-          clear_promise_amount: !promiseAmount,
+          // No promise_date / promise_amount, and deliberately no clear_*
+          // either (KAN-1069 follow-up). The promise now comes from the chain
+          // steps the admin flagged, and the backend rewrites both columns
+          // from `step_data` on this very request. Sending `clear_*: true`
+          // because the removed inputs are empty would wipe the promise on
+          // every edit — the columns would be cleared and then, for a chain
+          // with no flagged steps, never refilled.
           credit_id: creditId ? parseInt(creditId, 10) : undefined,
           clear_credit_id: !creditId,
           notes: trimmedNotes || '',
@@ -577,36 +570,6 @@ export function EditTAInteractionModal({
                 </div>
               )
             })}
-
-            {showPromiseDate && (
-              <div className="flex flex-col gap-1">
-                <Label className="text-foreground text-sm">
-                  {t('pages.clientChains.promiseDate')}
-                </Label>
-                <Input
-                  type="date"
-                  value={promiseDate}
-                  onChange={(e) => setPromiseDate(e.target.value)}
-                />
-              </div>
-            )}
-
-            {showPromiseAmount && (
-              <div className="flex flex-col gap-1">
-                <Label className="text-foreground text-sm">
-                  {t('pages.clientChains.promiseAmountUAH')}
-                </Label>
-                <Input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  placeholder="0.00"
-                  leftIcon={<span className="text-foreground">₴</span>}
-                  value={promiseAmount}
-                  onChange={(e) => setPromiseAmount(e.target.value)}
-                />
-              </div>
-            )}
 
             {showCredit && debts.length > 0 && (
               <div className="flex flex-col gap-1">
