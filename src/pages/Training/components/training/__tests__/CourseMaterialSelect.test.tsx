@@ -99,3 +99,15 @@ describe('CourseMaterialSelect', () => {
     ).toBeInTheDocument()
   })
 })
+
+describe('CourseMaterialSelect while a change is in flight', () => {
+  it('does not accept a second click', () => {
+    // selectedIds comes from the server on the course-edit path, so until the
+    // refetch lands the row still shows its old state — an enabled row would
+    // repeat the same attach.
+    const onChange = vi.fn()
+    render(<CourseMaterialSelect selectedIds={[]} onChange={onChange} disabled />)
+    fireEvent.click(screen.getByRole('checkbox', { name: /Rebuttals slides/ }))
+    expect(onChange).not.toHaveBeenCalled()
+  })
+})

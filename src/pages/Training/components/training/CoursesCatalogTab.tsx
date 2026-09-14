@@ -668,7 +668,7 @@ function CourseDetailsDialog({
                     className="rounded-md border border-[#EDEDED] bg-white px-2.5 py-1 text-[11px] font-medium text-[#05040D] hover:bg-[#F7F7F7]"
                   >
                     {addingMaterials
-                      ? t('common.done', 'Done')
+                      ? t('pages.training.training.courses.doneAdding', 'Done')
                       : t('pages.training.training.courses.addMaterials', 'Add materials')}
                   </button>
                 ) : null}
@@ -678,25 +678,43 @@ function CourseDetailsDialog({
               {addingMaterials ? (
                 <CourseMaterialSelect
                   selectedIds={materials.map((m) => m.id)}
+                  // Disabled while either mutation is in flight: `selectedIds`
+                  // comes from the server list, so until the refetch lands the
+                  // box still looks unchecked and a second click repeats the
+                  // same attach.
+                  disabled={attachMaterial.isPending || detachMaterial.isPending}
                   onChange={(ids) => {
                     const current = new Set(materials.map((m) => m.id))
                     const next = new Set(ids)
+                    // Failures are reported, not swallowed. Without this the
+                    // checkbox just springs back and the trainer is told
+                    // nothing — the silent shape this control was added to fix.
+                    const onError = (key: 'attach' | 'detach') => () =>
+                      toast.error(
+                        key === 'attach'
+                          ? t(
+                              'pages.training.training.materials.errors.attach',
+                              'Could not attach the material.'
+                            )
+                          : t(
+                              'pages.training.training.materials.errors.detach',
+                              'Could not detach the material.'
+                            )
+                      )
                     for (const id of next) {
                       if (!current.has(id)) {
-                        attachMaterial.mutate({
-                          materialId: id,
-                          targetType: 'course',
-                          targetId: course.id,
-                        })
+                        attachMaterial.mutate(
+                          { materialId: id, targetType: 'course', targetId: course.id },
+                          { onError: onError('attach') }
+                        )
                       }
                     }
                     for (const id of current) {
                       if (!next.has(id)) {
-                        detachMaterial.mutate({
-                          materialId: id,
-                          targetType: 'course',
-                          targetId: course.id,
-                        })
+                        detachMaterial.mutate(
+                          { materialId: id, targetType: 'course', targetId: course.id },
+                          { onError: onError('detach') }
+                        )
                       }
                     }
                   }}

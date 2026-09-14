@@ -19,9 +19,17 @@ import { materialSubtitle } from '@/features/training/types/materials'
 export interface CourseMaterialSelectProps {
   selectedIds: number[]
   onChange: (ids: number[]) => void
+  /** Freeze the rows while a change is in flight. `selectedIds` comes from the
+   *  server where this edits an existing course, so until the refetch lands a
+   *  row still shows its old state and a second click repeats the same call. */
+  disabled?: boolean
 }
 
-export function CourseMaterialSelect({ selectedIds, onChange }: CourseMaterialSelectProps) {
+export function CourseMaterialSelect({
+  selectedIds,
+  onChange,
+  disabled = false,
+}: CourseMaterialSelectProps) {
   const { t } = useTranslation('common')
   const [search, setSearch] = useState('')
   const [debounced, setDebounced] = useState('')
@@ -74,7 +82,8 @@ export function CourseMaterialSelect({ selectedIds, onChange }: CourseMaterialSe
                     role="checkbox"
                     aria-checked={checked}
                     onClick={() => toggle(m.id)}
-                    className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-[#F7F7F7]"
+                    disabled={disabled}
+                    className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-[#F7F7F7] disabled:opacity-50"
                   >
                     <span
                       aria-hidden="true"
