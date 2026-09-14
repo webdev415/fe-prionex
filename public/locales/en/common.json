@@ -3451,11 +3451,12 @@
       "training": {
         "courses": {
           "addCourse": "Add Course",
+          "addMaterials": "Add materials",
           "allCategories": "All categories",
           "assign": "Assign",
           "assignCta": "Assign",
           "assignHint": "Select operators to enroll.",
-          "attachFailed": "The course was created, but its materials could not be attached.",
+          "attachFailed": "{{count}} material(s) could not be attached. Add them from the course.",
           "author": "Author",
           "avgCompletion": "Average completion",
           "createCta": "Create a course",
@@ -3561,6 +3562,7 @@
             "list": "Could not load the library.",
             "noFile": "Choose a file to upload.",
             "noTitle": "Give the material a title.",
+            "openLink": "This link cannot be opened — its address is not a valid https:// URL.",
             "update": "Could not update the material.",
             "upload": "Could not upload the material."
           },
@@ -3579,6 +3581,7 @@
           "noCalls": "No calls found.",
           "noCategory": "No category",
           "noneAttached": "No materials attached yet.",
+          "openLink": "Open link",
           "preview": "Preview",
           "previewError": "Could not load the preview.",
           "previewLoading": "Loading preview…",

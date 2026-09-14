@@ -16,6 +16,7 @@ import {
   MATERIAL_TYPES,
   isPreviewable,
   materialSubtitle,
+  openMaterialLink,
   type Material,
   type MaterialType,
 } from '@/features/training/types/materials'
@@ -122,8 +123,14 @@ export function MaterialsLibraryTab() {
       // No file behind it: the download endpoint answers 409. Opening the url is
       // the equivalent action, and safeHttpUrl is what keeps a stored
       // `javascript:` out of window.open.
-      const href = safeHttpUrl(m.url)
-      if (href) window.open(href, '_blank', 'noopener,noreferrer')
+      if (!openMaterialLink(m, safeHttpUrl)) {
+        toast.error(
+          t(
+            'pages.training.training.materials.errors.openLink',
+            'This link cannot be opened — its address is not a valid https:// URL.'
+          )
+        )
+      }
       return
     }
     setDownloadingId(m.id)
@@ -316,9 +323,15 @@ export function MaterialsLibraryTab() {
                     onClick={() => handleDownload(m)}
                     disabled={downloadingId === m.id}
                     className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F0FDF4] text-[#204E4D] hover:bg-[#BBFB5B]/40 disabled:opacity-50"
-                    aria-label={t('actions.download', 'Download')}
+                    aria-label={
+                      m.kind === 'link'
+                        ? t('pages.training.training.materials.openLink', 'Open link')
+                        : t('actions.download', 'Download')
+                    }
                   >
-                    <Icons.Download size={16} />
+                    {/* A link is opened, not downloaded — saying "Download" is
+                        wrong for a screen reader and for anyone reading the icon. */}
+                    {m.kind === 'link' ? <Icons.Link01 size={16} /> : <Icons.Download size={16} />}
                   </button>
                 </div>
               </div>

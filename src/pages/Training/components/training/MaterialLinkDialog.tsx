@@ -104,14 +104,14 @@ export function MaterialLinkDialog({ open, onClose }: MaterialLinkDialogProps) {
 
           <label className="flex flex-col gap-1">
             <span className="text-xs font-medium text-[#05040D]">
-              {t('pages.training.training.materials.title', 'Title')}
+              {t('pages.training.training.materials.titleField', 'Title')}
             </span>
             <Input value={title} onChange={(e) => setTitle(e.target.value)} />
           </label>
 
           <label className="flex flex-col gap-1">
             <span className="text-xs font-medium text-[#05040D]">
-              {t('pages.training.training.materials.description', 'Description')}
+              {t('pages.training.training.materials.descriptionField', 'Description')}
             </span>
             <Input value={description} onChange={(e) => setDescription(e.target.value)} />
           </label>
@@ -125,7 +125,10 @@ export function MaterialLinkDialog({ open, onClose }: MaterialLinkDialogProps) {
             <Input
               value={tagsInput}
               onChange={(e) => setTagsInput(e.target.value)}
-              placeholder={t('pages.training.training.materials.tagsHint', 'comma, separated')}
+              placeholder={t(
+                'pages.training.training.materials.tagsPlaceholder',
+                'script, onboarding'
+              )}
             />
           </label>
         </div>

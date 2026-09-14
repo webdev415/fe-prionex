@@ -16,7 +16,11 @@ import {
 } from '@/features/training/hooks/useCourses'
 import type { CourseCardData, CourseLevel } from '@/features/training/types/courses'
 import { safeHttpUrl } from '@/lib/safeUrl'
-import { useAttachMaterial, useMaterialsForTarget } from '@/features/training/hooks/useMaterials'
+import {
+  useAttachMaterial,
+  useDetachMaterial,
+  useMaterialsForTarget,
+} from '@/features/training/hooks/useMaterials'
 import { CourseMaterialSelect } from './CourseMaterialSelect'
 import { EmployeeSearchList } from '../dialogue/EmployeeMultiSelect'
 import { TrainingPrimaryButton, TrainingSearchBar } from './TrainingToolbar'
@@ -320,9 +324,14 @@ function CreateCoursePanel({ onClose }: { onClose: () => void }) {
   const [description, setDescription] = useState('')
   const [modules, setModules] = useState<ModuleDraft[]>([])
   const [materialIds, setMaterialIds] = useState<number[]>([])
+  // createCourse.isPending goes false the moment the course exists — the attach
+  // round-trips are still in flight after that, and a second click there makes a
+  // duplicate course. This covers the whole submission, not just the mutation.
+  const [submitting, setSubmitting] = useState(false)
 
   const submit = () => {
-    if (!title.trim()) return
+    if (!title.trim() || submitting) return
+    setSubmitting(true)
     createCourse.mutate(
       {
         title: title.trim(),
@@ -339,27 +348,33 @@ function CreateCoursePanel({ onClose }: { onClose: () => void }) {
       {
         onSuccess: async (created) => {
           // The course has no id until it exists, so the picked materials are
-          // attached here rather than sent with the payload. A failure leaves a
-          // created course with fewer materials — said out loud rather than
-          // swallowed, because the trainer can re-attach from the course.
-          try {
-            for (const materialId of materialIds) {
-              await attachMaterial.mutateAsync({
+          // attached here rather than sent with the payload. allSettled, not a
+          // loop that throws: one failure must not skip the materials after it.
+          const results = await Promise.allSettled(
+            materialIds.map((materialId) =>
+              attachMaterial.mutateAsync({
                 materialId,
                 targetType: 'course',
                 targetId: created.id,
               })
-            }
-          } catch {
+            )
+          )
+          const failed = results.filter((r) => r.status === 'rejected').length
+          if (failed > 0) {
+            // Says how many, because the rest did attach and the trainer can
+            // add the missing ones from the course itself.
             toast.error(
-              t(
-                'pages.training.training.courses.attachFailed',
-                'The course was created, but its materials could not be attached.'
-              )
+              t('pages.training.training.courses.attachFailed', {
+                defaultValue:
+                  '{{count}} material(s) could not be attached. Add them from the course.',
+                count: failed,
+              })
             )
           }
+          setSubmitting(false)
           onClose()
         },
+        onError: () => setSubmitting(false),
       }
     )
   }
@@ -540,7 +555,7 @@ function CreateCoursePanel({ onClose }: { onClose: () => void }) {
           <button
             type="button"
             onClick={submit}
-            disabled={!title.trim() || createCourse.isPending}
+            disabled={!title.trim() || submitting}
             className="rounded-md bg-[#BBFB5B] px-4 py-2 text-xs font-semibold text-[#05040D] hover:bg-[#a9e94f] disabled:opacity-50"
           >
             {t('pages.training.training.courses.createCta', 'Create a course')}
@@ -563,6 +578,9 @@ function CourseDetailsDialog({
   const { t } = useTranslation('common')
   const { data: full } = useCourse(course.id)
   const updateCourse = useUpdateCourse()
+  const attachMaterial = useAttachMaterial()
+  const detachMaterial = useDetachMaterial()
+  const [addingMaterials, setAddingMaterials] = useState(false)
   const archiveCourse = useArchiveCourse()
   const detail = full ?? course
   const lessons = detail.lessons ?? []
@@ -637,11 +655,53 @@ function CourseDetailsDialog({
             </div>
           ) : null}
 
-          {materials.length > 0 ? (
+          {materials.length > 0 || canManage ? (
             <div className="flex flex-col gap-2">
-              <span className="text-sm font-semibold text-[#05040D]">
-                {t('pages.training.training.courses.materials', 'Materials')}
-              </span>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-[#05040D]">
+                  {t('pages.training.training.courses.materials', 'Materials')}
+                </span>
+                {canManage ? (
+                  <button
+                    type="button"
+                    onClick={() => setAddingMaterials((v) => !v)}
+                    className="rounded-md border border-[#EDEDED] bg-white px-2.5 py-1 text-[11px] font-medium text-[#05040D] hover:bg-[#F7F7F7]"
+                  >
+                    {addingMaterials
+                      ? t('common.done', 'Done')
+                      : t('pages.training.training.courses.addMaterials', 'Add materials')}
+                  </button>
+                ) : null}
+              </div>
+              {/* Without this the only repair for a half-attached course is to
+                  delete and recreate it: creation attaches, and nothing else did. */}
+              {addingMaterials ? (
+                <CourseMaterialSelect
+                  selectedIds={materials.map((m) => m.id)}
+                  onChange={(ids) => {
+                    const current = new Set(materials.map((m) => m.id))
+                    const next = new Set(ids)
+                    for (const id of next) {
+                      if (!current.has(id)) {
+                        attachMaterial.mutate({
+                          materialId: id,
+                          targetType: 'course',
+                          targetId: course.id,
+                        })
+                      }
+                    }
+                    for (const id of current) {
+                      if (!next.has(id)) {
+                        detachMaterial.mutate({
+                          materialId: id,
+                          targetType: 'course',
+                          targetId: course.id,
+                        })
+                      }
+                    }
+                  }}
+                />
+              ) : null}
               {materials.map((m) => {
                 const href = m.kind === 'link' ? safeHttpUrl(m.url) : undefined
                 return (

@@ -134,3 +134,21 @@ export function materialSubtitle(material: Material): string {
   if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`
   return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`
 }
+
+/**
+ * Open a link material, or report why it cannot be opened.
+ *
+ * Returns false when the stored url does not survive `safeHttpUrl` — a legacy
+ * row, or a value that reached the column by some path other than the validated
+ * endpoint. The caller must say something: a button that looks live and does
+ * nothing is worse than an error.
+ */
+export function openMaterialLink(
+  material: Pick<Material, 'url'>,
+  safe: (raw: unknown) => string | undefined
+): boolean {
+  const href = safe(material.url)
+  if (!href) return false
+  window.open(href, '_blank', 'noopener,noreferrer')
+  return true
+}
