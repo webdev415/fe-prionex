@@ -192,3 +192,61 @@ describe('decideChainAutoOpen — wait-window simulation', () => {
     expect(d).toEqual({ open: false, disarm: false })
   })
 })
+
+describe('decideChainAutoOpen - System (hidden) chains (KAN-1045)', () => {
+  // A hidden chain's instance fits the "launched" description exactly: active,
+  // and system-started because a trigger created it. Visibility is the only
+  // thing that tells it apart.
+  const hiddenChain: ChainInstanceLite = {
+    id: 200,
+    status: 'active',
+    started_by: null,
+    is_system_hidden: true,
+  }
+
+  it('does not pop the executor for one', () => {
+    const decision = decideChainAutoOpen({
+      armed: true,
+      instances: [hiddenChain],
+      seenIds: noSeen,
+      isExecutorOpen: false,
+    })
+    expect(decision).toEqual({ open: false, disarm: false })
+  })
+
+  it('stays armed while only hidden instances exist, so a later real one pops', () => {
+    // This is where the real damage shows. The search stops at the first match
+    // and disarms, so an unguarded hidden instance would consume the pop the
+    // operator's own debt-status chain was owed. A pure open/disarm result
+    // cannot say WHICH instance opened it — staying armed is the observable
+    // proof that the hidden one was passed over rather than acted on.
+    let d = decideChainAutoOpen({
+      armed: true,
+      instances: [hiddenChain],
+      seenIds: noSeen,
+      isExecutorOpen: false,
+    })
+    expect(d).toEqual({ open: false, disarm: false })
+
+    // The operator's chain shows up on a later poll.
+    d = decideChainAutoOpen({
+      armed: true,
+      instances: [hiddenChain, launchedChain],
+      seenIds: noSeen,
+      isExecutorOpen: false,
+    })
+    expect(d).toEqual({ open: true, disarm: false })
+  })
+
+  it('still pops an ordinary system-started chain (the KAN-396 flow)', () => {
+    // The guard must not catch debt-status chains, which are also
+    // system-started - they are simply not hidden.
+    const decision = decideChainAutoOpen({
+      armed: true,
+      instances: [{ ...launchedChain, is_system_hidden: false }],
+      seenIds: noSeen,
+      isExecutorOpen: false,
+    })
+    expect(decision).toEqual({ open: true, disarm: false })
+  })
+})
