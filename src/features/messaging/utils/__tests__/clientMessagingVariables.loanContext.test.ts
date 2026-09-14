@@ -57,4 +57,28 @@ describe('credit variables when the client has no open credit', () => {
 
     expect(vars.contract_number).toBe('CLOSED-001')
   })
+
+  it('does not date the message from a credit that was not selected', () => {
+    const withClosedDebt = {
+      debts: [
+        {
+          contract_number: 'CLOSED-001',
+          debt_close_date: '2024-01-31',
+          credit_closed_date: '2024-01-31',
+        },
+      ],
+      max_promise_to_pay_date: null,
+    } as never
+
+    const vars = buildClientMessagingVariables({
+      clientName: 'Kovalchuk Olena',
+      clientDisplayName: 'Olena',
+      clientData: withClosedDebt,
+      selectedLoan: null,
+      hasLoanContext: true,
+    })
+
+    expect(vars.due_date).toBe('')
+    expect(renderMessagingTemplate('{{due_date}}', vars)).toBe('{{due_date}}')
+  })
 })

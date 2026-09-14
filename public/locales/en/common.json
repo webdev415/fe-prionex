@@ -5554,6 +5554,7 @@
           "debtAmount": "Debt amount",
           "loanNumber": "Loan number",
           "noOpenLoans": "No open credits",
+          "creditVariableUnresolved": "This message uses credit variables, but the client has no open credit.",
           "templateVariables": "Template Variables",
           "sending": "Sending...",
           "smsSentSuccessfully": "SMS sent successfully",

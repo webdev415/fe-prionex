@@ -26,6 +26,7 @@ import { authApi } from '@/features/auth/api/authApi'
 import { useQuery } from '@tanstack/react-query'
 import { getErrorMessage } from '@/lib/errors'
 import { formatDateDotDMY, formatMoneyUAHTwoDecimals } from '@/lib/formatters'
+import { mentionsCreditVariable } from '@/features/messaging/utils/creditPlaceholders'
 
 export interface SendSMSModalProps {
   open: boolean
@@ -217,8 +218,12 @@ export function SendSMSModal({
   }, [selectedTemplateId, message, messageEdited, customMessage, variableValues])
 
   const isDailyLimitReached = smsSentToday >= dailyLimit
+  const creditVariableUnresolved = !selectedLoan && mentionsCreditVariable(displayMessage)
   const canSend =
-    !isDailyLimitReached && displayMessage.trim().length > 0 && !sendSMSMutation.isPending
+    !isDailyLimitReached &&
+    displayMessage.trim().length > 0 &&
+    !creditVariableUnresolved &&
+    !sendSMSMutation.isPending
 
   const handleSend = async () => {
     if (!canSend) return
@@ -232,7 +237,7 @@ export function SendSMSModal({
               template_id: selectedTemplateId,
               variables: {
                 client_name: variableValues.client_name,
-                debt_amount: variableValues.debt_amount || '0',
+                debt_amount: variableValues.debt_amount,
                 operator_name: variableValues.operator_name,
                 operator_phone: variableValues.operator_phone,
                 due_date: variableValues.due_date,

@@ -6293,6 +6293,7 @@
           "debtAmount": "Сума боргу",
           "loanNumber": "Номер позики",
           "noOpenLoans": "Немає відкритих кредитів",
+          "creditVariableUnresolved": "Це повідомлення використовує змінні кредиту, але у клієнта немає відкритих кредитів.",
           "templateVariables": "Змінні шаблону",
           "sending": "Відправка...",
           "smsSentSuccessfully": "SMS успішно відправлено",

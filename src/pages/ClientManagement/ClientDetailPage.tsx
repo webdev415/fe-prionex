@@ -526,6 +526,15 @@ export function ClientDetailPage() {
   // Powers the RecordPaymentModal's ``currentDebt`` prop with the identical value.
   const { data: clientDetail } = useClient(clientId, isValidClientId)
   const eligibleLoansForRr = useMemo(() => (loans ?? []).filter(isOpenLoan), [loans])
+  const openLoanOptions = useMemo(
+    () =>
+      (loans ?? []).filter(isOpenLoan).map((l) => ({
+        id: l.id,
+        loanNumber: l.contract_number,
+        totalToRepay: Number(l.remaining_debt_amount ?? 0),
+      })),
+    [loans]
+  )
   const hasEligibleLoansForRr = eligibleLoansForRr.length > 0
   const { data: restructuringAgreements = [] } = useClientRestructuringAgreements(
     clientId,
@@ -5841,11 +5850,7 @@ export function ClientDetailPage() {
           clientId={clientId}
           clientName={client.fullName}
           phoneNumber={selectedPhoneForSMS || client.phones?.[0]?.number || ''}
-          loans={(client.loans ?? []).filter(isOpenLoan).map((l) => ({
-            id: l.id,
-            loanNumber: l.loanNumber,
-            totalToRepay: l.remainingDebtAmount,
-          }))}
+          loans={openLoanOptions}
           onSent={() => {
             // SMS sent successfully - history will refresh automatically via query invalidation
           }}
@@ -5873,11 +5878,7 @@ export function ClientDetailPage() {
           }
           email={profile?.email ?? null}
           initialPhone={selectedPhoneForMessage || undefined}
-          loans={(client.loans ?? []).filter(isOpenLoan).map((l) => ({
-            id: l.id,
-            loanNumber: l.loanNumber,
-            totalToRepay: l.remainingDebtAmount,
-          }))}
+          loans={openLoanOptions}
           onSent={() => {
             // Messaging history refreshes via react-query invalidation in the mutation hook.
           }}
