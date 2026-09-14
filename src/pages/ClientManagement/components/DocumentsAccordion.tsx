@@ -1,9 +1,9 @@
 /**
  * Documents Accordion Component
  *
- * Groups documents by debt (credit) in collapsible sections:
- * - "Без прив'язки до кредиту" — documents with debt_id = null
+ * Groups documents by debt (credit) in collapsible sections, in render order:
  * - "Кредит #contract_number — counterparty" — per-debt sections
+ * - "Без прив'язки до кредиту" — documents with debt_id = null, last
  *
  * Each document row has: filename, type badge, date, size, preview, download, delete buttons.
  */
@@ -263,15 +263,9 @@ export function DocumentsAccordion({ documents, loans, clientId }: DocumentsAcco
 
   return (
     <div className="flex w-full flex-col gap-3">
-      {/* Unlinked documents */}
-      {unlinked.length > 0 &&
-        renderSection(
-          'unlinked',
-          t('pages.clients.detail.documentsUnlinked', "Без прив'язки до кредиту"),
-          unlinked
-        )}
-
-      {/* Per-debt sections */}
+      {/* Per-debt sections lead. byDebt is filled by a single walk of
+          sortedDocuments, so its insertion order is first-appearance order,
+          and Array.from preserves it. */}
       {Array.from(byDebt.entries()).map(([debtId, docs]) => {
         const loan = loanMap.get(debtId)
         const title = loan
@@ -279,6 +273,15 @@ export function DocumentsAccordion({ documents, loans, clientId }: DocumentsAcco
           : `${t('pages.clients.detail.loan', 'Кредит')} #${debtId}`
         return renderSection(`debt-${debtId}`, title, docs)
       })}
+
+      {/* Unlinked documents render last: a document with no credit is the
+          exception rather than what the operator opened the tab for. */}
+      {unlinked.length > 0 &&
+        renderSection(
+          'unlinked',
+          t('pages.clients.detail.documentsUnlinked', "Без прив'язки до кредиту"),
+          unlinked
+        )}
 
       {/* Preview modal */}
       {previewDoc && (
