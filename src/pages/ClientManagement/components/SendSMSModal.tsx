@@ -26,7 +26,11 @@ import { authApi } from '@/features/auth/api/authApi'
 import { useQuery } from '@tanstack/react-query'
 import { getErrorMessage } from '@/lib/errors'
 import { formatDateDotDMY, formatMoneyUAHTwoDecimals } from '@/lib/formatters'
-import { unresolvedVariables } from '@/features/messaging/utils/unresolvedVariables'
+import {
+  blockingVariables,
+  unresolvedVariables,
+} from '@/features/messaging/utils/unresolvedVariables'
+import { resolveOperatorPhone } from '@/features/messaging/utils/operatorPhone'
 
 export interface SendSMSModalProps {
   open: boolean
@@ -192,7 +196,7 @@ export function SendSMSModal({
     const dueDate = formatDateDotDMY(clientData?.max_promise_to_pay_date ?? null)
 
     // Get operator_phone from user API response
-    const operatorPhone = currentUserData?.data?.phone || ''
+    const operatorPhone = resolveOperatorPhone(currentUserData?.data)
 
     return {
       client_name: clientNameField,
@@ -224,10 +228,11 @@ export function SendSMSModal({
     [displayMessage, variableValues]
   )
   const hasUnresolvedVariables = missingVariables.length > 0
+  const blocksSending = blockingVariables(missingVariables).length > 0
   const canSend =
     !isDailyLimitReached &&
     displayMessage.trim().length > 0 &&
-    !hasUnresolvedVariables &&
+    !blocksSending &&
     !sendSMSMutation.isPending
 
   const handleSend = async () => {

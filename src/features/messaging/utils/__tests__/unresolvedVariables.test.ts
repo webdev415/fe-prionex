@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { unresolvedVariables } from '../unresolvedVariables'
+import { blockingVariables, unresolvedVariables } from '../unresolvedVariables'
 
 const resolved = {
   client_name: 'Olena',
@@ -66,5 +66,24 @@ describe('finding the variables a message still has no value for', () => {
       'debt_amount',
     ])
     expect(unresolvedVariables('', resolved, 'double')).toEqual([])
+  })
+
+  it('blocks only on variables that choosing a credit can fill', () => {
+    expect(blockingVariables(['contract_number', 'debt_amount', 'due_date'])).toEqual([
+      'contract_number',
+      'debt_amount',
+      'due_date',
+    ])
+  })
+
+  it('does not block on a variable the operator cannot supply here', () => {
+    expect(blockingVariables(['operator_phone', 'operator_name'])).toEqual([])
+  })
+
+  it('still reports the unblocking ones so the operator is warned', () => {
+    const missing = unresolvedVariables('{{operator_phone}}', { operator_phone: '' }, 'double')
+
+    expect(missing).toEqual(['operator_phone'])
+    expect(blockingVariables(missing)).toEqual([])
   })
 })

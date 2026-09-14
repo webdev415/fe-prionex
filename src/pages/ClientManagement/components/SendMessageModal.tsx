@@ -48,7 +48,10 @@ import {
 } from '@/features/messaging'
 import type { MessagingChannel, MessagingDraft } from '@/features/messaging'
 import { CHANNEL_SPECS } from '@/pages/MessagingDrafts/draftModalShared'
-import { unresolvedVariables } from '@/features/messaging/utils/unresolvedVariables'
+import {
+  blockingVariables,
+  unresolvedVariables,
+} from '@/features/messaging/utils/unresolvedVariables'
 import { SendMessageModalSkeleton } from './SendMessageModalSkeleton'
 
 const formatClientNameInitials = (fullName: string): string => {
@@ -393,13 +396,14 @@ export function SendMessageModal({
     [body, showSubject, subject, variableValues]
   )
   const hasUnresolvedVariables = missingVariables.length > 0
+  const blocksSending = blockingVariables(missingVariables).length > 0
   const canSend =
     clientId > 0 &&
     !!service &&
     hasDestination &&
     (body.trim().length > 0 || hasViberRich) &&
     (!channelSpec.subjectRequired || subject.trim().length > 0) &&
-    !hasUnresolvedVariables &&
+    !blocksSending &&
     !quotaExceeded &&
     !sendMessageMutation.isPending
 

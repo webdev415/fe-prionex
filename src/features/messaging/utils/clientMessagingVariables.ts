@@ -1,6 +1,7 @@
 import type { ClientDetail } from '@/features/clients/api/types'
 import { formatDateDotDMY, formatMoneyUAHTwoDecimals } from '@/lib/formatters'
 import type { CurrentUserResponse } from '@/types/api'
+import { resolveOperatorPhone } from './operatorPhone'
 
 /** React-query may store either AxiosResponse or the unwrapped body. */
 export function resolveCurrentUserFromQuery(data: unknown): CurrentUserResponse | undefined {
@@ -56,9 +57,7 @@ export function buildClientMessagingVariables(options: {
   )
   const dueDate = promiseDueDate || debtDueDate
 
-  const operatorPhone =
-    (currentUser?.phone || '').trim() ||
-    (currentUser?.asterisk_extension ? `ext. ${currentUser.asterisk_extension}` : '')
+  const operatorPhone = resolveOperatorPhone(currentUser)
 
   return {
     client_name: clientDisplayName,
