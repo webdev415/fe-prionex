@@ -26,7 +26,7 @@ import { authApi } from '@/features/auth/api/authApi'
 import { useQuery } from '@tanstack/react-query'
 import { getErrorMessage } from '@/lib/errors'
 import { formatDateDotDMY, formatMoneyUAHTwoDecimals } from '@/lib/formatters'
-import { mentionsCreditVariable } from '@/features/messaging/utils/creditPlaceholders'
+import { unresolvedVariables } from '@/features/messaging/utils/unresolvedVariables'
 
 export interface SendSMSModalProps {
   open: boolean
@@ -218,11 +218,15 @@ export function SendSMSModal({
   }, [selectedTemplateId, message, messageEdited, customMessage, variableValues])
 
   const isDailyLimitReached = smsSentToday >= dailyLimit
-  const creditVariableUnresolved = !selectedLoan && mentionsCreditVariable(displayMessage)
+  const missingVariables = useMemo(
+    () => unresolvedVariables(displayMessage, variableValues),
+    [displayMessage, variableValues]
+  )
+  const hasUnresolvedVariables = missingVariables.length > 0
   const canSend =
     !isDailyLimitReached &&
     displayMessage.trim().length > 0 &&
-    !creditVariableUnresolved &&
+    !hasUnresolvedVariables &&
     !sendSMSMutation.isPending
 
   const handleSend = async () => {
@@ -445,10 +449,18 @@ export function SendSMSModal({
                   ) : (
                     <input
                       type="text"
-                      value="—"
+                      value={t('pages.clients.modals.sendSMS.noOpenLoans', 'No open credits')}
                       readOnly
-                      className="text-foreground border-border bg-card h-[45px] w-full rounded-lg border px-3 py-2 text-xs font-light sm:text-sm"
+                      className="text-muted-foreground border-border bg-card h-[45px] w-full rounded-lg border px-3 py-2 text-xs font-light sm:text-sm"
                     />
+                  )}
+                  {hasUnresolvedVariables && (
+                    <p className="text-error-500 text-xs">
+                      {t('pages.clients.modals.sendSMS.unresolvedVariables', {
+                        names: missingVariables.join(', '),
+                        defaultValue: `These variables have no value yet: ${missingVariables.join(', ')}`,
+                      })}
+                    </p>
                   )}
                 </div>
               </div>

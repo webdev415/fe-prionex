@@ -48,7 +48,7 @@ import {
 } from '@/features/messaging'
 import type { MessagingChannel, MessagingDraft } from '@/features/messaging'
 import { CHANNEL_SPECS } from '@/pages/MessagingDrafts/draftModalShared'
-import { mentionsCreditVariable } from '@/features/messaging/utils/creditPlaceholders'
+import { unresolvedVariables } from '@/features/messaging/utils/unresolvedVariables'
 import { SendMessageModalSkeleton } from './SendMessageModalSkeleton'
 
 const formatClientNameInitials = (fullName: string): string => {
@@ -383,15 +383,23 @@ export function SendMessageModal({
     ((viberAddImage && viberPublicUrls(viberImages).length > 0) ||
       (viberAddButton && viberButtonName.trim() && viberButtonUrl.trim()))
 
-  const creditVariableUnresolved =
-    !selectedLoan && (mentionsCreditVariable(body) || mentionsCreditVariable(subject))
+  const missingVariables = useMemo(
+    () => [
+      ...new Set([
+        ...unresolvedVariables(body, variableValues),
+        ...(showSubject ? unresolvedVariables(subject, variableValues) : []),
+      ]),
+    ],
+    [body, showSubject, subject, variableValues]
+  )
+  const hasUnresolvedVariables = missingVariables.length > 0
   const canSend =
     clientId > 0 &&
     !!service &&
     hasDestination &&
     (body.trim().length > 0 || hasViberRich) &&
     (!channelSpec.subjectRequired || subject.trim().length > 0) &&
-    !creditVariableUnresolved &&
+    !hasUnresolvedVariables &&
     !quotaExceeded &&
     !sendMessageMutation.isPending
 
@@ -703,12 +711,12 @@ export function SendMessageModal({
                   ))}
                 </SelectContent>
               </Select>
-              {creditVariableUnresolved && (
+              {hasUnresolvedVariables && (
                 <p className="text-error-500 mt-1.5 text-xs">
-                  {t(
-                    'pages.clients.modals.sendSMS.creditVariableUnresolved',
-                    'This message uses credit variables, but the client has no open credit.'
-                  )}
+                  {t('pages.clients.modals.sendSMS.unresolvedVariables', {
+                    names: missingVariables.join(', '),
+                    defaultValue: `These variables have no value yet: ${missingVariables.join(', ')}`,
+                  })}
                 </p>
               )}
             </div>
