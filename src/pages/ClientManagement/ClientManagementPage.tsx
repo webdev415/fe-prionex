@@ -221,6 +221,11 @@ export interface ClientFilters {
 
   rrStatusIds?: number[]
 
+  // "Has verified payment(s)". Existence only: a client matches on
+  // ONE verified, non-deleted, non-pre-acquisition payment, whatever its date
+  // or amount. Undefined/false applies no filter, which is also the reset state.
+  hasVerifiedPayment?: boolean
+
   // Chain filter — TA Chain IDs (KAN-821: multi-select). Narrows to clients
   // with at least one ta_interaction in ANY of these chains. Pairs with
   // ``chainStepIds`` (steps belonging to the picked chains) and ``stepValues``
@@ -330,6 +335,10 @@ export function ClientManagementPage() {
     ''
   )
   const [unassignedOnlyFilter, setUnassignedOnlyFilter] = useURLState<boolean>('unassigned', false)
+  const [hasVerifiedPaymentFilter, setHasVerifiedPaymentFilter] = useURLState<boolean>(
+    'hasVerifiedPayment',
+    false
+  )
   const [dateOfSaleFromFilter, setDateOfSaleFromFilter] = useURLState<string>('dateFrom', '')
   const [dateOfSaleToFilter, setDateOfSaleToFilter] = useURLState<string>('dateTo', '')
   const [debtRangeFromFilter, setDebtRangeFromFilter] = useURLState<number>('debtMin', 0)
@@ -390,6 +399,7 @@ export function ClientManagementPage() {
       portfolio: portfolioFilter,
       tagIds: tagIdsFilter,
       rrStatusIds: rrStatusFilter,
+      hasVerifiedPayment: hasVerifiedPaymentFilter,
       excludeTagIds: excludeTagIdsFilter,
       segmentId: segmentIdFilter || undefined,
       responsibleEmployee: responsibleEmployeeFilter || undefined,
@@ -426,6 +436,7 @@ export function ClientManagementPage() {
       responsibleEmployeeIdsFilter,
       responsibleSearcherFilter,
       unassignedOnlyFilter,
+      hasVerifiedPaymentFilter,
       dateOfSaleFromFilter,
       dateOfSaleToFilter,
       debtRangeFromFilter,
@@ -529,6 +540,7 @@ export function ClientManagementPage() {
       responsibleEmployeeIdsFilter,
       responsibleSearcherFilter,
       unassignedOnlyFilter,
+      hasVerifiedPaymentFilter,
       dateOfSaleFromFilter,
       dateOfSaleToFilter,
       debtRangeFromFilter,
@@ -564,6 +576,7 @@ export function ClientManagementPage() {
       excludeTagIdsFilter.length > 0 ||
       segmentIdFilter > 0 ||
       unassignedOnlyFilter ||
+      hasVerifiedPaymentFilter ||
       dateOfSaleFromFilter !== '' ||
       dateOfSaleToFilter !== '' ||
       taDateFromFilter !== '' ||
@@ -606,6 +619,7 @@ export function ClientManagementPage() {
     responsibleEmployeeIdsFilter,
     responsibleSearcherFilter,
     unassignedOnlyFilter,
+    hasVerifiedPaymentFilter,
     dateOfSaleFromFilter,
     dateOfSaleToFilter,
     debtRangeFromFilter,
@@ -644,6 +658,7 @@ export function ClientManagementPage() {
       excludeTagIdsFilter.length > 0 ||
       segmentIdFilter > 0 ||
       unassignedOnlyFilter ||
+      hasVerifiedPaymentFilter ||
       dateOfSaleFromFilter !== '' ||
       dateOfSaleToFilter !== '' ||
       taDateFromFilter !== '' ||
@@ -693,6 +708,8 @@ export function ClientManagementPage() {
             if (parsed.responsibleSearcherFilter)
               setResponsibleSearcherFilter(parsed.responsibleSearcherFilter)
             if (parsed.unassignedOnlyFilter) setUnassignedOnlyFilter(parsed.unassignedOnlyFilter)
+            if (parsed.hasVerifiedPaymentFilter)
+              setHasVerifiedPaymentFilter(parsed.hasVerifiedPaymentFilter)
             if (parsed.dateOfSaleFromFilter) setDateOfSaleFromFilter(parsed.dateOfSaleFromFilter)
             if (parsed.dateOfSaleToFilter) setDateOfSaleToFilter(parsed.dateOfSaleToFilter)
             if (parsed.debtRangeFromFilter) setDebtRangeFromFilter(parsed.debtRangeFromFilter)
@@ -934,6 +951,12 @@ export function ClientManagementPage() {
       params.rr_status_in = filters.rrStatusIds.join(',')
     }
 
+    // Sent only when ticked: the backend defaults it to false, and an explicit
+    // `false` would still register as a set filter in its audit snapshot.
+    if (filters.hasVerifiedPayment) {
+      params.has_verified_payment = true
+    }
+
     // FILTER 10: Priority
     if (selectedPriorities.length > 0) {
       // Map priority labels to lowercase for API
@@ -1168,6 +1191,7 @@ export function ClientManagementPage() {
     if (filters.responsibleEmployeeIds && filters.responsibleEmployeeIds.length > 0) count++
     if (filters.responsibleSearcher) count++
     if (filters.unassignedOnly) count++
+    if (filters.hasVerifiedPayment) count++
     if (filters.chainIds && filters.chainIds.length > 0) count++
     if (filters.chainStepIds && filters.chainStepIds.length > 0) count++
     if (filters.stepValues && Object.keys(filters.stepValues).length > 0) count++
@@ -1594,6 +1618,9 @@ export function ClientManagementPage() {
     if (newFilters.unassignedOnly !== unassignedOnlyFilter) {
       setUnassignedOnlyFilter(newFilters.unassignedOnly || false)
     }
+    if (newFilters.hasVerifiedPayment !== hasVerifiedPaymentFilter) {
+      setHasVerifiedPaymentFilter(newFilters.hasVerifiedPayment || false)
+    }
     if (newFilters.dateOfSaleFrom !== dateOfSaleFromFilter) {
       setDateOfSaleFromFilter(newFilters.dateOfSaleFrom || '')
     }
@@ -1695,6 +1722,7 @@ export function ClientManagementPage() {
     setResponsibleEmployeeIdsFilter([])
     setResponsibleSearcherFilter('')
     setUnassignedOnlyFilter(false)
+    setHasVerifiedPaymentFilter(false)
     setDateOfSaleFromFilter('')
     setDateOfSaleToFilter('')
     setDebtRangeFromFilter(0)
@@ -1769,7 +1797,7 @@ export function ClientManagementPage() {
       sortKey: 'fullName',
       render: (client) => (
         <Link
-          to={`/dashboard/clients/${client.id}`}
+          to={`/dashboard/clients/${client.id}?from=list`}
           className="text-primary-700 hover:text-primary-600 cursor-pointer text-left hover:underline"
         >
           {client.fullName}
@@ -1784,7 +1812,7 @@ export function ClientManagementPage() {
       sortKey: 'taxIdNumber',
       render: (client) => (
         <Link
-          to={`/dashboard/clients/${client.id}`}
+          to={`/dashboard/clients/${client.id}?from=list`}
           className="text-primary-700 hover:text-primary-600 cursor-pointer text-left hover:underline"
         >
           {client.taxIdNumber}

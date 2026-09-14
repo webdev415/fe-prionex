@@ -5243,6 +5243,8 @@
         "noMatches": "Немає збігів",
         "noMatchingUsers": "Немає збігів",
         "promiseDate": "Дата обіцянки",
+        "payments": "Платежі",
+        "hasVerifiedPayment": "Має підтверджені оплати",
         "rrStatus": "Статус РР",
         "searchPlaceholder": "Пошук...",
         "selectAll": "Вибрати всіх",
@@ -5795,7 +5797,8 @@
           "docs": "Документи",
           "callSms": "Дзвінок / SMS",
           "taChains": "Ланцюжки ЦД",
-          "searcherComments": "Коментарі пошуковика"
+          "searcherComments": "Коментарі пошуковика",
+          "activity": "Активність"
         },
         "relatedTags": {
           "loading": "Завантаження пов'язаних тегів...",
@@ -5947,6 +5950,66 @@
           "card": "Картка",
           "google_pay": "Google Pay",
           "apple_pay": "Apple Pay"
+        },
+        "activityLog": {
+          "title": "Активність по клієнту",
+          "empty": "Для цього клієнта ще немає записів активності.",
+          "loadError": "Не вдалося завантажити журнал активності.",
+          "degraded": "Деякі джерела недоступні: {{sources}}. Стрічка неповна.",
+          "filters": {
+            "from": "З",
+            "to": "По",
+            "operator": "Оператор",
+            "allOperators": "Усі оператори",
+            "reset": "Скинути",
+            "dateRange": "Період",
+            "selectStartDate": "Оберіть початкову дату",
+            "selectEndDate": "Оберіть кінцеву дату"
+          },
+          "sources": {
+            "events": "Дії в інтерфейсі",
+            "audit": "Зміни даних",
+            "calls": "Дзвінки"
+          },
+          "recording": "Запис",
+          "openedTab": "Відкрито вкладку '{{tab}}'",
+          "openedForm": "Відкрито форму взаємодії",
+          "submittedForm": "Надіслано форму взаємодії",
+          "openedCard": "Відкрито картку клієнта",
+          "openedModal": "Відкрито '{{modal}}'",
+          "modals": {
+            "connect_rr": "Підключення реструктуризації",
+            "writeoff": "Списання",
+            "reversal": "Сторнування платежу",
+            "assign_client": "Призначення клієнта",
+            "record_payment": "Внесення платежу",
+            "task": "Завдання",
+            "call_recording": "Запис дзвінка",
+            "tag": "Теги",
+            "edit_client": "Редагування клієнта",
+            "edit_interaction": "Редагування взаємодії",
+            "view_sms": "Перегляд SMS",
+            "send_sms": "Надсилання SMS",
+            "send_message": "Надсилання повідомлення",
+            "upload_document": "Завантаження документа",
+            "view_message": "Перегляд повідомлення",
+            "edit_payment": "Редагування платежу",
+            "cancel_payment": "Скасування платежу",
+            "reassign_payment": "Перепризначення співробітника платежу",
+            "verify_payment": "Черга верифікації платежів",
+            "export_payments": "Експорт платежів",
+            "payment_details": "Деталі платежу"
+          },
+          "openedCardFrom": "Відкрито картку клієнта з: {{origin}}",
+          "origins": {
+            "list": "списку клієнтів",
+            "search": "пошуку",
+            "dialer": "дозвону"
+          },
+          "entryCount_one": "{{count}} запис",
+          "entryCount_few": "{{count}} записи",
+          "entryCount_many": "{{count}} записів",
+          "pagingLimit": "Показано {{count}} останніх записів. Вкажіть діапазон дат, щоб побачити давнішу активність."
         }
       },
       "modals": {
@@ -6325,6 +6388,7 @@
         "viewSMS": {
           "title": "Переглянути SMS",
           "dateTime": "Дата/Час",
+          "phone": "Телефон",
           "template": "Шаблон",
           "operator": "Оператор",
           "status": "Статус",
@@ -8092,7 +8156,8 @@
         "operator-promises": "Обіцянки по операторах",
         "outbound-calls": "Вихідні дзвінки",
         "promises-daily": "Обіцянки до кінця місяця",
-        "promises-feed": "Обіцянки"
+        "promises-feed": "Обіцянки",
+        "callbacks": "Перезвони"
       },
       "processing": {
         "dateFrom": "Дата з",
@@ -8440,6 +8505,37 @@
         "empty": "Немає обіцянок у вибраному вікні",
         "forbidden": "Недостатньо прав для перегляду звіту",
         "unavailable": "Дані про співробітників, обіцянки або оплати тимчасово недоступні. Спробуйте пізніше.",
+        "error": {
+          "title": "Не вдалося завантажити дані",
+          "retry": "Повторити"
+        }
+      },
+      "callbacksFeed": {
+        "dateFrom": "Дата перезвону з",
+        "dateTo": "Дата перезвону по",
+        "invalidDate": "Дата не є коректною календарною датою — виберіть дату, щоб замінити її",
+        "invalidRange": "Початкова дата пізніша за кінцеву",
+        "rangeTooLong": "Діапазон дат не може перевищувати 366 днів",
+        "hideCalledToday": "Приховати тих, з ким уже спілкувались сьогодні",
+        "hideWorked": "Приховати відпрацьовані перезвони",
+        "openClient": "Відкрити клієнта {{id}}",
+        "columns": {
+          "inn": "ІПН",
+          "interactionDate": "Дата ЦД",
+          "interactionType": "Результат",
+          "promiseDate": "Обіцяна дата",
+          "employeeInteracted": "Співробітник, що залишив коментар",
+          "employeeResponsible": "Співробітник закріплення",
+          "link": "Посилання",
+          "lastInteractionDate": "Дата останнього ЦД",
+          "lastResult": "Відпрацювання сьогодні",
+          "department": "Відділ",
+          "noDepartment": "Без відділу",
+          "group": "Група"
+        },
+        "empty": "Немає перезвонів у вибраному вікні",
+        "forbidden": "Недостатньо прав для перегляду звіту",
+        "unavailable": "Дані про співробітників тимчасово недоступні. Спробуйте пізніше.",
         "error": {
           "title": "Не вдалося завантажити дані",
           "retry": "Повторити"
