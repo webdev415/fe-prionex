@@ -9,6 +9,8 @@
 
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/stores/authStore', () => ({
@@ -25,26 +27,49 @@ vi.mock('@/features/users/hooks/useUsers', () => ({
   }),
 }))
 
+// The endpoint is stubbed rather than the hook: that keeps the query wiring —
+// including the menu only fetching once it is opened — inside what these tests
+// exercise.
+const getClientFilterPresets = vi.hoisted(() => vi.fn())
+vi.mock('../api/clientFilterPresetsApi', () => ({
+  getClientFilterPresets,
+  createClientFilterPreset: vi.fn(),
+  updateClientFilterPreset: vi.fn(),
+  deleteClientFilterPreset: vi.fn(),
+}))
+
 const { ClientFilterPresetsMenu } = await import('../components/ClientFilterPresetsMenu')
-const { useClientFilterPresetStore } = await import('../store/clientFilterPresetStore')
 
 beforeEach(() => {
-  useClientFilterPresetStore.setState({ byUser: {} })
+  getClientFilterPresets.mockReset()
+  getClientFilterPresets.mockResolvedValue({ presets: [] })
 })
 
-/** Seeds the signed-in operator's presets directly, bypassing the editor. */
+/** What the endpoint will return for this test. */
 function seed(presets: Array<{ id: number; name: string; params: object }>) {
-  useClientFilterPresetStore.setState({ byUser: { '1': presets as never } })
+  getClientFilterPresets.mockResolvedValue({ presets })
+}
+
+function renderMenu(ui: React.ReactElement) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  )
+  return render(ui, { wrapper })
 }
 
 const open = async (user: ReturnType<typeof userEvent.setup>) => {
   await user.click(screen.getByTestId('client-filter-presets'))
+  // The list is fetched on open, so every assertion after this waits for it.
+  await screen.findByRole('menu')
 }
 
 describe('ClientFilterPresetsMenu', () => {
   it('points the operator at their profile when they have no presets', async () => {
     const user = userEvent.setup()
-    render(<ClientFilterPresetsMenu projectId={1} onApply={vi.fn()} hasActiveFilters />)
+    renderMenu(<ClientFilterPresetsMenu projectId={1} onApply={vi.fn()} hasActiveFilters />)
 
     await open(user)
 
@@ -64,10 +89,10 @@ describe('ClientFilterPresetsMenu', () => {
         },
       },
     ])
-    render(<ClientFilterPresetsMenu projectId={1} onApply={onApply} hasActiveFilters />)
+    renderMenu(<ClientFilterPresetsMenu projectId={1} onApply={onApply} hasActiveFilters />)
 
     await open(user)
-    await user.click(screen.getByText('This month'))
+    await user.click(await screen.findByText('This month'))
 
     const filters = onApply.mock.lastCall?.[0] as Record<string, unknown>
     const today = new Date()
@@ -83,10 +108,10 @@ describe('ClientFilterPresetsMenu', () => {
     const user = userEvent.setup()
     const onApply = vi.fn()
     seed([{ id: 1, name: 'My team', params: { responsibleEmployee: { scope: 'myGroup' } } }])
-    render(<ClientFilterPresetsMenu projectId={1} onApply={onApply} hasActiveFilters />)
+    renderMenu(<ClientFilterPresetsMenu projectId={1} onApply={onApply} hasActiveFilters />)
 
     await open(user)
-    await user.click(screen.getByText('My team'))
+    await user.click(await screen.findByText('My team'))
 
     const filters = onApply.mock.lastCall?.[0] as Record<string, unknown>
     // Operator 3 is in another group, so the preset covers 1 and 2 only.
@@ -97,10 +122,10 @@ describe('ClientFilterPresetsMenu', () => {
     const user = userEvent.setup()
     const onApply = vi.fn()
     seed([{ id: 1, name: 'DPD only', params: { dpd: { from: 10 } } }])
-    render(<ClientFilterPresetsMenu projectId={1} onApply={onApply} hasActiveFilters />)
+    renderMenu(<ClientFilterPresetsMenu projectId={1} onApply={onApply} hasActiveFilters />)
 
     await open(user)
-    await user.click(screen.getByText('DPD only'))
+    await user.click(await screen.findByText('DPD only'))
 
     const filters = onApply.mock.lastCall?.[0] as Record<string, unknown>
     expect(Object.keys(filters)).toEqual(['dpdRangeFrom'])
@@ -112,15 +137,15 @@ describe('ClientFilterPresetsMenu', () => {
       { id: 1, name: 'First', params: { dpd: { from: 1 } } },
       { id: 2, name: 'Second', params: { dpd: { from: 2 } } },
     ])
-    render(<ClientFilterPresetsMenu projectId={1} onApply={vi.fn()} hasActiveFilters />)
+    renderMenu(<ClientFilterPresetsMenu projectId={1} onApply={vi.fn()} hasActiveFilters />)
 
     await open(user)
-    await user.click(screen.getByText('First'))
+    await user.click(await screen.findByText('First'))
     await open(user)
     expect(screen.getByText('pages.clients.presets.applied')).toBeTruthy()
 
     // Single-select: the second replaces the first rather than adding to it.
-    await user.click(screen.getByText('Second'))
+    await user.click(await screen.findByText('Second'))
     await open(user)
     expect(screen.getAllByText('pages.clients.presets.applied')).toHaveLength(1)
   })
@@ -128,12 +153,12 @@ describe('ClientFilterPresetsMenu', () => {
   it('drops the applied mark once the filters are cleared', async () => {
     const user = userEvent.setup()
     seed([{ id: 1, name: 'First', params: { dpd: { from: 1 } } }])
-    const { rerender } = render(
+    const { rerender } = renderMenu(
       <ClientFilterPresetsMenu projectId={1} onApply={vi.fn()} hasActiveFilters />
     )
 
     await open(user)
-    await user.click(screen.getByText('First'))
+    await user.click(await screen.findByText('First'))
     await open(user)
     expect(screen.getByText('pages.clients.presets.applied')).toBeTruthy()
 
@@ -143,19 +168,30 @@ describe('ClientFilterPresetsMenu', () => {
     expect(screen.queryByText('pages.clients.presets.applied')).toBeNull()
   })
 
-  it('shows only the signed-in operator’s presets', async () => {
+  it('does not fetch the list until the menu is opened', async () => {
     const user = userEvent.setup()
-    useClientFilterPresetStore.setState({
-      byUser: {
-        '1': [{ id: 1, name: 'Mine', params: {} }],
-        '2': [{ id: 2, name: 'Somebody else’s', params: {} }],
-      },
-    })
-    render(<ClientFilterPresetsMenu projectId={1} onApply={vi.fn()} hasActiveFilters />)
+    seed([{ id: 1, name: 'Mine', params: {} }])
+    renderMenu(<ClientFilterPresetsMenu projectId={1} onApply={vi.fn()} hasActiveFilters />)
+
+    // Most visits to the client list never open this menu, and the button
+    // itself needs nothing from the list.
+    expect(getClientFilterPresets).not.toHaveBeenCalled()
+
+    await open(user)
+    expect(getClientFilterPresets).toHaveBeenCalled()
+    expect(await screen.findByText('Mine')).toBeTruthy()
+  })
+
+  it('says so when the list could not be loaded', async () => {
+    const user = userEvent.setup()
+    getClientFilterPresets.mockRejectedValue(new Error('offline'))
+    renderMenu(<ClientFilterPresetsMenu projectId={1} onApply={vi.fn()} hasActiveFilters />)
 
     await open(user)
 
-    expect(screen.getByText('Mine')).toBeTruthy()
-    expect(screen.queryByText('Somebody else’s')).toBeNull()
+    // Pointing at the profile here would send the operator off to recreate
+    // presets they already have.
+    expect(await screen.findByText('pages.clients.presets.loadFailed')).toBeTruthy()
+    expect(screen.queryByText('pages.clients.presets.empty')).toBeNull()
   })
 })

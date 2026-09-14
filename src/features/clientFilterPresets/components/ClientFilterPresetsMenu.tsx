@@ -51,7 +51,9 @@ export function ClientFilterPresetsMenu({
   /** Which preset produced the filters currently on screen, if any. */
   const [appliedId, setAppliedId] = useState<number | null>(null)
 
-  const { presets } = useClientFilterPresets()
+  // Fetched only once the menu is opened: the button itself needs nothing
+  // from the list, and most visits to the client list never open it.
+  const { presets, isLoading, isError } = useClientFilterPresets(open)
   const resolveEmployeeScope = useResolveEmployeeScope(projectId)
 
   const apply = (id: number) => {
@@ -79,7 +81,17 @@ export function ClientFilterPresetsMenu({
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="max-h-72 min-w-[16rem] overflow-y-auto p-1.5">
-        {presets.length === 0 ? (
+        {isLoading ? (
+          <div className="text-muted-foreground px-2 py-3 text-xs">
+            {t('pages.clients.presets.loading', 'Loading…')}
+          </div>
+        ) : isError ? (
+          // Not the same as having none, and pointing at the profile here would
+          // send the operator to recreate presets they already have.
+          <div className="text-error-500 px-2 py-3 text-xs">
+            {t('pages.clients.presets.loadFailed', 'Presets could not be loaded.')}
+          </div>
+        ) : presets.length === 0 ? (
           // The ticket's own wording: say where presets come from rather than
           // leaving an empty menu that looks broken.
           <div className="text-muted-foreground px-2 py-3 text-xs">

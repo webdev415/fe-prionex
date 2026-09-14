@@ -1,5 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // The editor reads the operator's own project and fetches the option lists
@@ -24,8 +26,21 @@ vi.mock('../hooks/usePresetFilterOptions', () => ({
   }),
 }))
 
+// A fake of the endpoints, holding the presets in memory so the screen's own
+// create/rename/delete flows still drive what the list shows. Stubbing at the
+// API keeps the query and mutation wiring — invalidation included — inside what
+// these tests exercise.
+const store = vi.hoisted(() => ({ presets: [] as Array<Record<string, unknown>>, nextId: 1 }))
+
+const api = vi.hoisted(() => ({
+  getClientFilterPresets: vi.fn(),
+  createClientFilterPreset: vi.fn(),
+  updateClientFilterPreset: vi.fn(),
+  deleteClientFilterPreset: vi.fn(),
+}))
+vi.mock('../api/clientFilterPresetsApi', () => api)
+
 const { ClientFilterPresetsSettings } = await import('../components/ClientFilterPresetsSettings')
-const { useClientFilterPresetStore } = await import('../store/clientFilterPresetStore')
 
 // Radix measures and scrolls its triggers; jsdom implements neither.
 beforeAll(() => {
@@ -35,11 +50,40 @@ beforeAll(() => {
   Element.prototype.scrollIntoView = vi.fn()
 })
 
-// Presets now live in a persisted store, which is a module singleton — without
-// this, each test starts with whatever the previous one saved.
 beforeEach(() => {
-  useClientFilterPresetStore.setState({ byUser: {} })
+  store.presets = []
+  store.nextId = 1
+  api.getClientFilterPresets.mockReset()
+  api.createClientFilterPreset.mockReset()
+  api.updateClientFilterPreset.mockReset()
+  api.deleteClientFilterPreset.mockReset()
+
+  api.getClientFilterPresets.mockImplementation(async () => ({ presets: [...store.presets] }))
+  api.createClientFilterPreset.mockImplementation(async ({ name, params }) => {
+    const preset = { id: store.nextId++, name, params }
+    store.presets.push(preset)
+    return preset
+  })
+  api.updateClientFilterPreset.mockImplementation(async (id, { name, params }) => {
+    const preset = store.presets.find((p) => p.id === id)
+    if (preset) Object.assign(preset, { name, params })
+    return preset
+  })
+  api.deleteClientFilterPreset.mockImplementation(async (id) => {
+    store.presets = store.presets.filter((p) => p.id !== id)
+  })
 })
+
+/** Every test renders through a query client of its own, so caches never cross. */
+function renderSettings() {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  )
+  return render(<ClientFilterPresetsSettings />, { wrapper })
+}
 
 // The ticket is specific about this screen's behaviour, and most of it is easy
 // to get subtly wrong: the editor must stay hidden until asked for, the card
@@ -63,16 +107,53 @@ async function deleteFirstPreset(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('ClientFilterPresetsSettings', () => {
-  it('starts with no presets and no editor', () => {
-    render(<ClientFilterPresetsSettings />)
-    expect(screen.getByText('pages.profile.presets.empty')).toBeTruthy()
+  it('starts with no presets and no editor', async () => {
+    renderSettings()
+    // The list arrives from the server now, so the empty state follows a load.
+    expect(await screen.findByText('pages.profile.presets.empty')).toBeTruthy()
     expect(screen.queryByLabelText('pages.profile.presets.name')).toBeNull()
+  })
+
+  it('distinguishes a failed load from having no presets', async () => {
+    api.getClientFilterPresets.mockRejectedValue(new Error('offline'))
+    renderSettings()
+
+    // Told they have none, an operator may well create them all over again.
+    expect(await screen.findByText('pages.profile.presets.loadFailed')).toBeTruthy()
+    expect(screen.queryByText('pages.profile.presets.empty')).toBeNull()
+  })
+
+  it('reports a name the server refuses even when this screen allowed it', async () => {
+    const user = userEvent.setup()
+    // A preset saved on another device between this screen's load and the save.
+    api.createClientFilterPreset.mockRejectedValue({ response: { status: 409 } })
+    renderSettings()
+
+    await user.click(await screen.findByText('pages.profile.presets.new'))
+    await user.type(screen.getByLabelText('pages.profile.presets.name'), 'Elsewhere')
+    await user.click(screen.getByText('pages.profile.presets.save'))
+
+    expect(await screen.findByText('pages.profile.presets.nameDuplicate')).toBeTruthy()
+  })
+
+  it('says so when a save fails for any other reason', async () => {
+    const user = userEvent.setup()
+    api.createClientFilterPreset.mockRejectedValue(new Error('offline'))
+    renderSettings()
+
+    await user.click(await screen.findByText('pages.profile.presets.new'))
+    await user.type(screen.getByLabelText('pages.profile.presets.name'), 'Doomed')
+    await user.click(screen.getByText('pages.profile.presets.save'))
+
+    // Not reported as a name clash, and not silently swallowed either.
+    expect(await screen.findByText('pages.profile.presets.saveFailed')).toBeTruthy()
+    expect(screen.queryByRole('status')).toBeNull()
   })
 
   it('opens an empty editor from "New preset"', async () => {
     const user = userEvent.setup()
-    render(<ClientFilterPresetsSettings />)
-    await user.click(screen.getByText('pages.profile.presets.new'))
+    renderSettings()
+    await user.click(await screen.findByText('pages.profile.presets.new'))
 
     expect(screen.getByText('pages.profile.presets.newTitle')).toBeTruthy()
     expect(screen.getByLabelText('pages.profile.presets.name')).toHaveValue('')
@@ -80,8 +161,8 @@ describe('ClientFilterPresetsSettings', () => {
 
   it('refuses to save a preset with no name', async () => {
     const user = userEvent.setup()
-    render(<ClientFilterPresetsSettings />)
-    await user.click(screen.getByText('pages.profile.presets.new'))
+    renderSettings()
+    await user.click(await screen.findByText('pages.profile.presets.new'))
     await user.click(screen.getByText('pages.profile.presets.save'))
 
     expect(screen.getByText('pages.profile.presets.nameRequired')).toBeTruthy()
@@ -91,8 +172,8 @@ describe('ClientFilterPresetsSettings', () => {
 
   it('refuses a name that is only whitespace', async () => {
     const user = userEvent.setup()
-    render(<ClientFilterPresetsSettings />)
-    await user.click(screen.getByText('pages.profile.presets.new'))
+    renderSettings()
+    await user.click(await screen.findByText('pages.profile.presets.new'))
     await user.type(screen.getByLabelText('pages.profile.presets.name'), '   ')
     await user.click(screen.getByText('pages.profile.presets.save'))
 
@@ -101,8 +182,8 @@ describe('ClientFilterPresetsSettings', () => {
 
   it('saves a named preset and confirms it', async () => {
     const user = userEvent.setup()
-    render(<ClientFilterPresetsSettings />)
-    await user.click(screen.getByText('pages.profile.presets.new'))
+    renderSettings()
+    await user.click(await screen.findByText('pages.profile.presets.new'))
     await user.type(screen.getByLabelText('pages.profile.presets.name'), 'Overdue 30+')
     await user.click(screen.getByText('pages.profile.presets.save'))
 
@@ -113,8 +194,8 @@ describe('ClientFilterPresetsSettings', () => {
 
   it('opens the editor from the pencil, not from the card body', async () => {
     const user = userEvent.setup()
-    render(<ClientFilterPresetsSettings />)
-    await user.click(screen.getByText('pages.profile.presets.new'))
+    renderSettings()
+    await user.click(await screen.findByText('pages.profile.presets.new'))
     await user.type(screen.getByLabelText('pages.profile.presets.name'), 'Weekly')
     await user.click(screen.getByText('pages.profile.presets.save'))
 
@@ -130,8 +211,8 @@ describe('ClientFilterPresetsSettings', () => {
 
   it('closes the editor when the preset being edited is deleted', async () => {
     const user = userEvent.setup()
-    render(<ClientFilterPresetsSettings />)
-    await user.click(screen.getByText('pages.profile.presets.new'))
+    renderSettings()
+    await user.click(await screen.findByText('pages.profile.presets.new'))
     await user.type(screen.getByLabelText('pages.profile.presets.name'), 'Doomed')
     await user.click(screen.getByText('pages.profile.presets.save'))
     await user.click(screen.getByLabelText('pages.profile.presets.edit'))
@@ -145,8 +226,8 @@ describe('ClientFilterPresetsSettings', () => {
 
   it('renames an existing preset rather than adding a second one', async () => {
     const user = userEvent.setup()
-    render(<ClientFilterPresetsSettings />)
-    await user.click(screen.getByText('pages.profile.presets.new'))
+    renderSettings()
+    await user.click(await screen.findByText('pages.profile.presets.new'))
     await user.type(screen.getByLabelText('pages.profile.presets.name'), 'Before')
     await user.click(screen.getByText('pages.profile.presets.save'))
 
@@ -162,8 +243,8 @@ describe('ClientFilterPresetsSettings', () => {
 
   it('keeps the preset when the delete is called off', async () => {
     const user = userEvent.setup()
-    render(<ClientFilterPresetsSettings />)
-    await user.click(screen.getByText('pages.profile.presets.new'))
+    renderSettings()
+    await user.click(await screen.findByText('pages.profile.presets.new'))
     await user.type(screen.getByLabelText('pages.profile.presets.name'), 'Spared')
     await user.click(screen.getByText('pages.profile.presets.save'))
 
@@ -176,12 +257,12 @@ describe('ClientFilterPresetsSettings', () => {
 
   it('refuses a second preset with a name already in use', async () => {
     const user = userEvent.setup()
-    render(<ClientFilterPresetsSettings />)
-    await user.click(screen.getByText('pages.profile.presets.new'))
+    renderSettings()
+    await user.click(await screen.findByText('pages.profile.presets.new'))
     await user.type(screen.getByLabelText('pages.profile.presets.name'), 'Overdue')
     await user.click(screen.getByText('pages.profile.presets.save'))
 
-    await user.click(screen.getByText('pages.profile.presets.new'))
+    await user.click(await screen.findByText('pages.profile.presets.new'))
     // Case and surrounding space do not make it a different name — the menu
     // shows names alone, so the two would be indistinguishable there.
     await user.type(screen.getByLabelText('pages.profile.presets.name'), '  overdue  ')
@@ -193,8 +274,8 @@ describe('ClientFilterPresetsSettings', () => {
 
   it('lets a preset keep its own name when edited', async () => {
     const user = userEvent.setup()
-    render(<ClientFilterPresetsSettings />)
-    await user.click(screen.getByText('pages.profile.presets.new'))
+    renderSettings()
+    await user.click(await screen.findByText('pages.profile.presets.new'))
     await user.type(screen.getByLabelText('pages.profile.presets.name'), 'Stable')
     await user.click(screen.getByText('pages.profile.presets.save'))
 
@@ -208,8 +289,8 @@ describe('ClientFilterPresetsSettings', () => {
 
   it('keeps the typed name when clearing the filter fields', async () => {
     const user = userEvent.setup()
-    render(<ClientFilterPresetsSettings />)
-    await user.click(screen.getByText('pages.profile.presets.new'))
+    renderSettings()
+    await user.click(await screen.findByText('pages.profile.presets.new'))
     await user.type(screen.getByLabelText('pages.profile.presets.name'), 'Keep me')
     await user.click(screen.getByText('pages.profile.presets.clearFields'))
 

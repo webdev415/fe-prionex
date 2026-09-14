@@ -42,7 +42,7 @@ export interface ClientFilterPresetEditorProps {
   name: string
   params: ClientFilterPresetParams
   /** Why the name was rejected, if it was. */
-  nameError: 'required' | 'duplicate' | null
+  nameError: 'required' | 'duplicate' | 'failed' | null
   saved: boolean
   onNameChange: (name: string) => void
   onParamsChange: (params: ClientFilterPresetParams) => void
@@ -133,7 +133,9 @@ export function ClientFilterPresetEditor({
             ? t('pages.profile.presets.nameRequired', 'Enter a name for the preset')
             : nameError === 'duplicate'
               ? t('pages.profile.presets.nameDuplicate', 'You already have a preset with this name')
-              : undefined
+              : nameError === 'failed'
+                ? t('pages.profile.presets.saveFailed', 'The preset could not be saved. Try again.')
+                : undefined
         }
       />
 

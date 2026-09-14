@@ -50,6 +50,12 @@ vi.mock('@/stores/authStore', () => {
 })
 vi.mock('@tanstack/react-query', () => ({ useMutation: () => ({ mutateAsync: vi.fn() }) }))
 vi.mock('../AppearanceSettings', () => ({ AppearanceSettings: () => <div>Appearance</div> }))
+// Stubbed for the same reason as AppearanceSettings: this file is about the
+// tablist contract, and the presets panel fetches over react-query, which the
+// mock above deliberately does not provide.
+vi.mock('@/features/clientFilterPresets/components/ClientFilterPresetsSettings', () => ({
+  ClientFilterPresetsSettings: () => <div>Presets</div>,
+}))
 vi.mock('@/features/auth/hooks/useMyPersonalInformation', () => ({
   useMyPersonalInformation: () => ({ data: undefined }),
   useUpdateMyPersonalInformation: () => ({ mutateAsync: vi.fn() }),

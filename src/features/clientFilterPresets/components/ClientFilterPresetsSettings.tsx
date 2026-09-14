@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/Button'
 import { useConfirm } from '@/components/ui/useConfirm'
 import { Icons } from '@/lib/icons'
 
-import { useClientFilterPresets } from '../hooks/useClientFilterPresets'
+import { isDuplicateNameError, useClientFilterPresets } from '../hooks/useClientFilterPresets'
 import type { ClientFilterPreset, ClientFilterPresetParams } from '../types'
 import { ClientFilterPresetEditor } from './ClientFilterPresetEditor'
 
@@ -25,7 +25,7 @@ import { ClientFilterPresetEditor } from './ClientFilterPresetEditor'
 const SAVED_NOTICE_MS = 1800
 
 /** Why the name was rejected, or null when it was not. */
-type NameError = 'required' | 'duplicate' | null
+type NameError = 'required' | 'duplicate' | 'failed' | null
 
 interface EditorState {
   /** null = creating a new preset; a number = editing that saved preset. */
@@ -39,7 +39,14 @@ const emptyEditor = (): EditorState => ({ editingId: null, name: '', params: {} 
 export function ClientFilterPresetsSettings() {
   const { t } = useTranslation('common')
 
-  const { presets, create, update, remove: removePreset } = useClientFilterPresets()
+  const {
+    presets,
+    isLoading,
+    isError,
+    create,
+    update,
+    remove: removePreset,
+  } = useClientFilterPresets()
   const { confirm, confirmDialog } = useConfirm()
   const [editor, setEditor] = useState<EditorState | null>(null)
   const [nameError, setNameError] = useState<NameError>(null)
@@ -71,13 +78,13 @@ export function ClientFilterPresetsSettings() {
     })
     if (!confirmed) return
 
-    removePreset(preset.id)
+    await removePreset(preset.id)
     // Deleting the preset being edited leaves the form describing something
     // that no longer exists, so the editor closes with it.
     setEditor((current) => (current?.editingId === preset.id ? null : current))
   }
 
-  const save = () => {
+  const save = async () => {
     if (!editor) return
     const name = editor.name.trim()
     if (!name) {
@@ -100,8 +107,21 @@ export function ClientFilterPresetsSettings() {
       return
     }
     setNameError(null)
-    if (editor.editingId === null) create(name, editor.params)
-    else update(editor.editingId, name, editor.params)
+    try {
+      if (editor.editingId === null) await create(name, editor.params)
+      else await update(editor.editingId, name, editor.params)
+    } catch (error) {
+      // The check above works off the list this screen has; the server holds
+      // the constraint. A name saved on another device between the two lands
+      // here, and says the same thing rather than failing silently.
+      if (isDuplicateNameError(error)) {
+        setNameError('duplicate')
+        document.getElementById('preset-name')?.focus()
+        return
+      }
+      setNameError('failed')
+      return
+    }
     setSavedNotice(true)
     window.setTimeout(() => setSavedNotice(false), SAVED_NOTICE_MS)
   }
@@ -129,7 +149,17 @@ export function ClientFilterPresetsSettings() {
           </Button>
         </div>
 
-        {presets.length === 0 ? (
+        {isLoading ? (
+          <div className="border-border text-muted-foreground w-full rounded-lg border border-dashed p-6 text-center text-sm">
+            {t('pages.profile.presets.loading', 'Loading your presets…')}
+          </div>
+        ) : isError ? (
+          // Distinct from "you have none": an operator told they have no
+          // presets when the request merely failed might well create them again.
+          <div className="border-border text-error-500 w-full rounded-lg border border-dashed p-6 text-center text-sm">
+            {t('pages.profile.presets.loadFailed', 'Your presets could not be loaded.')}
+          </div>
+        ) : presets.length === 0 ? (
           <div className="border-border text-muted-foreground w-full rounded-lg border border-dashed p-6 text-center text-sm">
             {t(
               'pages.profile.presets.empty',
@@ -189,7 +219,7 @@ export function ClientFilterPresetsSettings() {
             if (nameError) setNameError(null)
           }}
           onParamsChange={(params) => setEditor({ ...editor, params })}
-          onSave={save}
+          onSave={() => void save()}
           onClearFields={clearFields}
         />
       )}

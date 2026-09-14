@@ -6894,7 +6894,9 @@
       "presets": {
         "label": "Filter Presets",
         "empty": "You can set up presets in your profile",
-        "applied": "Applied"
+        "applied": "Applied",
+        "loading": "Loading…",
+        "loadFailed": "Presets could not be loaded."
       }
     },
     "clientChains": {
@@ -8834,7 +8836,10 @@
         },
         "nameDuplicate": "You already have a preset with this name",
         "confirmDeleteTitle": "Delete this preset?",
-        "confirmDeleteMessage": "\"{{name}}\" will be removed. This cannot be undone."
+        "confirmDeleteMessage": "\"{{name}}\" will be removed. This cannot be undone.",
+        "loading": "Loading your presets…",
+        "loadFailed": "Your presets could not be loaded.",
+        "saveFailed": "The preset could not be saved. Try again."
       }
     },
     "reports": {
