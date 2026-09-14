@@ -3473,6 +3473,7 @@
           "author": "Автор",
           "avgCompletion": "Середнє завершення",
           "createCta": "Створити курс",
+          "createFailed": "Не вдалося створити курс.",
           "details": "Деталі",
           "doneAdding": "Готово",
           "duration": "Тривалість",

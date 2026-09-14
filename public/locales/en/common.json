@@ -3460,6 +3460,7 @@
           "author": "Author",
           "avgCompletion": "Average completion",
           "createCta": "Create a course",
+          "createFailed": "Could not create the course.",
           "details": "Details",
           "doneAdding": "Done",
           "duration": "Duration",

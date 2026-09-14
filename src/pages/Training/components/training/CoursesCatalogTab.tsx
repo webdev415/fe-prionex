@@ -374,7 +374,12 @@ function CreateCoursePanel({ onClose }: { onClose: () => void }) {
           setSubmitting(false)
           onClose()
         },
-        onError: () => setSubmitting(false),
+        onError: () => {
+          setSubmitting(false)
+          toast.error(
+            t('pages.training.training.courses.createFailed', 'Could not create the course.')
+          )
+        },
       }
     )
   }
@@ -566,7 +571,7 @@ function CreateCoursePanel({ onClose }: { onClose: () => void }) {
   )
 }
 
-function CourseDetailsDialog({
+export function CourseDetailsDialog({
   course,
   canManage,
   onClose,
@@ -585,10 +590,21 @@ function CourseDetailsDialog({
   const detail = full ?? course
   const lessons = detail.lessons ?? []
   // Attachments, not `detail.materials`: the course's own list is legacy and
-  // 047 moved its contents into the library. It is still populated so that
-  // migration stays reversible, so reading it here would show each material
-  // twice once a trainer attaches anything new.
-  const { data: attached } = useMaterialsForTarget('course', course.id)
+  // migration 047 moved its contents into the library. It is still populated so
+  // that migration stays reversible, so reading it here would show each
+  // material twice once a trainer attaches anything new.
+  //
+  // DEPLOY ORDER: this needs api 047 applied first. Until it is, a course
+  // created before the change shows no materials here.
+  //
+  // Falling back to `detail.materials` when this list is empty looks like the
+  // fix and is not: on a migrated course whose materials a trainer has since
+  // detached, the list is legitimately empty and the fallback would resurrect
+  // every one of them, with no way to remove them again.
+  const { data: attached, isFetching: attachedFetching } = useMaterialsForTarget(
+    'course',
+    course.id
+  )
   const materials = attached?.data ?? []
 
   return (
@@ -678,11 +694,14 @@ function CourseDetailsDialog({
               {addingMaterials ? (
                 <CourseMaterialSelect
                   selectedIds={materials.map((m) => m.id)}
-                  // Disabled while either mutation is in flight: `selectedIds`
-                  // comes from the server list, so until the refetch lands the
-                  // box still looks unchecked and a second click repeats the
-                  // same attach.
-                  disabled={attachMaterial.isPending || detachMaterial.isPending}
+                  // `selectedIds` comes from the server list, so a click is
+                  // refused until that list is authoritative again — which is
+                  // after the refetch, not after the mutation: isPending clears
+                  // the moment the server answers, and in that window the box
+                  // still looks unchecked and a second click repeats the attach.
+                  disabled={
+                    attachMaterial.isPending || detachMaterial.isPending || attachedFetching
+                  }
                   onChange={(ids) => {
                     const current = new Set(materials.map((m) => m.id))
                     const next = new Set(ids)
