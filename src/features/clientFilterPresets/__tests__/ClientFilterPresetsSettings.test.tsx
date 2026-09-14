@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -45,6 +45,22 @@ beforeEach(() => {
 // to get subtly wrong: the editor must stay hidden until asked for, the card
 // body must not open it, a nameless preset must not save, and deleting the
 // preset being edited must not leave the form describing something gone.
+
+/**
+ * Deleting now asks first, so every delete in these tests goes through the
+ * dialog. Matched by role and a loose name: the shared `actions.*` keys resolve
+ * to real words in the test bundle while feature keys fall through as keys, and
+ * this reads the same either way. Scoped to the dialog because the trash icon
+ * carries a label of its own.
+ */
+function dialogButton(pattern: RegExp) {
+  return within(screen.getByRole('dialog')).getByRole('button', { name: pattern })
+}
+
+async function deleteFirstPreset(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByLabelText('pages.profile.presets.delete'))
+  await user.click(dialogButton(/delete/i))
+}
 
 describe('ClientFilterPresetsSettings', () => {
   it('starts with no presets and no editor', () => {
@@ -120,7 +136,7 @@ describe('ClientFilterPresetsSettings', () => {
     await user.click(screen.getByText('pages.profile.presets.save'))
     await user.click(screen.getByLabelText('pages.profile.presets.edit'))
 
-    await user.click(screen.getByLabelText('pages.profile.presets.delete'))
+    await deleteFirstPreset(user)
 
     await waitFor(() => expect(screen.queryByText('Doomed')).toBeNull())
     // The form described a preset that no longer exists, so it closed with it.
@@ -142,6 +158,52 @@ describe('ClientFilterPresetsSettings', () => {
     expect(screen.getByText('After')).toBeTruthy()
     expect(screen.queryByText('Before')).toBeNull()
     expect(screen.getAllByLabelText('pages.profile.presets.edit')).toHaveLength(1)
+  })
+
+  it('keeps the preset when the delete is called off', async () => {
+    const user = userEvent.setup()
+    render(<ClientFilterPresetsSettings />)
+    await user.click(screen.getByText('pages.profile.presets.new'))
+    await user.type(screen.getByLabelText('pages.profile.presets.name'), 'Spared')
+    await user.click(screen.getByText('pages.profile.presets.save'))
+
+    await user.click(screen.getByLabelText('pages.profile.presets.delete'))
+    await user.click(dialogButton(/cancel/i))
+
+    // Deleting is irreversible, so backing out must genuinely back out.
+    expect(screen.getByText('Spared')).toBeTruthy()
+  })
+
+  it('refuses a second preset with a name already in use', async () => {
+    const user = userEvent.setup()
+    render(<ClientFilterPresetsSettings />)
+    await user.click(screen.getByText('pages.profile.presets.new'))
+    await user.type(screen.getByLabelText('pages.profile.presets.name'), 'Overdue')
+    await user.click(screen.getByText('pages.profile.presets.save'))
+
+    await user.click(screen.getByText('pages.profile.presets.new'))
+    // Case and surrounding space do not make it a different name — the menu
+    // shows names alone, so the two would be indistinguishable there.
+    await user.type(screen.getByLabelText('pages.profile.presets.name'), '  overdue  ')
+    await user.click(screen.getByText('pages.profile.presets.save'))
+
+    expect(screen.getByText('pages.profile.presets.nameDuplicate')).toBeTruthy()
+    expect(screen.getAllByLabelText('pages.profile.presets.edit')).toHaveLength(1)
+  })
+
+  it('lets a preset keep its own name when edited', async () => {
+    const user = userEvent.setup()
+    render(<ClientFilterPresetsSettings />)
+    await user.click(screen.getByText('pages.profile.presets.new'))
+    await user.type(screen.getByLabelText('pages.profile.presets.name'), 'Stable')
+    await user.click(screen.getByText('pages.profile.presets.save'))
+
+    await user.click(screen.getByLabelText('pages.profile.presets.edit'))
+    await user.click(screen.getByText('pages.profile.presets.save'))
+
+    // A preset is not a duplicate of itself.
+    expect(screen.queryByText('pages.profile.presets.nameDuplicate')).toBeNull()
+    expect(screen.getByText('Stable')).toBeTruthy()
   })
 
   it('keeps the typed name when clearing the filter fields', async () => {

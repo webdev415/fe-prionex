@@ -14,6 +14,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/Button'
+import { useConfirm } from '@/components/ui/useConfirm'
 import { Icons } from '@/lib/icons'
 
 import { useClientFilterPresets } from '../hooks/useClientFilterPresets'
@@ -22,6 +23,9 @@ import { ClientFilterPresetEditor } from './ClientFilterPresetEditor'
 
 /** How long the "Preset saved" confirmation stays up, per the ticket. */
 const SAVED_NOTICE_MS = 1800
+
+/** Why the name was rejected, or null when it was not. */
+type NameError = 'required' | 'duplicate' | null
 
 interface EditorState {
   /** null = creating a new preset; a number = editing that saved preset. */
@@ -36,25 +40,41 @@ export function ClientFilterPresetsSettings() {
   const { t } = useTranslation('common')
 
   const { presets, create, update, remove: removePreset } = useClientFilterPresets()
+  const { confirm, confirmDialog } = useConfirm()
   const [editor, setEditor] = useState<EditorState | null>(null)
-  const [nameError, setNameError] = useState(false)
+  const [nameError, setNameError] = useState<NameError>(null)
   const [savedNotice, setSavedNotice] = useState(false)
 
   const openNew = () => {
     setEditor(emptyEditor())
-    setNameError(false)
+    setNameError(null)
   }
 
   const openEdit = (preset: ClientFilterPreset) => {
     setEditor({ editingId: preset.id, name: preset.name, params: preset.params })
-    setNameError(false)
+    setNameError(null)
   }
 
-  const remove = (id: number) => {
-    removePreset(id)
+  const remove = async (preset: ClientFilterPreset) => {
+    // Deleting a preset cannot be undone and the only affordance is a small
+    // icon, so it asks first — the same treatment the employee-list templates
+    // give their own delete.
+    const confirmed = await confirm({
+      title: t('pages.profile.presets.confirmDeleteTitle', 'Delete this preset?'),
+      message: t('pages.profile.presets.confirmDeleteMessage', {
+        defaultValue: '"{{name}}" will be removed. This cannot be undone.',
+        name: preset.name,
+      }),
+      confirmLabel: t('actions.delete', 'Delete'),
+      cancelLabel: t('actions.cancel', 'Cancel'),
+      tone: 'danger',
+    })
+    if (!confirmed) return
+
+    removePreset(preset.id)
     // Deleting the preset being edited leaves the form describing something
     // that no longer exists, so the editor closes with it.
-    setEditor((current) => (current?.editingId === id ? null : current))
+    setEditor((current) => (current?.editingId === preset.id ? null : current))
   }
 
   const save = () => {
@@ -63,11 +83,23 @@ export function ClientFilterPresetsSettings() {
     if (!name) {
       // The ticket asks for the field to take focus and show a red border
       // rather than a toast — a validation message the operator cannot miss.
-      setNameError(true)
+      setNameError('required')
       document.getElementById('preset-name')?.focus()
       return
     }
-    setNameError(false)
+    // Names are how a preset is picked from the client list menu, so two with
+    // the same one are indistinguishable there. Rejecting matches the
+    // UniqueConstraint(user_id, name) the employee-list templates already carry.
+    // Case-insensitive, and a preset is never a duplicate of itself.
+    const clash = presets.some(
+      (p) => p.id !== editor.editingId && p.name.trim().toLowerCase() === name.toLowerCase()
+    )
+    if (clash) {
+      setNameError('duplicate')
+      document.getElementById('preset-name')?.focus()
+      return
+    }
+    setNameError(null)
     if (editor.editingId === null) create(name, editor.params)
     else update(editor.editingId, name, editor.params)
     setSavedNotice(true)
@@ -81,6 +113,7 @@ export function ClientFilterPresetsSettings() {
 
   return (
     <div className="flex w-full flex-col items-start gap-6 self-stretch">
+      {confirmDialog}
       <div className="flex w-full flex-col items-start gap-3 self-stretch">
         <div className="flex w-full items-center justify-between gap-2 self-stretch">
           <span className="text-foreground text-base leading-[150%] font-medium tracking-[-0.36px]">
@@ -131,7 +164,7 @@ export function ClientFilterPresetsSettings() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => remove(preset.id)}
+                    onClick={() => void remove(preset)}
                     aria-label={t('pages.profile.presets.delete', 'Delete preset')}
                     className="text-muted-foreground hover:text-error-500 rounded-md p-1.5"
                   >
@@ -153,7 +186,7 @@ export function ClientFilterPresetsSettings() {
           saved={savedNotice}
           onNameChange={(name) => {
             setEditor({ ...editor, name })
-            if (nameError) setNameError(false)
+            if (nameError) setNameError(null)
           }}
           onParamsChange={(params) => setEditor({ ...editor, params })}
           onSave={save}

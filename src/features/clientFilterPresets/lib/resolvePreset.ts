@@ -154,6 +154,10 @@ export function resolvePresetToFilters(
     chainIds: nonEmpty(params.chainIds),
     chainStepIds: nonEmpty(params.chainStepIds),
     onlyLastChain: params.onlyLastChain,
+    // Only ever written when the preset asks for it. Left absent, the client
+    // list falls back to its own `false`, which is what "the preset does not
+    // filter on payments" should mean.
+    hasVerifiedPayment: params.hasVerifiedPayment ? true : undefined,
   }
 
   // Applying a preset replaces the whole filter state, so an absent parameter

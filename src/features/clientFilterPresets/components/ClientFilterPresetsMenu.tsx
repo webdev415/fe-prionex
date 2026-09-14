@@ -32,9 +32,20 @@ import { resolvePresetToFilters } from '../lib/resolvePreset'
 export interface ClientFilterPresetsMenuProps {
   projectId: number | null
   onApply: (filters: ClientFilters) => void
+  /**
+   * Whether any filter is currently applied. The "Applied" mark is derived from
+   * this rather than tracked on its own: Clear All wipes the filters without
+   * telling this component, and a mark left behind would claim a view that is
+   * no longer on screen.
+   */
+  hasActiveFilters: boolean
 }
 
-export function ClientFilterPresetsMenu({ projectId, onApply }: ClientFilterPresetsMenuProps) {
+export function ClientFilterPresetsMenu({
+  projectId,
+  onApply,
+  hasActiveFilters,
+}: ClientFilterPresetsMenuProps) {
   const { t } = useTranslation('common')
   const [open, setOpen] = useState(false)
   /** Which preset produced the filters currently on screen, if any. */
@@ -83,7 +94,7 @@ export function ClientFilterPresetsMenu({ projectId, onApply }: ClientFilterPres
             >
               <span className="flex w-full items-center justify-between gap-2">
                 <span className="truncate">{preset.name}</span>
-                {appliedId === preset.id && (
+                {appliedId === preset.id && hasActiveFilters && (
                   // Named, not just ticked: a bare glyph beside one row of a
                   // list reads as decoration to a screen reader.
                   <span className="text-primary-500 flex shrink-0 items-center gap-1 text-xs">

@@ -2151,6 +2151,7 @@ export function ClientManagementPage() {
             <ClientFilterPresetsMenu
               projectId={user?.active_project_id ? Number(user.active_project_id) : null}
               onApply={handleFilterChange}
+              hasActiveFilters={appliedFiltersCount > 0}
             />
             <button
               onClick={() => setIsFiltersOpen(!isFiltersOpen)}
