@@ -31,6 +31,7 @@ import { isRealCalendarDate } from '@/lib/calendarDate'
 import { getErrorMessage, getErrorStatus } from '@/lib/errors'
 import { Icons } from '@/lib/icons'
 import { formatPickerDateAsYMD, getDateStringInTimezone } from '@/lib/dateUtils'
+import { isWindowTooLong } from '@/lib/reportWindow'
 import { REPORTS_URL_KEYS } from '@/lib/reportsUrlKeys'
 import { useAuthStore } from '@/stores/authStore'
 import { useClientProcessingReport } from '../hooks'
@@ -40,14 +41,6 @@ import {
   rowDepartmentTabId,
 } from '../utils/departmentTabs'
 import { ProcessingTable } from './ProcessingTable'
-
-// Mirrors the backend's window cap `_MAX_RANGE_DAYS` in
-// api-prionex/services/client/app/routers/reports.py: the (end - start) day
-// difference may be at most 366, i.e. an inclusive window of 367 days is the
-// widest allowed — larger answers 400.
-const MAX_RANGE_DAYS = 366
-
-const MS_PER_DAY = 86_400_000
 
 const TABS_ID_PREFIX = 'client-processing'
 
@@ -71,9 +64,10 @@ export function ClientProcessingTab() {
   //
   // `isRealCalendarDate`, not a shape-only regex: V8's Date.parse lazily
   // reads an impossible day like 2026-02-31 as March 3rd, so a shape check
-  // would wave `?from=2026-02-31` through to the API (and into the 366-day
-  // arithmetic below) as a date nobody typed. An unusable value falls back to
-  // today — this tab's long-standing rule for malformed URL values; the
+  // would wave `?from=2026-02-31` through to the API (and into the window-cap
+  // check below, which would then measure the window from a date nobody
+  // typed). An unusable value falls back to today — this tab's long-standing
+  // rule for malformed URL values; the
   // sibling tabs' louder per-field error treatment is a different design this
   // report has not adopted.
   const today = getDateStringInTimezone(new Date(), userTimezone)
@@ -115,8 +109,7 @@ export function ClientProcessingTab() {
   // input and hand-edited URLs would bypass such bounds anyway. ISO YYYY-MM-DD
   // strings compare correctly as strings.
   const isRangeInverted = dateStart > dateEnd
-  const isRangeTooLong =
-    !isRangeInverted && (Date.parse(dateEnd) - Date.parse(dateStart)) / MS_PER_DAY > MAX_RANGE_DAYS
+  const isRangeTooLong = !isRangeInverted && isWindowTooLong(dateStart, dateEnd)
   const rangeErrorKey = isRangeInverted
     ? 'pages.reports.processing.invalidRange'
     : isRangeTooLong

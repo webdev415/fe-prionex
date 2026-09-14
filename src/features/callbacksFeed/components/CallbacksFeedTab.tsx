@@ -25,7 +25,7 @@
  * operator returns to it), and deliberately NOT written into the URL (an
  * auto-derived value in a shared link would pin "today" to the day the link
  * was made). The backend caps the window at a 366-day difference (mirrored
- * here — see utils/window.ts) and answers 400 on an inverted pair (guarded
+ * here — see `@/lib/reportWindow`) and answers 400 on an inverted pair (guarded
  * here before any request leaves).
  *
  * «Приховати тих, з ким уже спілкувались сьогодні» / «Приховати
@@ -60,11 +60,11 @@ import { isTransientFailure } from '@/lib/api'
 import { getDateStringInTimezone } from '@/lib/dateUtils'
 import { getErrorMessage, getErrorStatus, hasResponseDetail } from '@/lib/errors'
 import { Icons } from '@/lib/icons'
+import { isWindowTooLong } from '@/lib/reportWindow'
 import { REPORTS_URL_KEYS } from '@/lib/reportsUrlKeys'
 import { readUrlDateBound } from '@/lib/urlDateBound'
 import { useAuthStore } from '@/stores/authStore'
 import { useCallbacksFeed } from '../hooks'
-import { isWindowTooLong } from '../utils/window'
 import { CALLBACKS_FEED_COLUMN_COUNT, CallbacksFeedTable } from './CallbacksFeedTable'
 
 /** This tab's slice of the Reports page URL namespace (see the registry). */
