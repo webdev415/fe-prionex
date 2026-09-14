@@ -1,62 +1,83 @@
 /**
  * The operator's own presets, and the operations on them (#1100).
  *
- * Everything above this line talks to this hook rather than to the store, so
- * replacing localStorage with an endpoint is a change to one file. Callers get
- * only their own presets: the operator id never crosses this boundary, which is
- * what stops a caller from reading someone else's list by accident.
+ * Everything above this line talks to this hook rather than to the endpoints,
+ * which is what kept the feature buildable while the storage question was open.
+ * Callers get only their own presets: the operator comes from the token, so the
+ * id never crosses this boundary and cannot be asked for.
+ *
+ * The list is fetched on demand — the client-list menu only needs it once
+ * opened, and an operator who never uses presets should not pay for a request
+ * on every visit to the page.
  */
 
-import { useCallback, useMemo } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { useAuthStore } from '@/stores/authStore'
-
-import { useClientFilterPresetStore } from '../store/clientFilterPresetStore'
+import * as presetsApi from '../api/clientFilterPresetsApi'
 import type { ClientFilterPreset, ClientFilterPresetParams } from '../types'
+
+export const clientFilterPresetKeys = {
+  all: ['client-filter-presets'] as const,
+}
 
 export interface ClientFilterPresetsApi {
   presets: ClientFilterPreset[]
-  /** False while there is no signed-in operator to own a preset. */
-  canEdit: boolean
-  create: (name: string, params: ClientFilterPresetParams) => void
-  update: (id: number, name: string, params: ClientFilterPresetParams) => void
-  remove: (id: number) => void
+  isLoading: boolean
+  isError: boolean
+  create: (name: string, params: ClientFilterPresetParams) => Promise<void>
+  update: (id: number, name: string, params: ClientFilterPresetParams) => Promise<void>
+  remove: (id: number) => Promise<void>
 }
 
 const NONE: ClientFilterPreset[] = []
 
-export function useClientFilterPresets(): ClientFilterPresetsApi {
-  const userId = useAuthStore((state) => state.user?.id)
-  const byUser = useClientFilterPresetStore((state) => state.byUser)
-  const createInStore = useClientFilterPresetStore((state) => state.create)
-  const updateInStore = useClientFilterPresetStore((state) => state.update)
-  const removeFromStore = useClientFilterPresetStore((state) => state.remove)
+/** True when the server refused a name the operator already uses. */
+export function isDuplicateNameError(error: unknown): boolean {
+  const status = (error as { response?: { status?: number } } | undefined)?.response?.status
+  return status === 409
+}
 
-  const presets = useMemo(() => (userId ? (byUser[userId] ?? NONE) : NONE), [byUser, userId])
+export function useClientFilterPresets(enabled = true): ClientFilterPresetsApi {
+  const queryClient = useQueryClient()
 
-  const create = useCallback(
-    (name: string, params: ClientFilterPresetParams) => {
-      if (!userId) return
-      createInStore(userId, name, params)
+  const { data, isLoading, isError } = useQuery({
+    queryKey: clientFilterPresetKeys.all,
+    queryFn: presetsApi.getClientFilterPresets,
+    enabled,
+  })
+
+  const invalidate = () => {
+    void queryClient.invalidateQueries({ queryKey: clientFilterPresetKeys.all })
+  }
+
+  const createMutation = useMutation({
+    mutationFn: presetsApi.createClientFilterPreset,
+    onSuccess: invalidate,
+  })
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, input }: { id: number; input: presetsApi.SaveClientFilterPresetInput }) =>
+      presetsApi.updateClientFilterPreset(id, input),
+    onSuccess: invalidate,
+  })
+
+  const removeMutation = useMutation({
+    mutationFn: presetsApi.deleteClientFilterPreset,
+    onSuccess: invalidate,
+  })
+
+  return {
+    presets: data?.presets ?? NONE,
+    isLoading,
+    isError,
+    create: async (name, params) => {
+      await createMutation.mutateAsync({ name, params })
     },
-    [createInStore, userId]
-  )
-
-  const update = useCallback(
-    (id: number, name: string, params: ClientFilterPresetParams) => {
-      if (!userId) return
-      updateInStore(userId, id, name, params)
+    update: async (id, name, params) => {
+      await updateMutation.mutateAsync({ id, input: { name, params } })
     },
-    [updateInStore, userId]
-  )
-
-  const remove = useCallback(
-    (id: number) => {
-      if (!userId) return
-      removeFromStore(userId, id)
+    remove: async (id) => {
+      await removeMutation.mutateAsync(id)
     },
-    [removeFromStore, userId]
-  )
-
-  return { presets, canEdit: !!userId, create, update, remove }
+  }
 }
