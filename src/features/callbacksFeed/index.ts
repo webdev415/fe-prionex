@@ -14,4 +14,3 @@ export { CallbacksFeedTable, CALLBACKS_FEED_COLUMN_COUNT } from './components/Ca
 export { useCallbacksFeed, callbacksFeedKeys, type UseCallbacksFeedParams } from './hooks'
 export { getCallbacksFeed } from './api/callbacksFeedApi'
 export type { CallbacksFeedParams, CallbacksFeedRow, CallbacksFeedResponse } from './types'
-export { MAX_RANGE_DAYS, isWindowTooLong } from './utils/window'

@@ -37,6 +37,7 @@ import { formatDateTime } from '@/lib/localeFormat'
 import { formatPickerDateAsYMD, getDateStringInTimezone } from '@/lib/dateUtils'
 import { getErrorMessage, getErrorStatus, hasResponseDetail } from '@/lib/errors'
 import { Icons } from '@/lib/icons'
+import { isWindowTooLong } from '@/lib/reportWindow'
 import { REPORTS_URL_KEYS } from '@/lib/reportsUrlKeys'
 import { isDatePairInverted, readUrlDateBound } from '@/lib/urlDateBound'
 import { useAuthStore } from '@/stores/authStore'
@@ -53,16 +54,6 @@ const {
   dateTo: DATE_TO_KEY,
   possiblePayment: POSSIBLE_PAYMENT_KEY,
 } = REPORTS_URL_KEYS.promisesDaily
-
-/**
- * Mirrors the backend's window cap in
- * api-prionex/services/client/app/routers/reports.py: the (end - start) day
- * difference may be at most 366, i.e. an inclusive window of 367 days is the
- * widest allowed — larger answers 400. Same cap as operator-promises.
- */
-const MAX_RANGE_DAYS = 366
-
-const MS_PER_DAY = 86_400_000
 
 /**
  * Skeleton width while the first answer loads. The real column count is
@@ -110,11 +101,7 @@ export function PromisesDailyTab() {
   // deliberately do not bound each other (see the fields below), and manual
   // input and hand-edited URLs would bypass such bounds anyway.
   const isInverted = isDatePairInverted(dateFrom, dateTo)
-  const isTooLong =
-    !!dateFrom &&
-    !!dateTo &&
-    !isInverted &&
-    (Date.parse(dateTo) - Date.parse(dateFrom)) / MS_PER_DAY > MAX_RANGE_DAYS
+  const isTooLong = !!dateFrom && !!dateTo && !isInverted && isWindowTooLong(dateFrom, dateTo)
 
   const hasFilterError = fromBound.isInvalid || toBound.isInvalid || isInverted || isTooLong
 
