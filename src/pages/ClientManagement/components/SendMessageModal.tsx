@@ -48,6 +48,10 @@ import {
 } from '@/features/messaging'
 import type { MessagingChannel, MessagingDraft } from '@/features/messaging'
 import { CHANNEL_SPECS } from '@/pages/MessagingDrafts/draftModalShared'
+import {
+  blockingVariables,
+  unresolvedVariables,
+} from '@/features/messaging/utils/unresolvedVariables'
 import { SendMessageModalSkeleton } from './SendMessageModalSkeleton'
 
 const formatClientNameInitials = (fullName: string): string => {
@@ -109,7 +113,7 @@ export function SendMessageModal({
   onClose,
   clientId,
   clientName,
-  loans = [],
+  loans: loansProp,
   phones: phonesProp,
   phoneOptions: phoneOptionsProp,
   workPhone,
@@ -152,6 +156,8 @@ export function SendMessageModal({
     enabled: open,
     staleTime: 5 * 60 * 1000,
   })
+
+  const loans = useMemo(() => loansProp ?? [], [loansProp])
 
   const [selectedLoanId, setSelectedLoanId] = useState<number | null>(
     loans.length > 0 ? loans[0].id : null
@@ -231,8 +237,17 @@ export function SendMessageModal({
               totalToRepay: selectedLoan.totalToRepay,
             }
           : null,
+        hasLoanContext: loansProp !== undefined,
       }),
-    [clientData, clientDisplayName, clientName, currentUser, selectedLoan, user?.username]
+    [
+      clientData,
+      clientDisplayName,
+      clientName,
+      currentUser,
+      selectedLoan,
+      loansProp,
+      user?.username,
+    ]
   )
 
   const previewBody = useMemo(
@@ -371,12 +386,24 @@ export function SendMessageModal({
     ((viberAddImage && viberPublicUrls(viberImages).length > 0) ||
       (viberAddButton && viberButtonName.trim() && viberButtonUrl.trim()))
 
+  const missingVariables = useMemo(
+    () => [
+      ...new Set([
+        ...unresolvedVariables(body, variableValues, 'double'),
+        ...(showSubject ? unresolvedVariables(subject, variableValues, 'double') : []),
+      ]),
+    ],
+    [body, showSubject, subject, variableValues]
+  )
+  const hasUnresolvedVariables = missingVariables.length > 0
+  const blocksSending = blockingVariables(missingVariables).length > 0
   const canSend =
     clientId > 0 &&
     !!service &&
     hasDestination &&
     (body.trim().length > 0 || hasViberRich) &&
     (!channelSpec.subjectRequired || subject.trim().length > 0) &&
+    !blocksSending &&
     !quotaExceeded &&
     !sendMessageMutation.isPending
 
@@ -662,28 +689,41 @@ export function SendMessageModal({
               </Select>
             </div>
 
-            {loans.length > 0 && (
-              <div>
-                <label className="text-foreground mb-1.5 block text-sm font-light">
-                  {t('pages.clients.modals.sendSMS.loanNumber', 'Loan number')}
-                </label>
-                <Select
-                  value={selectedLoanId?.toString() ?? ''}
-                  onValueChange={(value) => setSelectedLoanId(Number(value))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="—" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {loans.map((loan) => (
-                      <SelectItem key={loan.id} value={loan.id.toString()}>
-                        {loan.loanNumber} — {formatMoneyUAHTwoDecimals(loan.totalToRepay)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            <div>
+              <label className="text-foreground mb-1.5 block text-sm font-light">
+                {t('pages.clients.modals.sendSMS.loanNumber', 'Loan number')}
+              </label>
+              <Select
+                value={selectedLoanId?.toString() ?? ''}
+                onValueChange={(value) => setSelectedLoanId(Number(value))}
+                disabled={loans.length === 0}
+              >
+                <SelectTrigger>
+                  <SelectValue
+                    placeholder={
+                      loans.length === 0
+                        ? t('pages.clients.modals.sendSMS.noOpenLoans', 'No open credits')
+                        : '—'
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {loans.map((loan) => (
+                    <SelectItem key={loan.id} value={loan.id.toString()}>
+                      {loan.loanNumber} — {formatMoneyUAHTwoDecimals(loan.totalToRepay)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {hasUnresolvedVariables && (
+                <p className="text-error-500 mt-1.5 text-xs">
+                  {t('pages.clients.modals.sendSMS.unresolvedVariables', {
+                    names: missingVariables.join(', '),
+                    defaultValue: `These variables have no value yet: ${missingVariables.join(', ')}`,
+                  })}
+                </p>
+              )}
+            </div>
 
             {showSubject && (
               <Input
