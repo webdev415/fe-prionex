@@ -13,4 +13,3 @@ export { PromisesFeedTable, PROMISES_FEED_COLUMN_COUNT } from './components/Prom
 export { usePromisesFeed, promisesFeedKeys, type UsePromisesFeedParams } from './hooks'
 export { getPromisesFeed } from './api/promisesFeedApi'
 export type { PromisesFeedParams, PromisesFeedRow, PromisesFeedResponse } from './types'
-export { MAX_RANGE_DAYS, isWindowTooLong } from './utils/window'

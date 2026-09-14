@@ -59,6 +59,7 @@ import { isRealCalendarDate } from '@/lib/calendarDate'
 import { formatPickerDateAsYMD, getDateStringInTimezone } from '@/lib/dateUtils'
 import { getErrorMessage, getErrorStatus, hasResponseDetail } from '@/lib/errors'
 import { Icons } from '@/lib/icons'
+import { isWindowTooLong } from '@/lib/reportWindow'
 import { REPORTS_URL_KEYS } from '@/lib/reportsUrlKeys'
 import { useAuthStore } from '@/stores/authStore'
 import { useOperatorPromisesReport } from '../hooks'
@@ -86,16 +87,6 @@ const {
 } = REPORTS_URL_KEYS.operatorPromises
 
 const TABS_ID_PREFIX = 'operator-promises'
-
-/**
- * Mirrors the backend's window cap `_MAX_RANGE_DAYS` in
- * api-prionex/services/client/app/routers/reports.py: the (end - start) day
- * difference may be at most 366, i.e. an inclusive window of 367 days is the
- * widest allowed — larger answers 400.
- */
-const MAX_RANGE_DAYS = 366
-
-const MS_PER_DAY = 86_400_000
 
 export function OperatorPromisesTab() {
   const { t, i18n } = useTranslation('common')
@@ -135,11 +126,7 @@ export function OperatorPromisesTab() {
   // input and hand-edited URLs would bypass such bounds anyway. ISO YYYY-MM-DD
   // strings compare correctly as strings.
   const isInverted = !!dateFrom && !!dateTo && dateFrom > dateTo
-  const isTooLong =
-    !!dateFrom &&
-    !!dateTo &&
-    !isInverted &&
-    (Date.parse(dateTo) - Date.parse(dateFrom)) / MS_PER_DAY > MAX_RANGE_DAYS
+  const isTooLong = !!dateFrom && !!dateTo && !isInverted && isWindowTooLong(dateFrom, dateTo)
 
   const hasFilterError = isFromInvalid || isToInvalid || isInverted || isTooLong
 
