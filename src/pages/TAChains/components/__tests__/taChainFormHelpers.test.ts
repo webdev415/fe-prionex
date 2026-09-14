@@ -17,6 +17,8 @@ function makeStep(overrides: Partial<TAChainStep> = {}): TAChainStep {
     contact_source: null,
     contact_medium: 'phone',
     show_closed_credits: true,
+    is_promise_date: false,
+    is_promise_amount: false,
     position_x: null,
     position_y: null,
     ...overrides,
@@ -53,6 +55,8 @@ describe('taChainStepsToInput', () => {
         not_in_the_past: true,
         contact_source: 'client',
         show_closed_credits: true,
+        is_promise_date: true,
+        is_promise_amount: true,
       }),
     ])
     expect(result[0]).toEqual({
@@ -62,6 +66,8 @@ describe('taChainStepsToInput', () => {
       not_in_the_past: true,
       contact_source: 'client',
       show_closed_credits: true,
+      is_promise_date: true,
+      is_promise_amount: true,
     })
   })
 
@@ -76,5 +82,28 @@ describe('taChainStepsToInput', () => {
   it('returns an empty array when there are no steps', () => {
     expect(taChainStepsToInput(undefined)).toEqual([])
     expect(taChainStepsToInput([])).toEqual([])
+  })
+
+  // KAN-1069, and the second time this exact bug has been written. The mapper
+  // copies field by field, so any step setting not listed here reads back as
+  // its default: the chain saves correctly, reopens with the boxes unticked,
+  // and the admin reports "it did not save".
+  it('preserves the promise flags (KAN-1069)', () => {
+    const [out] = taChainStepsToInput([
+      makeStep({
+        target_action_field_type: 'date',
+        is_promise_date: true,
+        is_promise_amount: false,
+      }),
+    ])
+    expect(out.is_promise_date).toBe(true)
+    expect(out.is_promise_amount).toBe(false)
+  })
+
+  it('preserves is_promise_amount independently', () => {
+    const [out] = taChainStepsToInput([
+      makeStep({ target_action_field_type: 'amount', is_promise_amount: true }),
+    ])
+    expect(out.is_promise_amount).toBe(true)
   })
 })
