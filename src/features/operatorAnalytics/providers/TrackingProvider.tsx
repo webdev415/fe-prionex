@@ -4,6 +4,7 @@ import { api, getAccessToken } from '@/lib/api'
 import { ingestEvents, buildIngestEventsBody } from '../api/operatorAnalyticsService'
 import type { TrackingEventPayload } from '../types'
 import { TrackingContext, type Tracker } from './trackingContext'
+import { toTrackableClientId } from '../lib/trackableClientId'
 
 const FLUSH_THRESHOLD = 20
 const FLUSH_DEBOUNCE_MS = 5_000
@@ -133,7 +134,11 @@ export function TrackingProvider({
         ts: new Date().toISOString(),
         session_id: sessionIdRef.current,
         call_id: callId,
-        client_id: options?.clientId ?? null,
+        // Checked here, at the one door every event passes through, not only
+        // by the callers: a single out-of-range id gets the whole batch
+        // rejected, and a rejected batch is re-queued, so it would block every
+        // event after it. Callers added later are covered without knowing.
+        client_id: toTrackableClientId(options?.clientId),
         event_type: eventType,
         page_ref:
           options?.pageRef ?? (typeof window !== 'undefined' ? window.location.pathname : null),

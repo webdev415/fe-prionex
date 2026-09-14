@@ -13,14 +13,19 @@
  *  - tab labels — the raw values ("documents", "call-sms-history") are internal
  *    state names that mean nothing to a reader
  *  - document reads badged as UI events, not "Data changes"
+ *  - times in the profile timezone, like the rest of the card, not the browser's
+ *  - a fresh tab per client: the card stays mounted across a client switch
+ *  - card-load tab/section events (`initial`) never shown as clicks
  */
 
-import { describe, expect, it, vi, beforeAll, beforeEach } from 'vitest'
+import { afterEach, describe, expect, it, vi, beforeAll, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ClientActivityLogTab, type ActivityCallRef } from '../ClientActivityLogTab'
 import { activityLogApi, type ActivityLogResponse } from '@/features/clients/api/activityLogApi'
+import { useAuthStore } from '@/stores/authStore'
+import type { User } from '@/types/api'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -428,5 +433,139 @@ describe('ClientActivityLogTab', () => {
       expect(getSpy).toHaveBeenCalledWith(2, expect.objectContaining({ page: 1 }))
     )
     expect(getSpy).not.toHaveBeenCalledWith(2, expect.objectContaining({ page: 3 }))
+  })
+})
+
+describe('ClientActivityLogTab — card-load events', () => {
+  // The card sends a tab and a section event when it loads, marked `initial`,
+  // because screen-time needs the boundary. They are not clicks. The endpoint
+  // drops them; the tab must not show one even if it arrives.
+  beforeEach(() => {
+    getSpy.mockReset()
+  })
+
+  const tabSwitch = (tab: string, initial?: boolean | string) =>
+    entry({
+      kind: 'client_card_tab_switch',
+      summary: null,
+      detail: { meta: { tab, ...(initial !== undefined ? { initial } : {}) } },
+    })
+
+  it('does not show a tab the card opened on load as a click', async () => {
+    getSpy.mockResolvedValue(
+      response({ entries: [tabSwitch('call-sms-history', true), tabSwitch('documents')] })
+    )
+    renderTab()
+
+    // The operator's own click is shown...
+    expect(await screen.findByText("Opened 'Docs' tab")).toBeInTheDocument()
+    // ...the card's load is not.
+    expect(screen.queryByText("Opened 'Call / SMS' tab")).not.toBeInTheDocument()
+  })
+
+  it('treats the flag written as text the same way', async () => {
+    getSpy.mockResolvedValue(
+      response({ entries: [tabSwitch('call-sms-history', 'true'), tabSwitch('documents')] })
+    )
+    renderTab()
+
+    await screen.findByText("Opened 'Docs' tab")
+    expect(screen.queryByText("Opened 'Call / SMS' tab")).not.toBeInTheDocument()
+  })
+
+  it('reads as empty when card loads are all there is', async () => {
+    getSpy.mockResolvedValue(response({ entries: [tabSwitch('call-sms-history', true)] }))
+    renderTab()
+
+    expect(await screen.findByText('No activity recorded')).toBeInTheDocument()
+  })
+})
+
+describe('ClientActivityLogTab — switching client', () => {
+  beforeEach(() => {
+    getSpy.mockReset()
+  })
+
+  it('starts fresh when the card moves to another client', async () => {
+    // The card stays mounted across a client switch, so only the tab can make
+    // sure client A's page and filters are not applied to client B.
+    getSpy.mockResolvedValue(response({ entries: [entry()], total: 500 }))
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const tab = (clientId: number) => (
+      <QueryClientProvider client={queryClient}>
+        <ClientActivityLogTab clientId={clientId} isActive />
+      </QueryClientProvider>
+    )
+    const { rerender } = render(tab(2))
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Go to page 2' }))
+    await userEvent.type(
+      screen.getByPlaceholderText('pages.clients.detail.activityLog.filters.selectStartDate'),
+      '01.09.2026'
+    )
+    await waitFor(() =>
+      expect(getSpy).toHaveBeenLastCalledWith(
+        2,
+        expect.objectContaining({ fromTs: expect.any(String) })
+      )
+    )
+
+    rerender(tab(3))
+
+    await waitFor(() =>
+      expect(getSpy).toHaveBeenLastCalledWith(
+        3,
+        expect.objectContaining({ page: 1, fromTs: null, operatorId: null })
+      )
+    )
+    expect(getSpy).not.toHaveBeenCalledWith(3, expect.objectContaining({ page: 2 }))
+    expect(
+      screen.getByPlaceholderText('pages.clients.detail.activityLog.filters.selectStartDate')
+    ).toHaveValue('')
+  })
+})
+
+describe('ClientActivityLogTab — profile timezone', () => {
+  // The suite runs with TZ=UTC (vitest.config.ts), so a Kyiv profile -- UTC+3
+  // in September -- makes the browser's zone and the profile's disagree.
+  beforeEach(() => {
+    getSpy.mockReset()
+    useAuthStore.setState({
+      user: { id: '7', timezone: 'Europe/Kyiv' } as unknown as User,
+      isAuthenticated: true,
+    })
+  })
+  afterEach(() => {
+    useAuthStore.setState({ user: null, isAuthenticated: false })
+  })
+
+  it('shows times in the profile timezone, as the rest of the card does', async () => {
+    getSpy.mockResolvedValue(response({ entries: [entry({ ts: '2026-09-01T10:00:00Z' })] }))
+    renderTab()
+
+    // 10:00 UTC is 13:00 in Kyiv -- "01:00 PM" in the 'en' locale this suite
+    // renders in. The browser's zone (UTC here) would say 10:00 AM, and the
+    // Call/SMS tab would show the same call three hours apart.
+    expect(await screen.findByText('09/01/2026, 01:00 PM')).toBeInTheDocument()
+    expect(screen.queryByText('09/01/2026, 10:00 AM')).not.toBeInTheDocument()
+  })
+
+  it("bounds a picked day by the profile timezone, not the browser's", async () => {
+    getSpy.mockResolvedValue(response())
+    renderTab()
+
+    await userEvent.type(
+      screen.getByPlaceholderText('pages.clients.detail.activityLog.filters.selectStartDate'),
+      '01.09.2026'
+    )
+
+    // Kyiv's 1 September starts at 21:00 UTC the day before. Browser-local
+    // midnight would have asked from 00:00 UTC and missed three hours of it.
+    await waitFor(() =>
+      expect(getSpy).toHaveBeenLastCalledWith(
+        2,
+        expect.objectContaining({ fromTs: '2026-08-31T21:00:00.000Z' })
+      )
+    )
   })
 })

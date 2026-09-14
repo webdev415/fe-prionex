@@ -1115,14 +1115,13 @@ jobs:
       # makes AC2's guarantee possible at all.
       #
       # ⚠️ AC2's guarantee covers these TWO variables and no others, and that is a
-      # recorded gap rather than an oversight. `src/` reads five: these two plus
-      # `VITE_OPERATOR_PHONE_URL`, `VITE_EASYPAY_PORTAL_API_KEY` and
-      # `VITE_BUILD_TS`. Vite bakes `undefined` for an undeclared
-      # `import.meta.env.X`; each of the three has an in-source fallback, and the
-      # websocket one falls back to `localhost`. Closing that gap means extending
-      # `Dockerfile.prod`, which AC5 forbids without an amendment — so it is
-      # deferred with an owner rather than resolved by pretending the contract
-      # covers five. See deferred-work.md.
+      # recorded gap rather than an oversight. `src/` reads four: these two plus
+      # `VITE_OPERATOR_PHONE_URL` and `VITE_BUILD_TS`. Vite bakes `undefined`
+      # for an undeclared `import.meta.env.X`; each of the two has an in-source
+      # fallback, and the websocket one falls back to `localhost`. Closing that
+      # gap means extending `Dockerfile.prod`, which AC5 forbids without an
+      # amendment — so it is deferred with an owner rather than resolved by
+      # pretending the contract covers four. See deferred-work.md.
       #
       # `org.prionex.environment` is Story 3.3's, and it answers Story 3.6 AC3:
       # "the environment it was built for is determinable from the image itself,

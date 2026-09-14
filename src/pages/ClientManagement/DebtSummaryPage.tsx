@@ -4,7 +4,7 @@
  * Displays customer debt summary with payment progress and payment history.
  */
 
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   convertUTCToUserTimezone,
@@ -14,6 +14,7 @@ import {
 } from '@/lib/formatters'
 import { useAuthStore } from '@/stores/authStore'
 import { useTrackEvent } from '@/features/operatorAnalytics'
+import { useModalOpenTracking } from './hooks/useClientCardInteractionTracking'
 import { useParams, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
@@ -201,7 +202,6 @@ export function DebtSummaryPage() {
   // mounted on both, so keying them apart would split one action into two
   // names in the feed for no reason an operator could see.
   const trackEvent = useTrackEvent()
-  const previousPaymentModalFlags = useRef<Record<string, boolean> | null>(null)
   const paymentModalFlags = useMemo(
     () => ({
       payment_details: isPaymentDetailsModalOpen,
@@ -219,18 +219,9 @@ export function DebtSummaryPage() {
     ]
   )
 
-  useEffect(() => {
-    if (!clientId) return
-    const previous = previousPaymentModalFlags.current
-    previousPaymentModalFlags.current = paymentModalFlags
-    // First run records the baseline only -- nothing was "opened" by anyone yet.
-    if (!previous) return
-    for (const [modal, isOpen] of Object.entries(paymentModalFlags)) {
-      if (isOpen && !previous[modal]) {
-        trackEvent('client_modal_open', { clientId, meta: { modal } })
-      }
-    }
-  }, [paymentModalFlags, clientId, trackEvent])
+  // Same baseline-then-transition rule as the client card, from the same
+  // tested hook rather than a hand-kept copy of it.
+  useModalOpenTracking(id, paymentModalFlags, trackEvent)
 
   // Call functionality state
   const { isCallActive, setOpenCallModal } = useCallStore()
