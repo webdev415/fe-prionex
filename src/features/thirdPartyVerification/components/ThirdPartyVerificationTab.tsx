@@ -35,18 +35,12 @@ import { isRealCalendarDate } from '@/lib/calendarDate'
 import { getErrorMessage, getErrorStatus } from '@/lib/errors'
 import { Icons } from '@/lib/icons'
 import { formatPickerDateAsYMD } from '@/lib/dateUtils'
+import { isWindowTooLong } from '@/lib/reportWindow'
 import { REPORTS_URL_KEYS } from '@/lib/reportsUrlKeys'
 import { useAuthStore } from '@/stores/authStore'
 import { useThirdPartyVerificationReport } from '../hooks'
 import { currentMonthRange } from '../utils/monthRange'
 import { VerificationTable } from './VerificationTable'
-
-// Mirrors the backend's window cap `_MAX_RANGE_DAYS` in
-// api-prionex/services/client/app/routers/reports.py: the (end - start) day
-// difference may be at most 366 for BOTH windows — larger answers 400.
-const MAX_RANGE_DAYS = 366
-
-const MS_PER_DAY = 86_400_000
 
 /** This tab's slice of the Reports page URL namespace (see the registry). */
 const {
@@ -61,11 +55,6 @@ type FilterKey =
   | typeof SELL_TO_KEY
   | typeof COUNT_FROM_KEY
   | typeof COUNT_TO_KEY
-
-/** Whole-day span between two ISO dates (the backend compares the same way). */
-function spanInDays(from: string, to: string): number {
-  return (Date.parse(to) - Date.parse(from)) / MS_PER_DAY
-}
 
 export function ThirdPartyVerificationTab() {
   const { t } = useTranslation('common')
@@ -139,8 +128,7 @@ export function ThirdPartyVerificationTab() {
   // Manual input can bypass the pickers' min/max, so invalid ranges must not
   // reach the API. ISO YYYY-MM-DD strings compare correctly as strings.
   const isSellInverted = !hasInvalidSellDate && sellFrom > sellTo
-  const isSellTooLong =
-    !hasInvalidSellDate && !isSellInverted && spanInDays(sellFrom, sellTo) > MAX_RANGE_DAYS
+  const isSellTooLong = !hasInvalidSellDate && !isSellInverted && isWindowTooLong(sellFrom, sellTo)
   const sellErrorKey = hasInvalidSellDate
     ? 'pages.reports.verification.invalidSellDate'
     : isSellInverted
@@ -154,7 +142,7 @@ export function ThirdPartyVerificationTab() {
   const hasBothCountBounds = !!countFrom && !!countTo
   const isCountInverted = hasBothCountBounds && countFrom > countTo
   const isCountTooLong =
-    hasBothCountBounds && !isCountInverted && spanInDays(countFrom, countTo) > MAX_RANGE_DAYS
+    hasBothCountBounds && !isCountInverted && isWindowTooLong(countFrom, countTo)
   const countErrorKey = hasInvalidCountDate
     ? 'pages.reports.verification.invalidCountDate'
     : isCountInverted
