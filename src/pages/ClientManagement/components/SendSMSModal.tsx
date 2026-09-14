@@ -69,6 +69,7 @@ const renderTemplateMessage = (
   let rendered = templateText
   // Replace all variables in format {variable_name}
   rendered = rendered.replace(/\{(\w+)\}/g, (match, varName) => {
+    if (!Object.prototype.hasOwnProperty.call(variables, varName)) return match
     return variables[varName] !== undefined && variables[varName] !== ''
       ? variables[varName]!
       : match
@@ -219,7 +220,7 @@ export function SendSMSModal({
 
   const isDailyLimitReached = smsSentToday >= dailyLimit
   const missingVariables = useMemo(
-    () => unresolvedVariables(displayMessage, variableValues),
+    () => unresolvedVariables(displayMessage, variableValues, 'single'),
     [displayMessage, variableValues]
   )
   const hasUnresolvedVariables = missingVariables.length > 0

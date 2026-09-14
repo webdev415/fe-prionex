@@ -81,4 +81,17 @@ describe('credit variables when the client has no open credit', () => {
     expect(vars.due_date).toBe('')
     expect(renderMessagingTemplate('{{due_date}}', vars)).toBe('{{due_date}}')
   })
+
+  it('never renders an inherited object member into a message', () => {
+    const vars = buildClientMessagingVariables({
+      clientName: 'Kovalchuk Olena',
+      clientDisplayName: 'Olena',
+      clientData,
+      selectedLoan: null,
+      hasLoanContext: true,
+    })
+
+    expect(renderMessagingTemplate('Hello {{constructor}}', vars)).toBe('Hello {{constructor}}')
+    expect(renderMessagingTemplate('{{toString}}', vars)).toBe('{{toString}}')
+  })
 })

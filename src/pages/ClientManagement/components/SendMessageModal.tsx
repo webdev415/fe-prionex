@@ -386,8 +386,8 @@ export function SendMessageModal({
   const missingVariables = useMemo(
     () => [
       ...new Set([
-        ...unresolvedVariables(body, variableValues),
-        ...(showSubject ? unresolvedVariables(subject, variableValues) : []),
+        ...unresolvedVariables(body, variableValues, 'double'),
+        ...(showSubject ? unresolvedVariables(subject, variableValues, 'double') : []),
       ]),
     ],
     [body, showSubject, subject, variableValues]
