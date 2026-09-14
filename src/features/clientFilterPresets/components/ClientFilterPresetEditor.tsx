@@ -41,7 +41,8 @@ export interface ClientFilterPresetEditorProps {
   editingId: number | null
   name: string
   params: ClientFilterPresetParams
-  nameError: boolean
+  /** Why the name was rejected, if it was. */
+  nameError: 'required' | 'duplicate' | null
   saved: boolean
   onNameChange: (name: string) => void
   onParamsChange: (params: ClientFilterPresetParams) => void
@@ -128,9 +129,11 @@ export function ClientFilterPresetEditor({
         value={name}
         onChange={(e) => onNameChange(e.target.value)}
         error={
-          nameError
+          nameError === 'required'
             ? t('pages.profile.presets.nameRequired', 'Enter a name for the preset')
-            : undefined
+            : nameError === 'duplicate'
+              ? t('pages.profile.presets.nameDuplicate', 'You already have a preset with this name')
+              : undefined
         }
       />
 
@@ -283,6 +286,23 @@ export function ClientFilterPresetEditor({
           aria-label={t('pages.profile.presets.fields.onlyLastChain', 'Only last TA chain')}
         />
         {t('pages.profile.presets.fields.onlyLastChain', 'Only last TA chain')}
+      </label>
+
+      {/* Unlike the row above, off is the meaningful default here: an unticked
+          box means the preset does not ask about payments, so the key is
+          dropped rather than saved as false. */}
+      <label className="text-foreground flex cursor-pointer items-center gap-2 text-sm">
+        <Checkbox
+          checked={params.hasVerifiedPayment ?? false}
+          onCheckedChange={(checked) =>
+            setParam('hasVerifiedPayment', checked === true ? true : undefined)
+          }
+          aria-label={t(
+            'pages.profile.presets.fields.hasVerifiedPayment',
+            'Has verified payment(s)'
+          )}
+        />
+        {t('pages.profile.presets.fields.hasVerifiedPayment', 'Has verified payment(s)')}
       </label>
 
       <div className="flex w-full flex-wrap items-center gap-2 self-stretch">

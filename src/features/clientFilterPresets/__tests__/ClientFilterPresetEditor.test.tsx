@@ -91,7 +91,7 @@ function Harness({
       editingId={null}
       name="Preset"
       params={params}
-      nameError={false}
+      nameError={null}
       saved={false}
       onNameChange={vi.fn()}
       onParamsChange={(next) => {
@@ -170,6 +170,29 @@ describe('ClientFilterPresetEditor', () => {
     expect(last.chainIds).toEqual([10])
     // 201 belonged to Legal and is gone; 101 is still in a selected chain.
     expect(last.chainStepIds).toEqual([101])
+  })
+
+  it('saves the verified-payments filter only when it is asked for', async () => {
+    const user = userEvent.setup()
+    const onParamsChange = vi.fn()
+    render(<Harness onParamsChange={onParamsChange} />)
+    const box = screen.getByRole('checkbox', {
+      name: 'pages.profile.presets.fields.hasVerifiedPayment',
+    })
+
+    // Off is the meaningful default: an unticked box means the preset does not
+    // ask about payments, so nothing is stored for it.
+    expect(box).not.toBeChecked()
+
+    await user.click(box)
+    expect(onParamsChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ hasVerifiedPayment: true })
+    )
+
+    await user.click(box)
+    const last = onParamsChange.mock.lastCall?.[0] as ClientFilterPresetParams
+    // Dropped, not saved as false — false would read as a deliberate filter.
+    expect('hasVerifiedPayment' in last).toBe(false)
   })
 
   it('defaults "only last chain" to on, matching the client list', () => {

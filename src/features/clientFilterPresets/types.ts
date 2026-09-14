@@ -79,10 +79,11 @@ export interface ClientFilterPresetParams {
   responsibleEmployee?: EmployeeScopeParam
   responsibleSearcher?: string
   /**
-   * Blocked on #1099. Declared so the shape is stable and the resolver has a
-   * home for it, but nothing sets or reads it until that filter exists.
+   * Singular, matching `ClientFilters.hasVerifiedPayment` — the filter #1099
+   * added. Absent means the preset does not ask about payments at all, which
+   * the client list reads as its `false` default.
    */
-  hasVerifiedPayments?: boolean
+  hasVerifiedPayment?: boolean
 }
 
 export interface ClientFilterPreset {

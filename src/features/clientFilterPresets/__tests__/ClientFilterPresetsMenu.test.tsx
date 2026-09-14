@@ -44,7 +44,7 @@ const open = async (user: ReturnType<typeof userEvent.setup>) => {
 describe('ClientFilterPresetsMenu', () => {
   it('points the operator at their profile when they have no presets', async () => {
     const user = userEvent.setup()
-    render(<ClientFilterPresetsMenu projectId={1} onApply={vi.fn()} />)
+    render(<ClientFilterPresetsMenu projectId={1} onApply={vi.fn()} hasActiveFilters />)
 
     await open(user)
 
@@ -64,7 +64,7 @@ describe('ClientFilterPresetsMenu', () => {
         },
       },
     ])
-    render(<ClientFilterPresetsMenu projectId={1} onApply={onApply} />)
+    render(<ClientFilterPresetsMenu projectId={1} onApply={onApply} hasActiveFilters />)
 
     await open(user)
     await user.click(screen.getByText('This month'))
@@ -83,7 +83,7 @@ describe('ClientFilterPresetsMenu', () => {
     const user = userEvent.setup()
     const onApply = vi.fn()
     seed([{ id: 1, name: 'My team', params: { responsibleEmployee: { scope: 'myGroup' } } }])
-    render(<ClientFilterPresetsMenu projectId={1} onApply={onApply} />)
+    render(<ClientFilterPresetsMenu projectId={1} onApply={onApply} hasActiveFilters />)
 
     await open(user)
     await user.click(screen.getByText('My team'))
@@ -97,7 +97,7 @@ describe('ClientFilterPresetsMenu', () => {
     const user = userEvent.setup()
     const onApply = vi.fn()
     seed([{ id: 1, name: 'DPD only', params: { dpd: { from: 10 } } }])
-    render(<ClientFilterPresetsMenu projectId={1} onApply={onApply} />)
+    render(<ClientFilterPresetsMenu projectId={1} onApply={onApply} hasActiveFilters />)
 
     await open(user)
     await user.click(screen.getByText('DPD only'))
@@ -112,7 +112,7 @@ describe('ClientFilterPresetsMenu', () => {
       { id: 1, name: 'First', params: { dpd: { from: 1 } } },
       { id: 2, name: 'Second', params: { dpd: { from: 2 } } },
     ])
-    render(<ClientFilterPresetsMenu projectId={1} onApply={vi.fn()} />)
+    render(<ClientFilterPresetsMenu projectId={1} onApply={vi.fn()} hasActiveFilters />)
 
     await open(user)
     await user.click(screen.getByText('First'))
@@ -125,6 +125,24 @@ describe('ClientFilterPresetsMenu', () => {
     expect(screen.getAllByText('pages.clients.presets.applied')).toHaveLength(1)
   })
 
+  it('drops the applied mark once the filters are cleared', async () => {
+    const user = userEvent.setup()
+    seed([{ id: 1, name: 'First', params: { dpd: { from: 1 } } }])
+    const { rerender } = render(
+      <ClientFilterPresetsMenu projectId={1} onApply={vi.fn()} hasActiveFilters />
+    )
+
+    await open(user)
+    await user.click(screen.getByText('First'))
+    await open(user)
+    expect(screen.getByText('pages.clients.presets.applied')).toBeTruthy()
+
+    // Clear All empties the filters without telling this component. A mark left
+    // standing would claim a view that is no longer on screen.
+    rerender(<ClientFilterPresetsMenu projectId={1} onApply={vi.fn()} hasActiveFilters={false} />)
+    expect(screen.queryByText('pages.clients.presets.applied')).toBeNull()
+  })
+
   it('shows only the signed-in operator’s presets', async () => {
     const user = userEvent.setup()
     useClientFilterPresetStore.setState({
@@ -133,7 +151,7 @@ describe('ClientFilterPresetsMenu', () => {
         '2': [{ id: 2, name: 'Somebody else’s', params: {} }],
       },
     })
-    render(<ClientFilterPresetsMenu projectId={1} onApply={vi.fn()} />)
+    render(<ClientFilterPresetsMenu projectId={1} onApply={vi.fn()} hasActiveFilters />)
 
     await open(user)
 

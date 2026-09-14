@@ -8784,7 +8784,8 @@
           "chainStep": "Chain step",
           "chainStepHint": "Choose a chain first",
           "responsibleSearcher": "Responsible searcher",
-          "tags": "Tags"
+          "tags": "Tags",
+          "hasVerifiedPayment": "Has verified payment(s)"
         },
         "multi": {
           "all": "Any"
@@ -8792,7 +8793,10 @@
         "tags": {
           "none": "No tags available",
           "hint": "Click a tag to include it, again to exclude it"
-        }
+        },
+        "nameDuplicate": "You already have a preset with this name",
+        "confirmDeleteTitle": "Delete this preset?",
+        "confirmDeleteMessage": "\"{{name}}\" will be removed. This cannot be undone."
       }
     },
     "reports": {

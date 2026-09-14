@@ -137,6 +137,10 @@ describe('resolvePresetToFilters', () => {
     expect(f.onlyLastChain).toBe(true)
     expect(f.responsibleSearcher).toBe('searcher-1')
 
+    // Absent unless asked for: the client list reads a missing value as false,
+    // so writing false would add a key that changes nothing but looks deliberate.
+    expect('hasVerifiedPayment' in f).toBe(false)
+
     // "Any date" on one side must leave that bound unset, not empty.
     expect('taDateFrom' in f).toBe(false)
   })
@@ -172,5 +176,21 @@ describe('resolvePresetToFilters', () => {
       { now: NOW, resolveEmployeeScope: noScopes }
     )
     expect('responsibleSearcher' in f).toBe(false)
+  })
+
+  it('writes the verified-payments filter only when the preset asks for it', () => {
+    const asked = resolvePresetToFilters(
+      { hasVerifiedPayment: true },
+      { now: NOW, resolveEmployeeScope: noScopes }
+    )
+    expect(asked.hasVerifiedPayment).toBe(true)
+
+    // Explicit false means the same as absent — the preset does not filter on
+    // payments — so it must not reach the client list as a set filter.
+    const notAsked = resolvePresetToFilters(
+      { hasVerifiedPayment: false },
+      { now: NOW, resolveEmployeeScope: noScopes }
+    )
+    expect(Object.keys(notAsked)).toEqual([])
   })
 })
