@@ -766,24 +766,6 @@ export function SendMessageModal({
               )}
             />
 
-            <MessagingVariablesPalette onInsert={handleInsertVariable} disabled={!hasDestination} />
-
-            {isMy2Viber && (
-              <ViberRichContentFields
-                addImage={viberAddImage}
-                onAddImageChange={setViberAddImage}
-                images={viberImages}
-                onImagesChange={setViberImages}
-                addButton={viberAddButton}
-                onAddButtonChange={setViberAddButton}
-                buttonName={viberButtonName}
-                onButtonNameChange={setViberButtonName}
-                buttonUrl={viberButtonUrl}
-                onButtonUrlChange={setViberButtonUrl}
-                disabled={!hasDestination}
-              />
-            )}
-
             <div className="border-border bg-muted rounded-xl border p-4">
               <div className="mb-3 flex flex-wrap items-center gap-2">
                 <span className="text-foreground text-sm font-medium">
@@ -820,6 +802,24 @@ export function SendMessageModal({
                 </div>
               </div>
             </div>
+
+            <MessagingVariablesPalette onInsert={handleInsertVariable} disabled={!hasDestination} />
+
+            {isMy2Viber && (
+              <ViberRichContentFields
+                addImage={viberAddImage}
+                onAddImageChange={setViberAddImage}
+                images={viberImages}
+                onImagesChange={setViberImages}
+                addButton={viberAddButton}
+                onAddButtonChange={setViberAddButton}
+                buttonName={viberButtonName}
+                onButtonNameChange={setViberButtonName}
+                buttonUrl={viberButtonUrl}
+                onButtonUrlChange={setViberButtonUrl}
+                disabled={!hasDestination}
+              />
+            )}
           </div>
         )}
       </ModalContent>

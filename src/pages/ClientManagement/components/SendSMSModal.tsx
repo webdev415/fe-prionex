@@ -193,7 +193,9 @@ export function SendSMSModal({
     const contractNumber = selectedLoan?.loanNumber ?? debtFallback
 
     // {due_date} = max promise_to_pay_date across this client's interactions (DD.MM.YYYY)
-    const dueDate = formatDateDotDMY(clientData?.max_promise_to_pay_date ?? null)
+    const dueDate =
+      formatDateDotDMY(clientData?.max_promise_to_pay_date ?? null) ||
+      formatDateDotDMY(new Date().toISOString())
 
     // Get operator_phone from user API response
     const operatorPhone = resolveOperatorPhone(currentUserData?.data)

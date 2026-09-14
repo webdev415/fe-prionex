@@ -7691,7 +7691,7 @@
         "currentDebtAmount": "Current debt amount",
         "operatorName": "Operator's name",
         "operatorPhone": "Operator's phone",
-        "paymentDueDate": "Latest promise date from interactions (DD.MM.YYYY)",
+        "paymentDueDate": "Latest promise date from interactions, or today's date if there is none (DD.MM.YYYY)",
         "contractLoanNumber": "Contract/Loan number"
       },
       "forms": {
