@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
+import { safeHttpUrl } from '@/lib/safeUrl'
 import { useAuthStore } from '@/stores/authStore'
 import { formatTaskDueDateForDisplay } from '@/lib/formatters'
 import { cn } from '@/lib/utils'
@@ -1240,24 +1241,6 @@ function RRPaymentNotificationItem({
   )
 }
 
-// `meeting_url` is free text a trainer types when scheduling a group
-// training, so it reaches us unvalidated. Render it as a link only when
-// it is http(s): a `javascript:` href would execute on click, and
-// `data:`/`blob:` open an opaque origin — both are phishing vectors even
-// from an internal author. Anything else is dropped (the card still
-// shows topic and time).
-function safeMeetingUrl(raw: unknown): string | undefined {
-  if (typeof raw !== 'string') return undefined
-  const value = raw.trim()
-  if (!value) return undefined
-  try {
-    const { protocol } = new URL(value, window.location.origin)
-    return protocol === 'http:' || protocol === 'https:' ? value : undefined
-  } catch {
-    return undefined
-  }
-}
-
 // ─── Training notification item ──────────────────────────────────
 // Coaching & training assignments (1-on-1s, courses, drills,
 // correction tasks). 1-on-1 cards surface who/when from metadata when
@@ -1298,7 +1281,7 @@ function TrainingNotificationItem({
   const isGroupTraining =
     n.type === NotificationType.TRAINING_SCHEDULED || n.type === NotificationType.TRAINING_REMINDER
   const topic = typeof meta.title === 'string' ? meta.title : undefined
-  const meetingUrl = safeMeetingUrl(meta.meeting_url)
+  const meetingUrl = safeHttpUrl(meta.meeting_url)
   return (
     <div className="group border-border hover:bg-muted relative flex flex-col border-b transition-colors last:border-b-0">
       <button

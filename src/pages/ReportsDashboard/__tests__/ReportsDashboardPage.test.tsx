@@ -83,6 +83,16 @@ vi.mock('@/features/promisesDaily', () => ({
   PromisesDailyTab: () => <div data-testid="promises-daily-tab" />,
 }))
 
+// …and for the promises feed (features/promisesFeed).
+vi.mock('@/features/promisesFeed', () => ({
+  PromisesFeedTab: () => <div data-testid="promises-feed-tab" />,
+}))
+
+// …and for the callbacks feed (features/callbacksFeed).
+vi.mock('@/features/callbacksFeed', () => ({
+  CallbacksFeedTab: () => <div data-testid="callbacks-feed-tab" />,
+}))
+
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: (selector: (s: unknown) => unknown) =>
     selector({
@@ -163,6 +173,8 @@ const outboundCallsTab = () =>
   screen.getByRole('tab', { name: 'pages.reports.tabs.outbound-calls' })
 const promisesDailyTab = () =>
   screen.getByRole('tab', { name: 'pages.reports.tabs.promises-daily' })
+const promisesFeedTab = () => screen.getByRole('tab', { name: 'pages.reports.tabs.promises-feed' })
+const callbacksFeedTab = () => screen.getByRole('tab', { name: 'pages.reports.tabs.callbacks' })
 
 describe('ReportsDashboardPage (tab host)', () => {
   it('renders the processing report panel for ?tab=processing', () => {
@@ -523,7 +535,102 @@ describe('ReportsDashboardPage (tab host)', () => {
     expect(search()).toContain('pdp=1')
   })
 
-  it('offers all eleven report tabs in a fixed order', () => {
+  it('renders the promises feed panel for ?tab=promises-feed', () => {
+    renderPage(['/reports?tab=promises-feed'])
+
+    expect(screen.getByTestId('promises-feed-tab')).toBeInTheDocument()
+    // Its neighbour migrates the same promise universe (Cards 103/119) — the
+    // two must not be confusable at the routing level.
+    expect(screen.queryByTestId('promises-daily-tab')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('agent-performance-table')).not.toBeInTheDocument()
+    expect(promisesFeedTab()).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'reports-panel-promises-feed')
+  })
+
+  it('keeps the promises feed filters when switching tabs', async () => {
+    renderPage([
+      '/reports?tab=promises-feed&prf=2026-09-01&prt=2026-09-07&prw=1&prp=1&prpg=2&prps=100',
+    ])
+    expect(screen.getByTestId('promises-feed-tab')).toBeInTheDocument()
+
+    await userEvent.click(dashboardTab())
+
+    // Same documented contract as the other report tabs: the filters survive a
+    // round-trip through the dashboard, and no key set collides with another
+    // tab's (`prf/prt/prw/prp/prpg/prps` vs the daily promises `pdf/pdt/pdp`
+    // and the low-verification `pf/pt/pg/ps` — the closest spellings in the
+    // registry).
+    expect(screen.getByTestId('agent-performance-table')).toBeInTheDocument()
+    expect(search()).not.toContain('tab=')
+    expect(search()).toContain('prf=2026-09-01')
+    expect(search()).toContain('prt=2026-09-07')
+    expect(search()).toContain('prw=1')
+    expect(search()).toContain('prp=1')
+    expect(search()).toContain('prpg=2')
+    expect(search()).toContain('prps=100')
+  })
+
+  it('keeps the two promises tabs’ params apart in one URL', () => {
+    // `pdf/pdt/pdp` and `prf/prt/prp` are one letter apart, and both tabs are
+    // about promises — the registry is what keeps them from transplanting
+    // into each other. Opening one with both sets present must mount only
+    // that one; the sibling's keys are inert here.
+    renderPage([
+      '/reports?tab=promises-feed&pdf=2026-08-01&pdt=2026-08-31&pdp=1&prf=2026-09-01&prt=2026-09-07',
+    ])
+
+    expect(screen.getByTestId('promises-feed-tab')).toBeInTheDocument()
+    expect(screen.queryByTestId('promises-daily-tab')).not.toBeInTheDocument()
+    expect(search()).toContain('pdf=2026-08-01')
+    expect(search()).toContain('prf=2026-09-01')
+  })
+
+  it('renders the callbacks feed panel for ?tab=callbacks', () => {
+    renderPage(['/reports?tab=callbacks'])
+
+    expect(screen.getByTestId('callbacks-feed-tab')).toBeInTheDocument()
+    // Its neighbour is the promises feed it shares a frame with — the two
+    // must not be confusable at the routing level.
+    expect(screen.queryByTestId('promises-feed-tab')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('agent-performance-table')).not.toBeInTheDocument()
+    expect(callbacksFeedTab()).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'reports-panel-callbacks')
+  })
+
+  it('keeps the callbacks feed filters when switching tabs', async () => {
+    renderPage(['/reports?tab=callbacks&cbf=2026-09-01&cbt=2026-09-07&cbc=1&cbw=1&cbpg=2&cbps=100'])
+    expect(screen.getByTestId('callbacks-feed-tab')).toBeInTheDocument()
+
+    await userEvent.click(dashboardTab())
+
+    // Same documented contract as the other report tabs: the filters survive a
+    // round-trip through the dashboard, and no key set collides with another
+    // tab's (`cbf/cbt/cbc/cbw/cbpg/cbps` vs the verification tab's `cf`/`ct` —
+    // the closest spellings in the registry).
+    expect(screen.getByTestId('agent-performance-table')).toBeInTheDocument()
+    expect(search()).not.toContain('tab=')
+    expect(search()).toContain('cbf=2026-09-01')
+    expect(search()).toContain('cbt=2026-09-07')
+    expect(search()).toContain('cbc=1')
+    expect(search()).toContain('cbw=1')
+    expect(search()).toContain('cbpg=2')
+    expect(search()).toContain('cbps=100')
+  })
+
+  it('keeps the callbacks feed apart from the verification tab’s `c…` params in one URL', () => {
+    // `cf`/`ct` are the verification tab's "count from/to" and the two keys a
+    // CallbacKs feed would reach for first — the registry is what keeps them
+    // from transplanting into each other. Opening the feed with both sets
+    // present must mount only it; the sibling's keys are inert here.
+    renderPage(['/reports?tab=callbacks&cf=2026-01-01&ct=2026-01-31&cbf=2026-09-01&cbt=2026-09-07'])
+
+    expect(screen.getByTestId('callbacks-feed-tab')).toBeInTheDocument()
+    expect(search()).toContain('cf=2026-01-01')
+    expect(search()).toContain('ct=2026-01-31')
+    expect(search()).toContain('cbf=2026-09-01')
+  })
+
+  it('offers all thirteen report tabs in a fixed order', () => {
     // The strip is the only place the tab set is visible at a glance; a new
     // report must be ADDED here rather than replace a sibling.
     renderPage()
@@ -544,6 +651,11 @@ describe('ReportsDashboardPage (tab host)', () => {
       'pages.reports.tabs.operator-promises',
       'pages.reports.tabs.outbound-calls',
       'pages.reports.tabs.promises-daily',
+      // …and the promises feed right after the daily matrix it details.
+      'pages.reports.tabs.promises-feed',
+      // …and the call plan last, next to the promises feed it shares a frame
+      // with: same operators, but «whom do I RING, and at what time».
+      'pages.reports.tabs.callbacks',
     ])
   })
 
