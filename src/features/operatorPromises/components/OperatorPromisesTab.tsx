@@ -54,10 +54,9 @@ import {
   type SegmentedTabItem,
 } from '@/components/ui/SegmentedTabs'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
-import { isTransientFailure } from '@/lib/api'
+import { FEED_ERROR_KEY_PREFIXES, useFeedErrorMessage } from '@/hooks'
 import { isRealCalendarDate } from '@/lib/calendarDate'
 import { formatPickerDateAsYMD, getDateStringInTimezone } from '@/lib/dateUtils'
-import { getErrorMessage, getErrorStatus, hasResponseDetail } from '@/lib/errors'
 import { Icons } from '@/lib/icons'
 import { isWindowTooLong } from '@/lib/reportWindow'
 import { REPORTS_URL_KEYS } from '@/lib/reportsUrlKeys'
@@ -126,7 +125,7 @@ export function OperatorPromisesTab() {
   // input and hand-edited URLs would bypass such bounds anyway. ISO YYYY-MM-DD
   // strings compare correctly as strings.
   const isInverted = !!dateFrom && !!dateTo && dateFrom > dateTo
-  const isTooLong = !!dateFrom && !!dateTo && !isInverted && isWindowTooLong(dateFrom, dateTo)
+  const isTooLong = !!dateFrom && !!dateTo && isWindowTooLong(dateFrom, dateTo)
 
   const hasFilterError = isFromInvalid || isToInvalid || isInverted || isTooLong
 
@@ -247,40 +246,18 @@ export function OperatorPromisesTab() {
   // background refetch of the SAME window shows current data and needs none.
   const isRefreshing = query.isPlaceholderData
 
-  const errorStatus = getErrorStatus(query.error)
-  const isForbidden = errorStatus === 403
-  const isUnavailable = isTransientFailure(query.error)
-  const errorMessage = isUnavailable
-    ? // Covers all three of the endpoint's own 503s — the payment-service being
-      // down, the auth-service directory being down, and the two lookups
-      // together blowing the fan-out deadline. The operator's move is the same
-      // in all three (wait and retry), and none may degrade to a partial
-      // report: without the directory rows cannot be named, grouped or sorted,
-      // and without the payment data a working operator reads as one who
-      // collected nothing.
-      t('pages.reports.operatorPromises.unavailable')
-    : isForbidden
-      ? t('pages.reports.operatorPromises.forbidden')
-      : // Backend date/timezone validation answers 400 with a human-readable
-        // detail (inverted window, > 367 days, a date outside
-        // 1900-01-01..9998-12-31, an unknown IANA zone). Passing it through
-        // verbatim is what makes the refusal actionable. Only when the answer
-        // HAS a detail, though: a 400 whose body never arrived would otherwise
-        // show axios' own untranslated "Request failed with status code 400"
-        // (see hasResponseDetail), so it joins every other unexplained failure
-        // under the localized generic title.
-        errorStatus === 400 && hasResponseDetail(query.error)
-        ? getErrorMessage(query.error)
-        : t('pages.reports.operatorPromises.error.title')
-
-  // The three 503s are worded distinctly by the backend on purpose — the
-  // remedies differ and monitoring must tell an outage from a timeout — so the
-  // server's own sentence is shown UNDER the localized one rather than instead
-  // of it: the operator reads their language, and whoever is asked "what does
-  // it say?" can tell which dependency failed. Absent for a transport-level
-  // failure (a 502/504 or a dropped connection carries no body).
-  const errorDetail =
-    isUnavailable && hasResponseDetail(query.error) ? getErrorMessage(query.error) : null
+  // The shared failure ladder (see the hook for the rungs and their order).
+  // What is this endpoint's own: three 503s — the payment-service down, the
+  // auth-service directory down, and the two lookups together blowing the
+  // fan-out deadline — none of which may degrade to a partial report, since
+  // without the directory rows cannot be named, grouped or sorted, and without
+  // the payment data a working operator reads as one who collected nothing.
+  // Its 400 detail names an inverted window, > 367 days, a date outside
+  // 1900-01-01..9998-12-31, or an unknown IANA zone.
+  const { errorMessage, errorDetail, isForbidden } = useFeedErrorMessage(
+    query.error,
+    FEED_ERROR_KEY_PREFIXES.operatorPromises
+  )
 
   return (
     <div className="flex w-full flex-col gap-4">

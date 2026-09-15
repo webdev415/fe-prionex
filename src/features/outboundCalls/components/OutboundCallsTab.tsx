@@ -35,9 +35,8 @@ import { useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { DateSelect } from '@/components/ui/DateSelect'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
-import { isTransientFailure } from '@/lib/api'
+import { FEED_ERROR_KEY_PREFIXES, useFeedErrorMessage } from '@/hooks'
 import { formatPickerDateAsYMD, getDateStringInTimezone } from '@/lib/dateUtils'
-import { getErrorMessage, getErrorStatus, hasResponseDetail } from '@/lib/errors'
 import { Icons } from '@/lib/icons'
 import { REPORTS_URL_KEYS } from '@/lib/reportsUrlKeys'
 import { isDatePairInverted, readUrlDateBound } from '@/lib/urlDateBound'
@@ -169,40 +168,21 @@ export function OutboundCallsTab() {
   // background refetch of the SAME window shows current data and needs none.
   const isRefreshing = query.isPlaceholderData
 
-  const errorStatus = getErrorStatus(query.error)
-  const isForbidden = errorStatus === 403
-  const isUnavailable = isTransientFailure(query.error)
-  const errorMessage = isUnavailable
-    ? // Covers every 503 this endpoint words separately — the call-service
-      // aggregate being down or throttling, the auth-service directory being
-      // down, and the two together blowing the fan-out deadline. The operator's
-      // move is the same in all of them (wait and retry), and none may degrade
-      // to a partial report: without the calls there is nothing to count, and
-      // without the directory the seats cannot be named, grouped or sorted.
-      t('pages.reports.outboundCalls.unavailable')
-    : isForbidden
-      ? t('pages.reports.outboundCalls.forbidden')
-      : // Backend date/timezone/budget validation answers 400 with a
-        // human-readable detail (inverted window, > 90 inclusive days, a date outside
-        // 1900-01-01..9998-12-31, an unknown IANA zone, or a window carrying
-        // more calls than the aggregate walk budgets for — "narrow it").
-        // Passing it through verbatim is what makes the refusal actionable, and
-        // the budget one is the only way the user learns which knob to turn.
-        // Only when the answer HAS a detail, though: a 400 whose body never
-        // arrived would otherwise show axios' own untranslated "Request failed
-        // with status code 400" (see hasResponseDetail).
-        errorStatus === 400 && hasResponseDetail(query.error)
-        ? getErrorMessage(query.error)
-        : t('pages.reports.outboundCalls.error.title')
-
-  // The 503s are worded distinctly by the backend on purpose — the remedies
-  // differ and monitoring must tell an outage from a timeout — so the server's
-  // own sentence is shown UNDER the localized one rather than instead of it:
-  // the operator reads their language, and whoever is asked "what does it say?"
-  // can tell which dependency failed. Absent for a transport-level failure (a
-  // 502/504 or a dropped connection carries no body).
-  const errorDetail =
-    isUnavailable && hasResponseDetail(query.error) ? getErrorMessage(query.error) : null
+  // The shared failure ladder (see the hook for the rungs and their order).
+  // What is this endpoint's own: the 503s it words separately — the
+  // call-service aggregate down or throttling, the auth-service directory
+  // down, and the two together blowing the fan-out deadline — none of which
+  // may degrade to a partial report, since without the calls there is nothing
+  // to count and without the directory the seats cannot be named, grouped or
+  // sorted. Its 400 detail names an inverted window, > 90 INCLUSIVE days (this
+  // endpoint's own cap, not the 366 of its siblings), a date outside
+  // 1900-01-01..9998-12-31, an unknown IANA zone, or a window carrying more
+  // calls than the aggregate walk budgets for — that last one being the only
+  // way the user learns which knob to turn.
+  const { errorMessage, errorDetail, isForbidden } = useFeedErrorMessage(
+    query.error,
+    FEED_ERROR_KEY_PREFIXES.outboundCalls
+  )
 
   return (
     <div className="flex w-full flex-col gap-4">
