@@ -47,15 +47,9 @@ export function buildClientMessagingVariables(options: {
 
   const contractNumber = selectedLoan?.loanNumber ?? debtFallback
 
-  const matchedDebt = contractNumber
-    ? clientData?.debts?.find((debt) => debt.contract_number === contractNumber)
-    : undefined
-
-  const promiseDueDate = formatDateDotDMY(clientData?.max_promise_to_pay_date ?? null)
-  const debtDueDate = formatDateDotDMY(
-    matchedDebt?.debt_close_date ?? matchedDebt?.credit_closed_date ?? null
-  )
-  const dueDate = promiseDueDate || debtDueDate || formatDateDotDMY(new Date().toISOString())
+  const dueDate =
+    formatDateDotDMY(clientData?.max_promise_to_pay_date ?? null) ||
+    formatDateDotDMY(new Date().toISOString())
 
   const operatorPhone = resolveOperatorPhone(currentUser)
 
