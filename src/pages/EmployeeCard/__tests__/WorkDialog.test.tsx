@@ -481,4 +481,57 @@ describe('WorkDialog: the group', () => {
 
     expect(Object.keys(state.saved.mock.calls[0][0])).not.toContain('group_id')
   })
+
+  /*
+   * A department change clears the position, and a group picked before a new
+   * position is chosen would not be sent. So the field waits for one.
+   */
+  it('hides the group after a department change until a position is chosen', async () => {
+    render(<WorkDialog card={grouped()} projectId={3} open onClose={vi.fn()} />)
+
+    await userEvent.click(screen.getAllByRole('combobox')[0])
+    await userEvent.click(screen.getByRole('option', { name: 'Analytics' }))
+
+    expect(screen.queryByText('pages.employeeCard.fields.group')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getAllByRole('combobox')[1])
+    await userEvent.click(screen.getByRole('option', { name: 'Analyst' }))
+
+    expect(screen.getByText('pages.employeeCard.fields.group')).toBeInTheDocument()
+    expect(groupSelect()).toHaveTextContent('pages.employeeCard.dialogs.noGroup')
+  })
+
+  /*
+   * A group never sits outside a department. A card that somehow carries one
+   * without a department opens on "no group" rather than holding a value
+   * behind a field it does not show.
+   */
+  it('sends no stale group for a position with no department', async () => {
+    render(
+      <WorkDialog
+        card={card({
+          work: {
+            ...card().work,
+            department: null,
+            department_id: null,
+            position: 'Admin',
+            role_id: 13,
+            group: 'Morning shift',
+            group_id: 20,
+          },
+        })}
+        projectId={3}
+        open
+        onClose={vi.fn()}
+      />
+    )
+
+    expect(screen.queryByText('pages.employeeCard.fields.group')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'actions.save' }))
+
+    expect(state.saved).toHaveBeenCalledWith(
+      expect.objectContaining({ role_id: 13, group_id: null })
+    )
+  })
 })

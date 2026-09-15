@@ -61,8 +61,10 @@ export function WorkDialog({ card, projectId, open, onClose }: WorkDialogProps) 
     card.work.department_id ? String(card.work.department_id) : NOBODY
   )
   const [roleId, setRoleId] = useState<string>(card.work.role_id ? String(card.work.role_id) : '')
+  // Only with a department: a group never sits outside one, and a value held
+  // behind a field that is not shown would still be sent.
   const [groupId, setGroupId] = useState<string>(
-    card.work.group_id ? String(card.work.group_id) : NOBODY
+    card.work.group_id && card.work.department_id ? String(card.work.group_id) : NOBODY
   )
   const [managerId, setManagerId] = useState<string>(
     card.header.manager_user_id ? String(card.header.manager_user_id) : NOBODY
@@ -167,6 +169,14 @@ export function WorkDialog({ card, projectId, open, onClose }: WorkDialogProps) 
     t,
   ])
 
+  /*
+   * The group sits on the assignment beside the position, so it is offered
+   * only once there is a position to hold it. A department change clears the
+   * position, and a group picked before a new one is chosen would not be sent -
+   * showing and sending on the same condition keeps what is seen what is saved.
+   */
+  const showGroup = departmentId !== NOBODY && roleId !== ''
+
   return (
     <SectionDialog
       open={open}
@@ -188,7 +198,9 @@ export function WorkDialog({ card, projectId, open, onClose }: WorkDialogProps) 
             // The group sits on the assignment beside the position, so it is
             // sent with one. Null rather than omitted, so choosing "no group"
             // removes it instead of leaving the old one in place.
-            ...(roleId ? { group_id: groupId === NOBODY ? null : Number(groupId) } : {}),
+            ...(roleId
+              ? { group_id: showGroup && groupId !== NOBODY ? Number(groupId) : null }
+              : {}),
             manager_user_id: managerId === NOBODY ? null : Number(managerId),
             hired_at: hiredAt || null,
             // Empty clears it. Sent as null rather than omitted, so somebody
@@ -242,9 +254,9 @@ export function WorkDialog({ card, projectId, open, onClose }: WorkDialogProps) 
           </Select>
         </div>
 
-        {/* Hidden rather than disabled with no department, as on the
-            user-management screen: there is no group it could hold. */}
-        {departmentId !== NOBODY && (
+        {/* Hidden rather than disabled, as on the user-management screen:
+            without a department and a position there is no group to hold. */}
+        {showGroup && (
           <div className="space-y-1.5">
             <span className="text-muted-foreground text-xs">
               {t('pages.employeeCard.fields.group')}
