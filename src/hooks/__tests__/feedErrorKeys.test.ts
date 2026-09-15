@@ -11,9 +11,11 @@ import { FEED_ERROR_KEY_PREFIXES } from '../useFeedErrorMessage'
  * `pages/Credit/__tests__/i18nKeys.test.ts` skips template keys on purpose,
  * because it cannot know their values. Before the extraction each of those 48
  * keys was a literal inside a tab, greppable and reviewable. The extraction is
- * what opens the hole, so it brings the gate: a missing key or a misspelled
- * prefix now fails a test instead of putting `pages.reports.promisesFeeed.
- * unavailable` on an operator's screen. That failure mode is not hypothetical
+ * what opens the hole, so it brings the gate: a section missing a key now
+ * fails a test instead of putting `pages.reports.promisesFeed.unavailable` on
+ * an operator's screen as its own name. (A misspelled PREFIX is no longer this
+ * test's business — the hook takes a registry key and resolves the prefix
+ * itself, so a wrong one does not compile.) That failure mode is not hypothetical
  * — the Credit section's gate exists because it shipped twice and was found by
  * eye on a live screen both times.
  *
@@ -88,37 +90,20 @@ describe('feed error keys', () => {
   })
 
   it('covers every tab that actually calls the hook', () => {
-    // The registry must not be SHORTER than the list of callers. A missing
-    // prefix cannot compile (the parameter type is the union of the registry's
-    // values), so the case this guards is a caller passing a LITERAL that
-    // happens to equal a registered value — which the next test catches by
-    // spelling, and this one by count when the literal belongs to another
-    // tab. Not an equality: a registered prefix with no caller yet (a tab in
+    // The registry must not be SHORTER than the list of callers: every caller
+    // has to be in here, because that is where its four keys get demanded.
+    // This one is deliberately weak now — the parameter is the union of the
+    // registry's KEYS, so an unregistered tab cannot compile at all, and the
+    // case that used to need a regex here (a caller writing the prefix STRING
+    // out and quietly leaving the registry behind) is no longer expressible.
+    // Kept as the anti-vacuum partner of the glob check above: a registry that
+    // fell behind a growing `features/` tree still shows up as a count.
+    // Not an equality: a registered prefix with no caller yet (a tab in
     // progress) is not a defect.
     expect(HOOK_CALLERS.length).toBeGreaterThan(0)
     expect(
       Object.keys(FEED_ERROR_KEY_PREFIXES).length,
       `tabs calling useFeedErrorMessage:\n${HOOK_CALLERS.join('\n')}`
     ).toBeGreaterThanOrEqual(HOOK_CALLERS.length)
-  })
-
-  it('is what the callers actually pass — no prefix written as a literal', () => {
-    // The parameter type is the union of the registry's VALUES, so a literal
-    // `'pages.reports.contactTag'` at a call site type-checks happily and
-    // silently opts out of the registry — including out of the count above.
-    // The rule is "name it from the registry", and this is what enforces it.
-    // At the CALL SITE, not anywhere in the file: a tab with two calls — one
-    // from the registry, one a literal — or a file that only mentions the
-    // registry in a comment would pass a whole-file `includes`.
-    const offenders = HOOK_CALLERS.filter((path) => {
-      const calls = TAB_SOURCES[path].match(/useFeedErrorMessage\(/g) ?? []
-      const fromRegistry =
-        TAB_SOURCES[path].match(/useFeedErrorMessage\(\s*[^,]+,\s*FEED_ERROR_KEY_PREFIXES\./g) ?? []
-      return calls.length === 0 || fromRegistry.length !== calls.length
-    })
-    expect(
-      offenders,
-      `these tabs pass a feed error prefix without naming it in the registry:\n${offenders.join('\n')}`
-    ).toEqual([])
   })
 })
