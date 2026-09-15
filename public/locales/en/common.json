@@ -6891,6 +6891,13 @@
         "cancelled": "Cancelled",
         "completed": "Completed",
         "completedEarly": "Completed early"
+      },
+      "presets": {
+        "label": "Filter Presets",
+        "empty": "You can set up presets in your profile",
+        "applied": "Applied",
+        "loading": "Loading…",
+        "loadFailed": "Presets could not be loaded."
       }
     },
     "clientChains": {
@@ -8729,7 +8736,8 @@
       },
       "tabs": {
         "account": "Account",
-        "shortcuts": "Keyboard Shortcuts"
+        "shortcuts": "Keyboard Shortcuts",
+        "presets": "Filter Presets"
       },
       "shortcuts": {
         "intro": "Assign a keyboard shortcut to any quick template you use often. Trigger the shortcut while on a client's profile page to open that Target Action (TA) modal instantly, adjust amount or date if needed, and save it — all without the mouse.",
@@ -8755,6 +8763,84 @@
         "clear": "Clear Selection",
         "saved": "Shortcut saved",
         "reassigned": "Shortcut moved from \"{{name}}\""
+      },
+      "presets": {
+        "title": "Filter Presets",
+        "new": "New preset",
+        "newTitle": "New preset",
+        "editTitle": "Edit preset",
+        "name": "Preset name",
+        "nameRequired": "Enter a name for the preset",
+        "save": "Save preset",
+        "clearFields": "Clear all fields",
+        "saved": "Preset saved",
+        "edit": "Edit preset",
+        "delete": "Delete preset",
+        "empty": "No presets yet. Create one to apply a set of client list filters in a single click.",
+        "dates": {
+          "from": "From",
+          "to": "To",
+          "days": "Days",
+          "result": "Result",
+          "pick": "Select date",
+          "modes": {
+            "any": "Any date",
+            "today": "Today",
+            "startOfMonth": "Start of month",
+            "minusDays": "Today minus N days",
+            "plusDays": "Today plus N days",
+            "custom": "Custom date"
+          }
+        },
+        "range": {
+          "from": "From",
+          "to": "To"
+        },
+        "employees": {
+          "allLabel": "All employees",
+          "scopes": {
+            "any": "Anyone",
+            "myGroup": "My group",
+            "myDepartment": "My department",
+            "everyoneExceptMe": "Everyone except me",
+            "everyoneExceptMyGroup": "Everyone except my group",
+            "everyoneExceptMyDepartment": "Everyone except my department",
+            "custom": "Selected employees"
+          }
+        },
+        "fields": {
+          "totalDebt": "Total debt",
+          "principalDebt": "Principal debt",
+          "dpd": "DPD",
+          "dateOfSale": "Date of sale",
+          "assignmentDate": "Assignment date",
+          "targetActionDate": "Target action date",
+          "interactionDate": "Interaction date",
+          "interactionCreated": "Interaction created by",
+          "responsibleEmployee": "Responsible employee",
+          "onlyLastChain": "Only last TA chain",
+          "portfolio": "Portfolio",
+          "rrStatus": "Restructuring status",
+          "chain": "TA chain",
+          "chainStep": "Chain step",
+          "chainStepHint": "Choose a chain first",
+          "responsibleSearcher": "Responsible searcher",
+          "tags": "Tags",
+          "hasVerifiedPayment": "Has verified payment(s)"
+        },
+        "multi": {
+          "all": "Any"
+        },
+        "tags": {
+          "none": "No tags available",
+          "hint": "Click a tag to include it, again to exclude it"
+        },
+        "nameDuplicate": "You already have a preset with this name",
+        "confirmDeleteTitle": "Delete this preset?",
+        "confirmDeleteMessage": "\"{{name}}\" will be removed. This cannot be undone.",
+        "loading": "Loading your presets…",
+        "loadFailed": "Your presets could not be loaded.",
+        "saveFailed": "The preset could not be saved. Try again."
       }
     },
     "reports": {
