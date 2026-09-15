@@ -110,7 +110,6 @@ import {
 } from '@/components/ui/SegmentedTabs'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import {
-  FEED_ERROR_KEY_PREFIXES,
   useFeedErrorMessage,
   usePagedFeedPages,
   useTodayInTimezone,
@@ -374,10 +373,7 @@ export function ContactTagFeedTab() {
   // apart from the backend's own logs, where they are already distinct. Same
   // as the sibling gap feed. The 400 detail still rides `errorMessage`,
   // because THAT one names a filter the operator can actually turn.
-  const { errorMessage, isForbidden } = useFeedErrorMessage(
-    query.error,
-    FEED_ERROR_KEY_PREFIXES.contactTag
-  )
+  const { errorMessage, isForbidden } = useFeedErrorMessage(query.error, 'contactTag')
 
   return (
     <div className="flex w-full flex-col gap-4">

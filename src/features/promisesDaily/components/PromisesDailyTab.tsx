@@ -32,13 +32,12 @@ import { Button } from '@/components/ui/Button'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { DateSelect } from '@/components/ui/DateSelect'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
-import { FEED_ERROR_KEY_PREFIXES, useFeedErrorMessage } from '@/hooks'
+import { useDateWindowFilters, useFeedErrorMessage } from '@/hooks'
 import { formatDateTime } from '@/lib/localeFormat'
 import { formatPickerDateAsYMD, getDateStringInTimezone } from '@/lib/dateUtils'
 import { Icons } from '@/lib/icons'
 import { isWindowTooLong } from '@/lib/reportWindow'
 import { REPORTS_URL_KEYS } from '@/lib/reportsUrlKeys'
-import { isDatePairInverted, readUrlDateBound } from '@/lib/urlDateBound'
 import { useAuthStore } from '@/stores/authStore'
 import { usePromisesDailyReport } from '../hooks'
 import { endOfMonthYMD, startOfMonthYMD } from '../utils/monthWindow'
@@ -63,6 +62,18 @@ const {
  */
 const SKELETON_COLUMNS = 6
 
+/** This tab's wording for the two window complaints (see `useDateWindowFilters`). */
+const WINDOW_ERROR_KEYS = {
+  invalidDate: 'pages.reports.promisesDaily.invalidDate',
+  invertedRange: 'pages.reports.promisesDaily.invalidRange',
+} as const
+
+/** The backend's 366-day DIFFERENCE cap, mirrored — predicate and sentence together. */
+const WINDOW_CAP = {
+  isTooLong: isWindowTooLong,
+  messageKey: 'pages.reports.promisesDaily.rangeTooLong',
+} as const
+
 export function PromisesDailyTab() {
   const { t, i18n } = useTranslation('common')
   const language = i18n.language
@@ -82,27 +93,27 @@ export function PromisesDailyTab() {
   const monthStart = startOfMonthYMD(today)
   const monthEnd = endOfMonthYMD(today)
 
-  // A present-but-unusable bound is NOT silently replaced with the default:
-  // the URL would then disagree with both the field and the request. It goes
-  // down the same path as an inverted window — inline hint, no request —
-  // tracked per bound so the hint sits on the offending field.
-  const fromBound = readUrlDateBound(searchParams, DATE_FROM_KEY)
-  const toBound = readUrlDateBound(searchParams, DATE_TO_KEY)
-
-  // An ABSENT key is the default (today → end of the current month); only an
-  // explicitly bad one stays undefined and blocks the request.
-  const dateFrom = fromBound.value ?? (fromBound.isInvalid ? undefined : today)
-  const dateTo = toBound.value ?? (toBound.isInvalid ? undefined : monthEnd)
+  // The shared window reader: both bounds, what is wrong with them, and the
+  // verdict that gates the request. An ABSENT key is the default, and this is
+  // the ONE tab whose two defaults differ — today for the lower bound, the end
+  // of the current month for the upper, which is the report's namesake period.
+  // Only an explicitly bad value stays undefined and blocks the request.
+  const { dateFrom, dateTo, isFromInvalid, isToInvalid, dateError, rangeError, hasWindowError } =
+    useDateWindowFilters({
+      searchParams,
+      fromKey: DATE_FROM_KEY,
+      toKey: DATE_TO_KEY,
+      fallbackFrom: today,
+      fallbackTo: monthEnd,
+      cap: WINDOW_CAP,
+      keys: WINDOW_ERROR_KEYS,
+    })
 
   const possiblePayment = searchParams.get(POSSIBLE_PAYMENT_KEY) === '1'
 
-  // The only guard against an inverted or oversized window: the pickers
-  // deliberately do not bound each other (see the fields below), and manual
-  // input and hand-edited URLs would bypass such bounds anyway.
-  const isInverted = isDatePairInverted(dateFrom, dateTo)
-  const isTooLong = !!dateFrom && !!dateTo && isWindowTooLong(dateFrom, dateTo)
-
-  const hasFilterError = fromBound.isInvalid || toBound.isInvalid || isInverted || isTooLong
+  // The window is this tab's only filter — the possible-payment switch cannot
+  // be wrong, and the whole-month box only moves the window.
+  const hasFilterError = hasWindowError
 
   // «Весь місяць» is a STATE of the window, not a filter of its own: it reads
   // as checked exactly when the window IS the whole current month, however it
@@ -167,13 +178,6 @@ export function PromisesDailyTab() {
     else setWindowParams(null, null)
   }
 
-  const dateError = t('pages.reports.promisesDaily.invalidDate')
-  const rangeErrorKey = isInverted
-    ? 'pages.reports.promisesDaily.invalidRange'
-    : isTooLong
-      ? 'pages.reports.promisesDaily.rangeTooLong'
-      : null
-
   const query = usePromisesDailyReport({
     projectId,
     // The fallbacks are never sent: a missing bound can only come from an
@@ -199,7 +203,7 @@ export function PromisesDailyTab() {
   // outside 1900-01-01..9998-12-31, or an unknown IANA zone.
   const { errorMessage, errorDetail, isForbidden } = useFeedErrorMessage(
     query.error,
-    FEED_ERROR_KEY_PREFIXES.promisesDaily
+    'promisesDaily'
   )
 
   return (
@@ -221,7 +225,7 @@ export function PromisesDailyTab() {
           // Only the bound that actually carries the unusable value is marked.
           // `error` (not `invalidText`) is the right prop: the value arrives
           // already committed, from the URL, not as half-typed text.
-          error={fromBound.isInvalid ? dateError : undefined}
+          error={isFromInvalid ? dateError : undefined}
           onChange={handleDateChange(DATE_FROM_KEY)}
           allowManualInput
           resyncInvalidOnBlur
@@ -231,7 +235,7 @@ export function PromisesDailyTab() {
         <DateSelect
           label={t('pages.reports.promisesDaily.dateTo')}
           value={dateTo ?? null}
-          error={toBound.isInvalid ? dateError : undefined}
+          error={isToInvalid ? dateError : undefined}
           onChange={handleDateChange(DATE_TO_KEY)}
           allowManualInput
           resyncInvalidOnBlur
@@ -266,9 +270,9 @@ export function PromisesDailyTab() {
         {/* Pair-level only: a bad single date rides its own field above.
             Neither bound is wrong on its own in an inverted or oversized
             window, so this one has no field to sit on. */}
-        {rangeErrorKey && (
+        {rangeError && (
           <p className="text-error-500 w-full text-xs font-medium" role="alert">
-            {t(rangeErrorKey)}
+            {rangeError}
           </p>
         )}
       </div>

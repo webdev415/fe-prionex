@@ -17,7 +17,8 @@
  * through the query string" (reading a bound, rejecting 2026-02-31, catching
  * an inverted pair) and its neighbours are URL primitives. A window-size
  * limit is not a transport question. `isDatePairInverted` stays there for the
- * same reason; the one tab that uses both side by side is `PromisesDailyTab`.
+ * same reason; the two are used side by side inside `useDateWindowFilters`,
+ * which the nine report tabs with a date window call.
  */
 
 /**
@@ -63,8 +64,10 @@ const MS_PER_DAY = 86_400_000
  *
  * An inverted pair is NOT "too long" either: the difference goes negative and
  * this answers false, leaving the finding to the tabs' inversion guard
- * (`isDatePairInverted` in `PromisesDailyTab`, an inline `from > to` in the
- * other five). Reporting one mistake twice would show two alerts for one typo.
+ * (`useDateWindowFilters` for the nine tabs that share it; an inline
+ * `from > to` in client processing and third-party verification, which keep
+ * their own window logic). Reporting one mistake twice would show two alerts
+ * for one typo.
  * That is why no call site guards this one with `!isInverted &&` any more: all
  * seven used to, and the guard could never change an answer — an inverted pair
  * is negative and already reads false here. The guards are gone rather than
