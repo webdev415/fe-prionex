@@ -28,4 +28,8 @@ describe('the amount a message quotes', () => {
     expect(amountFor(15817.5).debt_amount).toBe('15817.50')
     expect(amountFor(33228.4).debt_amount).toBe('33228.40')
   })
+
+  it('leaves the amount empty rather than quoting NaN', () => {
+    expect(amountFor(Number.NaN).debt_amount).toBe('')
+  })
 })

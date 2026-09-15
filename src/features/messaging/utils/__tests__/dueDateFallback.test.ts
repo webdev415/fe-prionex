@@ -80,4 +80,38 @@ describe('the date a message tells the client to pay by', () => {
 
     expect(vars.due_date).not.toBe('14.09.2026')
   })
+
+  it('takes today from the operator profile timezone, not the browser', () => {
+    vi.setSystemTime(new Date('2026-09-14T22:30:00Z'))
+    const noPromise = { max_promise_to_pay_date: null } as never
+
+    const tokyo = buildClientMessagingVariables({
+      ...base,
+      clientData: noPromise,
+      timezone: 'Asia/Tokyo',
+      selectedLoan: null,
+      hasLoanContext: true,
+    })
+    const newYork = buildClientMessagingVariables({
+      ...base,
+      clientData: noPromise,
+      timezone: 'America/New_York',
+      selectedLoan: null,
+      hasLoanContext: true,
+    })
+
+    expect(tokyo.due_date).toBe('15.09.2026')
+    expect(newYork.due_date).toBe('14.09.2026')
+  })
+
+  it('stays empty until the client has loaded instead of guessing today', () => {
+    const vars = buildClientMessagingVariables({
+      ...base,
+      clientData: undefined,
+      selectedLoan: null,
+      hasLoanContext: true,
+    })
+
+    expect(vars.due_date).toBe('')
+  })
 })

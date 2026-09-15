@@ -149,7 +149,7 @@ export function SendMessageModal({
     open ? channel : undefined
   )
   const sendMessageMutation = useSendMessage()
-  const { data: clientData } = useClient(clientId, !!clientId && open)
+  const { data: clientData, isLoading: clientLoading } = useClient(clientId, !!clientId && open)
   const { data: currentUserData } = useQuery({
     queryKey: ['current-user'],
     queryFn: () => authApi.me(),
@@ -231,6 +231,7 @@ export function SendMessageModal({
         clientData,
         currentUser,
         username: user?.username,
+        timezone: user?.timezone,
         selectedLoan: selectedLoan
           ? {
               loanNumber: selectedLoan.loanNumber,
@@ -247,6 +248,7 @@ export function SendMessageModal({
       selectedLoan,
       loansProp,
       user?.username,
+      user?.timezone,
     ]
   )
 
@@ -399,6 +401,7 @@ export function SendMessageModal({
   const blocksSending = blockingVariables(missingVariables).length > 0
   const canSend =
     clientId > 0 &&
+    !clientLoading &&
     !!service &&
     hasDestination &&
     (body.trim().length > 0 || hasViberRich) &&

@@ -1,6 +1,7 @@
 import type { ClientDetail } from '@/features/clients/api/types'
-import { formatDateDotDMY } from '@/lib/formatters'
 import type { CurrentUserResponse } from '@/types/api'
+import { formatDebtAmount } from './debtAmount'
+import { resolveDueDate } from './dueDate'
 import { resolveOperatorPhone } from './operatorPhone'
 
 /** React-query may store either AxiosResponse or the unwrapped body. */
@@ -27,6 +28,7 @@ export function buildClientMessagingVariables(options: {
   clientData?: ClientDetail | null
   currentUser?: CurrentUserResponse | null
   username?: string
+  timezone?: string | null
   selectedLoan?: { loanNumber: string; totalToRepay: number } | null
   hasLoanContext?: boolean
 }): Record<string, string> {
@@ -36,6 +38,7 @@ export function buildClientMessagingVariables(options: {
     clientData,
     currentUser,
     username,
+    timezone,
     selectedLoan,
     hasLoanContext,
   } = options
@@ -47,15 +50,13 @@ export function buildClientMessagingVariables(options: {
 
   const contractNumber = selectedLoan?.loanNumber ?? debtFallback
 
-  const dueDate =
-    formatDateDotDMY(clientData?.max_promise_to_pay_date ?? null) ||
-    formatDateDotDMY(new Date().toISOString())
+  const dueDate = resolveDueDate(clientData, timezone)
 
   const operatorPhone = resolveOperatorPhone(currentUser)
 
   return {
     client_name: clientDisplayName,
-    debt_amount: selectedLoan ? Number(selectedLoan.totalToRepay).toFixed(2) : '',
+    debt_amount: selectedLoan ? formatDebtAmount(selectedLoan.totalToRepay) : '',
     operator_name: username || currentUser?.username || '',
     operator_phone: operatorPhone,
     due_date: dueDate,
