@@ -33,9 +33,12 @@ import { DateSelect } from '@/components/ui/DateSelect'
 import { Input } from '@/components/ui/Input'
 import { Pagination } from '@/components/ui/Pagination'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
-import { usePagedFeedPages, useUrlPagedFeedFilters } from '@/hooks'
-import { isTransientFailure } from '@/lib/api'
-import { getErrorMessage, getErrorStatus } from '@/lib/errors'
+import {
+  FEED_ERROR_KEY_PREFIXES,
+  useFeedErrorMessage,
+  usePagedFeedPages,
+  useUrlPagedFeedFilters,
+} from '@/hooks'
 import { Icons } from '@/lib/icons'
 import { REPORTS_URL_KEYS } from '@/lib/reportsUrlKeys'
 import { isDatePairInverted, readUrlDateBound } from '@/lib/urlDateBound'
@@ -192,16 +195,20 @@ export function LowVerificationFeedTab() {
   // background refetch of the SAME page shows current data and needs none.
   const isRefreshing = query.isPlaceholderData
 
-  const errorStatus = getErrorStatus(query.error)
-  const isForbidden = errorStatus === 403
-  const errorMessage = isTransientFailure(query.error)
-    ? t('pages.reports.lowVerification.unavailable')
-    : isForbidden
-      ? t('pages.reports.lowVerification.forbidden')
-      : errorStatus === 400
-        ? // Backend date/timezone validation answers 400 with a human-readable detail
-          getErrorMessage(query.error)
-        : t('pages.reports.lowVerification.error.title')
+  // The shared failure ladder (see the hook for the rungs and their order).
+  // What is this endpoint's own: its 400 carries a human-readable detail from
+  // the date/timezone validation, which is what makes the refusal actionable.
+  // `errorDetail` is not taken — this tab has never shown the server's 503
+  // sentence under the localized one.
+  //
+  // The 400 now goes through the hook's `hasResponseDetail` gate, which this
+  // tab did not have: a 400 whose body a proxy stripped used to reach the
+  // operator as axios' own untranslated "Request failed with status code 400"
+  // and now reaches them as the localized title. Deliberate — see the hook.
+  const { errorMessage, isForbidden } = useFeedErrorMessage(
+    query.error,
+    FEED_ERROR_KEY_PREFIXES.lowVerification
+  )
 
   return (
     <div className="flex w-full flex-col gap-4">
