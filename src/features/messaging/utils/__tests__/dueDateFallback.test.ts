@@ -139,4 +139,26 @@ describe('the date a message tells the client to pay by', () => {
 
     expect(vars.due_date).toBe('31.05.2026')
   })
+
+  it('reads a promise that carries a UTC offset in the operator profile timezone', () => {
+    const tagged = { max_promise_to_pay_date: '2026-05-30T21:00:00Z' } as never
+
+    const tokyo = buildClientMessagingVariables({
+      ...base,
+      clientData: tagged,
+      timezone: 'Asia/Tokyo',
+      selectedLoan: null,
+      hasLoanContext: true,
+    })
+    const newYork = buildClientMessagingVariables({
+      ...base,
+      clientData: tagged,
+      timezone: 'America/New_York',
+      selectedLoan: null,
+      hasLoanContext: true,
+    })
+
+    expect(tokyo.due_date).toBe('31.05.2026')
+    expect(newYork.due_date).toBe('30.05.2026')
+  })
 })
