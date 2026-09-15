@@ -35,11 +35,10 @@ import { useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { DateSelect } from '@/components/ui/DateSelect'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
-import { FEED_ERROR_KEY_PREFIXES, useFeedErrorMessage } from '@/hooks'
+import { useDateWindowFilters, useFeedErrorMessage } from '@/hooks'
 import { formatPickerDateAsYMD, getDateStringInTimezone } from '@/lib/dateUtils'
 import { Icons } from '@/lib/icons'
 import { REPORTS_URL_KEYS } from '@/lib/reportsUrlKeys'
-import { isDatePairInverted, readUrlDateBound } from '@/lib/urlDateBound'
 import { useAuthStore } from '@/stores/authStore'
 import { useOutboundCallsReport } from '../hooks'
 import { OUTBOUND_CALLS_COLUMN_COUNT, OutboundCallsTable } from './OutboundCallsTable'
@@ -63,6 +62,38 @@ const MAX_WINDOW_DAYS_INCLUSIVE = 90
 
 const MS_PER_DAY = 86_400_000
 
+/**
+ * This endpoint's own window cap, and the reason `useDateWindowFilters` takes
+ * a PREDICATE rather than a number: both ends COUNT here (a today–today window
+ * is one day, not zero), so the rule is not the 366-day DIFFERENCE its sibling
+ * reports mirror from `@/lib/reportWindow` — neither the number nor the
+ * arithmetic carries over, which is why that module's docstring says outbound
+ * does not belong in it and why this stays here beside the constant it reads.
+ *
+ * An absent or unparseable bound cannot reach this: the hook only asks once
+ * both bounds are usable strings. An inverted pair would measure NEGATIVE and
+ * so read false here anyway — no `!isInverted` guard in front of the call,
+ * for the same reason the shared predicate needs none: reporting one mistake
+ * twice would show two alerts for one typo, and the order of the two findings
+ * is decided where the message is chosen (inversion first).
+ */
+function isOutboundWindowTooLong(dateFrom: string, dateTo: string): boolean {
+  const inclusiveDays = (Date.parse(dateTo) - Date.parse(dateFrom)) / MS_PER_DAY + 1
+  return inclusiveDays > MAX_WINDOW_DAYS_INCLUSIVE
+}
+
+/** This tab's wording for the two window complaints (see `useDateWindowFilters`). */
+const WINDOW_ERROR_KEYS = {
+  invalidDate: 'pages.reports.outboundCalls.invalidDate',
+  invertedRange: 'pages.reports.outboundCalls.invalidRange',
+} as const
+
+/** The cap above and the sentence that explains it — one option, never split. */
+const OUTBOUND_CAP = {
+  isTooLong: isOutboundWindowTooLong,
+  messageKey: 'pages.reports.outboundCalls.rangeTooLong',
+} as const
+
 export function OutboundCallsTab() {
   const { t } = useTranslation('common')
   const [searchParams, setSearchParams] = useSearchParams()
@@ -79,34 +110,31 @@ export function OutboundCallsTab() {
   // cuts the window's calendar days (and nothing else).
   const today = getDateStringInTimezone(new Date(), userTimezone)
 
-  // A present-but-unusable bound is NOT silently replaced with today: the URL
-  // would then disagree with both the field and the request, and a shape-only
-  // check would let an impossible day like `?ocf=2026-02-31` through to the API
-  // (every comparison against NaN is false, so a range guard would pass
-  // silently). It goes down the same path as an inverted window — inline hint,
-  // no request — tracked per bound so the hint sits on the offending field.
-  const startBound = readUrlDateBound(searchParams, DATE_START_KEY)
-  const endBound = readUrlDateBound(searchParams, DATE_END_KEY)
+  // The shared window reader: both bounds, what is wrong with them, and the
+  // verdict that gates the request. An ABSENT key is the default (today); only
+  // an explicitly bad one stays undefined and blocks the request. The cap is
+  // this endpoint's own 90 INCLUSIVE days, not the siblings' 366-day
+  // difference — see `isOutboundWindowTooLong` above.
+  const {
+    dateFrom: dateStart,
+    dateTo: dateEnd,
+    isFromInvalid,
+    isToInvalid,
+    dateError,
+    rangeError,
+    hasWindowError,
+  } = useDateWindowFilters({
+    searchParams,
+    fromKey: DATE_START_KEY,
+    toKey: DATE_END_KEY,
+    fallbackFrom: today,
+    fallbackTo: today,
+    cap: OUTBOUND_CAP,
+    keys: WINDOW_ERROR_KEYS,
+  })
 
-  // An ABSENT key is the default (today); only an explicitly bad one stays
-  // undefined and blocks the request.
-  const dateStart = startBound.value ?? (startBound.isInvalid ? undefined : today)
-  const dateEnd = endBound.value ?? (endBound.isInvalid ? undefined : today)
-
-  // The only guard against an inverted or oversized window: the pickers
-  // deliberately do not bound each other (see the fields below), and manual
-  // input and hand-edited URLs would bypass such bounds anyway.
-  const isInverted = isDatePairInverted(dateStart, dateEnd)
-  // Both ends COUNT: a today–today window is one day, not zero — the same
-  // reading the backend's cap uses.
-  const inclusiveDays =
-    dateStart && dateEnd
-      ? (Date.parse(dateEnd) - Date.parse(dateStart)) / MS_PER_DAY + 1
-      : undefined
-  const isTooLong =
-    inclusiveDays !== undefined && !isInverted && inclusiveDays > MAX_WINDOW_DAYS_INCLUSIVE
-
-  const hasFilterError = startBound.isInvalid || endBound.isInvalid || isInverted || isTooLong
+  // The window is this tab's only filter, so its verdict is the whole verdict.
+  const hasFilterError = hasWindowError
 
   // Filter updates never create history entries (page-tab switches do). The
   // simple functional form is enough here: nothing in this tab emits two URL
@@ -141,13 +169,6 @@ export function OutboundCallsTab() {
       if (value) setUrlParam(key, formatPickerDateAsYMD(value))
     }
 
-  const dateError = t('pages.reports.outboundCalls.invalidDate')
-  const rangeErrorKey = isInverted
-    ? 'pages.reports.outboundCalls.invalidRange'
-    : isTooLong
-      ? 'pages.reports.outboundCalls.rangeTooLong'
-      : null
-
   const query = useOutboundCallsReport({
     projectId,
     // The fallbacks are never sent: a missing bound can only come from an
@@ -181,7 +202,7 @@ export function OutboundCallsTab() {
   // way the user learns which knob to turn.
   const { errorMessage, errorDetail, isForbidden } = useFeedErrorMessage(
     query.error,
-    FEED_ERROR_KEY_PREFIXES.outboundCalls
+    'outboundCalls'
   )
 
   return (
@@ -205,7 +226,7 @@ export function OutboundCallsTab() {
           // Only the bound that actually carries the unusable value is marked.
           // `error` (not `invalidText`) is the right prop: the value arrives
           // already committed, from the URL, not as half-typed text.
-          error={startBound.isInvalid ? dateError : undefined}
+          error={isFromInvalid ? dateError : undefined}
           onChange={handleDateChange(DATE_START_KEY)}
           allowManualInput
           resyncInvalidOnBlur
@@ -215,7 +236,7 @@ export function OutboundCallsTab() {
         <DateSelect
           label={t('pages.reports.outboundCalls.dateTo')}
           value={dateEnd ?? null}
-          error={endBound.isInvalid ? dateError : undefined}
+          error={isToInvalid ? dateError : undefined}
           onChange={handleDateChange(DATE_END_KEY)}
           allowManualInput
           resyncInvalidOnBlur
@@ -225,9 +246,9 @@ export function OutboundCallsTab() {
         {/* Pair-level only: a bad single date rides its own field above.
             Neither bound is wrong on its own in an inverted or oversized
             window, so this one has no field to sit on. */}
-        {rangeErrorKey && (
+        {rangeError && (
           <p className="text-error-500 w-full text-xs font-medium" role="alert">
-            {t(rangeErrorKey)}
+            {rangeError}
           </p>
         )}
       </div>

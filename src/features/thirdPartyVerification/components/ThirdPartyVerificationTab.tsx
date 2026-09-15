@@ -30,7 +30,7 @@ import { useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { DateSelect } from '@/components/ui/DateSelect'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
-import { FEED_ERROR_KEY_PREFIXES, useFeedErrorMessage } from '@/hooks'
+import { useFeedErrorMessage } from '@/hooks'
 import { isRealCalendarDate } from '@/lib/calendarDate'
 import { Icons } from '@/lib/icons'
 import { formatPickerDateAsYMD } from '@/lib/dateUtils'
@@ -181,10 +181,7 @@ export function ThirdPartyVerificationTab() {
   // tab did not have: a 400 whose body a proxy stripped used to reach the
   // operator as axios' own untranslated "Request failed with status code 400"
   // and now reaches them as the localized title. Deliberate — see the hook.
-  const { errorMessage, isForbidden } = useFeedErrorMessage(
-    query.error,
-    FEED_ERROR_KEY_PREFIXES.verification
-  )
+  const { errorMessage, isForbidden } = useFeedErrorMessage(query.error, 'verification')
 
   return (
     <div className="flex w-full flex-col gap-4">

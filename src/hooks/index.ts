@@ -14,9 +14,17 @@ export { useGuardedAction } from './useGuardedAction'
 export { useTodayInTimezone } from './useTodayInTimezone'
 
 export {
+  useDateWindowFilters,
+  type DateWindowCap,
+  type DateWindowErrorKeys,
+  type DateWindowFilters,
+  type UseDateWindowFiltersOptions,
+} from './useDateWindowFilters'
+
+export {
   useFeedErrorMessage,
   FEED_ERROR_KEY_PREFIXES,
-  type FeedErrorKeyPrefix,
+  type FeedErrorTab,
   type FeedErrorMessage,
 } from './useFeedErrorMessage'
 

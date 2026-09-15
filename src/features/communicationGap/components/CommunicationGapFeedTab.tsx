@@ -38,14 +38,13 @@ import { Input } from '@/components/ui/Input'
 import { Pagination } from '@/components/ui/Pagination'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import {
-  FEED_ERROR_KEY_PREFIXES,
+  useDateWindowFilters,
   useFeedErrorMessage,
   usePagedFeedPages,
   useUrlPagedFeedFilters,
 } from '@/hooks'
 import { Icons } from '@/lib/icons'
 import { REPORTS_URL_KEYS } from '@/lib/reportsUrlKeys'
-import { isDatePairInverted, readUrlDateBound } from '@/lib/urlDateBound'
 import { useAuthStore } from '@/stores/authStore'
 import { useCommunicationGapFeed } from '../hooks'
 import { GAP_MIN_CEILING, parseGapMin } from '../utils/gapMin'
@@ -72,6 +71,17 @@ const {
  */
 type FilterKey = typeof SELL_FROM_KEY | typeof SELL_TO_KEY | typeof GAP_MIN_KEY
 
+/**
+ * This tab's wording for the two window complaints (see `useDateWindowFilters`).
+ * The sell window's keys are NOT spelled like the other report tabs' — the
+ * section has always named them `invalidSell*`, which is why the hook takes
+ * whole keys instead of a prefix.
+ */
+const SELL_WINDOW_ERROR_KEYS = {
+  invalidDate: 'pages.reports.communicationGap.invalidSellDate',
+  invertedRange: 'pages.reports.communicationGap.invalidSellRange',
+} as const
+
 export function CommunicationGapFeedTab() {
   const { t } = useTranslation('common')
 
@@ -91,20 +101,27 @@ export function CommunicationGapFeedTab() {
   })
   const { searchParams, pageSize, setFilterParam } = filters
 
-  // A present-but-unusable bound is NOT silently replaced: the URL would then
-  // disagree with both the field and the request. It goes down the same path
-  // as an inverted range — inline hint, no request (below). Tracked per bound
-  // so the hint can sit on the field that actually holds the bad value.
-  const sellFromBound = readUrlDateBound(searchParams, SELL_FROM_KEY)
-  const sellToBound = readUrlDateBound(searchParams, SELL_TO_KEY)
-  const isSellFromInvalid = sellFromBound.isInvalid
-  const isSellToInvalid = sellToBound.isInvalid
-  const hasInvalidSellDate = isSellFromInvalid || isSellToInvalid
-
-  // No defaults: an unset bound means "no bound", not "today" (the card's own
-  // default is the whole population — see the module comment).
-  const sellFrom = sellFromBound.value
-  const sellTo = sellToBound.value
+  // The shared window reader. NO defaults: an unset bound means "no bound",
+  // not "today" (the card's own default is the whole population — see the
+  // module comment), and either may be set alone, which the backend accepts as
+  // an open-ended bound. NO `cap` either: the bounds can only NARROW the feed,
+  // so the backend caps nothing here — what bounds an oversized population is
+  // the candidate cap — and the suite pins that a window wider than the
+  // sibling reports' 366 days does go out.
+  const {
+    dateFrom: sellFrom,
+    dateTo: sellTo,
+    isFromInvalid: isSellFromInvalid,
+    isToInvalid: isSellToInvalid,
+    dateError: sellDateError,
+    rangeError: sellRangeError,
+    hasWindowError,
+  } = useDateWindowFilters({
+    searchParams,
+    fromKey: SELL_FROM_KEY,
+    toKey: SELL_TO_KEY,
+    keys: SELL_WINDOW_ERROR_KEYS,
+  })
 
   const rawGapMin = searchParams.get(GAP_MIN_KEY) ?? ''
 
@@ -148,23 +165,12 @@ export function CommunicationGapFeedTab() {
     setFilterParam(GAP_MIN_KEY, next)
   }
 
-  const isSellInverted = !hasInvalidSellDate && isDatePairInverted(sellFrom, sellTo)
-
-  // Where a message is rendered follows WHAT it is about.
-  //
-  // A bad date or a bad minimum belongs to ONE field, so it rides that field's
-  // `error` prop: the red border, `aria-invalid` and `aria-describedby` all land
-  // on the offending input, and a screen reader reaches the explanation from the
-  // field itself. `error` (not `invalidText`) is the right prop here —
-  // `invalidText` only surfaces while DateSelect holds half-typed text of its
-  // own, whereas these values arrive already committed, from the URL.
-  //
-  // An inverted window belongs to the PAIR — neither bound is wrong on its own —
-  // so it stays a standalone alert under the filters, the way both sibling feeds
-  // report their range errors.
-  const sellDateError = hasInvalidSellDate
-    ? t('pages.reports.communicationGap.invalidSellDate')
-    : undefined
+  // A bad minimum belongs to ONE field, so it rides that field's `error` prop:
+  // the red border, `aria-invalid` and `aria-describedby` all land on the
+  // offending input, and a screen reader reaches the explanation from the field
+  // itself. (The sell window's own two messages are split along the same line
+  // by the shared hook — a bad bound on its field, an inverted pair as a
+  // standalone alert, because neither bound is wrong on its own there.)
   const gapMinError = gapMin.isInvalid
     ? t(
         // The two refusals get different sentences: a value past the backend's
@@ -180,11 +186,11 @@ export function CommunicationGapFeedTab() {
         { max: GAP_MIN_CEILING }
       )
     : undefined
-  const sellRangeError = isSellInverted
-    ? t('pages.reports.communicationGap.invalidSellRange')
-    : undefined
 
-  const hasFilterError = hasInvalidSellDate || isSellInverted || gapMin.isInvalid
+  // The window is not this tab's only filter, which is exactly why the hook
+  // names its verdict for the WINDOW: `enabled: !hasWindowError` would let a
+  // bad numeric filter reach the backend for a 422.
+  const hasFilterError = hasWindowError || gapMin.isInvalid
 
   const query = useCommunicationGapFeed({
     projectId,
@@ -223,10 +229,7 @@ export function CommunicationGapFeedTab() {
   // sentence, but the operator's move is the same in all three and the wording
   // is aimed at whoever runs the services. Same call as the sibling contact-tag
   // feed, which explains it at length.
-  const { errorMessage, isForbidden } = useFeedErrorMessage(
-    query.error,
-    FEED_ERROR_KEY_PREFIXES.communicationGap
-  )
+  const { errorMessage, isForbidden } = useFeedErrorMessage(query.error, 'communicationGap')
 
   return (
     <div className="flex w-full flex-col gap-4">
