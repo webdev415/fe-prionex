@@ -60,7 +60,13 @@ function render(query: string, options: Options = { keys: KEYS }) {
   )
 }
 
-/** The shape seven of the nine call sites use: today–today, capped at 366. */
+/**
+ * The shape seven of the ten call sites use: today–today, capped at 366.
+ * (The two sell windows use OPTIONAL below; the drains feed is the tenth and
+ * the only one whose fallbacks MOVE — the previous working day in its windowed
+ * mode, both `undefined` in its all-history one, which is the same "no bound"
+ * shape as OPTIONAL with a cap on top.)
+ */
 const DEFAULTED = { fallbackFrom: TODAY, fallbackTo: TODAY, cap: CAP, keys: KEYS } as const
 /** The shape the two sell windows use: no defaults, no cap. */
 const OPTIONAL = { keys: KEYS } as const
@@ -359,7 +365,7 @@ describe('useDateWindowFilters', () => {
     })
 
     it('asks under the keys it is GIVEN, not a spelling of its own', () => {
-      // Two of the nine sections name these messages `invalidSell*`, which is
+      // Two of the ten sections name these messages `invalidSell*`, which is
       // why whole keys are passed and no prefix is ever concatenated here.
       const sellKeys = {
         invalidDate: 'pages.reports.lowVerification.invalidSellDate',

@@ -123,6 +123,32 @@ export const REPORTS_URL_KEYS = {
     page: 'cbpg',
     pageSize: 'cbps',
   },
+  /**
+   * «Зливи» feed (drainsFeed). "dr…" for DRains: the bare `d…` spellings are
+   * the processing tab's `dept`, and `df`/`dt` are exactly what a feed with a
+   * date pair would reach for first.
+   *
+   * `drwt`/`drw`/`drp` carry the three server-side toggles (hide worked today
+   * / hide worked / hide paid): present-as-"1" is on, absent is the backend
+   * default (off) — a shared link carries only choices somebody made.
+   *
+   * `dra` is THIS TAB'S ONLY KEY WITH NO SIBLING: the «вся історія» switch.
+   * Every other feed's window always has a default, so absent bounds mean
+   * "the default window"; here omitting both dates is a SUPPORTED MODE of the
+   * endpoint (the whole history, acceptance criterion Kanbanboard#27), and the
+   * two meanings cannot share one absence. The flag is what tells them apart —
+   * see `DrainsFeedTab` for why a flag rather than three-state date keys.
+   */
+  drainsFeed: {
+    dateFrom: 'drf',
+    dateTo: 'drt',
+    allHistory: 'dra',
+    hideWorkedToday: 'drwt',
+    hideWorked: 'drw',
+    hidePaid: 'drp',
+    page: 'drpg',
+    pageSize: 'drps',
+  },
 } as const
 
 export type ReportsUrlKeyOwner = keyof typeof REPORTS_URL_KEYS

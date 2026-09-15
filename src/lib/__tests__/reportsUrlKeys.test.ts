@@ -79,6 +79,16 @@ describe('REPORTS_URL_KEYS', () => {
         page: 'cbpg',
         pageSize: 'cbps',
       },
+      drainsFeed: {
+        dateFrom: 'drf',
+        dateTo: 'drt',
+        allHistory: 'dra',
+        hideWorkedToday: 'drwt',
+        hideWorked: 'drw',
+        hidePaid: 'drp',
+        page: 'drpg',
+        pageSize: 'drps',
+      },
     })
   })
 
@@ -106,6 +116,33 @@ describe('REPORTS_URL_KEYS', () => {
       expect(promisesFeedKeys).not.toContain(taken)
     }
     expect(promisesFeedKeys.every((key) => key.startsWith('pr'))).toBe(true)
+  })
+
+  it('keeps the drains feed clear of the `d…` spellings it would naturally take', () => {
+    // `dept` is the processing tab's department filter, and `df`/`dt` are the
+    // two keys a feed with a date pair would reach for first. The collision
+    // test above already fails on a reused key; this one records WHY the set
+    // is spelled `dr…`, so a later "tidy-up" rename cannot quietly walk it
+    // back into a taken (or collision-prone) prefix.
+    const drainsFeedKeys = Object.values<string>(REPORTS_URL_KEYS.drainsFeed)
+    for (const taken of ['dept', 'df', 'dt']) {
+      expect(drainsFeedKeys).not.toContain(taken)
+    }
+    expect(drainsFeedKeys.every((key) => key.startsWith('dr'))).toBe(true)
+  })
+
+  it('gives the drains feed an all-history flag no other feed has', () => {
+    // Every sibling window has a default, so "no dates in the URL" means "the
+    // default window" everywhere else. The drains endpoint treats BOTH dates
+    // absent as a supported mode (the whole history), and one absence cannot
+    // carry both meanings — hence a flag of its own. A later sweep that
+    // "normalises" the feed sets by deleting the odd key out would silently
+    // make the mode unreachable.
+    expect(REPORTS_URL_KEYS.drainsFeed.allHistory).toBe('dra')
+    const otherSets = Object.entries(REPORTS_URL_KEYS).filter(([owner]) => owner !== 'drainsFeed')
+    for (const [, set] of otherSets) {
+      expect(Object.keys(set)).not.toContain('allHistory')
+    }
   })
 
   it('keeps the contact-tag set clear of the `c…` spellings it would naturally take', () => {
