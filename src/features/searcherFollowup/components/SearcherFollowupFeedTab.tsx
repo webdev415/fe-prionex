@@ -28,16 +28,19 @@
  * backend caps nothing here because the window cannot widen the query's cost.
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { DateSelect } from '@/components/ui/DateSelect'
 import { Pagination } from '@/components/ui/Pagination'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
-import { usePagedFeedPages, useUrlPagedFeedFilters } from '@/hooks'
-import { isTransientFailure } from '@/lib/api'
-import { getDateStringInTimezone } from '@/lib/dateUtils'
-import { getErrorMessage, getErrorStatus, hasResponseDetail } from '@/lib/errors'
+import {
+  FEED_ERROR_KEY_PREFIXES,
+  useFeedErrorMessage,
+  usePagedFeedPages,
+  useTodayInTimezone,
+  useUrlPagedFeedFilters,
+} from '@/hooks'
 import { Icons } from '@/lib/icons'
 import { REPORTS_URL_KEYS } from '@/lib/reportsUrlKeys'
 import { readUrlDateBound } from '@/lib/urlDateBound'
@@ -70,34 +73,12 @@ export function SearcherFollowupFeedTab() {
   const projectId: number = Number(user?.active_project_id ?? user?.projects?.[0]?.id ?? 1)
   const userTimezone = user?.timezone
 
-  // The default window: "today" resolved in the PROFILE timezone — "now" is a
-  // real moment, and near midnight the browser's day and the operator's day
-  // differ. The same timezone travels to the backend, which cuts the window's
-  // calendar days in it, so the two ends of the request agree on what "today"
-  // means.
-  //
-  // Held in STATE, not read off the wall clock in render (the host page keeps
-  // comparable clock reads inside effects too): seeded once at mount and
-  // re-resolved on window focus, so a tab left open across midnight picks up
-  // the new day the moment the operator comes back to it instead of keeping
-  // yesterday's window until an unrelated re-render. The functional update
-  // returns the previous value while the day is unchanged, so a same-day
-  // focus re-renders nothing. `today` only backs the DEFAULT window below —
-  // user-picked URL bounds never move when the day rolls over.
-  const [today, setToday] = useState(() => getDateStringInTimezone(new Date(), userTimezone))
-  useEffect(() => {
-    const refreshToday = () =>
-      setToday((prev) => {
-        const next = getDateStringInTimezone(new Date(), userTimezone)
-        return next === prev ? prev : next
-      })
-    // The profile timezone can change what "today" means without the clock
-    // moving (it loads or changes after mount) — re-resolve right away, not
-    // only on the next focus.
-    refreshToday()
-    window.addEventListener('focus', refreshToday)
-    return () => window.removeEventListener('focus', refreshToday)
-  }, [userTimezone])
+  // The PROFILE timezone is the one that travels to the backend, where it cuts
+  // the window's find-day calendar days — so both ends of the request must
+  // agree on which day "today" is (the hook owns when that day is re-resolved).
+  // It backs the DEFAULT window below and nothing else: user-picked URL bounds
+  // never move when the day rolls over.
+  const today = useTodayInTimezone(userTimezone)
 
   // The shared paged-feed URL shell: composed `replace` updates (the
   // same-tick-burst ref composition lives there), defensive page/page-size
@@ -170,41 +151,20 @@ export function SearcherFollowupFeedTab() {
   // background refetch of the SAME page shows current data and needs none.
   const isRefreshing = query.isPlaceholderData
 
-  const errorStatus = getErrorStatus(query.error)
-  const isForbidden = errorStatus === 403
-  const isUnavailable = isTransientFailure(query.error)
-  const errorMessage = isUnavailable
-    ? // Covers all FOUR of the endpoint's own 503s — the auth-service directory
-      // being down, the call-service being down, the call-service throttling
-      // past one retry, and the two lookups together blowing the fan-out
-      // deadline. The operator's move is the same in all four (wait and retry),
-      // and none may degrade to a partial feed: a silently missing "last call"
-      // would read as "never called" and send an operator to re-dial somebody
-      // who was called an hour ago.
-      t('pages.reports.searcherFollowup.unavailable')
-    : isForbidden
-      ? t('pages.reports.searcherFollowup.forbidden')
-      : // Backend date/timezone validation answers 400 with a human-readable
-        // detail — and so does the candidate cap, whose detail names the count,
-        // the maximum and the remedy ("ask for a narrower window"). Passing it
-        // through verbatim is what makes that refusal actionable; a generic
-        // message would leave the operator with no idea which knob to turn.
-        // Only when the answer HAS a detail, though: a 400 whose body never
-        // arrived would otherwise show axios' own untranslated "Request failed
-        // with status code 400" (see hasResponseDetail), so it joins every
-        // other unexplained failure under the localized generic title.
-        errorStatus === 400 && hasResponseDetail(query.error)
-        ? getErrorMessage(query.error)
-        : t('pages.reports.searcherFollowup.error.title')
-
-  // The four 503s are worded distinctly by the backend on purpose — the
-  // remedies differ and monitoring must tell an outage from a timeout from
-  // throttling — so the server's own sentence is shown UNDER the localized one
-  // rather than instead of it: the operator reads their language, and whoever
-  // is asked "what does it say?" can tell which dependency failed. Absent for a
-  // transport-level failure (a 502/504 or a dropped connection carries no body).
-  const errorDetail =
-    isUnavailable && hasResponseDetail(query.error) ? getErrorMessage(query.error) : null
+  // The shared failure ladder (see the hook for the rungs and their order).
+  // What is this endpoint's own: FOUR distinct 503s — the auth-service
+  // directory down, the call-service down, the call-service throttling past
+  // one retry, and the two lookups together blowing the fan-out deadline —
+  // none of which may degrade to a partial feed, since a silently missing
+  // "last call" would read as "never called" and send an operator to re-dial
+  // somebody who was called an hour ago. Its 400 detail names the failing
+  // date/timezone or, for the candidate cap, the count, the maximum and the
+  // remedy ("ask for a narrower window") — the only way the operator learns
+  // which knob to turn.
+  const { errorMessage, errorDetail, isForbidden } = useFeedErrorMessage(
+    query.error,
+    FEED_ERROR_KEY_PREFIXES.searcherFollowup
+  )
 
   return (
     <div className="flex w-full flex-col gap-4">

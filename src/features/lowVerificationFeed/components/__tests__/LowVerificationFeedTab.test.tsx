@@ -756,6 +756,29 @@ describe('LowVerificationFeedTab', () => {
     expect(await screen.findByText('sell_from must not be after sell_to')).toBeInTheDocument()
   })
 
+  it('falls back to the localized title for a 400 whose body never arrived', async () => {
+    // THE ONE DELIBERATE BEHAVIOUR CHANGE of the shared error ladder. This tab
+    // used to gate its 400 on the status alone, so a body-less answer — what a
+    // proxy that strips the body produces — reached the operator as whatever
+    // `getErrorMessage` could scrape off the error: in production axios'
+    // untranslated "Request failed with status code 400", here this suite's
+    // own `HTTP 400`. The nine sibling tabs already gated on
+    // `hasResponseDetail`; this pins that this one now does too.
+    //
+    // The case above (a 400 WITH a detail) stays green either way, which is
+    // exactly why it could not stand in for this one.
+    //
+    // The absence assertion names the helper's OWN message rather than the
+    // axios wording: the helper never produces the axios sentence, so checking
+    // for that would pass whatever the tab rendered.
+    mockGetFeed.mockRejectedValue(makeHttpError(400))
+
+    renderTab()
+
+    expect(await screen.findByText('pages.reports.lowVerification.error.title')).toBeInTheDocument()
+    expect(screen.queryByText(/HTTP 400/)).not.toBeInTheDocument()
+  })
+
   it('shows a permissions message without a retry button on 403', async () => {
     mockGetFeed.mockRejectedValue(makeHttpError(403))
 

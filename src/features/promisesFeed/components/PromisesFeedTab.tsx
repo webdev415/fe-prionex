@@ -34,17 +34,20 @@
  * choices somebody made.
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { DateSelect } from '@/components/ui/DateSelect'
 import { Pagination } from '@/components/ui/Pagination'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
-import { usePagedFeedPages, useUrlPagedFeedFilters } from '@/hooks'
-import { isTransientFailure } from '@/lib/api'
-import { getDateStringInTimezone } from '@/lib/dateUtils'
-import { getErrorMessage, getErrorStatus, hasResponseDetail } from '@/lib/errors'
+import {
+  FEED_ERROR_KEY_PREFIXES,
+  useFeedErrorMessage,
+  usePagedFeedPages,
+  useTodayInTimezone,
+  useUrlPagedFeedFilters,
+} from '@/hooks'
 import { Icons } from '@/lib/icons'
 import { isWindowTooLong } from '@/lib/reportWindow'
 import { REPORTS_URL_KEYS } from '@/lib/reportsUrlKeys'
@@ -84,34 +87,12 @@ export function PromisesFeedTab() {
   const projectId: number = Number(user?.active_project_id ?? user?.projects?.[0]?.id ?? 1)
   const userTimezone = user?.timezone
 
-  // The default window: "today" resolved in the PROFILE timezone — "now" is a
-  // real moment, and near midnight the browser's day and the operator's day
-  // differ. The same timezone travels to the backend, which cuts the
-  // PROMISED-date calendar days in it, so the two ends of the request agree
-  // on what "today" means.
-  //
-  // Held in STATE, not read off the wall clock in render: seeded once at
-  // mount and re-resolved on window focus, so a tab left open across midnight
-  // picks up the new day the moment the operator comes back to it instead of
-  // keeping yesterday's window until an unrelated re-render. The functional
-  // update returns the previous value while the day is unchanged, so a
-  // same-day focus re-renders nothing. `today` only backs the DEFAULT window
-  // below — user-picked URL bounds never move when the day rolls over. Same
-  // pattern as the searcher feed.
-  const [today, setToday] = useState(() => getDateStringInTimezone(new Date(), userTimezone))
-  useEffect(() => {
-    const refreshToday = () =>
-      setToday((prev) => {
-        const next = getDateStringInTimezone(new Date(), userTimezone)
-        return next === prev ? prev : next
-      })
-    // The profile timezone can change what "today" means without the clock
-    // moving (it loads or changes after mount) — re-resolve right away, not
-    // only on the next focus.
-    refreshToday()
-    window.addEventListener('focus', refreshToday)
-    return () => window.removeEventListener('focus', refreshToday)
-  }, [userTimezone])
+  // The PROFILE timezone is the one that travels to the backend, where it cuts
+  // the PROMISED-date calendar days — so both ends of the request must agree
+  // on which day "today" is (the hook owns when that day is re-resolved). It
+  // backs the DEFAULT window below and nothing else: user-picked URL bounds
+  // never move when the day rolls over.
+  const today = useTodayInTimezone(userTimezone)
 
   // The shared paged-feed URL shell: composed `replace` updates (the
   // same-tick-burst ref composition lives there), defensive page/page-size
@@ -157,7 +138,7 @@ export function PromisesFeedTab() {
   // input and hand-edited URLs would bypass such bounds anyway. ISO
   // YYYY-MM-DD strings compare correctly as strings.
   const isRangeInverted = !hasInvalidDate && dateFrom > dateTo
-  const isTooLong = !hasInvalidDate && !isRangeInverted && isWindowTooLong(dateFrom, dateTo)
+  const isTooLong = !hasInvalidDate && isWindowTooLong(dateFrom, dateTo)
 
   // Where a message is rendered follows WHAT it is about: a bad date belongs
   // to ONE field, so it rides that field's `error` prop; an inverted or
@@ -198,36 +179,18 @@ export function PromisesFeedTab() {
   // background refetch of the SAME page shows current data and needs none.
   const isRefreshing = query.isPlaceholderData
 
-  const errorStatus = getErrorStatus(query.error)
-  const isForbidden = errorStatus === 403
-  const isUnavailable = isTransientFailure(query.error)
-  const errorMessage = isUnavailable
-    ? // Covers the endpoint's 503s — the auth-service org directory being down
-      // (without it the rows cannot be grouped into departments), the payment
-      // lookup failing and either blowing its deadline. The operator's move is
-      // the same in all: wait and retry; a partial feed is never shown — a
-      // silently missing payment would read as "not paid" and send an operator
-      // to dun somebody who paid an hour ago.
-      t('pages.reports.promisesFeed.unavailable')
-    : isForbidden
-      ? t('pages.reports.promisesFeed.forbidden')
-      : // Backend date/timezone validation answers 400 with a human-readable
-        // detail (inverted window, > 366-day difference, a date outside the
-        // supported range, an unknown IANA zone). Passing it through verbatim
-        // is what makes the refusal actionable — but only when the answer HAS
-        // a detail (see hasResponseDetail), otherwise axios' own untranslated
-        // sentence would leak through.
-        errorStatus === 400 && hasResponseDetail(query.error)
-        ? getErrorMessage(query.error)
-        : t('pages.reports.promisesFeed.error.title')
-
-  // The 503s are worded distinctly by the backend on purpose — the remedies
-  // differ and monitoring must tell an outage from a timeout — so the
-  // server's own sentence is shown UNDER the localized one rather than
-  // instead of it. Absent for a transport-level failure (a 502/504 or a
-  // dropped connection carries no body).
-  const errorDetail =
-    isUnavailable && hasResponseDetail(query.error) ? getErrorMessage(query.error) : null
+  // The shared failure ladder (see the hook for the rungs and their order).
+  // What is this endpoint's own: its 503s are the auth-service org directory
+  // being down (without it the rows cannot be grouped into departments), the
+  // payment lookup failing, and either of them blowing its deadline — none may
+  // degrade to a partial feed, since a silently missing payment would read as
+  // "not paid" and send an operator to dun somebody who paid an hour ago. Its
+  // 400 detail names an inverted window, a > 366-day difference, a date
+  // outside the supported range or an unknown IANA zone.
+  const { errorMessage, errorDetail, isForbidden } = useFeedErrorMessage(
+    query.error,
+    FEED_ERROR_KEY_PREFIXES.promisesFeed
+  )
 
   return (
     <div className="flex w-full flex-col gap-4">

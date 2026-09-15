@@ -37,9 +37,12 @@ import { DateSelect } from '@/components/ui/DateSelect'
 import { Input } from '@/components/ui/Input'
 import { Pagination } from '@/components/ui/Pagination'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
-import { usePagedFeedPages, useUrlPagedFeedFilters } from '@/hooks'
-import { isTransientFailure } from '@/lib/api'
-import { getErrorMessage, getErrorStatus, hasResponseDetail } from '@/lib/errors'
+import {
+  FEED_ERROR_KEY_PREFIXES,
+  useFeedErrorMessage,
+  usePagedFeedPages,
+  useUrlPagedFeedFilters,
+} from '@/hooks'
 import { Icons } from '@/lib/icons'
 import { REPORTS_URL_KEYS } from '@/lib/reportsUrlKeys'
 import { isDatePairInverted, readUrlDateBound } from '@/lib/urlDateBound'
@@ -207,31 +210,23 @@ export function CommunicationGapFeedTab() {
   // background refetch of the SAME page shows current data and needs none.
   const isRefreshing = query.isPlaceholderData
 
-  const errorStatus = getErrorStatus(query.error)
-  const isForbidden = errorStatus === 403
-  const errorMessage = isTransientFailure(query.error)
-    ? // Covers all three of the endpoint's own 503s — the auth-service
-      // directory being down, the payment-service being down, and the two
-      // lookups together blowing the fan-out deadline. Each has its own server
-      // detail, but the operator's move is the same in all three (wait and
-      // retry), and none may degrade to a partial feed: without the directory
-      // the department gate disappears, without the payment data a client who
-      // paid yesterday lands back in a call list.
-      t('pages.reports.communicationGap.unavailable')
-    : isForbidden
-      ? t('pages.reports.communicationGap.forbidden')
-      : // Backend date/timezone validation answers 400 with a human-readable
-        // detail — and so does the candidate cap, whose detail asks for a
-        // narrower sell window. Passing it through verbatim is what makes that
-        // refusal actionable; a generic message would leave the operator with no
-        // idea which knob to turn. Only when the answer HAS a detail, though: a
-        // 400 whose body never arrived would otherwise show axios' own
-        // untranslated "Request failed with status code 400" (see
-        // hasResponseDetail), so it joins every other unexplained failure under
-        // the localized generic title.
-        errorStatus === 400 && hasResponseDetail(query.error)
-        ? getErrorMessage(query.error)
-        : t('pages.reports.communicationGap.error.title')
+  // The shared failure ladder (see the hook for the rungs and their order).
+  // What is this endpoint's own: three 503s — the auth-service directory down,
+  // the payment-service down, and the two lookups together blowing the fan-out
+  // deadline — none of which may degrade to a partial feed, since without the
+  // directory the department gate disappears and without the payment data a
+  // client who paid yesterday lands back in a call list. Its 400 detail names
+  // the failing date/timezone or asks for a narrower sell window when the
+  // candidate cap is hit.
+  //
+  // `errorDetail` is DELIBERATELY NOT TAKEN: each 503 has its own server
+  // sentence, but the operator's move is the same in all three and the wording
+  // is aimed at whoever runs the services. Same call as the sibling contact-tag
+  // feed, which explains it at length.
+  const { errorMessage, isForbidden } = useFeedErrorMessage(
+    query.error,
+    FEED_ERROR_KEY_PREFIXES.communicationGap
+  )
 
   return (
     <div className="flex w-full flex-col gap-4">
