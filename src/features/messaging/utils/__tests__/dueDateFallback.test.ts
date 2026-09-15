@@ -128,10 +128,11 @@ describe('the date a message tells the client to pay by', () => {
     }
   })
 
-  it('reads a promise sent with a time as its calendar day', () => {
+  it('quotes the promise as the wall-clock day it was stored as, in any profile timezone', () => {
     const vars = buildClientMessagingVariables({
       ...base,
-      clientData: { max_promise_to_pay_date: '2026-05-31T00:00:00' } as never,
+      clientData: { max_promise_to_pay_date: '2026-05-31T21:00:00' } as never,
+      timezone: 'Asia/Tokyo',
       selectedLoan: null,
       hasLoanContext: true,
     })

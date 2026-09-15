@@ -5573,6 +5573,7 @@
           "loanNumber": "Loan number",
           "noOpenLoans": "No open credits",
           "unresolvedVariables": "These variables have no value yet: {{names}}",
+          "clientLoadFailed": "Client details could not be loaded, so the message can't be sent. Close the window and try again.",
           "templateVariables": "Template Variables",
           "sending": "Sending...",
           "smsSentSuccessfully": "SMS sent successfully",

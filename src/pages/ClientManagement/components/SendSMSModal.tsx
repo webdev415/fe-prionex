@@ -105,7 +105,7 @@ export function SendSMSModal({
   const sendSMSMutation = useSendSMS()
 
   // Fetch client details (debts, contract_number, max promise date for SMS {due_date})
-  const { data: clientData, isLoading: isLoadingClient } = useClient(clientId, !!clientId && open)
+  const { data: clientData, isError: clientLoadFailed } = useClient(clientId, !!clientId && open)
 
   // Fetch current user details to get operator phone
   const { data: currentUserData } = useQuery({
@@ -240,7 +240,7 @@ export function SendSMSModal({
   const hasUnresolvedVariables = missingVariables.length > 0
   const blocksSending = blockingVariables(missingVariables).length > 0
   const canSend =
-    !isLoadingClient &&
+    !!clientData &&
     !isDailyLimitReached &&
     displayMessage.trim().length > 0 &&
     !blocksSending &&
@@ -477,6 +477,11 @@ export function SendSMSModal({
                         names: missingVariables.join(', '),
                         defaultValue: `These variables have no value yet: ${missingVariables.join(', ')}`,
                       })}
+                    </p>
+                  )}
+                  {clientLoadFailed && (
+                    <p className="text-error-500 text-xs">
+                      {t('pages.clients.modals.sendSMS.clientLoadFailed')}
                     </p>
                   )}
                 </div>

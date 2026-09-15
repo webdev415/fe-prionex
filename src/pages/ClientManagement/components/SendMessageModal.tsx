@@ -149,7 +149,7 @@ export function SendMessageModal({
     open ? channel : undefined
   )
   const sendMessageMutation = useSendMessage()
-  const { data: clientData, isLoading: clientLoading } = useClient(clientId, !!clientId && open)
+  const { data: clientData, isError: clientLoadFailed } = useClient(clientId, !!clientId && open)
   const { data: currentUserData } = useQuery({
     queryKey: ['current-user'],
     queryFn: () => authApi.me(),
@@ -401,7 +401,7 @@ export function SendMessageModal({
   const blocksSending = blockingVariables(missingVariables).length > 0
   const canSend =
     clientId > 0 &&
-    !clientLoading &&
+    !!clientData &&
     !!service &&
     hasDestination &&
     (body.trim().length > 0 || hasViberRich) &&
@@ -724,6 +724,11 @@ export function SendMessageModal({
                     names: missingVariables.join(', '),
                     defaultValue: `These variables have no value yet: ${missingVariables.join(', ')}`,
                   })}
+                </p>
+              )}
+              {clientLoadFailed && (
+                <p className="text-error-500 mt-1.5 text-xs">
+                  {t('pages.clients.modals.sendSMS.clientLoadFailed')}
                 </p>
               )}
             </div>
