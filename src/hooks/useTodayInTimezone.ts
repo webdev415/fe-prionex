@@ -28,13 +28,17 @@ import { getDateStringInTimezone } from '@/lib/dateUtils'
  * profile timezone can load or change after mount, which changes what "today"
  * means with the clock standing still.
  *
- * DELIBERATELY NOT USED BY EVERY REPORT TAB. Four tabs (client processing,
- * promises-daily, operator-promises, third-party verification) read their
- * "today" in render instead. Adopting this hook there would change their
- * behaviour — the day would stop following re-renders, and they would gain a
- * focus listener and therefore a refetch they do not have today — and none of
- * them has a focus test that would catch it. Converting them is a change of
- * behaviour with its own tests, not part of an extraction.
+ * DELIBERATELY NOT USED BY EVERY REPORT TAB. The remaining report tabs (client
+ * processing, promises-daily, operator-promises, outbound calls, and
+ * third-party verification, which reaches the same clock read through
+ * `currentMonthRange`) resolve their "today" in render instead. Adopting this
+ * hook there would change their behaviour — the day would stop following
+ * re-renders, and they would gain a focus listener and therefore a refetch
+ * they do not have today — and none of them has a focus test that would catch
+ * it. Converting them is a change of behaviour with its own tests, not part of
+ * an extraction. (No count here on purpose: a number in this sentence goes
+ * stale the first time a tab is added or converted, and a stale count is how
+ * the previous version of this paragraph came to name the wrong set.)
  *
  * @param timezone IANA zone from the user's profile; falsy falls back to the
  *   browser zone inside `getDateStringInTimezone`.

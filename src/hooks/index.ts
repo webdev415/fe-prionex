@@ -13,6 +13,13 @@ export { useGuardedAction } from './useGuardedAction'
 
 export { useTodayInTimezone } from './useTodayInTimezone'
 
+export {
+  useFeedErrorMessage,
+  FEED_ERROR_KEY_PREFIXES,
+  type FeedErrorKeyPrefix,
+  type FeedErrorMessage,
+} from './useFeedErrorMessage'
+
 export { useURLState, type UseURLStateOptions } from './useURLState'
 
 export {

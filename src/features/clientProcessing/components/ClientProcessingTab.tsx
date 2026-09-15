@@ -26,9 +26,8 @@ import {
   type SegmentedTabItem,
 } from '@/components/ui/SegmentedTabs'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
-import { isTransientFailure } from '@/lib/api'
+import { FEED_ERROR_KEY_PREFIXES, useFeedErrorMessage } from '@/hooks'
 import { isRealCalendarDate } from '@/lib/calendarDate'
-import { getErrorMessage, getErrorStatus } from '@/lib/errors'
 import { Icons } from '@/lib/icons'
 import { formatPickerDateAsYMD, getDateStringInTimezone } from '@/lib/dateUtils'
 import { isWindowTooLong } from '@/lib/reportWindow'
@@ -67,9 +66,8 @@ export function ClientProcessingTab() {
   // would wave `?from=2026-02-31` through to the API (and into the window-cap
   // check below, which would then measure the window from a date nobody
   // typed). An unusable value falls back to today — this tab's long-standing
-  // rule for malformed URL values; the
-  // sibling tabs' louder per-field error treatment is a different design this
-  // report has not adopted.
+  // rule for malformed URL values; the sibling tabs' louder per-field error
+  // treatment is a different design this report has not adopted.
   const today = getDateStringInTimezone(new Date(), userTimezone)
   const rawFrom = searchParams.get(FROM_KEY)
   const rawTo = searchParams.get(TO_KEY)
@@ -109,7 +107,7 @@ export function ClientProcessingTab() {
   // input and hand-edited URLs would bypass such bounds anyway. ISO YYYY-MM-DD
   // strings compare correctly as strings.
   const isRangeInverted = dateStart > dateEnd
-  const isRangeTooLong = !isRangeInverted && isWindowTooLong(dateStart, dateEnd)
+  const isRangeTooLong = isWindowTooLong(dateStart, dateEnd)
   const rangeErrorKey = isRangeInverted
     ? 'pages.reports.processing.invalidRange'
     : isRangeTooLong
@@ -157,16 +155,20 @@ export function ClientProcessingTab() {
   // the numbers may update in place a moment later.
   const isRefreshing = query.isPlaceholderData
 
-  const errorStatus = getErrorStatus(query.error)
-  const isForbidden = errorStatus === 403
-  const errorMessage = isTransientFailure(query.error)
-    ? t('pages.reports.processing.unavailable')
-    : isForbidden
-      ? t('pages.reports.processing.forbidden')
-      : errorStatus === 400
-        ? // Backend range validation answers 400 with a human-readable detail
-          getErrorMessage(query.error)
-        : t('pages.reports.processing.error.title')
+  // The shared failure ladder (see the hook for the rungs and their order).
+  // What is this endpoint's own: its 400 carries a human-readable detail from
+  // the range validation, which is what makes the refusal actionable.
+  // `errorDetail` is not taken — this tab has never shown the server's 503
+  // sentence under the localized one.
+  //
+  // The 400 now goes through the hook's `hasResponseDetail` gate, which this
+  // tab did not have: a 400 whose body a proxy stripped used to reach the
+  // operator as axios' own untranslated "Request failed with status code 400"
+  // and now reaches them as the localized title. Deliberate — see the hook.
+  const { errorMessage, isForbidden } = useFeedErrorMessage(
+    query.error,
+    FEED_ERROR_KEY_PREFIXES.processing
+  )
 
   return (
     <div className="flex w-full flex-col gap-4">
