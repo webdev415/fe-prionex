@@ -1,5 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { getDateStringInTimezone } from '@/lib/dateUtils'
 import { useTodayInTimezone } from '../useTodayInTimezone'
 
 /**
@@ -14,7 +15,11 @@ import { useTodayInTimezone } from '../useTodayInTimezone'
  */
 describe('useTodayInTimezone', () => {
   beforeEach(() => {
-    vi.useFakeTimers()
+    // Only Date is faked — the convention of the five tab suites this rule
+    // came from: real timers keep waitFor / React Query / userEvent flowing,
+    // while setSystemTime moves what "now" (and thus "today") is. Faking
+    // everything would also freeze the machinery the rule runs inside.
+    vi.useFakeTimers({ toFake: ['Date'] })
   })
 
   afterEach(() => {
@@ -79,14 +84,60 @@ describe('useTodayInTimezone', () => {
     expect(result.current).toBe('2026-09-09')
   })
 
-  it('stops listening when the component unmounts', () => {
+  it('removes the LISTENER IT ADDED when the component unmounts', () => {
+    // `expect.any(Function)` would be satisfied by a cleanup that removed
+    // somebody else's focus listener and left this one attached — a leak that
+    // survives every remount of the tab. So the reference added is captured
+    // and the reference removed is compared against it.
+    const add = vi.spyOn(window, 'addEventListener')
     const remove = vi.spyOn(window, 'removeEventListener')
     vi.setSystemTime(new Date('2026-09-08T12:00:00Z'))
     const { unmount } = renderHook(() => useTodayInTimezone('Europe/Kyiv'))
 
+    const added = add.mock.calls.filter(([event]) => event === 'focus')
+    expect(added).toHaveLength(1)
+
     unmount()
 
-    expect(remove).toHaveBeenCalledWith('focus', expect.any(Function))
+    expect(remove).toHaveBeenCalledWith('focus', added[0][1])
+    add.mockRestore()
     remove.mockRestore()
+  })
+
+  it('survives a missing profile zone and resolves again once it arrives', () => {
+    // `undefined` is not an edge case: it is the FIRST render of all five
+    // tabs, before the profile has loaded. `getDateStringInTimezone` falls
+    // back to the browser zone, and the value must then follow the real zone
+    // the moment it appears — with the clock standing still.
+    //
+    // The browser-zone day is DERIVED, not hardcoded: vitest.config.ts only
+    // DEFAULTS `TZ` to UTC and documents `TZ=America/New_York npx vitest run`
+    // as the way to hunt for exactly this class of bug, so a literal here
+    // would break that workflow and go red on any dev box with `TZ` set.
+    // 12:00 UTC is the same calendar day in every zone from UTC-12 to
+    // UTC+11, and the re-resolve is proven with UTC+14 (Kiritimati), where
+    // it is already the next day.
+    vi.setSystemTime(new Date('2026-09-08T12:00:00Z'))
+    const { result, rerender } = renderHook(
+      ({ zone }: { zone: string | null | undefined }) => useTodayInTimezone(zone),
+      { initialProps: { zone: undefined as string | null | undefined } }
+    )
+    expect(result.current).toBe(getDateStringInTimezone(new Date(), undefined))
+
+    rerender({ zone: 'Pacific/Kiritimati' })
+    expect(result.current).toBe('2026-09-09')
+  })
+
+  it('falls back to the browser zone for an unusable zone string', () => {
+    // A profile carrying junk (a hand-edited value, a zone that ICU does not
+    // know) must not throw an unhandled RangeError out of a render and take
+    // the whole tab down with it — the fallback inside
+    // `getDateStringInTimezone` is what keeps a bad profile field a cosmetic
+    // problem.
+    // Same derivation as above: the expected value is whatever the browser
+    // zone says, so the test is honest under any process `TZ`.
+    vi.setSystemTime(new Date('2026-09-08T12:00:00Z'))
+    const { result } = renderHook(() => useTodayInTimezone('Mars/Olympus'))
+    expect(result.current).toBe(getDateStringInTimezone(new Date(), undefined))
   })
 })

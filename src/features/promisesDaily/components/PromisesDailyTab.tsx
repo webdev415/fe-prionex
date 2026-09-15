@@ -32,10 +32,9 @@ import { Button } from '@/components/ui/Button'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { DateSelect } from '@/components/ui/DateSelect'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
-import { isTransientFailure } from '@/lib/api'
+import { FEED_ERROR_KEY_PREFIXES, useFeedErrorMessage } from '@/hooks'
 import { formatDateTime } from '@/lib/localeFormat'
 import { formatPickerDateAsYMD, getDateStringInTimezone } from '@/lib/dateUtils'
-import { getErrorMessage, getErrorStatus, hasResponseDetail } from '@/lib/errors'
 import { Icons } from '@/lib/icons'
 import { isWindowTooLong } from '@/lib/reportWindow'
 import { REPORTS_URL_KEYS } from '@/lib/reportsUrlKeys'
@@ -101,7 +100,7 @@ export function PromisesDailyTab() {
   // deliberately do not bound each other (see the fields below), and manual
   // input and hand-edited URLs would bypass such bounds anyway.
   const isInverted = isDatePairInverted(dateFrom, dateTo)
-  const isTooLong = !!dateFrom && !!dateTo && !isInverted && isWindowTooLong(dateFrom, dateTo)
+  const isTooLong = !!dateFrom && !!dateTo && isWindowTooLong(dateFrom, dateTo)
 
   const hasFilterError = fromBound.isInvalid || toBound.isInvalid || isInverted || isTooLong
 
@@ -192,33 +191,16 @@ export function PromisesDailyTab() {
   // background refetch of the SAME window shows current data and needs none.
   const isRefreshing = query.isPlaceholderData
 
-  const errorStatus = getErrorStatus(query.error)
-  const isForbidden = errorStatus === 403
-  const isUnavailable = isTransientFailure(query.error)
-  const errorMessage = isUnavailable
-    ? // Covers the endpoint's 503s — the auth-service org directory being down
-      // (without it the series cannot be grouped into departments) and the
-      // lookup blowing its deadline. The operator's move is the same in both:
-      // wait and retry; a partial report is never shown.
-      t('pages.reports.promisesDaily.unavailable')
-    : isForbidden
-      ? t('pages.reports.promisesDaily.forbidden')
-      : // Backend date/timezone validation answers 400 with a human-readable
-        // detail (inverted window, > 367 days, a date outside
-        // 1900-01-01..9998-12-31, an unknown IANA zone). Passing it through
-        // verbatim is what makes the refusal actionable — but only when the
-        // answer HAS a detail (see hasResponseDetail), otherwise axios' own
-        // untranslated sentence would leak through.
-        errorStatus === 400 && hasResponseDetail(query.error)
-        ? getErrorMessage(query.error)
-        : t('pages.reports.promisesDaily.error.title')
-
-  // The 503s are worded distinctly by the backend on purpose, so the server's
-  // own sentence is shown UNDER the localized one rather than instead of it.
-  // Absent for a transport-level failure (a 502/504 or a dropped connection
-  // carries no body).
-  const errorDetail =
-    isUnavailable && hasResponseDetail(query.error) ? getErrorMessage(query.error) : null
+  // The shared failure ladder (see the hook for the rungs and their order).
+  // What is this endpoint's own: its 503s are the auth-service org directory
+  // being down (without it the series cannot be grouped into departments) and
+  // that lookup blowing its deadline — neither may degrade to a partial
+  // report. Its 400 detail names an inverted window, > 367 days, a date
+  // outside 1900-01-01..9998-12-31, or an unknown IANA zone.
+  const { errorMessage, errorDetail, isForbidden } = useFeedErrorMessage(
+    query.error,
+    FEED_ERROR_KEY_PREFIXES.promisesDaily
+  )
 
   return (
     <div className="flex w-full flex-col gap-4">

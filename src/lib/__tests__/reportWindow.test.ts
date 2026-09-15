@@ -103,27 +103,62 @@ const SCANNED_SOURCES = Object.fromEntries(
       import: 'default',
       eager: true,
     }) as Record<string, string>
-    // Keys are relative to THIS file, so the module itself arrives as
+    // Keys are relative to THIS file, so the module itself arrives as exactly
     // `../reportWindow.ts`; `import.meta.glob` already leaves this suite out.
-  ).filter(([path]) => !path.endsWith('/reportWindow.ts'))
+    // The EXACT key, not a name suffix: with the path regex below accepting
+    // `./reportWindow` from anywhere, a suffix filter would also drop a COPY
+    // of the module planted next to a feature — and its `./` consumers would
+    // then read as legitimate. Verified by planting exactly that: a suffix
+    // filter passed 10/10, this one goes red.
+  ).filter(([path]) => path !== '../reportWindow.ts')
 )
 
 /**
- * Does this file import `name` FROM THIS MODULE? Parses the specifier list
- * rather than testing for the path, so "imports the module" cannot stand in
- * for "imports this symbol". A renaming import (`as`) counts under its
- * original name — the declaration being policed is the export, not the alias.
- * Relative spellings are accepted alongside the `@/` alias: none exist today
- * (1062 `@/lib/...` imports under features/ and pages/, zero relative), but a
- * legitimate import must never read as a violation.
+ * Every spelling of an import FROM THIS MODULE, in one place.
+ *
+ * Both halves matter. The PATH half accepts the `@/` alias and every relative
+ * form, `lib/` segment or not: a file inside `src/lib` reaches its neighbour as
+ * `'./reportWindow'` (three files there already import a sibling that way), and
+ * a path-only pattern would read that legitimate import as a violation. A gate
+ * whose red is sometimes wrong stops being read, and being read is all it has.
+ *
+ * The SPECIFIER half captures either a brace list or a namespace import. A
+ * namespace import (`import * as rw from …`) brings in every export, so
+ * `rw.MAX_RANGE_DAYS` in the body is a legitimate use of the name — matched by
+ * the mention regex and, without this branch, reported as a file that names the
+ * constant without importing it. Nobody writes that form here today; the point
+ * is that the gate must not punish them for starting.
+ *
+ * `g` is not decoration: `String.match` without it returns the FIRST match
+ * only, so a file that writes `import type { … }` on one line and
+ * `import { … }` on the next would have half its specifiers invisible.
+ */
+const MODULE_IMPORT =
+  /import\s+(?:type\s+)?(?:\{([^}]*)\}|\*\s+as\s+\w+)\s+from\s+'(?:@\/lib\/reportWindow|(?:\.{1,2}\/)+(?:lib\/)?reportWindow)'/g
+
+/**
+ * Does this file import `name` FROM THIS MODULE? Parses the specifier lists —
+ * ALL of them — rather than testing for the path, so "imports the module"
+ * cannot stand in for "imports this symbol". A renaming import (`as`) counts
+ * under its original name, and an inline `type` specifier under its bare one:
+ * the declaration being policed is the export, not how a call site spells it.
  */
 function importsSymbol(source: string, name: string): boolean {
-  const specifiers = source.match(
-    /import\s+(?:type\s+)?\{([^}]+)\}\s+from\s+'(?:@\/|(?:\.\.\/)+)lib\/reportWindow'/
-  )
-  return (specifiers?.[1] ?? '')
-    .split(',')
-    .some((entry) => entry.trim().split(/\s+as\s+/)[0] === name)
+  for (const statement of source.matchAll(MODULE_IMPORT)) {
+    const specifiers = statement[1]
+    // A namespace import has no specifier list and brings in everything.
+    if (specifiers === undefined) return true
+    const imported = specifiers.split(',').some(
+      (entry) =>
+        entry
+          .trim()
+          .replace(/^type\s+/, '')
+          .split(/\s+as\s+/)[0]
+          .trim() === name
+    )
+    if (imported) return true
+  }
+  return false
 }
 
 function filesNaming(name: string, mention: RegExp): string[] {
@@ -140,6 +175,11 @@ describe('the window cap has exactly one definition', () => {
     // count alone is not enough: a glob that silently lost one directory would
     // still be in the hundreds, so both halves are named explicitly.
     const paths = Object.keys(SCANNED_SOURCES)
+    // The glob saw 2067 files when this line was written; the threshold is
+    // deliberately far below that and is NOT to be raised to match. It exists
+    // to catch a glob that returned nothing (or lost a directory), not to
+    // record how big the repository is — a threshold tracking the real count
+    // turns any large deletion into a failure in an unrelated file.
     expect(paths.length).toBeGreaterThan(1500)
     expect(paths.some((path) => path.includes('/features/'))).toBe(true)
     expect(paths.some((path) => path.includes('/pages/'))).toBe(true)
