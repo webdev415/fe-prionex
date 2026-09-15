@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
+import { safeHttpUrl } from '@/lib/safeUrl'
 import { formatDate } from '@/lib/localeFormat'
 import { useConfirm } from '@/components/ui/useConfirm'
 import { useHasPermission } from '@/hooks'
@@ -14,11 +15,14 @@ import {
 import {
   MATERIAL_TYPES,
   isPreviewable,
+  materialSubtitle,
+  openMaterialLink,
   type Material,
   type MaterialType,
 } from '@/features/training/types/materials'
 import { TrainingFilterChips, TrainingPrimaryButton, TrainingSearchBar } from './TrainingToolbar'
 import { MaterialUploadDialog } from './MaterialUploadDialog'
+import { MaterialLinkDialog } from './MaterialLinkDialog'
 import { MaterialEditDialog } from './MaterialEditDialog'
 import { MaterialPreviewModal } from './MaterialPreviewModal'
 import { AttachMaterialToCallDialog } from './AttachMaterialToCallDialog'
@@ -28,17 +32,11 @@ const TYPE_BADGE: Record<MaterialType, { label: string; tone: string; iconBg: st
   docx: { label: 'DOCX', tone: 'text-[#2563EB]', iconBg: 'bg-[#EFF6FF]' },
   video: { label: 'VIDEO', tone: 'text-[#7C3AED]', iconBg: 'bg-[#F5F3FF]' },
   audio: { label: 'AUDIO', tone: 'text-[#D97706]', iconBg: 'bg-[#FFFBEB]' },
+  link: { label: 'LINK', tone: 'text-[#0F766E]', iconBg: 'bg-[#F0FDFA]' },
   other: { label: 'FILE', tone: 'text-[#4B5563]', iconBg: 'bg-[#F3F4F6]' },
 }
 
 const PAGE_SIZE = 48
-
-function formatSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`
-  return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`
-}
 
 function formatUpdated(
   t: (key: string, opts?: Record<string, unknown>) => string,
@@ -80,6 +78,7 @@ export function MaterialsLibraryTab() {
   const [typeFilter, setTypeFilter] = useState<MaterialType | 'all'>('all')
   const [query, setQuery] = useState('')
   const [uploadOpen, setUploadOpen] = useState(false)
+  const [linkOpen, setLinkOpen] = useState(false)
   const [editTarget, setEditTarget] = useState<Material | null>(null)
   const [previewTarget, setPreviewTarget] = useState<Material | null>(null)
   const [attachTarget, setAttachTarget] = useState<Material | null>(null)
@@ -120,10 +119,24 @@ export function MaterialsLibraryTab() {
   )
 
   const handleDownload = async (m: Material) => {
+    if (m.kind === 'link') {
+      // No file behind it: the download endpoint answers 409. Opening the url is
+      // the equivalent action, and safeHttpUrl is what keeps a stored
+      // `javascript:` out of window.open.
+      if (!openMaterialLink(m, safeHttpUrl)) {
+        toast.error(
+          t(
+            'pages.training.training.materials.errors.openLink',
+            'This link cannot be opened — its address is not a valid https:// URL.'
+          )
+        )
+      }
+      return
+    }
     setDownloadingId(m.id)
     try {
       const blob = await downloadMaterial(m.id)
-      triggerBlobDownload(blob, m.original_filename)
+      triggerBlobDownload(blob, m.original_filename ?? m.title)
     } catch {
       toast.error(
         t('pages.training.training.materials.errors.download', 'Could not download the file.')
@@ -174,12 +187,22 @@ export function MaterialsLibraryTab() {
           <span className="text-xs text-[#6B7280]">{total}</span>
         </div>
         {canManage && (
-          <TrainingPrimaryButton
-            onClick={() => setUploadOpen(true)}
-            leftIcon={<Icons.FileImport size={14} className="text-white" />}
-          >
-            {t('pages.training.training.materials.upload', 'Upload material')}
-          </TrainingPrimaryButton>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setLinkOpen(true)}
+              className="flex items-center gap-1 rounded-md border border-[#EDEDED] bg-white px-3 py-2 text-xs font-medium text-[#05040D] hover:bg-[#F7F7F7]"
+            >
+              <Icons.Link01 size={14} />
+              {t('pages.training.training.materials.addLink', 'Add a link')}
+            </button>
+            <TrainingPrimaryButton
+              onClick={() => setUploadOpen(true)}
+              leftIcon={<Icons.FileImport size={14} className="text-white" />}
+            >
+              {t('pages.training.training.materials.upload', 'Upload material')}
+            </TrainingPrimaryButton>
+          </div>
         )}
       </div>
 
@@ -242,7 +265,7 @@ export function MaterialsLibraryTab() {
                     >
                       {t(`pages.training.training.materials.type.${m.type}`, badge.label)}
                     </span>
-                    <span>{formatSize(m.size_bytes)}</span>
+                    <span>{materialSubtitle(m)}</span>
                     <span>·</span>
                     <span>{formatUpdated(t, m.updated_at, i18n.language)}</span>
                     {m.category_id != null && categoryName.has(m.category_id) && (
@@ -300,9 +323,15 @@ export function MaterialsLibraryTab() {
                     onClick={() => handleDownload(m)}
                     disabled={downloadingId === m.id}
                     className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F0FDF4] text-[#204E4D] hover:bg-[#BBFB5B]/40 disabled:opacity-50"
-                    aria-label={t('actions.download', 'Download')}
+                    aria-label={
+                      m.kind === 'link'
+                        ? t('pages.training.training.materials.openLink', 'Open link')
+                        : t('actions.download', 'Download')
+                    }
                   >
-                    <Icons.Download size={16} />
+                    {/* A link is opened, not downloaded — saying "Download" is
+                        wrong for a screen reader and for anyone reading the icon. */}
+                    {m.kind === 'link' ? <Icons.Link01 size={16} /> : <Icons.Download size={16} />}
                   </button>
                 </div>
               </div>
@@ -312,6 +341,7 @@ export function MaterialsLibraryTab() {
       )}
 
       <MaterialUploadDialog open={uploadOpen} onClose={() => setUploadOpen(false)} />
+      <MaterialLinkDialog open={linkOpen} onClose={() => setLinkOpen(false)} />
       <MaterialEditDialog material={editTarget} onClose={() => setEditTarget(null)} />
       <MaterialPreviewModal material={previewTarget} onClose={() => setPreviewTarget(null)} />
       <AttachMaterialToCallDialog material={attachTarget} onClose={() => setAttachTarget(null)} />

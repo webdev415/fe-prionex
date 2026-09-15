@@ -23,7 +23,7 @@
  * the operator returns to it), and deliberately NOT written into the URL (an
  * auto-derived value in a shared link would pin "today" to the day the link
  * was made). The backend caps the window at a 366-day difference (mirrored
- * here — see utils/window.ts) and answers 400 on an inverted pair (guarded
+ * here — see `@/lib/reportWindow`) and answers 400 on an inverted pair (guarded
  * here before any request leaves).
  *
  * «Скрыть отработанных» / «Скрыть оплативших» are SERVER-side filters
@@ -34,23 +34,22 @@
  * choices somebody made.
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { DateSelect } from '@/components/ui/DateSelect'
 import { Pagination } from '@/components/ui/Pagination'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
-import { usePagedFeedPages, useUrlPagedFeedFilters } from '@/hooks'
+import { usePagedFeedPages, useTodayInTimezone, useUrlPagedFeedFilters } from '@/hooks'
 import { isTransientFailure } from '@/lib/api'
-import { getDateStringInTimezone } from '@/lib/dateUtils'
 import { getErrorMessage, getErrorStatus, hasResponseDetail } from '@/lib/errors'
 import { Icons } from '@/lib/icons'
+import { isWindowTooLong } from '@/lib/reportWindow'
 import { REPORTS_URL_KEYS } from '@/lib/reportsUrlKeys'
 import { readUrlDateBound } from '@/lib/urlDateBound'
 import { useAuthStore } from '@/stores/authStore'
 import { usePromisesFeed } from '../hooks'
-import { isWindowTooLong } from '../utils/window'
 import { PROMISES_FEED_COLUMN_COUNT, PromisesFeedTable } from './PromisesFeedTable'
 
 /** This tab's slice of the Reports page URL namespace (see the registry). */
@@ -98,20 +97,7 @@ export function PromisesFeedTab() {
   // same-day focus re-renders nothing. `today` only backs the DEFAULT window
   // below — user-picked URL bounds never move when the day rolls over. Same
   // pattern as the searcher feed.
-  const [today, setToday] = useState(() => getDateStringInTimezone(new Date(), userTimezone))
-  useEffect(() => {
-    const refreshToday = () =>
-      setToday((prev) => {
-        const next = getDateStringInTimezone(new Date(), userTimezone)
-        return next === prev ? prev : next
-      })
-    // The profile timezone can change what "today" means without the clock
-    // moving (it loads or changes after mount) — re-resolve right away, not
-    // only on the next focus.
-    refreshToday()
-    window.addEventListener('focus', refreshToday)
-    return () => window.removeEventListener('focus', refreshToday)
-  }, [userTimezone])
+  const today = useTodayInTimezone(userTimezone)
 
   // The shared paged-feed URL shell: composed `replace` updates (the
   // same-tick-burst ref composition lives there), defensive page/page-size

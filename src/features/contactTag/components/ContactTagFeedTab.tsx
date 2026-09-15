@@ -91,7 +91,7 @@
  * working across a tag rename.
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { DateSelect } from '@/components/ui/DateSelect'
@@ -103,10 +103,9 @@ import {
   type SegmentedTabItem,
 } from '@/components/ui/SegmentedTabs'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
-import { usePagedFeedPages, useUrlPagedFeedFilters } from '@/hooks'
+import { usePagedFeedPages, useTodayInTimezone, useUrlPagedFeedFilters } from '@/hooks'
 import { isTransientFailure } from '@/lib/api'
 import { formatCalendarDay } from '@/lib/calendarDay'
-import { getDateStringInTimezone } from '@/lib/dateUtils'
 import { getErrorMessage, getErrorStatus, hasResponseDetail } from '@/lib/errors'
 import { Icons } from '@/lib/icons'
 import { REPORTS_URL_KEYS } from '@/lib/reportsUrlKeys'
@@ -170,20 +169,7 @@ export function ContactTagFeedTab() {
   // update returns the previous value while the day is unchanged, so a same-day
   // focus re-renders nothing. `today` only backs the DEFAULT — a user-picked
   // URL date never moves when the day rolls over.
-  const [today, setToday] = useState(() => getDateStringInTimezone(new Date(), userTimezone))
-  useEffect(() => {
-    const refreshToday = () =>
-      setToday((prev) => {
-        const next = getDateStringInTimezone(new Date(), userTimezone)
-        return next === prev ? prev : next
-      })
-    // The profile timezone can change what "today" means without the clock
-    // moving (it loads or changes after mount) — re-resolve right away, not
-    // only on the next focus.
-    refreshToday()
-    window.addEventListener('focus', refreshToday)
-    return () => window.removeEventListener('focus', refreshToday)
-  }, [userTimezone])
+  const today = useTodayInTimezone(userTimezone)
 
   // The shared paged-feed URL shell: composed `replace` updates (the
   // same-tick-burst ref composition lives there), defensive page/page-size

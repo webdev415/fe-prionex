@@ -11,6 +11,8 @@ export { usePermissionRefresh } from './usePermissionRefresh'
 
 export { useGuardedAction } from './useGuardedAction'
 
+export { useTodayInTimezone } from './useTodayInTimezone'
+
 export { useURLState, type UseURLStateOptions } from './useURLState'
 
 export {

@@ -1,6 +1,7 @@
 import type { ClientDetail } from '@/features/clients/api/types'
 import { formatDateDotDMY, formatMoneyUAHTwoDecimals } from '@/lib/formatters'
 import type { CurrentUserResponse } from '@/types/api'
+import { resolveOperatorPhone } from './operatorPhone'
 
 /** React-query may store either AxiosResponse or the unwrapped body. */
 export function resolveCurrentUserFromQuery(data: unknown): CurrentUserResponse | undefined {
@@ -27,16 +28,28 @@ export function buildClientMessagingVariables(options: {
   currentUser?: CurrentUserResponse | null
   username?: string
   selectedLoan?: { loanNumber: string; totalToRepay: number } | null
+  hasLoanContext?: boolean
 }): Record<string, string> {
-  const { clientName, clientDisplayName, clientData, currentUser, username, selectedLoan } = options
+  const {
+    clientName,
+    clientDisplayName,
+    clientData,
+    currentUser,
+    username,
+    selectedLoan,
+    hasLoanContext,
+  } = options
 
-  const contractNumber =
-    selectedLoan?.loanNumber ??
-    (clientData?.debts && clientData.debts.length > 0 ? clientData.debts[0].contract_number : '')
+  const debtFallback =
+    !hasLoanContext && clientData?.debts && clientData.debts.length > 0
+      ? clientData.debts[0].contract_number
+      : ''
 
-  const matchedDebt =
-    clientData?.debts?.find((debt) => debt.contract_number === contractNumber) ??
-    clientData?.debts?.[0]
+  const contractNumber = selectedLoan?.loanNumber ?? debtFallback
+
+  const matchedDebt = contractNumber
+    ? clientData?.debts?.find((debt) => debt.contract_number === contractNumber)
+    : undefined
 
   const promiseDueDate = formatDateDotDMY(clientData?.max_promise_to_pay_date ?? null)
   const debtDueDate = formatDateDotDMY(
@@ -44,9 +57,7 @@ export function buildClientMessagingVariables(options: {
   )
   const dueDate = promiseDueDate || debtDueDate
 
-  const operatorPhone =
-    (currentUser?.phone || '').trim() ||
-    (currentUser?.asterisk_extension ? `ext. ${currentUser.asterisk_extension}` : '')
+  const operatorPhone = resolveOperatorPhone(currentUser)
 
   return {
     client_name: clientDisplayName,
