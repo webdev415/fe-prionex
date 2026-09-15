@@ -114,4 +114,28 @@ describe('the date a message tells the client to pay by', () => {
 
     expect(vars.due_date).toBe('')
   })
+
+  it('falls back to today when the promise date is not a real day', () => {
+    for (const impossible of ['0000-00-00', '2026-02-31']) {
+      const vars = buildClientMessagingVariables({
+        ...base,
+        clientData: { max_promise_to_pay_date: impossible } as never,
+        selectedLoan: null,
+        hasLoanContext: true,
+      })
+
+      expect(vars.due_date).toBe('14.09.2026')
+    }
+  })
+
+  it('reads a promise sent with a time as its calendar day', () => {
+    const vars = buildClientMessagingVariables({
+      ...base,
+      clientData: { max_promise_to_pay_date: '2026-05-31T00:00:00' } as never,
+      selectedLoan: null,
+      hasLoanContext: true,
+    })
+
+    expect(vars.due_date).toBe('31.05.2026')
+  })
 })

@@ -1,8 +1,11 @@
+import { isRealCalendarDate } from '@/lib/calendarDate'
 import { getDateStringInTimezone } from '@/lib/dateUtils'
 
 function toDotDMY(isoDate: string | null | undefined): string {
-  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(isoDate ?? '')
-  return match ? `${match[3]}.${match[2]}.${match[1]}` : ''
+  const day = (isoDate ?? '').slice(0, 10)
+  if (!isRealCalendarDate(day)) return ''
+  const [year, month, date] = day.split('-')
+  return `${date}.${month}.${year}`
 }
 
 export function resolveDueDate(
