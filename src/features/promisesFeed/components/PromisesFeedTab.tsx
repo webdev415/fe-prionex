@@ -34,16 +34,15 @@
  * choices somebody made.
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { DateSelect } from '@/components/ui/DateSelect'
 import { Pagination } from '@/components/ui/Pagination'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
-import { usePagedFeedPages, useUrlPagedFeedFilters } from '@/hooks'
+import { usePagedFeedPages, useTodayInTimezone, useUrlPagedFeedFilters } from '@/hooks'
 import { isTransientFailure } from '@/lib/api'
-import { getDateStringInTimezone } from '@/lib/dateUtils'
 import { getErrorMessage, getErrorStatus, hasResponseDetail } from '@/lib/errors'
 import { Icons } from '@/lib/icons'
 import { isWindowTooLong } from '@/lib/reportWindow'
@@ -98,20 +97,7 @@ export function PromisesFeedTab() {
   // same-day focus re-renders nothing. `today` only backs the DEFAULT window
   // below — user-picked URL bounds never move when the day rolls over. Same
   // pattern as the searcher feed.
-  const [today, setToday] = useState(() => getDateStringInTimezone(new Date(), userTimezone))
-  useEffect(() => {
-    const refreshToday = () =>
-      setToday((prev) => {
-        const next = getDateStringInTimezone(new Date(), userTimezone)
-        return next === prev ? prev : next
-      })
-    // The profile timezone can change what "today" means without the clock
-    // moving (it loads or changes after mount) — re-resolve right away, not
-    // only on the next focus.
-    refreshToday()
-    window.addEventListener('focus', refreshToday)
-    return () => window.removeEventListener('focus', refreshToday)
-  }, [userTimezone])
+  const today = useTodayInTimezone(userTimezone)
 
   // The shared paged-feed URL shell: composed `replace` updates (the
   // same-tick-burst ref composition lives there), defensive page/page-size
