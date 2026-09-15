@@ -726,6 +726,8 @@
       "feedbackNotUseful": "Не корисно",
       "feedbackClear": "Зрозуміло",
       "feedbackUnclear": "Незрозуміло",
+      "feedbackUnavailable": "Оцінку не збережено: відповідь ще не записана. Оновіть сторінку та спробуйте ще раз.",
+      "feedbackFailed": "Не вдалося зберегти оцінку. Спробуйте ще раз.",
       "historyTitle": "Чати",
       "historyNewChat": "Новий чат",
       "historySearchPlaceholder": "Пошук чатів",
