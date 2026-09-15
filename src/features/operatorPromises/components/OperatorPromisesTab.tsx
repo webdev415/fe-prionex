@@ -54,8 +54,7 @@ import {
   type SegmentedTabItem,
 } from '@/components/ui/SegmentedTabs'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
-import { FEED_ERROR_KEY_PREFIXES, useFeedErrorMessage } from '@/hooks'
-import { isRealCalendarDate } from '@/lib/calendarDate'
+import { useDateWindowFilters, useFeedErrorMessage } from '@/hooks'
 import { formatPickerDateAsYMD, getDateStringInTimezone } from '@/lib/dateUtils'
 import { Icons } from '@/lib/icons'
 import { isWindowTooLong } from '@/lib/reportWindow'
@@ -87,6 +86,18 @@ const {
 
 const TABS_ID_PREFIX = 'operator-promises'
 
+/** This tab's wording for the two window complaints (see `useDateWindowFilters`). */
+const WINDOW_ERROR_KEYS = {
+  invalidDate: 'pages.reports.operatorPromises.invalidDate',
+  invertedRange: 'pages.reports.operatorPromises.invalidRange',
+} as const
+
+/** The backend's 366-day DIFFERENCE cap, mirrored — predicate and sentence together. */
+const WINDOW_CAP = {
+  isTooLong: isWindowTooLong,
+  messageKey: 'pages.reports.operatorPromises.rangeTooLong',
+} as const
+
 export function OperatorPromisesTab() {
   const { t, i18n } = useTranslation('common')
   // Orders the dynamic department tabs in the reader's own alphabet.
@@ -104,30 +115,24 @@ export function OperatorPromisesTab() {
   // only which calendar day "now" is, and then travels to the backend, where it
   // cuts the PROMISED-date window (and nothing else).
   const today = getDateStringInTimezone(new Date(), userTimezone)
-  const rawFrom = searchParams.get(DATE_FROM_KEY)
-  const rawTo = searchParams.get(DATE_TO_KEY)
 
-  // A present-but-unusable bound is NOT silently replaced with today: the URL
-  // would then disagree with both the field and the request, and a shape-only
-  // check would let an impossible day like `?opf=2026-02-31` through to the API
-  // (every comparison against NaN is false, so a range guard would pass
-  // silently). It goes down the same path as an inverted window — inline hint,
-  // no request — tracked per bound so the hint sits on the offending field.
-  const isFromInvalid = !!rawFrom && !isRealCalendarDate(rawFrom)
-  const isToInvalid = !!rawTo && !isRealCalendarDate(rawTo)
+  // The shared window reader: both bounds, what is wrong with them, and the
+  // verdict that gates the request. An ABSENT key is the default (today); only
+  // an explicitly bad one stays undefined and blocks the request.
+  const { dateFrom, dateTo, isFromInvalid, isToInvalid, dateError, rangeError, hasWindowError } =
+    useDateWindowFilters({
+      searchParams,
+      fromKey: DATE_FROM_KEY,
+      toKey: DATE_TO_KEY,
+      fallbackFrom: today,
+      fallbackTo: today,
+      cap: WINDOW_CAP,
+      keys: WINDOW_ERROR_KEYS,
+    })
 
-  // An ABSENT key is the default (today); only an explicitly bad one is undefined.
-  const dateFrom = rawFrom ? (isFromInvalid ? undefined : rawFrom) : today
-  const dateTo = rawTo ? (isToInvalid ? undefined : rawTo) : today
-
-  // The only guard against an inverted or oversized window: the pickers
-  // deliberately do not bound each other (see the fields below), and manual
-  // input and hand-edited URLs would bypass such bounds anyway. ISO YYYY-MM-DD
-  // strings compare correctly as strings.
-  const isInverted = !!dateFrom && !!dateTo && dateFrom > dateTo
-  const isTooLong = !!dateFrom && !!dateTo && isWindowTooLong(dateFrom, dateTo)
-
-  const hasFilterError = isFromInvalid || isToInvalid || isInverted || isTooLong
+  // The window is this tab's only filter — the department sub-tab filters an
+  // already-fetched response and cannot be wrong.
+  const hasFilterError = hasWindowError
 
   // Filter updates never create history entries (page-tab switches do). The
   // simple functional form is enough here: nothing in this tab emits two URL
@@ -162,13 +167,6 @@ export function OperatorPromisesTab() {
       // state this report has.
       if (value) setUrlParam(key, formatPickerDateAsYMD(value))
     }
-
-  const dateError = t('pages.reports.operatorPromises.invalidDate')
-  const rangeErrorKey = isInverted
-    ? 'pages.reports.operatorPromises.invalidRange'
-    : isTooLong
-      ? 'pages.reports.operatorPromises.rangeTooLong'
-      : null
 
   const query = useOperatorPromisesReport({
     projectId,
@@ -256,7 +254,7 @@ export function OperatorPromisesTab() {
   // 1900-01-01..9998-12-31, or an unknown IANA zone.
   const { errorMessage, errorDetail, isForbidden } = useFeedErrorMessage(
     query.error,
-    FEED_ERROR_KEY_PREFIXES.operatorPromises
+    'operatorPromises'
   )
 
   return (
@@ -313,9 +311,9 @@ export function OperatorPromisesTab() {
         {/* Pair-level only: a bad single date rides its own field above.
             Neither bound is wrong on its own in an inverted or oversized
             window, so this one has no field to sit on. */}
-        {rangeErrorKey && (
+        {rangeError && (
           <p className="text-error-500 w-full text-xs font-medium" role="alert">
-            {t(rangeErrorKey)}
+            {rangeError}
           </p>
         )}
       </div>

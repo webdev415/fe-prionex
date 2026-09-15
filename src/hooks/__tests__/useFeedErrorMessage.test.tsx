@@ -42,10 +42,11 @@ function networkError(code: string) {
   return Object.assign(new Error(code), { isAxiosError: true, code })
 }
 
-const PREFIX = FEED_ERROR_KEY_PREFIXES.promisesFeed
+const TAB = 'promisesFeed' as const
+const PREFIX = FEED_ERROR_KEY_PREFIXES[TAB]
 const DETAIL = { detail: 'Date range must not exceed 366 days' }
 
-const render = (error: unknown) => renderHook(() => useFeedErrorMessage(error, PREFIX)).result
+const render = (error: unknown) => renderHook(() => useFeedErrorMessage(error, TAB)).result
 
 describe('useFeedErrorMessage', () => {
   it.each([
@@ -92,7 +93,7 @@ describe('useFeedErrorMessage', () => {
     // would leave the previous language's sentence on screen; this is the case
     // that would go red if anyone did.
     const error = httpError(503)
-    const { result, rerender } = renderHook(() => useFeedErrorMessage(error, PREFIX))
+    const { result, rerender } = renderHook(() => useFeedErrorMessage(error, TAB))
     expect(result.current.errorMessage).toBe(`${PREFIX}.unavailable`)
 
     translate = (key) => `EN ${key}`
@@ -111,10 +112,8 @@ describe('useFeedErrorMessage', () => {
     expect(current.errorDetail).toBe(DETAIL.detail)
   })
 
-  it('asks under the prefix it is GIVEN, not a hardcoded one', () => {
-    const { current } = renderHook(() =>
-      useFeedErrorMessage(httpError(403), FEED_ERROR_KEY_PREFIXES.contactTag)
-    ).result
+  it('asks under the section of the tab it is NAMED, not a hardcoded one', () => {
+    const { current } = renderHook(() => useFeedErrorMessage(httpError(403), 'contactTag')).result
     expect(current.errorMessage).toBe('pages.reports.contactTag.forbidden')
   })
 

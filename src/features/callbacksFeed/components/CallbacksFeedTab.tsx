@@ -56,7 +56,7 @@ import { DateSelect } from '@/components/ui/DateSelect'
 import { Pagination } from '@/components/ui/Pagination'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import {
-  FEED_ERROR_KEY_PREFIXES,
+  useDateWindowFilters,
   useFeedErrorMessage,
   usePagedFeedPages,
   useTodayInTimezone,
@@ -65,7 +65,6 @@ import {
 import { Icons } from '@/lib/icons'
 import { isWindowTooLong } from '@/lib/reportWindow'
 import { REPORTS_URL_KEYS } from '@/lib/reportsUrlKeys'
-import { readUrlDateBound } from '@/lib/urlDateBound'
 import { useAuthStore } from '@/stores/authStore'
 import { useCallbacksFeed } from '../hooks'
 import { CALLBACKS_FEED_COLUMN_COUNT, CallbacksFeedTable } from './CallbacksFeedTable'
@@ -91,6 +90,18 @@ type FilterKey =
   | typeof DATE_TO_KEY
   | typeof HIDE_CALLED_TODAY_KEY
   | typeof HIDE_WORKED_KEY
+
+/** This tab's wording for the two window complaints (see `useDateWindowFilters`). */
+const WINDOW_ERROR_KEYS = {
+  invalidDate: 'pages.reports.callbacksFeed.invalidDate',
+  invertedRange: 'pages.reports.callbacksFeed.invalidRange',
+} as const
+
+/** The backend's 366-day DIFFERENCE cap, mirrored — predicate and sentence together. */
+const WINDOW_CAP = {
+  isTooLong: isWindowTooLong,
+  messageKey: 'pages.reports.callbacksFeed.rangeTooLong',
+} as const
 
 export function CallbacksFeedTab() {
   const { t } = useTranslation('common')
@@ -118,21 +129,21 @@ export function CallbacksFeedTab() {
   })
   const { searchParams, pageSize } = filters
 
-  // A present-but-unusable bound is NOT silently replaced by the default: the
-  // URL would then disagree with both the field and the request. It goes down
-  // the same path as an inverted range — inline hint, no request (below).
-  // Tracked per bound so the hint can sit on the field holding the bad value.
-  const dateFromBound = readUrlDateBound(searchParams, DATE_FROM_KEY)
-  const dateToBound = readUrlDateBound(searchParams, DATE_TO_KEY)
-  const isDateFromInvalid = dateFromBound.isInvalid
-  const isDateToInvalid = dateToBound.isInvalid
-  const hasInvalidDate = isDateFromInvalid || isDateToInvalid
-
-  // An ABSENT bound means "today", not "no bound": the pair always goes to
-  // the API whole (the backend would default an absent bound to today itself,
-  // but the fields and the request must never disagree).
-  const dateFrom = dateFromBound.value ?? today
-  const dateTo = dateToBound.value ?? today
+  // The shared window reader: both bounds, what is wrong with them, and the
+  // verdict that gates the request. An ABSENT bound means "today", not "no
+  // bound" — the pair always goes to the API whole (the backend would default
+  // an absent bound to today itself, but the fields and the request must never
+  // disagree).
+  const { dateFrom, dateTo, isFromInvalid, isToInvalid, dateError, rangeError, hasWindowError } =
+    useDateWindowFilters({
+      searchParams,
+      fromKey: DATE_FROM_KEY,
+      toKey: DATE_TO_KEY,
+      fallbackFrom: today,
+      fallbackTo: today,
+      cap: WINDOW_CAP,
+      keys: WINDOW_ERROR_KEYS,
+    })
 
   // There is no "×" on these fields on purpose — the pair is mandatory, and
   // the way back to the default is simply picking today.
@@ -147,31 +158,17 @@ export function CallbacksFeedTab() {
   const handleToggle = (key: FilterKey) => (checked: boolean | 'indeterminate') =>
     filters.setFilterParam(key, checked === true ? '1' : null)
 
-  // The only guards against an inverted or oversized window: the pickers
-  // deliberately do not bound each other (see the fields below), and manual
-  // input and hand-edited URLs would bypass such bounds anyway. ISO
-  // YYYY-MM-DD strings compare correctly as strings.
-  const isRangeInverted = !hasInvalidDate && dateFrom > dateTo
-  const isTooLong = !hasInvalidDate && isWindowTooLong(dateFrom, dateTo)
-
-  // Where a message is rendered follows WHAT it is about: a bad date belongs
-  // to ONE field, so it rides that field's `error` prop; an inverted or
-  // oversized window belongs to the PAIR — neither bound is wrong on its own
-  // — so it stays a standalone alert under the filters. Same split as the
-  // sibling feed tabs.
-  const dateError = hasInvalidDate ? t('pages.reports.callbacksFeed.invalidDate') : undefined
-  const rangeError = isRangeInverted
-    ? t('pages.reports.callbacksFeed.invalidRange')
-    : isTooLong
-      ? t('pages.reports.callbacksFeed.rangeTooLong')
-      : undefined
-
-  const hasFilterError = hasInvalidDate || isRangeInverted || isTooLong
+  // The window is this tab's only filter besides the two server-side toggles,
+  // which cannot be wrong — so its verdict is the whole verdict.
+  const hasFilterError = hasWindowError
 
   const query = useCallbacksFeed({
     projectId,
-    dateFrom,
-    dateTo,
+    // The fallbacks are never sent: a missing bound can only come from an
+    // invalid URL value, which is exactly what sets `hasFilterError` and
+    // disables the query.
+    dateFrom: dateFrom ?? today,
+    dateTo: dateTo ?? today,
     hideCalledToday,
     hideWorked,
     skip: filters.skip,
@@ -204,7 +201,7 @@ export function CallbacksFeedTab() {
   // the feed's ceiling — all actionable, which is why it is shown verbatim.
   const { errorMessage, errorDetail, isForbidden } = useFeedErrorMessage(
     query.error,
-    FEED_ERROR_KEY_PREFIXES.callbacksFeed
+    'callbacksFeed'
   )
 
   return (
@@ -223,10 +220,11 @@ export function CallbacksFeedTab() {
         <DateSelect
           label={t('pages.reports.callbacksFeed.dateFrom')}
           // An unusable URL value shows an empty field with the error on it,
-          // never the default silently standing in for the bad value.
-          value={isDateFromInvalid ? null : dateFrom}
+          // never the default silently standing in for the bad value — the
+          // bound itself is undefined in that case.
+          value={dateFrom ?? null}
           // Only the bound that actually carries the unusable value is marked.
-          error={isDateFromInvalid ? dateError : undefined}
+          error={isFromInvalid ? dateError : undefined}
           onChange={handleDateChange(DATE_FROM_KEY)}
           allowManualInput
           resyncInvalidOnBlur
@@ -235,8 +233,8 @@ export function CallbacksFeedTab() {
         />
         <DateSelect
           label={t('pages.reports.callbacksFeed.dateTo')}
-          value={isDateToInvalid ? null : dateTo}
-          error={isDateToInvalid ? dateError : undefined}
+          value={dateTo ?? null}
+          error={isToInvalid ? dateError : undefined}
           onChange={handleDateChange(DATE_TO_KEY)}
           allowManualInput
           resyncInvalidOnBlur

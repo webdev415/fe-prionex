@@ -41,7 +41,7 @@ import { DateSelect } from '@/components/ui/DateSelect'
 import { Pagination } from '@/components/ui/Pagination'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import {
-  FEED_ERROR_KEY_PREFIXES,
+  useDateWindowFilters,
   useFeedErrorMessage,
   usePagedFeedPages,
   useTodayInTimezone,
@@ -49,7 +49,6 @@ import {
 } from '@/hooks'
 import { Icons } from '@/lib/icons'
 import { REPORTS_URL_KEYS } from '@/lib/reportsUrlKeys'
-import { readUrlDateBound } from '@/lib/urlDateBound'
 import { useAuthStore } from '@/stores/authStore'
 import { useInboundFollowupFeed } from '../hooks'
 import { INBOUND_FOLLOWUP_COLUMN_COUNT, InboundFollowupTable } from './InboundFollowupTable'
@@ -69,6 +68,12 @@ const {
  * own and are configured, not passed per call.
  */
 type FilterKey = typeof DATE_FROM_KEY | typeof DATE_TO_KEY
+
+/** This tab's wording for the two window complaints (see `useDateWindowFilters`). */
+const WINDOW_ERROR_KEYS = {
+  invalidDate: 'pages.reports.inboundFollowup.invalidDate',
+  invertedRange: 'pages.reports.inboundFollowup.invalidRange',
+} as const
 
 export function InboundFollowupFeedTab() {
   const { t } = useTranslation('common')
@@ -96,48 +101,38 @@ export function InboundFollowupFeedTab() {
   })
   const { searchParams, pageSize } = filters
 
-  // A present-but-unusable bound is NOT silently replaced by the default: the
-  // URL would then disagree with both the field and the request. It goes down
-  // the same path as an inverted range — inline hint, no request (below).
-  // Tracked per bound so the hint can sit on the field holding the bad value.
-  const dateFromBound = readUrlDateBound(searchParams, DATE_FROM_KEY)
-  const dateToBound = readUrlDateBound(searchParams, DATE_TO_KEY)
-  const isDateFromInvalid = dateFromBound.isInvalid
-  const isDateToInvalid = dateToBound.isInvalid
-  const hasInvalidDate = isDateFromInvalid || isDateToInvalid
-
-  // An ABSENT bound means "today", not "no bound": the pair is mandatory
-  // (both dates always go to the API), so the default fills in per bound.
-  const dateStart = dateFromBound.value ?? today
-  const dateEnd = dateToBound.value ?? today
+  // The shared window reader: both bounds, what is wrong with them, and the
+  // verdict that gates the request. An ABSENT bound means "today", not "no
+  // bound" — the pair is mandatory (both dates always go to the API), so the
+  // default fills in per bound. NO `cap`: this endpoint bounds its cost by the
+  // CANDIDATE population instead of by the window (see the module comment),
+  // and the suite pins that a window wider than the siblings' 366 days does go
+  // out.
+  const { dateFrom, dateTo, isFromInvalid, isToInvalid, dateError, rangeError, hasWindowError } =
+    useDateWindowFilters({
+      searchParams,
+      fromKey: DATE_FROM_KEY,
+      toKey: DATE_TO_KEY,
+      fallbackFrom: today,
+      fallbackTo: today,
+      keys: WINDOW_ERROR_KEYS,
+    })
 
   // There is no "×" on these fields on purpose — the pair is mandatory
   // (clearing a bound cannot mean "no bound" when the backend rejects half a
   // window), and the way back to the default is simply picking today.
   const handleDateChange = (key: FilterKey) => filters.dateFilterHandler(key)
 
-  // The only guard against an inverted window: the pickers deliberately do not
-  // bound each other (see the fields below), and manual input and hand-edited
-  // URLs would bypass such bounds anyway. ISO YYYY-MM-DD strings compare
-  // correctly as strings. Both bounds always exist here (default today), so the
-  // pair check is unconditional once both are usable.
-  const isRangeInverted = !hasInvalidDate && dateStart > dateEnd
-
-  // Where a message is rendered follows WHAT it is about: a bad date belongs
-  // to ONE field, so it rides that field's `error` prop (red border,
-  // aria-invalid, aria-describedby on the offending input); an inverted
-  // window belongs to the PAIR — neither bound is wrong on its own — so it
-  // stays a standalone alert under the filters. Same split as the sibling
-  // feed tabs.
-  const dateError = hasInvalidDate ? t('pages.reports.inboundFollowup.invalidDate') : undefined
-  const rangeError = isRangeInverted ? t('pages.reports.inboundFollowup.invalidRange') : undefined
-
-  const hasFilterError = hasInvalidDate || isRangeInverted
+  // The window is this tab's only filter, so its verdict is the whole verdict.
+  const hasFilterError = hasWindowError
 
   const query = useInboundFollowupFeed({
     projectId,
-    dateStart,
-    dateEnd,
+    // The fallbacks are never sent: a missing bound can only come from an
+    // invalid URL value, which is exactly what sets `hasFilterError` and
+    // disables the query.
+    dateStart: dateFrom ?? today,
+    dateEnd: dateTo ?? today,
     skip: filters.skip,
     limit: pageSize,
     timezone: userTimezone,
@@ -168,7 +163,7 @@ export function InboundFollowupFeedTab() {
   // window") — the only way the operator learns which knob to turn.
   const { errorMessage, errorDetail, isForbidden } = useFeedErrorMessage(
     query.error,
-    FEED_ERROR_KEY_PREFIXES.inboundFollowup
+    'inboundFollowup'
   )
 
   return (
@@ -197,10 +192,11 @@ export function InboundFollowupFeedTab() {
         <DateSelect
           label={t('pages.reports.inboundFollowup.dateFrom')}
           // An unusable URL value shows an empty field with the error on it,
-          // never the default silently standing in for the bad value.
-          value={isDateFromInvalid ? null : dateStart}
+          // never the default silently standing in for the bad value — the
+          // bound itself is undefined in that case.
+          value={dateFrom ?? null}
           // Only the bound that actually carries the unusable value is marked.
-          error={isDateFromInvalid ? dateError : undefined}
+          error={isFromInvalid ? dateError : undefined}
           onChange={handleDateChange(DATE_FROM_KEY)}
           allowManualInput
           resyncInvalidOnBlur
@@ -209,8 +205,8 @@ export function InboundFollowupFeedTab() {
         />
         <DateSelect
           label={t('pages.reports.inboundFollowup.dateTo')}
-          value={isDateToInvalid ? null : dateEnd}
-          error={isDateToInvalid ? dateError : undefined}
+          value={dateTo ?? null}
+          error={isToInvalid ? dateError : undefined}
           onChange={handleDateChange(DATE_TO_KEY)}
           allowManualInput
           resyncInvalidOnBlur
