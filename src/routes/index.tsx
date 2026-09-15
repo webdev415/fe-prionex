@@ -19,9 +19,6 @@ import { RepaymentConfigurationPageSkeleton } from '@/pages/RepaymentConfigurati
 import { AppLoadingFallback } from '@/components/ui/AppLoadingFallback'
 
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'))
-const PublicPaymentsPage = lazy(() =>
-  import('@/pages/PublicPayments').then((m) => ({ default: m.PublicPaymentsPage }))
-)
 const ForceChangePasswordPage = lazy(() => import('@/pages/auth/ForceChangePasswordPage'))
 const EmployeeCardPage = lazy(() =>
   import('@/pages/EmployeeCard').then((m) => ({ default: m.EmployeeCardPage }))
@@ -285,13 +282,6 @@ export const router = createBrowserRouter([
   {
     path: '/login',
     element: <GuestRoute>{withSuspense(<LoginPage />)}</GuestRoute>,
-    errorElement: <RouteErrorElement />,
-  },
-  {
-    // Public EasyPay payment portal (techno-finance.com "Factoring" tab).
-    // No auth, no dashboard layout — reachable by unauthenticated visitors.
-    path: '/pay',
-    element: withSuspense(<PublicPaymentsPage />),
     errorElement: <RouteErrorElement />,
   },
   {
