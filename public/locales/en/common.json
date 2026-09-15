@@ -707,6 +707,8 @@
       "feedbackNotUseful": "Not helpful",
       "feedbackClear": "Clear",
       "feedbackUnclear": "Unclear",
+      "feedbackUnavailable": "The rating was not saved: this answer is not stored yet. Refresh the page and try again.",
+      "feedbackFailed": "Could not save the rating. Please try again.",
       "historyTitle": "Chats",
       "historyNewChat": "New chat",
       "historySearchPlaceholder": "Search chats",
