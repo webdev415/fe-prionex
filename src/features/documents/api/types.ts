@@ -116,6 +116,12 @@ export interface DocumentTemplate {
    * This is the client-service tag id, NOT the tag-service `/tags` id.
    */
   activation_tag_id: number | null
+  /**
+   * Generate a document from this template on every loan closure, with no
+   * operator involved. Only allowed with the `closed_debt` rule and a document
+   * type — the server rejects it otherwise.
+   */
+  auto_generate: boolean
 }
 
 /**
@@ -165,6 +171,8 @@ export interface DocumentTemplateCreatePayload {
   activation_rule?: DocumentActivationRule
   /** Required client_db tag id when activation_rule is `tag_active`. */
   activation_tag_id?: number | null
+  /** Generate on every loan closure; `closed_debt` rule + document type only. */
+  auto_generate?: boolean
 }
 
 export interface DocumentTemplateUpdatePayload {
@@ -177,6 +185,8 @@ export interface DocumentTemplateUpdatePayload {
   activation_rule?: DocumentActivationRule
   /** Required client_db tag id when activation_rule is `tag_active`. */
   activation_tag_id?: number | null
+  /** Generate on every loan closure; `closed_debt` rule + document type only. */
+  auto_generate?: boolean
 }
 
 /**
