@@ -190,3 +190,46 @@ export interface ExportParams {
  * Project detail response (alias for ApiProjectDetail for backward compatibility)
  */
 export type ProjectDetailResponse = ApiProjectDetail
+
+/* ── Calling window and holiday calendar (KAN-1107) ─────────────────────── */
+
+/** ISO weekday numbers: 1 = Monday … 7 = Sunday. */
+export type IsoWeekday = 1 | 2 | 3 | 4 | 5 | 6 | 7
+
+export interface CallingWindowConfig {
+  enabled: boolean
+  /** "HH:MM", inclusive. */
+  start: string | null
+  /** "HH:MM", exclusive — 20:45 means the last permitted moment is 20:44. */
+  end: string | null
+  /** null means every day is allowed. */
+  weekdays: IsoWeekday[] | null
+  timezone: string | null
+  holiday_country: string | null
+  holiday_subdivision: string | null
+}
+
+export type CallingWindowInput = CallingWindowConfig
+
+export interface HolidayCountry {
+  code: string
+  name: string
+}
+
+export interface HolidayDate {
+  holiday_date: string
+  name: string | null
+  /** 'computed' came from the package; 'manual' was added by an admin. */
+  origin: 'computed' | 'manual'
+}
+
+export interface HolidayCalendar {
+  year: number
+  country: string
+  subdivision: string | null
+  source_version: string | null
+  reviewed: boolean
+  reviewed_at: string | null
+  reviewed_by: number | null
+  dates: HolidayDate[]
+}

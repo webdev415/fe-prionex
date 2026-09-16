@@ -4108,40 +4108,39 @@
       }
     },
     "projects": {
-      "title": "Project Management",
-      "noProjectsFound": "No projects found",
-      "errorLoading": "Error loading projects",
-      "tableHeaders": {
-        "users": "Users",
-        "projectCode": "Project / Code",
-        "client": "Client",
-        "period": "Period",
-        "clients": "Total Clients",
-        "debt": "Total Debt",
-        "status": "Status"
-      },
-      "searchFilters": {
-        "placeholder": "Search by name, code, clients",
-        "status": "Status",
-        "client": "Client",
-        "period": "Period",
-        "newProject": "New Project",
-        "export": "Export",
-        "searchProjects": "Search projects",
-        "addNewProject": "Add new project",
-        "statusOptions": {
-          "active": "Active",
-          "inactive": "Inactive",
-          "archived": "Archived",
-          "all": "All"
+      "callingWindow": {
+        "title": "Calling window",
+        "enable": "Enforce a calling window",
+        "enableHint": "Calls outside the window are refused by the system. Operators cannot override it.",
+        "start": "Opens",
+        "end": "Closes",
+        "endHint": "Exclusive — set it short of the legal limit so no call is still running at the cut-off.",
+        "weekdays": "Allowed days",
+        "weekdaysHint": "Select none to allow every day.",
+        "timezone": "Fallback timezone",
+        "timezoneHint": "Used when the debtor's own timezone cannot be determined.",
+        "country": "Holiday calendar",
+        "countryPlaceholder": "Select a country",
+        "subdivision": "Region (optional)",
+        "subdivisionPlaceholder": "National only",
+        "noCountry": "Without a holiday calendar, calls are refused on every day of a year that has no calendar generated.",
+        "saved": "Calling window saved",
+        "saveFailed": "Could not save the calling window",
+        "days": {
+          "1": "Mon",
+          "2": "Tue",
+          "3": "Wed",
+          "4": "Thu",
+          "5": "Fri",
+          "6": "Sat",
+          "7": "Sun"
         },
-        "periodOptions": {
-          "any": "Any time",
-          "last30Days": "Last 30 days",
-          "last90Days": "Last 90 days",
-          "thisYear": "This year"
-        },
-        "allClients": "All Clients"
+        "errors": {
+          "start": "Start must be HH:MM",
+          "end": "End must be HH:MM",
+          "same": "Start and end cannot be equal",
+          "timezone": "A fallback timezone is required"
+        }
       },
       "detailPanel": {
         "noProject": "There is no project",
@@ -4168,6 +4167,7 @@
         "edit": "Edit",
         "delete": "Delete"
       },
+      "errorLoading": "Error loading projects",
       "modals": {
         "create": {
           "title": "Create New Project",
@@ -4296,7 +4296,41 @@
           "hotlinePhoneFormat": "Phone number may contain digits and spaces only",
           "emailFormat": "Enter a valid email address"
         }
-      }
+      },
+      "noProjectsFound": "No projects found",
+      "searchFilters": {
+        "placeholder": "Search by name, code, clients",
+        "status": "Status",
+        "client": "Client",
+        "period": "Period",
+        "newProject": "New Project",
+        "export": "Export",
+        "searchProjects": "Search projects",
+        "addNewProject": "Add new project",
+        "statusOptions": {
+          "active": "Active",
+          "inactive": "Inactive",
+          "archived": "Archived",
+          "all": "All"
+        },
+        "periodOptions": {
+          "any": "Any time",
+          "last30Days": "Last 30 days",
+          "last90Days": "Last 90 days",
+          "thisYear": "This year"
+        },
+        "allClients": "All Clients"
+      },
+      "tableHeaders": {
+        "users": "Users",
+        "projectCode": "Project / Code",
+        "client": "Client",
+        "period": "Period",
+        "clients": "Total Clients",
+        "debt": "Total Debt",
+        "status": "Status"
+      },
+      "title": "Project Management"
     },
     "roles": {
       "title": "Role Management",
