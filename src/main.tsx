@@ -11,6 +11,7 @@ import './index.css'
 import App from './App.tsx'
 import { AppLoadingFallback } from '@/components/ui/AppLoadingFallback'
 import { setupThemeStorageListener, useThemeStore } from '@/stores/themeStore'
+import { startOpenReplay } from '@/lib/openreplay'
 
 // Ensure theme store module evaluates (applies attrs from localStorage).
 void useThemeStore.getState()
@@ -68,3 +69,14 @@ createRoot(document.getElementById('root')!).render(
     </QueryClientProvider>
   </StrictMode>
 )
+
+// Session replay, deliberately LAST and deliberately outside the render call.
+// The tracker downloads its own chunk and walks the DOM, so starting it before
+// the first paint would push out the very thing operators wait for. It is also a
+// no-op unless the build carries a project key, in which case the chunk is never
+// requested at all. See docs/openreplay-integration-plan.md.
+if ('requestIdleCallback' in window) {
+  requestIdleCallback(() => startOpenReplay())
+} else {
+  setTimeout(startOpenReplay, 0)
+}
