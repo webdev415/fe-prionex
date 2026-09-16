@@ -513,6 +513,25 @@ describe('SearcherFollowupFeedTab', () => {
     expect(fields[offendingIndex].value).toBe('')
   })
 
+  it('sends a window wider than a YEAR — this endpoint has no window cap, on purpose', async () => {
+    // The uncapped half of the Reports page is a deliberate backend decision
+    // (`# No _MAX_RANGE_DAYS cap here on purpose` in the router) that until now
+    // nothing on the client pinned: adding a `cap` (the capped siblings' `WINDOW_CAP`) to this tab's
+    // window call would have left every suite green while silently refusing
+    // windows the API serves. Two years is comfortably past the 366-day
+    // DIFFERENCE its capped siblings mirror.
+    mockGetFeed.mockResolvedValue(makeResponse([makeRow()]))
+
+    renderTab(['/?if=2024-01-01&it=2026-01-01'])
+    expect(await screen.findByText('Коваленко Іван Петрович')).toBeInTheDocument()
+
+    expect(mockGetFeed).toHaveBeenCalledWith(
+      expect.objectContaining({ date_start: '2024-01-01', date_end: '2026-01-01' })
+    )
+    // ...and no pair alert of any kind under the filters.
+    expect(screen.queryAllByRole('alert')).toHaveLength(0)
+  })
+
   it('blocks an inverted window and recovers once a bound is repicked', async () => {
     mockGetFeed.mockResolvedValue(makeResponse([makeRow()]))
 

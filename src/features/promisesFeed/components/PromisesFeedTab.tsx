@@ -23,7 +23,7 @@
  * the operator returns to it), and deliberately NOT written into the URL (an
  * auto-derived value in a shared link would pin "today" to the day the link
  * was made). The backend caps the window at a 366-day difference (mirrored
- * here — see utils/window.ts) and answers 400 on an inverted pair (guarded
+ * here — see `@/lib/reportWindow`) and answers 400 on an inverted pair (guarded
  * here before any request leaves).
  *
  * «Скрыть отработанных» / «Скрыть оплативших» are SERVER-side filters
@@ -34,23 +34,25 @@
  * choices somebody made.
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { DateSelect } from '@/components/ui/DateSelect'
 import { Pagination } from '@/components/ui/Pagination'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
-import { usePagedFeedPages, useUrlPagedFeedFilters } from '@/hooks'
-import { isTransientFailure } from '@/lib/api'
-import { getDateStringInTimezone } from '@/lib/dateUtils'
-import { getErrorMessage, getErrorStatus, hasResponseDetail } from '@/lib/errors'
+import {
+  useDateWindowFilters,
+  useFeedErrorMessage,
+  usePagedFeedPages,
+  useTodayInTimezone,
+  useUrlPagedFeedFilters,
+} from '@/hooks'
 import { Icons } from '@/lib/icons'
+import { isWindowTooLong } from '@/lib/reportWindow'
 import { REPORTS_URL_KEYS } from '@/lib/reportsUrlKeys'
-import { readUrlDateBound } from '@/lib/urlDateBound'
 import { useAuthStore } from '@/stores/authStore'
 import { usePromisesFeed } from '../hooks'
-import { isWindowTooLong } from '../utils/window'
 import { PROMISES_FEED_COLUMN_COUNT, PromisesFeedTable } from './PromisesFeedTable'
 
 /** This tab's slice of the Reports page URL namespace (see the registry). */
@@ -75,6 +77,18 @@ type FilterKey =
   | typeof HIDE_WORKED_KEY
   | typeof HIDE_PAID_KEY
 
+/** This tab's wording for the two window complaints (see `useDateWindowFilters`). */
+const WINDOW_ERROR_KEYS = {
+  invalidDate: 'pages.reports.promisesFeed.invalidDate',
+  invertedRange: 'pages.reports.promisesFeed.invalidRange',
+} as const
+
+/** The backend's 366-day DIFFERENCE cap, mirrored — predicate and sentence together. */
+const WINDOW_CAP = {
+  isTooLong: isWindowTooLong,
+  messageKey: 'pages.reports.promisesFeed.rangeTooLong',
+} as const
+
 export function PromisesFeedTab() {
   const { t } = useTranslation('common')
 
@@ -84,34 +98,12 @@ export function PromisesFeedTab() {
   const projectId: number = Number(user?.active_project_id ?? user?.projects?.[0]?.id ?? 1)
   const userTimezone = user?.timezone
 
-  // The default window: "today" resolved in the PROFILE timezone — "now" is a
-  // real moment, and near midnight the browser's day and the operator's day
-  // differ. The same timezone travels to the backend, which cuts the
-  // PROMISED-date calendar days in it, so the two ends of the request agree
-  // on what "today" means.
-  //
-  // Held in STATE, not read off the wall clock in render: seeded once at
-  // mount and re-resolved on window focus, so a tab left open across midnight
-  // picks up the new day the moment the operator comes back to it instead of
-  // keeping yesterday's window until an unrelated re-render. The functional
-  // update returns the previous value while the day is unchanged, so a
-  // same-day focus re-renders nothing. `today` only backs the DEFAULT window
-  // below — user-picked URL bounds never move when the day rolls over. Same
-  // pattern as the searcher feed.
-  const [today, setToday] = useState(() => getDateStringInTimezone(new Date(), userTimezone))
-  useEffect(() => {
-    const refreshToday = () =>
-      setToday((prev) => {
-        const next = getDateStringInTimezone(new Date(), userTimezone)
-        return next === prev ? prev : next
-      })
-    // The profile timezone can change what "today" means without the clock
-    // moving (it loads or changes after mount) — re-resolve right away, not
-    // only on the next focus.
-    refreshToday()
-    window.addEventListener('focus', refreshToday)
-    return () => window.removeEventListener('focus', refreshToday)
-  }, [userTimezone])
+  // The PROFILE timezone is the one that travels to the backend, where it cuts
+  // the PROMISED-date calendar days — so both ends of the request must agree
+  // on which day "today" is (the hook owns when that day is re-resolved). It
+  // backs the DEFAULT window below and nothing else: user-picked URL bounds
+  // never move when the day rolls over.
+  const today = useTodayInTimezone(userTimezone)
 
   // The shared paged-feed URL shell: composed `replace` updates (the
   // same-tick-burst ref composition lives there), defensive page/page-size
@@ -123,21 +115,21 @@ export function PromisesFeedTab() {
   })
   const { searchParams, pageSize } = filters
 
-  // A present-but-unusable bound is NOT silently replaced by the default: the
-  // URL would then disagree with both the field and the request. It goes down
-  // the same path as an inverted range — inline hint, no request (below).
-  // Tracked per bound so the hint can sit on the field holding the bad value.
-  const dateFromBound = readUrlDateBound(searchParams, DATE_FROM_KEY)
-  const dateToBound = readUrlDateBound(searchParams, DATE_TO_KEY)
-  const isDateFromInvalid = dateFromBound.isInvalid
-  const isDateToInvalid = dateToBound.isInvalid
-  const hasInvalidDate = isDateFromInvalid || isDateToInvalid
-
-  // An ABSENT bound means "today", not "no bound": the pair always goes to
-  // the API whole (the backend would default an absent bound to today itself,
-  // but the fields and the request must never disagree).
-  const dateFrom = dateFromBound.value ?? today
-  const dateTo = dateToBound.value ?? today
+  // The shared window reader: both bounds, what is wrong with them, and the
+  // verdict that gates the request. An ABSENT bound means "today", not "no
+  // bound" — the pair always goes to the API whole (the backend would default
+  // an absent bound to today itself, but the fields and the request must never
+  // disagree).
+  const { dateFrom, dateTo, isFromInvalid, isToInvalid, dateError, rangeError, hasWindowError } =
+    useDateWindowFilters({
+      searchParams,
+      fromKey: DATE_FROM_KEY,
+      toKey: DATE_TO_KEY,
+      fallbackFrom: today,
+      fallbackTo: today,
+      cap: WINDOW_CAP,
+      keys: WINDOW_ERROR_KEYS,
+    })
 
   // There is no "×" on these fields on purpose — the pair is mandatory, and
   // the way back to the default is simply picking today.
@@ -152,31 +144,17 @@ export function PromisesFeedTab() {
   const handleToggle = (key: FilterKey) => (checked: boolean | 'indeterminate') =>
     filters.setFilterParam(key, checked === true ? '1' : null)
 
-  // The only guards against an inverted or oversized window: the pickers
-  // deliberately do not bound each other (see the fields below), and manual
-  // input and hand-edited URLs would bypass such bounds anyway. ISO
-  // YYYY-MM-DD strings compare correctly as strings.
-  const isRangeInverted = !hasInvalidDate && dateFrom > dateTo
-  const isTooLong = !hasInvalidDate && !isRangeInverted && isWindowTooLong(dateFrom, dateTo)
-
-  // Where a message is rendered follows WHAT it is about: a bad date belongs
-  // to ONE field, so it rides that field's `error` prop; an inverted or
-  // oversized window belongs to the PAIR — neither bound is wrong on its own
-  // — so it stays a standalone alert under the filters. Same split as the
-  // sibling feed tabs.
-  const dateError = hasInvalidDate ? t('pages.reports.promisesFeed.invalidDate') : undefined
-  const rangeError = isRangeInverted
-    ? t('pages.reports.promisesFeed.invalidRange')
-    : isTooLong
-      ? t('pages.reports.promisesFeed.rangeTooLong')
-      : undefined
-
-  const hasFilterError = hasInvalidDate || isRangeInverted || isTooLong
+  // The window is this tab's only filter besides the two server-side toggles,
+  // which cannot be wrong — so its verdict is the whole verdict.
+  const hasFilterError = hasWindowError
 
   const query = usePromisesFeed({
     projectId,
-    dateFrom,
-    dateTo,
+    // The fallbacks are never sent: a missing bound can only come from an
+    // invalid URL value, which is exactly what sets `hasFilterError` and
+    // disables the query.
+    dateFrom: dateFrom ?? today,
+    dateTo: dateTo ?? today,
     hideWorked,
     hidePaid,
     skip: filters.skip,
@@ -198,36 +176,18 @@ export function PromisesFeedTab() {
   // background refetch of the SAME page shows current data and needs none.
   const isRefreshing = query.isPlaceholderData
 
-  const errorStatus = getErrorStatus(query.error)
-  const isForbidden = errorStatus === 403
-  const isUnavailable = isTransientFailure(query.error)
-  const errorMessage = isUnavailable
-    ? // Covers the endpoint's 503s — the auth-service org directory being down
-      // (without it the rows cannot be grouped into departments), the payment
-      // lookup failing and either blowing its deadline. The operator's move is
-      // the same in all: wait and retry; a partial feed is never shown — a
-      // silently missing payment would read as "not paid" and send an operator
-      // to dun somebody who paid an hour ago.
-      t('pages.reports.promisesFeed.unavailable')
-    : isForbidden
-      ? t('pages.reports.promisesFeed.forbidden')
-      : // Backend date/timezone validation answers 400 with a human-readable
-        // detail (inverted window, > 366-day difference, a date outside the
-        // supported range, an unknown IANA zone). Passing it through verbatim
-        // is what makes the refusal actionable — but only when the answer HAS
-        // a detail (see hasResponseDetail), otherwise axios' own untranslated
-        // sentence would leak through.
-        errorStatus === 400 && hasResponseDetail(query.error)
-        ? getErrorMessage(query.error)
-        : t('pages.reports.promisesFeed.error.title')
-
-  // The 503s are worded distinctly by the backend on purpose — the remedies
-  // differ and monitoring must tell an outage from a timeout — so the
-  // server's own sentence is shown UNDER the localized one rather than
-  // instead of it. Absent for a transport-level failure (a 502/504 or a
-  // dropped connection carries no body).
-  const errorDetail =
-    isUnavailable && hasResponseDetail(query.error) ? getErrorMessage(query.error) : null
+  // The shared failure ladder (see the hook for the rungs and their order).
+  // What is this endpoint's own: its 503s are the auth-service org directory
+  // being down (without it the rows cannot be grouped into departments), the
+  // payment lookup failing, and either of them blowing its deadline — none may
+  // degrade to a partial feed, since a silently missing payment would read as
+  // "not paid" and send an operator to dun somebody who paid an hour ago. Its
+  // 400 detail names an inverted window, a > 366-day difference, a date
+  // outside the supported range or an unknown IANA zone.
+  const { errorMessage, errorDetail, isForbidden } = useFeedErrorMessage(
+    query.error,
+    'promisesFeed'
+  )
 
   return (
     <div className="flex w-full flex-col gap-4">
@@ -245,10 +205,11 @@ export function PromisesFeedTab() {
         <DateSelect
           label={t('pages.reports.promisesFeed.dateFrom')}
           // An unusable URL value shows an empty field with the error on it,
-          // never the default silently standing in for the bad value.
-          value={isDateFromInvalid ? null : dateFrom}
+          // never the default silently standing in for the bad value — the
+          // bound itself is undefined in that case.
+          value={dateFrom ?? null}
           // Only the bound that actually carries the unusable value is marked.
-          error={isDateFromInvalid ? dateError : undefined}
+          error={isFromInvalid ? dateError : undefined}
           onChange={handleDateChange(DATE_FROM_KEY)}
           allowManualInput
           resyncInvalidOnBlur
@@ -257,8 +218,8 @@ export function PromisesFeedTab() {
         />
         <DateSelect
           label={t('pages.reports.promisesFeed.dateTo')}
-          value={isDateToInvalid ? null : dateTo}
-          error={isDateToInvalid ? dateError : undefined}
+          value={dateTo ?? null}
+          error={isToInvalid ? dateError : undefined}
           onChange={handleDateChange(DATE_TO_KEY)}
           allowManualInput
           resyncInvalidOnBlur

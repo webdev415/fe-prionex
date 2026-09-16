@@ -385,6 +385,25 @@ describe('LowVerificationFeedTab', () => {
     ).not.toBeInTheDocument()
   })
 
+  it('sends a window wider than a YEAR — this endpoint has no window cap, on purpose', async () => {
+    // The uncapped half of the Reports page is a deliberate backend decision
+    // (`# No _MAX_RANGE_DAYS cap here on purpose` in the router) that until now
+    // nothing on the client pinned: adding a `cap` (the capped siblings' `WINDOW_CAP`) to this tab's
+    // window call would have left every suite green while silently refusing
+    // windows the API serves. Two years is comfortably past the 366-day
+    // DIFFERENCE its capped siblings mirror.
+    mockGetFeed.mockResolvedValue(makeResponse([makeRow()]))
+
+    renderTab(['/?pf=2024-01-01&pt=2026-01-01'])
+    expect(await screen.findByText('Коваленко Іван Петрович')).toBeInTheDocument()
+
+    expect(mockGetFeed).toHaveBeenCalledWith(
+      expect.objectContaining({ sell_from: '2024-01-01', sell_to: '2026-01-01' })
+    )
+    // ...and no pair alert of any kind under the filters.
+    expect(screen.queryAllByRole('alert')).toHaveLength(0)
+  })
+
   it('blocks an inverted sell window but accepts a lone bound after it', async () => {
     mockGetFeed.mockResolvedValue(makeResponse([makeRow()]))
 
@@ -754,6 +773,29 @@ describe('LowVerificationFeedTab', () => {
     renderTab()
 
     expect(await screen.findByText('sell_from must not be after sell_to')).toBeInTheDocument()
+  })
+
+  it('falls back to the localized title for a 400 whose body never arrived', async () => {
+    // THE ONE DELIBERATE BEHAVIOUR CHANGE of the shared error ladder. This tab
+    // used to gate its 400 on the status alone, so a body-less answer — what a
+    // proxy that strips the body produces — reached the operator as whatever
+    // `getErrorMessage` could scrape off the error: in production axios'
+    // untranslated "Request failed with status code 400", here this suite's
+    // own `HTTP 400`. The nine sibling tabs already gated on
+    // `hasResponseDetail`; this pins that this one now does too.
+    //
+    // The case above (a 400 WITH a detail) stays green either way, which is
+    // exactly why it could not stand in for this one.
+    //
+    // The absence assertion names the helper's OWN message rather than the
+    // axios wording: the helper never produces the axios sentence, so checking
+    // for that would pass whatever the tab rendered.
+    mockGetFeed.mockRejectedValue(makeHttpError(400))
+
+    renderTab()
+
+    expect(await screen.findByText('pages.reports.lowVerification.error.title')).toBeInTheDocument()
+    expect(screen.queryByText(/HTTP 400/)).not.toBeInTheDocument()
   })
 
   it('shows a permissions message without a retry button on 403', async () => {
