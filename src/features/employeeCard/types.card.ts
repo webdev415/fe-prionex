@@ -39,6 +39,9 @@ export interface WorkInformation {
   project_name: string | null
   department: string | null
   department_id: number | null
+  /** Named even once the group is deactivated or archived. */
+  group: string | null
+  group_id: number | null
   position: string | null
   role_id: number | null
   manager: string | null
@@ -136,6 +139,8 @@ export interface WorkInformationUpdate {
   project_id?: number
   role_id?: number
   department_id?: number
+  /** Null clears it. Left out, the current group stays while the department does. */
+  group_id?: number | null
   manager_user_id?: number | null
   hired_at?: string | null
   /** Null clears one, which is a different request from leaving it out. */

@@ -77,6 +77,7 @@ export function CardSections({ card, onEdit }: CardSectionsProps) {
         <FieldGrid
           fields={[
             { label: t('pages.employeeCard.fields.department'), value: card.work.department },
+            { label: t('pages.employeeCard.fields.group'), value: card.work.group },
             { label: t('pages.employeeCard.fields.position'), value: card.work.position },
             { label: t('pages.employeeCard.fields.manager'), value: card.work.manager },
             {
