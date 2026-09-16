@@ -18,7 +18,7 @@
  * an inverted pair) and its neighbours are URL primitives. A window-size
  * limit is not a transport question. `isDatePairInverted` stays there for the
  * same reason; the two are used side by side inside `useDateWindowFilters`,
- * which the nine report tabs with a date window call.
+ * which the ten report tabs with a date window call.
  */
 
 /**
@@ -26,12 +26,16 @@
  * (`date_to` - `date_from`) day DIFFERENCE may be at most 366, i.e. an
  * inclusive window of 367 days. Larger answers 400.
  *
- * ONLY SIX ENDPOINTS CAP THEIR WINDOW AT THIS NUMBER (seven checks — the
+ * ONLY SEVEN ENDPOINTS CAP THEIR WINDOW AT THIS NUMBER (eight checks — the
  * verification report measures two windows), and this is not a detail to
  * gloss:
  * `/processing`, `/third-party-verification` (both of its windows),
- * `/operator-promises`, `/feeds/promises`, `/feeds/callbacks` and
- * `/promises-daily` (`grep _MAX_RANGE_DAYS` in the router). The other feeds —
+ * `/operator-promises`, `/feeds/promises`, `/feeds/callbacks`,
+ * `/promises-daily` and `/feeds/drains` (`grep _MAX_RANGE_DAYS` in the
+ * router). `/feeds/drains` caps only its WINDOWED mode: omitting both dates
+ * there is the all-history mode, deliberately the widest request it accepts,
+ * bounded by a candidate ceiling instead — so the drains tab passes this cap
+ * and still has a mode in which no window exists to measure. The other feeds —
  * low-verification, searcher-followup, inbound-followup, communication-gap,
  * contact-tag — carry an explicit `# No _MAX_RANGE_DAYS cap here on purpose`
  * because their cost is bounded by something other than the window, and all
@@ -64,7 +68,7 @@ const MS_PER_DAY = 86_400_000
  *
  * An inverted pair is NOT "too long" either: the difference goes negative and
  * this answers false, leaving the finding to the tabs' inversion guard
- * (`useDateWindowFilters` for the nine tabs that share it; an inline
+ * (`useDateWindowFilters` for the ten tabs that share it; an inline
  * `from > to` in client processing and third-party verification, which keep
  * their own window logic). Reporting one mistake twice would show two alerts
  * for one typo.
