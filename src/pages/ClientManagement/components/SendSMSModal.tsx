@@ -25,12 +25,14 @@ import { useClient } from '@/features/clients/hooks/useClients'
 import { authApi } from '@/features/auth/api/authApi'
 import { useQuery } from '@tanstack/react-query'
 import { getErrorMessage } from '@/lib/errors'
-import { formatDateDotDMY, formatMoneyUAHTwoDecimals } from '@/lib/formatters'
+import { formatMoneyUAHTwoDecimals } from '@/lib/formatters'
 import {
   blockingVariables,
   unresolvedVariables,
 } from '@/features/messaging/utils/unresolvedVariables'
 import { resolveOperatorPhone } from '@/features/messaging/utils/operatorPhone'
+import { resolveDueDate } from '@/features/messaging/utils/dueDate'
+import { formatDebtAmount } from '@/features/messaging/utils/debtAmount'
 
 export interface SendSMSModalProps {
   open: boolean
@@ -103,7 +105,7 @@ export function SendSMSModal({
   const sendSMSMutation = useSendSMS()
 
   // Fetch client details (debts, contract_number, max promise date for SMS {due_date})
-  const { data: clientData } = useClient(clientId, !!clientId && open)
+  const { data: clientData, isError: clientLoadFailed } = useClient(clientId, !!clientId && open)
 
   // Fetch current user details to get operator phone
   const { data: currentUserData } = useQuery({
@@ -193,20 +195,28 @@ export function SendSMSModal({
     const contractNumber = selectedLoan?.loanNumber ?? debtFallback
 
     // {due_date} = max promise_to_pay_date across this client's interactions (DD.MM.YYYY)
-    const dueDate = formatDateDotDMY(clientData?.max_promise_to_pay_date ?? null)
+    const dueDate = resolveDueDate(clientData, user?.timezone)
 
     // Get operator_phone from user API response
     const operatorPhone = resolveOperatorPhone(currentUserData?.data)
 
     return {
       client_name: clientNameField,
-      debt_amount: selectedLoan ? Number(selectedLoan.totalToRepay).toFixed(2) : '',
+      debt_amount: selectedLoan ? formatDebtAmount(selectedLoan.totalToRepay) : '',
       operator_name: user?.username || '',
       operator_phone: operatorPhone,
       due_date: dueDate,
       contract_number: contractNumber,
     }
-  }, [clientData, clientNameField, selectedLoan, loansProp, user?.username, currentUserData])
+  }, [
+    clientData,
+    clientNameField,
+    selectedLoan,
+    loansProp,
+    user?.username,
+    user?.timezone,
+    currentUserData,
+  ])
 
   // Render template message with variables replaced, or use custom message
   // If message was manually edited, use it as-is (don't re-render)
@@ -230,6 +240,7 @@ export function SendSMSModal({
   const hasUnresolvedVariables = missingVariables.length > 0
   const blocksSending = blockingVariables(missingVariables).length > 0
   const canSend =
+    !!clientData &&
     !isDailyLimitReached &&
     displayMessage.trim().length > 0 &&
     !blocksSending &&
@@ -466,6 +477,11 @@ export function SendSMSModal({
                         names: missingVariables.join(', '),
                         defaultValue: `These variables have no value yet: ${missingVariables.join(', ')}`,
                       })}
+                    </p>
+                  )}
+                  {clientLoadFailed && (
+                    <p className="text-error-500 text-xs">
+                      {t('pages.clients.modals.sendSMS.clientLoadFailed')}
                     </p>
                   )}
                 </div>

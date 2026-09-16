@@ -21,10 +21,10 @@ describe('finding the variables a message still has no value for', () => {
     ).toEqual(['contract_number'])
   })
 
-  it('catches due_date, which depends on the selected credit', () => {
+  it('reports any variable the caller left empty, whatever it is', () => {
     expect(
-      unresolvedVariables('Pay by {{due_date}}', { ...resolved, due_date: '' }, 'double')
-    ).toEqual(['due_date'])
+      unresolvedVariables('Pay by {{operator_name}}', { operator_name: '' }, 'double')
+    ).toEqual(['operator_name'])
   })
 
   it('ignores single braces when scanning for the double-brace renderer', () => {
