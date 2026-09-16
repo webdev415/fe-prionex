@@ -9,6 +9,7 @@ import type {
   UpdateCallOutcomeRequest,
   AMIHealthResponse,
   IncomingCallData,
+  CallingWindowStatus,
 } from '../types'
 
 // Use same base URL as other services - all requests go through Kong Gateway
@@ -49,6 +50,12 @@ export interface FetchRecordingOptions {
 }
 
 class CallService {
+  /** Whether the project's calling window allows a call right now (KAN-1107). */
+  async getCallingWindowStatus(): Promise<CallingWindowStatus> {
+    const response = await api.get(`${API_BASE_URL}/api/v1/calls/calling-window/status`)
+    return response.data
+  }
+
   async originateCall(request: OriginateCallRequest): Promise<OriginateCallResponse> {
     const response = await api.post(`${API_BASE_URL}/api/v1/calls/originate`, request)
     return response.data

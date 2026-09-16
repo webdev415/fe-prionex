@@ -220,3 +220,24 @@ export interface IncomingCallEvent {
   event_type: 'call.incoming'
   data: IncomingCallData
 }
+
+/**
+ * Whether the project's calling window permits a call right now (KAN-1107).
+ *
+ * Evaluated by the backend, never recomputed here: the rule is a compliance
+ * control, and an operator whose clock is an hour fast must not be told they
+ * may call when they may not.
+ */
+export type CallingWindowReason =
+  | 'before_window_start'
+  | 'after_window_end'
+  | 'weekday_not_allowed'
+  | 'public_holiday'
+  | 'timezone_unresolved'
+  | 'window_misconfigured'
+
+export interface CallingWindowStatus {
+  allowed: boolean
+  reason: CallingWindowReason | null
+  detail: string | null
+}

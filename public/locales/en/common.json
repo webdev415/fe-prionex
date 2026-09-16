@@ -3229,10 +3229,7 @@
         "trainer": "Trainer",
         "type": "Type",
         "typePlaceholder": "Optional label",
-        "unlimited": "Unlimited",
-        "description": "Description",
-        "descriptionPlaceholder": "What the session covers — participants see this.",
-        "joinMeeting": "Join the meeting"
+        "unlimited": "Unlimited"
       },
       "leaks": {
         "chips": {
@@ -11538,6 +11535,15 @@
       "tabs": {
         "showEarlier": "Show earlier sections",
         "showLater": "Show later sections"
+      }
+    },
+    "calls": {
+      "callingWindow": {
+        "blocked": "Calling is not allowed right now",
+        "holiday": "Today is a public holiday",
+        "outsideHours": "Outside the allowed calling hours",
+        "unavailable": "Calling hours cannot be checked right now",
+        "weekend": "Calls are not allowed today"
       }
     }
   },
