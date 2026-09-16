@@ -17,7 +17,8 @@
  * through the query string" (reading a bound, rejecting 2026-02-31, catching
  * an inverted pair) and its neighbours are URL primitives. A window-size
  * limit is not a transport question. `isDatePairInverted` stays there for the
- * same reason; the one tab that uses both side by side is `PromisesDailyTab`.
+ * same reason; the two are used side by side inside `useDateWindowFilters`,
+ * which the ten report tabs with a date window call.
  */
 
 /**
@@ -25,18 +26,21 @@
  * (`date_to` - `date_from`) day DIFFERENCE may be at most 366, i.e. an
  * inclusive window of 367 days. Larger answers 400.
  *
- * ONLY SIX ENDPOINTS CAP THEIR WINDOW AT THIS NUMBER (seven checks — the
+ * ONLY SEVEN ENDPOINTS CAP THEIR WINDOW AT THIS NUMBER (eight checks — the
  * verification report measures two windows), and this is not a detail to
  * gloss:
  * `/processing`, `/third-party-verification` (both of its windows),
- * `/operator-promises`, `/feeds/promises`, `/feeds/callbacks` and
- * `/promises-daily` (`grep _MAX_RANGE_DAYS` in the router). The other feeds —
+ * `/operator-promises`, `/feeds/promises`, `/feeds/callbacks`,
+ * `/promises-daily` and `/feeds/drains` (`grep _MAX_RANGE_DAYS` in the
+ * router). `/feeds/drains` caps only its WINDOWED mode: omitting both dates
+ * there is the all-history mode, deliberately the widest request it accepts,
+ * bounded by a candidate ceiling instead — so the drains tab passes this cap
+ * and still has a mode in which no window exists to measure. The other feeds —
  * low-verification, searcher-followup, inbound-followup, communication-gap,
  * contact-tag — carry an explicit `# No _MAX_RANGE_DAYS cap here on purpose`
- * because their cost is bounded by something other than the window, and most
- * of their tabs say so in their own docstrings (`ContactTagFeedTab` is the one
- * that does not). `/outbound-calls` is capped by a
- * DIFFERENT rule: `_OUTBOUND_CALLS_MAX_WINDOW_DAYS = 90`, counted
+ * because their cost is bounded by something other than the window, and all
+ * five of their tabs say so in their own docstrings. `/outbound-calls` is
+ * capped by a DIFFERENT rule: `_OUTBOUND_CALLS_MAX_WINDOW_DAYS = 90`, counted
  * INCLUSIVELY (`(end - start).days + 1`), so neither the number nor the
  * arithmetic here applies to it.
  *
@@ -64,12 +68,16 @@ const MS_PER_DAY = 86_400_000
  *
  * An inverted pair is NOT "too long" either: the difference goes negative and
  * this answers false, leaving the finding to the tabs' inversion guard
- * (`isDatePairInverted` in `PromisesDailyTab`, an inline `from > to` in the
- * other five). Reporting one mistake twice would show two alerts for one typo.
- * EVERY call site — all seven of them, across six files — still writes
- * `!isInverted && isWindowTooLong(...)`; that guard is redundant rather than
- * wrong, and it is kept because it makes the reading order of the two checks
- * visible where the error messages are chosen.
+ * (`useDateWindowFilters` for the ten tabs that share it; an inline
+ * `from > to` in client processing and third-party verification, which keep
+ * their own window logic). Reporting one mistake twice would show two alerts
+ * for one typo.
+ * That is why no call site guards this one with `!isInverted &&` any more: all
+ * seven used to, and the guard could never change an answer — an inverted pair
+ * is negative and already reads false here. The guards are gone rather than
+ * kept-for-clarity because a second statement of a rule is a second place for
+ * it to go stale, and the ORDER of the two findings is visible anyway where
+ * the error message is chosen (inversion is tested first there).
  */
 export function isWindowTooLong(dateFrom: string, dateTo: string): boolean {
   const diff = (Date.parse(dateTo) - Date.parse(dateFrom)) / MS_PER_DAY

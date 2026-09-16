@@ -28,19 +28,21 @@
  * backend caps nothing here because the window cannot widen the query's cost.
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { DateSelect } from '@/components/ui/DateSelect'
 import { Pagination } from '@/components/ui/Pagination'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
-import { usePagedFeedPages, useUrlPagedFeedFilters } from '@/hooks'
-import { isTransientFailure } from '@/lib/api'
-import { getDateStringInTimezone } from '@/lib/dateUtils'
-import { getErrorMessage, getErrorStatus, hasResponseDetail } from '@/lib/errors'
+import {
+  useDateWindowFilters,
+  useFeedErrorMessage,
+  usePagedFeedPages,
+  useTodayInTimezone,
+  useUrlPagedFeedFilters,
+} from '@/hooks'
 import { Icons } from '@/lib/icons'
 import { REPORTS_URL_KEYS } from '@/lib/reportsUrlKeys'
-import { readUrlDateBound } from '@/lib/urlDateBound'
 import { useAuthStore } from '@/stores/authStore'
 import { useSearcherFollowupFeed } from '../hooks'
 import { SEARCHER_FOLLOWUP_COLUMN_COUNT, SearcherFollowupTable } from './SearcherFollowupTable'
@@ -61,6 +63,12 @@ const {
  */
 type FilterKey = typeof DATE_FROM_KEY | typeof DATE_TO_KEY
 
+/** This tab's wording for the two window complaints (see `useDateWindowFilters`). */
+const WINDOW_ERROR_KEYS = {
+  invalidDate: 'pages.reports.searcherFollowup.invalidDate',
+  invertedRange: 'pages.reports.searcherFollowup.invalidRange',
+} as const
+
 export function SearcherFollowupFeedTab() {
   const { t } = useTranslation('common')
 
@@ -70,34 +78,12 @@ export function SearcherFollowupFeedTab() {
   const projectId: number = Number(user?.active_project_id ?? user?.projects?.[0]?.id ?? 1)
   const userTimezone = user?.timezone
 
-  // The default window: "today" resolved in the PROFILE timezone — "now" is a
-  // real moment, and near midnight the browser's day and the operator's day
-  // differ. The same timezone travels to the backend, which cuts the window's
-  // calendar days in it, so the two ends of the request agree on what "today"
-  // means.
-  //
-  // Held in STATE, not read off the wall clock in render (the host page keeps
-  // comparable clock reads inside effects too): seeded once at mount and
-  // re-resolved on window focus, so a tab left open across midnight picks up
-  // the new day the moment the operator comes back to it instead of keeping
-  // yesterday's window until an unrelated re-render. The functional update
-  // returns the previous value while the day is unchanged, so a same-day
-  // focus re-renders nothing. `today` only backs the DEFAULT window below —
-  // user-picked URL bounds never move when the day rolls over.
-  const [today, setToday] = useState(() => getDateStringInTimezone(new Date(), userTimezone))
-  useEffect(() => {
-    const refreshToday = () =>
-      setToday((prev) => {
-        const next = getDateStringInTimezone(new Date(), userTimezone)
-        return next === prev ? prev : next
-      })
-    // The profile timezone can change what "today" means without the clock
-    // moving (it loads or changes after mount) — re-resolve right away, not
-    // only on the next focus.
-    refreshToday()
-    window.addEventListener('focus', refreshToday)
-    return () => window.removeEventListener('focus', refreshToday)
-  }, [userTimezone])
+  // The PROFILE timezone is the one that travels to the backend, where it cuts
+  // the window's find-day calendar days — so both ends of the request must
+  // agree on which day "today" is (the hook owns when that day is re-resolved).
+  // It backs the DEFAULT window below and nothing else: user-picked URL bounds
+  // never move when the day rolls over.
+  const today = useTodayInTimezone(userTimezone)
 
   // The shared paged-feed URL shell: composed `replace` updates (the
   // same-tick-burst ref composition lives there), defensive page/page-size
@@ -109,48 +95,38 @@ export function SearcherFollowupFeedTab() {
   })
   const { searchParams, pageSize } = filters
 
-  // A present-but-unusable bound is NOT silently replaced by the default: the
-  // URL would then disagree with both the field and the request. It goes down
-  // the same path as an inverted range — inline hint, no request (below).
-  // Tracked per bound so the hint can sit on the field holding the bad value.
-  const dateFromBound = readUrlDateBound(searchParams, DATE_FROM_KEY)
-  const dateToBound = readUrlDateBound(searchParams, DATE_TO_KEY)
-  const isDateFromInvalid = dateFromBound.isInvalid
-  const isDateToInvalid = dateToBound.isInvalid
-  const hasInvalidDate = isDateFromInvalid || isDateToInvalid
-
-  // An ABSENT bound means "today", not "no bound": the pair is mandatory
-  // (both dates always go to the API), so the default fills in per bound.
-  const dateStart = dateFromBound.value ?? today
-  const dateEnd = dateToBound.value ?? today
+  // The shared window reader: both bounds, what is wrong with them, and the
+  // verdict that gates the request. An ABSENT bound means "today", not "no
+  // bound" — the pair is mandatory (both dates always go to the API), so the
+  // default fills in per bound. NO `cap`: the backend caps nothing here
+  // because the window cannot widen the query's cost (see the module comment),
+  // and the suite pins that a window wider than the siblings' 366 days does go
+  // out.
+  const { dateFrom, dateTo, isFromInvalid, isToInvalid, dateError, rangeError, hasWindowError } =
+    useDateWindowFilters({
+      searchParams,
+      fromKey: DATE_FROM_KEY,
+      toKey: DATE_TO_KEY,
+      fallbackFrom: today,
+      fallbackTo: today,
+      keys: WINDOW_ERROR_KEYS,
+    })
 
   // There is no "×" on these fields on purpose — the pair is mandatory
   // (clearing a bound cannot mean "no bound" when the backend rejects half a
   // window), and the way back to the default is simply picking today.
   const handleDateChange = (key: FilterKey) => filters.dateFilterHandler(key)
 
-  // The only guard against an inverted window: the pickers deliberately do not
-  // bound each other (see the fields below), and manual input and hand-edited
-  // URLs would bypass such bounds anyway. ISO YYYY-MM-DD strings compare
-  // correctly as strings. Both bounds always exist here (default today), so the
-  // pair check is unconditional once both are usable.
-  const isRangeInverted = !hasInvalidDate && dateStart > dateEnd
-
-  // Where a message is rendered follows WHAT it is about: a bad date belongs
-  // to ONE field, so it rides that field's `error` prop (red border,
-  // aria-invalid, aria-describedby on the offending input); an inverted
-  // window belongs to the PAIR — neither bound is wrong on its own — so it
-  // stays a standalone alert under the filters. Same split as the sibling
-  // feed tab.
-  const dateError = hasInvalidDate ? t('pages.reports.searcherFollowup.invalidDate') : undefined
-  const rangeError = isRangeInverted ? t('pages.reports.searcherFollowup.invalidRange') : undefined
-
-  const hasFilterError = hasInvalidDate || isRangeInverted
+  // The window is this tab's only filter, so its verdict is the whole verdict.
+  const hasFilterError = hasWindowError
 
   const query = useSearcherFollowupFeed({
     projectId,
-    dateStart,
-    dateEnd,
+    // The fallbacks are never sent: a missing bound can only come from an
+    // invalid URL value, which is exactly what sets `hasFilterError` and
+    // disables the query.
+    dateStart: dateFrom ?? today,
+    dateEnd: dateTo ?? today,
     skip: filters.skip,
     limit: pageSize,
     timezone: userTimezone,
@@ -170,41 +146,20 @@ export function SearcherFollowupFeedTab() {
   // background refetch of the SAME page shows current data and needs none.
   const isRefreshing = query.isPlaceholderData
 
-  const errorStatus = getErrorStatus(query.error)
-  const isForbidden = errorStatus === 403
-  const isUnavailable = isTransientFailure(query.error)
-  const errorMessage = isUnavailable
-    ? // Covers all FOUR of the endpoint's own 503s — the auth-service directory
-      // being down, the call-service being down, the call-service throttling
-      // past one retry, and the two lookups together blowing the fan-out
-      // deadline. The operator's move is the same in all four (wait and retry),
-      // and none may degrade to a partial feed: a silently missing "last call"
-      // would read as "never called" and send an operator to re-dial somebody
-      // who was called an hour ago.
-      t('pages.reports.searcherFollowup.unavailable')
-    : isForbidden
-      ? t('pages.reports.searcherFollowup.forbidden')
-      : // Backend date/timezone validation answers 400 with a human-readable
-        // detail — and so does the candidate cap, whose detail names the count,
-        // the maximum and the remedy ("ask for a narrower window"). Passing it
-        // through verbatim is what makes that refusal actionable; a generic
-        // message would leave the operator with no idea which knob to turn.
-        // Only when the answer HAS a detail, though: a 400 whose body never
-        // arrived would otherwise show axios' own untranslated "Request failed
-        // with status code 400" (see hasResponseDetail), so it joins every
-        // other unexplained failure under the localized generic title.
-        errorStatus === 400 && hasResponseDetail(query.error)
-        ? getErrorMessage(query.error)
-        : t('pages.reports.searcherFollowup.error.title')
-
-  // The four 503s are worded distinctly by the backend on purpose — the
-  // remedies differ and monitoring must tell an outage from a timeout from
-  // throttling — so the server's own sentence is shown UNDER the localized one
-  // rather than instead of it: the operator reads their language, and whoever
-  // is asked "what does it say?" can tell which dependency failed. Absent for a
-  // transport-level failure (a 502/504 or a dropped connection carries no body).
-  const errorDetail =
-    isUnavailable && hasResponseDetail(query.error) ? getErrorMessage(query.error) : null
+  // The shared failure ladder (see the hook for the rungs and their order).
+  // What is this endpoint's own: FOUR distinct 503s — the auth-service
+  // directory down, the call-service down, the call-service throttling past
+  // one retry, and the two lookups together blowing the fan-out deadline —
+  // none of which may degrade to a partial feed, since a silently missing
+  // "last call" would read as "never called" and send an operator to re-dial
+  // somebody who was called an hour ago. Its 400 detail names the failing
+  // date/timezone or, for the candidate cap, the count, the maximum and the
+  // remedy ("ask for a narrower window") — the only way the operator learns
+  // which knob to turn.
+  const { errorMessage, errorDetail, isForbidden } = useFeedErrorMessage(
+    query.error,
+    'searcherFollowup'
+  )
 
   return (
     <div className="flex w-full flex-col gap-4">
@@ -232,10 +187,11 @@ export function SearcherFollowupFeedTab() {
         <DateSelect
           label={t('pages.reports.searcherFollowup.dateFrom')}
           // An unusable URL value shows an empty field with the error on it,
-          // never the default silently standing in for the bad value.
-          value={isDateFromInvalid ? null : dateStart}
+          // never the default silently standing in for the bad value — the
+          // bound itself is undefined in that case.
+          value={dateFrom ?? null}
           // Only the bound that actually carries the unusable value is marked.
-          error={isDateFromInvalid ? dateError : undefined}
+          error={isFromInvalid ? dateError : undefined}
           onChange={handleDateChange(DATE_FROM_KEY)}
           allowManualInput
           resyncInvalidOnBlur
@@ -244,8 +200,8 @@ export function SearcherFollowupFeedTab() {
         />
         <DateSelect
           label={t('pages.reports.searcherFollowup.dateTo')}
-          value={isDateToInvalid ? null : dateEnd}
-          error={isDateToInvalid ? dateError : undefined}
+          value={dateTo ?? null}
+          error={isToInvalid ? dateError : undefined}
           onChange={handleDateChange(DATE_TO_KEY)}
           allowManualInput
           resyncInvalidOnBlur

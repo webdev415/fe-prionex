@@ -8861,7 +8861,8 @@
         "outbound-calls": "Outbound calls",
         "promises-daily": "Promises till end of month",
         "promises-feed": "Promises",
-        "callbacks": "Callbacks"
+        "callbacks": "Callbacks",
+        "drains": "Drains"
       },
       "processing": {
         "dateFrom": "Date from",
@@ -9238,6 +9239,42 @@
         "empty": "No callbacks in the selected window",
         "forbidden": "You don't have permission to view this report",
         "unavailable": "Employee data is temporarily unavailable. Please try again later.",
+        "error": {
+          "title": "Failed to load the data",
+          "retry": "Retry"
+        }
+      },
+      "drainsFeed": {
+        "dateFrom": "Promised date from",
+        "dateTo": "Promised date to",
+        "allHistory": "Whole history",
+        "invalidDate": "The date is not a real calendar date — pick a date to replace it",
+        "invalidRange": "Start date is later than end date",
+        "rangeTooLong": "Date range must not exceed 366 days",
+        "bothOrNeither": "Give both dates, or clear both — switch «Whole history» on",
+        "hideWorkedToday": "Hide clients handled today",
+        "hideWorked": "Hide rows whose promised date an interaction has reached",
+        "hidePaid": "Hide partial payers",
+        "openClient": "Open client {{id}}",
+        "columns": {
+          "inn": "Tax ID",
+          "interactionDate": "Interaction date",
+          "interactionType": "Result",
+          "promiseDate": "Promised date",
+          "promiseAmount": "Promised amount",
+          "employeeInteracted": "Employee who commented",
+          "employeeResponsible": "Responsible employee",
+          "link": "Link",
+          "paymentAmount": "Payments amount",
+          "lastInteractionDate": "Last interaction date",
+          "lastResult": "Worked today",
+          "department": "Department",
+          "noDepartment": "No department",
+          "group": "Group"
+        },
+        "empty": "No drains match these filters",
+        "forbidden": "You don't have permission to view this report",
+        "unavailable": "Employee or payment data is temporarily unavailable. Please try again later.",
         "error": {
           "title": "Failed to load the data",
           "retry": "Retry"

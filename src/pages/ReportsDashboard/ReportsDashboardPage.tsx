@@ -1,7 +1,7 @@
 /**
  * ReportsDashboardPage Component
  *
- * Main page for viewing reports. Hosts thirteen tabs (active tab in the URL via
+ * Main page for viewing reports. Hosts fourteen tabs (active tab in the URL via
  * `?tab=…`): the reports dashboard with KPIs and agent performance metrics
  * (default), the "Відпрацювання за ЦД" client processing report, the
  * "Верифікація 3-х осіб" third-party verification report, the
@@ -13,7 +13,8 @@
  * "Обіцянки по операторах" operator promises report, the
  * "Вихідні дзвінки" outbound calls report, the
  * "Обіцянки до кінця місяця" daily promises report, the
- * "Обіцянки" promises feed and the "Перезвони" callbacks feed.
+ * "Обіцянки" promises feed, the "Перезвони" callbacks feed and the
+ * "Зливи" drains feed.
  */
 
 import { useState, useMemo, useEffect, useCallback } from 'react'
@@ -60,6 +61,7 @@ import { OutboundCallsTab } from '@/features/outboundCalls'
 import { PromisesDailyTab } from '@/features/promisesDaily'
 import { PromisesFeedTab } from '@/features/promisesFeed'
 import { CallbacksFeedTab } from '@/features/callbacksFeed'
+import { DrainsFeedTab } from '@/features/drainsFeed'
 import { SegmentedTabs, segmentedTabId, segmentedTabPanelId } from '@/components/ui/SegmentedTabs'
 
 // ============================================================================
@@ -478,6 +480,11 @@ const REPORT_TABS = [
   // 119's frame, but this one answers «whom do I RING, and at what time» —
   // the operators who work the promise list work the call plan right after.
   'callbacks',
+  // Closes the factoring family (Cards 119/120/121): the promise list, the
+  // call plan, and now the clients who promised and did NOT pay. Last because
+  // it is the only one of the three whose row is a CLIENT rather than an
+  // interaction, and the only one whose window can be switched off entirely.
+  'drains',
 ] as const
 type ReportsTab = (typeof REPORT_TABS)[number]
 
@@ -605,6 +612,8 @@ export function ReportsDashboardPage() {
           <PromisesFeedTab />
         ) : activeTab === 'callbacks' ? (
           <CallbacksFeedTab />
+        ) : activeTab === 'drains' ? (
+          <DrainsFeedTab />
         ) : (
           <DashboardTab />
         )}
