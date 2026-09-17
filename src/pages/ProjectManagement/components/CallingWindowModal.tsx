@@ -17,6 +17,7 @@ import { Label } from '@/components/ui/Label'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
+import { HolidayCalendarPanel } from './HolidayCalendarPanel'
 import {
   useCallingWindow,
   useHolidayCountries,
@@ -53,6 +54,7 @@ export function CallingWindowModal({
 }: CallingWindowModalProps) {
   const { t } = useTranslation('common')
   const { data: current, isLoading } = useCallingWindow(open ? projectId : null)
+  const [view, setView] = useState<'window' | 'holidays'>('window')
 
   return (
     <Modal open={open} onClose={onClose} maxWidth="lg">
@@ -68,14 +70,48 @@ export function CallingWindowModal({
           <p className="text-muted-foreground text-sm">{t('status.loading', 'Loading…')}</p>
         </ModalContent>
       ) : (
-        /* Mounted only once the window has loaded, so the form initialises
-           from props instead of syncing server data in with an effect. */
-        <CallingWindowForm
-          key={projectId ?? 'none'}
-          projectId={projectId as number}
-          initial={current}
-          onClose={onClose}
-        />
+        <>
+          {/* One modal with two views rather than a second modal opened from
+              the first: the window and its holiday calendar are one setting,
+              and nesting modals to edit halves of it reads as two features. */}
+          <div className="flex gap-2 px-6 pt-2" role="tablist">
+            <Button
+              variant={view === 'window' ? 'primary' : 'secondary'}
+              size="sm"
+              role="tab"
+              aria-selected={view === 'window'}
+              onClick={() => setView('window')}
+            >
+              {t('pages.projects.callingWindow.tabWindow', 'Window')}
+            </Button>
+            <Button
+              variant={view === 'holidays' ? 'primary' : 'secondary'}
+              size="sm"
+              role="tab"
+              aria-selected={view === 'holidays'}
+              onClick={() => setView('holidays')}
+            >
+              {t('pages.projects.callingWindow.tabHolidays', 'Holidays')}
+            </Button>
+          </div>
+
+          {view === 'window' ? (
+            /* Mounted only once the window has loaded, so the form initialises
+               from props instead of syncing server data in with an effect. */
+            <CallingWindowForm
+              key={projectId ?? 'none'}
+              projectId={projectId as number}
+              initial={current}
+              onClose={onClose}
+            />
+          ) : (
+            <HolidayCalendarPanel
+              projectId={projectId as number}
+              country={current.holiday_country}
+              onClose={onClose}
+            />
+          )}
+        </>
       )}
     </Modal>
   )
