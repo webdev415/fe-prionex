@@ -18,6 +18,12 @@ export interface TAChainStepIn {
   // executor's picker (true) or only status='active' (false). Default
   // false. Meaningful only when the step's TA has field_type='credit'.
   show_closed_credits?: boolean
+  // KAN-1069: this step's value feeds ta_interactions.promise_date /
+  // promise_amount. Valid only on a date / amount step respectively; at most
+  // one of each per chain, and the two are a pair — the server refuses a
+  // chain carrying one without the other.
+  is_promise_date?: boolean
+  is_promise_amount?: boolean
 }
 
 export interface TAChainStep {
@@ -33,6 +39,8 @@ export interface TAChainStep {
   contact_source: ContactSource | null
   contact_medium: ContactMedium
   show_closed_credits: boolean
+  is_promise_date: boolean
+  is_promise_amount: boolean
   position_x: number | null
   position_y: number | null
 }

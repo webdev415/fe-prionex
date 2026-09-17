@@ -8,6 +8,7 @@
  */
 
 import { useEffect, useMemo } from 'react'
+import { toast } from 'sonner'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { Input } from '@/components/ui/Input'
@@ -99,6 +100,55 @@ export function ChainStepsEditor({ steps, onChange, disabled }: ChainStepsEditor
     onChange(next)
   }
 
+  /**
+   * Tick / untick a promise flag (KAN-1069).
+   *
+   * Ticking a second field of the same type is REFUSED, not applied — the
+   * ticket is explicit that the earlier choice must not be silently undone.
+   * The server enforces the same rule; doing it here too means the admin finds
+   * out on the click rather than after filling in the rest of the form.
+   *
+   * The pairing rule ("both flags or neither") is deliberately NOT enforced
+   * here: it cannot be, because ticking the first of a pair is always a step
+   * through an invalid state on the way to a valid one. The server refuses the
+   * save and its message is what the admin reads.
+   */
+  const togglePromiseFlag = (
+    index: number,
+    field: 'is_promise_date' | 'is_promise_amount',
+    checked: boolean
+  ) => {
+    if (checked) {
+      const takenBy = steps.findIndex((s, i) => i !== index && s[field])
+      if (takenBy !== -1) {
+        const isDate = field === 'is_promise_date'
+        toast.error(
+          t(
+            isDate
+              ? 'pages.taChains.steps.promiseDateTaken'
+              : 'pages.taChains.steps.promiseAmountTaken',
+            `Step {{step}} is already counted as the promise ${isDate ? 'date' : 'amount'}. Untick it first.`,
+            { step: takenBy + 1 }
+          )
+        )
+        return
+      }
+    }
+    update(index, { [field]: checked })
+  }
+
+  /**
+   * Exactly one half of the pair flagged — a chain the server will refuse.
+   *
+   * Advisory only: it does NOT block the tick or the submit, because ticking
+   * the first of a pair is always a step through an invalid state on the way
+   * to a valid one. Without it the admin's only signal is a raw API string on
+   * Save, which is especially unhelpful when the chain has no step of the
+   * other type at all and nothing on screen suggests adding one.
+   */
+  const promiseHalfConfigured =
+    steps.some((s) => s.is_promise_date) !== steps.some((s) => s.is_promise_amount)
+
   const addStep = () => {
     const firstTA = allTAs[0]
     if (!firstTA) return
@@ -112,6 +162,8 @@ export function ChainStepsEditor({ steps, onChange, disabled }: ChainStepsEditor
         contact_source: firstTA.field_type === 'contact' ? 'client' : null,
         contact_medium: firstTA.field_type === 'contact' ? 'phone' : undefined,
         show_closed_credits: false,
+        is_promise_date: false,
+        is_promise_amount: false,
       },
     ])
   }
@@ -209,6 +261,17 @@ export function ChainStepsEditor({ steps, onChange, disabled }: ChainStepsEditor
                         next.contact_source = null
                         next.contact_medium = undefined
                       }
+                      // Retype clears a promise flag the new type cannot carry
+                      // (KAN-1069). The checkbox only renders for date / amount,
+                      // so a flag left behind on a retyped step is invisible:
+                      // the server refuses it, the chain stops saving, and
+                      // there is no control on screen to untick. It would also
+                      // poison the one-per-chain check here, which counts
+                      // flags rather than visible checkboxes.
+                      next.is_promise_date =
+                        newTA?.field_type === 'date' ? step.is_promise_date : false
+                      next.is_promise_amount =
+                        newTA?.field_type === 'amount' ? step.is_promise_amount : false
                       update(index, next)
                     }}
                     disabled={disabled}
@@ -265,6 +328,32 @@ export function ChainStepsEditor({ steps, onChange, disabled }: ChainStepsEditor
                     {t('pages.taChains.steps.notInPast')}
                   </label>
                 )}
+                {ta?.field_type === 'date' && (
+                  <label className="flex items-center gap-1">
+                    <input
+                      type="checkbox"
+                      checked={step.is_promise_date ?? false}
+                      onChange={(e) =>
+                        togglePromiseFlag(index, 'is_promise_date', e.target.checked)
+                      }
+                      disabled={disabled}
+                    />
+                    {t('pages.taChains.steps.countAsPromiseDate', 'Count as promise date')}
+                  </label>
+                )}
+                {ta?.field_type === 'amount' && (
+                  <label className="flex items-center gap-1">
+                    <input
+                      type="checkbox"
+                      checked={step.is_promise_amount ?? false}
+                      onChange={(e) =>
+                        togglePromiseFlag(index, 'is_promise_amount', e.target.checked)
+                      }
+                      disabled={disabled}
+                    />
+                    {t('pages.taChains.steps.countAsPromiseAmount', 'Count as promise amount')}
+                  </label>
+                )}
               </div>
 
               {ta?.field_type === 'contact' && (
@@ -309,6 +398,15 @@ export function ChainStepsEditor({ steps, onChange, disabled }: ChainStepsEditor
           )
         })}
       </ol>
+
+      {promiseHalfConfigured && (
+        <p className="text-muted-foreground mt-2 text-xs">
+          {t(
+            'pages.taChains.steps.promiseNeedsBothHalves',
+            'A promise needs both a Date step and an Amount step counted. Flag the other one, or untick this.'
+          )}
+        </p>
+      )}
     </div>
   )
 }
