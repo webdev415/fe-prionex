@@ -1,0 +1,34 @@
+{
+  "general": {
+    "unknown": "Se ha producido un error desconocido",
+    "network": "Error de red. Compruebe su conexión.",
+    "server": "Error del servidor. Inténtelo de nuevo más tarde.",
+    "notFound": "Recurso no encontrado",
+    "forbidden": "Acceso denegado",
+    "unauthorized": "Inicie sesión para continuar"
+  },
+  "auth": {
+    "invalidCredentials": "Usuario o contraseña incorrectos",
+    "accountLocked": "Su cuenta ha sido bloqueada",
+    "sessionExpired": "Su sesión ha caducado. Inicie sesión de nuevo.",
+    "alreadyLoggedIn": "Ya ha iniciado sesión en otro dispositivo",
+    "tooManyAttempts": "Demasiados intentos de inicio de sesión. Inténtelo de nuevo más tarde."
+  },
+  "validation": {
+    "required": "Este campo es obligatorio",
+    "invalidEmail": "Introduzca una dirección de correo electrónico válida",
+    "invalidPhone": "Introduzca un número de teléfono válido",
+    "minLength": "Debe tener al menos {{min}} caracteres",
+    "maxLength": "No debe tener más de {{max}} caracteres"
+  },
+  "api": {
+    "timeout": "Se ha agotado el tiempo de espera de la solicitud. Inténtelo de nuevo.",
+    "rateLimit": "Demasiadas solicitudes. Espere un momento.",
+    "maintenance": "El sistema está en mantenimiento. Inténtelo de nuevo más tarde."
+  },
+  "permissions": {
+    "required": "No tiene permiso para hacer eso ({{permission}})",
+    "reassignClient": "No tiene permiso para reasignar clientes",
+    "bulkAssign": "No tiene permiso para asignar clientes de forma masiva"
+  }
+}
