@@ -5289,7 +5289,8 @@
         "optInUbki": "Re-enable UBKI sending",
         "submitUbki": "Send to UBKI",
         "selectClientsFirst": "Select at least one client before starting a bulk action",
-        "limitExceeded": "The maximum allowed selection for bulk actions is 10,000 clients. Please narrow your filter and try again."
+        "limitExceeded": "The maximum allowed selection for bulk actions is 10,000 clients. Please narrow your filter and try again.",
+        "title": "Bulk Actions"
       },
       "manageTags": "Manage Tags",
       "errorLoading": "Failed to load clients",
@@ -5617,7 +5618,8 @@
           "cancel": "Cancel",
           "close": "Close",
           "previousWriteUpLost": "The previous call was not written up — that interaction was not saved.",
-          "restore": "Return to the call"
+          "restore": "Return to the call",
+          "telephonyUnavailable": "Telephony is temporarily unavailable"
         },
         "callLogCard": {
           "message": "Message",
@@ -6011,7 +6013,9 @@
           "printReceipt": "Print Receipt",
           "downloadReceiptPDF": "Download Receipt PDF",
           "close": "Close",
-          "reassignEmployee": "Reassign employee"
+          "reassignEmployee": "Reassign employee",
+          "receiptNotConfigured": "Receipt download is not configured for this view yet.",
+          "receiptDownloadFailed": "Failed to download receipt. Please try again."
         },
         "reassignEmployee": {
           "title": "Reassign Employee",
@@ -6154,6 +6158,21 @@
           "selectAtLeastOneTag": "Please select at least one tag",
           "cancel": "Cancel",
           "processing": "Processing..."
+        },
+        "documentUpload": {
+          "fileSizeKb": "{{size}} KB"
+        },
+        "promiseAssign": {
+          "title": "Assign “{{tag}}” — {{client}}",
+          "description": "This tag needs a target payment date. When that date passes, a background rule automatically replaces “{{tag}}” with “Broken promise”.",
+          "dateLabel": "Promise date (date + time)",
+          "amountLabel": "Promise amount (optional)",
+          "amountPlaceholder": "e.g., 1500",
+          "dateInFuture": "The promise date must be in the future",
+          "amountPositive": "The amount must be a positive number",
+          "assigned": "“{{tag}}” assigned to {{client}}",
+          "assignFailed": "Failed to assign the tag",
+          "assign": "Assign"
         }
       },
       "activity": {
@@ -6853,7 +6872,13 @@
           "entryCount_one": "{{count}} entry",
           "entryCount_other": "{{count}} entries",
           "pagingLimit": "Showing the {{count}} most recent entries. Set a date range to reach older activity."
-        }
+        },
+        "workExperienceMonths": "{{count}} mo.",
+        "errorOccurred": "An error occurred",
+        "noTransitionPermission": "Your role doesn't allow this transition.",
+        "rrDraftAlreadyExists": "This credit already has a draft restructuring agreement.",
+        "documentsCount_one": "{{count}} doc.",
+        "documentsCount_other": "{{count}} docs."
       },
       "debtSummary": {
         "title": "Debt Summary",
@@ -6960,7 +6985,8 @@
           "copied": "Link copied to clipboard",
           "copyFailed": "Could not copy the link",
           "unavailable": "Link unavailable. Cancel the payment and create it again."
-        }
+        },
+        "failedToLoadPayments": "Failed to load payments"
       },
       "tasks": {
         "addTask": "Add Task",
@@ -11181,7 +11207,8 @@
       "confirmDeleteCategory": "Delete “{{name}}” and all its values? It disappears everywhere but stays readable in Tag History.",
       "confirmDeleteValueTitle": "Delete value?",
       "confirmDeleteValue": "Delete “{{name}}”? It is removed from all contacts but stays readable in Tag History.",
-      "valueDeleted": "Value deleted"
+      "valueDeleted": "Value deleted",
+      "noValues": "No values available"
     },
     "profileSettings": {
       "photo": {

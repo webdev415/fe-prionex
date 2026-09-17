@@ -1126,7 +1126,9 @@ export function ClientDetailPage() {
             position: profile.employment.position ?? '-',
             experience:
               profile.employment.work_experience_months != null
-                ? `${profile.employment.work_experience_months} міс.`
+                ? t('pages.clients.detail.workExperienceMonths', {
+                    count: profile.employment.work_experience_months,
+                  })
                 : '-',
             managerFullName: profile.employment.manager_full_name ?? '-',
             employmentType: profile.employment.employment_type
@@ -2078,12 +2080,14 @@ export function ClientDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-16">
         <Icons.Warning className="text-error-500 h-8 w-8" strokeWidth={2} />
-        <p className="text-foreground font-medium">Failed to load client</p>
+        <p className="text-foreground font-medium">
+          {t('pages.clients.debtSummary.failedToLoadClient')}
+        </p>
         <p className="text-muted-foreground text-sm">
-          {profileError?.message || 'An error occurred'}
+          {profileError?.message || t('pages.clients.detail.errorOccurred')}
         </p>
         <Button variant="outline" onClick={() => navigate('/dashboard/client')} className="mt-4">
-          Back to Clients
+          {t('pages.clients.detail.backToClients')}
         </Button>
       </div>
     )
@@ -5576,7 +5580,7 @@ export function ClientDetailPage() {
                   setChainExecutorInitialTemplateId(null)
                 }}
                 className="hover:bg-muted flex h-8 w-8 items-center justify-center rounded-md transition-colors"
-                aria-label="Close modal"
+                aria-label={t('components.modal.close', 'Close modal')}
               >
                 <Icons.Cancel01 size={20} className="text-foreground" strokeWidth={1.5} />
               </button>

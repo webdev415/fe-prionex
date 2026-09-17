@@ -1150,7 +1150,7 @@ export function PaymentHistoryPage() {
             <span className="hidden sm:inline">
               {t('pages.clients.paymentHistory.backToClient')}
             </span>
-            <span className="sm:hidden">Back</span>
+            <span className="sm:hidden">{t('common.back')}</span>
           </Button>
           <span className="text-foreground text-center text-lg leading-tight font-light tracking-[-0.48px] sm:text-2xl">
             {t('pages.clients.paymentHistory.title')}:{' '}

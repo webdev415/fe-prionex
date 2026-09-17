@@ -322,7 +322,11 @@ export function AddNoteModal({
               </div>
             ) : (
               <Select value={resolvedTypeId?.toString()} onValueChange={handleTypeChange}>
-                <SelectTrigger className="w-full" id="interaction-type" aria-label="Type">
+                <SelectTrigger
+                  className="w-full"
+                  id="interaction-type"
+                  aria-label={t('pages.clients.modals.editInteraction.aria.type')}
+                >
                   <SelectValue
                     placeholder={t(
                       'pages.clients.modals.addNote.selectTypeOfAction',
@@ -356,7 +360,11 @@ export function AddNoteModal({
                 </div>
               ) : (
                 <Select value={subtypeId?.toString()} onValueChange={handleChannelChange}>
-                  <SelectTrigger className="w-full" id="interaction-channel" aria-label="Channel">
+                  <SelectTrigger
+                    className="w-full"
+                    id="interaction-channel"
+                    aria-label={t('pages.clients.modals.editInteraction.aria.channel')}
+                  >
                     <SelectValue
                       placeholder={t(
                         'pages.clients.modals.addNote.selectChannel',
@@ -394,7 +402,7 @@ export function AddNoteModal({
                   <SelectTrigger
                     className="w-full"
                     id="interaction-contact-type"
-                    aria-label="Contact type"
+                    aria-label={t('pages.clients.modals.editInteraction.aria.contactType')}
                   >
                     <SelectValue
                       placeholder={t(
@@ -434,7 +442,11 @@ export function AddNoteModal({
                 </div>
               ) : (
                 <Select value={resultId?.toString()} onValueChange={handleResultChange}>
-                  <SelectTrigger className="w-full" id="interaction-result" aria-label="Result">
+                  <SelectTrigger
+                    className="w-full"
+                    id="interaction-result"
+                    aria-label={t('pages.clients.modals.editInteraction.aria.result')}
+                  >
                     <SelectValue
                       placeholder={t(
                         'pages.clients.modals.addNote.selectResult',
@@ -507,7 +519,7 @@ export function AddNoteModal({
                 <SelectTrigger
                   className="w-full"
                   id="interaction-credit-number"
-                  aria-label="Credit number"
+                  aria-label={t('pages.clients.modals.editInteraction.aria.creditNumber')}
                 >
                   <SelectValue
                     placeholder={t(

@@ -5297,7 +5297,8 @@
         "optInUbki": "Reactivar el envío a UBKI",
         "submitUbki": "Enviar a UBKI",
         "selectClientsFirst": "Seleccione al menos un cliente antes de iniciar una acción masiva",
-        "limitExceeded": "La selección máxima permitida para acciones masivas es de 10.000 clientes. Reduzca el filtro e inténtelo de nuevo."
+        "limitExceeded": "La selección máxima permitida para acciones masivas es de 10.000 clientes. Reduzca el filtro e inténtelo de nuevo.",
+        "title": "Acciones masivas"
       },
       "manageTags": "Gestionar etiquetas",
       "errorLoading": "Error al cargar los clientes",
@@ -5625,7 +5626,8 @@
           "cancel": "Cancelar",
           "close": "Cerrar",
           "previousWriteUpLost": "La llamada anterior no se registró: esa interacción no se guardó.",
-          "restore": "Volver a la llamada"
+          "restore": "Volver a la llamada",
+          "telephonyUnavailable": "La telefonía no está disponible temporalmente"
         },
         "callLogCard": {
           "message": "Mensaje",
@@ -6019,7 +6021,9 @@
           "printReceipt": "Imprimir recibo",
           "downloadReceiptPDF": "Descargar recibo en PDF",
           "close": "Cerrar",
-          "reassignEmployee": "Reasignar empleado"
+          "reassignEmployee": "Reasignar empleado",
+          "receiptNotConfigured": "La descarga del recibo aún no está configurada para esta vista.",
+          "receiptDownloadFailed": "No se ha podido descargar el recibo. Inténtelo de nuevo."
         },
         "reassignEmployee": {
           "title": "Reasignar empleado",
@@ -6162,6 +6166,21 @@
           "selectAtLeastOneTag": "Seleccione al menos una etiqueta",
           "cancel": "Cancelar",
           "processing": "Procesando…"
+        },
+        "documentUpload": {
+          "fileSizeKb": "{{size}} KB"
+        },
+        "promiseAssign": {
+          "title": "Asignar «{{tag}}» — {{client}}",
+          "description": "Esta etiqueta requiere una fecha objetivo de pago. Cuando llegue esa fecha, una regla en segundo plano sustituirá automáticamente «{{tag}}» por «Promesa incumplida».",
+          "dateLabel": "Fecha de la promesa (fecha + hora)",
+          "amountLabel": "Importe de la promesa (opcional)",
+          "amountPlaceholder": "p. ej., 1500",
+          "dateInFuture": "La fecha de la promesa debe ser futura",
+          "amountPositive": "El importe debe ser un número positivo",
+          "assigned": "«{{tag}}» asignada a {{client}}",
+          "assignFailed": "No se ha podido asignar la etiqueta",
+          "assign": "Asignar"
         }
       },
       "activity": {
@@ -6888,7 +6907,14 @@
           "F": "Femenino",
           "male": "Masculino",
           "female": "Femenino"
-        }
+        },
+        "workExperienceMonths": "{{count}} meses",
+        "errorOccurred": "Se ha producido un error",
+        "noTransitionPermission": "Su rol no permite esta transición.",
+        "rrDraftAlreadyExists": "Este crédito ya tiene un borrador de acuerdo de reestructuración.",
+        "documentsCount_one": "{{count}} doc.",
+        "documentsCount_many": "{{count}} docs.",
+        "documentsCount_other": "{{count}} docs."
       },
       "debtSummary": {
         "title": "Resumen de la deuda",
@@ -6995,7 +7021,8 @@
           "copied": "Enlace copiado al portapapeles",
           "copyFailed": "No se ha podido copiar el enlace",
           "unavailable": "Enlace no disponible. Cancele el pago y créelo de nuevo."
-        }
+        },
+        "failedToLoadPayments": "No se han podido cargar los pagos"
       },
       "tasks": {
         "addTask": "Añadir tarea",
@@ -11219,7 +11246,8 @@
       "confirmDeleteCategory": "¿Eliminar «{{name}}» y todos sus valores? Desaparecerá de todas partes, pero seguirá siendo visible en el historial de etiquetas.",
       "confirmDeleteValueTitle": "¿Eliminar valor?",
       "confirmDeleteValue": "¿Eliminar «{{name}}»? Se eliminará de todos los contactos, pero seguirá siendo visible en el historial de etiquetas.",
-      "valueDeleted": "Valor eliminado"
+      "valueDeleted": "Valor eliminado",
+      "noValues": "No hay valores disponibles"
     },
     "profileSettings": {
       "photo": {

@@ -652,7 +652,7 @@ export function CallDialogModal({
         <button
           onClick={() => handleMinimize()}
           className="hover:bg-muted absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-md transition-colors sm:top-4 sm:right-12"
-          aria-label="Minimize modal"
+          aria-label={t('components.modal.minimize', 'Minimize modal')}
         >
           <Icons.Remove02 size={20} className="text-foreground" strokeWidth={1.5} />
         </button>
@@ -665,7 +665,7 @@ export function CallDialogModal({
                 role="alert"
                 className="border-warning-500/40 bg-warning-50 text-warning-500 rounded-lg border px-3 py-2 text-sm font-medium"
               >
-                Telephony is temporarily unavailable
+                {t('pages.clients.modals.callDialog.telephonyUnavailable')}
               </div>
             )}
 
@@ -825,7 +825,7 @@ export function CallDialogModal({
       <button
         onClick={() => handleMinimize()}
         className="hover:bg-muted absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-md transition-colors sm:top-4 sm:right-12"
-        aria-label="Minimize modal"
+        aria-label={t('components.modal.minimize', 'Minimize modal')}
       >
         <Icons.Remove02 size={20} className="text-foreground" strokeWidth={1.5} />
       </button>
@@ -835,7 +835,7 @@ export function CallDialogModal({
             role="alert"
             className="border-warning-500/40 bg-warning-50 text-warning-500 rounded-lg border px-3 py-2 text-sm font-medium"
           >
-            Telephony is temporarily unavailable
+            {t('pages.clients.modals.callDialog.telephonyUnavailable')}
           </div>
         )}
 

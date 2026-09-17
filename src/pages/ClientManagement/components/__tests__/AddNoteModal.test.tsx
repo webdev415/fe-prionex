@@ -174,11 +174,19 @@ describe('AddNoteModal', () => {
     it('should show Type and Channel by default (Outgoing pre-selected)', async () => {
       render(<AddNoteModal {...defaultProps} />, { wrapper: createWrapper() })
       await waitFor(() => {
-        expect(screen.getByRole('combobox', { name: 'Type' })).toHaveTextContent('Outgoing')
+        expect(
+          screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.type' })
+        ).toHaveTextContent('Outgoing')
       })
-      expect(screen.getByRole('combobox', { name: 'Channel' })).toBeInTheDocument()
-      expect(screen.queryByLabelText('Contact type')).not.toBeInTheDocument()
-      expect(screen.queryByLabelText('Result')).not.toBeInTheDocument()
+      expect(
+        screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.channel' })
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByLabelText('pages.clients.modals.editInteraction.aria.contactType')
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByLabelText('pages.clients.modals.editInteraction.aria.result')
+      ).not.toBeInTheDocument()
     })
   })
 
@@ -187,10 +195,14 @@ describe('AddNoteModal', () => {
       render(<AddNoteModal {...defaultProps} />, { wrapper: createWrapper() })
 
       await waitFor(() => {
-        expect(screen.getByRole('combobox', { name: 'Type' })).toHaveTextContent('Outgoing')
+        expect(
+          screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.type' })
+        ).toHaveTextContent('Outgoing')
       })
 
-      fireEvent.click(screen.getByRole('combobox', { name: 'Type' }))
+      fireEvent.click(
+        screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.type' })
+      )
 
       expect(await screen.findByRole('option', { name: 'Incoming' })).toBeInTheDocument()
       expect(screen.getByRole('option', { name: 'Outgoing' })).toBeInTheDocument()
@@ -212,18 +224,26 @@ describe('AddNoteModal', () => {
     it('should show channel dropdown after type is selected', async () => {
       render(<AddNoteModal {...defaultProps} />, { wrapper: createWrapper() })
 
-      fireEvent.click(screen.getByRole('combobox', { name: 'Type' }))
+      fireEvent.click(
+        screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.type' })
+      )
       fireEvent.click(await screen.findByRole('option', { name: 'Incoming' }))
 
       await waitFor(() => {
-        expect(screen.getByRole('combobox', { name: 'Channel' })).toBeInTheDocument()
+        expect(
+          screen.getByRole('combobox', {
+            name: 'pages.clients.modals.editInteraction.aria.channel',
+          })
+        ).toBeInTheDocument()
       })
     })
 
     it('should NOT show channel dropdown for Searching type', async () => {
       render(<AddNoteModal {...defaultProps} />, { wrapper: createWrapper() })
 
-      fireEvent.click(screen.getByRole('combobox', { name: 'Type' }))
+      fireEvent.click(
+        screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.type' })
+      )
       fireEvent.click(await screen.findByRole('option', { name: 'Searching' }))
 
       await waitFor(() => {
@@ -234,10 +254,14 @@ describe('AddNoteModal', () => {
     it('should display channel options', async () => {
       render(<AddNoteModal {...defaultProps} />, { wrapper: createWrapper() })
 
-      fireEvent.click(screen.getByRole('combobox', { name: 'Type' }))
+      fireEvent.click(
+        screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.type' })
+      )
       fireEvent.click(await screen.findByRole('option', { name: 'Outgoing' }))
 
-      fireEvent.click(screen.getByRole('combobox', { name: 'Channel' }))
+      fireEvent.click(
+        screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.channel' })
+      )
 
       await waitFor(() => {
         expect(screen.getByText('Call')).toBeInTheDocument()
@@ -251,18 +275,32 @@ describe('AddNoteModal', () => {
       render(<AddNoteModal {...defaultProps} />, { wrapper: createWrapper() })
 
       // Select Outgoing → Call
-      fireEvent.click(screen.getByRole('combobox', { name: 'Type' }))
+      fireEvent.click(
+        screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.type' })
+      )
       fireEvent.click(await screen.findByRole('option', { name: 'Outgoing' }))
-      fireEvent.click(screen.getByRole('combobox', { name: 'Channel' }))
+      fireEvent.click(
+        screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.channel' })
+      )
       fireEvent.click(await screen.findByRole('option', { name: 'Call' }))
 
       // Change type — channel should disappear and re-appear empty
-      fireEvent.click(screen.getByRole('combobox', { name: 'Type' }))
+      fireEvent.click(
+        screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.type' })
+      )
       fireEvent.click(await screen.findByRole('option', { name: 'Incoming' }))
 
       await waitFor(() => {
-        expect(screen.getByRole('combobox', { name: 'Channel' })).toBeInTheDocument()
-        expect(screen.queryByRole('combobox', { name: 'Contact type' })).not.toBeInTheDocument()
+        expect(
+          screen.getByRole('combobox', {
+            name: 'pages.clients.modals.editInteraction.aria.channel',
+          })
+        ).toBeInTheDocument()
+        expect(
+          screen.queryByRole('combobox', {
+            name: 'pages.clients.modals.editInteraction.aria.contactType',
+          })
+        ).not.toBeInTheDocument()
       })
     })
   })
@@ -271,53 +309,83 @@ describe('AddNoteModal', () => {
     it('should show contact type dropdown after Call channel is selected', async () => {
       render(<AddNoteModal {...defaultProps} />, { wrapper: createWrapper() })
 
-      fireEvent.click(screen.getByRole('combobox', { name: 'Type' }))
+      fireEvent.click(
+        screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.type' })
+      )
       fireEvent.click(await screen.findByRole('option', { name: 'Outgoing' }))
-      fireEvent.click(screen.getByRole('combobox', { name: 'Channel' }))
+      fireEvent.click(
+        screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.channel' })
+      )
       fireEvent.click(await screen.findByRole('option', { name: 'Call' }))
 
       await waitFor(() => {
-        expect(screen.getByLabelText('Contact type')).toBeInTheDocument()
+        expect(
+          screen.getByLabelText('pages.clients.modals.editInteraction.aria.contactType')
+        ).toBeInTheDocument()
       })
     })
 
     it('should NOT show contact type dropdown for Mail channel (auto-sets Relative)', async () => {
       render(<AddNoteModal {...defaultProps} />, { wrapper: createWrapper() })
 
-      fireEvent.click(screen.getByRole('combobox', { name: 'Type' }))
+      fireEvent.click(
+        screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.type' })
+      )
       fireEvent.click(await screen.findByRole('option', { name: 'Outgoing' }))
-      fireEvent.click(screen.getByRole('combobox', { name: 'Channel' }))
+      fireEvent.click(
+        screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.channel' })
+      )
       fireEvent.click(await screen.findByRole('option', { name: 'Mail' }))
 
       await waitFor(() => {
-        expect(screen.queryByLabelText('Contact type')).not.toBeInTheDocument()
+        expect(
+          screen.queryByLabelText('pages.clients.modals.editInteraction.aria.contactType')
+        ).not.toBeInTheDocument()
         // Result should appear immediately after Mail (Relative is auto-set)
-        expect(screen.getByLabelText('Result')).toBeInTheDocument()
+        expect(
+          screen.getByLabelText('pages.clients.modals.editInteraction.aria.result')
+        ).toBeInTheDocument()
       })
     })
 
     it('should NOT show contact type dropdown for Chat channel', async () => {
       render(<AddNoteModal {...defaultProps} />, { wrapper: createWrapper() })
 
-      fireEvent.click(screen.getByRole('combobox', { name: 'Type' }))
+      fireEvent.click(
+        screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.type' })
+      )
       fireEvent.click(await screen.findByRole('option', { name: 'Outgoing' }))
-      fireEvent.click(screen.getByRole('combobox', { name: 'Channel' }))
+      fireEvent.click(
+        screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.channel' })
+      )
       fireEvent.click(await screen.findByRole('option', { name: 'Chat' }))
 
       await waitFor(() => {
-        expect(screen.queryByLabelText('Contact type')).not.toBeInTheDocument()
-        expect(screen.getByLabelText('Result')).toBeInTheDocument()
+        expect(
+          screen.queryByLabelText('pages.clients.modals.editInteraction.aria.contactType')
+        ).not.toBeInTheDocument()
+        expect(
+          screen.getByLabelText('pages.clients.modals.editInteraction.aria.result')
+        ).toBeInTheDocument()
       })
     })
 
     it('should display Client, 3rd Person, Relative options', async () => {
       render(<AddNoteModal {...defaultProps} />, { wrapper: createWrapper() })
 
-      fireEvent.click(screen.getByRole('combobox', { name: 'Type' }))
+      fireEvent.click(
+        screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.type' })
+      )
       fireEvent.click(await screen.findByRole('option', { name: 'Outgoing' }))
-      fireEvent.click(screen.getByRole('combobox', { name: 'Channel' }))
+      fireEvent.click(
+        screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.channel' })
+      )
       fireEvent.click(await screen.findByRole('option', { name: 'Messenger' }))
-      fireEvent.click(screen.getByRole('combobox', { name: 'Contact type' }))
+      fireEvent.click(
+        screen.getByRole('combobox', {
+          name: 'pages.clients.modals.editInteraction.aria.contactType',
+        })
+      )
 
       await waitFor(() => {
         expect(screen.getByText('Client')).toBeInTheDocument()
@@ -331,15 +399,25 @@ describe('AddNoteModal', () => {
     it('should show result dropdown after all upstream steps are complete (Call flow)', async () => {
       render(<AddNoteModal {...defaultProps} />, { wrapper: createWrapper() })
 
-      fireEvent.click(screen.getByRole('combobox', { name: 'Type' }))
+      fireEvent.click(
+        screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.type' })
+      )
       fireEvent.click(await screen.findByRole('option', { name: 'Outgoing' }))
-      fireEvent.click(screen.getByRole('combobox', { name: 'Channel' }))
+      fireEvent.click(
+        screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.channel' })
+      )
       fireEvent.click(await screen.findByRole('option', { name: 'Call' }))
-      fireEvent.click(screen.getByRole('combobox', { name: 'Contact type' }))
+      fireEvent.click(
+        screen.getByRole('combobox', {
+          name: 'pages.clients.modals.editInteraction.aria.contactType',
+        })
+      )
       fireEvent.click(await screen.findByRole('option', { name: 'Client' }))
 
       await waitFor(() => {
-        expect(screen.getByLabelText('Result')).toBeInTheDocument()
+        expect(
+          screen.getByLabelText('pages.clients.modals.editInteraction.aria.result')
+        ).toBeInTheDocument()
       })
     })
 
@@ -351,14 +429,20 @@ describe('AddNoteModal', () => {
 
       render(<AddNoteModal {...defaultProps} />, { wrapper: createWrapper() })
 
-      fireEvent.click(screen.getByRole('combobox', { name: 'Type' }))
+      fireEvent.click(
+        screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.type' })
+      )
       fireEvent.click(await screen.findByRole('option', { name: 'Searching' }))
 
       await waitFor(() => {
-        expect(screen.getByLabelText('Result')).toBeInTheDocument()
+        expect(
+          screen.getByLabelText('pages.clients.modals.editInteraction.aria.result')
+        ).toBeInTheDocument()
       })
 
-      fireEvent.click(screen.getByRole('combobox', { name: 'Result' }))
+      fireEvent.click(
+        screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.result' })
+      )
       await waitFor(() => {
         expect(screen.getByText('No numbers')).toBeInTheDocument()
         expect(screen.getByText('Numbers found')).toBeInTheDocument()
@@ -368,14 +452,24 @@ describe('AddNoteModal', () => {
     it('should show result options from filtered API', async () => {
       render(<AddNoteModal {...defaultProps} />, { wrapper: createWrapper() })
 
-      fireEvent.click(screen.getByRole('combobox', { name: 'Type' }))
+      fireEvent.click(
+        screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.type' })
+      )
       fireEvent.click(await screen.findByRole('option', { name: 'Outgoing' }))
-      fireEvent.click(screen.getByRole('combobox', { name: 'Channel' }))
+      fireEvent.click(
+        screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.channel' })
+      )
       fireEvent.click(await screen.findByRole('option', { name: 'Call' }))
-      fireEvent.click(screen.getByRole('combobox', { name: 'Contact type' }))
+      fireEvent.click(
+        screen.getByRole('combobox', {
+          name: 'pages.clients.modals.editInteraction.aria.contactType',
+        })
+      )
       fireEvent.click(await screen.findByRole('option', { name: 'Client' }))
 
-      fireEvent.click(screen.getByRole('combobox', { name: 'Result' }))
+      fireEvent.click(
+        screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.result' })
+      )
       await waitFor(() => {
         expect(screen.getByText('Agreement')).toBeInTheDocument()
         expect(screen.getByText('Refusal to pay')).toBeInTheDocument()
@@ -387,11 +481,19 @@ describe('AddNoteModal', () => {
     async function selectFullPath() {
       render(<AddNoteModal {...defaultProps} />, { wrapper: createWrapper() })
 
-      fireEvent.click(screen.getByRole('combobox', { name: 'Type' }))
+      fireEvent.click(
+        screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.type' })
+      )
       fireEvent.click(await screen.findByRole('option', { name: 'Outgoing' }))
-      fireEvent.click(screen.getByRole('combobox', { name: 'Channel' }))
+      fireEvent.click(
+        screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.channel' })
+      )
       fireEvent.click(await screen.findByRole('option', { name: 'Call' }))
-      fireEvent.click(screen.getByRole('combobox', { name: 'Contact type' }))
+      fireEvent.click(
+        screen.getByRole('combobox', {
+          name: 'pages.clients.modals.editInteraction.aria.contactType',
+        })
+      )
       fireEvent.click(await screen.findByRole('option', { name: 'Client' }))
     }
 
@@ -404,7 +506,9 @@ describe('AddNoteModal', () => {
     it('should show promise fields when result requires them', async () => {
       await selectFullPath()
 
-      fireEvent.click(screen.getByRole('combobox', { name: 'Result' }))
+      fireEvent.click(
+        screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.result' })
+      )
       fireEvent.click(await screen.findByRole('option', { name: 'Agreement' }))
 
       await waitFor(() => {
@@ -416,7 +520,9 @@ describe('AddNoteModal', () => {
     it('should not show promise fields when result does not require them', async () => {
       await selectFullPath()
 
-      fireEvent.click(screen.getByRole('combobox', { name: 'Result' }))
+      fireEvent.click(
+        screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.result' })
+      )
       fireEvent.click(await screen.findByRole('option', { name: 'Refusal to pay' }))
 
       await waitFor(() => {
@@ -447,7 +553,9 @@ describe('AddNoteModal', () => {
 
       await selectFullPath()
 
-      fireEvent.click(screen.getByRole('combobox', { name: 'Result' }))
+      fireEvent.click(
+        screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.result' })
+      )
       fireEvent.click(await screen.findByRole('option', { name: 'Payment reminder' }))
 
       await waitFor(() => {
@@ -473,7 +581,9 @@ describe('AddNoteModal', () => {
     it('should not submit when channel is not selected (non-Searching type)', async () => {
       render(<AddNoteModal {...defaultProps} />, { wrapper: createWrapper() })
 
-      fireEvent.click(screen.getByRole('combobox', { name: 'Type' }))
+      fireEvent.click(
+        screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.type' })
+      )
       fireEvent.click(await screen.findByRole('option', { name: 'Outgoing' }))
 
       fireEvent.click(screen.getByRole('button', { name: /save/i }))
@@ -483,9 +593,13 @@ describe('AddNoteModal', () => {
     it('should not submit when contact type is not selected (Call/Messenger channel)', async () => {
       render(<AddNoteModal {...defaultProps} />, { wrapper: createWrapper() })
 
-      fireEvent.click(screen.getByRole('combobox', { name: 'Type' }))
+      fireEvent.click(
+        screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.type' })
+      )
       fireEvent.click(await screen.findByRole('option', { name: 'Outgoing' }))
-      fireEvent.click(screen.getByRole('combobox', { name: 'Channel' }))
+      fireEvent.click(
+        screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.channel' })
+      )
       fireEvent.click(await screen.findByRole('option', { name: 'Call' }))
 
       fireEvent.click(screen.getByRole('button', { name: /save/i }))
@@ -497,11 +611,19 @@ describe('AddNoteModal', () => {
     it('should submit with type_id, subtype_id, contact_type_id (Call flow)', async () => {
       render(<AddNoteModal {...defaultProps} />, { wrapper: createWrapper() })
 
-      fireEvent.click(screen.getByRole('combobox', { name: 'Type' }))
+      fireEvent.click(
+        screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.type' })
+      )
       fireEvent.click(await screen.findByRole('option', { name: 'Outgoing' }))
-      fireEvent.click(screen.getByRole('combobox', { name: 'Channel' }))
+      fireEvent.click(
+        screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.channel' })
+      )
       fireEvent.click(await screen.findByRole('option', { name: 'Call' }))
-      fireEvent.click(screen.getByRole('combobox', { name: 'Contact type' }))
+      fireEvent.click(
+        screen.getByRole('combobox', {
+          name: 'pages.clients.modals.editInteraction.aria.contactType',
+        })
+      )
       fireEvent.click(await screen.findByRole('option', { name: 'Client' }))
 
       fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Test note' } })
@@ -523,9 +645,13 @@ describe('AddNoteModal', () => {
     it('should submit with auto-set Relative contact_type_id for Mail channel', async () => {
       render(<AddNoteModal {...defaultProps} />, { wrapper: createWrapper() })
 
-      fireEvent.click(screen.getByRole('combobox', { name: 'Type' }))
+      fireEvent.click(
+        screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.type' })
+      )
       fireEvent.click(await screen.findByRole('option', { name: 'Outgoing' }))
-      fireEvent.click(screen.getByRole('combobox', { name: 'Channel' }))
+      fireEvent.click(
+        screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.channel' })
+      )
       fireEvent.click(await screen.findByRole('option', { name: 'Mail' }))
 
       fireEvent.click(screen.getByRole('button', { name: /save/i }))
@@ -549,7 +675,9 @@ describe('AddNoteModal', () => {
 
       render(<AddNoteModal {...defaultProps} />, { wrapper: createWrapper() })
 
-      fireEvent.click(screen.getByRole('combobox', { name: 'Type' }))
+      fireEvent.click(
+        screen.getByRole('combobox', { name: 'pages.clients.modals.editInteraction.aria.type' })
+      )
       fireEvent.click(await screen.findByRole('option', { name: 'Searching' }))
 
       fireEvent.click(screen.getByRole('button', { name: /save/i }))

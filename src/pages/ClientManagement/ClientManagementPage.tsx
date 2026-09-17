@@ -2205,8 +2205,10 @@ export function ClientManagementPage() {
                         className="text-primary-foreground sm:h-[18px] sm:w-[18px]"
                         strokeWidth={1.5}
                       />
-                      <span className="hidden font-medium sm:inline">Bulk Actions</span>
-                      <span className="font-medium sm:hidden">Actions</span>
+                      <span className="hidden font-medium sm:inline">
+                        {t('pages.clients.bulkActions.title')}
+                      </span>
+                      <span className="font-medium sm:hidden">{t('common.actions')}</span>
                       <Icons.ArrowDown
                         size={14}
                         className="text-primary-foreground sm:h-4 sm:w-4"

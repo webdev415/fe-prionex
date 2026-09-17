@@ -194,7 +194,7 @@ describe('CallDialogModal', () => {
     it('should call minimize handler when minimize button is clicked', () => {
       render(<CallDialogModal {...defaultProps} />, { wrapper: createWrapper() })
 
-      const minimizeButton = screen.getByLabelText('Minimize modal')
+      const minimizeButton = screen.getByLabelText('components.modal.minimize')
       fireEvent.click(minimizeButton)
 
       expect(mockSetMinimizedCall).toHaveBeenCalled()
