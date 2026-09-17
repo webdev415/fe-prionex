@@ -121,10 +121,11 @@ describe('CallingWindowModal', () => {
     expect(payload).toMatchObject({ enabled: false, start: null, end: null, timezone: null })
   })
 
-  it('warns when a window is enabled with no holiday calendar country', async () => {
+  it('says a missing holiday country means holidays are not observed, not that calling stops', async () => {
+    // The first version told the admin every call would be refused. That was
+    // the behaviour then; it is not the behaviour now, and a warning that
+    // overstates the consequence is worse than none.
     renderModal({ ...SPAIN, holiday_country: null })
-    expect(
-      await screen.findByText(/pages\.projects\.callingWindow\.noCountry|no calendar generated/i)
-    ).toBeInTheDocument()
+    expect(await screen.findByText('pages.projects.callingWindow.noCountry')).toBeInTheDocument()
   })
 })

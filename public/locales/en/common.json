@@ -4319,7 +4319,7 @@
           "same": "Start and end cannot be equal",
           "timezone": "A fallback timezone is required"
         },
-        "noCountry": "Without a holiday calendar, calls are refused on every day of a year that has no calendar generated.",
+        "noCountry": "No holiday calendar: public holidays are not observed for this project. Hours and allowed days still apply.",
         "saveFailed": "Could not save the calling window",
         "saved": "Calling window saved",
         "start": "Opens",
@@ -4335,7 +4335,7 @@
       },
       "holidayCalendar": {
         "year": "Year",
-        "noCountry": "Choose a holiday calendar country on the Window tab first.",
+        "noCountry": "No country is set, so public holidays are not observed. Choose one on the Window tab to enforce them.",
         "loadFailed": "Could not load the calendar. Try again before generating, so an existing one is not overwritten.",
         "notGenerated": "No calendar exists for this year. Until one does, every call in that year is refused.",
         "generate": "Generate {{year}}",
