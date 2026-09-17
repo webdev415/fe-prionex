@@ -11713,6 +11713,279 @@
         "showEarlier": "Mostrar secciones anteriores",
         "showLater": "Mostrar secciones siguientes"
       }
+    },
+    "scoringV3": {
+      "buckets": {
+        "CRIT": "Llamar primero",
+        "HIGH": "Alta",
+        "AVG": "Media",
+        "LOW": "Baja",
+        "EXIT": "No llamar"
+      },
+      "bucketMeaning": {
+        "CRIT": "Llamar hoy",
+        "HIGH": "Llamar esta semana",
+        "AVG": "Ritmo normal",
+        "LOW": "Solo con capacidad disponible",
+        "EXIT": "No llamar"
+      },
+      "exitReasons": {
+        "deceased": "El cliente ha fallecido",
+        "fraud": "Marcado como fraude",
+        "lawsuit": "El caso está en los tribunales",
+        "paid_off": "La deuda está saldada",
+        "closed": "La deuda está cerrada",
+        "unknown": "Excluido por una regla de cumplimiento",
+        "other": "Excluido: {{reason}}"
+      },
+      "notScored": {
+        "label": "Sin puntuación",
+        "title": "Las deudas de este cliente están fuera del alcance del modelo de puntuación, por lo que aún no tienen prioridad.",
+        "outsideRange": "fuera del alcance del modelo"
+      },
+      "cards": {
+        "notToBeCalled": "no llamar",
+        "expected": "≈ {{amount}} UAH esperados"
+      },
+      "panel": {
+        "title": "Prioridad v3",
+        "notScored": "Sin puntuación: las deudas de este cliente están fuera del alcance del modelo de puntuación, por lo que v3 no les asigna prioridad.",
+        "debt": "Deuda {{id}}",
+        "payChance": "{{value}}% de probabilidad de pago",
+        "why": "Motivo:"
+      },
+      "runNow": "Ejecutar ahora",
+      "starting": "Iniciando…",
+      "saving": "Guardando…",
+      "month": "Mes",
+      "titlePrefix": "Puntuación v3 —",
+      "monitoring": {
+        "titleEmphasis": "informe de ejecución en sombra",
+        "subtitle": "Revise estas cifras antes de activar v3 para los operadores.",
+        "selectMonth": "Seleccione un mes",
+        "statusLive": "Activo: los operadores ven las prioridades de v3 para esta marca.",
+        "statusShadow": "Ejecución en sombra: las puntuaciones se calculan y se guardan, pero los operadores AÚN NO las ven.",
+        "hideFromOperators": "Ocultar a los operadores",
+        "enableForOperators": "Activar para los operadores",
+        "confirmEnableTitle": "¿Mostrar las prioridades de v3 a los operadores?",
+        "confirmHideTitle": "¿Ocultar las prioridades de v3 a los operadores?",
+        "confirmEnableMessage": "Todos los operadores de esta marca verán los grupos de v3 en lugar de la prioridad anterior, y la Lista de trabajo prioritaria estará disponible. Hágalo solo después de que el cliente haya aprobado el informe anterior. Puede deshacerlo aquí en cualquier momento.",
+        "confirmHideMessage": "Los operadores vuelven de inmediato a la prioridad anterior. La puntuación sigue ejecutándose en segundo plano, por lo que no se pierden datos.",
+        "loadError": "No se pudo cargar el informe. ¿Está en funcionamiento el servicio de puntuación?",
+        "nothingScored": "Todavía no se ha puntuado nada para esta marca. El proceso de v3 se ejecuta el día 1 de cada mes; cuando se haya ejecutado, los resultados aparecerán aquí.",
+        "neverScored": "{{month}} nunca se puntuó. Meses con datos: {{months}}.",
+        "noDebtsScored": "Aún no hay deudas puntuadas para {{month}}. El proceso se ejecuta el día 1 de cada mes o puede iniciarse manualmente.",
+        "stats": {
+          "debtsScored": "Deudas puntuadas",
+          "worthCalling": "Vale la pena llamar (AVG o superior)",
+          "targetHint": "objetivo ≈ {{target}}: lo fija tau",
+          "excluded": "Excluidas (EXIT)",
+          "excludedHint": "fallecido / cerrada / pagada / judicial",
+          "avgPayChance": "Probabilidad media de pago",
+          "top10Hint": "10% superior ≈ {{value}}"
+        },
+        "offTargetBefore": "La proporción AVG está fuera del objetivo. tau es el parámetro que la ajusta:",
+        "offTargetLink": "ajústelo en la configuración de puntuación v3",
+        "offTargetAfter": ". El cambio se aplica en la siguiente ejecución de puntuación.",
+        "split": {
+          "title": "Cómo se repartieron las deudas",
+          "subtitle": "Ordenado por urgencia. Compare la forma mes a mes: si un grupo concentra casi todo, hay un problema.",
+          "tooltipDebts": "Deudas: {{count}} ({{share}})",
+          "count": "Cantidad"
+        },
+        "table": {
+          "bucket": "Grupo",
+          "meaning": "Significado",
+          "debts": "Deudas",
+          "share": "Proporción",
+          "group": "Decil",
+          "predicted": "Previsto",
+          "actuallyPaid": "Pagado realmente",
+          "rule": "Regla"
+        },
+        "calibration": {
+          "title": "¿El modelo predice realmente el pago?",
+          "subtitle": "Las deudas se dividen en diez grupos según la probabilidad de pago prevista. Las barras de la derecha deben ser más altas que las de la izquierda: eso significa que el modelo ordena correctamente a quienes pagan.",
+          "notAvailable": "Aún no disponible. Es necesario que el mes puntuado haya terminado para comparar los pagos reales con la previsión.",
+          "notMeasurable": "No medible para este mes: no se registraron pagos en estas deudas, por lo que no hay nada con qué comparar la previsión. Esto no dice nada del modelo; elija un mes con actividad de pagos.",
+          "rankingHolds": "La clasificación se cumple: las deudas con mayor probabilidad prevista de pago pagaron más a menudo.",
+          "rankingFails": "La clasificación NO se cumple: esto bloquea la aprobación. Investigue antes del cambio.",
+          "averageGap": "Diferencia media entre lo previsto y lo real: {{value}}."
+        },
+        "rules": {
+          "title": "Por qué cada deuda obtuvo su prioridad",
+          "subtitle": "Qué regla decidió. En una mezcla sana, la mayoría de las deudas las decide el modelo (ml_low / ml_avg) y una minoría, los eventos."
+        },
+        "drift": {
+          "title": "Cambios desde el mes pasado",
+          "subtitle": "Las grandes variaciones sin un motivo de negocio son una señal de alerta.",
+          "needsTwoMonths": "Se necesitan dos meses puntuados. Estará disponible cuando {{previous}} y {{current}} tengan datos.",
+          "earlierMonth": "un mes anterior"
+        },
+        "loading": "Cargando informe de ejecución en sombra…"
+      },
+      "settings": {
+        "titleEmphasis": "configuración",
+        "introBefore": "Estas reglas deciden a quién llaman primero sus operadores. Los cambios se aplican a la",
+        "introNextRun": "siguiente ejecución de puntuación",
+        "introMiddle": "(no se vuelve a calcular nada ya puntuado) y cada cambio se guarda en el",
+        "introLink": "historial de configuración",
+        "defaultSource": "Esta marca nunca ha guardado sus propios valores: todo lo que aparece abajo es la configuración estándar.",
+        "queue": {
+          "title": "¿Cuántas deudas deben trabajar los operadores?",
+          "description": "Cada deuda recibe una probabilidad prevista de pago para este mes. Quienes tienen más probabilidad de pagar entran en la cola de trabajo; el resto queda para cuando haya capacidad disponible. Una cola más grande llega a más pagadores, pero necesita más llamadas para encontrar a cada uno: elija el tamaño que su equipo puede asumir.",
+          "noGuidance": "Aún no hay orientación sobre el tamaño de la cola.",
+          "showCutoff": "Mostrar el valor de corte exacto",
+          "hideCutoff": "Ocultar el valor de corte exacto",
+          "cutoffLabel": "Corte (tau)",
+          "cutoffHint": "Una deuda se trabaja cuando su probabilidad de pago alcanza este valor.",
+          "standardSetup": "Configuración estándar: {{value}}.",
+          "queueSize": "Tamaño de la cola",
+          "debtsToWork": "Deudas a trabajar",
+          "payersReached": "Pagadores alcanzados",
+          "callsThatPay": "Llamadas que cobran",
+          "ofDebts": "{{share}} de las deudas",
+          "current": "actual",
+          "payersReachedExplain": "= cuántas de las personas que pagarán este mes entran en la cola.",
+          "callsThatPayExplain": "= con cuánta más frecuencia una llamada encuentra a alguien que paga que si llamara al azar. Una cola más grande llega a más pagadores, pero cada llamada vale menos.",
+          "measured": "Calculado a partir de las puntuaciones de esta marca, así que son las cifras que obtendría realmente.",
+          "generic": "Valores de referencia genéricos: esta marca aún no se ha puntuado, por lo que se desconoce el número de deudas."
+        },
+        "changed": "modificado",
+        "sections": {
+          "promise": {
+            "title": "Cuando alguien promete pagar",
+            "blurb": "Una promesa merece atención en torno al día para el que se hizo, y conviene insistir durante un tiempo después de que se incumpla."
+          },
+          "contact": {
+            "title": "Cuando alguien nos contacta",
+            "blurb": "Un deudor que se pone en contacto es la mejor oportunidad posible. Devuélvale la llamada mientras sigue reciente."
+          },
+          "partial": {
+            "title": "Cuando alguien paga poco a poco",
+            "blurb": "Quien paga a plazos tiene un ritmo. No le moleste mientras lo mantenga; insista cuando lo incumpla."
+          },
+          "limits": {
+            "title": "Límites y redes de seguridad",
+            "blurb": "Una regla evita que contactemos en exceso a las personas. Las otras dos evitan que abandonemos a deudores que sí se implican."
+          }
+        },
+        "fields": {
+          "ptp_active_window_days": {
+            "label": "La promesa está vigente durante",
+            "unit": "± días",
+            "hint": "¿Prometieron pagar el día 10? Del 7 al 13, llámelos hoy."
+          },
+          "ptp_active_max_age_days": {
+            "label": "Olvidar una promesa después de",
+            "unit": "días",
+            "hint": "Una promesa antigua deja de contar como motivo para llamar."
+          },
+          "ptp_broken_min_days": {
+            "label": "Empezar a insistir con una promesa incumplida",
+            "unit": "días después",
+            "hint": "Se establece automáticamente: el día siguiente al cierre del periodo de la promesa."
+          },
+          "ptp_broken_max_days": {
+            "label": "Dejar de insistir",
+            "unit": "días después",
+            "hint": "Pasado este plazo, una promesa incumplida queda obsoleta y deja de influir en la prioridad."
+          },
+          "inbound_crit_max_days": {
+            "label": "Devolver la llamada hoy si se pusieron en contacto en los últimos",
+            "unit": "días",
+            "hint": "La señal más fuerte del sistema."
+          },
+          "inbound_high_max_days": {
+            "label": "Devolver la llamada esta semana si fue en los últimos",
+            "unit": "días",
+            "hint": "Sigue siendo reciente, pero ya no es urgente."
+          },
+          "partial_avg_max_days": {
+            "label": "Va al día si pagó en los últimos",
+            "unit": "días",
+            "hint": "No insista: se comporta como se esperaba."
+          },
+          "partial_high_max_days": {
+            "label": "El pago lleva un retraso de hasta",
+            "unit": "días",
+            "hint": "Haga seguimiento esta semana. Pasado este plazo, trátelo como urgente."
+          },
+          "partial_pay_expire_days": {
+            "label": "Dejar de insistir con quien dejó de pagar después de",
+            "unit": "días",
+            "hint": "Si lo deja vacío, alguien que pagó una vez hace años seguirá siendo urgente para siempre: eso llevó al 40% de la cartera al grupo superior.",
+            "nullLabel": "nunca"
+          },
+          "weekly_contact_cap": {
+            "label": "No contactar nunca más de",
+            "unit": "veces / semana",
+            "hint": "Por encima de este límite, la deuda baja en la cola. Protección de cumplimiento normativo."
+          },
+          "floor_min_real_payments": {
+            "label": "Seguir trabajando con quien haya pagado al menos",
+            "unit": "veces",
+            "hint": "Un pagador comprobado nunca cae al final de la cola."
+          },
+          "floor_min_reached_rate": {
+            "label": "…o con quien nos responde al menos",
+            "unit": "de las veces",
+            "hint": "0,5 significa que contesta la mitad de las veces. Con las personas localizables se sigue trabajando."
+          }
+        },
+        "outcomes": {
+          "title": "Durante cuánto tiempo cuenta el resultado de una llamada",
+          "description": "Después de una llamada, lo que registra el operador determina la prioridad de la deuda durante un tiempo. «Se niega a pagar» la mantiene baja durante un mes; «pago posible» la mantiene alta durante una semana. Deje una fila en blanco para conservar el valor estándar.",
+          "callOutcome": "Resultado de la llamada",
+          "prioritySets": "Prioridad que establece",
+          "standard": "Estándar",
+          "yourValue": "Su valor",
+          "days_one": "{{count}} día",
+          "days_other": "{{count}} días",
+          "days_many": "{{count}} días"
+        },
+        "save": {
+          "unsaved": "Tiene cambios sin guardar.",
+          "allSaved": "Todo está guardado.",
+          "reasonPlaceholder": "¿Por qué hace este cambio? (se guarda en el historial)",
+          "discard": "Descartar"
+        },
+        "loading": "Cargando configuración de puntuación v3…"
+      },
+      "workList": {
+        "subtitleDebts": "Deudas ordenadas por el modelo v3: llame primero a las de arriba de la lista. Vista previa de la ejecución en sombra.",
+        "subtitleClients": "Clientes ordenados por el modelo v3: llame primero a los de arriba de la lista. Vista previa de la ejecución en sombra.",
+        "byDebt": "Por deuda",
+        "byClient": "Por cliente",
+        "priority": "Prioridad",
+        "debtId": "ID de deuda",
+        "searchPlaceholder": "Buscar…",
+        "clearDebtId": "Borrar ID de deuda",
+        "minPayChance": "Probabilidad mín. de pago",
+        "filters": {
+          "ALL": "Todas las activas",
+          "EXIT": "No llamar"
+        },
+        "totalDebts_one": "{{formatted}} deuda",
+        "totalDebts_other": "{{formatted}} deudas",
+        "totalDebts_many": "{{formatted}} deudas",
+        "totalClients_one": "{{formatted}} cliente",
+        "totalClients_other": "{{formatted}} clientes",
+        "totalClients_many": "{{formatted}} clientes",
+        "loadError": "No se pudo cargar la lista de trabajo. Es posible que el servicio de puntuación no esté disponible.",
+        "emptyClients": "Aún no hay clientes puntuados para este mes.",
+        "emptyDebtId": "No hay ninguna deuda con ID {{id}} en este mes.",
+        "emptyFiltered": "Ninguna deuda puntuada coincide con estos filtros.",
+        "priorityValue": "Valor de prioridad",
+        "payChance": "Probabilidad de pago",
+        "why": "Motivo",
+        "client": "Cliente",
+        "clientLink": "Cliente {{id}}",
+        "prev": "Anterior",
+        "pageOf": "Página {{page}} de {{total}}",
+        "loadingWorkList": "Cargando lista de trabajo…",
+        "loadingPriorityWorkList": "Cargando lista de trabajo prioritaria…"
+      }
     }
   },
   "contactTypes": {
@@ -12622,6 +12895,15 @@
       "operatorPerformanceExportFailed": "No se ha podido exportar el rendimiento de los operadores",
       "clientStatisticsExportFailed": "No se han podido exportar las estadísticas de clientes",
       "communicationStatisticsExportFailed": "No se han podido exportar las estadísticas de comunicación"
+    },
+    "scoring": {
+      "liveEnabled": "v3 ya está activa para los operadores de esta marca.",
+      "hiddenAgain": "v3 vuelve a estar oculta para los operadores. La puntuación sigue ejecutándose en segundo plano.",
+      "settingChangeFailed": "No se pudo cambiar la configuración. ¿Tiene permiso?",
+      "started": "Puntuación iniciada: actualice en un momento para ver los cambios.",
+      "startFailed": "No se pudo iniciar la puntuación.",
+      "settingsSaved": "Guardado. La siguiente ejecución de puntuación usará estos valores.",
+      "settingsSaveFailed": "No se pudo guardar. Revise los valores e inténtelo de nuevo."
     }
   }
 }

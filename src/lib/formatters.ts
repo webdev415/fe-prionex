@@ -13,6 +13,14 @@ export function dateSeparator(): string {
   return isSpanishUi() ? '/' : '-'
 }
 
+export function uiLocale(): string | undefined {
+  return isSpanishUi() ? 'es-ES' : undefined
+}
+
+export function uiDecimal(text: string): string {
+  return isSpanishUi() ? text.replace('.', ',') : text
+}
+
 /**
  * Helper: format a Date object to DD-MM-YYYY
  */

@@ -18,7 +18,9 @@
  *     of only being told how many there are.
  */
 
+import { useTranslation } from 'react-i18next'
 import { V3BucketBadge } from '@/pages/OperatorWorkList/components/V3BucketBadge'
+import { uiLocale } from '@/lib/formatters'
 import type { V3Bucket, V3ClientBucketCount } from '@/features/scoring/api/types'
 
 const ORDER: V3Bucket[] = ['CRIT', 'HIGH', 'AVG', 'LOW', 'EXIT']
@@ -58,6 +60,7 @@ export function V3PriorityCards({
   selected?: string[]
   onToggle?: (bucket: string) => void
 }) {
+  const { t } = useTranslation('common')
   const byBucket = new Map(buckets.map((b) => [b.bucket, b]))
   const notScored = counts?.NONE ?? null
 
@@ -85,12 +88,14 @@ export function V3PriorityCards({
             >
               <V3BucketBadge bucket={bucket} className="self-start" />
               <span className="text-foreground text-xl font-semibold tabular-nums">
-                {(counts?.[bucket] ?? row?.clients ?? 0).toLocaleString()}
+                {(counts?.[bucket] ?? row?.clients ?? 0).toLocaleString(uiLocale())}
               </span>
               <span className="text-muted-foreground text-xs">
                 {bucket === 'EXIT'
-                  ? 'not to be called'
-                  : `≈ ${compactMoney(row?.priority_dollar ?? 0)} UAH expected`}
+                  ? t('pages.scoringV3.cards.notToBeCalled')
+                  : t('pages.scoringV3.cards.expected', {
+                      amount: compactMoney(row?.priority_dollar ?? 0),
+                    })}
               </span>
             </div>
           )
@@ -112,12 +117,14 @@ export function V3PriorityCards({
             } ${selected.includes('NONE') ? 'ring-primary-400/50 shadow-sm ring-2' : ''}`}
           >
             <span className="border-border bg-muted text-muted-foreground inline-flex h-[25px] min-w-[90px] items-center justify-center self-start rounded-[16px] border px-3 py-1 text-xs font-medium">
-              Not scored
+              {t('pages.scoringV3.notScored.label')}
             </span>
             <span className="text-foreground text-xl font-semibold tabular-nums">
-              {notScored.toLocaleString()}
+              {notScored.toLocaleString(uiLocale())}
             </span>
-            <span className="text-muted-foreground text-xs">outside the model&apos;s range</span>
+            <span className="text-muted-foreground text-xs">
+              {t('pages.scoringV3.notScored.outsideRange')}
+            </span>
           </div>
         )}
       </div>
