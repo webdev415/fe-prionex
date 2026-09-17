@@ -167,7 +167,7 @@ export function ConfigListEditor({
           <Input
             value={newValue}
             onChange={(e) => setNewValue(e.target.value)}
-            placeholder="value (API code)"
+            placeholder={t('pages.tags.settings.valuePlaceholder', 'value (API code)')}
             className="h-8 flex-1 text-xs"
             onKeyDown={(e) => handleKeyDown(e, handleAdd)}
           />
@@ -175,7 +175,7 @@ export function ConfigListEditor({
             <Input
               value={newLabel}
               onChange={(e) => setNewLabel(e.target.value)}
-              placeholder="label"
+              placeholder={t('pages.tags.settings.labelPlaceholder', 'label')}
               className="h-8 flex-1 text-xs"
               onKeyDown={(e) => handleKeyDown(e, handleAdd)}
             />

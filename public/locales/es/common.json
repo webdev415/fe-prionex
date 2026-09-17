@@ -1919,7 +1919,9 @@
           "title": "Historial",
           "letterCount": "Cartas",
           "messageCount": "Mensajes en el hilo"
-        }
+        },
+        "openContext": "Contexto",
+        "close": "Cerrar contexto"
       },
       "senderHistory": {
         "label": "Historial de la dirección",
@@ -4757,7 +4759,8 @@
             "contractPurchaseDate": "Fecha de compra del contrato",
             "contractPurchaseDatePlaceholder": "Seleccione la fecha de compra del contrato",
             "reportingDate": "Fecha de informe",
-            "reportingDatePlaceholder": "Seleccione la fecha de informe"
+            "reportingDatePlaceholder": "Seleccione la fecha de informe",
+            "previousLenderRequiredHint": "Este cedente no tiene razón social registrada, por lo que «Quién vendió» es obligatorio."
           }
         },
         "vendorSchema": "Esquema del proveedor",
@@ -4806,7 +4809,15 @@
           "fromZip": "Desde el paquete ZIP",
           "ready": "Listo",
           "selectSchema": "Seleccione un esquema de proveedor en el paso 1 antes de iniciar la importación.",
-          "zipLoaded": "Paquete ZIP cargado: {{name}} ({{size}}). Todos los conjuntos de datos obligatorios están cubiertos."
+          "zipLoaded": "Paquete ZIP cargado: {{name}} ({{size}}). Todos los conjuntos de datos obligatorios están cubiertos.",
+          "datasets": {
+            "users": "Usuarios",
+            "credits": "Créditos",
+            "payments": "Pagos",
+            "write_offs": "Condonaciones",
+            "prolongations": "Prórrogas",
+            "documents": "Paquete ZIP"
+          }
         }
       },
       "history": {
@@ -4864,7 +4875,9 @@
           "uploadedBy": "Subido por",
           "allUsers": "Todos los usuarios",
           "importType": "Tipo",
-          "allTypes": "Todos los tipos"
+          "allTypes": "Todos los tipos",
+          "filtersAria": "Filtros",
+          "searchAria": "Buscar en el historial de importaciones"
         }
       },
       "details": {
@@ -5317,7 +5330,8 @@
           }
         }
       },
-      "cancelOwnerOnly": "Solo el usuario que inició esta tarea puede cancelarla"
+      "cancelOwnerOnly": "Solo el usuario que inició esta tarea puede cancelarla",
+      "uploadedByAt": "{{user}}, {{time}}"
     },
     "clients": {
       "title": "Gestión de clientes",
@@ -7355,7 +7369,9 @@
         "phone": "teléfono: {{step}}",
         "phoneUnknown": "teléfono: paso n.º {{id}}",
         "generic": "{{key}}: {{value}}",
-        "stepRef": "Paso {{order}} — {{name}}"
+        "stepRef": "Paso {{order}} — {{name}}",
+        "email": "Correo electrónico: {{step}}",
+        "emailUnknown": "Paso de correo electrónico n.º {{id}}"
       },
       "debtStatus": {
         "active": "Activo",
@@ -7443,7 +7459,8 @@
       },
       "preview": "Vista previa",
       "saved": "Guardado",
-      "maxDaysReached": "Máximo 10 entradas"
+      "maxDaysReached": "Máximo 10 entradas",
+      "templatePlaceholder": "{client_name} tiene un pago de RR programado de {amount} con vencimiento el {due_date}"
     },
     "documentGeneration": {
       "title": "Generación de documentos",
@@ -8107,7 +8124,8 @@
           "relatedTag": "Si está activada, esta etiqueta aparece en los clientes vinculados que comparten un número de teléfono.",
           "mutexGroup": "Las etiquetas del mismo grupo son mutuamente excluyentes. Al asignar una se eliminan las demás.",
           "sortOrder": "Un número más bajo indica una posición más alta en las listas de etiquetas. El valor predeterminado es 100.",
-          "departments": "Déjelo vacío para todos los departamentos. De lo contrario, solo los operadores de los departamentos seleccionados verán esta etiqueta en el selector."
+          "departments": "Déjelo vacío para todos los departamentos. De lo contrario, solo los operadores de los departamentos seleccionados verán esta etiqueta en el selector.",
+          "skipWeekends": "Si está activado, la cuenta atrás del TTL se detiene el sábado y el domingo. Por ejemplo, un TTL de 48 horas asignado el viernes a las 18:00 vencerá el martes a las 18:00, no el domingo."
         },
         "notificationTemplatePlaceholder": "p. ej., Etiqueta '{tag_name}' asignada al cliente {client_id}",
         "codePlaceholder": "p. ej., high_risk",
@@ -8134,7 +8152,8 @@
         "ttlHoursAlt": "o duración en horas",
         "departmentsHint": "Sin selección = visible para todos los departamentos (igual que ahora).",
         "targetActionDateNote": "La caducidad se establece a partir de un campo de fecha de la acción objetivo que dispara esta etiqueta. Las etiquetas de este tipo no pueden asignarse manualmente por los operadores, solo mediante efectos de cadena.",
-        "triggerEventPlaceholder": "p. ej., client.payment_missed"
+        "triggerEventPlaceholder": "p. ej., client.payment_missed",
+        "skipWeekends": "Omitir fines de semana"
       },
       "expiryTypes": {
         "permanent": "Permanente",
@@ -8292,7 +8311,8 @@
           "nameFormat": "Solo letras minúsculas, números y guiones bajos"
         },
         "minTagsWarning": "Seleccione al menos 2 etiquetas para formar un grupo excluyente",
-        "mutexHint": "Solo una etiqueta de este grupo puede estar activa en un cliente a la vez"
+        "mutexHint": "Solo una etiqueta de este grupo puede estar activa en un cliente a la vez",
+        "descriptionExample": "p. ej., Tipo de acuerdo con el cliente"
       },
       "rules": {
         "name": "Nombre",
@@ -8533,7 +8553,13 @@
         "executions": {
           "loadFailed": "No se han podido cargar las ejecuciones",
           "title": "Ejecuciones de la regla",
-          "empty": "Aún no hay ejecuciones; la regla no se ha activado desde que se añadió el registro de ejecuciones."
+          "empty": "Aún no hay ejecuciones; la regla no se ha activado desde que se añadió el registro de ejecuciones.",
+          "titleNamed": "Ejecuciones de «{{name}}»",
+          "count_one": "{{count}} ejecución (más recientes primero)",
+          "count_many": "{{count}} ejecuciones (más recientes primero)",
+          "count_other": "{{count}} ejecuciones (más recientes primero)",
+          "matched": "coincide",
+          "action": "acción:"
         },
         "viewExecutions": "Ver ejecuciones",
         "valueSelectPlaceholder": "Seleccionar…"
@@ -8634,7 +8660,9 @@
         "templateCodeExists": "Ya existe una plantilla con este código",
         "save": "Guardar",
         "unsavedChanges": "Cambios sin guardar",
-        "usingDefaults": "Usando valores predeterminados"
+        "usingDefaults": "Usando valores predeterminados",
+        "valuePlaceholder": "valor (código de API)",
+        "labelPlaceholder": "etiqueta"
       },
       "deleteRule": "Eliminar regla",
       "deleteRuleConfirmation": "¿Seguro que desea eliminar la regla «{{name}}»?",
@@ -8876,7 +8904,8 @@
         "telecom": "Telecomunicaciones",
         "utilities": "Suministros",
         "other": "Otro"
-      }
+      },
+      "clearSearch": "Borrar búsqueda"
     },
     "profile": {
       "title": "Configuración del perfil",
@@ -9519,7 +9548,8 @@
         "averagePayment": "Pago medio",
         "topCollector": "Mejor recaudador",
         "largestPayment": "Pago más alto",
-        "noData": "No hay datos disponibles"
+        "noData": "No hay datos disponibles",
+        "noPaymentMethods": "No hay datos de métodos de pago"
       }
     },
     "scoringConfiguration": {
@@ -9628,7 +9658,8 @@
           "reason": "Motivo",
           "changes": "Cambios"
         }
-      }
+      },
+      "thresholdsSummary": "Crítica ≥ {{critical}}, Alta ≥ {{high}}, Media ≥ {{medium}}"
     },
     "repaymentConfiguration": {
       "title": "Configuración de pagos y condonaciones",
@@ -10024,7 +10055,11 @@
         "title": "Borradores eliminados"
       },
       "noReadPermission": "Este rol puede gestionar borradores, pero no consultar la lista, que requiere un permiso de envío o inicio de mensajería. Los borradores eliminados siguen visibles más abajo y pueden restaurarse.",
-      "createdOutOfSight": "Borrador guardado. No aparecerá en la lista de abajo, que requiere un permiso de envío o inicio de mensajería."
+      "createdOutOfSight": "Borrador guardado. No aparecerá en la lista de abajo, que requiere un permiso de envío o inicio de mensajería.",
+      "columns": {
+        "name": "Nombre",
+        "channel": "Canal"
+      }
     },
     "messagingIntegrations": {
       "description": "Configure las credenciales del proveedor, active los canales por servicio y verifique el estado de la conexión.",
@@ -11287,7 +11322,8 @@
       "confirmDeleteValueTitle": "¿Eliminar valor?",
       "confirmDeleteValue": "¿Eliminar «{{name}}»? Se eliminará de todos los contactos, pero seguirá siendo visible en el historial de etiquetas.",
       "valueDeleted": "Valor eliminado",
-      "noValues": "No hay valores disponibles"
+      "noValues": "No hay valores disponibles",
+      "valuesOf": "{{category}} — valores"
     },
     "profileSettings": {
       "photo": {

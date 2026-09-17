@@ -48,6 +48,7 @@ function formatTimestamp(value: string): string {
 }
 
 function ExecutionRow({ entry }: { entry: RuleExecutionEntry }) {
+  const { t } = useTranslation('common')
   const status = entry.processing_status as ProcessingStatus
   const badge = STATUS_BADGE_COLORS[status] || 'bg-muted text-foreground'
   return (
@@ -60,7 +61,7 @@ function ExecutionRow({ entry }: { entry: RuleExecutionEntry }) {
             </span>
             {entry.matched && (
               <span className="bg-information-50 text-information-700 rounded px-1.5 py-0.5 text-[10px] font-medium">
-                matched
+                {t('pages.tags.rules.executions.matched', 'matched')}
               </span>
             )}
             {entry.source_event_type && (
@@ -70,7 +71,9 @@ function ExecutionRow({ entry }: { entry: RuleExecutionEntry }) {
             )}
           </div>
           {entry.action_taken && (
-            <div className="text-foreground text-xs">action: {entry.action_taken}</div>
+            <div className="text-foreground text-xs">
+              {t('pages.tags.rules.executions.action', 'action:')} {entry.action_taken}
+            </div>
           )}
           {entry.error_message && (
             <div className="text-error-600 text-xs">⚠️ {entry.error_message}</div>
@@ -105,7 +108,9 @@ export function RuleExecutionsModal({ open, ruleId, ruleName, onClose }: RuleExe
         }
         title={
           ruleName
-            ? t('pages.tags.rules.executions.titleNamed', `Executions of "${ruleName}"`)
+            ? t('pages.tags.rules.executions.titleNamed', `Executions of "${ruleName}"`, {
+                name: ruleName,
+              })
             : t('pages.tags.rules.executions.title', 'Rule executions')
         }
       />

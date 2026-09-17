@@ -278,7 +278,9 @@ export function PaymentsCollectedModal({
                     )
                   )
                 ) : (
-                  <span className="text-muted-foreground text-sm">No payment methods data</span>
+                  <span className="text-muted-foreground text-sm">
+                    {t('pages.reports.paymentsModal.noPaymentMethods')}
+                  </span>
                 )}
               </div>
             </div>

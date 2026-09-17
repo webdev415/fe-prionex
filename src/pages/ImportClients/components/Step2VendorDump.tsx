@@ -323,7 +323,11 @@ export function Step2VendorDump({
     {
       key: 'name',
       header: t('pages.imports.step2.vendor.dataset'),
-      render: (item) => <span className="text-foreground text-xs font-medium">{item.name}</span>,
+      render: (item) => (
+        <span className="text-foreground text-xs font-medium">
+          {t(`pages.imports.step2.vendor.datasets.${item.type}`, item.name)}
+        </span>
+      ),
     },
     {
       key: 'status',

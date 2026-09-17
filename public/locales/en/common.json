@@ -1912,7 +1912,9 @@
           "title": "History",
           "letterCount": "Letters",
           "messageCount": "Messages in thread"
-        }
+        },
+        "openContext": "Context",
+        "close": "Close context"
       },
       "senderHistory": {
         "label": "Address history",
@@ -4749,7 +4751,8 @@
             "contractPurchaseDate": "Contract purchase date",
             "contractPurchaseDatePlaceholder": "Select contract purchase date",
             "reportingDate": "Reporting Date",
-            "reportingDatePlaceholder": "Select reporting date"
+            "reportingDatePlaceholder": "Select reporting date",
+            "previousLenderRequiredHint": "This seller has no legal name on file, so \"Who sold\" is required."
           }
         },
         "vendorSchema": "Vendor schema",
@@ -4798,7 +4801,15 @@
           "fromZip": "From ZIP bundle",
           "ready": "Ready",
           "selectSchema": "Select a vendor schema in step 1 before starting the import.",
-          "zipLoaded": "ZIP bundle loaded — {{name}} ({{size}}). All required datasets are covered."
+          "zipLoaded": "ZIP bundle loaded — {{name}} ({{size}}). All required datasets are covered.",
+          "datasets": {
+            "users": "Users",
+            "credits": "Credits",
+            "payments": "Payments",
+            "write_offs": "Write-offs",
+            "prolongations": "Prolongations",
+            "documents": "ZIP bundle"
+          }
         }
       },
       "history": {
@@ -4856,7 +4867,9 @@
           "uploadedBy": "Uploaded by",
           "allUsers": "All users",
           "importType": "Type",
-          "allTypes": "All Types"
+          "allTypes": "All Types",
+          "filtersAria": "Filters",
+          "searchAria": "Search import history"
         }
       },
       "details": {
@@ -5309,7 +5322,8 @@
           }
         }
       },
-      "cancelOwnerOnly": "Only the user who started this job can cancel it"
+      "cancelOwnerOnly": "Only the user who started this job can cancel it",
+      "uploadedByAt": "{{user}} at {{time}}"
     },
     "clients": {
       "title": "Client Management",
@@ -7319,7 +7333,9 @@
         "phone": "phone: {{step}}",
         "phoneUnknown": "phone: step #{{id}}",
         "generic": "{{key}}: {{value}}",
-        "stepRef": "Step {{order}} — {{name}}"
+        "stepRef": "Step {{order}} — {{name}}",
+        "email": "Email: {{step}}",
+        "emailUnknown": "Email step #{{id}}"
       },
       "debtStatus": {
         "active": "Active",
@@ -7407,7 +7423,8 @@
       },
       "preview": "Preview",
       "saved": "Saved",
-      "maxDaysReached": "Max 10 entries"
+      "maxDaysReached": "Max 10 entries",
+      "templatePlaceholder": "{client_name} has a scheduled RR payment of {amount} due on {due_date}"
     },
     "documentGeneration": {
       "title": "Document Generation",
@@ -8071,7 +8088,8 @@
           "relatedTag": "When enabled, this tag appears on linked clients who share a phone number.",
           "mutexGroup": "Tags in the same group are mutually exclusive. Assigning one removes others.",
           "sortOrder": "Lower number = higher position in tag lists. Default is 100.",
-          "departments": "Leave empty for all departments. Otherwise only operators in selected departments see this tag in the picker."
+          "departments": "Leave empty for all departments. Otherwise only operators in selected departments see this tag in the picker.",
+          "skipWeekends": "When enabled, the TTL countdown pauses on Saturday and Sunday. For example, a 48-hour TTL assigned on Friday at 18:00 will expire on Tuesday at 18:00, not Sunday."
         },
         "notificationTemplatePlaceholder": "e.g. Tag '{tag_name}' assigned to client {client_id}",
         "codePlaceholder": "e.g. high_risk",
@@ -8098,7 +8116,8 @@
         "ttlHoursAlt": "or duration in hours",
         "departmentsHint": "No selection = visible to every department (same as today).",
         "targetActionDateNote": "Expiry is set from a date field in the Target Action that triggers this tag. Tags of this type cannot be assigned manually by operators — only via chain effects.",
-        "triggerEventPlaceholder": "e.g. client.payment_missed"
+        "triggerEventPlaceholder": "e.g. client.payment_missed",
+        "skipWeekends": "Skip weekends"
       },
       "expiryTypes": {
         "permanent": "Permanent",
@@ -8256,7 +8275,8 @@
           "nameFormat": "Only lowercase letters, numbers, underscores"
         },
         "minTagsWarning": "Select at least 2 tags to form a mutex group",
-        "mutexHint": "Only one tag from this group can be active on a client at the same time"
+        "mutexHint": "Only one tag from this group can be active on a client at the same time",
+        "descriptionExample": "e.g. Client agreement type"
       },
       "rules": {
         "name": "Name",
@@ -8497,7 +8517,12 @@
         "executions": {
           "loadFailed": "Failed to load executions",
           "title": "Rule executions",
-          "empty": "No executions yet — the rule has not fired since execution log was added."
+          "empty": "No executions yet — the rule has not fired since execution log was added.",
+          "titleNamed": "Executions of \"{{name}}\"",
+          "count_one": "{{count}} run (newest first)",
+          "count_other": "{{count}} runs (newest first)",
+          "matched": "matched",
+          "action": "action:"
         },
         "viewExecutions": "View executions",
         "valueSelectPlaceholder": "Select..."
@@ -8598,7 +8623,9 @@
         "templateCodeExists": "A template with this code already exists",
         "save": "Save",
         "unsavedChanges": "Unsaved changes",
-        "usingDefaults": "Using defaults"
+        "usingDefaults": "Using defaults",
+        "valuePlaceholder": "value (API code)",
+        "labelPlaceholder": "label"
       },
       "deleteRule": "Delete Rule",
       "deleteRuleConfirmation": "Are you sure you want to delete the rule \"{{name}}\"?",
@@ -8840,7 +8867,8 @@
         "telecom": "Telecom",
         "utilities": "Utilities",
         "other": "Other"
-      }
+      },
+      "clearSearch": "Clear search"
     },
     "profile": {
       "title": "Profile Settings",
@@ -9482,7 +9510,8 @@
         "averagePayment": "Average Payment",
         "topCollector": "Top Collector",
         "largestPayment": "Largest Payment",
-        "noData": "No data available"
+        "noData": "No data available",
+        "noPaymentMethods": "No payment methods data"
       }
     },
     "scoringConfiguration": {
@@ -9591,7 +9620,8 @@
           "reason": "Reason",
           "changes": "Changes"
         }
-      }
+      },
+      "thresholdsSummary": "Critical ≥ {{critical}}, High ≥ {{high}}, Medium ≥ {{medium}}"
     },
     "repaymentConfiguration": {
       "title": "Repayment & Write-off Configuration",
@@ -9985,7 +10015,11 @@
         "title": "Deleted drafts"
       },
       "noReadPermission": "This role can manage drafts but not browse the list, which needs a messaging send or launch permission. Deleted drafts stay visible below and can still be restored.",
-      "createdOutOfSight": "Draft saved. It will not appear in the list below, which needs a messaging send or launch permission."
+      "createdOutOfSight": "Draft saved. It will not appear in the list below, which needs a messaging send or launch permission.",
+      "columns": {
+        "name": "Name",
+        "channel": "Channel"
+      }
     },
     "messagingIntegrations": {
       "description": "Configure provider credentials, enable channels per service, and verify connection health.",
@@ -11248,7 +11282,8 @@
       "confirmDeleteValueTitle": "Delete value?",
       "confirmDeleteValue": "Delete “{{name}}”? It is removed from all contacts but stays readable in Tag History.",
       "valueDeleted": "Value deleted",
-      "noValues": "No values available"
+      "noValues": "No values available",
+      "valuesOf": "{{category}} — values"
     },
     "profileSettings": {
       "photo": {
