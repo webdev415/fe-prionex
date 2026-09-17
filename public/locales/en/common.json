@@ -3229,10 +3229,7 @@
         "trainer": "Trainer",
         "type": "Type",
         "typePlaceholder": "Optional label",
-        "unlimited": "Unlimited",
-        "description": "Description",
-        "descriptionPlaceholder": "What the session covers — participants see this.",
-        "joinMeeting": "Join the meeting"
+        "unlimited": "Unlimited"
       },
       "leaks": {
         "chips": {
@@ -4299,6 +4296,64 @@
           "hotlinePhoneFormat": "Phone number may contain digits and spaces only",
           "emailFormat": "Enter a valid email address"
         }
+      },
+      "callingWindow": {
+        "country": "Holiday calendar",
+        "countryPlaceholder": "Select a country",
+        "days": {
+          "1": "Mon",
+          "2": "Tue",
+          "3": "Wed",
+          "4": "Thu",
+          "5": "Fri",
+          "6": "Sat",
+          "7": "Sun"
+        },
+        "enable": "Enforce a calling window",
+        "enableHint": "Calls outside the window are refused by the system. Operators cannot override it.",
+        "end": "Closes",
+        "endHint": "Exclusive — set it short of the legal limit so no call is still running at the cut-off.",
+        "errors": {
+          "start": "Start must be HH:MM",
+          "end": "End must be HH:MM",
+          "same": "Start and end cannot be equal",
+          "timezone": "A fallback timezone is required"
+        },
+        "noCountry": "Without a holiday calendar, calls are refused on every day of a year that has no calendar generated.",
+        "saveFailed": "Could not save the calling window",
+        "saved": "Calling window saved",
+        "start": "Opens",
+        "subdivision": "Region (optional)",
+        "subdivisionPlaceholder": "National only",
+        "tabHolidays": "Holidays",
+        "tabWindow": "Window",
+        "timezone": "Fallback timezone",
+        "timezoneHint": "Used when the debtor's own timezone cannot be determined.",
+        "title": "Calling window",
+        "weekdays": "Allowed days",
+        "weekdaysHint": "Select none to allow every day."
+      },
+      "holidayCalendar": {
+        "year": "Year",
+        "noCountry": "Choose a holiday calendar country on the Window tab first.",
+        "loadFailed": "Could not load the calendar. Try again before generating, so an existing one is not overwritten.",
+        "notGenerated": "No calendar exists for this year. Until one does, every call in that year is refused.",
+        "generate": "Generate {{year}}",
+        "generateFailed": "Could not generate the calendar",
+        "computedEmpty": "This country has no public holidays recorded for that year. Check before relying on it.",
+        "emptyCalendar": "This calendar has no dates. That is a valid answer for some countries, but confirm it is right — calls will be allowed on every working day of the year.",
+        "reviewed": "Reviewed",
+        "unreviewed": "Not yet reviewed",
+        "added": "added",
+        "addDate": "Add a date",
+        "addName": "Name (optional)",
+        "addFailed": "Could not add that date",
+        "removeFailed": "Could not remove that date",
+        "regenerate": "Recompute from the calendar",
+        "regenerateHint": "Recomputing keeps dates you added and clears the reviewed mark.",
+        "confirm": "Mark as reviewed",
+        "confirmed": "Calendar marked as reviewed",
+        "confirmFailed": "Could not mark the calendar as reviewed"
       }
     },
     "roles": {
@@ -11538,6 +11593,15 @@
       "tabs": {
         "showEarlier": "Show earlier sections",
         "showLater": "Show later sections"
+      }
+    },
+    "calls": {
+      "callingWindow": {
+        "blocked": "Calling is not allowed right now",
+        "holiday": "Today is a public holiday",
+        "outsideHours": "Outside the allowed calling hours",
+        "unavailable": "Calling hours cannot be checked right now",
+        "weekend": "Calls are not allowed today"
       }
     }
   },

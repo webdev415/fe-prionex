@@ -25,6 +25,7 @@ import type { IncomingModalLoan } from '@/stores/callStore'
 import { useCallDetails, useHangupCall, useRejectCall } from '@/features/calls/hooks/useCall'
 import type { IncomingCallClient } from '@/features/calls/types'
 import { useCallStateUpdates } from '@/features/calls/hooks/useCallStateUpdates'
+import { useCallingWindow } from '@/features/calls/hooks/useCallingWindow'
 import { useSetLastCallResultFromCall } from '@/features/contactTags/hooks/useContactTags'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { formatMoneyUAHTwoDecimals } from '@/lib/formatters'
@@ -288,9 +289,16 @@ export function CallDialogModal({
     }
   }, [open])
 
-  const canPlaceCall = !manualPhoneEnabled
+  // The project's calling window (KAN-1107). Server-decided; the button only
+  // reflects it. Origination is refused server-side either way — this stops
+  // the operator making a call they will be told off for, rather than being
+  // the control itself.
+  const callingWindow = useCallingWindow()
+
+  const hasDialTarget = !manualPhoneEnabled
     ? String(phoneNumber).trim().length > 0
     : isValidManualDialPhone(manualPhoneDigits)
+  const canPlaceCall = hasDialTarget && callingWindow.allowed
 
   const handleManualPhoneChange = (raw: string) => {
     setManualPhoneDigits(raw.replace(/\D/g, '').slice(0, 12))
@@ -1027,7 +1035,9 @@ export function CallDialogModal({
                     ? t('status.loading')
                     : isCallCooldown
                       ? `Try again in ${cooldownSecondsRemaining || 1}s`
-                      : t('pages.clients.modals.callDialog.callNow')}
+                      : !callingWindow.allowed
+                        ? callingWindow.message
+                        : t('pages.clients.modals.callDialog.callNow')}
                 </Button>
               )}
             </ModalFooter>
