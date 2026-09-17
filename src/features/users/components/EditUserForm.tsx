@@ -82,7 +82,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
       last_name: user?.last_name || '',
       middle_name: user?.middle_name || '',
       phone: user?.phone || '',
-      language: (user?.language as 'en' | 'uk') || 'uk',
+      language: (user?.language as 'en' | 'uk' | 'es') || 'uk',
       timezone: user?.timezone || 'Europe/Kyiv',
       asterisk_extension: user?.asterisk_extension || '',
       dialer_extension: user?.dialer_extension || '',
@@ -167,7 +167,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
         last_name: user.last_name || '',
         middle_name: user.middle_name || '',
         phone: user.phone || '',
-        language: (user.language as 'en' | 'uk') || 'uk',
+        language: (user.language as 'en' | 'uk' | 'es') || 'uk',
         timezone: user.timezone || 'Europe/Kyiv',
         asterisk_extension: user.asterisk_extension || '',
         dialer_extension: user.dialer_extension || '',
@@ -368,8 +368,9 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="uk">Ukrainian</SelectItem>
-                    <SelectItem value="en">English</SelectItem>
+                    <SelectItem value="uk">{t('language.uk')}</SelectItem>
+                    <SelectItem value="en">{t('language.en')}</SelectItem>
+                    <SelectItem value="es">{t('language.es')}</SelectItem>
                   </SelectContent>
                 </Select>
               )}

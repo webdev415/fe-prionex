@@ -138,7 +138,7 @@ export interface UpdateMyProfileInput {
   last_name?: string
   middle_name?: string
   phone?: string
-  language?: 'uk' | 'en'
+  language?: 'uk' | 'en' | 'es'
   timezone?: string
   theme_base?: string
   theme_accent?: string

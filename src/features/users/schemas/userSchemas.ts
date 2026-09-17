@@ -75,6 +75,7 @@ const optionalNameSchema = z
 export const languageOptions = [
   { value: 'en', label: 'English' },
   { value: 'uk', label: 'Ukrainian' },
+  { value: 'es', label: 'Spanish' },
 ] as const
 
 /**
@@ -91,7 +92,7 @@ export const createUserSchema = z.object({
   last_name: nameSchema,
   middle_name: optionalNameSchema,
   phone: phoneSchema,
-  language: z.enum(['en', 'uk'], {
+  language: z.enum(['en', 'uk', 'es'], {
     message: 'Please select a language',
   }),
   timezone: z.string().min(1, 'Please select a timezone'),
@@ -122,7 +123,7 @@ export const updateUserSchema = z.object({
   last_name: nameSchema,
   middle_name: optionalNameSchema,
   phone: phoneSchema,
-  language: z.enum(['en', 'uk'], {
+  language: z.enum(['en', 'uk', 'es'], {
     message: 'Please select a language',
   }),
   timezone: z.string().min(1, 'Please select a timezone'),

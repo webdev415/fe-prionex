@@ -347,7 +347,8 @@
   "language": {
     "select": "Select Language",
     "en": "English",
-    "uk": "Ukrainian"
+    "uk": "Ukrainian",
+    "es": "Spanish"
   },
   "theme": {
     "switchToLight": "Switch to light theme",

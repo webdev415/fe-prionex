@@ -8,22 +8,25 @@ const BUILD_TIMESTAMP = import.meta.env.DEV
   ? String(Date.now())
   : (import.meta.env.VITE_BUILD_TS ?? '1')
 
-export const SUPPORTED_LANGUAGES = ['en', 'uk'] as const
+export const SUPPORTED_LANGUAGES = ['en', 'uk', 'es'] as const
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number]
 
 export const LANGUAGE_NAMES: Record<SupportedLanguage, string> = {
   en: 'English',
   uk: 'Українська',
+  es: 'Español',
 }
 
 export const LANGUAGE_SHORT_NAMES: Record<SupportedLanguage, string> = {
   en: 'EN',
   uk: 'UA',
+  es: 'ES',
 }
 
 export const LANGUAGE_FLAGS: Record<SupportedLanguage, string> = {
   en: '🇬🇧',
   uk: '🇺🇦',
+  es: '🇪🇸',
 }
 
 i18n
@@ -65,21 +68,24 @@ i18n.on('languageChanged', syncDocumentLang)
 syncDocumentLang(i18n.language ?? 'en')
 
 /**
- * Map API / legacy `language` to a supported UI code (en | uk only).
+ * Map API / legacy `language` to a supported UI code.
  * Legacy `ru` is mapped to `uk` so existing accounts keep a Cyrillic UI.
  */
 export function normalizeBackendLanguage(lang: string | undefined | null): SupportedLanguage {
   const base = (lang ?? '').split('-')[0].toLowerCase()
   if (base === 'en') return 'en'
   if (base === 'uk') return 'uk'
+  if (base === 'es') return 'es'
   if (base === 'ru') return 'uk'
   return 'en'
 }
 
-/** BCP 47 locale for `Intl`, dates, and numbers from UI language (en | uk). */
+/** BCP 47 locale for `Intl`, dates, and numbers from UI language. */
 export function intlLocaleForUiLanguage(lang: string | undefined | null): string {
   const base = (lang ?? 'en').split('-')[0]
-  return base === 'uk' ? 'uk-UA' : 'en-US'
+  if (base === 'uk') return 'uk-UA'
+  if (base === 'es') return 'es-ES'
+  return 'en-US'
 }
 
 /** Apply server-stored language so UI matches the account after login/refresh (persists via i18n localStorage). */
