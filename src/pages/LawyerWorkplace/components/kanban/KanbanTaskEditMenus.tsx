@@ -17,6 +17,8 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
 } from '@/components/ui/DropdownMenu'
+import { pickerLocaleForLanguage } from '@/lib/dateUtils'
+import i18n from '@/lib/i18n'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import type { KanbanColumnId, KanbanTask } from '../../kanban/kanbanData'
@@ -270,6 +272,7 @@ export function KanbanDeadlineCalendar({
         timeFormat="HH:mm"
         timeIntervals={15}
         dateFormat="dd/MM/yyyy HH:mm"
+        locale={pickerLocaleForLanguage(i18n.language)}
         calendarStartDay={1}
         showYearDropdown
         scrollableYearDropdown
