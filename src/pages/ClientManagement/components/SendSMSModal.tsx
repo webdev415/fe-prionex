@@ -25,7 +25,14 @@ import { useClient } from '@/features/clients/hooks/useClients'
 import { authApi } from '@/features/auth/api/authApi'
 import { useQuery } from '@tanstack/react-query'
 import { getErrorMessage } from '@/lib/errors'
-import { formatDateDotDMY, formatMoneyUAHTwoDecimals } from '@/lib/formatters'
+import { formatMoneyUAHTwoDecimals } from '@/lib/formatters'
+import {
+  blockingVariables,
+  unresolvedVariables,
+} from '@/features/messaging/utils/unresolvedVariables'
+import { resolveOperatorPhone } from '@/features/messaging/utils/operatorPhone'
+import { resolveDueDate } from '@/features/messaging/utils/dueDate'
+import { formatDebtAmount } from '@/features/messaging/utils/debtAmount'
 
 export interface SendSMSModalProps {
   open: boolean
@@ -68,6 +75,7 @@ const renderTemplateMessage = (
   let rendered = templateText
   // Replace all variables in format {variable_name}
   rendered = rendered.replace(/\{(\w+)\}/g, (match, varName) => {
+    if (!Object.prototype.hasOwnProperty.call(variables, varName)) return match
     return variables[varName] !== undefined && variables[varName] !== ''
       ? variables[varName]!
       : match
@@ -81,7 +89,7 @@ export function SendSMSModal({
   clientId,
   clientName,
   phoneNumber,
-  loans = [],
+  loans: loansProp,
   onSent,
 }: SendSMSModalProps) {
   const { t } = useTranslation('common')
@@ -97,7 +105,7 @@ export function SendSMSModal({
   const sendSMSMutation = useSendSMS()
 
   // Fetch client details (debts, contract_number, max promise date for SMS {due_date})
-  const { data: clientData } = useClient(clientId, !!clientId && open)
+  const { data: clientData, isError: clientLoadFailed } = useClient(clientId, !!clientId && open)
 
   // Fetch current user details to get operator phone
   const { data: currentUserData } = useQuery({
@@ -126,6 +134,8 @@ export function SendSMSModal({
   const [clientNameField, setClientNameField] = useState<string>(
     formatClientNameInitials(clientName)
   )
+  const loans = useMemo(() => loansProp ?? [], [loansProp])
+
   const [selectedLoanId, setSelectedLoanId] = useState<number | null>(
     loans.length > 0 ? loans[0].id : null
   )
@@ -178,25 +188,35 @@ export function SendSMSModal({
   const variableValues = useMemo(() => {
     // Prefer the currently selected loan for contract_number.
     // Fallback to first debt for backwards-compatibility when loans aren't provided.
-    const contractNumber =
-      selectedLoan?.loanNumber ??
-      (clientData?.debts && clientData.debts.length > 0 ? clientData.debts[0].contract_number : '')
+    const debtFallback =
+      loansProp === undefined && clientData?.debts && clientData.debts.length > 0
+        ? clientData.debts[0].contract_number
+        : ''
+    const contractNumber = selectedLoan?.loanNumber ?? debtFallback
 
     // {due_date} = max promise_to_pay_date across this client's interactions (DD.MM.YYYY)
-    const dueDate = formatDateDotDMY(clientData?.max_promise_to_pay_date ?? null)
+    const dueDate = resolveDueDate(clientData, user?.timezone)
 
     // Get operator_phone from user API response
-    const operatorPhone = currentUserData?.data?.phone || ''
+    const operatorPhone = resolveOperatorPhone(currentUserData?.data)
 
     return {
       client_name: clientNameField,
-      debt_amount: selectedLoan ? Number(selectedLoan.totalToRepay).toFixed(2) : '',
+      debt_amount: selectedLoan ? formatDebtAmount(selectedLoan.totalToRepay) : '',
       operator_name: user?.username || '',
       operator_phone: operatorPhone,
       due_date: dueDate,
       contract_number: contractNumber,
     }
-  }, [clientData, clientNameField, selectedLoan, user?.username, currentUserData])
+  }, [
+    clientData,
+    clientNameField,
+    selectedLoan,
+    loansProp,
+    user?.username,
+    user?.timezone,
+    currentUserData,
+  ])
 
   // Render template message with variables replaced, or use custom message
   // If message was manually edited, use it as-is (don't re-render)
@@ -213,8 +233,18 @@ export function SendSMSModal({
   }, [selectedTemplateId, message, messageEdited, customMessage, variableValues])
 
   const isDailyLimitReached = smsSentToday >= dailyLimit
+  const missingVariables = useMemo(
+    () => unresolvedVariables(displayMessage, variableValues, 'single'),
+    [displayMessage, variableValues]
+  )
+  const hasUnresolvedVariables = missingVariables.length > 0
+  const blocksSending = blockingVariables(missingVariables).length > 0
   const canSend =
-    !isDailyLimitReached && displayMessage.trim().length > 0 && !sendSMSMutation.isPending
+    !!clientData &&
+    !isDailyLimitReached &&
+    displayMessage.trim().length > 0 &&
+    !blocksSending &&
+    !sendSMSMutation.isPending
 
   const handleSend = async () => {
     if (!canSend) return
@@ -228,7 +258,7 @@ export function SendSMSModal({
               template_id: selectedTemplateId,
               variables: {
                 client_name: variableValues.client_name,
-                debt_amount: variableValues.debt_amount || '0',
+                debt_amount: variableValues.debt_amount,
                 operator_name: variableValues.operator_name,
                 operator_phone: variableValues.operator_phone,
                 due_date: variableValues.due_date,
@@ -436,10 +466,23 @@ export function SendSMSModal({
                   ) : (
                     <input
                       type="text"
-                      value="—"
+                      value={t('pages.clients.modals.sendSMS.noOpenLoans', 'No open credits')}
                       readOnly
-                      className="text-foreground border-border bg-card h-[45px] w-full rounded-lg border px-3 py-2 text-xs font-light sm:text-sm"
+                      className="text-muted-foreground border-border bg-card h-[45px] w-full rounded-lg border px-3 py-2 text-xs font-light sm:text-sm"
                     />
+                  )}
+                  {hasUnresolvedVariables && (
+                    <p className="text-error-500 text-xs">
+                      {t('pages.clients.modals.sendSMS.unresolvedVariables', {
+                        names: missingVariables.join(', '),
+                        defaultValue: `These variables have no value yet: ${missingVariables.join(', ')}`,
+                      })}
+                    </p>
+                  )}
+                  {clientLoadFailed && (
+                    <p className="text-error-500 text-xs">
+                      {t('pages.clients.modals.sendSMS.clientLoadFailed')}
+                    </p>
                   )}
                 </div>
               </div>

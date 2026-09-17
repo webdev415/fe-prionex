@@ -1,8 +1,11 @@
 import { api } from '@/lib/api'
 import type {
   Material,
+  MaterialAttachment,
+  MaterialAttachmentTarget,
   MaterialCallAttachment,
   MaterialCategory,
+  MaterialLinkPayload,
   MaterialListFilters,
   MaterialListResponse,
   MaterialUpdatePayload,
@@ -109,5 +112,50 @@ export async function listMaterialsForCall(callId: string): Promise<MaterialList
 
 export async function listCallsForMaterial(materialId: number): Promise<MaterialCallAttachment[]> {
   const response = await api.get<MaterialCallAttachment[]>(`${BASE}/${materialId}/attachments`)
+  return response.data
+}
+
+/** Register a link as a library material.
+
+ *  A separate endpoint from `uploadMaterial`: that one is multipart and built
+ *  around a File, and a body that is sometimes a form and sometimes JSON is
+ *  worse than two endpoints. The url is validated server-side too — this is a
+ *  convenience, not the control.
+ */
+export async function createMaterialLink(payload: MaterialLinkPayload): Promise<Material> {
+  const response = await api.post<Material>(`${BASE}/link`, payload)
+  return response.data
+}
+
+const ATTACH_BASE = '/api/v1/quality/material-attachments'
+
+export async function attachMaterial(
+  materialId: number,
+  targetType: MaterialAttachmentTarget,
+  targetId: number
+): Promise<MaterialAttachment> {
+  const response = await api.post<MaterialAttachment>(ATTACH_BASE, {
+    material_id: materialId,
+    target_type: targetType,
+    target_id: targetId,
+  })
+  return response.data
+}
+
+export async function detachMaterial(
+  materialId: number,
+  targetType: MaterialAttachmentTarget,
+  targetId: number
+): Promise<void> {
+  await api.delete(`${ATTACH_BASE}/${materialId}/${targetType}/${targetId}`)
+}
+
+export async function listMaterialsForTarget(
+  targetType: MaterialAttachmentTarget,
+  targetId: number
+): Promise<MaterialListResponse> {
+  const response = await api.get<MaterialListResponse>(ATTACH_BASE, {
+    params: { target_type: targetType, target_id: targetId },
+  })
   return response.data
 }

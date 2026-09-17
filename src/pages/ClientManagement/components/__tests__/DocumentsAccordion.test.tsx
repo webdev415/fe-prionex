@@ -4,6 +4,9 @@
  * Covers the two KAN-403 generation-flow additions:
  *   - documents within a section are ordered newest-first (created_at DESC);
  *   - a "Generated" badge marks rows whose source is 'generated'.
+ *
+ * Plus section ORDER: the section for documents with no credit renders last,
+ * below every credit-linked section, and does not disturb their order.
  */
 
 import { describe, it, expect, vi } from 'vitest'
@@ -54,6 +57,13 @@ function makeDoc(overrides: Partial<ClientDocument>): ClientDocument {
   }
 }
 
+/** Section headings, in the order they appear on screen. */
+function sectionTitles(): string[] {
+  return Array.from(document.querySelectorAll('button'))
+    .map((b) => b.textContent?.trim() ?? '')
+    .filter((text) => text.includes('Кредит') || text.includes("Без прив'язки"))
+}
+
 function renderAccordion(documents: ClientDocument[]) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -94,5 +104,57 @@ describe('DocumentsAccordion', () => {
     expect(generatedRow?.textContent).toContain('Згенеровано')
     const uploadedRow = screen.getByText('uploaded.pdf').closest('tr')
     expect(uploadedRow?.textContent).not.toContain('Згенеровано')
+  })
+
+  it('renders the "no linked credit" section last', () => {
+    // The unlinked doc leads the input, so only the render order can put its
+    // section last.
+    renderAccordion([
+      makeDoc({ id: 1, original_filename: 'loose.pdf', debt_id: null }),
+      makeDoc({ id: 2, original_filename: 'credit-a.pdf', debt_id: 11 }),
+      makeDoc({ id: 3, original_filename: 'credit-b.pdf', debt_id: 22 }),
+    ])
+
+    const titles = sectionTitles()
+    expect(titles).toHaveLength(3)
+    expect(titles[titles.length - 1]).toContain("Без прив'язки")
+  })
+
+  it('leaves the order of the credit sections alone', () => {
+    // First appearance in the newest-first document order decides the order of
+    // the credit sections. The unlinked section must not disturb that.
+    renderAccordion([
+      makeDoc({
+        id: 1,
+        original_filename: 'newest.pdf',
+        debt_id: 22,
+        created_at: '2026-07-05T00:00:00Z',
+      }),
+      makeDoc({
+        id: 2,
+        original_filename: 'loose.pdf',
+        debt_id: null,
+        created_at: '2026-07-04T00:00:00Z',
+      }),
+      makeDoc({
+        id: 3,
+        original_filename: 'older.pdf',
+        debt_id: 11,
+        created_at: '2026-07-03T00:00:00Z',
+      }),
+    ])
+
+    const titles = sectionTitles()
+    expect(titles[0]).toContain('#22')
+    expect(titles[1]).toContain('#11')
+    expect(titles[2]).toContain("Без прив'язки")
+  })
+
+  it('renders only credit sections when nothing is unlinked', () => {
+    renderAccordion([makeDoc({ id: 1, original_filename: 'only.pdf', debt_id: 11 })])
+
+    const titles = sectionTitles()
+    expect(titles).toHaveLength(1)
+    expect(titles[0]).not.toContain("Без прив'язки")
   })
 })

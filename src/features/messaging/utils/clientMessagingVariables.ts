@@ -1,6 +1,8 @@
 import type { ClientDetail } from '@/features/clients/api/types'
-import { formatDateDotDMY, formatMoneyUAHTwoDecimals } from '@/lib/formatters'
 import type { CurrentUserResponse } from '@/types/api'
+import { formatDebtAmount } from './debtAmount'
+import { resolveDueDate } from './dueDate'
+import { resolveOperatorPhone } from './operatorPhone'
 
 /** React-query may store either AxiosResponse or the unwrapped body. */
 export function resolveCurrentUserFromQuery(data: unknown): CurrentUserResponse | undefined {
@@ -26,31 +28,35 @@ export function buildClientMessagingVariables(options: {
   clientData?: ClientDetail | null
   currentUser?: CurrentUserResponse | null
   username?: string
+  timezone?: string | null
   selectedLoan?: { loanNumber: string; totalToRepay: number } | null
+  hasLoanContext?: boolean
 }): Record<string, string> {
-  const { clientName, clientDisplayName, clientData, currentUser, username, selectedLoan } = options
+  const {
+    clientName,
+    clientDisplayName,
+    clientData,
+    currentUser,
+    username,
+    timezone,
+    selectedLoan,
+    hasLoanContext,
+  } = options
 
-  const contractNumber =
-    selectedLoan?.loanNumber ??
-    (clientData?.debts && clientData.debts.length > 0 ? clientData.debts[0].contract_number : '')
+  const debtFallback =
+    !hasLoanContext && clientData?.debts && clientData.debts.length > 0
+      ? clientData.debts[0].contract_number
+      : ''
 
-  const matchedDebt =
-    clientData?.debts?.find((debt) => debt.contract_number === contractNumber) ??
-    clientData?.debts?.[0]
+  const contractNumber = selectedLoan?.loanNumber ?? debtFallback
 
-  const promiseDueDate = formatDateDotDMY(clientData?.max_promise_to_pay_date ?? null)
-  const debtDueDate = formatDateDotDMY(
-    matchedDebt?.debt_close_date ?? matchedDebt?.credit_closed_date ?? null
-  )
-  const dueDate = promiseDueDate || debtDueDate
+  const dueDate = resolveDueDate(clientData, timezone)
 
-  const operatorPhone =
-    (currentUser?.phone || '').trim() ||
-    (currentUser?.asterisk_extension ? `ext. ${currentUser.asterisk_extension}` : '')
+  const operatorPhone = resolveOperatorPhone(currentUser)
 
   return {
     client_name: clientDisplayName,
-    debt_amount: selectedLoan ? formatMoneyUAHTwoDecimals(selectedLoan.totalToRepay) : '',
+    debt_amount: selectedLoan ? formatDebtAmount(selectedLoan.totalToRepay) : '',
     operator_name: username || currentUser?.username || '',
     operator_phone: operatorPhone,
     due_date: dueDate,

@@ -2571,8 +2571,21 @@ export function AiAssistantBetaPage() {
     startServerDictation,
   ])
 
+  /**
+   * Оценка ответа оператором.
+   *
+   * `messageId === null` — серверный id хода неизвестен (прокси не прислал кадр
+   * `persisted`, либо персист не состоялся). Раньше кнопки в этом случае просто не
+   * рисовались: оператор не видел ни оценки, ни причины, а на проде это означало
+   * НОЛЬ жалоб за 23 дня при живых ходах. Теперь кнопка есть всегда и вслух
+   * говорит, почему не вышло, — молчаливого провала здесь больше нет.
+   */
   const handleFeedback = useCallback(
-    (messageId: number, patch: Partial<MessageFeedback>) => {
+    (messageId: number | null, patch: Partial<MessageFeedback>) => {
+      if (messageId == null) {
+        toast.error(t('pages.aiAssistant.feedbackUnavailable'))
+        return
+      }
       const previous = feedbackByMessage[messageId]
       const merged: MessageFeedback = { ...previous, ...patch }
       setFeedbackByMessage((current) => ({ ...current, [messageId]: merged }))
@@ -2580,7 +2593,9 @@ export function AiAssistantBetaPage() {
         { message_id: messageId, ...merged },
         {
           onError: () => {
-            toast.error(t('pages.aiAssistant.apiError'))
+            // Свой текст, а не общий apiError: «оценка не сохранилась» и
+            // «ассистент недоступен» — разные события для оператора.
+            toast.error(t('pages.aiAssistant.feedbackFailed'))
             setFeedbackByMessage((current) => ({ ...current, [messageId]: previous ?? {} }))
           },
         }
@@ -2756,8 +2771,10 @@ export function AiAssistantBetaPage() {
     )
   }
 
-  const renderFeedbackControls = (serverMessageId: number) => {
-    const feedback = feedbackByMessage[serverMessageId] ?? {}
+  const renderFeedbackControls = (serverMessageId: number | null) => {
+    // Без серверного id хранить нечего — состояние пустое, а клик уходит в
+    // honest-путь handleFeedback (тост, не тишина).
+    const feedback = serverMessageId == null ? {} : (feedbackByMessage[serverMessageId] ?? {})
     const ratingLocked = feedback.rating != null
     const comprehensionLocked = feedback.comprehension != null
 
@@ -2829,12 +2846,10 @@ export function AiAssistantBetaPage() {
     <div className="mt-1.5 flex flex-wrap items-center gap-1.5 px-1">
       {renderTtsButton(item)}
       {item.expert && renderExpertCost(item.expert)}
-      {item.serverMessageId != null && (
-        <>
-          <span className="bg-border mx-0.5 h-4 w-px" aria-hidden />
-          {renderFeedbackControls(item.serverMessageId)}
-        </>
-      )}
+      {/* Оценка есть у ЛЮБОГО дописанного ответа. Прятать её при неизвестном
+          серверном id значило прятать и сам факт, что оценить нельзя. */}
+      <span className="bg-border mx-0.5 h-4 w-px" aria-hidden />
+      {renderFeedbackControls(item.serverMessageId ?? null)}
     </div>
   )
 

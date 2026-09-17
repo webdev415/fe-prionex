@@ -93,6 +93,11 @@ vi.mock('@/features/callbacksFeed', () => ({
   CallbacksFeedTab: () => <div data-testid="callbacks-feed-tab" />,
 }))
 
+// …and for the drains feed (features/drainsFeed).
+vi.mock('@/features/drainsFeed', () => ({
+  DrainsFeedTab: () => <div data-testid="drains-feed-tab" />,
+}))
+
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: (selector: (s: unknown) => unknown) =>
     selector({
@@ -175,6 +180,7 @@ const promisesDailyTab = () =>
   screen.getByRole('tab', { name: 'pages.reports.tabs.promises-daily' })
 const promisesFeedTab = () => screen.getByRole('tab', { name: 'pages.reports.tabs.promises-feed' })
 const callbacksFeedTab = () => screen.getByRole('tab', { name: 'pages.reports.tabs.callbacks' })
+const drainsFeedTab = () => screen.getByRole('tab', { name: 'pages.reports.tabs.drains' })
 
 describe('ReportsDashboardPage (tab host)', () => {
   it('renders the processing report panel for ?tab=processing', () => {
@@ -630,7 +636,52 @@ describe('ReportsDashboardPage (tab host)', () => {
     expect(search()).toContain('cbf=2026-09-01')
   })
 
-  it('offers all thirteen report tabs in a fixed order', () => {
+  it('renders the drains feed panel for ?tab=drains', () => {
+    renderPage(['/reports?tab=drains'])
+
+    expect(screen.getByTestId('drains-feed-tab')).toBeInTheDocument()
+    // Its two neighbours in the factoring family share its column frame — the
+    // three must not be confusable at the routing level.
+    expect(screen.queryByTestId('callbacks-feed-tab')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('promises-feed-tab')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('agent-performance-table')).not.toBeInTheDocument()
+    expect(drainsFeedTab()).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'reports-panel-drains')
+  })
+
+  it('keeps the drains feed filters — the all-history flag included — when switching tabs', async () => {
+    renderPage(['/reports?tab=drains&dra=1&drwt=1&drw=1&drp=1&drpg=2&drps=100'])
+    expect(screen.getByTestId('drains-feed-tab')).toBeInTheDocument()
+
+    await userEvent.click(dashboardTab())
+
+    // Same documented contract as the other report tabs. `dra` matters most
+    // here: it is the only key on the page that selects a MODE rather than a
+    // filter value, so losing it on a tab round-trip would silently swap an
+    // 11k-row report for a one-day window.
+    expect(screen.getByTestId('agent-performance-table')).toBeInTheDocument()
+    expect(search()).not.toContain('tab=')
+    expect(search()).toContain('dra=1')
+    expect(search()).toContain('drwt=1')
+    expect(search()).toContain('drw=1')
+    expect(search()).toContain('drp=1')
+    expect(search()).toContain('drpg=2')
+    expect(search()).toContain('drps=100')
+  })
+
+  it('keeps the drains feed apart from the processing tab’s `d…` param in one URL', () => {
+    // `dept` is the processing tab's department filter and the `d…` spelling a
+    // DRains feed would collide with first. Opening the feed with both sets
+    // present must mount only it; the sibling's key is inert here.
+    renderPage(['/reports?tab=drains&dept=5&drf=2026-09-11&drt=2026-09-13'])
+
+    expect(screen.getByTestId('drains-feed-tab')).toBeInTheDocument()
+    expect(search()).toContain('dept=5')
+    expect(search()).toContain('drf=2026-09-11')
+    expect(search()).toContain('drt=2026-09-13')
+  })
+
+  it('offers all fourteen report tabs in a fixed order', () => {
     // The strip is the only place the tab set is visible at a glance; a new
     // report must be ADDED here rather than replace a sibling.
     renderPage()
@@ -653,9 +704,12 @@ describe('ReportsDashboardPage (tab host)', () => {
       'pages.reports.tabs.promises-daily',
       // …and the promises feed right after the daily matrix it details.
       'pages.reports.tabs.promises-feed',
-      // …and the call plan last, next to the promises feed it shares a frame
+      // …and the call plan next to the promises feed it shares a frame
       // with: same operators, but «whom do I RING, and at what time».
       'pages.reports.tabs.callbacks',
+      // …and the drains feed last, closing the factoring family: the only one
+      // of the three whose row is a CLIENT rather than an interaction.
+      'pages.reports.tabs.drains',
     ])
   })
 

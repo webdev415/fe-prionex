@@ -110,6 +110,33 @@ describe('the employees table', () => {
     const headers = screen.getAllByRole('columnheader').map((h) => h.textContent?.trim())
 
     expect(headers).toEqual([
+      'pages.users.tableHeaders.userId',
+      'pages.users.tableHeaders.fullName',
+      'pages.users.tableHeaders.department',
+      'pages.users.tableHeaders.position',
+      'pages.users.tableHeaders.status',
+      'pages.users.tableHeaders.workFormat',
+      'pages.users.tableHeaders.extension',
+      'pages.users.tableHeaders.actions',
+    ])
+  })
+
+  it('shows the id of each employee in the first cell', () => {
+    rows.value = [employee({ id: 4242 })]
+    renderPage()
+    const firstRow = screen.getAllByRole('row')[1]
+    const cells = within(firstRow).getAllByRole('cell')
+
+    expect(cells[0]).toHaveTextContent('4242')
+  })
+
+  it('leaves the name where it was, one place to the right', () => {
+    renderPage()
+    const headers = screen.getAllByRole('columnheader').map((h) => h.textContent?.trim())
+
+    expect(headers[0]).toBe('pages.users.tableHeaders.userId')
+    expect(headers[1]).toBe('pages.users.tableHeaders.fullName')
+    expect(headers.slice(1)).toEqual([
       'pages.users.tableHeaders.fullName',
       'pages.users.tableHeaders.department',
       'pages.users.tableHeaders.position',

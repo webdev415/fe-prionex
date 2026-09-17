@@ -707,6 +707,8 @@
       "feedbackNotUseful": "Not helpful",
       "feedbackClear": "Clear",
       "feedbackUnclear": "Unclear",
+      "feedbackUnavailable": "The rating was not saved: this answer is not stored yet. Refresh the page and try again.",
+      "feedbackFailed": "Could not save the rating. Please try again.",
       "historyTitle": "Chats",
       "historyNewChat": "New chat",
       "historySearchPlaceholder": "Search chats",
@@ -3451,14 +3453,18 @@
       "training": {
         "courses": {
           "addCourse": "Add Course",
+          "addMaterials": "Add materials",
           "allCategories": "All categories",
           "assign": "Assign",
           "assignCta": "Assign",
           "assignHint": "Select operators to enroll.",
+          "attachFailed": "{{count}} material(s) could not be attached. Add them from the course.",
           "author": "Author",
           "avgCompletion": "Average completion",
           "createCta": "Create a course",
+          "createFailed": "Could not create the course.",
           "details": "Details",
+          "doneAdding": "Done",
           "duration": "Duration",
           "empty": "No courses yet.",
           "enrolled": "Enrolled",
@@ -3470,28 +3476,30 @@
           "fieldLevel": "Level",
           "fieldName": "Course name",
           "fieldNamePlaceholder": "Working with objections: basic",
-          "loadFailed": "Failed to load courses.",
-          "materialName": "Material name",
-          "materials": "Materials",
-          "moduleName": "Module name",
-          "modules": "Modules",
-          "publish": "Publish",
-          "searchPlaceholder": "Search by title…",
-          "students": "Students",
-          "title": "Course Catalog",
           "level": {
             "beginner": "Beginner",
             "intermediate": "Intermediate",
             "advanced": "Advanced"
           },
-          "removeModule": "Remove module",
+          "loadFailed": "Failed to load courses.",
+          "materialName": "Material name",
+          "materials": "Materials",
+          "moduleName": "Module name",
+          "modules": "Modules",
+          "noAuthor": "No author",
+          "noMaterialsInLibrary": "Nothing in the library yet — add a file or a link on the Materials tab first.",
+          "publish": "Publish",
           "removeMaterial": "Remove material",
+          "removeModule": "Remove module",
+          "searchMaterials": "Search the library…",
+          "searchPlaceholder": "Search by title…",
           "status": {
             "draft": "Draft",
             "published": "Published",
             "archived": "Archived"
           },
-          "noAuthor": "No author"
+          "students": "Students",
+          "title": "Course Catalog"
         },
         "library": {
           "add": "Add to library",
@@ -3529,6 +3537,7 @@
           }
         },
         "materials": {
+          "addLink": "Add a link",
           "archive": "Archive",
           "attach": "Attach",
           "attachMaterial": "Attach material",
@@ -3553,8 +3562,11 @@
             "createCategory": "Could not create the category.",
             "detach": "Could not detach the material.",
             "download": "Could not download the file.",
+            "link": "Could not save the link.",
+            "list": "Could not load the library.",
             "noFile": "Choose a file to upload.",
             "noTitle": "Give the material a title.",
+            "openLink": "This link cannot be opened — its address is not a valid https:// URL.",
             "update": "Could not update the material.",
             "upload": "Could not upload the material."
           },
@@ -3562,6 +3574,9 @@
           "filters": {
             "all": "All types"
           },
+          "linkSaved": "Link added to the library.",
+          "linkUrl": "Link",
+          "linkUrlInvalid": "Include https:// — a link without it cannot be opened.",
           "loadError": "Failed to load materials.",
           "loading": "Loading materials...",
           "newCategory": "New",
@@ -3570,10 +3585,12 @@
           "noCalls": "No calls found.",
           "noCategory": "No category",
           "noneAttached": "No materials attached yet.",
+          "openLink": "Open link",
           "preview": "Preview",
           "previewError": "Could not load the preview.",
           "previewLoading": "Loading preview…",
           "previewUnsupported": "Preview is available for PDFs and video only. Download the file to view it.",
+          "saveLink": "Save link",
           "saving": "Saving…",
           "searchPlaceholder": "Search...",
           "tags": "Tags (comma-separated)",
@@ -3581,17 +3598,18 @@
           "title": "Materials library",
           "titleField": "Title",
           "titlePlaceholder": "Defaults to the file name",
+          "type": {
+            "audio": "AUDIO",
+            "docx": "DOCX",
+            "link": "LINK",
+            "other": "FILE",
+            "pdf": "PDF",
+            "video": "VIDEO"
+          },
           "updateSuccess": "Material updated.",
           "upload": "Upload material",
           "uploadSuccess": "Material uploaded.",
-          "uploading": "Uploading…",
-          "type": {
-            "pdf": "PDF",
-            "docx": "DOCX",
-            "video": "VIDEO",
-            "audio": "AUDIO",
-            "other": "FILE"
-          }
+          "uploading": "Uploading…"
         },
         "subTabs": {
           "assignments": "Assignments",
@@ -5230,6 +5248,8 @@
         "noMatches": "No matches",
         "noMatchingUsers": "No matches",
         "promiseDate": "Promise Date",
+        "payments": "Payments",
+        "hasVerifiedPayment": "Has verified payment(s)",
         "rrStatus": "RR status",
         "searchPlaceholder": "Search...",
         "selectAll": "Select all",
@@ -5551,6 +5571,9 @@
           "clientName": "Client name",
           "debtAmount": "Debt amount",
           "loanNumber": "Loan number",
+          "noOpenLoans": "No open credits",
+          "unresolvedVariables": "These variables have no value yet: {{names}}",
+          "clientLoadFailed": "Client details could not be loaded, so the message can't be sent. Close the window and try again.",
           "templateVariables": "Template Variables",
           "sending": "Sending...",
           "smsSentSuccessfully": "SMS sent successfully",
@@ -6525,7 +6548,8 @@
           "docs": "Docs",
           "callSms": "Call / SMS",
           "taChains": "TA Chains",
-          "searcherComments": "Searcher Comments"
+          "searcherComments": "Searcher Comments",
+          "activity": "Activity"
         },
         "relatedTags": {
           "loading": "Loading related tags...",
@@ -6652,6 +6676,65 @@
           "card": "Card",
           "google_pay": "Google Pay",
           "apple_pay": "Apple Pay"
+        },
+        "activityLog": {
+          "title": "Client activity",
+          "empty": "No activity recorded for this client yet.",
+          "loadError": "Could not load the activity log.",
+          "degraded": "Some sources are unavailable: {{sources}}. This feed is incomplete.",
+          "filters": {
+            "from": "From",
+            "to": "To",
+            "operator": "Operator",
+            "allOperators": "All operators",
+            "reset": "Reset",
+            "dateRange": "Date Range",
+            "selectStartDate": "Select start date",
+            "selectEndDate": "Select end date"
+          },
+          "sources": {
+            "events": "UI events",
+            "audit": "Data changes",
+            "calls": "Calls"
+          },
+          "recording": "Recording",
+          "openedTab": "Opened '{{tab}}' tab",
+          "openedForm": "Opened the interaction form",
+          "submittedForm": "Submitted the interaction form",
+          "openedCard": "Opened the client card",
+          "openedModal": "Opened '{{modal}}'",
+          "modals": {
+            "connect_rr": "Connect restructuring",
+            "writeoff": "Write-off",
+            "reversal": "Payment reversal",
+            "assign_client": "Assign client",
+            "record_payment": "Record payment",
+            "task": "Task",
+            "call_recording": "Call recording",
+            "tag": "Tags",
+            "edit_client": "Edit client",
+            "edit_interaction": "Edit interaction",
+            "view_sms": "View SMS",
+            "send_sms": "Send SMS",
+            "send_message": "Send message",
+            "upload_document": "Upload document",
+            "view_message": "View message",
+            "edit_payment": "Edit payment",
+            "cancel_payment": "Cancel payment",
+            "reassign_payment": "Reassign payment employee",
+            "verify_payment": "Payment verification queue",
+            "export_payments": "Export payments",
+            "payment_details": "Payment details"
+          },
+          "openedCardFrom": "Opened the client card from {{origin}}",
+          "origins": {
+            "list": "the client list",
+            "search": "search",
+            "dialer": "the dialer"
+          },
+          "entryCount_one": "{{count}} entry",
+          "entryCount_other": "{{count}} entries",
+          "pagingLimit": "Showing the {{count}} most recent entries. Set a date range to reach older activity."
         }
       },
       "debtSummary": {
@@ -7631,7 +7714,7 @@
         "currentDebtAmount": "Current debt amount",
         "operatorName": "Operator's name",
         "operatorPhone": "Operator's phone",
-        "paymentDueDate": "Latest promise date from interactions (DD.MM.YYYY)",
+        "paymentDueDate": "Latest promise date from interactions, or today's date if there is none (DD.MM.YYYY)",
         "contractLoanNumber": "Contract/Loan number"
       },
       "forms": {
@@ -8676,7 +8759,8 @@
         "outbound-calls": "Outbound calls",
         "promises-daily": "Promises till end of month",
         "promises-feed": "Promises",
-        "callbacks": "Callbacks"
+        "callbacks": "Callbacks",
+        "drains": "Drains"
       },
       "processing": {
         "dateFrom": "Date from",
@@ -9053,6 +9137,42 @@
         "empty": "No callbacks in the selected window",
         "forbidden": "You don't have permission to view this report",
         "unavailable": "Employee data is temporarily unavailable. Please try again later.",
+        "error": {
+          "title": "Failed to load the data",
+          "retry": "Retry"
+        }
+      },
+      "drainsFeed": {
+        "dateFrom": "Promised date from",
+        "dateTo": "Promised date to",
+        "allHistory": "Whole history",
+        "invalidDate": "The date is not a real calendar date — pick a date to replace it",
+        "invalidRange": "Start date is later than end date",
+        "rangeTooLong": "Date range must not exceed 366 days",
+        "bothOrNeither": "Give both dates, or clear both — switch «Whole history» on",
+        "hideWorkedToday": "Hide clients handled today",
+        "hideWorked": "Hide rows whose promised date an interaction has reached",
+        "hidePaid": "Hide partial payers",
+        "openClient": "Open client {{id}}",
+        "columns": {
+          "inn": "Tax ID",
+          "interactionDate": "Interaction date",
+          "interactionType": "Result",
+          "promiseDate": "Promised date",
+          "promiseAmount": "Promised amount",
+          "employeeInteracted": "Employee who commented",
+          "employeeResponsible": "Responsible employee",
+          "link": "Link",
+          "paymentAmount": "Payments amount",
+          "lastInteractionDate": "Last interaction date",
+          "lastResult": "Worked today",
+          "department": "Department",
+          "noDepartment": "No department",
+          "group": "Group"
+        },
+        "empty": "No drains match these filters",
+        "forbidden": "You don't have permission to view this report",
+        "unavailable": "Employee or payment data is temporarily unavailable. Please try again later.",
         "error": {
           "title": "Failed to load the data",
           "retry": "Retry"
@@ -11194,6 +11314,7 @@
         "workFormat": "Work Format",
         "referralSource": "Where referred from",
         "department": "Department",
+        "group": "Group",
         "position": "Position",
         "manager": "Manager",
         "hiredAt": "Date of Hire",
@@ -11302,6 +11423,7 @@
         "choose": "Choose",
         "noManager": "No manager",
         "noDepartment": "No department",
+        "noGroup": "No group",
         "documents": "Documents",
         "attachFile": "Attach a document (PDF or Word, up to 10 MB)",
         "searchManager": "Search by name",

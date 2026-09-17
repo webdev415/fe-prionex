@@ -30,23 +30,16 @@ import { useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { DateSelect } from '@/components/ui/DateSelect'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
-import { isTransientFailure } from '@/lib/api'
+import { useFeedErrorMessage } from '@/hooks'
 import { isRealCalendarDate } from '@/lib/calendarDate'
-import { getErrorMessage, getErrorStatus } from '@/lib/errors'
 import { Icons } from '@/lib/icons'
 import { formatPickerDateAsYMD } from '@/lib/dateUtils'
+import { isWindowTooLong } from '@/lib/reportWindow'
 import { REPORTS_URL_KEYS } from '@/lib/reportsUrlKeys'
 import { useAuthStore } from '@/stores/authStore'
 import { useThirdPartyVerificationReport } from '../hooks'
 import { currentMonthRange } from '../utils/monthRange'
 import { VerificationTable } from './VerificationTable'
-
-// Mirrors the backend's window cap `_MAX_RANGE_DAYS` in
-// api-prionex/services/client/app/routers/reports.py: the (end - start) day
-// difference may be at most 366 for BOTH windows — larger answers 400.
-const MAX_RANGE_DAYS = 366
-
-const MS_PER_DAY = 86_400_000
 
 /** This tab's slice of the Reports page URL namespace (see the registry). */
 const {
@@ -61,11 +54,6 @@ type FilterKey =
   | typeof SELL_TO_KEY
   | typeof COUNT_FROM_KEY
   | typeof COUNT_TO_KEY
-
-/** Whole-day span between two ISO dates (the backend compares the same way). */
-function spanInDays(from: string, to: string): number {
-  return (Date.parse(to) - Date.parse(from)) / MS_PER_DAY
-}
 
 export function ThirdPartyVerificationTab() {
   const { t } = useTranslation('common')
@@ -139,8 +127,7 @@ export function ThirdPartyVerificationTab() {
   // Manual input can bypass the pickers' min/max, so invalid ranges must not
   // reach the API. ISO YYYY-MM-DD strings compare correctly as strings.
   const isSellInverted = !hasInvalidSellDate && sellFrom > sellTo
-  const isSellTooLong =
-    !hasInvalidSellDate && !isSellInverted && spanInDays(sellFrom, sellTo) > MAX_RANGE_DAYS
+  const isSellTooLong = !hasInvalidSellDate && isWindowTooLong(sellFrom, sellTo)
   const sellErrorKey = hasInvalidSellDate
     ? 'pages.reports.verification.invalidSellDate'
     : isSellInverted
@@ -153,8 +140,7 @@ export function ThirdPartyVerificationTab() {
   // bound is a legitimate open-ended filter (backend rule, same branch).
   const hasBothCountBounds = !!countFrom && !!countTo
   const isCountInverted = hasBothCountBounds && countFrom > countTo
-  const isCountTooLong =
-    hasBothCountBounds && !isCountInverted && spanInDays(countFrom, countTo) > MAX_RANGE_DAYS
+  const isCountTooLong = hasBothCountBounds && isWindowTooLong(countFrom, countTo)
   const countErrorKey = hasInvalidCountDate
     ? 'pages.reports.verification.invalidCountDate'
     : isCountInverted
@@ -184,16 +170,18 @@ export function ThirdPartyVerificationTab() {
   // background refetch of the SAME window shows current data and needs none.
   const isRefreshing = query.isPlaceholderData
 
-  const errorStatus = getErrorStatus(query.error)
-  const isForbidden = errorStatus === 403
-  const errorMessage = isTransientFailure(query.error)
-    ? t('pages.reports.verification.unavailable')
-    : isForbidden
-      ? t('pages.reports.verification.forbidden')
-      : errorStatus === 400
-        ? // Backend range validation answers 400 with a human-readable detail
-          getErrorMessage(query.error)
-        : t('pages.reports.verification.error.title')
+  // The shared failure ladder (see the hook for the rungs and their order).
+  // What is this endpoint's own: its 400 carries a human-readable detail from
+  // the range validation — and this report measures TWO windows, so that
+  // detail is the only thing that says which one the backend refused.
+  // `errorDetail` is not taken — this tab has never shown the server's 503
+  // sentence under the localized one.
+  //
+  // The 400 now goes through the hook's `hasResponseDetail` gate, which this
+  // tab did not have: a 400 whose body a proxy stripped used to reach the
+  // operator as axios' own untranslated "Request failed with status code 400"
+  // and now reaches them as the localized title. Deliberate — see the hook.
+  const { errorMessage, isForbidden } = useFeedErrorMessage(query.error, 'verification')
 
   return (
     <div className="flex w-full flex-col gap-4">
