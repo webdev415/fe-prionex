@@ -78,7 +78,19 @@ export function HolidayCalendarPanel({ projectId, country, onClose }: HolidayCal
     })
 
   const handleAdd = () => {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate)) return
+    // Says why instead of returning quietly. The first version silently did
+    // nothing when the text did not parse, so a date typed in any other
+    // format looked like a dead button.
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate)) {
+      toast.error(t('pages.projects.holidayCalendar.badDate', 'Enter the date as YYYY-MM-DD'))
+      return
+    }
+    if (Number(newDate.slice(0, 4)) !== year) {
+      toast.error(
+        t('pages.projects.holidayCalendar.wrongYear', 'That date is not in {{year}}', { year })
+      )
+      return
+    }
     addDate.mutate(
       { date: newDate, name: newName.trim() || undefined },
       {
@@ -86,8 +98,19 @@ export function HolidayCalendarPanel({ projectId, country, onClose }: HolidayCal
           setNewDate('')
           setNewName('')
         },
-        onError: () =>
-          toast.error(t('pages.projects.holidayCalendar.addFailed', 'Could not add that date')),
+        onError: (error: unknown) => {
+          // 409 is the common one — the date is already on the calendar — and
+          // "could not add that date" leaves the admin wondering what broke.
+          const status = (error as { response?: { status?: number } })?.response?.status
+          toast.error(
+            status === 409
+              ? t(
+                  'pages.projects.holidayCalendar.alreadyAdded',
+                  'That date is already on the calendar'
+                )
+              : t('pages.projects.holidayCalendar.addFailed', 'Could not add that date')
+          )
+        },
       }
     )
   }
@@ -227,9 +250,11 @@ export function HolidayCalendarPanel({ projectId, country, onClose }: HolidayCal
                   </Label>
                   <Input
                     id="hc-date"
+                    type="date"
                     value={newDate}
                     onChange={(e) => setNewDate(e.target.value)}
-                    placeholder={`${year}-12-24`}
+                    min={`${year}-01-01`}
+                    max={`${year}-12-31`}
                   />
                 </div>
                 <div className="flex-1">

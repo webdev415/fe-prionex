@@ -4353,7 +4353,10 @@
         "regenerateHint": "Recomputing keeps dates you added and clears the reviewed mark.",
         "confirm": "Mark as reviewed",
         "confirmed": "Calendar marked as reviewed",
-        "confirmFailed": "Could not mark the calendar as reviewed"
+        "confirmFailed": "Could not mark the calendar as reviewed",
+        "badDate": "Enter the date as YYYY-MM-DD",
+        "wrongYear": "That date is not in {{year}}",
+        "alreadyAdded": "That date is already on the calendar"
       }
     },
     "roles": {

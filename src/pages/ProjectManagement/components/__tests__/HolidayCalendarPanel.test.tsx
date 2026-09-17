@@ -17,11 +17,12 @@ const addDate = vi.fn()
 const removeDate = vi.fn()
 const confirmCal = vi.fn()
 const toastWarning = vi.fn()
+const toastError = vi.fn()
 
 vi.mock('sonner', () => ({
   toast: {
     success: vi.fn(),
-    error: vi.fn(),
+    error: (...a: unknown[]) => toastError(...a),
     warning: (...a: unknown[]) => toastWarning(...a),
   },
 }))
@@ -137,7 +138,7 @@ describe('HolidayCalendarPanel', () => {
     removeDate.mockResolvedValue(undefined)
     renderPanel()
     const input = await screen.findByLabelText('pages.projects.holidayCalendar.addDate')
-    fireEvent.change(input, { target: { value: '2026-12-24' } })
+    fireEvent.change(input, { target: { value: `${CALENDAR.year}-12-24` } })
     fireEvent.click(screen.getByRole('button', { name: 'actions.add' }))
     await waitFor(() => expect(addDate).toHaveBeenCalled())
     expect(addDate.mock.calls[0][2]).toBe('2026-12-24')
@@ -146,13 +147,50 @@ describe('HolidayCalendarPanel', () => {
     await waitFor(() => expect(removeDate).toHaveBeenCalledWith(7, CALENDAR.year, '2026-01-01'))
   })
 
-  it('refuses a malformed date rather than sending it', async () => {
+  it('cannot be given a malformed date at all', async () => {
+    // This is what fixed the reported bug. The field used to be free text
+    // with a silent format check, so a date typed any other way made the
+    // button look dead. A date input cannot hold "24 Dec" — the value is
+    // rejected by the control, the field stays empty, and Add stays disabled
+    // rather than failing quietly when pressed.
     getCalendar.mockResolvedValue(CALENDAR)
     renderPanel()
-    const input = await screen.findByLabelText('pages.projects.holidayCalendar.addDate')
+    const input = (await screen.findByLabelText(
+      'pages.projects.holidayCalendar.addDate'
+    )) as HTMLInputElement
     fireEvent.change(input, { target: { value: '24 Dec' } })
+    expect(input.value).toBe('')
+    expect(screen.getByRole('button', { name: 'actions.add' })).toBeDisabled()
+    expect(addDate).not.toHaveBeenCalled()
+  })
+
+  it('cannot send a date outside the selected year', async () => {
+    // The input is bounded to the year, so an out-of-range value is rejected
+    // by the control itself and never reaches the handler. The handler keeps
+    // its own year check as well, for a pasted value or a browser that does
+    // not honour min/max.
+    getCalendar.mockResolvedValue(CALENDAR)
+    renderPanel()
+    const input = (await screen.findByLabelText(
+      'pages.projects.holidayCalendar.addDate'
+    )) as HTMLInputElement
+    expect(input.type).toBe('date')
+    expect(input.min).toBe(`${CALENDAR.year}-01-01`)
+    expect(input.max).toBe(`${CALENDAR.year}-12-31`)
+    fireEvent.change(input, { target: { value: '2099-01-01' } })
     fireEvent.click(screen.getByRole('button', { name: 'actions.add' }))
     expect(addDate).not.toHaveBeenCalled()
+  })
+
+  it('names the duplicate case rather than reporting a generic failure', async () => {
+    getCalendar.mockResolvedValue(CALENDAR)
+    addDate.mockRejectedValue(Object.assign(new Error('x'), { response: { status: 409 } }))
+    renderPanel()
+    const input = await screen.findByLabelText('pages.projects.holidayCalendar.addDate')
+    fireEvent.change(input, { target: { value: `${CALENDAR.year}-12-24` } })
+    fireEvent.click(screen.getByRole('button', { name: 'actions.add' }))
+    await waitFor(() => expect(toastError).toHaveBeenCalled())
+    expect(toastError.mock.calls[0][0]).toBe('pages.projects.holidayCalendar.alreadyAdded')
   })
 
   it('offers the review confirmation only while it is unreviewed', async () => {
