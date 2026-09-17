@@ -641,6 +641,28 @@ jobs:
           OR_INGEST="${OR_INGEST:-}"
 
           if [ -n "$OR_KEY" ] && [ -n "$OR_INGEST" ]; then
+            # 🔴 TEMPORARY GATE — remove together with KAN-KB-54.
+            #
+            # With the tracker enabled, digits are masked and input values are
+            # dropped, but NOTHING masks letters: client names, addresses and
+            # free-text operator comments go into the recording verbatim. The fix
+            # is `data-openreplay-obscured` on the blocks that hold them, which
+            # spans 102 components across 18 areas and is tracked separately as
+            # KAN-KB-54.
+            #
+            # Until that lands, PROD must not be switched on — and "must not" is
+            # worth exactly nothing as a comment, because switching it on takes
+            # one repository variable and no code review. So the build refuses.
+            # DEV and PRE-PROD are unaffected: their data is synthetic, which is
+            # the whole reason the rollout order is DEV first.
+            if [ "$ENVIRONMENT" = prod ]; then
+              echo "FAIL: OpenReplay is configured for prod, and that is blocked on purpose."
+              echo "  Client names, addresses and operator comments are NOT masked yet —"
+              echo "  only digits and input values are. See KAN-KB-54:"
+              echo "  https://git.crm-prionex.com/Tasks/Kanbanboard/issues/54"
+              echo "  Remove this gate as part of that task, not around it."
+              exit 1
+            fi
             # The key is not secret, but there is no reason to print it either.
             echo "OpenReplay for '${ENVIRONMENT}': ENABLED (ingest ${OR_INGEST})"
           else

@@ -48,14 +48,16 @@ export const OPENREPLAY_ENABLED = OPENREPLAY_PROJECT_KEY !== '' && OPENREPLAY_IN
  * names, addresses (`types/api.ts`) and free-text operator comments are recorded
  * verbatim.
  *
- * The intended fix is `data-openreplay-obscured` on the blocks that hold that
- * data — client card, payments, documents — which is an unticked item on task
- * Tasks/Kanbanboard#52 and does NOT exist in `src/` today: grep for the
+ * The fix is `data-openreplay-obscured` on the blocks that hold that data, which
+ * spans 102 components across 18 areas and is tracked as **KAN-KB-54**
+ * (Tasks/Kanbanboard#54). It does NOT exist in `src/` today: grep for the
  * attribute and this comment is most of what you will find.
  *
- * Whoever enables the PROD key: that gap is still open unless this paragraph
- * says otherwise. On DEV and PRE-PROD the data is synthetic, which is why the
- * order is DEV first.
+ * 🔒 So that this is not a promise guarding a hole: `build.yml` REFUSES a prod
+ * build that carries an OpenReplay key, and the refusal names KAN-KB-54. DEV and
+ * PRE-PROD are unaffected — their data is synthetic, which is the whole reason
+ * the rollout order is DEV first. Remove that gate as part of KAN-KB-54, not
+ * around it.
  *
  * Same convention as the key and as `VITE_ASSISTANT_REPORT_TABLES_ENABLED`:
  * empty or unset means off, and only a literal 'true'/'1' turns it on.
