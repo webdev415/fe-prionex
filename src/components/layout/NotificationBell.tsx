@@ -19,6 +19,7 @@ import { Icons } from '@/lib/icons'
 import { safeHttpUrl } from '@/lib/safeUrl'
 import { useAuthStore } from '@/stores/authStore'
 import { formatTaskDueDateForDisplay } from '@/lib/formatters'
+import { spanishLocaleOr } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
 import {
@@ -38,7 +39,7 @@ import type { NotificationItem } from '@/features/notifications/types'
 function getIntlLocale(language: string): string {
   const base = language.split('-')[0] ?? 'en'
   if (base === 'uk') return 'uk-UA'
-  return 'en-GB'
+  return spanishLocaleOr(language, 'en-GB')
 }
 
 function translatePaymentMethod(method: string | undefined, t: TFunction): string {
@@ -67,7 +68,8 @@ function formatDateTime(isoDate: string, timezone: string | undefined, language:
       timeZone: tz,
     }).formatToParts(new Date(dateStr))
     const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '00'
-    return `${get('day')}-${get('month')}-${get('year')} ${get('hour')}:${get('minute')}`
+    const sep = intlLocale === 'es-ES' ? '/' : '-'
+    return `${get('day')}${sep}${get('month')}${sep}${get('year')} ${get('hour')}:${get('minute')}`
   } catch {
     return isoDate
   }

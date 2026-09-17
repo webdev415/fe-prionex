@@ -6,6 +6,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import i18n, { spanishLocaleOr } from '@/lib/i18n'
 import { Input } from '@/components/ui/Input'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { CheckboxMultiSelect } from '@/components/ui/CheckboxMultiSelect'
@@ -85,7 +86,9 @@ function DebouncedNumberInput({
   const displayValue = isFocused
     ? localValue
     : localValue && formatWithCommas
-      ? new Intl.NumberFormat('uk-UA').format(Number(localValue.replace(/,/g, '')))
+      ? new Intl.NumberFormat(spanishLocaleOr(i18n.language, 'uk-UA')).format(
+          Number(localValue.replace(/,/g, ''))
+        )
       : localValue
 
   // × is opt-in (onClear) and only meaningful when there is a value to clear.

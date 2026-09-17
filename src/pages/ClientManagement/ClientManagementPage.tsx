@@ -6,6 +6,7 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
+import i18n, { spanishLocaleOr } from '@/lib/i18n'
 import { DataTable, type Column, type SortConfig } from '@/components/ui/DataTable'
 import { Pagination } from '@/components/ui/Pagination'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
@@ -1766,7 +1767,7 @@ export function ClientManagementPage() {
   const formatCurrency = (amount: string | number) => {
     const num = typeof amount === 'string' ? parseFloat(amount) : amount
     if (isNaN(num)) return '0'
-    return new Intl.NumberFormat('uk-UA', {
+    return new Intl.NumberFormat(spanishLocaleOr(i18n.language, 'uk-UA'), {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
       useGrouping: true,

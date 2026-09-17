@@ -5,6 +5,7 @@
  */
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import { spanishLocaleOr } from '@/lib/i18n'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQueries, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -4719,7 +4720,9 @@ export function ClientDetailPage() {
                                             }
                                           ).initiated_at || item.date
                                   const locale =
-                                    i18n.language?.split('-')[0] === 'uk' ? 'uk-UA' : 'en-GB'
+                                    i18n.language?.split('-')[0] === 'uk'
+                                      ? 'uk-UA'
+                                      : spanishLocaleOr(i18n.language, 'en-GB')
                                   const date = new Date(String(timestamp)).toLocaleDateString(
                                     locale,
                                     {
@@ -4846,7 +4849,9 @@ export function ClientDetailPage() {
                                           new Date().toISOString()
                                         const dt = new Date(String(timestamp))
                                         const time = dt.toLocaleTimeString(
-                                          i18n.language?.split('-')[0] === 'uk' ? 'uk-UA' : 'en-GB',
+                                          i18n.language?.split('-')[0] === 'uk'
+                                            ? 'uk-UA'
+                                            : spanishLocaleOr(i18n.language, 'en-GB'),
                                           {
                                             hour: '2-digit',
                                             minute: '2-digit',
@@ -5020,7 +5025,9 @@ export function ClientDetailPage() {
                                         ? call.initiated_at
                                         : call.date
                                     const locale =
-                                      i18n.language?.split('-')[0] === 'uk' ? 'uk-UA' : 'en-GB'
+                                      i18n.language?.split('-')[0] === 'uk'
+                                        ? 'uk-UA'
+                                        : spanishLocaleOr(i18n.language, 'en-GB')
                                     const date = new Date(String(timestamp)).toLocaleDateString(
                                       locale,
                                       {
@@ -5182,7 +5189,9 @@ export function ClientDetailPage() {
                                     const timestamp =
                                       'sent_at' in sms && sms.sent_at ? sms.sent_at : sms.date
                                     const locale =
-                                      i18n.language?.split('-')[0] === 'uk' ? 'uk-UA' : 'en-GB'
+                                      i18n.language?.split('-')[0] === 'uk'
+                                        ? 'uk-UA'
+                                        : spanishLocaleOr(i18n.language, 'en-GB')
                                     const date = new Date(String(timestamp)).toLocaleDateString(
                                       locale,
                                       {
@@ -5285,7 +5294,9 @@ export function ClientDetailPage() {
                                         item.failed_at ||
                                         new Date().toISOString()
                                       const locale =
-                                        i18n.language?.split('-')[0] === 'uk' ? 'uk-UA' : 'en-GB'
+                                        i18n.language?.split('-')[0] === 'uk'
+                                          ? 'uk-UA'
+                                          : spanishLocaleOr(i18n.language, 'en-GB')
                                       const date = new Date(String(timestamp)).toLocaleDateString(
                                         locale,
                                         {
@@ -5324,7 +5335,7 @@ export function ClientDetailPage() {
                                             const time = dt.toLocaleTimeString(
                                               i18n.language?.split('-')[0] === 'uk'
                                                 ? 'uk-UA'
-                                                : 'en-GB',
+                                                : spanishLocaleOr(i18n.language, 'en-GB'),
                                               {
                                                 hour: '2-digit',
                                                 minute: '2-digit',

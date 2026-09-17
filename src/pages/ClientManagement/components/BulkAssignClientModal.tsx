@@ -6,6 +6,7 @@
 
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import i18n, { spanishLocaleOr } from '@/lib/i18n'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import {
@@ -30,7 +31,7 @@ import { toast } from 'sonner'
 const formatUAH = (amount: string | number) => {
   const num = typeof amount === 'string' ? parseFloat(amount) : amount
   if (isNaN(num)) return '0'
-  return new Intl.NumberFormat('uk-UA', {
+  return new Intl.NumberFormat(spanishLocaleOr(i18n.language, 'uk-UA'), {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
     useGrouping: true,

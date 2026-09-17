@@ -6,6 +6,7 @@
  */
 
 import { useTranslation } from 'react-i18next'
+import i18n, { spanishLocaleOr } from '@/lib/i18n'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
@@ -33,7 +34,7 @@ const STATUS_BADGE_COLORS: Record<string, string> = {
 
 function formatTimestamp(value: string): string {
   try {
-    return new Date(value).toLocaleString('uk-UA', {
+    return new Date(value).toLocaleString(spanishLocaleOr(i18n.language, 'uk-UA'), {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',

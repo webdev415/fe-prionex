@@ -20,7 +20,7 @@ import { taskApi } from '@/features/clients/api/taskApi'
 import { useTransitionCorrectionTask } from '@/features/training'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/authStore'
-import { formatTaskDueDateForDisplay } from '@/lib/formatters'
+import { dateSeparator, formatTaskDueDateForDisplay } from '@/lib/formatters'
 import { cn } from '@/lib/utils'
 
 function formatDateTime(isoDate: string, timezone?: string): string {
@@ -40,7 +40,8 @@ function formatDateTime(isoDate: string, timezone?: string): string {
       timeZone: tz,
     }).formatToParts(new Date(dateStr))
     const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '00'
-    return `${get('day')}-${get('month')}-${get('year')} ${get('hour')}:${get('minute')}`
+    const sep = dateSeparator()
+    return `${get('day')}${sep}${get('month')}${sep}${get('year')} ${get('hour')}:${get('minute')}`
   } catch {
     return isoDate
   }

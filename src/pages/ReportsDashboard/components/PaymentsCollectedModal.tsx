@@ -6,6 +6,8 @@
  */
 
 import { useTranslation } from 'react-i18next'
+import i18n, { spanishLocaleOr } from '@/lib/i18n'
+import { dateSeparator } from '@/lib/formatters'
 import { Modal, ModalContent, ModalFooter, ModalTitle } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { ProgressBar } from '@/components/ui/ProgressBar'
@@ -73,7 +75,7 @@ export function PaymentsCollectedModal({
 
   const formatCurrency = (amount: number) => {
     // Format number with spaces as thousands separator
-    const formatted = new Intl.NumberFormat('uk-UA', {
+    const formatted = new Intl.NumberFormat(spanishLocaleOr(i18n.language, 'uk-UA'), {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
       useGrouping: true,
@@ -87,7 +89,8 @@ export function PaymentsCollectedModal({
     const now = new Date()
     const day = String(now.getDate()).padStart(2, '0')
     const month = String(now.getMonth() + 1).padStart(2, '0')
-    return `${day}-${month}-${now.getFullYear()}`
+    const sep = dateSeparator()
+    return `${day}${sep}${month}${sep}${now.getFullYear()}`
   }
 
   const getComparisonText = () => {

@@ -88,6 +88,10 @@ export function intlLocaleForUiLanguage(lang: string | undefined | null): string
   return 'en-US'
 }
 
+export function spanishLocaleOr(lang: string | undefined | null, locale: string): string {
+  return normalizeBackendLanguage(lang) === 'es' ? 'es-ES' : locale
+}
+
 /** Apply server-stored language so UI matches the account after login/refresh (persists via i18n localStorage). */
 export function applyPersistedLanguageFromServer(lang: string | undefined | null): void {
   void i18n.changeLanguage(normalizeBackendLanguage(lang))

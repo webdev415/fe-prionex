@@ -7,6 +7,7 @@
 import { useState, useCallback, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import i18n, { spanishLocaleOr } from '@/lib/i18n'
 import { Link } from 'react-router-dom'
 import { SearchFiltersBar } from './components/SearchFiltersBar'
 import { AuditLogDetailModal } from './components/AuditLogDetailModal'
@@ -468,7 +469,7 @@ export function AuditLogsPage() {
   const formatCurrency = useCallback((amount: string | number): string => {
     const num = typeof amount === 'string' ? parseFloat(amount) : amount
     if (isNaN(num)) return String(amount)
-    return new Intl.NumberFormat('uk-UA', {
+    return new Intl.NumberFormat(spanishLocaleOr(i18n.language, 'uk-UA'), {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
       useGrouping: true,

@@ -9,7 +9,7 @@ function isSpanishUi(): boolean {
   return (i18n.language ?? '').split('-')[0].toLowerCase() === 'es'
 }
 
-function dateSeparator(): string {
+export function dateSeparator(): string {
   return isSpanishUi() ? '/' : '-'
 }
 

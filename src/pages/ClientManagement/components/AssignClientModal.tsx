@@ -6,6 +6,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import i18n, { spanishLocaleOr } from '@/lib/i18n'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
@@ -25,7 +26,7 @@ import { toast } from 'sonner'
 
 // Format currency for Ukrainian Hryvnia
 const formatUAH = (amount: number) => {
-  return new Intl.NumberFormat('uk-UA', {
+  return new Intl.NumberFormat(spanishLocaleOr(i18n.language, 'uk-UA'), {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
     useGrouping: true,
