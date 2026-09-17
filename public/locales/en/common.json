@@ -110,7 +110,8 @@
       "statusPaused": "Paused",
       "statusNotConnected": "Not connected",
       "waitingForCall": "Connected — waiting for the next call…",
-      "joinToStart": "Join the dialer to start receiving calls."
+      "joinToStart": "Join the dialer to start receiving calls.",
+      "queueCompleted": "The queue has been fully dialed through."
     },
     "call": {
       "activeCall": "Active Call",
@@ -128,7 +129,35 @@
       "chainStepLabel": "Step {{step}} - Collection: {{label}}",
       "chainStepCreditLabel": "Step 9 - Collection: Credit *",
       "chainContinue": "Continue",
-      "chainDemoNotice": "This is a demo chain — no data was saved."
+      "chainDemoNotice": "This is a demo chain — no data was saved.",
+      "wrapUp": "Wrap-up",
+      "wrapUpIn": "Wrap-up {{s}}s",
+      "skip": "Skip",
+      "taChain": "TA Chain",
+      "loanNumber": "Number",
+      "loanCounterparty": "Counterparty",
+      "loanDateOfSale": "Date of Sale",
+      "loanBodyAmount": "Body Amount",
+      "loanTotalToReturn": "Total to Return",
+      "loanLegitimate": "Legitimate",
+      "selectTypeRequired": "Please select an interaction type",
+      "selectType": "Select type",
+      "clientName": "Client's Name",
+      "taxId": "Tax ID",
+      "interactionType": "Interaction Type",
+      "contactComment": "contact comment",
+      "enterComment": "Enter comment...",
+      "saveInteraction": "Save interaction",
+      "statusActive": "Active",
+      "statusInactive": "Inactive",
+      "totalPaid": "Total Paid",
+      "totalPayments": "Total Payments",
+      "numberOfPayments": "Number of Payments",
+      "verified": "Verified",
+      "pending": "Pending",
+      "phoneNumber": "Phone Number",
+      "incomingCall": "Incoming Call",
+      "acceptCall": "Accept call"
     },
     "accessGroup": {
       "all_groups": "All groups",
@@ -192,7 +221,17 @@
       "maxAttempts": "Attempts per number",
       "maxAttemptsHint": "Total attempts, including the first. Line failures are periodic, so a retry usually lands on another SIM.",
       "retryDelayFailed": "Retry delay (seconds)",
-      "retryDelayFailedHint": "0 disables retrying failures."
+      "retryDelayFailedHint": "0 disables retrying failures.",
+      "validation": {
+        "nameRequired": "Queue name is required",
+        "priorityNumber": "Enter a number from 1 to 5",
+        "minimumOne": "Minimum is 1",
+        "maximumFive": "Maximum is 5",
+        "enterNumber": "Enter a number",
+        "atLeastOneAttempt": "At least 1 attempt",
+        "enterSeconds": "Enter a number of seconds",
+        "notNegative": "Cannot be negative"
+      }
     },
     "numbers": {
       "inQueue": "In Queue",
@@ -245,7 +284,8 @@
       "loadError": "Failed to load clients.",
       "showingFirst": "Showing the first {{shown}} of {{total}} clients.",
       "added": "{{count}} clients added to the queue",
-      "addedWithSkipped": "{{count}} clients added ({{skipped}} skipped — no phone)"
+      "addedWithSkipped": "{{count}} clients added ({{skipped}} skipped — no phone)",
+      "selectQueue": "Select queue"
     },
     "analysis": {
       "operatorsInLine": "Operators in Line",

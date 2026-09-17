@@ -110,7 +110,8 @@
       "statusPaused": "En pausa",
       "statusNotConnected": "No conectado",
       "waitingForCall": "Conectado — esperando la siguiente llamada…",
-      "joinToStart": "Únase al marcador para empezar a recibir llamadas."
+      "joinToStart": "Únase al marcador para empezar a recibir llamadas.",
+      "queueCompleted": "Se han marcado todos los números de la cola."
     },
     "call": {
       "activeCall": "Llamada activa",
@@ -128,7 +129,35 @@
       "chainStepLabel": "Paso {{step}} - Cobro: {{label}}",
       "chainStepCreditLabel": "Paso 9 - Cobro: Crédito *",
       "chainContinue": "Continuar",
-      "chainDemoNotice": "Esta es una cadena de demostración — no se ha guardado ningún dato."
+      "chainDemoNotice": "Esta es una cadena de demostración — no se ha guardado ningún dato.",
+      "wrapUp": "Posllamada",
+      "wrapUpIn": "Posllamada {{s}} s",
+      "skip": "Omitir",
+      "taChain": "Cadena de AO",
+      "loanNumber": "Número",
+      "loanCounterparty": "Contraparte",
+      "loanDateOfSale": "Fecha de venta",
+      "loanBodyAmount": "Importe del principal",
+      "loanTotalToReturn": "Total a devolver",
+      "loanLegitimate": "Legítimo",
+      "selectTypeRequired": "Seleccione un tipo de interacción",
+      "selectType": "Seleccione el tipo",
+      "clientName": "Nombre del cliente",
+      "taxId": "NIF",
+      "interactionType": "Tipo de interacción",
+      "contactComment": "comentario del contacto",
+      "enterComment": "Introduzca un comentario...",
+      "saveInteraction": "Guardar interacción",
+      "statusActive": "Activo",
+      "statusInactive": "Inactivo",
+      "totalPaid": "Total pagado",
+      "totalPayments": "Total de pagos",
+      "numberOfPayments": "Número de pagos",
+      "verified": "Verificado",
+      "pending": "Pendiente",
+      "phoneNumber": "Número de teléfono",
+      "incomingCall": "Llamada entrante",
+      "acceptCall": "Aceptar llamada"
     },
     "accessGroup": {
       "all_groups": "Todos los grupos",
@@ -192,7 +221,17 @@
       "maxAttempts": "Intentos por número",
       "maxAttemptsHint": "Intentos totales, incluido el primero. Los fallos de línea son periódicos, por lo que un reintento suele recaer en otra SIM.",
       "retryDelayFailed": "Retraso de reintento (segundos)",
-      "retryDelayFailedHint": "0 desactiva el reintento de fallos."
+      "retryDelayFailedHint": "0 desactiva el reintento de fallos.",
+      "validation": {
+        "nameRequired": "El nombre de la cola es obligatorio",
+        "priorityNumber": "Introduzca un número del 1 al 5",
+        "minimumOne": "El mínimo es 1",
+        "maximumFive": "El máximo es 5",
+        "enterNumber": "Introduzca un número",
+        "atLeastOneAttempt": "Al menos 1 intento",
+        "enterSeconds": "Introduzca un número de segundos",
+        "notNegative": "No puede ser negativo"
+      }
     },
     "numbers": {
       "inQueue": "En cola",
@@ -245,7 +284,8 @@
       "loadError": "No se pudieron cargar los clientes.",
       "showingFirst": "Mostrando los primeros {{shown}} de {{total}} clientes.",
       "added": "{{count}} clientes añadidos a la cola",
-      "addedWithSkipped": "{{count}} clientes añadidos ({{skipped}} omitidos — sin teléfono)"
+      "addedWithSkipped": "{{count}} clientes añadidos ({{skipped}} omitidos — sin teléfono)",
+      "selectQueue": "Seleccione una cola"
     },
     "analysis": {
       "operatorsInLine": "Operadores en línea",

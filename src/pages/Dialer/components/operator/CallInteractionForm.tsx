@@ -82,7 +82,7 @@ export function CallInteractionForm({ clientId, clientName, phone }: CallInterac
 
   const handleSubmit = async () => {
     if (!resolvedTypeId) {
-      toast.error(t('dialer.call.selectType', 'Please select an interaction type'))
+      toast.error(t('dialer.call.selectTypeRequired', 'Please select an interaction type'))
       return
     }
     try {
@@ -149,7 +149,7 @@ export function CallInteractionForm({ clientId, clientName, phone }: CallInterac
           <SelectTrigger
             className="w-full"
             id="dialer-interaction-type"
-            aria-label="Interaction Type"
+            aria-label={t('dialer.call.interactionType', 'Interaction Type')}
           >
             <SelectValue placeholder={t('dialer.call.selectType', 'Select type')} />
           </SelectTrigger>

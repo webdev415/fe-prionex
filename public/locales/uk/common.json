@@ -110,7 +110,8 @@
       "statusPaused": "Призупинено",
       "statusNotConnected": "Не підключено",
       "waitingForCall": "Підключено — очікування наступного дзвінка…",
-      "joinToStart": "Приєднайтеся до дайлера, щоб отримувати дзвінки."
+      "joinToStart": "Приєднайтеся до дайлера, щоб отримувати дзвінки.",
+      "queueCompleted": "Усі номери черги вже обдзвонено."
     },
     "call": {
       "activeCall": "Активний дзвінок",
@@ -128,7 +129,35 @@
       "chainStepLabel": "Крок {{step}} - Збір: {{label}}",
       "chainStepCreditLabel": "Крок 9 - Збір: Кредит *",
       "chainContinue": "Продовжити",
-      "chainDemoNotice": "Це демо-ланцюжок — дані не збережено."
+      "chainDemoNotice": "Це демо-ланцюжок — дані не збережено.",
+      "wrapUp": "Постобробка",
+      "wrapUpIn": "Постобробка {{s}} с",
+      "skip": "Пропустити",
+      "taChain": "Ланцюжок ЦД",
+      "loanNumber": "Номер",
+      "loanCounterparty": "Контрагент",
+      "loanDateOfSale": "Дата продажу",
+      "loanBodyAmount": "Сума тіла",
+      "loanTotalToReturn": "Всього до повернення",
+      "loanLegitimate": "Правомірно",
+      "selectTypeRequired": "Оберіть тип взаємодії",
+      "selectType": "Оберіть тип",
+      "clientName": "Ім’я клієнта",
+      "taxId": "ІПН",
+      "interactionType": "Тип взаємодії",
+      "contactComment": "коментар до контакту",
+      "enterComment": "Введіть коментар...",
+      "saveInteraction": "Зберегти взаємодію",
+      "statusActive": "Активний",
+      "statusInactive": "Неактивний",
+      "totalPaid": "Усього сплачено",
+      "totalPayments": "Усього платежів",
+      "numberOfPayments": "Кількість платежів",
+      "verified": "Верифіковано",
+      "pending": "Очікує",
+      "phoneNumber": "Номер телефону",
+      "incomingCall": "Вхідний дзвінок",
+      "acceptCall": "Прийняти дзвінок"
     },
     "accessGroup": {
       "all_groups": "Усі групи",
@@ -192,7 +221,17 @@
       "maxAttempts": "Спроб на номер",
       "maxAttemptsHint": "Усі спроби разом із першою. Збої лінії трапляються періодично, тому повтор зазвичай потрапляє на іншу SIM-картку.",
       "retryDelayFailed": "Затримка повтору (секунди)",
-      "retryDelayFailedHint": "0 вимикає повтор після збою."
+      "retryDelayFailedHint": "0 вимикає повтор після збою.",
+      "validation": {
+        "nameRequired": "Назва черги обов’язкова",
+        "priorityNumber": "Введіть число від 1 до 5",
+        "minimumOne": "Мінімум — 1",
+        "maximumFive": "Максимум — 5",
+        "enterNumber": "Введіть число",
+        "atLeastOneAttempt": "Щонайменше 1 спроба",
+        "enterSeconds": "Введіть кількість секунд",
+        "notNegative": "Не може бути від’ємним"
+      }
     },
     "numbers": {
       "inQueue": "У черзі",
@@ -245,7 +284,8 @@
       "loadError": "Не вдалося завантажити клієнтів.",
       "showingFirst": "Показано перші {{shown}} з {{total}} клієнтів.",
       "added": "Додано клієнтів до черги: {{count}}",
-      "addedWithSkipped": "Додано клієнтів: {{count}} ({{skipped}} пропущено — немає телефону)"
+      "addedWithSkipped": "Додано клієнтів: {{count}} ({{skipped}} пропущено — немає телефону)",
+      "selectQueue": "Оберіть чергу"
     },
     "analysis": {
       "operatorsInLine": "Операторів на лінії",
