@@ -17,16 +17,16 @@ import { z } from 'zod'
  */
 const passwordSchema = z
   .string()
-  .min(8, 'Password must be at least 8 characters')
-  .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
-  .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
-  .regex(/[0-9]/, 'Password must contain at least one number')
-  .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character')
+  .min(8, 'pages.users.validation.passwordMinLength')
+  .regex(/[A-Z]/, 'pages.users.validation.passwordUppercase')
+  .regex(/[a-z]/, 'pages.users.validation.passwordLowercase')
+  .regex(/[0-9]/, 'pages.users.validation.passwordNumber')
+  .regex(/[^A-Za-z0-9]/, 'pages.users.validation.passwordSpecial')
 
 /**
  * Email validation
  */
-const emailSchema = z.string().email('Invalid email address')
+const emailSchema = z.string().email('pages.users.validation.invalidEmail')
 
 /**
  * Phone number validation (E.164 format)
@@ -34,7 +34,7 @@ const emailSchema = z.string().email('Invalid email address')
  */
 const phoneSchema = z
   .string()
-  .regex(/^\+[1-9]\d{0,3}-\d{1,14}$/, 'Phone must be in E.164 format (e.g., +1-555-0101)')
+  .regex(/^\+[1-9]\d{0,3}-\d{1,14}$/, 'pages.users.validation.phoneFormat')
   .optional()
   .or(z.literal(''))
 
@@ -45,27 +45,24 @@ const phoneSchema = z
  */
 const usernameSchema = z
   .string()
-  .min(3, 'Username must be at least 3 characters')
-  .max(50, 'Username must be at most 50 characters')
-  .regex(
-    /^[a-zA-Z0-9._-]+$/,
-    'Username can only contain letters, numbers, dots, underscores, and hyphens'
-  )
+  .min(3, 'pages.users.validation.usernameMin')
+  .max(50, 'pages.users.validation.usernameMax')
+  .regex(/^[a-zA-Z0-9._-]+$/, 'pages.users.validation.usernameChars')
 
 /**
  * Name field validation
  */
 const nameSchema = z
   .string()
-  .min(1, 'This field is required')
-  .max(100, 'Name must be at most 100 characters')
+  .min(1, 'pages.users.validation.required')
+  .max(100, 'pages.users.validation.nameMax')
 
 /**
  * Optional name field validation
  */
 const optionalNameSchema = z
   .string()
-  .max(100, 'Name must be at most 100 characters')
+  .max(100, 'pages.users.validation.nameMax')
   .optional()
   .or(z.literal(''))
 
@@ -93,18 +90,18 @@ export const createUserSchema = z.object({
   middle_name: optionalNameSchema,
   phone: phoneSchema,
   language: z.enum(['en', 'uk', 'es'], {
-    message: 'Please select a language',
+    message: 'pages.users.validation.selectLanguage',
   }),
-  timezone: z.string().min(1, 'Please select a timezone'),
+  timezone: z.string().min(1, 'pages.users.validation.selectTimezone'),
   must_change_password: z.boolean().default(true),
   asterisk_extension: z
     .string()
-    .regex(/^\d{3,10}$/, 'Extension must be 3-10 digits')
+    .regex(/^\d{3,10}$/, 'pages.users.validation.extensionDigits')
     .optional()
     .or(z.literal('')),
   dialer_extension: z
     .string()
-    .regex(/^\d{3,10}$/, 'Extension must be 3-10 digits')
+    .regex(/^\d{3,10}$/, 'pages.users.validation.extensionDigits')
     .optional()
     .or(z.literal('')),
   is_agent: z.boolean().optional().default(false),
@@ -124,17 +121,17 @@ export const updateUserSchema = z.object({
   middle_name: optionalNameSchema,
   phone: phoneSchema,
   language: z.enum(['en', 'uk', 'es'], {
-    message: 'Please select a language',
+    message: 'pages.users.validation.selectLanguage',
   }),
-  timezone: z.string().min(1, 'Please select a timezone'),
+  timezone: z.string().min(1, 'pages.users.validation.selectTimezone'),
   asterisk_extension: z
     .string()
-    .regex(/^\d{3,10}$/, 'Extension must be 3-10 digits')
+    .regex(/^\d{3,10}$/, 'pages.users.validation.extensionDigits')
     .optional()
     .or(z.literal('')),
   dialer_extension: z
     .string()
-    .regex(/^\d{3,10}$/, 'Extension must be 3-10 digits')
+    .regex(/^\d{3,10}$/, 'pages.users.validation.extensionDigits')
     .optional()
     .or(z.literal('')),
   is_agent: z.boolean().optional(),
@@ -155,7 +152,7 @@ export const updateUserSchema = z.object({
  * It also cannot live on `createUserSchema` itself: the create form extends
  * that object, and a refined schema is a ZodEffects, which has no `.extend`.
  */
-export const AGENT_EXTENSION_REQUIRED_MESSAGE = 'Asterisk Extension is required for agents'
+export const AGENT_EXTENSION_REQUIRED_MESSAGE = 'pages.users.validation.agentExtensionRequired'
 
 export function requireAgentExtension(
   data: { is_agent?: boolean; asterisk_extension?: string },

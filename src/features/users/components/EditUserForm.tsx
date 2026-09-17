@@ -178,7 +178,11 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
 
   // Check if user data is available - AFTER all hooks
   if (!user) {
-    return <div className="text-muted-foreground py-8 text-center">No user data available</div>
+    return (
+      <div className="text-muted-foreground py-8 text-center">
+        {t('pages.users.forms.edit.noUserData')}
+      </div>
+    )
   }
 
   const onSubmit = (data: UpdateUserFormData) => {
@@ -249,8 +253,10 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
       {isError && (
         <Alert variant="error">
           <div>
-            <h3 className="font-semibold">Error updating user</h3>
-            <p className="mt-1 text-sm">{error?.message || 'Failed to update user'}</p>
+            <h3 className="font-semibold">{t('pages.users.forms.edit.errorUpdating')}</h3>
+            <p className="mt-1 text-sm">
+              {error?.message || t('pages.users.forms.edit.failedToUpdate')}
+            </p>
           </div>
         </Alert>
       )}
@@ -259,25 +265,29 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
       <div className="space-y-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <Label htmlFor="username">Username:</Label>
+            <Label htmlFor="username">{t('pages.users.forms.edit.username')}</Label>
             <Input id="username" value={user.username} disabled className="bg-muted mt-1" />
-            <p className="text-muted-foreground mt-1 text-xs">Username cannot be changed</p>
+            <p className="text-muted-foreground mt-1 text-xs">
+              {t('pages.users.forms.edit.usernameCannotChange')}
+            </p>
           </div>
 
           <div>
             <Label htmlFor="email" required>
-              Email:
+              {t('pages.users.forms.edit.email')}
             </Label>
             <Input
               id="email"
               type="email"
-              placeholder="Enter your email"
+              placeholder={t('pages.users.forms.placeholders.email')}
               {...register('email')}
               aria-invalid={!!errors.email}
               variant={errors.email ? 'error' : 'default'}
               className="mt-1"
             />
-            {errors.email && <p className="mt-1 text-sm text-red-500">{errors.email.message}</p>}
+            {errors.email && (
+              <p className="mt-1 text-sm text-red-500">{t(errors.email.message ?? '')}</p>
+            )}
           </div>
         </div>
       </div>
@@ -287,67 +297,69 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="first_name" required>
-              First Name:
+              {t('pages.users.forms.edit.firstName')}
             </Label>
             <Input
               id="first_name"
-              placeholder="Enter first name"
+              placeholder={t('pages.users.forms.placeholders.firstName')}
               {...register('first_name')}
               aria-invalid={!!errors.first_name}
               variant={errors.first_name ? 'error' : 'default'}
               className="mt-1"
             />
             {errors.first_name && (
-              <p className="mt-1 text-sm text-red-500">{errors.first_name.message}</p>
+              <p className="mt-1 text-sm text-red-500">{t(errors.first_name.message ?? '')}</p>
             )}
           </div>
 
           <div>
             <Label htmlFor="last_name" required>
-              Last Name:
+              {t('pages.users.forms.edit.lastName')}
             </Label>
             <Input
               id="last_name"
-              placeholder="Enter last name"
+              placeholder={t('pages.users.forms.placeholders.lastName')}
               {...register('last_name')}
               aria-invalid={!!errors.last_name}
               variant={errors.last_name ? 'error' : 'default'}
               className="mt-1"
             />
             {errors.last_name && (
-              <p className="mt-1 text-sm text-red-500">{errors.last_name.message}</p>
+              <p className="mt-1 text-sm text-red-500">{t(errors.last_name.message ?? '')}</p>
             )}
           </div>
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <Label htmlFor="middle_name">Middle Name:</Label>
+            <Label htmlFor="middle_name">{t('pages.users.forms.edit.middleName')}</Label>
             <Input
               id="middle_name"
-              placeholder="Enter middle name (optional)"
+              placeholder={t('pages.users.forms.placeholders.middleName')}
               {...register('middle_name')}
               aria-invalid={!!errors.middle_name}
               variant={errors.middle_name ? 'error' : 'default'}
               className="mt-1"
             />
             {errors.middle_name && (
-              <p className="mt-1 text-sm text-red-500">{errors.middle_name.message}</p>
+              <p className="mt-1 text-sm text-red-500">{t(errors.middle_name.message ?? '')}</p>
             )}
           </div>
 
           <div>
-            <Label htmlFor="phone">Phone:</Label>
+            <Label htmlFor="phone">{t('pages.users.forms.edit.phone')}</Label>
             <Input
               id="phone"
               type="tel"
-              placeholder="+1-555-0101 (optional)"
+              placeholder={t('pages.users.forms.placeholders.phone')}
               {...register('phone')}
               aria-invalid={!!errors.phone}
               variant={errors.phone ? 'error' : 'default'}
               className="mt-1"
             />
-            {errors.phone && <p className="mt-1 text-sm text-red-500">{errors.phone.message}</p>}
+            {errors.phone && (
+              <p className="mt-1 text-sm text-red-500">{t(errors.phone.message ?? '')}</p>
+            )}
           </div>
         </div>
       </div>
@@ -357,7 +369,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <Label htmlFor="language" required>
-              Language:
+              {t('pages.users.forms.edit.language')}
             </Label>
             <Controller
               name="language"
@@ -376,13 +388,13 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
               )}
             />
             {errors.language && (
-              <p className="mt-1 text-sm text-red-500">{errors.language.message}</p>
+              <p className="mt-1 text-sm text-red-500">{t(errors.language.message ?? '')}</p>
             )}
           </div>
 
           <div>
             <Label htmlFor="timezone" required>
-              Timezone:
+              {t('pages.users.forms.edit.timezone')}
             </Label>
             <Controller
               name="timezone"
@@ -411,7 +423,7 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
               )}
             />
             {errors.timezone && (
-              <p className="mt-1 text-sm text-red-500">{errors.timezone.message}</p>
+              <p className="mt-1 text-sm text-red-500">{t(errors.timezone.message ?? '')}</p>
             )}
           </div>
         </div>
@@ -432,7 +444,9 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
               className="mt-1"
             />
             {errors.asterisk_extension && (
-              <p className="mt-1 text-sm text-red-500">{errors.asterisk_extension.message}</p>
+              <p className="mt-1 text-sm text-red-500">
+                {t(errors.asterisk_extension.message ?? '')}
+              </p>
             )}
             <p className="text-muted-foreground mt-1 text-xs">
               {t('pages.users.forms.helpers.asteriskExtension')}
@@ -451,7 +465,9 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
               className="mt-1"
             />
             {errors.dialer_extension && (
-              <p className="mt-1 text-sm text-red-500">{errors.dialer_extension.message}</p>
+              <p className="mt-1 text-sm text-red-500">
+                {t(errors.dialer_extension.message ?? '')}
+              </p>
             )}
             <p className="text-muted-foreground mt-1 text-xs">
               {t('pages.users.forms.helpers.dialerExtension')}
@@ -481,7 +497,9 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
 
       {/* Assign Projects Section (editable, similar to CreateUserForm) */}
       <div className="mt-4 mb-0 space-y-4">
-        <h3 className="text-foreground text-sm font-semibold">Assign Projects:</h3>
+        <h3 className="text-foreground text-sm font-semibold">
+          {t('pages.users.forms.edit.assignProjects')}
+        </h3>
         <div className="flex flex-wrap gap-4">
           {projects.map((project) => {
             const isChecked = selectedProjects.includes(project.id)

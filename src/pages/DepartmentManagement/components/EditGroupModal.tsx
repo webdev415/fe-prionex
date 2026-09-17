@@ -25,7 +25,7 @@ interface EditGroupModalProps {
 }
 
 const schema = z.object({
-  name: z.string().min(1, 'Group name is required'),
+  name: z.string().min(1, 'pages.groups.validation.nameRequired'),
   description: z.string().optional(),
 })
 
@@ -95,7 +95,7 @@ export function EditGroupModal({ open, groupId, onClose, onSuccess }: EditGroupM
                   disabled={updateMutation.isPending}
                 />
                 {errors.name && (
-                  <p className="text-error-500 mt-1 text-sm">{errors.name.message}</p>
+                  <p className="text-error-500 mt-1 text-sm">{t(errors.name.message ?? '')}</p>
                 )}
               </div>
               <div>

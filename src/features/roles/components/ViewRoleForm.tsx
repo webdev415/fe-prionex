@@ -73,15 +73,21 @@ export function ViewRoleForm({ role }: ViewRoleFormProps) {
         </span>
         <span className="text-foreground text-sm font-semibold">
           {role.department_name ||
-            (role.is_default ? 'Not available for default roles' : 'Not assigned')}
+            (role.is_default
+              ? t('pages.roles.forms.notAvailableForDefault')
+              : t('pages.users.forms.notAssigned'))}
         </span>
       </div>
 
       {/* Type */}
       <div className="flex items-center gap-2">
-        <span className="text-muted-foreground text-sm font-light">Type:</span>
+        <span className="text-muted-foreground text-sm font-light">
+          {t('pages.roles.forms.type')}:
+        </span>
         <span className="text-foreground text-sm font-semibold">
-          {role.is_default ? 'System Default' : 'Custom Role'}
+          {role.is_default
+            ? t('pages.roles.forms.systemDefault')
+            : t('pages.roles.forms.customRole')}
         </span>
       </div>
 
@@ -100,7 +106,10 @@ export function ViewRoleForm({ role }: ViewRoleFormProps) {
             {t('pages.roles.forms.permissions')}:
           </span>
           <span className="text-muted-foreground text-sm font-light">
-            ({selectedPermissionIds.size} of {permissions.length} permissions)
+            {t('pages.roles.forms.permissionsCount', {
+              selected: selectedPermissionIds.size,
+              total: permissions.length,
+            })}
           </span>
         </div>
 

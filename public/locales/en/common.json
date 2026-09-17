@@ -3951,7 +3951,8 @@
           "firstName": "Enter first name",
           "lastName": "Enter last name",
           "middleName": "Enter middle name (optional)",
-          "phone": "+1-555-0101 (optional)"
+          "phone": "+1-555-0101 (optional)",
+          "notSet": "Not set"
         },
         "errors": {
           "failedToCreate": "Failed to create user",
@@ -3962,6 +3963,21 @@
         "helpers": {
           "asteriskExtension": "3-10 digit extension number for Asterisk phone system (e.g., 1001, 1002)",
           "dialerExtension": "3-10 digit extension for the predictive dialer, allocated by the dialer admin (e.g., 9001, 9002)"
+        },
+        "edit": {
+          "noUserData": "No user data available",
+          "errorUpdating": "Error updating user",
+          "failedToUpdate": "Failed to update user",
+          "username": "Username:",
+          "usernameCannotChange": "Username cannot be changed",
+          "email": "Email:",
+          "firstName": "First Name:",
+          "lastName": "Last Name:",
+          "middleName": "Middle Name:",
+          "phone": "Phone:",
+          "language": "Language:",
+          "timezone": "Timezone:",
+          "assignProjects": "Assign Projects:"
         }
       },
       "editForm": {
@@ -3986,6 +4002,24 @@
         "confirmDeleteMessage": "\"{{name}}\" is removed from your saved filters. The filters themselves are not changed.",
         "loading": "Loading templates...",
         "loadFailed": "Could not load templates - tap to retry"
+      },
+      "validation": {
+        "passwordMinLength": "Password must be at least 8 characters",
+        "passwordUppercase": "Password must contain at least one uppercase letter",
+        "passwordLowercase": "Password must contain at least one lowercase letter",
+        "passwordNumber": "Password must contain at least one number",
+        "passwordSpecial": "Password must contain at least one special character",
+        "invalidEmail": "Invalid email address",
+        "phoneFormat": "Phone must be in E.164 format (e.g., +1-555-0101)",
+        "usernameMin": "Username must be at least 3 characters",
+        "usernameMax": "Username must be at most 50 characters",
+        "usernameChars": "Username can only contain letters, numbers, dots, underscores, and hyphens",
+        "required": "This field is required",
+        "nameMax": "Name must be at most 100 characters",
+        "selectLanguage": "Please select a language",
+        "selectTimezone": "Please select a timezone",
+        "extensionDigits": "Extension must be 3-10 digits",
+        "agentExtensionRequired": "Asterisk Extension is required for agents"
       }
     },
     "ipWhitelist": {
@@ -4191,7 +4225,8 @@
           "last90Days": "Last 90 days",
           "thisYear": "This year"
         },
-        "allClients": "All Clients"
+        "allClients": "All Clients",
+        "filtersAria": "Filters"
       },
       "detailPanel": {
         "noProject": "There is no project",
@@ -4399,7 +4434,8 @@
           "setToDefault": "Set to default:",
           "cannotArchiveUntilReassigned": "You cannot archive a role until all users are reassigned.",
           "failedToArchive": "Failed to archive role. Please try again.",
-          "roleNotFound": "Role not found"
+          "roleNotFound": "Role not found",
+          "defaultOperatorRole": "Operator"
         }
       },
       "forms": {
@@ -4416,14 +4452,26 @@
           "noDepartment": "No Department"
         },
         "errors": {
-          "failedToCreate": "Failed to create role. Please try again."
-        }
+          "failedToCreate": "Failed to create role. Please try again.",
+          "failedToUpdate": "Failed to update role. Please try again."
+        },
+        "optional": "(Optional)",
+        "selectedPermissions": "(Selected: {{selected}} of {{total}} permissions)",
+        "permissionsCount": "({{selected}} of {{total}} permissions)",
+        "type": "Type",
+        "systemDefault": "System Default",
+        "customRole": "Custom Role",
+        "notAvailableForDefault": "Not available for default roles"
       },
       "accessLevel": {
         "my": "Only mine",
         "group": "My group",
         "department": "My department",
         "all": "Entire project"
+      },
+      "validation": {
+        "nameRequired": "Role name is required",
+        "permissionsRequired": "Please select at least one permission"
       }
     },
     "departments": {
@@ -4489,6 +4537,9 @@
       "status": {
         "active": "Active",
         "inactive": "Inactive"
+      },
+      "validation": {
+        "nameRequired": "Department name is required"
       }
     },
     "groups": {
@@ -4541,6 +4592,9 @@
           "failedToCreate": "Failed to create group. Please try again.",
           "failedToUpdate": "Failed to update group. Please try again."
         }
+      },
+      "validation": {
+        "nameRequired": "Group name is required"
       }
     },
     "imports": {
@@ -8802,7 +8856,8 @@
         "clear": "Clear Selection",
         "saved": "Shortcut saved",
         "reassigned": "Shortcut moved from \"{{name}}\""
-      }
+      },
+      "extensionLabel": "Extension:"
     },
     "reports": {
       "title": "Reports Dashboard",
@@ -9554,7 +9609,16 @@
         "allActions": "All Actions",
         "allUsers": "All Users",
         "applyFilters": "Apply Filters",
-        "clearAll": "Clear All"
+        "clearAll": "Clear All",
+        "allRoles": "All Roles",
+        "searchActions": "Search actions",
+        "searchEntityTypes": "Search entity types",
+        "noActionsFound": "No actions found",
+        "noEntityTypesFound": "No entity types found",
+        "actionsSelected_one": "{{count}} action selected",
+        "actionsSelected_other": "{{count}} actions selected",
+        "typesSelected_one": "{{count}} type selected",
+        "typesSelected_other": "{{count}} types selected"
       },
       "tableHeaders": {
         "status": "Status",
@@ -9597,7 +9661,10 @@
         "userAgent": "User Agent",
         "added": "Added",
         "modified": "Modified",
-        "removed": "Removed"
+        "removed": "Removed",
+        "notApplicableAsterisk": "N/A (Asterisk event)",
+        "source": "Source",
+        "asteriskSource": "Asterisk (system event — no HTTP request)"
       },
       "csvExport": {
         "title": "Export audit logs to CSV",
@@ -9621,11 +9688,20 @@
           "newValue": "New Value",
           "ipAddress": "IP Address",
           "successStatus": "Success Status"
+        },
+        "delimiters": {
+          "comma": "Comma (,)",
+          "semicolon": "Semicolon (;)",
+          "tab": "Tab"
         }
       },
       "accessDenied": {
-        "title": "Access Denied"
-      }
+        "title": "Access Denied",
+        "message": "You need the \"View audit logs\" permission to access this page. Please contact your administrator if you need access."
+      },
+      "exportSuccess": "Audit logs exported successfully",
+      "exportError": "Failed to export audit logs",
+      "loadError": "Failed to load audit logs"
     },
     "messagingCampaigns": {
       "description": "Review bulk and single-send campaigns, inspect recipient outcomes, and export delivery results.",

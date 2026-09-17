@@ -3964,7 +3964,8 @@
           "firstName": "Введіть ім'я",
           "lastName": "Введіть прізвище",
           "middleName": "Введіть по батькові (необов'язково)",
-          "phone": "+1-555-0101 (необов'язково)"
+          "phone": "+1-555-0101 (необов'язково)",
+          "notSet": "Не вказано"
         },
         "errors": {
           "failedToCreate": "Не вдалося створити користувача",
@@ -3975,6 +3976,21 @@
         "helpers": {
           "asteriskExtension": "3-10 цифровий номер внутрішнього зв'язку для телефонної системи Asterisk (наприклад, 1001, 1002)",
           "dialerExtension": "3-10 цифрове розширення для предиктивного дайлера, видане адміністратором дайлера (наприклад, 9001, 9002)"
+        },
+        "edit": {
+          "noUserData": "Дані користувача недоступні",
+          "errorUpdating": "Помилка оновлення користувача",
+          "failedToUpdate": "Не вдалося оновити користувача",
+          "username": "Ім’я користувача:",
+          "usernameCannotChange": "Ім’я користувача не можна змінити",
+          "email": "Електронна пошта:",
+          "firstName": "Ім’я:",
+          "lastName": "Прізвище:",
+          "middleName": "По батькові:",
+          "phone": "Телефон:",
+          "language": "Мова:",
+          "timezone": "Часовий пояс:",
+          "assignProjects": "Призначити проєкти:"
         }
       },
       "editForm": {
@@ -3999,6 +4015,24 @@
         "confirmDeleteMessage": "«{{name}}» буде видалено зі збережених фільтрів. Самі фільтри не зміняться.",
         "loading": "Завантаження шаблонів...",
         "loadFailed": "Не вдалося завантажити шаблони - натисніть, щоб повторити"
+      },
+      "validation": {
+        "passwordMinLength": "Пароль має містити щонайменше 8 символів",
+        "passwordUppercase": "Пароль має містити щонайменше одну велику літеру",
+        "passwordLowercase": "Пароль має містити щонайменше одну малу літеру",
+        "passwordNumber": "Пароль має містити щонайменше одну цифру",
+        "passwordSpecial": "Пароль має містити щонайменше один спеціальний символ",
+        "invalidEmail": "Некоректна адреса електронної пошти",
+        "phoneFormat": "Телефон має бути у форматі E.164 (наприклад, +1-555-0101)",
+        "usernameMin": "Ім’я користувача має містити щонайменше 3 символи",
+        "usernameMax": "Ім’я користувача має містити не більше 50 символів",
+        "usernameChars": "Ім’я користувача може містити лише літери, цифри, крапки, підкреслення та дефіси",
+        "required": "Це поле обов’язкове",
+        "nameMax": "Ім’я має містити не більше 100 символів",
+        "selectLanguage": "Оберіть мову",
+        "selectTimezone": "Оберіть часовий пояс",
+        "extensionDigits": "Внутрішній номер має містити від 3 до 10 цифр",
+        "agentExtensionRequired": "Для агентів внутрішній номер Asterisk обов’язковий"
       }
     },
     "ipWhitelist": {
@@ -4204,7 +4238,8 @@
           "last90Days": "Останні 90 днів",
           "thisYear": "Цього року"
         },
-        "allClients": "Всі клієнти"
+        "allClients": "Всі клієнти",
+        "filtersAria": "Фільтри"
       },
       "detailPanel": {
         "noProject": "Немає проєкту",
@@ -4412,7 +4447,8 @@
           "setToDefault": "Встановити за замовчуванням:",
           "cannotArchiveUntilReassigned": "Ви не можете архівувати роль, поки всі користувачі не будуть переназначені.",
           "failedToArchive": "Не вдалося архівувати роль. Будь ласка, спробуйте ще раз.",
-          "roleNotFound": "Роль не знайдено"
+          "roleNotFound": "Роль не знайдено",
+          "defaultOperatorRole": "Оператор"
         }
       },
       "forms": {
@@ -4429,14 +4465,26 @@
           "noDepartment": "Без відділу"
         },
         "errors": {
-          "failedToCreate": "Не вдалося створити роль. Будь ласка, спробуйте ще раз."
-        }
+          "failedToCreate": "Не вдалося створити роль. Будь ласка, спробуйте ще раз.",
+          "failedToUpdate": "Не вдалося оновити роль. Будь ласка, спробуйте ще раз."
+        },
+        "optional": "(Необов’язково)",
+        "selectedPermissions": "(Вибрано: {{selected}} з {{total}} дозволів)",
+        "permissionsCount": "({{selected}} з {{total}} дозволів)",
+        "type": "Тип",
+        "systemDefault": "Системна за замовчуванням",
+        "customRole": "Користувацька роль",
+        "notAvailableForDefault": "Недоступно для стандартних ролей"
       },
       "accessLevel": {
         "my": "Тільки мої",
         "group": "Моя група",
         "department": "Мій відділ",
         "all": "Весь проект"
+      },
+      "validation": {
+        "nameRequired": "Назва ролі обов’язкова",
+        "permissionsRequired": "Оберіть щонайменше один дозвіл"
       }
     },
     "departments": {
@@ -4502,6 +4550,9 @@
       "status": {
         "active": "Активний",
         "inactive": "Неактивний"
+      },
+      "validation": {
+        "nameRequired": "Назва відділу обов’язкова"
       }
     },
     "groups": {
@@ -4554,6 +4605,9 @@
           "failedToCreate": "Не вдалося створити групу.",
           "failedToUpdate": "Не вдалося оновити групу."
         }
+      },
+      "validation": {
+        "nameRequired": "Назва групи обов’язкова"
       }
     },
     "imports": {
@@ -8148,7 +8202,8 @@
         "clear": "Скинути вибір",
         "saved": "Комбінацію збережено",
         "reassigned": "Комбінацію перенесено з «{{name}}»"
-      }
+      },
+      "extensionLabel": "Внутрішній номер:"
     },
     "reports": {
       "title": "Панель звітів",
@@ -8902,7 +8957,20 @@
         "allActions": "Всі дії",
         "allUsers": "Всі користувачі",
         "applyFilters": "Застосувати фільтри",
-        "clearAll": "Очистити все"
+        "clearAll": "Очистити все",
+        "allRoles": "Усі ролі",
+        "searchActions": "Пошук дій",
+        "searchEntityTypes": "Пошук типів об’єктів",
+        "noActionsFound": "Дій не знайдено",
+        "noEntityTypesFound": "Типів об’єктів не знайдено",
+        "actionsSelected_one": "Вибрано {{count}} дію",
+        "actionsSelected_few": "Вибрано {{count}} дії",
+        "actionsSelected_many": "Вибрано {{count}} дій",
+        "actionsSelected_other": "Вибрано {{count}} дії",
+        "typesSelected_one": "Вибрано {{count}} тип",
+        "typesSelected_few": "Вибрано {{count}} типи",
+        "typesSelected_many": "Вибрано {{count}} типів",
+        "typesSelected_other": "Вибрано {{count}} типу"
       },
       "tableHeaders": {
         "status": "Статус",
@@ -8945,7 +9013,10 @@
         "userAgent": "User Agent",
         "added": "Додано",
         "modified": "Змінено",
-        "removed": "Видалено"
+        "removed": "Видалено",
+        "notApplicableAsterisk": "Н/Д (подія Asterisk)",
+        "source": "Джерело",
+        "asteriskSource": "Asterisk (системна подія — без HTTP-запиту)"
       },
       "csvExport": {
         "title": "ЕКСПОРТ ЖУРНАЛУ АУДИТУ В CSV",
@@ -8969,11 +9040,20 @@
           "newValue": "Нове значення",
           "ipAddress": "IP адреса",
           "successStatus": "Статус успіху"
+        },
+        "delimiters": {
+          "comma": "Кома (,)",
+          "semicolon": "Крапка з комою (;)",
+          "tab": "Табуляція"
         }
       },
       "accessDenied": {
-        "title": "Доступ заборонено"
-      }
+        "title": "Доступ заборонено",
+        "message": "Для доступу до цієї сторінки потрібен дозвіл «Перегляд журналу аудиту». Якщо вам потрібен доступ, зверніться до адміністратора."
+      },
+      "exportSuccess": "Журнал аудиту успішно експортовано",
+      "exportError": "Не вдалося експортувати журнал аудиту",
+      "loadError": "Не вдалося завантажити журнал аудиту"
     },
     "contactTypes": {
       "title": "Типи контактів",

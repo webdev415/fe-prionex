@@ -3959,7 +3959,8 @@
           "firstName": "Introduzca el nombre",
           "lastName": "Introduzca los apellidos",
           "middleName": "Introduzca el segundo nombre (opcional)",
-          "phone": "+34 600 00 00 00 (opcional)"
+          "phone": "+34 600 00 00 00 (opcional)",
+          "notSet": "No establecido"
         },
         "errors": {
           "failedToCreate": "No se ha podido crear el usuario",
@@ -3970,6 +3971,21 @@
         "helpers": {
           "asteriskExtension": "Número de extensión de 3 a 10 dígitos para el sistema telefónico Asterisk (p. ej., 1001, 1002)",
           "dialerExtension": "Extensión de 3 a 10 dígitos para el marcador predictivo, asignada por el administrador del marcador (p. ej., 9001, 9002)"
+        },
+        "edit": {
+          "noUserData": "No hay datos del usuario disponibles",
+          "errorUpdating": "Error al actualizar el usuario",
+          "failedToUpdate": "No se ha podido actualizar el usuario",
+          "username": "Nombre de usuario:",
+          "usernameCannotChange": "El nombre de usuario no se puede cambiar",
+          "email": "Correo electrónico:",
+          "firstName": "Nombre:",
+          "lastName": "Apellido:",
+          "middleName": "Segundo nombre:",
+          "phone": "Teléfono:",
+          "language": "Idioma:",
+          "timezone": "Zona horaria:",
+          "assignProjects": "Asignar proyectos:"
         }
       },
       "editForm": {
@@ -3994,6 +4010,24 @@
         "confirmDeleteMessage": "«{{name}}» se eliminará de sus filtros guardados. Los filtros en sí no se modifican.",
         "loading": "Cargando plantillas...",
         "loadFailed": "No se han podido cargar las plantillas - toque para reintentar"
+      },
+      "validation": {
+        "passwordMinLength": "La contraseña debe tener al menos 8 caracteres",
+        "passwordUppercase": "La contraseña debe contener al menos una letra mayúscula",
+        "passwordLowercase": "La contraseña debe contener al menos una letra minúscula",
+        "passwordNumber": "La contraseña debe contener al menos un número",
+        "passwordSpecial": "La contraseña debe contener al menos un carácter especial",
+        "invalidEmail": "Dirección de correo electrónico no válida",
+        "phoneFormat": "El teléfono debe estar en formato E.164 (p. ej., +1-555-0101)",
+        "usernameMin": "El nombre de usuario debe tener al menos 3 caracteres",
+        "usernameMax": "El nombre de usuario debe tener como máximo 50 caracteres",
+        "usernameChars": "El nombre de usuario solo puede contener letras, números, puntos, guiones bajos y guiones",
+        "required": "Este campo es obligatorio",
+        "nameMax": "El nombre debe tener como máximo 100 caracteres",
+        "selectLanguage": "Seleccione un idioma",
+        "selectTimezone": "Seleccione una zona horaria",
+        "extensionDigits": "La extensión debe tener entre 3 y 10 dígitos",
+        "agentExtensionRequired": "La extensión de Asterisk es obligatoria para los agentes"
       }
     },
     "ipWhitelist": {
@@ -4199,7 +4233,8 @@
           "last90Days": "Últimos 90 días",
           "thisYear": "Este año"
         },
-        "allClients": "Todos los clientes"
+        "allClients": "Todos los clientes",
+        "filtersAria": "Filtros"
       },
       "detailPanel": {
         "noProject": "No hay ningún proyecto",
@@ -4407,7 +4442,8 @@
           "setToDefault": "Establecer como predeterminado:",
           "cannotArchiveUntilReassigned": "No puede archivar un rol hasta que todos los usuarios estén reasignados.",
           "failedToArchive": "No se ha podido archivar el rol. Inténtelo de nuevo.",
-          "roleNotFound": "Rol no encontrado"
+          "roleNotFound": "Rol no encontrado",
+          "defaultOperatorRole": "Operador"
         }
       },
       "forms": {
@@ -4424,14 +4460,26 @@
           "noDepartment": "Sin departamento"
         },
         "errors": {
-          "failedToCreate": "No se ha podido crear el rol. Inténtelo de nuevo."
-        }
+          "failedToCreate": "No se ha podido crear el rol. Inténtelo de nuevo.",
+          "failedToUpdate": "No se ha podido actualizar el rol. Inténtelo de nuevo."
+        },
+        "optional": "(Opcional)",
+        "selectedPermissions": "(Seleccionados: {{selected}} de {{total}} permisos)",
+        "permissionsCount": "({{selected}} de {{total}} permisos)",
+        "type": "Tipo",
+        "systemDefault": "Predeterminado del sistema",
+        "customRole": "Rol personalizado",
+        "notAvailableForDefault": "No disponible para roles predeterminados"
       },
       "accessLevel": {
         "my": "Solo los míos",
         "group": "Mi grupo",
         "department": "Mi departamento",
         "all": "Todo el proyecto"
+      },
+      "validation": {
+        "nameRequired": "El nombre del rol es obligatorio",
+        "permissionsRequired": "Seleccione al menos un permiso"
       }
     },
     "departments": {
@@ -4497,6 +4545,9 @@
       "status": {
         "active": "Activo",
         "inactive": "Inactivo"
+      },
+      "validation": {
+        "nameRequired": "El nombre del departamento es obligatorio"
       }
     },
     "groups": {
@@ -4549,6 +4600,9 @@
           "failedToCreate": "No se ha podido crear el grupo. Inténtelo de nuevo.",
           "failedToUpdate": "No se ha podido actualizar el grupo. Inténtelo de nuevo."
         }
+      },
+      "validation": {
+        "nameRequired": "El nombre del grupo es obligatorio"
       }
     },
     "imports": {
@@ -8837,7 +8891,8 @@
         "clear": "Borrar selección",
         "saved": "Atajo guardado",
         "reassigned": "Atajo movido desde «{{name}}»"
-      }
+      },
+      "extensionLabel": "Extensión:"
     },
     "reports": {
       "title": "Panel de informes",
@@ -9590,7 +9645,18 @@
         "allActions": "Todas las acciones",
         "allUsers": "Todos los usuarios",
         "applyFilters": "Aplicar filtros",
-        "clearAll": "Borrar todo"
+        "clearAll": "Borrar todo",
+        "allRoles": "Todos los roles",
+        "searchActions": "Buscar acciones",
+        "searchEntityTypes": "Buscar tipos de entidad",
+        "noActionsFound": "No se encontraron acciones",
+        "noEntityTypesFound": "No se encontraron tipos de entidad",
+        "actionsSelected_one": "{{count}} acción seleccionada",
+        "actionsSelected_many": "{{count}} acciones seleccionadas",
+        "actionsSelected_other": "{{count}} acciones seleccionadas",
+        "typesSelected_one": "{{count}} tipo seleccionado",
+        "typesSelected_many": "{{count}} tipos seleccionados",
+        "typesSelected_other": "{{count}} tipos seleccionados"
       },
       "tableHeaders": {
         "status": "Estado",
@@ -9633,7 +9699,10 @@
         "userAgent": "Agente de usuario",
         "added": "Añadido",
         "modified": "Modificado",
-        "removed": "Eliminado"
+        "removed": "Eliminado",
+        "notApplicableAsterisk": "N/D (evento de Asterisk)",
+        "source": "Origen",
+        "asteriskSource": "Asterisk (evento del sistema — sin solicitud HTTP)"
       },
       "csvExport": {
         "title": "Exportar registros de auditoría a CSV",
@@ -9657,11 +9726,20 @@
           "newValue": "Valor nuevo",
           "ipAddress": "Dirección IP",
           "successStatus": "Estado de éxito"
+        },
+        "delimiters": {
+          "comma": "Coma (,)",
+          "semicolon": "Punto y coma (;)",
+          "tab": "Tabulación"
         }
       },
       "accessDenied": {
-        "title": "Acceso denegado"
-      }
+        "title": "Acceso denegado",
+        "message": "Necesita el permiso «Ver registros de auditoría» para acceder a esta página. Póngase en contacto con su administrador si necesita acceso."
+      },
+      "exportSuccess": "Registros de auditoría exportados correctamente",
+      "exportError": "No se han podido exportar los registros de auditoría",
+      "loadError": "No se han podido cargar los registros de auditoría"
     },
     "messagingCampaigns": {
       "description": "Revise las campañas masivas e individuales, consulte los resultados por destinatario y exporte los resultados de entrega.",

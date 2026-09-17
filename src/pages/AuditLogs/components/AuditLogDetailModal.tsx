@@ -249,7 +249,9 @@ export function AuditLogDetailModal({ open, log, onClose }: AuditLogDetailModalP
                     {t('pages.auditLogs.detailModal.ipAddress')}:
                   </span>
                   <span className="text-foreground flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] break-words sm:text-sm">
-                    {log.http_method === 'AMI' ? 'N/A (Asterisk event)' : log.ip_address || '—'}
+                    {log.http_method === 'AMI'
+                      ? t('pages.auditLogs.detailModal.notApplicableAsterisk')
+                      : log.ip_address || '—'}
                   </span>
                 </div>
                 <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-start sm:gap-6">
@@ -257,7 +259,9 @@ export function AuditLogDetailModal({ open, log, onClose }: AuditLogDetailModalP
                     {t('pages.auditLogs.detailModal.sessionId')}:
                   </span>
                   <span className="text-foreground flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] break-words sm:text-sm">
-                    {log.http_method === 'AMI' ? 'N/A (Asterisk event)' : log.session_id || '—'}
+                    {log.http_method === 'AMI'
+                      ? t('pages.auditLogs.detailModal.notApplicableAsterisk')
+                      : log.session_id || '—'}
                   </span>
                 </div>
                 <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-start sm:gap-6">
@@ -454,10 +458,10 @@ export function AuditLogDetailModal({ open, log, onClose }: AuditLogDetailModalP
                     </div>
                     <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-start sm:gap-6">
                       <span className="text-foreground shrink-0 text-xs leading-[150%] font-light tracking-[-0.28px] sm:w-[120px] sm:text-sm">
-                        Source:
+                        {t('pages.auditLogs.detailModal.source')}:
                       </span>
                       <span className="text-foreground flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] break-words sm:text-sm">
-                        Asterisk (system event — no HTTP request)
+                        {t('pages.auditLogs.detailModal.asteriskSource')}
                       </span>
                     </div>
                   </>

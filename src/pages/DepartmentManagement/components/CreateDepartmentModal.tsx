@@ -25,7 +25,7 @@ interface CreateDepartmentModalProps {
 }
 
 const createDepartmentSchema = z.object({
-  name: z.string().min(1, 'Department name is required'),
+  name: z.string().min(1, 'pages.departments.validation.nameRequired'),
   description: z.string().optional(),
 })
 
@@ -99,7 +99,9 @@ export function CreateDepartmentModal({
                 placeholder={t('pages.departments.forms.placeholders.name')}
                 disabled={createMutation.isPending}
               />
-              {errors.name && <p className="text-error-500 mt-1 text-sm">{errors.name.message}</p>}
+              {errors.name && (
+                <p className="text-error-500 mt-1 text-sm">{t(errors.name.message ?? '')}</p>
+              )}
             </div>
 
             {/* Description */}

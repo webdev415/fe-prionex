@@ -460,7 +460,7 @@ export function ProfileSettingsPage() {
               )}
               {user?.asterisk_extension && (
                 <div className="text-muted-foreground text-xs">
-                  Extension: {user.asterisk_extension}
+                  {t('pages.profile.extensionLabel')} {user.asterisk_extension}
                 </div>
               )}
               {user?.dialer_extension && (
