@@ -35,6 +35,7 @@ import { ReassignPaymentEmployeeModal } from './components/ReassignPaymentEmploy
 import { useClient } from '@/features/clients/hooks/useClients'
 import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
 import { useCallStore } from '@/stores/callStore'
+import { useCallingWindow } from '@/features/calls/hooks/useCallingWindow'
 import { useCallOrigination } from '@/features/calls/hooks/useCallOrigination'
 import {
   useClientPaymentHistory,
@@ -241,6 +242,7 @@ export function DebtSummaryPage() {
     handleCloseCallModal,
     handleCallEnd,
   } = useCallOrigination()
+  const callingWindow = useCallingWindow()
 
   // Fetch client data from API (same as ClientDetailPage). ``clientId`` is
   // hoisted above (right after useParams) so earlier hooks can use it.
@@ -1094,7 +1096,11 @@ export function DebtSummaryPage() {
                   variant="primary"
                   leftIcon={<Icons.Headset size={18} />}
                   className="w-full rounded-full sm:w-auto sm:flex-1"
-                  disabled={!user?.is_agent || !user?.asterisk_extension}
+                  // Gated on the calling window like the client-card button:
+                  // every entry point has to agree, or one of them opens a
+                  // dialog that cannot dial.
+                  disabled={!user?.is_agent || !user?.asterisk_extension || !callingWindow.allowed}
+                  title={callingWindow.allowed ? undefined : (callingWindow.message ?? undefined)}
                   onClick={() => {
                     const phoneNumber = client?.phones?.[0]?.number
                     if (!phoneNumber) {
