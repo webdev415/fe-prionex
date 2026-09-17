@@ -12254,5 +12254,192 @@
       "present": "Hay una clave guardada para esta pestaña.",
       "absent": "No hay clave guardada: el módulo responde 401."
     }
+  },
+  "toasts": {
+    "users": {
+      "updated": "Usuario actualizado correctamente",
+      "created": "Usuario creado correctamente",
+      "deactivated": "Usuario desactivado correctamente",
+      "reactivated": "Usuario reactivado correctamente",
+      "unlocked": "Cuenta desbloqueada correctamente"
+    },
+    "calls": {
+      "initiated": "Llamada iniciada correctamente",
+      "outcomeSaved": "Resultado de la llamada guardado",
+      "outcomeSaveFailed": "No se ha podido guardar el resultado de la llamada",
+      "ended": "Llamada finalizada",
+      "endFailed": "No se ha podido finalizar la llamada",
+      "rejected": "Llamada rechazada",
+      "rejectFailed": "No se ha podido rechazar la llamada",
+      "answerFailed": "No se ha podido contestar la llamada",
+      "holdFailed": "No se ha podido poner la llamada en espera",
+      "fallbackMode": "Las actualizaciones de llamadas usan el modo de reserva",
+      "connected": "Conectado al servicio de llamadas",
+      "reconnecting": "Reconectando con el servicio de llamadas..."
+    },
+    "clients": {
+      "created": "Cliente creado correctamente",
+      "manualPrioritySet": "Prioridad manual establecida correctamente",
+      "assigned": "Cliente asignado correctamente",
+      "spamNumberAdded": "Número de teléfono añadido al historial de llamadas de spam",
+      "createFailed": "No se ha podido crear el cliente",
+      "deleteFailed": "No se ha podido eliminar el cliente",
+      "manualPriorityFailed": "No se ha podido establecer la prioridad manual",
+      "assignFailed": "No se ha podido asignar el cliente",
+      "bulkAssignFailed": "No se ha podido realizar la asignación masiva de clientes",
+      "spamNumberAddFailed": "No se ha podido añadir al historial de llamadas de spam"
+    },
+    "tasks": {
+      "updated": "Tarea actualizada correctamente",
+      "deleted": "Tarea eliminada correctamente",
+      "created": "Tarea creada correctamente",
+      "updateFailed": "No se ha podido actualizar la tarea",
+      "deleteFailed": "No se ha podido eliminar la tarea"
+    },
+    "loans": {
+      "closed": "Crédito cerrado correctamente",
+      "reopened": "Crédito reabierto correctamente",
+      "closureDateUpdated": "Fecha de cierre actualizada",
+      "closeFailed": "No se ha podido cerrar el crédito",
+      "reopenFailed": "No se ha podido reabrir el crédito",
+      "closureDateUpdateFailed": "No se ha podido actualizar la fecha de cierre"
+    },
+    "restructuring": {
+      "completed": "Acuerdo de reestructuración completado",
+      "statusUpdated": "Estado de la reestructuración actualizado",
+      "disconnected": "Reestructuración desvinculada",
+      "activated": "Reestructuración activada",
+      "draftDeleted": "Borrador de reestructuración eliminado",
+      "overpaymentRecorded": "Sobrepago registrado",
+      "completeFailed": "No se ha podido completar el acuerdo de reestructuración",
+      "statusUpdateFailed": "No se ha podido actualizar el estado de la reestructuración",
+      "disconnectFailed": "No se ha podido desvincular la reestructuración",
+      "activateFailed": "No se ha podido activar la reestructuración",
+      "draftDeleteFailed": "No se ha podido eliminar el borrador de reestructuración",
+      "overpaymentFailed": "No se ha podido registrar el sobrepago"
+    },
+    "interactions": {
+      "recorded": "Interacción registrada correctamente",
+      "updated": "Interacción actualizada correctamente",
+      "recordFailed": "No se ha podido registrar la interacción"
+    },
+    "departments": {
+      "created": "Departamento creado correctamente",
+      "updated": "Departamento actualizado correctamente",
+      "archived": "Departamento archivado correctamente"
+    },
+    "imports": {
+      "started": "Importación iniciada correctamente",
+      "cancelled": "Importación cancelada correctamente",
+      "errorsExported": "Errores exportados correctamente",
+      "paymentImportStarted": "Importación de pagos iniciada"
+    },
+    "messaging": {
+      "channelsUpdated": "Canales habilitados actualizados"
+    },
+    "payments": {
+      "recorded": "Pago registrado correctamente",
+      "verified": "Pago verificado correctamente",
+      "cancelled": "Pago cancelado correctamente",
+      "updated": "Pago actualizado correctamente",
+      "assigneeReassigned": "Usuario asignado reasignado correctamente",
+      "receiptDownloaded": "Recibo descargado correctamente",
+      "receiptGenerated": "Recibo generado correctamente",
+      "exported": "Pagos exportados correctamente",
+      "clientIdRequired": "Se requiere el ID del cliente"
+    },
+    "projects": {
+      "created": "Proyecto creado correctamente",
+      "updated": "Proyecto actualizado correctamente",
+      "exported": "Proyectos exportados correctamente",
+      "archived": "Proyecto archivado correctamente",
+      "restored": "Proyecto restaurado correctamente"
+    },
+    "reversals": {
+      "createFailed": "No se ha podido crear la reversión"
+    },
+    "roles": {
+      "created": "Rol creado correctamente",
+      "updated": "Rol actualizado correctamente",
+      "deleted": "Rol eliminado correctamente",
+      "archived": "Rol archivado correctamente"
+    },
+    "sellers": {
+      "created": "Cedente creado correctamente",
+      "updated": "Cedente actualizado correctamente",
+      "deactivated": "Cedente desactivado correctamente"
+    },
+    "sms": {
+      "bulkStarted": "Envío masivo de SMS iniciado",
+      "configUpdated": "Configuración de SMS actualizada correctamente",
+      "sendFailed": "No se ha podido enviar el SMS",
+      "bulkSendFailed": "No se ha podido realizar el envío masivo de SMS",
+      "templateCreateFailed": "No se ha podido crear la plantilla",
+      "templateUpdateFailed": "No se ha podido actualizar la plantilla",
+      "templateDeleteFailed": "No se ha podido eliminar la plantilla",
+      "templateRestoreFailed": "No se ha podido restaurar la plantilla",
+      "configUpdateFailed": "No se ha podido actualizar la configuración de SMS"
+    },
+    "tags": {
+      "settingsSaved": "Configuración de etiquetas guardada",
+      "settingsReset": "Configuración de etiquetas restablecida a los valores predeterminados",
+      "created": "Etiqueta creada correctamente",
+      "updated": "Etiqueta actualizada correctamente",
+      "deleted": "Etiqueta eliminada correctamente",
+      "ruleCreated": "Regla creada correctamente",
+      "ruleUpdated": "Regla actualizada correctamente",
+      "ruleDeleted": "Regla eliminada correctamente",
+      "segmentCreated": "Segmento creado correctamente",
+      "segmentUpdated": "Segmento actualizado correctamente",
+      "segmentDeleted": "Segmento eliminado correctamente",
+      "segmentRefreshed": "Segmento recalculado",
+      "removalRequested": "Solicitud de eliminación enviada",
+      "removalApproved": "Eliminación de la etiqueta aprobada",
+      "removalRejected": "Eliminación de la etiqueta rechazada",
+      "createFailed": "No se ha podido crear la etiqueta",
+      "updateFailed": "No se ha podido actualizar la etiqueta",
+      "deleteFailed": "No se ha podido eliminar la etiqueta",
+      "assignFailed": "No se ha podido asignar la etiqueta",
+      "removeFailed": "No se ha podido quitar la etiqueta",
+      "bulkUpdateFailed": "No se han podido actualizar las etiquetas",
+      "ruleCreateFailed": "No se ha podido crear la regla",
+      "ruleUpdateFailed": "No se ha podido actualizar la regla",
+      "ruleDeleteFailed": "No se ha podido eliminar la regla",
+      "segmentCreateFailed": "No se ha podido crear el segmento",
+      "segmentUpdateFailed": "No se ha podido actualizar el segmento",
+      "segmentDeleteFailed": "No se ha podido eliminar el segmento",
+      "segmentRefreshFailed": "No se ha podido recalcular el segmento",
+      "removalRequestFailed": "No se ha podido enviar la solicitud de eliminación",
+      "removalApproveFailed": "No se ha podido aprobar la eliminación",
+      "removalRejectFailed": "No se ha podido rechazar la eliminación"
+    },
+    "writeoffs": {
+      "bulkUploadFailed": "Error al cargar la condonación masiva.",
+      "editFailed": "No se ha podido editar la condonación",
+      "cancelFailed": "No se ha podido anular la condonación",
+      "createFailed": "No se ha podido crear la condonación"
+    },
+    "documentTypes": {
+      "createFailed": "No se ha podido crear el tipo de documento",
+      "updateFailed": "No se ha podido actualizar el tipo de documento",
+      "visibilityUpdateFailed": "No se ha podido actualizar la visibilidad",
+      "deleteFailed": "No se ha podido eliminar el tipo de documento"
+    },
+    "dialer": {
+      "joinFailed": "No se ha podido unir al marcador",
+      "leaveFailed": "No se ha podido salir del marcador",
+      "queueCreateFailed": "No se ha podido crear la cola",
+      "queueUpdateFailed": "No se ha podido actualizar la cola",
+      "queueDeleteFailed": "No se ha podido eliminar la cola",
+      "queueStatusUpdateFailed": "No se ha podido actualizar el estado de la cola",
+      "numbersUploadFailed": "No se han podido cargar los números",
+      "addClientsFailed": "No se han podido añadir los clientes a la cola"
+    },
+    "reports": {
+      "dashboardExportFailed": "No se ha podido exportar el panel",
+      "operatorPerformanceExportFailed": "No se ha podido exportar el rendimiento de los operadores",
+      "clientStatisticsExportFailed": "No se han podido exportar las estadísticas de clientes",
+      "communicationStatisticsExportFailed": "No se han podido exportar las estadísticas de comunicación"
+    }
   }
 }

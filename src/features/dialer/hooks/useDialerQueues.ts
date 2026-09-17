@@ -10,6 +10,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import i18n from '@/lib/i18n'
 
 import { dialerService } from '../api/dialerService'
 import type { DialerQueue, PagedDialerQueues } from '../types'
@@ -62,7 +63,11 @@ export function useCreateDialerQueue() {
   return useMutation({
     mutationFn: (payload: Partial<DialerQueue>) => dialerService.createQueue(payload),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: dialerQueuesKeys.all }),
-    onError: (error: Error) => toast.error(error.message || 'Failed to create queue'),
+    onError: (error: Error) =>
+      toast.error(
+        error.message ||
+          i18n.t('toasts.dialer.queueCreateFailed', { defaultValue: 'Failed to create queue' })
+      ),
   })
 }
 
@@ -72,7 +77,11 @@ export function useUpdateDialerQueue() {
     mutationFn: ({ id, payload }: { id: number; payload: Partial<DialerQueue> }) =>
       dialerService.updateQueue(id, payload),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: dialerQueuesKeys.all }),
-    onError: (error: Error) => toast.error(error.message || 'Failed to update queue'),
+    onError: (error: Error) =>
+      toast.error(
+        error.message ||
+          i18n.t('toasts.dialer.queueUpdateFailed', { defaultValue: 'Failed to update queue' })
+      ),
   })
 }
 
@@ -81,7 +90,11 @@ export function useDeleteDialerQueue() {
   return useMutation({
     mutationFn: (id: number) => dialerService.deleteQueue(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: dialerQueuesKeys.all }),
-    onError: (error: Error) => toast.error(error.message || 'Failed to delete queue'),
+    onError: (error: Error) =>
+      toast.error(
+        error.message ||
+          i18n.t('toasts.dialer.queueDeleteFailed', { defaultValue: 'Failed to delete queue' })
+      ),
   })
 }
 
@@ -91,6 +104,12 @@ export function useSetDialerQueueActive() {
     mutationFn: ({ id, isActive }: { id: number; isActive: boolean }) =>
       dialerService.setQueueActive(id, isActive),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: dialerQueuesKeys.all }),
-    onError: (error: Error) => toast.error(error.message || 'Failed to update queue status'),
+    onError: (error: Error) =>
+      toast.error(
+        error.message ||
+          i18n.t('toasts.dialer.queueStatusUpdateFailed', {
+            defaultValue: 'Failed to update queue status',
+          })
+      ),
   })
 }

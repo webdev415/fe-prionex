@@ -6,6 +6,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import i18n from '@/lib/i18n'
 import { importsApi } from '../api/importsApi'
 import { importJobsKeys } from './useImportJobs'
 import { getErrorMessage } from '@/lib/errors'
@@ -20,7 +21,9 @@ export function useUploadImport() {
   return useMutation({
     mutationFn: (request: UploadImportRequest) => importsApi.uploadImport(request),
     onSuccess: (data) => {
-      toast.success('Import started successfully')
+      toast.success(
+        i18n.t('toasts.imports.started', { defaultValue: 'Import started successfully' })
+      )
       // Invalidate import jobs list to show new job
       queryClient.invalidateQueries({ queryKey: importJobsKeys.lists() })
       // Optionally prefetch the new job detail
@@ -46,7 +49,9 @@ export function useCancelImport() {
   return useMutation({
     mutationFn: (jobId: number | string) => importsApi.cancelImportJob(jobId),
     onSuccess: (_, jobId) => {
-      toast.success('Import cancelled successfully')
+      toast.success(
+        i18n.t('toasts.imports.cancelled', { defaultValue: 'Import cancelled successfully' })
+      )
       // Invalidate the specific job and jobs list
       queryClient.invalidateQueries({ queryKey: importJobsKeys.detail(jobId) })
       queryClient.invalidateQueries({ queryKey: importJobsKeys.lists() })
@@ -73,7 +78,9 @@ export function useExportImportErrors() {
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
-      toast.success('Errors exported successfully')
+      toast.success(
+        i18n.t('toasts.imports.errorsExported', { defaultValue: 'Errors exported successfully' })
+      )
     },
     onError: (error) => {
       toast.error(getErrorMessage(error))

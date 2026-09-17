@@ -12217,5 +12217,192 @@
       "present": "A key is saved for this tab.",
       "absent": "No key saved: the module answers 401."
     }
+  },
+  "toasts": {
+    "users": {
+      "updated": "User updated successfully",
+      "created": "User created successfully",
+      "deactivated": "User deactivated successfully",
+      "reactivated": "User reactivated successfully",
+      "unlocked": "Account unlocked successfully"
+    },
+    "calls": {
+      "initiated": "Call initiated successfully",
+      "outcomeSaved": "Call outcome saved",
+      "outcomeSaveFailed": "Failed to save call outcome",
+      "ended": "Call ended",
+      "endFailed": "Failed to end call",
+      "rejected": "Call rejected",
+      "rejectFailed": "Failed to reject call",
+      "answerFailed": "Failed to answer call",
+      "holdFailed": "Failed to hold call",
+      "fallbackMode": "Using fallback mode for call updates",
+      "connected": "Connected to call service",
+      "reconnecting": "Reconnecting to call service..."
+    },
+    "clients": {
+      "created": "Client created successfully",
+      "manualPrioritySet": "Manual priority set successfully",
+      "assigned": "Client assigned successfully",
+      "spamNumberAdded": "Phone number added to spam call history",
+      "createFailed": "Failed to create client",
+      "deleteFailed": "Failed to delete client",
+      "manualPriorityFailed": "Failed to set manual priority",
+      "assignFailed": "Failed to assign client",
+      "bulkAssignFailed": "Failed to bulk assign clients",
+      "spamNumberAddFailed": "Failed to add to spam call history"
+    },
+    "tasks": {
+      "updated": "Task updated successfully",
+      "deleted": "Task deleted successfully",
+      "created": "Task created successfully",
+      "updateFailed": "Failed to update task",
+      "deleteFailed": "Failed to delete task"
+    },
+    "loans": {
+      "closed": "Loan closed successfully",
+      "reopened": "Loan reopened successfully",
+      "closureDateUpdated": "Closure date updated",
+      "closeFailed": "Failed to close loan",
+      "reopenFailed": "Failed to reopen loan",
+      "closureDateUpdateFailed": "Failed to update closure date"
+    },
+    "restructuring": {
+      "completed": "Restructuring agreement completed",
+      "statusUpdated": "Restructuring status updated",
+      "disconnected": "Restructuring disconnected",
+      "activated": "Restructuring activated",
+      "draftDeleted": "Draft restructuring deleted",
+      "overpaymentRecorded": "Overpayment recorded",
+      "completeFailed": "Failed to complete restructuring agreement",
+      "statusUpdateFailed": "Failed to update restructuring status",
+      "disconnectFailed": "Failed to disconnect restructuring",
+      "activateFailed": "Failed to activate restructuring",
+      "draftDeleteFailed": "Failed to delete draft restructuring",
+      "overpaymentFailed": "Failed to record overpayment"
+    },
+    "interactions": {
+      "recorded": "Interaction recorded successfully",
+      "updated": "Interaction updated successfully",
+      "recordFailed": "Failed to record interaction"
+    },
+    "departments": {
+      "created": "Department created successfully",
+      "updated": "Department updated successfully",
+      "archived": "Department archived successfully"
+    },
+    "imports": {
+      "started": "Import started successfully",
+      "cancelled": "Import cancelled successfully",
+      "errorsExported": "Errors exported successfully",
+      "paymentImportStarted": "Payment import job started"
+    },
+    "messaging": {
+      "channelsUpdated": "Enabled channels updated"
+    },
+    "payments": {
+      "recorded": "Payment recorded successfully",
+      "verified": "Payment verified successfully",
+      "cancelled": "Payment cancelled successfully",
+      "updated": "Payment updated successfully",
+      "assigneeReassigned": "Assigned user reassigned successfully",
+      "receiptDownloaded": "Receipt downloaded successfully",
+      "receiptGenerated": "Receipt generated successfully",
+      "exported": "Payments exported successfully",
+      "clientIdRequired": "Client ID is required"
+    },
+    "projects": {
+      "created": "Project created successfully",
+      "updated": "Project updated successfully",
+      "exported": "Projects exported successfully",
+      "archived": "Project archived successfully",
+      "restored": "Project restored successfully"
+    },
+    "reversals": {
+      "createFailed": "Failed to create reversal"
+    },
+    "roles": {
+      "created": "Role created successfully",
+      "updated": "Role updated successfully",
+      "deleted": "Role deleted successfully",
+      "archived": "Role archived successfully"
+    },
+    "sellers": {
+      "created": "Seller created successfully",
+      "updated": "Seller updated successfully",
+      "deactivated": "Seller deactivated successfully"
+    },
+    "sms": {
+      "bulkStarted": "Bulk SMS sending started",
+      "configUpdated": "SMS configuration updated successfully",
+      "sendFailed": "Failed to send SMS",
+      "bulkSendFailed": "Failed to send bulk SMS",
+      "templateCreateFailed": "Failed to create template",
+      "templateUpdateFailed": "Failed to update template",
+      "templateDeleteFailed": "Failed to delete template",
+      "templateRestoreFailed": "Failed to restore template",
+      "configUpdateFailed": "Failed to update SMS configuration"
+    },
+    "tags": {
+      "settingsSaved": "Tag settings saved",
+      "settingsReset": "Tag settings reset to defaults",
+      "created": "Tag created successfully",
+      "updated": "Tag updated successfully",
+      "deleted": "Tag deleted successfully",
+      "ruleCreated": "Rule created successfully",
+      "ruleUpdated": "Rule updated successfully",
+      "ruleDeleted": "Rule deleted successfully",
+      "segmentCreated": "Segment created successfully",
+      "segmentUpdated": "Segment updated successfully",
+      "segmentDeleted": "Segment deleted successfully",
+      "segmentRefreshed": "Segment refreshed",
+      "removalRequested": "Removal request submitted",
+      "removalApproved": "Tag removal approved",
+      "removalRejected": "Tag removal rejected",
+      "createFailed": "Failed to create tag",
+      "updateFailed": "Failed to update tag",
+      "deleteFailed": "Failed to delete tag",
+      "assignFailed": "Failed to assign tag",
+      "removeFailed": "Failed to remove tag",
+      "bulkUpdateFailed": "Failed to update tags",
+      "ruleCreateFailed": "Failed to create rule",
+      "ruleUpdateFailed": "Failed to update rule",
+      "ruleDeleteFailed": "Failed to delete rule",
+      "segmentCreateFailed": "Failed to create segment",
+      "segmentUpdateFailed": "Failed to update segment",
+      "segmentDeleteFailed": "Failed to delete segment",
+      "segmentRefreshFailed": "Failed to refresh segment",
+      "removalRequestFailed": "Failed to submit removal request",
+      "removalApproveFailed": "Failed to approve removal",
+      "removalRejectFailed": "Failed to reject removal"
+    },
+    "writeoffs": {
+      "bulkUploadFailed": "Bulk write-off upload failed.",
+      "editFailed": "Failed to edit write-off",
+      "cancelFailed": "Failed to cancel write-off",
+      "createFailed": "Failed to create write-off"
+    },
+    "documentTypes": {
+      "createFailed": "Failed to create document type",
+      "updateFailed": "Failed to update document type",
+      "visibilityUpdateFailed": "Failed to update visibility",
+      "deleteFailed": "Failed to delete document type"
+    },
+    "dialer": {
+      "joinFailed": "Failed to join the dialer",
+      "leaveFailed": "Failed to leave the dialer",
+      "queueCreateFailed": "Failed to create queue",
+      "queueUpdateFailed": "Failed to update queue",
+      "queueDeleteFailed": "Failed to delete queue",
+      "queueStatusUpdateFailed": "Failed to update queue status",
+      "numbersUploadFailed": "Failed to upload numbers",
+      "addClientsFailed": "Failed to add clients to queue"
+    },
+    "reports": {
+      "dashboardExportFailed": "Failed to export dashboard",
+      "operatorPerformanceExportFailed": "Failed to export operator performance",
+      "clientStatisticsExportFailed": "Failed to export client statistics",
+      "communicationStatisticsExportFailed": "Failed to export communication statistics"
+    }
   }
 }
