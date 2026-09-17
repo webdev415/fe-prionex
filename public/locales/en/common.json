@@ -4108,41 +4108,40 @@
       }
     },
     "projects": {
-      "callingWindow": {
-        "country": "Holiday calendar",
-        "countryPlaceholder": "Select a country",
-        "days": {
-          "1": "Mon",
-          "2": "Tue",
-          "3": "Wed",
-          "4": "Thu",
-          "5": "Fri",
-          "6": "Sat",
-          "7": "Sun"
+      "title": "Project Management",
+      "noProjectsFound": "No projects found",
+      "errorLoading": "Error loading projects",
+      "tableHeaders": {
+        "users": "Users",
+        "projectCode": "Project / Code",
+        "client": "Client",
+        "period": "Period",
+        "clients": "Total Clients",
+        "debt": "Total Debt",
+        "status": "Status"
+      },
+      "searchFilters": {
+        "placeholder": "Search by name, code, clients",
+        "status": "Status",
+        "client": "Client",
+        "period": "Period",
+        "newProject": "New Project",
+        "export": "Export",
+        "searchProjects": "Search projects",
+        "addNewProject": "Add new project",
+        "statusOptions": {
+          "active": "Active",
+          "inactive": "Inactive",
+          "archived": "Archived",
+          "all": "All"
         },
-        "enable": "Enforce a calling window",
-        "enableHint": "Calls outside the window are refused by the system. Operators cannot override it.",
-        "end": "Closes",
-        "endHint": "Exclusive — set it short of the legal limit so no call is still running at the cut-off.",
-        "errors": {
-          "start": "Start must be HH:MM",
-          "end": "End must be HH:MM",
-          "same": "Start and end cannot be equal",
-          "timezone": "A fallback timezone is required"
+        "periodOptions": {
+          "any": "Any time",
+          "last30Days": "Last 30 days",
+          "last90Days": "Last 90 days",
+          "thisYear": "This year"
         },
-        "noCountry": "Without a holiday calendar, calls are refused on every day of a year that has no calendar generated.",
-        "saveFailed": "Could not save the calling window",
-        "saved": "Calling window saved",
-        "start": "Opens",
-        "subdivision": "Region (optional)",
-        "subdivisionPlaceholder": "National only",
-        "tabHolidays": "Holidays",
-        "tabWindow": "Window",
-        "timezone": "Fallback timezone",
-        "timezoneHint": "Used when the debtor's own timezone cannot be determined.",
-        "title": "Calling window",
-        "weekdays": "Allowed days",
-        "weekdaysHint": "Select none to allow every day."
+        "allClients": "All Clients"
       },
       "detailPanel": {
         "noProject": "There is no project",
@@ -4168,29 +4167,6 @@
         "system": "System",
         "edit": "Edit",
         "delete": "Delete"
-      },
-      "errorLoading": "Error loading projects",
-      "holidayCalendar": {
-        "year": "Year",
-        "noCountry": "Choose a holiday calendar country on the Window tab first.",
-        "loadFailed": "Could not load the calendar. Try again before generating, so an existing one is not overwritten.",
-        "notGenerated": "No calendar exists for this year. Until one does, every call in that year is refused.",
-        "generate": "Generate {{year}}",
-        "generateFailed": "Could not generate the calendar",
-        "computedEmpty": "This country has no public holidays recorded for that year. Check before relying on it.",
-        "emptyCalendar": "This calendar has no dates. That is a valid answer for some countries, but confirm it is right — calls will be allowed on every working day of the year.",
-        "reviewed": "Reviewed",
-        "unreviewed": "Not yet reviewed",
-        "added": "added",
-        "addDate": "Add a date",
-        "addName": "Name (optional)",
-        "addFailed": "Could not add that date",
-        "removeFailed": "Could not remove that date",
-        "regenerate": "Recompute from the calendar",
-        "regenerateHint": "Recomputing keeps dates you added and clears the reviewed mark.",
-        "confirm": "Mark as reviewed",
-        "confirmed": "Calendar marked as reviewed",
-        "confirmFailed": "Could not mark the calendar as reviewed"
       },
       "modals": {
         "create": {
@@ -4321,40 +4297,64 @@
           "emailFormat": "Enter a valid email address"
         }
       },
-      "noProjectsFound": "No projects found",
-      "searchFilters": {
-        "placeholder": "Search by name, code, clients",
-        "status": "Status",
-        "client": "Client",
-        "period": "Period",
-        "newProject": "New Project",
-        "export": "Export",
-        "searchProjects": "Search projects",
-        "addNewProject": "Add new project",
-        "statusOptions": {
-          "active": "Active",
-          "inactive": "Inactive",
-          "archived": "Archived",
-          "all": "All"
+      "callingWindow": {
+        "country": "Holiday calendar",
+        "countryPlaceholder": "Select a country",
+        "days": {
+          "1": "Mon",
+          "2": "Tue",
+          "3": "Wed",
+          "4": "Thu",
+          "5": "Fri",
+          "6": "Sat",
+          "7": "Sun"
         },
-        "periodOptions": {
-          "any": "Any time",
-          "last30Days": "Last 30 days",
-          "last90Days": "Last 90 days",
-          "thisYear": "This year"
+        "enable": "Enforce a calling window",
+        "enableHint": "Calls outside the window are refused by the system. Operators cannot override it.",
+        "end": "Closes",
+        "endHint": "Exclusive — set it short of the legal limit so no call is still running at the cut-off.",
+        "errors": {
+          "start": "Start must be HH:MM",
+          "end": "End must be HH:MM",
+          "same": "Start and end cannot be equal",
+          "timezone": "A fallback timezone is required"
         },
-        "allClients": "All Clients"
+        "noCountry": "Without a holiday calendar, calls are refused on every day of a year that has no calendar generated.",
+        "saveFailed": "Could not save the calling window",
+        "saved": "Calling window saved",
+        "start": "Opens",
+        "subdivision": "Region (optional)",
+        "subdivisionPlaceholder": "National only",
+        "tabHolidays": "Holidays",
+        "tabWindow": "Window",
+        "timezone": "Fallback timezone",
+        "timezoneHint": "Used when the debtor's own timezone cannot be determined.",
+        "title": "Calling window",
+        "weekdays": "Allowed days",
+        "weekdaysHint": "Select none to allow every day."
       },
-      "tableHeaders": {
-        "users": "Users",
-        "projectCode": "Project / Code",
-        "client": "Client",
-        "period": "Period",
-        "clients": "Total Clients",
-        "debt": "Total Debt",
-        "status": "Status"
-      },
-      "title": "Project Management"
+      "holidayCalendar": {
+        "year": "Year",
+        "noCountry": "Choose a holiday calendar country on the Window tab first.",
+        "loadFailed": "Could not load the calendar. Try again before generating, so an existing one is not overwritten.",
+        "notGenerated": "No calendar exists for this year. Until one does, every call in that year is refused.",
+        "generate": "Generate {{year}}",
+        "generateFailed": "Could not generate the calendar",
+        "computedEmpty": "This country has no public holidays recorded for that year. Check before relying on it.",
+        "emptyCalendar": "This calendar has no dates. That is a valid answer for some countries, but confirm it is right — calls will be allowed on every working day of the year.",
+        "reviewed": "Reviewed",
+        "unreviewed": "Not yet reviewed",
+        "added": "added",
+        "addDate": "Add a date",
+        "addName": "Name (optional)",
+        "addFailed": "Could not add that date",
+        "removeFailed": "Could not remove that date",
+        "regenerate": "Recompute from the calendar",
+        "regenerateHint": "Recomputing keeps dates you added and clears the reviewed mark.",
+        "confirm": "Mark as reviewed",
+        "confirmed": "Calendar marked as reviewed",
+        "confirmFailed": "Could not mark the calendar as reviewed"
+      }
     },
     "roles": {
       "title": "Role Management",
