@@ -68,7 +68,12 @@
     "creditModule": "Кредитний модуль",
     "creditApplications": "Заявки",
     "creditLoans": "Кредити",
-    "creditSettings": "Налаштування"
+    "creditSettings": "Налаштування",
+    "menu": "Меню",
+    "toggleMenu": "Перемкнути меню",
+    "scoringV3Monitoring": "Звіт тіньового запуску v3",
+    "scoringV3Settings": "Налаштування скорингу v3",
+    "operatorWorkList": "Пріоритетний список роботи"
   },
   "dialer": {
     "phone": {
@@ -336,6 +341,64 @@
     "colorPicker": {
       "hexCode": "Hex-код",
       "preview": "Попередній перегляд"
+    },
+    "dateSelect": {
+      "selectDate": "Виберіть дату"
+    },
+    "errorState": {
+      "tryAgain": "Спробувати знову"
+    },
+    "routeError": {
+      "newVersionTitle": "Доступна нова версія",
+      "newVersionMessage": "Застосунок оновлено. Оновіть сторінку, щоб завантажити останню версію.",
+      "translationConflictTitle": "Конфлікт із перекладом браузера",
+      "translationConflictMessage": "Chrome або інше розширення переклало цю сторінку, поки вона була відкрита, і це порушує роботу інтерфейсу. Вимкніть автоматичний переклад для цього сайту (адресний рядок Chrome → значок перекладу → вимкнути), а потім оновіть сторінку. Натомість використовуйте перемикач мови в застосунку.",
+      "unexpectedRouteError": "Неочікувана помилка маршруту.",
+      "unexpectedPageError": "Під час завантаження цієї сторінки сталася неочікувана помилка.",
+      "refreshPage": "Оновити сторінку",
+      "goBack": "Назад"
+    },
+    "searchableSelect": {
+      "noResults": "Нічого не знайдено"
+    },
+    "passwordInput": {
+      "show": "Показати пароль",
+      "hide": "Приховати пароль"
+    },
+    "modal": {
+      "close": "Закрити вікно",
+      "minimize": "Згорнути вікно"
+    },
+    "select": {
+      "clear": "Очистити"
+    },
+    "impersonation": {
+      "mode": "Режим перегляду",
+      "viewingAs": "Перегляд як:",
+      "project": "Проєкт:",
+      "exit": "Вийти з режиму перегляду",
+      "exiting": "Вихід...",
+      "unknownProject": "Невідомий проєкт",
+      "unknownRole": "Невідома роль"
+    },
+    "callBubble": {
+      "activeCall": "Активний дзвінок",
+      "expandCall": "Розгорнути дзвінок",
+      "restoreRecording": "Відновити запис дзвінка",
+      "restoreModal": "Відновити вікно дзвінка"
+    },
+    "searchBar": {
+      "searchType": "Тип пошуку"
+    },
+    "period": {
+      "from": "З",
+      "until": "До"
+    },
+    "permissionRefresh": {
+      "updated": "Ваші права доступу оновлено. Сторінку буде оновлено."
+    },
+    "connection": {
+      "reconnecting": "Проблема зі з’єднанням — повторне підключення…"
     }
   },
   "status": {
@@ -7049,7 +7112,8 @@
       "contactStale": "(застарілий)",
       "noEmails": "Для цього джерела немає доступних email-адрес.",
       "chainExecution": "Виконання ланцюга",
-      "restoreChainExecutor": "Відновити виконання ланцюга"
+      "restoreChainExecutor": "Відновити виконання ланцюга",
+      "stepProgress": "Крок {{current}} з {{total}}"
     },
     "interactionLog": {
       "title": "Журнал взаємодій",

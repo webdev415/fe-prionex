@@ -352,7 +352,7 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
           <button
             type="button"
             className="bg-secondary-800 flex h-10 w-10 cursor-pointer items-center justify-center rounded-md text-white transition-colors hover:opacity-90 focus:outline-none lg:hidden"
-            aria-label="Menu"
+            aria-label={t('navigation.menu', 'Menu')}
           >
             <Icons.User02 size={20} strokeWidth={1.5} className="text-primary-500" />
           </button>
@@ -1253,7 +1253,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     'focus:ring-primary-500 focus:ring-offset-background group border-border bg-card hover:bg-muted active:bg-muted flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow-md focus:ring-2 focus:ring-offset-2 focus:outline-none active:shadow-sm disabled:cursor-not-allowed disabled:opacity-50 xl:hidden',
                     isLawyerWorkplaceRoute && 'self-center'
                   )}
-                  aria-label="Toggle menu"
+                  aria-label={t('navigation.toggleMenu', 'Toggle menu')}
                 >
                   <Icons.Menu11
                     size={20}

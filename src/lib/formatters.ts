@@ -43,7 +43,9 @@ export function formatPeriod(startDate?: string, endDate?: string): string {
   if (startDate && endDate) {
     return `${fmt(startDate)} - ${fmt(endDate)}`
   }
-  return startDate ? `From ${fmt(startDate)}` : `Until ${fmt(endDate!)}`
+  return startDate
+    ? `${i18n.t('components.period.from', { defaultValue: 'From' })} ${fmt(startDate)}`
+    : `${i18n.t('components.period.until', { defaultValue: 'Until' })} ${fmt(endDate!)}`
 }
 
 /**

@@ -68,7 +68,12 @@
     "creditModule": "Credit Module",
     "creditApplications": "Applications",
     "creditLoans": "Loans",
-    "creditSettings": "Settings"
+    "creditSettings": "Settings",
+    "menu": "Menu",
+    "toggleMenu": "Toggle menu",
+    "scoringV3Monitoring": "v3 Shadow-Run Report",
+    "scoringV3Settings": "v3 Scoring Settings",
+    "operatorWorkList": "Priority Work List"
   },
   "dialer": {
     "phone": {
@@ -336,6 +341,64 @@
     "colorPicker": {
       "hexCode": "Hex Code",
       "preview": "Preview"
+    },
+    "dateSelect": {
+      "selectDate": "Select date"
+    },
+    "errorState": {
+      "tryAgain": "Try Again"
+    },
+    "routeError": {
+      "newVersionTitle": "New version available",
+      "newVersionMessage": "The application was updated. Refresh to load the latest version.",
+      "translationConflictTitle": "Browser translation conflict",
+      "translationConflictMessage": "Chrome or another extension translated this page while it was open, which breaks the UI. Turn off automatic translation for this site (Chrome address bar → translation icon → disable), then refresh. Use the language switcher inside the app instead.",
+      "unexpectedRouteError": "Unexpected route error.",
+      "unexpectedPageError": "An unexpected error occurred while loading this page.",
+      "refreshPage": "Refresh Page",
+      "goBack": "Go Back"
+    },
+    "searchableSelect": {
+      "noResults": "No results found"
+    },
+    "passwordInput": {
+      "show": "Show password",
+      "hide": "Hide password"
+    },
+    "modal": {
+      "close": "Close modal",
+      "minimize": "Minimize modal"
+    },
+    "select": {
+      "clear": "Clear"
+    },
+    "impersonation": {
+      "mode": "Impersonation mode",
+      "viewingAs": "Viewing as:",
+      "project": "Project:",
+      "exit": "Exit Impersonation",
+      "exiting": "Exiting...",
+      "unknownProject": "Unknown Project",
+      "unknownRole": "Unknown Role"
+    },
+    "callBubble": {
+      "activeCall": "Active call",
+      "expandCall": "Expand call",
+      "restoreRecording": "Restore call recording",
+      "restoreModal": "Restore call modal"
+    },
+    "searchBar": {
+      "searchType": "Search type"
+    },
+    "period": {
+      "from": "From",
+      "until": "Until"
+    },
+    "permissionRefresh": {
+      "updated": "Your permissions have been updated. Page will refresh."
+    },
+    "connection": {
+      "reconnecting": "Connection problem — reconnecting…"
     }
   },
   "status": {
@@ -7009,7 +7072,8 @@
       "contactStale": "(stale)",
       "noEmails": "No emails available for this source.",
       "chainExecution": "Chain execution",
-      "restoreChainExecutor": "Restore chain executor"
+      "restoreChainExecutor": "Restore chain executor",
+      "stepProgress": "Step {{current}} of {{total}}"
     },
     "chainBuilder": {
       "title": "Chain Builder",

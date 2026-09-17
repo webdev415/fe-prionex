@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import {
@@ -47,6 +48,7 @@ export function SearchBar({
   value,
   searchTypeValue,
 }: SearchBarProps) {
+  const { t } = useTranslation('common')
   const [searchQuery, setSearchQuery] = useState(value || '')
   const [searchType, setSearchType] = useState(searchTypeValue || defaultSearchType)
   const [isMobileDropdownOpen, setIsMobileDropdownOpen] = useState(false)
@@ -210,7 +212,7 @@ export function SearchBar({
                 <button
                   type="button"
                   className="text-primary-foreground bg-primary-300 hover:bg-primary-500 active:bg-primary-600 group flex h-9 w-9 min-w-0 cursor-pointer items-center justify-center rounded-full border-0 p-0 shadow-none transition-all duration-200 hover:shadow-md focus:outline-none active:shadow-sm disabled:cursor-not-allowed disabled:opacity-50 data-[state=open]:focus:ring-0 data-[state=open]:focus:ring-offset-0"
-                  aria-label="Search type"
+                  aria-label={t('components.searchBar.searchType', 'Search type')}
                 >
                   <Icons.Filter
                     size={18}
@@ -255,7 +257,7 @@ export function SearchBar({
                 <button
                   type="button"
                   className="text-foreground group hover:bg-muted active:bg-muted flex h-auto w-auto min-w-[120px] cursor-pointer items-center justify-between gap-2 rounded-md border-0 bg-transparent px-2 py-1 text-xs shadow-none transition-all duration-200 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50 data-[state=open]:focus:ring-0 data-[state=open]:focus:ring-offset-0"
-                  aria-label="Search type"
+                  aria-label={t('components.searchBar.searchType', 'Search type')}
                 >
                   <span className="transition-colors duration-200">{currentSearchTypeLabel}</span>
                   <Icons.ArrowDown
@@ -293,7 +295,7 @@ export function SearchBar({
         {/* Search button - hidden on mobile, visible on desktop */}
         <button
           className="bg-primary-300 hidden h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-105 disabled:opacity-50 lg:flex"
-          aria-label="Search"
+          aria-label={t('actions.search', 'Search')}
           onClick={handleSearch}
           disabled={isLoading}
         >

@@ -105,14 +105,14 @@ export function MinimizedChainExecutorBubble() {
             <button
               onClick={() => minimizeRef.current?.()}
               className="hover:bg-muted flex h-8 w-8 items-center justify-center rounded-md transition-colors"
-              aria-label="Minimize modal"
+              aria-label={t('components.modal.minimize', 'Minimize modal')}
             >
               <Icons.Remove02 size={20} className="text-dark-500" strokeWidth={1.5} />
             </button>
             <button
               onClick={handleClose}
               className="hover:bg-muted flex h-8 w-8 items-center justify-center rounded-md transition-colors"
-              aria-label="Close modal"
+              aria-label={t('components.modal.close', 'Close modal')}
             >
               <Icons.Cancel01 size={20} className="text-dark-500" strokeWidth={1.5} />
             </button>

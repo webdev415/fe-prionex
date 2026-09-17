@@ -68,7 +68,12 @@
     "creditModule": "Módulo de crédito",
     "creditApplications": "Solicitudes",
     "creditLoans": "Créditos",
-    "creditSettings": "Configuración"
+    "creditSettings": "Configuración",
+    "menu": "Menú",
+    "toggleMenu": "Mostrar u ocultar menú",
+    "scoringV3Monitoring": "Informe de ejecución en sombra v3",
+    "scoringV3Settings": "Configuración de puntuación v3",
+    "operatorWorkList": "Lista de trabajo prioritaria"
   },
   "dialer": {
     "phone": {
@@ -336,6 +341,64 @@
     "colorPicker": {
       "hexCode": "Código hexadecimal",
       "preview": "Vista previa"
+    },
+    "dateSelect": {
+      "selectDate": "Seleccionar fecha"
+    },
+    "errorState": {
+      "tryAgain": "Intentar de nuevo"
+    },
+    "routeError": {
+      "newVersionTitle": "Hay una nueva versión disponible",
+      "newVersionMessage": "La aplicación se ha actualizado. Actualice la página para cargar la última versión.",
+      "translationConflictTitle": "Conflicto con la traducción del navegador",
+      "translationConflictMessage": "Chrome u otra extensión tradujo esta página mientras estaba abierta, lo que rompe la interfaz. Desactive la traducción automática para este sitio (barra de direcciones de Chrome → icono de traducción → desactivar) y actualice la página. Use en su lugar el selector de idioma de la aplicación.",
+      "unexpectedRouteError": "Error de ruta inesperado.",
+      "unexpectedPageError": "Se ha producido un error inesperado al cargar esta página.",
+      "refreshPage": "Actualizar página",
+      "goBack": "Volver"
+    },
+    "searchableSelect": {
+      "noResults": "No se encontraron resultados"
+    },
+    "passwordInput": {
+      "show": "Mostrar contraseña",
+      "hide": "Ocultar contraseña"
+    },
+    "modal": {
+      "close": "Cerrar ventana",
+      "minimize": "Minimizar ventana"
+    },
+    "select": {
+      "clear": "Borrar"
+    },
+    "impersonation": {
+      "mode": "Modo de suplantación",
+      "viewingAs": "Viendo como:",
+      "project": "Proyecto:",
+      "exit": "Salir de la suplantación",
+      "exiting": "Saliendo...",
+      "unknownProject": "Proyecto desconocido",
+      "unknownRole": "Rol desconocido"
+    },
+    "callBubble": {
+      "activeCall": "Llamada activa",
+      "expandCall": "Expandir llamada",
+      "restoreRecording": "Restaurar grabación de la llamada",
+      "restoreModal": "Restaurar ventana de la llamada"
+    },
+    "searchBar": {
+      "searchType": "Tipo de búsqueda"
+    },
+    "period": {
+      "from": "Desde",
+      "until": "Hasta"
+    },
+    "permissionRefresh": {
+      "updated": "Sus permisos se han actualizado. La página se actualizará."
+    },
+    "connection": {
+      "reconnecting": "Problema de conexión — reconectando…"
     }
   },
   "status": {
@@ -7044,7 +7107,8 @@
       "contactStale": "(desactualizado)",
       "noEmails": "No hay correos electrónicos disponibles para este origen.",
       "chainExecution": "Ejecución de la cadena",
-      "restoreChainExecutor": "Restaurar ejecutor de cadena"
+      "restoreChainExecutor": "Restaurar ejecutor de cadena",
+      "stepProgress": "Paso {{current}} de {{total}}"
     },
     "chainBuilder": {
       "title": "Constructor de cadenas",

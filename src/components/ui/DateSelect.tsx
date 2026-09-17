@@ -7,6 +7,7 @@
 
 import { forwardRef, useEffect, useId, useRef, useState } from 'react'
 import DatePicker from 'react-datepicker'
+import { useTranslation } from 'react-i18next'
 import 'react-datepicker/dist/react-datepicker.css'
 import './DateSelect.theme.css'
 import { format as formatFns } from 'date-fns'
@@ -241,7 +242,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
       className,
       id,
       value,
-      placeholder = 'Select date',
+      placeholder,
       onChange,
       disabled,
       min,
@@ -293,6 +294,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
     // it is left alone deliberately.
     const opaqueFieldId = opaqueFieldName('ds', generatedId)
 
+    const { t } = useTranslation('common')
     const language = i18n.language
     const spanish = isSpanishLanguage(language)
     const dateSeparator = spanish ? '/' : '.'
@@ -446,9 +448,10 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
     )
 
     const effectivePlaceholder =
-      allowManualInput && placeholder === 'Select date'
+      placeholder ??
+      (allowManualInput
         ? manualPlaceholder(isDateOnlyManual, spanish)
-        : placeholder
+        : t('components.dateSelect.selectDate', 'Select date'))
 
     return (
       <div id={id} className={`w-full ${className || ''}`}>
