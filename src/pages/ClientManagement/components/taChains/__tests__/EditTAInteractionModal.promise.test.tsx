@@ -85,6 +85,60 @@ const TARGET_ACTIONS = [
   { id: 4, name: 'How much', field_type: 'amount', is_hidden: false, dropdown_values: [] },
 ]
 
+/**
+ * The other kind of chain: no flagged steps, a promise that came from a
+ * dropdown value's require_promise_* flags in ChainExecutor. The server
+ * derives nothing for these — `tracked` is false and it leaves both columns
+ * alone — so this modal is the only place such a promise can be fixed.
+ */
+const LEGACY_CHAIN = {
+  id: 2,
+  name: 'legacy',
+  chain_type: 'manual',
+  steps: [
+    {
+      id: 21,
+      chain_id: 2,
+      target_action_id: 5,
+      target_action_name: 'Result',
+      target_action_field_type: 'dropdown',
+      step_order: 1,
+      is_required: true,
+      delay_minutes: 0,
+      not_in_the_past: false,
+      contact_source: null,
+      contact_medium: 'phone',
+      show_closed_credits: false,
+      is_promise_date: false,
+      is_promise_amount: false,
+      position_x: null,
+      position_y: null,
+    },
+  ],
+}
+
+const LEGACY_TARGET_ACTIONS = [
+  {
+    id: 5,
+    name: 'Result',
+    field_type: 'dropdown',
+    is_hidden: false,
+    dropdown_values: [
+      {
+        id: 50,
+        value: 'Promised to pay',
+        require_promise_date: true,
+        require_promise_amount: true,
+        require_credit: false,
+      },
+    ],
+  },
+]
+
+// Swapped per describe block — the hooks below read these, not the constants.
+let activeChain: unknown = CHAIN
+let activeTargetActions: unknown = TARGET_ACTIONS
+
 const mutateAsync = vi.fn().mockResolvedValue({})
 
 vi.mock('@/features/taInteractions/hooks/useTAInteractions', () => ({
@@ -93,10 +147,10 @@ vi.mock('@/features/taInteractions/hooks/useTAInteractions', () => ({
   useUpdateTAInteraction: () => ({ mutateAsync, isPending: false }),
 }))
 vi.mock('@/features/taChains/hooks/useTAChains', () => ({
-  useTAChain: () => ({ data: CHAIN }),
+  useTAChain: () => ({ data: activeChain }),
 }))
 vi.mock('@/features/targetActions/hooks/useTargetActions', () => ({
-  useTargetActions: () => ({ data: { items: TARGET_ACTIONS } }),
+  useTargetActions: () => ({ data: { items: activeTargetActions } }),
 }))
 vi.mock('@/features/clients/hooks/useClientEmails', () => ({
   useClientEmails: () => ({ data: [] }),
@@ -135,7 +189,12 @@ function lastPayload(): Record<string, unknown> {
 }
 
 describe('Edit Interaction — the promise is the steps (KAN-1069 follow-up)', () => {
-  beforeEach(() => mutateAsync.mockClear())
+  beforeEach(() => {
+    mutateAsync.mockClear()
+    // A chain whose steps ARE flagged: the server derives the promise.
+    activeChain = CHAIN
+    activeTargetActions = TARGET_ACTIONS
+  })
 
   it('shows no standalone promise inputs, even when the interaction has a promise', () => {
     setup()
@@ -188,5 +247,60 @@ describe('Edit Interaction — the promise is the steps (KAN-1069 follow-up)', (
 
     await waitFor(() => expect(mutateAsync).toHaveBeenCalled())
     expect(lastPayload()).toHaveProperty('clear_credit_id')
+  })
+})
+
+describe('Edit Interaction — a chain with no flagged steps (KAN-1069 review)', () => {
+  /**
+   * The other half of the contract, and the one the review caught.
+   *
+   * ChainExecutor still writes promise_date / promise_amount from a dropdown
+   * value's require_promise_* flags. Those interactions have no flagged step,
+   * so the server's derive pass reports `tracked: false` and leaves both
+   * columns exactly as they were — nothing about editing step_data can reach
+   * them. Removing these inputs outright left such a promise permanently
+   * wrong, with no way to correct or clear it: the chain already holds
+   * interactions, so it is structurally locked and cannot adopt the flags
+   * without being cloned.
+   */
+  beforeEach(() => {
+    mutateAsync.mockClear()
+    activeChain = LEGACY_CHAIN
+    activeTargetActions = LEGACY_TARGET_ACTIONS
+  })
+
+  it('still offers the standalone inputs, populated from the interaction', async () => {
+    setup()
+
+    const date = await screen.findByDisplayValue('2026-09-13')
+    expect(date).toBeInTheDocument()
+    expect(screen.getByDisplayValue('340.00')).toBeInTheDocument()
+  })
+
+  it('sends the corrected promise, because nothing else can', async () => {
+    setup()
+
+    const amount = await screen.findByDisplayValue('340.00')
+    fireEvent.change(amount, { target: { value: '500' } })
+    fireEvent.click(screen.getByRole('button', { name: /save/i }))
+
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalled())
+    expect(lastPayload().promise_amount).toBe(500)
+    expect(lastPayload().clear_promise_amount).toBe(false)
+  })
+
+  it('can clear a promise outright', async () => {
+    setup()
+
+    const amount = await screen.findByDisplayValue('340.00')
+    fireEvent.change(amount, { target: { value: '' } })
+    const date = screen.getByDisplayValue('2026-09-13')
+    fireEvent.change(date, { target: { value: '' } })
+    fireEvent.click(screen.getByRole('button', { name: /save/i }))
+
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalled())
+    expect(lastPayload().clear_promise_date).toBe(true)
+    expect(lastPayload().clear_promise_amount).toBe(true)
+    expect(lastPayload().promise_amount).toBeUndefined()
   })
 })

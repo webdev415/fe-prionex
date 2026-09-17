@@ -7575,7 +7575,8 @@
         "promiseAmountTaken": "Step {{step}} is already counted as the promise amount. Untick it first.",
         "contactSource": "Contact source",
         "contactSourceClient": "Client contacts",
-        "contactSourceRecommender": "Recommender contacts"
+        "contactSourceRecommender": "Recommender contacts",
+        "promiseNeedsBothHalves": "A promise needs both a Date step and an Amount step counted. Flag the other one, or untick this."
       },
       "modals": {
         "create": {

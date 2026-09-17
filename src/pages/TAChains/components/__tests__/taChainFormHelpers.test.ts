@@ -55,6 +55,10 @@ describe('taChainStepsToInput', () => {
         not_in_the_past: true,
         contact_source: 'client',
         show_closed_credits: true,
+        // No field type, so the mapper has nothing to check the flags against
+        // and keeps them: the point here is that every field survives the
+        // copy, not what a given step type is allowed to carry.
+        target_action_field_type: null,
         is_promise_date: true,
         is_promise_amount: true,
       }),
@@ -105,5 +109,43 @@ describe('taChainStepsToInput', () => {
       makeStep({ target_action_field_type: 'amount', is_promise_amount: true }),
     ])
     expect(out.is_promise_amount).toBe(true)
+  })
+
+  // KAN-1069 review. A flag can outlive the type that justified it: chains
+  // saved before the editor learned to clear flags on retype still carry one.
+  // It is invisible (the checkbox renders only for date / amount) and the
+  // server refuses the chain, so the admin sees a save that fails with no
+  // cause and no control to untick. Opening the chain repairs it.
+  it('drops a flag the step type cannot carry', () => {
+    const [out] = taChainStepsToInput([
+      makeStep({
+        target_action_field_type: 'text',
+        is_promise_date: true,
+        is_promise_amount: true,
+      }),
+    ])
+    expect(out.is_promise_date).toBe(false)
+    expect(out.is_promise_amount).toBe(false)
+  })
+
+  it('drops the flag of the other half on a date step', () => {
+    const [out] = taChainStepsToInput([
+      makeStep({
+        target_action_field_type: 'date',
+        is_promise_date: true,
+        is_promise_amount: true,
+      }),
+    ])
+    expect(out.is_promise_date).toBe(true)
+    expect(out.is_promise_amount).toBe(false)
+  })
+
+  it('keeps a flag when the field type is unknown', () => {
+    // Nullable in the API type. Dropping on absence would turn a thin response
+    // into silent data loss.
+    const [out] = taChainStepsToInput([
+      makeStep({ target_action_field_type: null, is_promise_date: true }),
+    ])
+    expect(out.is_promise_date).toBe(true)
   })
 })

@@ -121,24 +121,33 @@ export function ChainStepsEditor({ steps, onChange, disabled }: ChainStepsEditor
     if (checked) {
       const takenBy = steps.findIndex((s, i) => i !== index && s[field])
       if (takenBy !== -1) {
+        const isDate = field === 'is_promise_date'
         toast.error(
-          field === 'is_promise_date'
-            ? t(
-                'pages.taChains.steps.promiseDateTaken',
-                'Step {{step}} is already counted as the promise date. Untick it first.',
-                { step: takenBy + 1 }
-              )
-            : t(
-                'pages.taChains.steps.promiseAmountTaken',
-                'Step {{step}} is already counted as the promise amount. Untick it first.',
-                { step: takenBy + 1 }
-              )
+          t(
+            isDate
+              ? 'pages.taChains.steps.promiseDateTaken'
+              : 'pages.taChains.steps.promiseAmountTaken',
+            `Step {{step}} is already counted as the promise ${isDate ? 'date' : 'amount'}. Untick it first.`,
+            { step: takenBy + 1 }
+          )
         )
         return
       }
     }
     update(index, { [field]: checked })
   }
+
+  /**
+   * Exactly one half of the pair flagged — a chain the server will refuse.
+   *
+   * Advisory only: it does NOT block the tick or the submit, because ticking
+   * the first of a pair is always a step through an invalid state on the way
+   * to a valid one. Without it the admin's only signal is a raw API string on
+   * Save, which is especially unhelpful when the chain has no step of the
+   * other type at all and nothing on screen suggests adding one.
+   */
+  const promiseHalfConfigured =
+    steps.some((s) => s.is_promise_date) !== steps.some((s) => s.is_promise_amount)
 
   const addStep = () => {
     const firstTA = allTAs[0]
@@ -252,6 +261,17 @@ export function ChainStepsEditor({ steps, onChange, disabled }: ChainStepsEditor
                         next.contact_source = null
                         next.contact_medium = undefined
                       }
+                      // Retype clears a promise flag the new type cannot carry
+                      // (KAN-1069). The checkbox only renders for date / amount,
+                      // so a flag left behind on a retyped step is invisible:
+                      // the server refuses it, the chain stops saving, and
+                      // there is no control on screen to untick. It would also
+                      // poison the one-per-chain check here, which counts
+                      // flags rather than visible checkboxes.
+                      next.is_promise_date =
+                        newTA?.field_type === 'date' ? step.is_promise_date : false
+                      next.is_promise_amount =
+                        newTA?.field_type === 'amount' ? step.is_promise_amount : false
                       update(index, next)
                     }}
                     disabled={disabled}
@@ -378,6 +398,15 @@ export function ChainStepsEditor({ steps, onChange, disabled }: ChainStepsEditor
           )
         })}
       </ol>
+
+      {promiseHalfConfigured && (
+        <p className="text-muted-foreground mt-2 text-xs">
+          {t(
+            'pages.taChains.steps.promiseNeedsBothHalves',
+            'A promise needs both a Date step and an Amount step counted. Flag the other one, or untick this.'
+          )}
+        </p>
+      )}
     </div>
   )
 }
