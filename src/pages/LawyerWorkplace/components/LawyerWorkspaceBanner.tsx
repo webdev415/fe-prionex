@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useLegalLawyers } from '@/features/lawyerWorkplace'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
+import { LANGUAGE_SHORT_NAMES, normalizeBackendLanguage } from '@/lib/i18n'
 import { useSidebarStore } from '@/stores/sidebarStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useLawyerWorkplaceLayout } from '../context/lawyerWorkplaceLayout'
@@ -36,7 +37,7 @@ export function LawyerWorkspaceBanner({ className }: LawyerWorkspaceBannerProps)
     [lawyersData?.items]
   )
 
-  const regionCode = i18n.language?.startsWith('uk') ? 'UA' : 'EN'
+  const regionCode = LANGUAGE_SHORT_NAMES[normalizeBackendLanguage(i18n.language)]
   const workspaceTitle = t('pages.lawyerWorkplace.workspaceBanner.title', "Lawyers' Workspace")
 
   if (!showWorkspaceBanner) {
