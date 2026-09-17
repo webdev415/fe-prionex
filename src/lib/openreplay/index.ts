@@ -40,6 +40,46 @@ export function redactSensitiveQueryParams(url: string): string {
 }
 
 /**
+ * Headers that must never reach a recording, lower-cased.
+ *
+ * 🔴 Headers are captured INDEPENDENTLY of `capturePayload` — that option gates
+ * bodies, which is exactly why `ignoreHeaders` exists as a separate one. So a
+ * credential in a header is recorded unless it is named here.
+ *
+ * Beyond the package's own three, this codebase sends a fourth:
+ * `features/credit/api/creditApi.ts` attaches `X-Internal-Api-Key` (the stand key
+ * the operator pastes into the credit panel) to every credit-service request.
+ *
+ * On case: the package matches with `Array.includes`, so the comparison is
+ * case-SENSITIVE, and its own defaults are lower-case. That works here because
+ * axios lower-cases header names before handing them to `setRequestHeader`
+ * (`AxiosHeaders` normalises via `String(header).trim().toLowerCase()`), and both
+ * `Headers` iteration and `getAllResponseHeaders()` are lower-case by spec. The
+ * sanitizer below nevertheless compares case-insensitively, so a caller that
+ * bypasses axios cannot slip a credential through on capitalisation alone.
+ */
+const SENSITIVE_HEADERS = [
+  'cookie',
+  'set-cookie',
+  'authorization',
+  'proxy-authorization',
+  'x-internal-api-key',
+  'x-api-key',
+]
+
+const SENSITIVE_HEADER_SET = new Set(SENSITIVE_HEADERS)
+
+/** Blank the value of every sensitive header in place, whatever its casing. */
+export function redactSensitiveHeaders(headers: Record<string, string> | undefined): void {
+  if (!headers) return
+  for (const name of Object.keys(headers)) {
+    if (SENSITIVE_HEADER_SET.has(name.toLowerCase())) {
+      headers[name] = '[REDACTED]'
+    }
+  }
+}
+
+/**
  * The single instance, as a promise. Also the guard against a second start:
  * `StrictMode` runs effects twice in development, and two `new Tracker().start()`
  * calls mean two sessions for one page load.
@@ -100,19 +140,26 @@ export function startOpenReplay(): void {
         // API fails. Recordings are correlated by `getSessionURL()` instead.
         network: {
           capturePayload: false,
-          ignoreHeaders: ['cookie', 'set-cookie', 'authorization'],
+
+          // The same list the sanitizer uses, so the two cannot drift apart: a
+          // credential added to one is covered by both. `ignoreHeaders` drops the
+          // header before it is ever recorded; the sanitizer is the second line,
+          // for anything that reaches the record under different casing.
+          ignoreHeaders: SENSITIVE_HEADERS,
           sessionTokenHeader: false,
           failuresOnly: false,
           captureInIframes: true,
 
-          // Bodies are not captured and those three headers are dropped, but
-          // neither of those touches the URL — and a URL is where this codebase
-          // actually carries a credential. The sanitizer runs before the record
-          // is sent and its return value replaces it, so redacting here means the
-          // secret never leaves the browser. See SENSITIVE_QUERY_PARAMS above for
-          // what this does and does not cover today.
+          // Bodies are not captured, but that covers neither URLs nor headers,
+          // and this codebase carries credentials in both: a JWT in the
+          // transcription socket's query string, and X-Internal-Api-Key on every
+          // credit-service request. The sanitizer runs before the record is sent
+          // and its return value replaces it, so nothing redacted here leaves the
+          // browser.
           sanitizer: (data) => {
             data.url = redactSensitiveQueryParams(data.url)
+            redactSensitiveHeaders(data.request?.headers)
+            redactSensitiveHeaders(data.response?.headers)
             return data
           },
         },

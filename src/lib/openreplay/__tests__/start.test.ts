@@ -51,6 +51,20 @@ async function loadWithMockedTracker(options: {
   return { mod, factory, construct, start }
 }
 
+type SanitizedRecord = {
+  url: string
+  request?: { headers?: Record<string, string> }
+  response?: { headers?: Record<string, string> }
+}
+
+/** The sanitizer the module handed to the tracker constructor. */
+function sanitizerOf(construct: ReturnType<typeof vi.fn>) {
+  const options = construct.mock.calls[0][0] as {
+    network: { sanitizer: (d: SanitizedRecord) => SanitizedRecord }
+  }
+  return options.network.sanitizer
+}
+
 afterEach(() => {
   vi.unstubAllEnvs()
   vi.resetModules()
@@ -123,14 +137,75 @@ describe('startOpenReplay', () => {
     mod.startOpenReplay()
     await mod.getTracker()
 
-    const options = construct.mock.calls[0][0] as {
-      network: { sanitizer: (d: { url: string }) => { url: string } }
-    }
-    const sanitized = options.network.sanitizer({
+    const sanitized = sanitizerOf(construct)({
       url: 'wss://api.example.com/ws/transcribe?token=eyJhbGciOiJIUzI1NiJ9.secret&lang=uk',
     })
 
     expect(sanitized.url).toBe('wss://api.example.com/ws/transcribe?token=[REDACTED]&lang=uk')
+  })
+
+  it('hands the tracker a sanitizer that redacts credential headers', async () => {
+    const { mod, construct } = await loadWithMockedTracker({ enabled: true })
+
+    mod.startOpenReplay()
+    await mod.getTracker()
+
+    // Headers are captured independently of `capturePayload`, so this is the
+    // path X-Internal-Api-Key would otherwise take into a recording.
+    const sanitized = sanitizerOf(construct)({
+      url: 'https://api.crm-prionex.online/api/v1/credit/loans',
+      request: {
+        headers: {
+          'x-internal-api-key': 'stand-key-value',
+          authorization: 'Bearer eyJhbGciOiJIUzI1NiJ9.x',
+          'x-operator-role': 'operator',
+        },
+      },
+      response: { headers: { 'set-cookie': 'session=abc' } },
+    })
+
+    expect(sanitized.request?.headers).toEqual({
+      'x-internal-api-key': '[REDACTED]',
+      authorization: '[REDACTED]',
+      // Not a credential — it must survive, or the record loses its meaning.
+      'x-operator-role': 'operator',
+    })
+    expect(sanitized.response?.headers).toEqual({ 'set-cookie': '[REDACTED]' })
+  })
+
+  it('redacts credential headers whatever their casing', async () => {
+    // The package matches `ignoreHeaders` with `Array.includes`, i.e.
+    // case-sensitively. axios lower-cases names, so the list matches today — but
+    // a caller that bypasses axios must not slip a key through on capitalisation.
+    const { mod, construct } = await loadWithMockedTracker({ enabled: true })
+
+    mod.startOpenReplay()
+    await mod.getTracker()
+
+    const sanitized = sanitizerOf(construct)({
+      url: 'https://api.crm-prionex.online/api/v1/credit/loans',
+      request: { headers: { 'X-Internal-Api-Key': 'stand-key-value', Authorization: 'Bearer x' } },
+    })
+
+    expect(sanitized.request?.headers).toEqual({
+      'X-Internal-Api-Key': '[REDACTED]',
+      Authorization: '[REDACTED]',
+    })
+  })
+
+  it('names the credential headers in ignoreHeaders as well as in the sanitizer', async () => {
+    // Two mechanisms, one list: `ignoreHeaders` drops the header before it is
+    // recorded, the sanitizer is the second line. They must not drift apart.
+    const { mod, construct } = await loadWithMockedTracker({ enabled: true })
+
+    mod.startOpenReplay()
+    await mod.getTracker()
+
+    const options = construct.mock.calls[0][0] as { network: { ignoreHeaders: string[] } }
+
+    expect(options.network.ignoreHeaders).toEqual(
+      expect.arrayContaining(['cookie', 'set-cookie', 'authorization', 'x-internal-api-key'])
+    )
   })
 })
 
