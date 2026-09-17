@@ -40,9 +40,22 @@ export const OPENREPLAY_ENABLED = OPENREPLAY_PROJECT_KEY !== '' && OPENREPLAY_IN
  *
  * Off in every environment today (decision 2026-09-16). It masks more than its
  * name suggests — page URLs, document titles and click labels go with the text,
- * leaving a replay in which the screen the operator was on cannot be told. PII
- * is handled instead by `obscureTextNumbers` plus `data-openreplay-obscured` on
- * the blocks that hold it.
+ * leaving a replay in which the screen the operator was on cannot be told.
+ *
+ * 🔴 WHICH LEAVES A REAL GAP, AND IT IS NOT CLOSED YET. With this off, the
+ * tracker masks digits (`obscureTextNumbers`) and input values, so phone numbers
+ * and amounts are covered — but NOTHING masks letters. Client first and last
+ * names, addresses (`types/api.ts`) and free-text operator comments are recorded
+ * verbatim.
+ *
+ * The intended fix is `data-openreplay-obscured` on the blocks that hold that
+ * data — client card, payments, documents — which is an unticked item on task
+ * Tasks/Kanbanboard#52 and does NOT exist in `src/` today: grep for the
+ * attribute and this comment is most of what you will find.
+ *
+ * Whoever enables the PROD key: that gap is still open unless this paragraph
+ * says otherwise. On DEV and PRE-PROD the data is synthetic, which is why the
+ * order is DEV first.
  *
  * Same convention as the key and as `VITE_ASSISTANT_REPORT_TABLES_ENABLED`:
  * empty or unset means off, and only a literal 'true'/'1' turns it on.

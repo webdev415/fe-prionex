@@ -15,6 +15,31 @@ import type Tracker from '@openreplay/tracker'
  */
 
 /**
+ * Query parameters whose value must never reach a recording.
+ *
+ * The one that exists today is `token`: `features/aiAssistant/transcribeSocket.ts`
+ * puts the operator's JWT in the transcription socket's query string, because a
+ * browser WebSocket cannot send an Authorization header. A bearer token in a
+ * replay would be usable by anyone with access to it, and would survive in the
+ * replay backend's backups.
+ *
+ * ⚠️ Read this before relying on it: as of 18.0.6 the tracker does NOT capture
+ * that socket. Its network capture is `@openreplay/network-proxy`, which exports
+ * `BeaconProxy`, `FetchProxy` and `XHRProxy` and nothing for WebSocket — which is
+ * also why the package offers a manual `trackWs()` at all. So this list closes no
+ * leak that exists right now; it is here so that the day a token appears in a
+ * fetch or XHR URL, or the day the proxy grows WebSocket support, the value is
+ * already redacted instead of being discovered in a recording afterwards.
+ */
+const SENSITIVE_QUERY_PARAMS =
+  /([?&](?:access_token|api_key|apikey|auth|jwt|key|password|secret|sig|signature|token)=)[^&#]*/gi
+
+/** Replace the value of every sensitive query parameter, leaving the URL readable. */
+export function redactSensitiveQueryParams(url: string): string {
+  return typeof url === 'string' ? url.replace(SENSITIVE_QUERY_PARAMS, '$1[REDACTED]') : url
+}
+
+/**
  * The single instance, as a promise. Also the guard against a second start:
  * `StrictMode` runs effects twice in development, and two `new Tracker().start()`
  * calls mean two sessions for one page load.
@@ -79,6 +104,17 @@ export function startOpenReplay(): void {
           sessionTokenHeader: false,
           failuresOnly: false,
           captureInIframes: true,
+
+          // Bodies are not captured and those three headers are dropped, but
+          // neither of those touches the URL — and a URL is where this codebase
+          // actually carries a credential. The sanitizer runs before the record
+          // is sent and its return value replaces it, so redacting here means the
+          // secret never leaves the browser. See SENSITIVE_QUERY_PARAMS above for
+          // what this does and does not cover today.
+          sanitizer: (data) => {
+            data.url = redactSensitiveQueryParams(data.url)
+            return data
+          },
         },
 
         // 🔴 Required, not optional. The constructor checks
