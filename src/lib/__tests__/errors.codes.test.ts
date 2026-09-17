@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import i18n from '@/lib/i18n'
-import { getErrorMessage, translateErrorCode } from '../errors'
+import { getErrorMessage, localizeCodedDetail, translateErrorCode } from '../errors'
 
 function makeHttpError(status: number, data?: unknown) {
   return Object.assign(new Error(`HTTP ${status}`), {
@@ -69,6 +69,30 @@ describe('error codes', () => {
     speakSpanish()
 
     expect(getErrorMessage(makeHttpError(404))).toBe('Recurso no encontrado.')
+  })
+
+  it('rewrites a coded detail for callers that read it directly', () => {
+    speakSpanish()
+    const error = makeHttpError(409, {
+      detail: 'Loan is already closed',
+      code: 'LOAN_ALREADY_CLOSED',
+    })
+
+    localizeCodedDetail(error)
+
+    expect(error.response.data).toEqual({
+      detail: 'El crédito ya está cerrado',
+      code: 'LOAN_ALREADY_CLOSED',
+    })
+  })
+
+  it('leaves an uncoded detail alone', () => {
+    speakSpanish()
+    const error = makeHttpError(404, { detail: 'Client not found' })
+
+    localizeCodedDetail(error)
+
+    expect(error.response.data).toEqual({ detail: 'Client not found' })
   })
 
   it('returns the fallback for a missing code', () => {

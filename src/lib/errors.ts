@@ -44,6 +44,16 @@ export function translateErrorCode(code: unknown, fallback: string, params?: unk
   return translated || fallback
 }
 
+export function localizeCodedDetail(error: unknown): void {
+  if (!axios.isAxiosError(error)) return
+  const data = error.response?.data
+  if (!data || typeof data !== 'object') return
+  const record = data as Record<string, unknown>
+  if (typeof record.detail === 'string' && typeof record.code === 'string') {
+    record.detail = translateErrorCode(record.code, record.detail, record.params)
+  }
+}
+
 /**
  * Get a user-friendly error message from an error object
  */
