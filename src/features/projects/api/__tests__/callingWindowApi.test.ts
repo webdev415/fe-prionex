@@ -25,15 +25,16 @@ describe('calling window API paths', () => {
   it('reads the country catalogue outside the /projects/ prefix', async () => {
     await getHolidayCountries()
     const url = get.mock.calls[0][0] as string
-    expect(url).toBe('/api/v1/calling-window/countries')
-    expect(url.startsWith('/api/v1/projects/')).toBe(false)
+    expect(url).toBe('/api/v1/projects/calling-window/countries')
+    // Two segments deep: one segment is captured by GET /projects/{project_id},
+    // and a separate top-level prefix has no Kong route at all.
+    expect(url.split('/api/v1/projects/')[1].split('/').length).toBeGreaterThan(1)
   })
 
   it('reads subdivisions outside the /projects/ prefix', async () => {
     await getSubdivisions('ES')
     const url = get.mock.calls[0][0] as string
-    expect(url).toBe('/api/v1/calling-window/countries/ES/subdivisions')
-    expect(url.startsWith('/api/v1/projects/')).toBe(false)
+    expect(url).toBe('/api/v1/projects/calling-window/countries/ES/subdivisions')
   })
 
   it('keeps the per-project window under its project id', async () => {

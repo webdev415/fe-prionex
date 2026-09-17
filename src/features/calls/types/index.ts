@@ -233,6 +233,7 @@ export type CallingWindowReason =
   | 'after_window_end'
   | 'weekday_not_allowed'
   | 'public_holiday'
+  | 'holiday_calendar_missing'
   | 'timezone_unresolved'
   | 'window_misconfigured'
 

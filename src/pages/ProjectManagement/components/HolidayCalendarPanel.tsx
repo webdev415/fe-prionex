@@ -114,7 +114,7 @@ export function HolidayCalendarPanel({ projectId, country, onClose }: HolidayCal
             <Alert variant="warning">
               {t(
                 'pages.projects.holidayCalendar.noCountry',
-                'Choose a holiday calendar country on the Window tab first.'
+                'No country is set, so public holidays are not observed. Choose one on the Window tab to enforce them.'
               )}
             </Alert>
           )}

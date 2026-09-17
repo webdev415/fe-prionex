@@ -52,6 +52,14 @@ export function reasonMessage(t: TFn, reason: CallingWindowReason | null): strin
       return t('pages.calls.callingWindow.weekend', 'Calls are not allowed today')
     case 'public_holiday':
       return t('pages.calls.callingWindow.holiday', 'Today is a public holiday')
+    case 'holiday_calendar_missing':
+      // Not "today is a holiday": it is not one, the calendar for this year
+      // has simply never been generated. The operator cannot wait that out —
+      // an administrator has to set it up.
+      return t(
+        'pages.calls.callingWindow.noCalendar',
+        'Calling is blocked until this year\u2019s holiday calendar is set up'
+      )
     case 'timezone_unresolved':
     case 'window_misconfigured':
       // Deliberately not "outside the hours": the call is refused because the
