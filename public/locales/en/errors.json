@@ -30,5 +30,17 @@
     "required": "You don't have permission to do that ({{permission}})",
     "reassignClient": "You don't have permission to reassign clients",
     "bulkAssign": "You don't have permission to bulk-assign clients"
+  },
+  "http": {
+    "timeout": "Request timeout. Please try again.",
+    "network": "Network error. Please check your connection.",
+    "unauthorized": "Unauthorized. Please log in again.",
+    "forbidden": "Access denied. You do not have permission to perform this action.",
+    "notFound": "Resource not found.",
+    "validation": "Validation error. Please check your input and try again.",
+    "server": "Server error. Please try again later.",
+    "generic": "An error occurred while processing your request.",
+    "validationOccurred": "Validation error occurred",
+    "unexpected": "An unexpected error occurred"
   }
 }

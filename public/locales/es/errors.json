@@ -30,5 +30,17 @@
     "required": "No tiene permiso para hacer eso ({{permission}})",
     "reassignClient": "No tiene permiso para reasignar clientes",
     "bulkAssign": "No tiene permiso para asignar clientes de forma masiva"
+  },
+  "http": {
+    "timeout": "Se agotó el tiempo de espera de la solicitud. Inténtelo de nuevo.",
+    "network": "Error de red. Compruebe su conexión.",
+    "unauthorized": "No autorizado. Vuelva a iniciar sesión.",
+    "forbidden": "Acceso denegado. No tiene permiso para realizar esta acción.",
+    "notFound": "Recurso no encontrado.",
+    "validation": "Error de validación. Revise los datos introducidos e inténtelo de nuevo.",
+    "server": "Error del servidor. Inténtelo de nuevo más tarde.",
+    "generic": "Se ha producido un error al procesar su solicitud.",
+    "validationOccurred": "Se ha producido un error de validación",
+    "unexpected": "Se ha producido un error inesperado"
   }
 }
