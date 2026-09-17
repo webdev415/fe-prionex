@@ -50,6 +50,12 @@ vi.mock('@/stores/authStore', () => {
 })
 vi.mock('@tanstack/react-query', () => ({ useMutation: () => ({ mutateAsync: vi.fn() }) }))
 vi.mock('../AppearanceSettings', () => ({ AppearanceSettings: () => <div>Appearance</div> }))
+// Stubbed for the same reason as AppearanceSettings: this file is about the
+// tablist contract, and the presets panel fetches over react-query, which the
+// mock above deliberately does not provide.
+vi.mock('@/features/clientFilterPresets/components/ClientFilterPresetsSettings', () => ({
+  ClientFilterPresetsSettings: () => <div>Presets</div>,
+}))
 vi.mock('@/features/auth/hooks/useMyPersonalInformation', () => ({
   useMyPersonalInformation: () => ({ data: undefined }),
   useUpdateMyPersonalInformation: () => ({ mutateAsync: vi.fn() }),
@@ -136,9 +142,19 @@ describe('ProfileSettingsPage tabs', () => {
     expect(shortcuts).toHaveFocus()
     expect(screen.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', shortcuts.id)
 
-    // And wraps, so the widget has no dead end.
+    // On to the third tab, then wrapping round to the first, so the widget
+    // has no dead end however many tabs it grows.
+    await user.keyboard('{ArrowRight}')
+    const [, , presets] = screen.getAllByRole('tab')
+    expect(presets).toHaveAttribute('aria-selected', 'true')
+
     await user.keyboard('{ArrowRight}')
     expect(screen.getAllByRole('tab')[0]).toHaveAttribute('aria-selected', 'true')
+
+    // And backwards from the first, which must land on the last rather
+    // than stopping.
+    await user.keyboard('{ArrowLeft}')
+    expect(screen.getAllByRole('tab')[2]).toHaveAttribute('aria-selected', 'true')
   })
 
   it('keeps the account column outside the tabs', () => {

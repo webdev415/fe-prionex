@@ -27,6 +27,7 @@ export const PERMISSIONS = {
     DELETE_INTERACTIONS: 'delete_interactions',
     CREATE_TASKS: 'create_tasks',
     VIEW_TASKS: 'view_tasks',
+    VIEW_ACTIVITY_LOG: 'view_client_activity_log',
   },
 
   /**
@@ -513,6 +514,20 @@ export const PERMISSION_CATEGORIES = {
   AI_ASSISTANT: 'AI Assistant',
 } as const
 
+export const DRAFT_READ_PERMISSIONS = [
+  PERMISSIONS.MESSAGING.SEND_MESSAGE_SMS,
+  PERMISSIONS.MESSAGING.SEND_MESSAGE_VIBER,
+  PERMISSIONS.MESSAGING.SEND_MESSAGE_EMAIL,
+  PERMISSIONS.MESSAGING.LAUNCH_CAMPAIGN_SMS,
+  PERMISSIONS.MESSAGING.LAUNCH_CAMPAIGN_VIBER,
+  PERMISSIONS.MESSAGING.LAUNCH_CAMPAIGN_EMAIL,
+]
+
+export const DRAFT_PAGE_PERMISSIONS = [
+  PERMISSIONS.MESSAGING.MANAGE_DRAFTS,
+  ...DRAFT_READ_PERMISSIONS,
+]
+
 /**
  * Permission descriptions for display in UI
  */
@@ -544,6 +559,7 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   delete_interactions: 'Delete existing TA interactions on the client profile',
   create_tasks: 'Create and manage tasks for clients',
   view_tasks: 'View tasks for clients',
+  view_client_activity_log: 'View the activity log tab in a client card',
 
   // Communication
   make_calls: 'Make outbound phone calls to clients',
@@ -558,7 +574,8 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   manage_dialer_queues: 'Create, edit, delete, and activate dialer campaign queues',
 
   // Messaging
-  manage_drafts: 'Create, edit, and delete messaging drafts; open the Message Drafts settings page',
+  manage_drafts:
+    'Open the Message Drafts page; create, edit, and delete messaging drafts, restore deleted ones, and view the trash. Reading the draft list itself needs a messaging send or launch permission.',
   view_campaign_analytics:
     'View campaign analytics, campaign recipients, CSV exports, and unified client message history',
   manage_messaging_integrations:

@@ -28,6 +28,11 @@ import {
 export type AssistantVoiceSilenceTimeout = 1.5 | 2 | 3
 /** Hard cap on a single voice recording (seconds). */
 export type AssistantVoiceMaxDuration = 30 | 60 | 120
+/**
+ * Явный выбор оператора по раздумьям 31B (см. `AssistantSettings.thinkingChoice`);
+ * «не выбирали» — это `null`, а не третье значение.
+ */
+export type AssistantThinkingChoice = 'on' | 'off'
 
 export interface AssistantSettings {
   /** Reasoning depth sent with every chat request: fast (default) | thinking. */
@@ -46,11 +51,31 @@ export interface AssistantSettings {
   /**
    * Показывать ли оператору ход рассуждения модели — плашку «Ход рассуждения» в
    * бабле и одноимённую секцию панели «Активность». Чисто клиентская настройка:
-   * `reasoning` приходит отдельным SSE-кадром, запрос к мозгу не меняется.
-   * Шаги оркестратора и «Источники» под ней не прячутся — по ним оператор
-   * проверяет факты ответа.
+   * `reasoning` приходит отдельным SSE-кадром, и в тело запроса это поле не
+   * попадает. Шаги оркестратора и «Источники» под ней не прячутся — по ним
+   * оператор проверяет факты ответа.
+   *
+   * Тип и смысл намеренно прежние (boolean, «показывать»): запись в
+   * localStorage обязана читаться и сборкой до появления {@link thinkingChoice}
+   * — откат фронта не должен сбрасывать операторам настройки. Переключатель
+   * «Міркування 31B» ведёт это поле следом за собой (`'off'` → `false`, иначе
+   * `true`), чтобы после отката спрятанные раздумья остались спрятанными.
    */
   showReasoning: boolean
+  /**
+   * Явный выбор оператора по раздумьям 31B — по контракту шлюза
+   * (`ASSISTANT_MODES.md`, поле `thinking: true | false | null`): поле уходит в
+   * запрос ТОЛЬКО когда оператор выбрал сам.
+   * - `null` — не выбирали («Сервер»): поля в теле нет, режим решает сервер
+   *   (его дефолт сейчас «с раздумьями»); клиент этот дефолт не дублирует,
+   *   иначе у CRM появился бы второй, расходящийся с мозгом;
+   * - `'on'` / `'off'` — явный выбор, уходит как `true` / `false`.
+   *
+   * Отдельное поле рядом с {@link showReasoning}, а не третье значение в нём:
+   * старая сборка читает запись как прежде (лишний ключ она просто не видит),
+   * версия схемы хранилища не меняется.
+   */
+  thinkingChoice: AssistantThinkingChoice | null
   responseMode: AssistantResponseMode
   outputFormat: AssistantOutputFormat
   voiceInputEnabled: boolean
@@ -74,6 +99,7 @@ export const DEFAULT_ASSISTANT_SETTINGS: AssistantSettings = {
   mode: 'fast',
   expertModel: null,
   showReasoning: true,
+  thinkingChoice: null,
   responseMode: 'short',
   outputFormat: 'mixed',
   voiceInputEnabled: true,
@@ -87,6 +113,31 @@ export const DEFAULT_ASSISTANT_SETTINGS: AssistantSettings = {
 }
 
 export const AI_ASSISTANT_STORAGE_KEY = 'ai-assistant-storage'
+
+/**
+ * Версия схемы localStorage — и она обязана оставаться `0`.
+ *
+ * Поднять версию значит сломать откат: сборка без `migrate` (все прежние)
+ * при `stored.version !== version` пишет console.error и поднимает стор
+ * дефолтами — режим, формат ответа, тайминги голоса и указатель диалога у
+ * каждого оператора обнуляются, а первый же `set` перезаписывает запись. Новые
+ * настройки добавляются аддитивно (лишний ключ старая сборка не видит), смысл
+ * и тип существующих ключей не меняются.
+ */
+export const AI_ASSISTANT_STORAGE_VERSION = 0
+
+/**
+ * Значение поля `thinking` в теле запроса для выбора оператора: только явный
+ * выбор даёт поле, «не выбирали» (`null`, а также отсутствие настроек) — поля
+ * нет вовсе, и режим решает сервер.
+ */
+export function thinkingFlagFor(
+  choice: AssistantThinkingChoice | null | undefined
+): boolean | undefined {
+  if (choice === 'on') return true
+  if (choice === 'off') return false
+  return undefined
+}
 
 interface AiAssistantState {
   userId: string | null
@@ -159,6 +210,7 @@ export const useAiAssistantStore = create<AiAssistantState>()(
     }),
     {
       name: AI_ASSISTANT_STORAGE_KEY,
+      version: AI_ASSISTANT_STORAGE_VERSION,
       partialize: (state) => ({
         userId: state.userId,
         conversationId: state.conversationId,

@@ -300,3 +300,395 @@ describe('RecordPaymentModal — Payment Type (KAN-507)', () => {
     expect(onSave).not.toHaveBeenCalled()
   })
 })
+
+const K = 'pages.clients.modals.recordPayment'
+
+/** A Connected RR on the default debt, so Payment Type auto-selects and the
+ *  save path is reachable — the same setup the RR tests above rely on. */
+function withPayableRr() {
+  mockRrList.mockReturnValue([
+    { id: 8, debt_id: 901, status_id: 1, status_name: 'Connected' },
+  ] as RestructuringAgreementSummary[])
+}
+
+/** Render with a real close->reopen cycle, so the reset paths actually run. */
+function renderModalForReopen(
+  props: Partial<React.ComponentProps<typeof RecordPaymentModal>> = {}
+) {
+  const view = render(
+    <RecordPaymentModal
+      open={true}
+      onClose={vi.fn()}
+      customerName="Test Client"
+      currentDebt={5000}
+      debts={[makeDebt()]}
+      clientId={42}
+      onSave={vi.fn()}
+      {...props}
+    />
+  )
+  const rerender = () =>
+    view.rerender(
+      <RecordPaymentModal
+        open={true}
+        onClose={vi.fn()}
+        customerName="Test Client"
+        currentDebt={5000}
+        debts={[makeDebt()]}
+        clientId={42}
+        onSave={vi.fn()}
+        {...props}
+      />
+    )
+  return { rerender }
+}
+
+function selectEasyPay() {
+  fireEvent.click(screen.getByLabelText(`${K}.easypay`))
+}
+
+function clickSaveAsPending() {
+  fireEvent.click(screen.getByText(`${K}.saveAsPending`).closest('button') as HTMLButtonElement)
+}
+
+function amountInput() {
+  return screen.getAllByRole('spinbutton')[0]
+}
+
+describe('RecordPaymentModal — EasyPay method', () => {
+  it('offers EasyPay in place of the retired Card option', () => {
+    renderModal()
+
+    expect(screen.getByLabelText(`${K}.easypay`)).toBeInTheDocument()
+    expect(screen.queryByLabelText(`${K}.card`)).not.toBeInTheDocument()
+  })
+
+  it('shows the EasyPay method selector only while EasyPay is the payment method', () => {
+    renderModal()
+
+    // Absent, not merely disabled, for the other methods.
+    expect(screen.queryByLabelText(`${K}.easypayMethods.card`)).not.toBeInTheDocument()
+
+    selectEasyPay()
+
+    expect(screen.getByLabelText(`${K}.easypayMethods.card`)).toBeInTheDocument()
+    expect(screen.getByLabelText(`${K}.easypayMethods.google_pay`)).toBeInTheDocument()
+    expect(screen.getByLabelText(`${K}.easypayMethods.apple_pay`)).toBeInTheDocument()
+  })
+
+  it('sends the chosen EasyPay method', () => {
+    withPayableRr()
+    const { onSave } = renderModal()
+
+    selectEasyPay()
+    fireEvent.click(screen.getByLabelText(`${K}.easypayMethods.google_pay`))
+    fillAmount('100')
+    clickSaveAsPending()
+
+    expect(onSave.mock.calls[0][0]).toMatchObject({
+      method: 'EasyPay',
+      easypayMethod: 'google_pay',
+    })
+  })
+
+  it('leaves easypayMethod undefined for a bank transfer', () => {
+    withPayableRr()
+    const { onSave } = renderModal()
+
+    fillAmount('100')
+    clickSaveAsPending()
+
+    expect(onSave.mock.calls[0][0].method).toBe('Bank Transfer')
+    expect(onSave.mock.calls[0][0].easypayMethod).toBeUndefined()
+  })
+})
+
+describe('RecordPaymentModal — EasyPay amount ceiling', () => {
+  it('clips an over-limit amount when the method changes underneath it', () => {
+    // 50,000 is valid against a 60,000 debt until EasyPay lowers the ceiling.
+    renderModal({
+      currentDebt: 60000,
+      debts: [makeDebt({ remaining_debt_amount: '60000.00' })],
+    })
+
+    fillAmount('50000')
+    selectEasyPay()
+
+    expect(amountInput()).toHaveValue(29999)
+  })
+
+  it('keeps the debt ceiling when it is below the KYC threshold', () => {
+    renderModal({ currentDebt: 5000, debts: [makeDebt({ remaining_debt_amount: '5000.00' })] })
+
+    fillAmount('5000')
+    selectEasyPay()
+
+    // 5,000 is under both caps, so nothing is rewritten.
+    expect(amountInput()).toHaveValue(5000)
+  })
+
+  it('blocks the save rather than rewriting a figure typed over the limit', () => {
+    withPayableRr()
+    const { onSave } = renderModal({
+      currentDebt: 60000,
+      debts: [makeDebt({ remaining_debt_amount: '60000.00' })],
+    })
+
+    selectEasyPay()
+    fillAmount('50000')
+
+    // The operator can see the limit they typed past, so it is an ordinary
+    // validation error: the value stands and the save is refused.
+    expect(amountInput()).toHaveValue(50000)
+    clickSaveAsPending()
+    expect(onSave).not.toHaveBeenCalled()
+  })
+})
+
+describe('RecordPaymentModal — EasyPay impact preview', () => {
+  it('announces the link and offers to copy it, ticked by default', () => {
+    withPayableRr()
+    const { onSave } = renderModal()
+
+    expect(screen.queryByText(`${K}.easypayLinkWillBeCreated`)).not.toBeInTheDocument()
+
+    selectEasyPay()
+
+    expect(screen.getByText(`${K}.easypayLinkWillBeCreated`)).toBeInTheDocument()
+    fillAmount('100')
+    clickSaveAsPending()
+
+    expect(onSave.mock.calls[0][0].copyLinkAfterSave).toBe(true)
+  })
+
+  it('honours unticking the copy checkbox', () => {
+    withPayableRr()
+    const { onSave } = renderModal()
+
+    selectEasyPay()
+    fireEvent.click(screen.getByText(`${K}.copyLinkAfterSaving`))
+    fillAmount('100')
+    clickSaveAsPending()
+
+    expect(onSave.mock.calls[0][0].copyLinkAfterSave).toBe(false)
+  })
+
+  it('sends no copy instruction for a non-EasyPay payment', () => {
+    withPayableRr()
+    const { onSave } = renderModal()
+
+    fillAmount('100')
+    clickSaveAsPending()
+
+    expect(onSave.mock.calls[0][0].copyLinkAfterSave).toBeUndefined()
+  })
+})
+
+describe('RecordPaymentModal — Save & Confirm under EasyPay', () => {
+  it('disables rather than hides it, so a missing button still means no permission', () => {
+    withPayableRr()
+    renderModal({ canVerify: true })
+    fillAmount('100')
+
+    expect(screen.getByText(`${K}.saveAndVerify`).closest('button')).toBeEnabled()
+
+    selectEasyPay()
+
+    // Nothing is confirmed until the gateway callback arrives.
+    expect(screen.getByText(`${K}.saveAndVerify`).closest('button')).toBeDisabled()
+  })
+
+  it('still never renders it for a user without the permission', () => {
+    withPayableRr()
+    renderModal({ canVerify: false })
+    fillAmount('100')
+
+    selectEasyPay()
+
+    expect(screen.queryByText(`${K}.saveAndVerify`)).not.toBeInTheDocument()
+  })
+})
+
+describe('RecordPaymentModal — the EasyPay fields reset with the rest of the form', () => {
+  it('reopens with the copy box ticked and the EasyPay method back to card', () => {
+    withPayableRr()
+    const onClose = vi.fn()
+    const { rerender } = renderModalForReopen({ onClose })
+
+    selectEasyPay()
+    fireEvent.click(screen.getByLabelText(`${K}.easypayMethods.apple_pay`))
+    fireEvent.click(screen.getByText(`${K}.copyLinkAfterSaving`))
+    fireEvent.click(screen.getByText(`${K}.cancel`).closest('button') as HTMLButtonElement)
+
+    // Reopen: every other field resets here, and these must not be the
+    // exception -- "ticked by default" has to survive the operator's last use.
+    rerender()
+    selectEasyPay()
+
+    expect(screen.getByLabelText(`${K}.easypayMethods.card`)).toBeChecked()
+    expect(screen.getByLabelText(`${K}.easypayMethods.apple_pay`)).not.toBeChecked()
+    const checkbox = screen
+      .getByText(`${K}.copyLinkAfterSaving`)
+      .closest('label')
+      ?.querySelector('[role="checkbox"]')
+    expect(checkbox).toHaveAttribute('data-state', 'checked')
+  })
+})
+
+describe('RecordPaymentModal — switching to EasyPay only clips the ceiling that appeared', () => {
+  it('caps an over-cap amount and says so', () => {
+    // 50,000 is valid against a 60,000 debt until EasyPay lowers the ceiling
+    // to the KYC threshold without the operator touching the field.
+    renderModal({ currentDebt: 60000, debts: [makeDebt({ remaining_debt_amount: '60000.00' })] })
+
+    fillAmount('50000')
+    selectEasyPay()
+
+    expect(amountInput()).toHaveValue(29999)
+    expect(screen.getByText(`${K}.amountCappedToEasypayLimit`)).toBeInTheDocument()
+  })
+
+  it('leaves an over-debt amount alone, error and all', () => {
+    // The debt ceiling was already visible and already showing an error. It is
+    // theirs to correct: rewriting it would change a monetary figure silently
+    // and clear the warning that explained why it was wrong.
+    renderModal({ currentDebt: 5000, debts: [makeDebt({ remaining_debt_amount: '5000.00' })] })
+
+    fillAmount('9000')
+    selectEasyPay()
+
+    expect(amountInput()).toHaveValue(9000)
+    expect(screen.queryByText(`${K}.amountCappedToEasypayLimit`)).not.toBeInTheDocument()
+  })
+
+  it('clears the notice once the operator types again', () => {
+    renderModal({ currentDebt: 60000, debts: [makeDebt({ remaining_debt_amount: '60000.00' })] })
+
+    fillAmount('50000')
+    selectEasyPay()
+    expect(screen.getByText(`${K}.amountCappedToEasypayLimit`)).toBeInTheDocument()
+
+    fillAmount('100')
+    expect(screen.queryByText(`${K}.amountCappedToEasypayLimit`)).not.toBeInTheDocument()
+  })
+})
+
+describe('RecordPaymentModal — exceeding the EasyPay cap explains itself', () => {
+  it('shows an error rather than only disabling Save', () => {
+    // maxAmount fed hasValidationErrors but nothing ever set an error for it,
+    // so an over-cap amount left both buttons dead with no explanation.
+    withPayableRr()
+    renderModal({ currentDebt: 60000, debts: [makeDebt({ remaining_debt_amount: '60000.00' })] })
+
+    selectEasyPay()
+    fillAmount('40000')
+
+    expect(screen.getByText(`${K}.validationPaymentExceedsEasypayLimit`)).toBeInTheDocument()
+    expect(screen.getByText(`${K}.saveAsPending`).closest('button')).toBeDisabled()
+  })
+
+  it('still reports the debt ceiling when that is the lower one', () => {
+    withPayableRr()
+    renderModal({ currentDebt: 5000, debts: [makeDebt({ remaining_debt_amount: '5000.00' })] })
+
+    fillAmount('9000')
+
+    expect(screen.getByText(`${K}.validationPaymentExceedsDebt`)).toBeInTheDocument()
+  })
+
+  it('shows the max hint for a closed-debt correction paid via EasyPay', () => {
+    // debtCeiling is Infinity there, so the old code hid the max half of the
+    // hint -- while the 29999 cap still applied. No limit, no error, two dead
+    // buttons.
+    withPayableRr()
+    renderModal({
+      currentDebt: 0,
+      debts: [makeDebt({ remaining_debt_amount: '0.00', status: 'closed' })],
+    })
+
+    selectEasyPay()
+
+    expect(screen.getByText(new RegExp(`${K}.max`))).toBeInTheDocument()
+  })
+})
+
+describe('RecordPaymentModal — the ceiling moves in both directions', () => {
+  it('clears a cap error when switching away from EasyPay', () => {
+    // Introduced by making the cap set an error: switching back raised the
+    // ceiling but left the message standing, so both Save buttons stayed
+    // disabled behind a limit that no longer applied and the only way out was
+    // to re-edit the field.
+    withPayableRr()
+    renderModal({ currentDebt: 60000, debts: [makeDebt({ remaining_debt_amount: '60000.00' })] })
+
+    selectEasyPay()
+    fillAmount('40000')
+    expect(screen.getByText(`${K}.validationPaymentExceedsEasypayLimit`)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByLabelText(`${K}.bankTransfer`))
+
+    expect(screen.queryByText(`${K}.validationPaymentExceedsEasypayLimit`)).not.toBeInTheDocument()
+    expect(screen.getByText(`${K}.saveAsPending`).closest('button')).toBeEnabled()
+  })
+
+  it('still reports the debt ceiling after switching away', () => {
+    // Raising the ceiling does not make every amount legal: the debt still
+    // applies, so the error changes rather than disappearing.
+    withPayableRr()
+    renderModal({ currentDebt: 5000, debts: [makeDebt({ remaining_debt_amount: '5000.00' })] })
+
+    selectEasyPay()
+    fillAmount('9000')
+    fireEvent.click(screen.getByLabelText(`${K}.bankTransfer`))
+
+    expect(screen.getByText(`${K}.validationPaymentExceedsDebt`)).toBeInTheDocument()
+  })
+
+  it('does not carry the capping notice into a reopened form', () => {
+    withPayableRr()
+    const { rerender } = renderModalForReopen({
+      currentDebt: 60000,
+      debts: [makeDebt({ remaining_debt_amount: '60000.00' })],
+    })
+
+    fillAmount('50000')
+    selectEasyPay()
+    expect(screen.getByText(`${K}.amountCappedToEasypayLimit`)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByText(`${K}.cancel`).closest('button') as HTMLButtonElement)
+    rerender()
+
+    expect(screen.queryByText(`${K}.amountCappedToEasypayLimit`)).not.toBeInTheDocument()
+  })
+})
+
+describe('RecordPaymentModal — a method switch does not swallow an unrelated error', () => {
+  it('keeps "must be positive" standing when the method changes underneath it', () => {
+    // The switch handler re-ran the ceiling check and wrote its answer over
+    // whatever was showing. A negative amount breaks no ceiling, so the answer
+    // was null: the message disappeared while hasValidationErrors stayed true
+    // on amountValue < 0, leaving both Save buttons dead with nothing on
+    // screen to explain them. One helper answers for every caller now.
+    withPayableRr()
+    renderModal({ currentDebt: 60000, debts: [makeDebt({ remaining_debt_amount: '60000.00' })] })
+
+    fillAmount('-100')
+    expect(screen.getByText(`${K}.validationPaymentMustBePositive`)).toBeInTheDocument()
+
+    selectEasyPay()
+
+    expect(screen.getByText(`${K}.validationPaymentMustBePositive`)).toBeInTheDocument()
+    expect(screen.getByText(`${K}.saveAsPending`).closest('button')).toBeDisabled()
+  })
+
+  it('survives the switch back as well', () => {
+    withPayableRr()
+    renderModal({ currentDebt: 60000, debts: [makeDebt({ remaining_debt_amount: '60000.00' })] })
+
+    selectEasyPay()
+    fillAmount('-100')
+    fireEvent.click(screen.getByLabelText(`${K}.bankTransfer`))
+
+    expect(screen.getByText(`${K}.validationPaymentMustBePositive`)).toBeInTheDocument()
+  })
+})

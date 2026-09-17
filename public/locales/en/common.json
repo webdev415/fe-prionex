@@ -68,7 +68,8 @@
     "creditModule": "Credit Module",
     "creditApplications": "Applications",
     "creditLoans": "Loans",
-    "creditSettings": "Settings"
+    "creditSettings": "Settings",
+    "creditUnderwriting": "Manual review queue"
   },
   "dialer": {
     "phone": {
@@ -123,7 +124,10 @@
       "chainStepLabel": "Step {{step}} - Collection: {{label}}",
       "chainStepCreditLabel": "Step 9 - Collection: Credit *",
       "chainContinue": "Continue",
-      "chainDemoNotice": "This is a demo chain — no data was saved."
+      "chainDemoNotice": "This is a demo chain — no data was saved.",
+      "noClientInteraction": "This number was dialed without client details, so an interaction cannot be logged against a client record.",
+      "noClientChain": "A TA chain needs a client record. None is attached to this number.",
+      "unknownClient": "Unknown contact"
     },
     "accessGroup": {
       "all_groups": "All groups",
@@ -187,7 +191,9 @@
       "maxAttempts": "Attempts per number",
       "maxAttemptsHint": "Total attempts, including the first. Line failures are periodic, so a retry usually lands on another SIM.",
       "retryDelayFailed": "Retry delay (seconds)",
-      "retryDelayFailedHint": "0 disables retrying failures."
+      "retryDelayFailedHint": "0 disables retrying failures.",
+      "answerMode": "Answer mode",
+      "answerModeHint": "Manual gives operators an accept window before the customer is connected."
     },
     "numbers": {
       "inQueue": "In Queue",
@@ -272,6 +278,10 @@
     "telephonyType": {
       "white": "White",
       "grey": "Grey"
+    },
+    "answerMode": {
+      "auto": "Automatic",
+      "manual": "Manual (operator accepts)"
     }
   },
   "search": {
@@ -707,6 +717,8 @@
       "feedbackNotUseful": "Not helpful",
       "feedbackClear": "Clear",
       "feedbackUnclear": "Unclear",
+      "feedbackUnavailable": "The rating was not saved: this answer is not stored yet. Refresh the page and try again.",
+      "feedbackFailed": "Could not save the rating. Please try again.",
       "historyTitle": "Chats",
       "historyNewChat": "New chat",
       "historySearchPlaceholder": "Search chats",
@@ -799,7 +811,7 @@
       "modeFastShort": "Fast",
       "modeThinkingShort": "Thinking",
       "modeFastHint": "Answers instantly",
-      "modeThinkingHint": "Analyzes more thoroughly, but slower",
+      "modeThinkingHint": "Analyzes more thoroughly, shows its train of thought (31B)",
       "modeChangeHint": "Set next to the input",
       "expertTitle": "Expert (Claude)",
       "expertTrigger": "Expert · {{model}}",
@@ -814,9 +826,18 @@
       "expertForbidden": "Expert mode is not available for your role.",
       "expertLimitReached": "The daily expert-mode limit is used up.",
       "expertUnavailable": "The external service is unavailable right now, try again later.",
-      "showReasoning": "Show reasoning",
-      "showReasoningHint": "The train of thought is shown in the «Activity» panel",
-      "showReasoningFastHint": "Fast mode produces no reasoning",
+      "showReasoning": "31B reasoning",
+      "showReasoningHint": "On — the model reasons and the train of thought goes to the «Activity» panel. Off — 31B answers straight away, faster. Server — as configured on the server.",
+      "thinkingChoiceServer": "Server",
+      "thinkingChoiceOn": "On",
+      "thinkingChoiceOff": "Off",
+      "thinkingChoiceServerHint": "The server decides the reasoning mode",
+      "thinkingChoiceFactOn": "Server decides · the last turn was with reasoning",
+      "thinkingChoiceFactOff": "Server decides · the last turn was without reasoning",
+      "thinkingUsedOn": "31B · with reasoning",
+      "thinkingUsedOff": "31B · without reasoning",
+      "thinkingUsedMismatch": "The server answered differently from the setting",
+      "thinkingFlagUnsupported": "Turning reasoning off is not supported by the server yet",
       "voiceSilenceTimeout": "Silence timeout (auto-stop)",
       "voiceMaxDuration": "Max recording length",
       "voiceSeconds": "{{count}}s",
@@ -3174,14 +3195,18 @@
         "cancel": "Cancel session",
         "createFailed": "Could not schedule the training.",
         "created": "Group training scheduled.",
+        "description": "Description",
+        "descriptionPlaceholder": "What the session covers — participants see this.",
         "durationMinutes": "Duration (min)",
         "empty": "No scheduled trainings.",
         "full": "Full",
+        "joinMeeting": "Join the meeting",
         "loadFailed": "Failed to load trainings.",
         "location": "Location",
         "locationPlaceholder": "e.g. Conference Room A / Zoom",
         "maxParticipants": "Max participants",
         "meetingUrl": "Meeting URL",
+        "meetingUrlInvalid": "Include https:// — a link without it cannot be opened.",
         "noParticipants": "No one registered yet.",
         "participants": "Participants",
         "participantsFailed": "Failed to load participants.",
@@ -3204,7 +3229,10 @@
         "trainer": "Trainer",
         "type": "Type",
         "typePlaceholder": "Optional label",
-        "unlimited": "Unlimited"
+        "unlimited": "Unlimited",
+        "description": "Description",
+        "descriptionPlaceholder": "What the session covers — participants see this.",
+        "joinMeeting": "Join the meeting"
       },
       "leaks": {
         "chips": {
@@ -3451,6 +3479,7 @@
           "assign": "Assign",
           "assignCta": "Assign",
           "assignHint": "Select operators to enroll.",
+          "attachFailed": "The course was created, but its materials could not be attached.",
           "author": "Author",
           "avgCompletion": "Average completion",
           "createCta": "Create a course",
@@ -3466,28 +3495,30 @@
           "fieldLevel": "Level",
           "fieldName": "Course name",
           "fieldNamePlaceholder": "Working with objections: basic",
-          "loadFailed": "Failed to load courses.",
-          "materialName": "Material name",
-          "materials": "Materials",
-          "moduleName": "Module name",
-          "modules": "Modules",
-          "publish": "Publish",
-          "searchPlaceholder": "Search by title…",
-          "students": "Students",
-          "title": "Course Catalog",
           "level": {
             "beginner": "Beginner",
             "intermediate": "Intermediate",
             "advanced": "Advanced"
           },
-          "removeModule": "Remove module",
+          "loadFailed": "Failed to load courses.",
+          "materialName": "Material name",
+          "materials": "Materials",
+          "moduleName": "Module name",
+          "modules": "Modules",
+          "noAuthor": "No author",
+          "noMaterialsInLibrary": "Nothing in the library yet — add a file or a link on the Materials tab first.",
+          "publish": "Publish",
           "removeMaterial": "Remove material",
+          "removeModule": "Remove module",
+          "searchMaterials": "Search the library…",
+          "searchPlaceholder": "Search by title…",
           "status": {
             "draft": "Draft",
             "published": "Published",
             "archived": "Archived"
           },
-          "noAuthor": "No author"
+          "students": "Students",
+          "title": "Course Catalog"
         },
         "library": {
           "add": "Add to library",
@@ -3525,6 +3556,7 @@
           }
         },
         "materials": {
+          "addLink": "Add a link",
           "archive": "Archive",
           "attach": "Attach",
           "attachMaterial": "Attach material",
@@ -3549,6 +3581,8 @@
             "createCategory": "Could not create the category.",
             "detach": "Could not detach the material.",
             "download": "Could not download the file.",
+            "link": "Could not save the link.",
+            "list": "Could not load the library.",
             "noFile": "Choose a file to upload.",
             "noTitle": "Give the material a title.",
             "update": "Could not update the material.",
@@ -3558,6 +3592,9 @@
           "filters": {
             "all": "All types"
           },
+          "linkSaved": "Link added to the library.",
+          "linkUrl": "Link",
+          "linkUrlInvalid": "Include https:// — a link without it cannot be opened.",
           "loadError": "Failed to load materials.",
           "loading": "Loading materials...",
           "newCategory": "New",
@@ -3570,6 +3607,7 @@
           "previewError": "Could not load the preview.",
           "previewLoading": "Loading preview…",
           "previewUnsupported": "Preview is available for PDFs and video only. Download the file to view it.",
+          "saveLink": "Save link",
           "saving": "Saving…",
           "searchPlaceholder": "Search...",
           "tags": "Tags (comma-separated)",
@@ -3577,17 +3615,18 @@
           "title": "Materials library",
           "titleField": "Title",
           "titlePlaceholder": "Defaults to the file name",
+          "type": {
+            "audio": "AUDIO",
+            "docx": "DOCX",
+            "link": "LINK",
+            "other": "FILE",
+            "pdf": "PDF",
+            "video": "VIDEO"
+          },
           "updateSuccess": "Material updated.",
           "upload": "Upload material",
           "uploadSuccess": "Material uploaded.",
-          "uploading": "Uploading…",
-          "type": {
-            "pdf": "PDF",
-            "docx": "DOCX",
-            "video": "VIDEO",
-            "audio": "AUDIO",
-            "other": "FILE"
-          }
+          "uploading": "Uploading…"
         },
         "subTabs": {
           "assignments": "Assignments",
@@ -5226,6 +5265,8 @@
         "noMatches": "No matches",
         "noMatchingUsers": "No matches",
         "promiseDate": "Promise Date",
+        "payments": "Payments",
+        "hasVerifiedPayment": "Has verified payment(s)",
         "rrStatus": "RR status",
         "searchPlaceholder": "Search...",
         "selectAll": "Select all",
@@ -5547,6 +5588,8 @@
           "clientName": "Client name",
           "debtAmount": "Debt amount",
           "loanNumber": "Loan number",
+          "noOpenLoans": "No open credits",
+          "unresolvedVariables": "These variables have no value yet: {{names}}",
           "templateVariables": "Template Variables",
           "sending": "Sending...",
           "smsSentSuccessfully": "SMS sent successfully",
@@ -5643,6 +5686,7 @@
         "viewSMS": {
           "title": "View SMS",
           "dateTime": "Date/Time",
+          "phone": "Phone",
           "template": "Template",
           "operator": "Operator",
           "status": "Status",
@@ -5782,7 +5826,20 @@
           "validationPaymentExceedsDebt": "Payment cannot exceed current debt ({{amount}})",
           "validationPaymentMustBePositive": "Payment amount must be positive.",
           "closedDebtBadge": "Closed",
-          "closedDebtCorrectionHint": "This debt is closed. The payment is recorded as a technical correction and will not reopen the debt."
+          "closedDebtCorrectionHint": "This debt is closed. The payment is recorded as a technical correction and will not reopen the debt.",
+          "easypay": "EasyPay",
+          "easypayLinkWillBeCreated": "An EasyPay payment link will be created.",
+          "copyLinkAfterSaving": "Copy link to clipboard after saving",
+          "linkCopied": "Link copied to clipboard",
+          "linkCopyFailed": "Could not copy the link. Use the Link button in the payment row.",
+          "linkUnavailable": "Link unavailable. Cancel the payment and create it again.",
+          "easypayMethods": {
+            "card": "Card",
+            "google_pay": "Google Pay",
+            "apple_pay": "Apple Pay"
+          },
+          "amountCappedToEasypayLimit": "Amount capped to the EasyPay limit ({{amount}})",
+          "validationPaymentExceedsEasypayLimit": "Payment cannot exceed the EasyPay limit ({{amount}})"
         },
         "editPayment": {
           "title": "Edit Payment #{{paymentId}}",
@@ -6507,7 +6564,8 @@
           "docs": "Docs",
           "callSms": "Call / SMS",
           "taChains": "TA Chains",
-          "searcherComments": "Searcher Comments"
+          "searcherComments": "Searcher Comments",
+          "activity": "Activity"
         },
         "relatedTags": {
           "loading": "Loading related tags...",
@@ -6634,6 +6692,65 @@
           "card": "Card",
           "google_pay": "Google Pay",
           "apple_pay": "Apple Pay"
+        },
+        "activityLog": {
+          "title": "Client activity",
+          "empty": "No activity recorded for this client yet.",
+          "loadError": "Could not load the activity log.",
+          "degraded": "Some sources are unavailable: {{sources}}. This feed is incomplete.",
+          "filters": {
+            "from": "From",
+            "to": "To",
+            "operator": "Operator",
+            "allOperators": "All operators",
+            "reset": "Reset",
+            "dateRange": "Date Range",
+            "selectStartDate": "Select start date",
+            "selectEndDate": "Select end date"
+          },
+          "sources": {
+            "events": "UI events",
+            "audit": "Data changes",
+            "calls": "Calls"
+          },
+          "recording": "Recording",
+          "openedTab": "Opened '{{tab}}' tab",
+          "openedForm": "Opened the interaction form",
+          "submittedForm": "Submitted the interaction form",
+          "openedCard": "Opened the client card",
+          "openedModal": "Opened '{{modal}}'",
+          "modals": {
+            "connect_rr": "Connect restructuring",
+            "writeoff": "Write-off",
+            "reversal": "Payment reversal",
+            "assign_client": "Assign client",
+            "record_payment": "Record payment",
+            "task": "Task",
+            "call_recording": "Call recording",
+            "tag": "Tags",
+            "edit_client": "Edit client",
+            "edit_interaction": "Edit interaction",
+            "view_sms": "View SMS",
+            "send_sms": "Send SMS",
+            "send_message": "Send message",
+            "upload_document": "Upload document",
+            "view_message": "View message",
+            "edit_payment": "Edit payment",
+            "cancel_payment": "Cancel payment",
+            "reassign_payment": "Reassign payment employee",
+            "verify_payment": "Payment verification queue",
+            "export_payments": "Export payments",
+            "payment_details": "Payment details"
+          },
+          "openedCardFrom": "Opened the client card from {{origin}}",
+          "origins": {
+            "list": "the client list",
+            "search": "search",
+            "dialer": "the dialer"
+          },
+          "entryCount_one": "{{count}} entry",
+          "entryCount_other": "{{count}} entries",
+          "pagingLimit": "Showing the {{count}} most recent entries. Set a date range to reach older activity."
         }
       },
       "debtSummary": {
@@ -6733,9 +6850,15 @@
         "actions": {
           "pdf": "PDF",
           "verify": "Verify",
-          "view": "View"
+          "view": "View",
+          "link": "Link"
         },
-        "noPaymentHistory": "No payment history found"
+        "noPaymentHistory": "No payment history found",
+        "easypayLink": {
+          "copied": "Link copied to clipboard",
+          "copyFailed": "Could not copy the link",
+          "unavailable": "Link unavailable. Cancel the payment and create it again."
+        }
       },
       "tasks": {
         "addTask": "Add Task",
@@ -6770,7 +6893,15 @@
         "cancelled": "Cancelled",
         "completed": "Completed",
         "completedEarly": "Completed early",
-        "withoutRr": "Without RR"
+        "withoutRr": "Without RR",
+        "completedEarly": "Completed early"
+      },
+      "presets": {
+        "label": "Filter Presets",
+        "empty": "You can set up presets in your profile",
+        "applied": "Applied",
+        "loading": "Loading…",
+        "loadFailed": "Presets could not be loaded."
       }
     },
     "clientChains": {
@@ -7034,7 +7165,8 @@
         "active": "Active",
         "closed": "Closed"
       },
-      "sendMessageEmailRefOptional": "Optional: add an email contact step to pick the address from chain data. Otherwise the client primary email is used."
+      "sendMessageEmailRefOptional": "Optional: add an email contact step to pick the address from chain data. Otherwise the client primary email is used.",
+      "sendMessageNoDraftPermission": "Reading drafts needs a messaging send or launch permission. Ask an administrator to grant one."
     },
     "quickPicks": {
       "title": "Quick Picks",
@@ -7234,6 +7366,8 @@
           "activationTag": "Activation tag",
           "activationTagPlaceholder": "Select a tag",
           "activationTagHelp": "The template will only be available to clients with this tag.",
+          "autoGenerate": "Generate automatically",
+          "autoGenerateHelp": "When a loan is closed, the document is generated from this template and attached to the client card with no operator involved.",
           "variablesReferenceHelp": "Use these names in your Word file as {{name}}.",
           "composeHelp": "Letterhead with logo, company requisites, stamp and signature are added automatically.",
           "composeTitle": "Document title",
@@ -7294,7 +7428,8 @@
           "bodyRequired": "Template body is required",
           "fileRequired": "Please choose a .docx file",
           "titleRequired": "Document title is required",
-          "activationTagRequired": "Select a tag for the \"Active tag\" rule"
+          "activationTagRequired": "Select a tag for the \"Active tag\" rule",
+          "autoGenerateDocumentTypeRequired": "Select a document type to generate automatically"
         },
         "messages": {
           "created": "Template created",
@@ -7462,6 +7597,10 @@
         "required": "Required",
         "notInPast": "Date cannot be in the past",
         "showClosedCredits": "Show closed credits",
+        "countAsPromiseDate": "Count as promise date",
+        "countAsPromiseAmount": "Count as promise amount",
+        "promiseDateTaken": "Step {{step}} is already counted as the promise date. Untick it first.",
+        "promiseAmountTaken": "Step {{step}} is already counted as the promise amount. Untick it first.",
         "contactSource": "Contact source",
         "contactSourceClient": "Client contacts",
         "contactSourceRecommender": "Recommender contacts"
@@ -7603,7 +7742,7 @@
         "currentDebtAmount": "Current debt amount",
         "operatorName": "Operator's name",
         "operatorPhone": "Operator's phone",
-        "paymentDueDate": "Latest promise date from interactions (DD.MM.YYYY)",
+        "paymentDueDate": "Latest promise date from interactions, or today's date if there is none (DD.MM.YYYY)",
         "contractLoanNumber": "Contract/Loan number"
       },
       "forms": {
@@ -8604,7 +8743,8 @@
       },
       "tabs": {
         "account": "Account",
-        "shortcuts": "Keyboard Shortcuts"
+        "shortcuts": "Keyboard Shortcuts",
+        "presets": "Filter Presets"
       },
       "shortcuts": {
         "intro": "Assign a keyboard shortcut to any quick template you use often. Trigger the shortcut while on a client's profile page to open that Target Action (TA) modal instantly, adjust amount or date if needed, and save it — all without the mouse.",
@@ -8630,6 +8770,84 @@
         "clear": "Clear Selection",
         "saved": "Shortcut saved",
         "reassigned": "Shortcut moved from \"{{name}}\""
+      },
+      "presets": {
+        "title": "Filter Presets",
+        "new": "New preset",
+        "newTitle": "New preset",
+        "editTitle": "Edit preset",
+        "name": "Preset name",
+        "nameRequired": "Enter a name for the preset",
+        "save": "Save preset",
+        "clearFields": "Clear all fields",
+        "saved": "Preset saved",
+        "edit": "Edit preset",
+        "delete": "Delete preset",
+        "empty": "No presets yet. Create one to apply a set of client list filters in a single click.",
+        "dates": {
+          "from": "From",
+          "to": "To",
+          "days": "Days",
+          "result": "Result",
+          "pick": "Select date",
+          "modes": {
+            "any": "Any date",
+            "today": "Today",
+            "startOfMonth": "Start of month",
+            "minusDays": "Today minus N days",
+            "plusDays": "Today plus N days",
+            "custom": "Custom date"
+          }
+        },
+        "range": {
+          "from": "From",
+          "to": "To"
+        },
+        "employees": {
+          "allLabel": "All employees",
+          "scopes": {
+            "any": "Anyone",
+            "myGroup": "My group",
+            "myDepartment": "My department",
+            "everyoneExceptMe": "Everyone except me",
+            "everyoneExceptMyGroup": "Everyone except my group",
+            "everyoneExceptMyDepartment": "Everyone except my department",
+            "custom": "Selected employees"
+          }
+        },
+        "fields": {
+          "totalDebt": "Total debt",
+          "principalDebt": "Principal debt",
+          "dpd": "DPD",
+          "dateOfSale": "Date of sale",
+          "assignmentDate": "Assignment date",
+          "targetActionDate": "Target action date",
+          "interactionDate": "Interaction date",
+          "interactionCreated": "Interaction created by",
+          "responsibleEmployee": "Responsible employee",
+          "onlyLastChain": "Only last TA chain",
+          "portfolio": "Portfolio",
+          "rrStatus": "Restructuring status",
+          "chain": "TA chain",
+          "chainStep": "Chain step",
+          "chainStepHint": "Choose a chain first",
+          "responsibleSearcher": "Responsible searcher",
+          "tags": "Tags",
+          "hasVerifiedPayment": "Has verified payment(s)"
+        },
+        "multi": {
+          "all": "Any"
+        },
+        "tags": {
+          "none": "No tags available",
+          "hint": "Click a tag to include it, again to exclude it"
+        },
+        "nameDuplicate": "You already have a preset with this name",
+        "confirmDeleteTitle": "Delete this preset?",
+        "confirmDeleteMessage": "\"{{name}}\" will be removed. This cannot be undone.",
+        "loading": "Loading your presets…",
+        "loadFailed": "Your presets could not be loaded.",
+        "saveFailed": "The preset could not be saved. Try again."
       }
     },
     "reports": {
@@ -8645,7 +8863,11 @@
         "contact-tag": "Contact / No contact",
         "communication-gap": "Communication gap",
         "operator-promises": "Operator promises",
-        "outbound-calls": "Outbound calls"
+        "outbound-calls": "Outbound calls",
+        "promises-daily": "Promises till end of month",
+        "promises-feed": "Promises",
+        "callbacks": "Callbacks",
+        "drains": "Drains"
       },
       "processing": {
         "dateFrom": "Date from",
@@ -8938,6 +9160,128 @@
         "unavailable": "Employee or call data is temporarily unavailable. Please try again later.",
         "error": {
           "title": "Failed to load the report",
+          "retry": "Retry"
+        }
+      },
+      "promisesDaily": {
+        "dateFrom": "Date from",
+        "dateTo": "Date to",
+        "invalidDate": "The date is not a real calendar date — pick a date to replace it",
+        "invalidRange": "Start date is later than end date",
+        "rangeTooLong": "Date range must not exceed 366 days",
+        "wholeMonth": "Whole month",
+        "possiblePayments": "Include possible payments",
+        "columns": {
+          "date": "Date",
+          "noDepartment": "No department",
+          "total": "Total"
+        },
+        "totalsRow": "Whole period",
+        "generatedAt": "Data as of {{value}}",
+        "empty": "No promises for the selected period",
+        "forbidden": "You don't have permission to view this report",
+        "unavailable": "Employee or promise data is temporarily unavailable. Please try again later.",
+        "error": {
+          "title": "Failed to load the report",
+          "retry": "Retry"
+        }
+      },
+      "promisesFeed": {
+        "dateFrom": "Promised date from",
+        "dateTo": "Promised date to",
+        "invalidDate": "The date is not a real calendar date — pick a date to replace it",
+        "invalidRange": "Start date is later than end date",
+        "rangeTooLong": "Date range must not exceed 366 days",
+        "hideWorked": "Hide worked",
+        "hidePaid": "Hide paid",
+        "openClient": "Open client {{id}}",
+        "columns": {
+          "inn": "Tax ID",
+          "interactionDate": "Interaction date",
+          "interactionType": "Result",
+          "promiseDate": "Promised date",
+          "promiseAmount": "Promised amount",
+          "employeeInteracted": "Employee who commented",
+          "employeeResponsible": "Responsible employee",
+          "link": "Link",
+          "paymentAmount": "Payments amount",
+          "lastResult": "Worked today",
+          "department": "Department",
+          "noDepartment": "No department",
+          "group": "Group"
+        },
+        "empty": "No promises in the selected window",
+        "forbidden": "You don't have permission to view this report",
+        "unavailable": "Employee, promise or payment data is temporarily unavailable. Please try again later.",
+        "error": {
+          "title": "Failed to load the data",
+          "retry": "Retry"
+        }
+      },
+      "callbacksFeed": {
+        "dateFrom": "Callback date from",
+        "dateTo": "Callback date to",
+        "invalidDate": "The date is not a real calendar date — pick a date to replace it",
+        "invalidRange": "Start date is later than end date",
+        "rangeTooLong": "Date range must not exceed 366 days",
+        "hideCalledToday": "Hide clients already contacted today",
+        "hideWorked": "Hide worked callbacks",
+        "openClient": "Open client {{id}}",
+        "columns": {
+          "inn": "Tax ID",
+          "interactionDate": "Interaction date",
+          "interactionType": "Result",
+          "promiseDate": "Promised date",
+          "employeeInteracted": "Employee who commented",
+          "employeeResponsible": "Responsible employee",
+          "link": "Link",
+          "lastInteractionDate": "Last interaction date",
+          "lastResult": "Worked today",
+          "department": "Department",
+          "noDepartment": "No department",
+          "group": "Group"
+        },
+        "empty": "No callbacks in the selected window",
+        "forbidden": "You don't have permission to view this report",
+        "unavailable": "Employee data is temporarily unavailable. Please try again later.",
+        "error": {
+          "title": "Failed to load the data",
+          "retry": "Retry"
+        }
+      },
+      "drainsFeed": {
+        "dateFrom": "Promised date from",
+        "dateTo": "Promised date to",
+        "allHistory": "Whole history",
+        "invalidDate": "The date is not a real calendar date — pick a date to replace it",
+        "invalidRange": "Start date is later than end date",
+        "rangeTooLong": "Date range must not exceed 366 days",
+        "bothOrNeither": "Give both dates, or clear both — switch «Whole history» on",
+        "hideWorkedToday": "Hide clients handled today",
+        "hideWorked": "Hide rows whose promised date an interaction has reached",
+        "hidePaid": "Hide partial payers",
+        "openClient": "Open client {{id}}",
+        "columns": {
+          "inn": "Tax ID",
+          "interactionDate": "Interaction date",
+          "interactionType": "Result",
+          "promiseDate": "Promised date",
+          "promiseAmount": "Promised amount",
+          "employeeInteracted": "Employee who commented",
+          "employeeResponsible": "Responsible employee",
+          "link": "Link",
+          "paymentAmount": "Payments amount",
+          "lastInteractionDate": "Last interaction date",
+          "lastResult": "Worked today",
+          "department": "Department",
+          "noDepartment": "No department",
+          "group": "Group"
+        },
+        "empty": "No drains match these filters",
+        "forbidden": "You don't have permission to view this report",
+        "unavailable": "Employee or payment data is temporarily unavailable. Please try again later.",
+        "error": {
+          "title": "Failed to load the data",
           "retry": "Retry"
         }
       },
@@ -9543,7 +9887,9 @@
       },
       "deleted": {
         "title": "Deleted drafts"
-      }
+      },
+      "noReadPermission": "This role can manage drafts but not browse the list, which needs a messaging send or launch permission. Deleted drafts stay visible below and can still be restored.",
+      "createdOutOfSight": "Draft saved. It will not appear in the list below, which needs a messaging send or launch permission."
     },
     "messagingIntegrations": {
       "description": "Configure provider credentials, enable channels per service, and verify connection health.",
@@ -11075,6 +11421,7 @@
         "workFormat": "Work Format",
         "referralSource": "Where referred from",
         "department": "Department",
+        "group": "Group",
         "position": "Position",
         "manager": "Manager",
         "hiredAt": "Date of Hire",
@@ -11183,6 +11530,7 @@
         "choose": "Choose",
         "noManager": "No manager",
         "noDepartment": "No department",
+        "noGroup": "No group",
         "documents": "Documents",
         "attachFile": "Attach a document (PDF or Word, up to 10 MB)",
         "searchManager": "Search by name",
@@ -11397,7 +11745,16 @@
       "allocation": "Allocation",
       "totalRow": "Total",
       "interest": "Interest",
-      "fee": "Fee"
+      "fee": "Fee",
+      "lastActivity": "Last activity",
+      "step": "Step",
+      "onStep": "On step",
+      "application": "Application",
+      "reasons": "Review reason",
+      "referred": "Referred",
+      "waiting": "In queue",
+      "assigned": "Assigned",
+      "disbursed": "Disbursed"
     },
     "fields": {
       "name": "Name",
@@ -11484,7 +11841,23 @@
       "signedAt": "Signed at",
       "signHash": "Document SHA-256",
       "signSession": "Session / IP",
-      "templateVersion": "Template version"
+      "templateVersion": "Template version",
+      "disbursementAmount": "Payout amount",
+      "disbursementMethod": "Method",
+      "settledAt": "Settled at",
+      "failedAt": "Failed at",
+      "failureCode": "Reason",
+      "timeSource": "Timestamp source",
+      "provider": "Provider",
+      "providerTxId": "Provider transaction ID",
+      "providerStatus": "Provider status",
+      "clientTransactionId": "Our operation key",
+      "retry": "Retry",
+      "applicationId": "Application ID",
+      "externalApplicationId": "External application ID",
+      "decisionId": "Decision ID",
+      "loanId": "Loan ID",
+      "loanAgeDays": "Days since disbursement"
     },
     "tabs": {
       "form": "Application form",
@@ -11608,11 +11981,26 @@
       "scheduleVersionEmpty": "Version {{version}} ({{reason}}) has no instalments — they are in version {{previous}}.",
       "openPreviousVersion": "Open it",
       "paymentReversedOn": "Reversed on {{date}}",
-      "paymentsReversedHint": "Of the payments listed, {{count}} were reversed for {{amount}} — that amount is not counted towards the debt, the money went back to the bank."
+      "paymentsReversedHint": "Of the payments listed, {{count}} were reversed for {{amount}} — that amount is not counted towards the debt, the money went back to the bank.",
+      "idleFor": "last activity: {{duration}} ago",
+      "outstandingLoans": "Outstanding loans",
+      "cooldownUntil": "Cooldown after decline until {{date}}",
+      "disbursement": "Money transfer progress",
+      "disbursementNotSent": "The payout has never been sent — not a single transfer attempt.",
+      "disbursementUpdated": "updated {{when}}",
+      "disbursementReview": "Awaiting review: {{reason}} — since {{since}}",
+      "disbursementReviewNoDate": "Awaiting review: {{reason}}",
+      "disbursementUnknownCode": "Code «{{code}}» — the provider’s own wording, we have not translated it yet",
+      "disbursementObservedTime": "The provider did not tell us the settlement time — we derived it from the moment we found out. The two-day cancellation window (CA s.124.4) is counted from this date: the client’s deadline is estimated, not known.",
+      "disbursementNoRetryButton": "There is deliberately no retry button here: the resume command accepts only the «failed» state with a closed review, requires no retry reason, accepts no idempotency key and does not record who pressed it. For now a module developer performs the retry on request.",
+      "disbursementRetryContradiction": "The module marks the retry as allowed, but the resume command will refuse it: the module’s flag is wider than the command’s condition. Aligning them is on the module side.",
+      "disbursementUnknown": "Disbursement state is unknown — the core did not answer. This does NOT mean no transfer was made: it may have gone out and failed. Refresh or come back later.",
+      "stagesTitle": "Client path",
+      "stagesHint": "the same five steps the client sees in their cabinet",
+      "identifiers": "Identifiers"
     },
     "stand": {
-      "notice": "Stage 1: the module runs outside Kong and does not know CRM roles yet — the role below is a stand mock (WS-20 replaces it with JWT).",
-      "role": "Stand role"
+      "notice": "Stage 1: the module still runs outside the Kong gateway — the browser calls it directly. Rights come from your CRM pass."
     },
     "settings": {
       "title": "Credit module settings",
@@ -11620,7 +12008,8 @@
       "tabs": {
         "products": "Credit products",
         "parameters": "Module settings",
-        "integrations": "Integrations"
+        "integrations": "Integrations",
+        "switches": "Kill switches"
       },
       "needRiskManager": "This section is available to the risk manager: it holds the thresholds and the product configuration.",
       "mutationDisabled": "Editing requires a second approver (UW-04) — available once CRM roles land (WS-20).",
@@ -11905,15 +12294,134 @@
       "title": "The credit module is not deployed on this stand",
       "hint": "The section is in place, but the credit service is not routed here yet: on stage 1 it runs outside Kong. Locally it is served on localhost:8020; on the dev server the route /api/v1/credit will appear together with the module deployment."
     },
-    "standKey": {
-      "title": "Stand service key",
-      "where": "Ask DevOps for INTERNAL_API_KEY of the credit module on this stand (deploy/.env on the server), and paste it here.",
-      "lifetime": "The key lives until this tab is closed — being asked again after reopening the tab is normal, not a fault.",
-      "placeholder": "X-Internal-Api-Key",
-      "save": "Save key",
-      "clear": "Clear",
-      "present": "A key is saved for this tab.",
-      "absent": "No key saved: the module answers 401."
+    "idle": {
+      "underHour": "under an hour",
+      "hoursShort": "{{value}} h",
+      "daysShort": "{{value}} d",
+      "sinceCreated": "since creation"
+    },
+    "switches": {
+      "rule": "Turning a switch off stops only what is NEW. Servicing of issued loans never stops: payments are accepted, schedule and documents are served, the two-day right of rescission stands.",
+      "on": "On",
+      "off": "Off",
+      "names": {
+        "applications_intake": "Application intake from the site",
+        "client_cabinet": "Client cabinet",
+        "crm_section": "Module section in CRM"
+      },
+      "effects": {
+        "applications_intake": "Off — no new application is created and no contract is signed. Issued loans are serviced as usual.",
+        "client_cabinet": "Emergency cabinet switch. The client cannot sign in but can still pay: payments, autodebit and accruals keep running.",
+        "crm_section": "The module stores this switch but enforces nothing: CRM hides the section. The operator loses the UI, the API keeps working."
+      },
+      "confirm": {
+        "applications_intake": "New applications and contract signing stop. Issued loans are unaffected.",
+        "client_cabinet": "Clients will not be able to sign in. Paying stays possible.",
+        "crm_section": "The section disappears from the operator menu in CRM. The module and the client cabinet keep working."
+      },
+      "reasonPlaceholder": "Why we are switching off — goes into the history",
+      "reasonRequired": "Without a reason nobody will explain the stop a week later",
+      "turnOff": "Switch off",
+      "readOnly": "Only the risk manager can switch",
+      "saveFailed": "Switching failed — state unchanged",
+      "loadFailed": "Could not read the switch state. Do not assume everything is on.",
+      "historyTitle": "Switching history",
+      "historyEmpty": "No switching yet",
+      "sectionOff": "The section was switched off by the risk manager. Servicing of issued loans is not stopped — contact the risk manager.",
+      "sectionOffHere": "The section is switched off by the “Module section in CRM” switch. This page stays open deliberately — otherwise there would be no way to switch the section back on. Servicing of issued loans is not stopped."
+    },
+    "disbursementState": {
+      "pending": "Money is on its way",
+      "settled": "Settled",
+      "failed": "Not sent",
+      "reversed": "Money came back to the sender",
+      "cancelled": "Operation withdrawn",
+      "unknown": "Unknown where the money is"
+    },
+    "disbursementMethod": {
+      "interac": "Interac e-Transfer",
+      "eft": "EFT — transfer to account"
+    },
+    "disbursementFailure": {
+      "payout_refused_pending_review": "We stopped the payout ourselves pending review",
+      "provider_never_created": "The provider never created the operation",
+      "NSF": "Bank declined: insufficient funds"
+    },
+    "disbursementRetry": {
+      "available": "Possible — underwriter or risk manager",
+      "reviewOpen": "Review first, retry after",
+      "notFailed": "Not possible: resume accepts only the «not sent» state",
+      "settled": "Not needed — the money has been settled",
+      "inFlight": "Too early — the money is still on its way",
+      "unknownState": "Forbidden: we do not know where the money is"
+    },
+    "providerTimeSource": {
+      "provider": "Provider’s own timestamp",
+      "observed": "Estimated from the moment we found out"
+    },
+    "queue": {
+      "title": "Manual review queue",
+      "total": "{{count}} total",
+      "empty": "The queue is empty",
+      "noNumberHint": "The queue endpoint returns only the application id — it carries no application number and no client email. Open the card by clicking a row to see them.",
+      "noAssignmentHint": "Assignment to an underwriter does not exist yet: the mechanism arrives with WS-20, so the “Assigned” column is empty for every row.",
+      "noSortingHint": "The module returns the whole queue as one list in referral order: there is no column sorting and no paging, because the server supports neither."
+    },
+    "railReviewReason": {
+      "payout_account_not_pinned": "The decision did not pin a payout account",
+      "payout_details_changed_after_approval": "Account details changed after approval",
+      "effective_time_corrected": "The settlement time was corrected after observation",
+      "provider_amount_mismatch": "The provider’s amount does not match ours",
+      "provider_amount_unconfirmed": "The provider did not confirm the amount",
+      "provider_contradiction": "The provider contradicts itself",
+      "provider_dishonour_unknown": "The provider reported a reversal without a reason",
+      "provider_foreign_operation": "The provider returned someone else’s operation",
+      "provider_impossible_time": "The provider’s operation time is impossible",
+      "provider_recipient_mismatch": "The provider’s recipient is not the one we named",
+      "provider_unidentified_success": "A success at the provider we could not match to our operation",
+      "provider_unknown_status": "The provider returned a status we do not know"
+    },
+    "referralReason": {
+      "income_not_verified": "Income not verified by the bank",
+      "income_mismatch": "Declared income differs from the bank data",
+      "income_frequency_unverified": "Income frequency not verified",
+      "income_not_plausible": "The bank showed an amount, but no payroll pattern behind it",
+      "login_attribution_unverified": "The provider did not confirm the bank login belongs to this application",
+      "schedule_infeasible": "No schedule can be built for the requested calendar",
+      "manual": "An operator referred the application for review",
+      "RC-04": "An active loan already exists",
+      "RC-08": "Cool-down period after a decline",
+      "RC-11": "Insufficient affordability / income below minimum",
+      "client_not_identifiable": "Client could not be identified"
+    },
+    "stage": {
+      "registration": "Registration",
+      "questionnaire": "Application form",
+      "bank": "Income check",
+      "decision": "Decision",
+      "signing": "Signing"
+    },
+    "stageState": {
+      "done": "done",
+      "current": "current step",
+      "todo": "ahead",
+      "failed": "not passed"
+    },
+    "clientLink": {
+      "byPhone": "matched by phone",
+      "ambiguous": "{{count}} cards matched this phone — pick one manually",
+      "notFound": "not found in CRM by phone",
+      "notSearched": {
+        "no_phone": "not searched: no phone",
+        "loading": "searching…",
+        "failed": "not searched: CRM did not answer"
+      }
+    },
+    "access": {
+      "notAuthenticated": "The module did not accept your sign-in",
+      "notAuthenticatedHint": "Your session may have expired. Sign in to CRM again; if that does not help, contact an administrator — the module verifies sign-in with CRM.",
+      "noRights": "No access to the credit section",
+      "noRightsHint": "The usual cause is the wrong project: credit permissions live in the “Finboost” project. Check the selected project or ask an administrator to assign a role."
     }
   }
 }

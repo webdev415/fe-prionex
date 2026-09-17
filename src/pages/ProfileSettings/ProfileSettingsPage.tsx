@@ -29,6 +29,7 @@ import { formatPickerDateAsYMD, parsePickerYMD } from '@/lib/dateUtils'
 import { LANGUAGE_NAMES, SUPPORTED_LANGUAGES, normalizeBackendLanguage } from '@/lib/i18n'
 import type { MyPersonalInformationInput, UpdateMyProfileInput } from '@/types/api'
 import { AppearanceSettings } from './AppearanceSettings'
+import { ClientFilterPresetsSettings } from '@/features/clientFilterPresets/components/ClientFilterPresetsSettings'
 import { KeyboardShortcutsSettings } from '@/features/taHotkeys/components/KeyboardShortcutsSettings'
 
 const TRIGGER_CLASS =
@@ -52,6 +53,10 @@ const MY_PERSONAL_FIELDS = [
 const CONTENT_CLASS =
   'max-h-60 min-w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto p-1.5'
 
+const PROFILE_TAB_IDS = ['account', 'shortcuts', 'presets'] as const
+
+type ProfileTabId = (typeof PROFILE_TAB_IDS)[number]
+
 export function ProfileSettingsPage() {
   const { user, isLoading: authLoading } = useAuth()
   const refreshUser = useAuthStore((state) => state.refreshUser)
@@ -62,10 +67,20 @@ export function ProfileSettingsPage() {
   const [isUpdatingLocal, setIsUpdatingLocal] = useState(false)
   const [isChangingLocal, setIsChangingLocal] = useState(false)
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false)
-  // KAN-975 — the right-hand column is now two tabs. The left column
+  // KAN-975 — the right-hand column is now three tabs. The left column
   // (identity, password, 2FA) is not tabbed: it is about the account itself
   // rather than about either set of settings.
-  const [activeTab, setActiveTab] = useState<'account' | 'shortcuts'>('account')
+  const [activeTab, setActiveTab] = useState<ProfileTabId>('account')
+  const tabLabel = (id: ProfileTabId) => {
+    switch (id) {
+      case 'account':
+        return t('pages.profile.tabs.account', 'Account')
+      case 'shortcuts':
+        return t('pages.profile.tabs.shortcuts', 'Keyboard Shortcuts')
+      case 'presets':
+        return t('pages.profile.tabs.presets', 'Filter Presets')
+    }
+  }
 
   // Local form state initialized from store user
   const initialForm = useMemo(() => {
@@ -525,12 +540,7 @@ export function ProfileSettingsPage() {
             className="border-border flex w-full items-center gap-1 self-stretch border-b"
             role="tablist"
           >
-            {(
-              [
-                ['account', t('pages.profile.tabs.account', 'Account')],
-                ['shortcuts', t('pages.profile.tabs.shortcuts', 'Keyboard Shortcuts')],
-              ] as const
-            ).map(([id, label]) => (
+            {PROFILE_TAB_IDS.map((id) => (
               <button
                 key={id}
                 type="button"
@@ -551,7 +561,7 @@ export function ProfileSettingsPage() {
                   const step = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0
                   if (step === 0) return
                   e.preventDefault()
-                  const order = ['account', 'shortcuts'] as const
+                  const order = PROFILE_TAB_IDS
                   const next =
                     order[(order.indexOf(activeTab) + step + order.length) % order.length]
                   setActiveTab(next)
@@ -565,7 +575,7 @@ export function ProfileSettingsPage() {
                     : 'text-muted-foreground hover:text-foreground -mb-px border-b-2 border-transparent px-3 py-2 text-sm font-medium'
                 }
               >
-                {label}
+                {tabLabel(id)}
               </button>
             ))}
           </div>
@@ -578,6 +588,15 @@ export function ProfileSettingsPage() {
               className="flex w-full flex-col self-stretch"
             >
               <KeyboardShortcutsSettings />
+            </div>
+          ) : activeTab === 'presets' ? (
+            <div
+              role="tabpanel"
+              id="profile-tabpanel-presets"
+              aria-labelledby="profile-tab-presets"
+              className="flex w-full flex-col self-stretch"
+            >
+              <ClientFilterPresetsSettings />
             </div>
           ) : (
             <div

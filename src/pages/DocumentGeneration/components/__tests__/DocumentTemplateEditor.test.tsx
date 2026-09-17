@@ -98,6 +98,7 @@ vi.mock('@/features/documents/api/documentTemplatesApi', () => ({
 }))
 
 import * as templatesApi from '@/features/documents/api/documentTemplatesApi'
+import { toast } from 'sonner'
 import { DocumentTemplateEditor } from '../DocumentTemplateEditor'
 
 function renderEditor(template: DocumentTemplate | null = null) {
@@ -135,6 +136,7 @@ function makeDocxTemplate(overrides: Partial<DocumentTemplate> = {}): DocumentTe
     activation_rule: 'always',
     activation_tag_id: null,
     document_type_id: null,
+    auto_generate: false,
     ...overrides,
   }
 }
@@ -276,5 +278,95 @@ describe('DocumentTemplateEditor', () => {
         expect.objectContaining({ activation_rule: 'tag_active', activation_tag_id: 501 })
       )
     )
+  })
+})
+
+describe('DocumentTemplateEditor — generate automatically', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  const autoGenerateBox = () => screen.queryByRole('checkbox', { name: 'Generate automatically' })
+  const closedLoanDocx = (overrides: Partial<DocumentTemplate> = {}) =>
+    makeDocxTemplate({ activation_rule: 'closed_debt', document_type_id: 7, ...overrides })
+
+  it('is offered for a closed-loan template, but never for a text one', async () => {
+    const user = userEvent.setup()
+    renderEditor(null)
+
+    // Text template on the closed-loan rule: text templates are never generated.
+    await user.click(screen.getAllByRole('combobox')[0])
+    await user.click(await screen.findByRole('option', { name: 'Closed debt' }))
+    expect(autoGenerateBox()).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('radio', { name: /\.docx file/i }))
+    expect(autoGenerateBox()).toBeInTheDocument()
+  })
+
+  it('is not offered on any other rule', () => {
+    renderEditor(makeDocxTemplate({ activation_rule: 'active_debt' }))
+    expect(autoGenerateBox()).not.toBeInTheDocument()
+  })
+
+  it('shows the saved state in edit mode', () => {
+    renderEditor(closedLoanDocx({ auto_generate: true }))
+    expect(autoGenerateBox()).toBeChecked()
+  })
+
+  it('sends auto_generate when ticked', async () => {
+    const user = userEvent.setup()
+    renderEditor(closedLoanDocx())
+
+    await user.click(autoGenerateBox()!)
+    await user.click(screen.getByRole('button', { name: /^Save$/ }))
+
+    await waitFor(() =>
+      expect(templatesApi.updateDocumentTemplate).toHaveBeenCalledWith(
+        2,
+        expect.objectContaining({ activation_rule: 'closed_debt', auto_generate: true })
+      )
+    )
+  })
+
+  it('cannot be saved without a document type', async () => {
+    const user = userEvent.setup()
+    renderEditor(closedLoanDocx({ document_type_id: null }))
+
+    await user.click(autoGenerateBox()!)
+    await user.click(screen.getByRole('button', { name: /^Save$/ }))
+
+    expect(templatesApi.updateDocumentTemplate).not.toHaveBeenCalled()
+    expect(toast.error).toHaveBeenCalledWith('Select a document type to generate automatically')
+  })
+
+  it('moving the rule away switches it off on save', async () => {
+    const user = userEvent.setup()
+    renderEditor(closedLoanDocx({ auto_generate: true }))
+
+    await user.click(screen.getAllByRole('combobox')[0])
+    await user.click(await screen.findByRole('option', { name: 'Active debt' }))
+    expect(autoGenerateBox()).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /^Save$/ }))
+
+    await waitFor(() =>
+      expect(templatesApi.updateDocumentTemplate).toHaveBeenCalledWith(
+        2,
+        expect.objectContaining({ activation_rule: 'active_debt', auto_generate: false })
+      )
+    )
+  })
+
+  it('a .docx upload carries the flag in the form', async () => {
+    const user = userEvent.setup()
+    renderEditor(null)
+
+    await user.click(screen.getByRole('radio', { name: /\.docx file/i }))
+    await user.type(screen.getByLabelText('Template name'), 'Closure note')
+    await user.upload(document.querySelector('#dt-file') as HTMLInputElement, docxFile())
+    await user.click(screen.getByRole('button', { name: /^Create$/ }))
+
+    await waitFor(() => expect(templatesApi.uploadDocumentTemplate).toHaveBeenCalled())
+    const fd = vi.mocked(templatesApi.uploadDocumentTemplate).mock.calls[0][0] as FormData
+    expect(fd.get('auto_generate')).toBe('false')
   })
 })

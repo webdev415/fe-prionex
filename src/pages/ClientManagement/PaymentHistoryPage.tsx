@@ -10,6 +10,8 @@ import { intlLocaleForUiLanguage } from '@/lib/i18n'
 import { convertUTCToUserTimezone, formatClientFullName, formatIsoDate } from '@/lib/formatters'
 import { getDateStringInTimezone } from '@/lib/dateUtils'
 import { useAuthStore } from '@/stores/authStore'
+import { useTrackEvent } from '@/features/operatorAnalytics'
+import { useModalOpenTracking } from './hooks/useClientCardInteractionTracking'
 import { useParams, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useURLState, useAutoPersistedState, useHasPermission } from '@/hooks'
@@ -44,6 +46,11 @@ import { ReassignPaymentEmployeeModal } from './components/ReassignPaymentEmploy
 import { useClient } from '@/features/clients/hooks/useClients'
 import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
 import { useCallStore } from '@/stores/callStore'
+import {
+  canOfferEasyPayLink,
+  copyToClipboard,
+  easypayLinkAction,
+} from '@/features/payments/utils/easypayLink'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
 import { useCallOrigination } from '@/features/calls/hooks/useCallOrigination'
@@ -80,6 +87,8 @@ interface Payment {
   method: BackendPaymentMethod
   /** EasyPay rows only: which service the payer picked on the portal. */
   easypayMethod?: string | null
+  /** EasyPay rows only: the checkout URL, absent if the gateway call failed. */
+  easypayLink?: string | null
   status: BackendPaymentStatus
   receipt?: string
   reference?: string
@@ -295,6 +304,7 @@ export function PaymentHistoryPage() {
 
   // Fetch client data from API (same as DebtSummaryPage)
   const clientId = id ? Number(id) : 0
+
   const {
     data: apiClient,
     isLoading: isLoadingClient,
@@ -361,11 +371,31 @@ export function PaymentHistoryPage() {
       contractNumber: backendPayment.debt_contract_number || undefined,
       method: backendPayment.payment_method,
       easypayMethod: backendPayment.easypay_method,
+      easypayLink: backendPayment.easypay_link,
       status: backendPayment.status,
       receipt: backendPayment.receipt_url,
       reference: backendPayment.bank_reference || backendPayment.payment_number,
     }
   }, [])
+
+  // The row conditions (EasyPay method + pending) do not guarantee a stored
+  // link: the gateway call sits between creating the payment and saving the
+  // URL, so report the gap rather than copying an empty string.
+  const handleCopyEasyPayLink = useCallback(
+    (payment: Payment) => {
+      const action = easypayLinkAction(payment)
+      if (action.kind === 'unavailable') {
+        toast.error(t('pages.clients.paymentHistory.easypayLink.unavailable'))
+        return
+      }
+      void copyToClipboard(action.url).then((copied) =>
+        copied
+          ? toast.success(t('pages.clients.paymentHistory.easypayLink.copied'))
+          : toast.error(t('pages.clients.paymentHistory.easypayLink.copyFailed'))
+      )
+    },
+    [t]
+  )
 
   // Convert payment history data to frontend format
   const paymentHistory = useMemo(() => {
@@ -449,6 +479,37 @@ export function PaymentHistoryPage() {
 
   const canReassignEmployee = useHasPermission(PERMISSIONS.CLIENTS.VERIFY_PAYMENT)
   const [isReassignModalOpen, setIsReassignModalOpen] = useState(false)
+
+  // The payment modals this page owns. Audit only hears about the ones that
+  // succeed -- a form opened and abandoned leaves no trace at all, and the
+  // details view leaves none either, though it is where an operator reads a
+  // client's whole debt breakdown. That gap is what this closes. Same event
+  // type the client card emits, so the activity feed renders them identically.
+  // Driven off a flags map rather than each call site, so a modal added later
+  // needs one line here.
+  const trackEvent = useTrackEvent()
+  const paymentModalFlags = useMemo(
+    () => ({
+      payment_details: isPaymentDetailsModalOpen,
+      edit_payment: isEditModalOpen,
+      cancel_payment: isCancelModalOpen,
+      reassign_payment: isReassignModalOpen,
+      verify_payment: isVerificationModalOpen,
+      export_payments: isExportModalOpen,
+    }),
+    [
+      isPaymentDetailsModalOpen,
+      isEditModalOpen,
+      isCancelModalOpen,
+      isReassignModalOpen,
+      isVerificationModalOpen,
+      isExportModalOpen,
+    ]
+  )
+
+  // Same baseline-then-transition rule as the client card, from the same
+  // tested hook rather than a hand-kept copy of it.
+  useModalOpenTracking(id, paymentModalFlags, trackEvent)
 
   // Fetch payment details when selectedPayment changes
   const backendPayment = paymentHistoryData?.payments.find((p) => p.id === selectedPayment?.id)
@@ -1647,6 +1708,22 @@ export function PaymentHistoryPage() {
                                         </LinkButton>
                                       </PermissionGuard>
                                     )}
+                                  {canOfferEasyPayLink(payment) && (
+                                    <LinkButton
+                                      variant="regular-black"
+                                      size="xs"
+                                      leftIcon={
+                                        <Icons.Link01
+                                          size={16}
+                                          className="text-foreground"
+                                          strokeWidth={1.5}
+                                        />
+                                      }
+                                      onClick={() => handleCopyEasyPayLink(payment)}
+                                    >
+                                      {t('pages.clients.paymentHistory.actions.link')}
+                                    </LinkButton>
+                                  )}
                                   <LinkButton
                                     variant="regular-black"
                                     size="xs"
@@ -1736,6 +1813,20 @@ export function PaymentHistoryPage() {
                                             </DropdownMenuItem>
                                           </PermissionGuard>
                                         )}
+                                      {canOfferEasyPayLink(payment) && (
+                                        <DropdownMenuItem
+                                          onClick={() => {
+                                            handleCopyEasyPayLink(payment)
+                                            setOpenDropdownPaymentId(null)
+                                          }}
+                                          className="text-foreground flex cursor-pointer items-center gap-2 text-sm"
+                                        >
+                                          <Icons.Link01 size={16} strokeWidth={1.5} />
+                                          <span>
+                                            {t('pages.clients.paymentHistory.actions.link')}
+                                          </span>
+                                        </DropdownMenuItem>
+                                      )}
                                       <DropdownMenuItem
                                         onClick={() => {
                                           handleViewDetails(payment)

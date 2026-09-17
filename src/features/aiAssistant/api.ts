@@ -10,6 +10,7 @@ import {
   type SseDonePayload,
   type SseErrorPayload,
   type SseMetaPayload,
+  type SsePersistedPayload,
   type SseSessionPayload,
 } from './sse'
 
@@ -51,6 +52,13 @@ export interface AssistantChatRequest {
    * ships support, so it is safe to send today (forward-compatible).
    */
   deep_research?: boolean
+  /**
+   * Раздумья 31B: `true` — «думающий» ход рассуждает вслух, `false` — отвечает
+   * сразу, без хода рассуждения (быстрее). Поле уходит ТОЛЬКО у thinking-хода:
+   * прокси, ещё не знающий его, отвечает 422, и обычный (fast) и экспертный
+   * запросы обязаны остаться байт-в-байт прежними.
+   */
+  thinking?: boolean
   /**
    * Images (screenshot paste), documents (pdf/xlsx/xls/csv) and/or one voice
    * note; at most {@link MAX_ATTACHMENTS} in total.
@@ -168,6 +176,11 @@ export interface SendChatMessageCallbacks {
    * сервере и без указателя его негде показать).
    */
   onMeta?: (meta: SseMetaPayload) => void
+  /**
+   * CRM `persisted` — ход записан в БД, вот id его сообщения. Приходит ПОСЛЕ
+   * `done`; по нему включаются кнопки оценки этого ответа.
+   */
+  onPersisted?: (payload: SsePersistedPayload) => void
   onSession?: (payload: SseSessionPayload) => void
   onText?: (delta: string) => void
   /** Reasoning deltas ("Ход рассуждения"); forwarded, never part of the answer. */
@@ -202,6 +215,13 @@ export class AssistantChatStreamError extends Error {
    * так».
    */
   readonly serverDetail?: string
+  /**
+   * Поля тела, названные схемой в отказе 422 (`detail[].loc`). Без них 422 «не
+   * знаю поле `thinking`» неотличим от 422 «этот файл не подходит»: текст у
+   * FastAPI один и тот же («Extra inputs are not permitted»), а имя поля живёт
+   * только в `loc`.
+   */
+  readonly fields?: string[]
 
   constructor(payload: SseErrorPayload) {
     super(payload.message ?? 'Assistant stream error')
@@ -209,11 +229,28 @@ export class AssistantChatStreamError extends Error {
     this.status = payload.status
     this.code = payload.code
     this.serverDetail = payload.message?.trim() || undefined
+    this.fields = payload.fields && payload.fields.length > 0 ? payload.fields : undefined
   }
 }
 
 /** The chat refuses a turn whose attachments are too large *in total* with this code. */
 export const ATTACHMENTS_TOTAL_TOO_LARGE = 'attachments_total_too_large'
+
+/**
+ * Имена полей из `detail[].loc` отказа по схеме: `["body", "thinking"]` → `thinking`.
+ * Технический префикс `body` отбрасывается, индексы (числа) — тоже.
+ */
+function readFields(detail: unknown[]): string[] | undefined {
+  const fields: string[] = []
+  for (const item of detail) {
+    const loc = (item as { loc?: unknown } | null)?.loc
+    if (!Array.isArray(loc)) continue
+    for (const part of loc) {
+      if (typeof part === 'string' && part && part !== 'body') fields.push(part)
+    }
+  }
+  return fields.length > 0 ? fields : undefined
+}
 
 /**
  * The readable text and the machine code inside an error body. Three shapes
@@ -227,7 +264,11 @@ export const ATTACHMENTS_TOTAL_TOO_LARGE = 'attachments_total_too_large'
  *   ({@link ATTACHMENTS_TOTAL_TOO_LARGE}). Its `message` is already written for
  *   the operator, so it is shown as it stands.
  */
-export function extractErrorDetail(body: unknown): { message?: string; code?: string } {
+export function extractErrorDetail(body: unknown): {
+  message?: string
+  code?: string
+  fields?: string[]
+} {
   if (!body || typeof body !== 'object') return {}
   const raw = (body as { detail?: unknown }).detail
   const detail = raw ?? (body as { message?: unknown }).message
@@ -245,7 +286,12 @@ export function extractErrorDetail(body: unknown): { message?: string; code?: st
 
   if (Array.isArray(detail)) {
     const parts = detail.map(readItem).filter((part): part is string => Boolean(part))
-    return { message: parts.length > 0 ? parts.join('; ') : undefined }
+    // `loc` — единственное место, где FastAPI называет ПОЛЕ: сам `msg` у отказа
+    // по схеме одинаков для любого поля («Extra inputs are not permitted»).
+    return {
+      message: parts.length > 0 ? parts.join('; ') : undefined,
+      fields: readFields(detail),
+    }
   }
 
   return {
@@ -290,12 +336,13 @@ export async function sendChatMessage(
   if (!response.ok) {
     let message: string | undefined
     let code: string | undefined
+    let fields: string[] | undefined
     try {
-      ;({ message, code } = extractErrorDetail(await response.json()))
+      ;({ message, code, fields } = extractErrorDetail(await response.json()))
     } catch {
       /* non-JSON error body — the caller falls back to a status-based text */
     }
-    throw new AssistantChatStreamError({ status: response.status, message, code })
+    throw new AssistantChatStreamError({ status: response.status, message, code, fields })
   }
 
   if (!response.body) {
@@ -311,6 +358,11 @@ export async function sendChatMessage(
   let citations: AssistantCitation[] = []
   let expert: AssistantExpertUsage | undefined
   let streamError: SseErrorPayload | null = null
+  // id записанного ассистентского сообщения и его флаг покрытия — приезжают
+  // кадром `persisted` уже ПОСЛЕ `done`. 0 = «неизвестен» (старый прокси кадра
+  // не шлёт): на этом значении фронт честно говорит, что оценить нечем.
+  let persistedMessageId = 0
+  let coverageFlag: string | null = null
 
   const applySessionId = (value: number | string | undefined) => {
     if (typeof value === 'number') {
@@ -331,6 +383,14 @@ export async function sendChatMessage(
     onMeta: (meta) => {
       applySessionId(meta.conversation_id)
       callbacks.onMeta?.(meta)
+    },
+    onPersisted: (payload) => {
+      applySessionId(payload.conversation_id)
+      if (typeof payload.message_id === 'number' && payload.message_id > 0) {
+        persistedMessageId = payload.message_id
+      }
+      if (typeof payload.coverage_flag === 'string') coverageFlag = payload.coverage_flag
+      callbacks.onPersisted?.(payload)
     },
     onSession: (session) => {
       applySessionId(session.session_id)
@@ -381,11 +441,13 @@ export async function sendChatMessage(
   return {
     conversation_id: conversationId,
     // The streamed `done` frame carries no per-message id (ASSISTANT_MODES.md
-    // §4 — only session_id + usage). 0 signals "unknown"; the real id is
-    // learned on conversation hydration, which is what gates the feedback UI.
-    message_id: 0,
+    // §4 — only session_id + usage). The CRM proxy sends it separately, in a
+    // `persisted` frame AFTER `done`; 0 still means "unknown" (old proxy, or the
+    // persist never landed) and the feedback row then says so out loud instead
+    // of silently disappearing.
+    message_id: persistedMessageId,
     response: accumulatedText,
-    coverage_flag: null,
+    coverage_flag: coverageFlag,
     tool_calls: toolCalls,
     citations,
     expert,

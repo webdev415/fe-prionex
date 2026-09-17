@@ -11,6 +11,7 @@ import './index.css'
 import App from './App.tsx'
 import { AppLoadingFallback } from '@/components/ui/AppLoadingFallback'
 import { setupThemeStorageListener, useThemeStore } from '@/stores/themeStore'
+import { startOpenReplay } from '@/lib/openreplay'
 
 // Ensure theme store module evaluates (applies attrs from localStorage).
 void useThemeStore.getState()
@@ -29,11 +30,19 @@ const isMutationRetryable = (error: unknown): boolean => {
   return Boolean(axiosError.code && MUTATION_NETWORK_ERROR_CODES.has(axiosError.code))
 }
 
+// A refused read is refused for good: the role will not have gained the
+// permission by the time a retry lands, so the second request only doubles
+// the rejected traffic and the noise in the gateway log.
+const isQueryRetryable = (error: unknown): boolean => {
+  const status = (error as AxiosError | undefined)?.response?.status
+  return status !== 401 && status !== 403
+}
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: QUERY.STALE_TIME,
-      retry: QUERY.RETRY_COUNT,
+      retry: (failureCount, error) => failureCount < QUERY.RETRY_COUNT && isQueryRetryable(error),
       refetchOnWindowFocus: false,
     },
     mutations: {
@@ -60,3 +69,14 @@ createRoot(document.getElementById('root')!).render(
     </QueryClientProvider>
   </StrictMode>
 )
+
+// Session replay, deliberately LAST and deliberately outside the render call.
+// The tracker downloads its own chunk and walks the DOM, so starting it before
+// the first paint would push out the very thing operators wait for. It is also a
+// no-op unless the build carries a project key, in which case the chunk is never
+// requested at all. See docs/openreplay-integration-plan.md.
+if ('requestIdleCallback' in window) {
+  requestIdleCallback(() => startOpenReplay())
+} else {
+  setTimeout(startOpenReplay, 0)
+}
