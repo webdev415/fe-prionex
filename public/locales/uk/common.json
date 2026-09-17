@@ -6987,6 +6987,8 @@
         "violated": "Порушено",
         "cancelled": "Скасовано",
         "completed": "Завершено",
+        "completedEarly": "Завершено достроково",
+        "withoutRr": "Без РР",
         "completedEarly": "Завершено достроково"
       },
       "presets": {

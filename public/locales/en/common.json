@@ -6947,6 +6947,8 @@
         "violated": "Violated",
         "cancelled": "Cancelled",
         "completed": "Completed",
+        "completedEarly": "Completed early",
+        "withoutRr": "Without RR",
         "completedEarly": "Completed early"
       },
       "presets": {

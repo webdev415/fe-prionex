@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { chronologyLabel, groupByYear } from '../lib/chronologyLabels'
 import type { EmployeeEvent } from '../types'
 
@@ -208,13 +208,52 @@ describe('groupByYear', () => {
   })
 
   it('does not merge two runs of the same year that are not adjacent', () => {
+    // Every timestamp here sits well inside its year on purpose. The year is
+    // read with `getFullYear()` — the VIEWER's year, matching the date each row
+    // renders with `toLocaleDateString` — so an instant near a year boundary
+    // belongs to different years for different readers. This case is about
+    // grouping runs, not about boundaries; see the test below for those.
     const groups = groupByYear([
       event({ id: 1, occurred_at: '2025-11-02T00:00:00Z' }),
       event({ id: 2, occurred_at: '2024-03-15T00:00:00Z' }),
-      event({ id: 3, occurred_at: '2025-01-01T00:00:00Z' }),
+      event({ id: 3, occurred_at: '2025-01-15T12:00:00Z' }),
     ])
 
     expect(groups.map((group) => group.year)).toEqual(['2025', '2024', '2025'])
+  })
+
+  describe('an instant near a year boundary', () => {
+    // `2025-01-01T00:00:00Z` is 31 December 2024 for every reader west of
+    // Greenwich and 1 January 2025 for everyone else. The heading has to agree
+    // with the date printed on the row underneath it, and that date is
+    // local — so the grouping is local too, deliberately.
+    //
+    // Pinned because it is invisible from Kyiv (UTC+2/+3): the assertion below
+    // passes there whichever way the code reads the year, and only fails in
+    // the Americas. A fixture with this shape is exactly what made this file
+    // fail on a US machine and pass in CI.
+    const NEW_YEAR_UTC = '2025-01-01T00:00:00Z'
+
+    describe('west of Greenwich', () => {
+      beforeAll(() => vi.stubEnv('TZ', 'America/New_York'))
+      afterAll(() => vi.unstubAllEnvs())
+
+      it('files it under the year the reader sees on the row', () => {
+        const [group] = groupByYear([event({ id: 1, occurred_at: NEW_YEAR_UTC })])
+        expect(group.year).toBe('2024')
+        expect(new Date(NEW_YEAR_UTC).getFullYear()).toBe(2024)
+      })
+    })
+
+    describe('east of Greenwich', () => {
+      beforeAll(() => vi.stubEnv('TZ', 'Europe/Kyiv'))
+      afterAll(() => vi.unstubAllEnvs())
+
+      it('files the same instant under the next year', () => {
+        const [group] = groupByYear([event({ id: 1, occurred_at: NEW_YEAR_UTC })])
+        expect(group.year).toBe('2025')
+      })
+    })
   })
 
   it('has nothing to group when there is nothing', () => {
