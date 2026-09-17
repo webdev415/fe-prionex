@@ -16,6 +16,15 @@ import { AxiosHeaders, type InternalAxiosRequestConfig } from 'axios'
 
 const STORED_KEY = 'credit.stand.apiKey'
 const STORED_ROLE = 'credit.stand.role'
+/**
+ * Ключ, под которым CRM держит пропуск оператора, — `TOKEN_KEY` в
+ * `src/lib/api.ts`. Раньше здесь стояло `access_token`: это имя поля в ТЕЛЕ
+ * ответа логина, а не ключ хранилища, и под ним в браузере не лежит ничего.
+ * «Запрос уносит пропуск» проверялось, стало быть, на токене, которого в CRM
+ * не бывает (#1213). Модуль спрашивает токен у `getAccessToken()` — тест сеет
+ * его туда же, откуда помощник его берёт.
+ */
+const CRM_TOKEN_KEY = 'prionex_token'
 
 /**
  * Прогоняет config через request-интерцептор модуля, как это делает axios.
@@ -52,7 +61,7 @@ describe('учётные данные кредитного модуля в бр�
 
   it('запрос уносит пропуск оператора и ничего кроме него', async () => {
     const { creditHttp } = await loadModule()
-    window.localStorage.setItem('access_token', 'pass-token')
+    window.localStorage.setItem(CRM_TOKEN_KEY, 'pass-token')
     // Секреты прежней схемы лежат в хранилище — но уйти не должны.
     window.sessionStorage.setItem(STORED_KEY, 'dev-portal-key')
     window.localStorage.setItem(STORED_ROLE, 'risk_manager')
@@ -70,7 +79,7 @@ describe('учётные данные кредитного модуля в бр�
     window.sessionStorage.setItem(STORED_KEY, 'dev-portal-key')
     window.localStorage.setItem(STORED_KEY, 'dev-portal-key')
     window.localStorage.setItem(STORED_ROLE, 'risk_manager')
-    window.localStorage.setItem('access_token', 'pass-token')
+    window.localStorage.setItem(CRM_TOKEN_KEY, 'pass-token')
 
     await import('../creditApi')
 
@@ -78,6 +87,6 @@ describe('учётные данные кредитного модуля в бр�
     expect(window.localStorage.getItem(STORED_KEY)).toBeNull()
     expect(window.localStorage.getItem(STORED_ROLE)).toBeNull()
     // Уборка прицельная: пропуск оператора она трогать не должна.
-    expect(window.localStorage.getItem('access_token')).toBe('pass-token')
+    expect(window.localStorage.getItem(CRM_TOKEN_KEY)).toBe('pass-token')
   })
 })
