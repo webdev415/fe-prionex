@@ -5336,6 +5336,7 @@
         "payments": "Платежі",
         "hasVerifiedPayment": "Має підтверджені оплати",
         "rrStatus": "Статус РР",
+        "clearRrStatus": "Очистити статус РР",
         "searchPlaceholder": "Пошук...",
         "selectAll": "Вибрати всіх",
         "selectAllEmployees": "Усі співробітники",
