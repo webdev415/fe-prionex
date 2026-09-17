@@ -5251,6 +5251,7 @@
         "payments": "Payments",
         "hasVerifiedPayment": "Has verified payment(s)",
         "rrStatus": "RR status",
+        "clearRrStatus": "Clear RR status",
         "searchPlaceholder": "Search...",
         "selectAll": "Select all",
         "selectAllEmployees": "All employees",
