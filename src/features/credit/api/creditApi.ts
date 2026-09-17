@@ -12,6 +12,7 @@
  * контрактных форм ответа.
  */
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios'
+import { getAccessToken } from '@/lib/api'
 import type {
   CreditApplicationDetail,
   CreditApplicationsParams,
@@ -77,13 +78,14 @@ export const creditHttp = axios.create({
 })
 
 creditHttp.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const token = (() => {
-    try {
-      return window.localStorage.getItem('access_token')
-    } catch {
-      return null
-    }
-  })()
+  /**
+   * Токен берём у самой CRM (`getAccessToken`), а не из хранилища напрямую.
+   * До #1213 здесь читался ключ `access_token`, которого в приложении нет —
+   * оно хранит JWT под `prionex_token`, — поэтому заголовок не уходил вовсе
+   * и запросы модуля получали 401. Второй литерал ключа разошёлся бы с CRM
+   * снова при первом же переименовании: источник должен быть один.
+   */
+  const token = getAccessToken()
   if (token) config.headers.set('Authorization', `Bearer ${token}`)
   // ⚠️ Служебный ключ и роль отсюда УБРАНЫ. Модуль теперь проверяет пропуск
   // оператора у самой CRM (`POST /api/v1/auth/validate`) и берёт права из его
