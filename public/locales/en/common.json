@@ -11601,7 +11601,8 @@
         "holiday": "Today is a public holiday",
         "outsideHours": "Outside the allowed calling hours",
         "unavailable": "Calling hours cannot be checked right now",
-        "weekend": "Calls are not allowed today"
+        "weekend": "Calls are not allowed today",
+        "noCalendar": "Calling is blocked until this year’s holiday calendar is set up"
       }
     }
   },

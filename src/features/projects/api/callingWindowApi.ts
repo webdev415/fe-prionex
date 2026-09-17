@@ -33,17 +33,19 @@ export async function setCallingWindow(
   return response.data
 }
 
-// Not under /api/v1/projects/: that prefix already serves GET /{project_id},
-// which parsed "holiday-countries" as a project id and 422'd. The catalogue is
-// global rather than per-project, so it has its own prefix.
+// Two segments deep under /projects/, deliberately. One segment
+// (/projects/holiday-countries) was matched by GET /projects/{project_id} and
+// rejected as a non-integer id; a separate top-level prefix fixed that and
+// 404'd at the Kong gateway, which routes /api/v1/projects but knows nothing
+// about a new prefix. This path is both routed and unshadowable.
 export async function getHolidayCountries(): Promise<HolidayCountry[]> {
-  const response = await api.get<HolidayCountry[]>('/api/v1/calling-window/countries')
+  const response = await api.get<HolidayCountry[]>('/api/v1/projects/calling-window/countries')
   return response.data
 }
 
 export async function getSubdivisions(country: string): Promise<string[]> {
   const response = await api.get<string[]>(
-    `/api/v1/calling-window/countries/${country}/subdivisions`
+    `/api/v1/projects/calling-window/countries/${country}/subdivisions`
   )
   return response.data
 }

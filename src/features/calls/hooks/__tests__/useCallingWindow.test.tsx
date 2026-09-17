@@ -83,6 +83,14 @@ describe('reasonMessage', () => {
     expect(reasonMessage(t, reason as CallingWindowReason)).toBe(expected)
   })
 
+  it('tells the operator a missing calendar is not a holiday', () => {
+    // Both refuse the call, but "today is a holiday" sends the operator home
+    // to wait; a missing calendar needs an administrator.
+    const missing = reasonMessage(t, 'holiday_calendar_missing')
+    expect(missing).not.toBe(reasonMessage(t, 'public_holiday'))
+    expect(missing).toMatch(/calendar/i)
+  })
+
   it.each(['timezone_unresolved', 'window_misconfigured'])(
     'reports %s as unavailable, not as outside the hours',
     (reason) => {
