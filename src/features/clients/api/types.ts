@@ -496,8 +496,16 @@ export interface PaginatedClientResponse {
 
 // Assignment request/response types
 export interface AssignClientRequest {
-  responsible_employee_id?: number
-  responsible_searcher_id?: number
+  /**
+   * Omit the field to leave the slot alone; send `null` to clear it.
+   *
+   * The two are different requests, and the backend keys on which fields were
+   * sent rather than on their values — so `undefined` (dropped by JSON
+   * serialisation) and `null` must stay distinguishable here too. Typing these
+   * as `?: number` alone made unassignment inexpressible.
+   */
+  responsible_employee_id?: number | null
+  responsible_searcher_id?: number | null
   assignment_reason?: string
 }
 

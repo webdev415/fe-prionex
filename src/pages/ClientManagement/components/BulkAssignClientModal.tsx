@@ -20,6 +20,7 @@ import { Textarea } from '@/components/ui/Textarea'
 import { Label } from '@/components/ui/Label'
 import { Icons } from '@/lib/icons'
 import { PriorityBadge } from './PriorityBadge'
+import { AssigneeSelect } from './AssigneeSelect'
 import { useOperators } from '@/features/users/hooks/useUsers'
 import { useAuthStore } from '@/stores/authStore'
 import { useHasAnyPermission } from '@/hooks'
@@ -80,16 +81,13 @@ export function BulkAssignClientModal({
 
   // Fetch active users for employee and searcher dropdowns (project-scoped)
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
-  const { data: operators } = useOperators(activeProjectId ? Number(activeProjectId) : null)
+  const { data: operators, isLoading: operatorsLoading } = useOperators(
+    activeProjectId ? Number(activeProjectId) : null
+  )
 
-  // Map users to dropdown options (full name format)
-  const userOptions = useMemo(() => {
-    if (!operators) return []
-    return operators.map((user) => ({
-      id: user.id.toString(),
-      name: user.full_name,
-    }))
-  }, [operators])
+  // Handed to the picker as they arrive: it renders the department under each
+  // name, which the old `{id, name}` option shape threw away.
+  const operatorOptions = useMemo(() => operators ?? [], [operators])
 
   const [employeeId, setEmployeeId] = useState<string>('')
   const [searcherId, setSearcherId] = useState<string>('')
@@ -256,29 +254,14 @@ export function BulkAssignClientModal({
                   >
                     {t('pages.clients.modals.bulkAssignClient.assignEmployeeToAll')}
                   </Label>
-                  <Select value={employeeId} onValueChange={setEmployeeId}>
-                    <SelectTrigger
-                      id="bulk-employee"
-                      className="h-[45px] w-full rounded-md sm:flex-1"
-                    >
-                      <SelectValue
-                        placeholder={t('pages.clients.modals.bulkAssignClient.selectEmployee')}
-                      />
-                    </SelectTrigger>
-                    <SelectContent searchable>
-                      {userOptions.length === 0 ? (
-                        <div className="text-muted-foreground px-2 py-6 text-center text-sm">
-                          {t('pages.clients.modals.assignClient.noUsersAvailable')}
-                        </div>
-                      ) : (
-                        userOptions.map((user) => (
-                          <SelectItem key={user.id} value={user.id}>
-                            {user.name}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
+                  <AssigneeSelect
+                    id="bulk-employee"
+                    operators={operatorOptions}
+                    isLoading={operatorsLoading}
+                    value={employeeId}
+                    onValueChange={setEmployeeId}
+                    placeholder={t('pages.clients.modals.bulkAssignClient.selectEmployee')}
+                  />
                 </div>
 
                 {/* Searcher Dropdown */}
@@ -289,29 +272,14 @@ export function BulkAssignClientModal({
                   >
                     {t('pages.clients.modals.bulkAssignClient.assignSearcherToAll')}
                   </Label>
-                  <Select value={searcherId} onValueChange={setSearcherId}>
-                    <SelectTrigger
-                      id="bulk-searcher"
-                      className="h-[45px] w-full rounded-md sm:flex-1"
-                    >
-                      <SelectValue
-                        placeholder={t('pages.clients.modals.bulkAssignClient.selectSearcher')}
-                      />
-                    </SelectTrigger>
-                    <SelectContent searchable>
-                      {userOptions.length === 0 ? (
-                        <div className="text-muted-foreground px-2 py-6 text-center text-sm">
-                          {t('pages.clients.modals.assignClient.noUsersAvailable')}
-                        </div>
-                      ) : (
-                        userOptions.map((user) => (
-                          <SelectItem key={user.id} value={user.id}>
-                            {user.name}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
+                  <AssigneeSelect
+                    id="bulk-searcher"
+                    operators={operatorOptions}
+                    isLoading={operatorsLoading}
+                    value={searcherId}
+                    onValueChange={setSearcherId}
+                    placeholder={t('pages.clients.modals.bulkAssignClient.selectSearcher')}
+                  />
                 </div>
               </div>
               <div className="flex w-full flex-col gap-4 self-stretch sm:flex-row sm:items-start sm:gap-2">

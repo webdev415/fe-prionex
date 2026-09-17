@@ -8,7 +8,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
-import { SearchableSelect } from '@/components/ui/SearchableSelect'
+import { AssigneeSelect } from './AssigneeSelect'
 import { RadioGroup, RadioItem } from '@/components/ui/Radio'
 import { Label } from '@/components/ui/Label'
 import { Icons } from '@/lib/icons'
@@ -56,16 +56,13 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
 
   // Fetch active users for employee and searcher dropdowns
-  const { data: operators } = useOperators(activeProjectId ? Number(activeProjectId) : null)
+  const { data: operators, isLoading: operatorsLoading } = useOperators(
+    activeProjectId ? Number(activeProjectId) : null
+  )
 
-  // Map users to dropdown options (full name format)
-  const userOptions = useMemo(() => {
-    if (!operators) return []
-    return operators.map((user) => ({
-      id: user.id.toString(),
-      name: user.full_name,
-    }))
-  }, [operators])
+  // Handed to the picker as they arrive: it renders the department under each
+  // name, which the old `{id, name}` option shape threw away.
+  const operatorOptions = useMemo(() => operators ?? [], [operators])
 
   const [employeeId, setEmployeeId] = useState<string>('')
   const [searcherId, setSearcherId] = useState<string>('')
@@ -297,9 +294,10 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
                     >
                       {t('pages.clients.modals.assignClient.employee')}
                     </Label>
-                    <SearchableSelect
+                    <AssigneeSelect
                       id="employee"
-                      options={userOptions}
+                      operators={operatorOptions}
+                      isLoading={operatorsLoading}
                       value={employeeId}
                       onValueChange={setEmployeeId}
                       placeholder={t('pages.clients.modals.assignClient.selectEmployee')}
@@ -314,9 +312,10 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
                     >
                       {t('pages.clients.modals.assignClient.searcher')}
                     </Label>
-                    <SearchableSelect
+                    <AssigneeSelect
                       id="searcher"
-                      options={userOptions}
+                      operators={operatorOptions}
+                      isLoading={operatorsLoading}
                       value={searcherId}
                       onValueChange={setSearcherId}
                       placeholder={t('pages.clients.modals.assignClient.selectSearcher')}

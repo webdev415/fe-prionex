@@ -6917,6 +6917,12 @@
         "cancelled": "Скасовано",
         "completed": "Завершено",
         "completedEarly": "Завершено достроково"
+      },
+      "assignee": {
+        "searchPlaceholder": "Пошук співробітника",
+        "allEmployees": "Усі співробітники",
+        "noMatches": "Збігів не знайдено",
+        "unassign": "Зняти призначення"
       }
     },
     "clientChains": {
