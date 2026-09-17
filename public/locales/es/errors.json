@@ -75,6 +75,27 @@
     "BULK_WRITEOFF_PERMISSION_REQUIRED": "La carga masiva de condonaciones también requiere el permiso para crear condonaciones",
     "NO_ACTIVE_PROJECT": "No hay ningún proyecto activo seleccionado",
     "CALLS_WINDOW_TOO_LARGE": "El periodo solicitado tiene demasiadas llamadas para agregarlas en una sola solicitud; acótelo",
-    "CLIENT_PROJECT_ACCESS_DENIED": "No tiene acceso al proyecto de este cliente"
+    "CLIENT_PROJECT_ACCESS_DENIED": "No tiene acceso al proyecto de este cliente",
+    "EASYPAY_LOAN_REQUIRED": "Debe seleccionar un crédito para un pago de EasyPay",
+    "EASYPAY_METHOD_REQUIRED": "Un pago de EasyPay debe usar el método de pago por pasarela en línea",
+    "PAYMENT_METHOD_UNAVAILABLE": "El método de pago seleccionado no está disponible",
+    "CREDIT_NOT_ONLINE_PAYABLE": "El crédito no admite el pago en línea",
+    "PAYMENT_EXCEEDS_DEBT": "El importe del pago supera la deuda restante",
+    "TAG_NOT_AVAILABLE_FOR_ROLE": "La etiqueta no está disponible para su rol",
+    "TAG_NOT_AVAILABLE_FOR_DEPARTMENT": "La etiqueta no está disponible para su departamento",
+    "TAG_PROTECTED": "Esta etiqueta está protegida. Solicite su eliminación en su lugar.",
+    "SEGMENT_INACTIVE": "El segmento no está activo",
+    "RULE_INACTIVE": "No se puede ejecutar una regla inactiva. Actívela primero.",
+    "TAG_OTHER_PROJECT": "La etiqueta pertenece a otro proyecto",
+    "SYSTEM_TAG_READONLY": "Las etiquetas del sistema no se pueden modificar",
+    "TAG_CODE_IMMUTABLE": "El código de la etiqueta no se puede cambiar después de crearla",
+    "SYSTEM_TAG_UNDELETABLE": "Las etiquetas del sistema no se pueden eliminar",
+    "CORRECTION_TASK_NOT_YOURS": "Solo puede ver las tareas de corrección asignadas a usted",
+    "TASK_SUBJECT_INVALID": "Asunto de la tarea no válido",
+    "LEGAL_TASK_LAWYER_REQUIRED": "Las tareas de carta legal requieren un abogado asignado",
+    "TASK_UPDATE_NOT_YOURS": "Los operadores solo pueden actualizar las tareas asignadas a ellos",
+    "TASK_DELETE_NOT_YOURS": "Los operadores solo pueden eliminar las tareas asignadas a ellos",
+    "TASK_NOT_CORRECTION": "Esta tarea no es una tarea de corrección",
+    "TASK_DATETIME_INVALID": "Formato de fecha y hora no válido"
   }
 }

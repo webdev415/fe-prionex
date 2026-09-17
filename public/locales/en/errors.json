@@ -75,6 +75,27 @@
     "BULK_WRITEOFF_PERMISSION_REQUIRED": "Bulk write-off upload also requires the permission to create write-offs",
     "NO_ACTIVE_PROJECT": "No active project selected",
     "CALLS_WINDOW_TOO_LARGE": "The requested period has too many calls to aggregate in one request; please narrow it",
-    "CLIENT_PROJECT_ACCESS_DENIED": "No access to this client's project"
+    "CLIENT_PROJECT_ACCESS_DENIED": "No access to this client's project",
+    "EASYPAY_LOAN_REQUIRED": "A loan must be selected for an EasyPay payment",
+    "EASYPAY_METHOD_REQUIRED": "An EasyPay payment must use the online gateway payment method",
+    "PAYMENT_METHOD_UNAVAILABLE": "Selected payment method is not available",
+    "CREDIT_NOT_ONLINE_PAYABLE": "Credit is not available for online payment",
+    "PAYMENT_EXCEEDS_DEBT": "Payment amount exceeds remaining debt",
+    "TAG_NOT_AVAILABLE_FOR_ROLE": "Tag is not available for your role",
+    "TAG_NOT_AVAILABLE_FOR_DEPARTMENT": "Tag is not available for your department",
+    "TAG_PROTECTED": "This tag is protected. Request its removal instead.",
+    "SEGMENT_INACTIVE": "Segment is not active",
+    "RULE_INACTIVE": "Cannot trigger an inactive rule. Activate it first.",
+    "TAG_OTHER_PROJECT": "Tag belongs to a different project",
+    "SYSTEM_TAG_READONLY": "System tags cannot be modified",
+    "TAG_CODE_IMMUTABLE": "Tag code cannot be changed after creation",
+    "SYSTEM_TAG_UNDELETABLE": "System tags cannot be deleted",
+    "CORRECTION_TASK_NOT_YOURS": "You can only view correction tasks assigned to you",
+    "TASK_SUBJECT_INVALID": "Invalid task subject",
+    "LEGAL_TASK_LAWYER_REQUIRED": "Legal letter tasks require an assigned lawyer",
+    "TASK_UPDATE_NOT_YOURS": "Operators can only update tasks assigned to them",
+    "TASK_DELETE_NOT_YOURS": "Operators can only delete tasks assigned to them",
+    "TASK_NOT_CORRECTION": "This task is not a correction task",
+    "TASK_DATETIME_INVALID": "Invalid date and time format"
   }
 }
