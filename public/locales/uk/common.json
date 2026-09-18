@@ -139,7 +139,8 @@
       "active": "Активна",
       "paused": "Пауза",
       "empty": "Черга порожня",
-      "inactive": "Неактивна"
+      "inactive": "Неактивна",
+      "pausedCallingWindow": "Поза годинами дзвінків"
     },
     "queueList": {
       "found": "Знайдено: {{count}} черг",

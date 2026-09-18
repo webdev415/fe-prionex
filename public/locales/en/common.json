@@ -139,7 +139,8 @@
       "active": "Active",
       "paused": "Pause",
       "empty": "Queue is empty",
-      "inactive": "Inactive"
+      "inactive": "Inactive",
+      "pausedCallingWindow": "Outside calling hours"
     },
     "queueList": {
       "found": "Found: {{count}} queues",
