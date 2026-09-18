@@ -56,6 +56,7 @@ import { mapScoreToPriority } from '@/features/clients/api/configApi'
 import type { Client as APIClient } from '@/features/clients/api/types'
 import type { PriorityThresholds } from '@/features/clients/api/configApi'
 import { useURLState } from '@/hooks/useURLState'
+import { useClampPage } from '@/hooks/useClampPage'
 import { useOperatorFilterOptions, coversAllOptions } from './hooks/useOperatorFilterOptions'
 import { NO_INTERACTIONS_ID, NO_RESPONSIBLE_ID } from './components/OperatorMultiSelectDropdown'
 import type { StepValueEntry } from './components/ClientStepValueRow'
@@ -1103,6 +1104,7 @@ export function ClientManagementPage() {
   const totalCount = clientsResponse?.total || 0
   const totalPages = clientsResponse?.total_pages || 1
   const prioritySummaryData = clientsResponse?.priority_summary
+  useClampPage(currentPage, totalPages, Boolean(clientsResponse) && !isFetching, setCurrentPage)
 
   // Fetch priority thresholds configuration
   const { data: thresholds = DEFAULT_THRESHOLDS } = usePriorityThresholds()
