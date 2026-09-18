@@ -45,7 +45,15 @@ type QueueFilter = 'all' | 'active'
  * ordinary Active queue while being unable to place a single call — the only
  * previous trace was a warning in a container log.
  */
-export function QueueStatusBadge({ active, synced }: { active: boolean; synced?: boolean }) {
+export function QueueStatusBadge({
+  active,
+  synced,
+  pausedByWindow,
+}: {
+  active: boolean
+  synced?: boolean
+  pausedByWindow?: boolean
+}) {
   const { t } = useTranslation('common')
 
   // Only `false` means "known unsynced". `undefined` is an older payload (or the
@@ -61,6 +69,25 @@ export function QueueStatusBadge({ active, synced }: { active: boolean; synced?:
       >
         <span className="bg-warning-500 h-2 w-2 shrink-0 rounded-full" />
         {t('dialer.queueList.notSynced', 'Not synced')}
+      </span>
+    )
+  }
+
+  // Below the sync check on purpose. Both mean the queue is not dialling, but
+  // an unsynced queue is a fault that needs someone to act and never clears
+  // itself, while a window hold is normal and self-resolving — showing the
+  // benign one would hide the fault behind it.
+  if (pausedByWindow) {
+    return (
+      <span
+        className="bg-info-100 text-info-700 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs leading-[130%] font-medium tracking-[-0.02em]"
+        title={t(
+          'dialer.queueList.pausedByWindowHint',
+          'Outside this project\u2019s allowed calling hours. Dialling resumes automatically at the next allowed time.'
+        )}
+      >
+        <span className="bg-info-500 h-2 w-2 shrink-0 rounded-full" />
+        {t('dialer.queueList.pausedByWindow', 'Outside calling hours')}
       </span>
     )
   }
@@ -193,7 +220,13 @@ export function QueueListTab() {
         key: 'status',
         header: t('dialer.queueList.status', 'Status'),
         align: 'center',
-        render: (q) => <QueueStatusBadge active={q.is_active} synced={q.telephony_synced} />,
+        render: (q) => (
+          <QueueStatusBadge
+            active={q.is_active}
+            synced={q.telephony_synced}
+            pausedByWindow={q.paused_by_window}
+          />
+        ),
       },
       {
         key: 'is_active',

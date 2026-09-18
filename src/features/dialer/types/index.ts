@@ -77,6 +77,12 @@ export interface DialerQueue {
    * being unable to place a single call.
    */
   telephony_synced?: boolean
+  /**
+   * The calling window is holding this queue, not a supervisor (KAN-1107).
+   * The supervisor's own toggle still reads on, so without this the queue
+   * looks active while placing no calls.
+   */
+  paused_by_window?: boolean
   // Live counters shown on cards / list.
   total_in_queue?: number
   remaining?: number
