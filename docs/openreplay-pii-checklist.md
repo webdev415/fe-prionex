@@ -223,6 +223,7 @@
 | 2.2 | `docs/openreplay-pii-screens.md` | файла нет в репозитории; шаг **пропущен**, а не выполнен |
 | 6.1–6.7 | приёмка по реальной записи | см. «Как пользоваться» выше; агент подготовил детектор и эту таблицу |
 | 8.5 | включение прода: сначала `VITE_OPENREPLAY_PROJECT_KEY_PREPROD`, прогнать сценарий на PRE-PROD, и только потом `_PROD` | repository variables |
+| — | объявить ключи метаданных в проекте OpenReplay (Project → Metadata): `role`, `project`, `department`, `impersonating` — список в `src/lib/openreplay/identify.ts` (`METADATA_KEYS`) | OpenReplay UI; необъявленный ключ бэкенд молча отбрасывает |
 
 ## Экраны от человека (шаг 2.2)
 

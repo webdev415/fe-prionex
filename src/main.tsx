@@ -12,6 +12,7 @@ import App from './App.tsx'
 import { AppLoadingFallback } from '@/components/ui/AppLoadingFallback'
 import { setupThemeStorageListener, useThemeStore } from '@/stores/themeStore'
 import { startOpenReplay } from '@/lib/openreplay'
+import { bindOperatorIdentity } from '@/lib/openreplay/identify'
 
 // Ensure theme store module evaluates (applies attrs from localStorage).
 void useThemeStore.getState()
@@ -76,10 +77,20 @@ createRoot(document.getElementById('root')!).render(
 // no-op unless the build carries a project key, in which case the chunk is never
 // requested at all. See docs/openreplay-pii-markup.md — the integration plan
 // this used to point at was never pushed to `origin`.
+//
+// `bindOperatorIdentity` follows the start: it puts the operator's id (and only
+// the id — see identify.ts) on the session, stops the tracker on logout and
+// starts a new session on the next login. It is bound after `startOpenReplay`
+// on purpose, so a page that loads with nobody signed in still records the
+// login screen rather than waiting for a user to exist.
+const startSessionReplay = () => {
+  startOpenReplay()
+  bindOperatorIdentity()
+}
 if ('requestIdleCallback' in window) {
-  requestIdleCallback(() => startOpenReplay())
+  requestIdleCallback(startSessionReplay)
 } else {
-  setTimeout(startOpenReplay, 0)
+  setTimeout(startSessionReplay, 0)
 }
 
 // `window.__piiAudit()` — lists the personal data readable on the current screen
