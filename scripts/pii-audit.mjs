@@ -40,10 +40,23 @@
 
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import ts from 'typescript'
 
-const ROOT = fileURLToPath(new URL('..', import.meta.url))
+/**
+ * The repository root.
+ *
+ * The fallback is for the test: Vitest transforms this module through Vite,
+ * where `import.meta.url` is an http: URL rather than a file: one and
+ * `fileURLToPath` throws. Under node — every real run — the first branch holds.
+ */
+const ROOT = (() => {
+  try {
+    return fileURLToPath(new URL('..', import.meta.url))
+  } catch {
+    return process.cwd()
+  }
+})()
 const ALLOWLIST_PATH = join(ROOT, 'scripts/pii-audit.allowlist.json')
 
 // ── The dictionary ───────────────────────────────────────────────────────────
@@ -99,6 +112,43 @@ const PII_FREE = [/\b(notes|comment|comments|description)\b/]
 const FREE_TEXT_OWNERS =
   /\b(client|contact|interaction|payment|row|item|detail|call|lead|debtor|promise)\w*$/i
 
+/**
+ * Property tails that read something OTHER than the value: a key, a count, a
+ * method. `client.address.id` matches the address dictionary on its text alone.
+ */
+const NON_VALUE_TAILS = new Set([
+  'id',
+  'ids',
+  'key',
+  'length',
+  'size',
+  'count',
+  'index',
+  'trim',
+  'toString',
+  'map',
+  'filter',
+  'find',
+  'some',
+  'every',
+  'join',
+  'split',
+  'slice',
+  'includes',
+])
+
+/**
+ * Identifier shapes that hold a flag or a callback rather than a value:
+ * `isUpdatingAddress`, `handleStartEditAddress`, `onAddressChange`,
+ * `setFullName`.
+ *
+ * ⚠️ `format*`, `render*` and `get*` are deliberately NOT here:
+ * `{formatEmployeeName(row)}` renders a name, and excluding that shape would
+ * drop a real site (`pages/ActionAnalysis/components/CallsTable.tsx`).
+ */
+const NON_VALUE_SHAPE =
+  /^(is|has|had|was|were|should|can|could|will|handle|on|set|toggle|use|open|close|show|hide)[A-Z]/
+
 const ATTRS_UNMASKED = new Set(['title', 'alt', 'aria-label', 'placeholder'])
 
 const OBSCURED_ATTR = 'data-openreplay-obscured'
@@ -149,10 +199,27 @@ function resolveTargets(list) {
 
 // ── Classification ───────────────────────────────────────────────────────────
 
+/** The last segment of a chain: `client.work?.managerFullName` -> `managerFullName`. */
+function tailOf(text) {
+  const dot = text.lastIndexOf('.')
+  return dot === -1 ? text : text.slice(dot + 1)
+}
+
+/**
+ * What kind of personal data, if any, an identifier reads.
+ *
+ * Judged on the chain's LAST segment, not on its full text. The object half of
+ * a chain says what the value belongs to, not what it is: `address.is_primary`
+ * is a boolean and `address.address_type` is an enum, yet both contain the
+ * string "address" and both were reported before this was narrowed. A rule that
+ * fires on the container's name reports the same false positive forever, and an
+ * allowlist entry for it is an unexplained hole that outlives whoever added it.
+ */
 function classify(text) {
-  if (NOT_PII.some((re) => re.test(text))) return null
-  if (PII_NAME.some((re) => re.test(text))) return 'PII_NAME'
-  if (PII_ADDR.some((re) => re.test(text))) return 'PII_ADDR'
+  const tail = tailOf(text)
+  if (NOT_PII.some((re) => re.test(tail))) return null
+  if (PII_NAME.some((re) => re.test(tail))) return 'PII_NAME'
+  if (PII_ADDR.some((re) => re.test(tail))) return 'PII_ADDR'
   return null
 }
 
@@ -167,29 +234,91 @@ function classifyFree(text) {
 // ── AST walk ─────────────────────────────────────────────────────────────────
 
 /**
- * The source text of an expression, trimmed to the identifier chain.
+ * The identifiers an expression READS, in the source's own spelling.
  *
- * Only property accesses and identifiers are considered. String literals,
- * template heads, comments and JSX text never reach `classify` — which is the
- * requirement a grep cannot meet.
+ * Three exclusions, each of which decides whether the report is usable at all:
+ *
+ * 🔴 NESTED JSX IS NOT DESCENDED INTO. Without this the walk reports the
+ * OUTERMOST expression on the screen rather than the place the value is
+ * rendered: `{tab === 'payments' && (…900 lines…)}` is reported as a hit for a
+ * `client.fullName` a thousand lines below it. That is not a cosmetic problem —
+ * marking up the real site would not clear the finding, because the marked
+ * element is not an ancestor of the outer expression. The barrier would stay red
+ * no matter what anyone did to the code. Every nested expression is visited on
+ * its own by the main walk, so nothing is lost by stopping here.
+ *
+ * BINDING POSITIONS ARE NOT READS. The `address` in
+ * `addresses.map((address) => …)` names a variable, it does not render one.
+ *
+ * A CHAIN ENDING IN A NON-VALUE IS NOT A READ. `addresses.length` is a number,
+ * `firstName.trim()` is a method, `address.id` is a key. Reporting those teaches
+ * the reader to skip the output, which costs more than the entries are worth.
  */
 function expressionNames(node, names) {
-  if (ts.isPropertyAccessExpression(node) || ts.isIdentifier(node)) {
-    names.add(node.getText())
+  const visit = (current) => {
+    // Nested JSX, and the contents of string and template literals: copy, not
+    // identifiers.
+    if (
+      ts.isJsxElement(current) ||
+      ts.isJsxSelfClosingElement(current) ||
+      ts.isJsxFragment(current) ||
+      ts.isJsxExpression(current) ||
+      ts.isStringLiteralLike(current)
+    ) {
+      return
+    }
+
+    if (
+      ts.isParameter(current) ||
+      ts.isBindingElement(current) ||
+      ts.isVariableDeclaration(current)
+    ) {
+      current.forEachChild((child) => {
+        if (child !== current.name) visit(child)
+      })
+      return
+    }
+
+    if (ts.isPropertyAccessExpression(current)) {
+      const tail = current.name.getText()
+      if (NON_VALUE_TAILS.has(tail)) return
+      if (!NON_VALUE_SHAPE.test(tail)) names.add(current.getText())
+      // The object half is NOT visited: `address` in `address.is_primary` is
+      // the container, not a rendered value, and adding it made every boolean
+      // and enum on an address object a finding.
+      return
+    }
+
+    if (ts.isIdentifier(current)) {
+      if (!NON_VALUE_SHAPE.test(current.getText())) names.add(current.getText())
+      return
+    }
+
+    current.forEachChild(visit)
   }
-  if (ts.isPropertyAccessExpression(node)) {
-    // Also record the shorter chains, so `row.client.full_name` is caught by the
-    // same rule as `client.full_name`.
-    expressionNames(node.expression, names)
-    return names
-  }
-  node.forEachChild((child) => {
-    // Do not descend into string or template literals: their contents are copy,
-    // not identifiers.
-    if (ts.isStringLiteralLike(child)) return
-    expressionNames(child, names)
-  })
+
+  visit(node)
   return names
+}
+
+/**
+ * The element or component an attribute sits on, for the report.
+ *
+ * It is reported rather than filtered on, and that is a decision worth stating.
+ * The obvious rule — "only lower-case tags are real DOM attributes" — is wrong
+ * here in both directions. `<Link title={fullName}>` forwards the prop to the
+ * `<a>` it renders, so the value reaches the recording exactly as it would from
+ * a `<span>`; filtering on the tag's case dropped three of the six known leaks
+ * the moment it was tried. `<ModalHeader title={…}>` really does render the
+ * prop as a text node, where markup IS the fix. Which of the two a component is
+ * cannot be known without reading it, so the host is printed and the reader
+ * reads it — an under-reported leak costs more than a mis-categorised one.
+ */
+function attributeHost(node) {
+  const opening = node.parent?.parent
+  const tag = opening?.tagName?.getText()
+  if (!tag) return '?'
+  return /^[a-z]/.test(tag) ? `<${tag}>` : tag
 }
 
 /** True when this JSX element, or one of its JSX ancestors, carries the attribute. */
@@ -224,6 +353,22 @@ function isCoveredInSource(node) {
 }
 
 /**
+ * Does this object literal look like a `Column<T>`?
+ *
+ * `key` plus `header` is the shape, and it is checked rather than assumed so
+ * that the rule below cannot fire on any object that happens to own a `render`.
+ */
+function isColumnLiteral(node) {
+  if (!ts.isObjectLiteralExpression(node)) return false
+  const keys = new Set(
+    node.properties
+      .filter((prop) => ts.isPropertyAssignment(prop) || ts.isShorthandPropertyAssignment(prop))
+      .map((prop) => prop.name?.getText())
+  )
+  return keys.has('key') && keys.has('header')
+}
+
+/**
  * A DataTable column object literal carrying `obscured: true`.
  *
  * Columns are declared outside JSX, so the JSX-ancestor walk above cannot see
@@ -252,7 +397,19 @@ function lineOf(sourceFile, node) {
 
 function auditFile(absPath) {
   const relPath = relative(ROOT, absPath).split(sep).join('/')
-  const text = readFileSync(absPath, 'utf8')
+  return auditSource(relPath, readFileSync(absPath, 'utf8'))
+}
+
+/**
+ * The audit of one file's source, without touching the disk.
+ *
+ * Split out so the rules can be tested against fixtures. They have to be: the
+ * walk's exclusions decide whether the report points at the line a developer
+ * must edit or at a container a thousand lines above it, and both shapes look
+ * identical in a summary count.
+ */
+export function auditSource(relPath, text) {
+  const absPath = join(ROOT, relPath)
   const sourceFile = ts.createSourceFile(
     absPath,
     text,
@@ -279,11 +436,33 @@ function auditFile(absPath) {
               line: lineOf(sourceFile, node),
               identifier: name,
               attribute: node.name.getText(),
+              host: attributeHost(node),
               kind,
             })
             break
           }
         }
+      }
+    }
+
+    // ── PII rendered by a DataTable column that returns no JSX ───────────
+    // `render: (r) => r.full_name` renders a name into a `<td>` without ever
+    // producing a JSX expression, so the walk below cannot see it. Skipping
+    // these would leave the one declarative chokepoint in the codebase — the 19
+    // files that go through DataTable — entirely unaudited.
+    if (
+      ts.isPropertyAssignment(node) &&
+      node.name.getText() === 'render' &&
+      isColumnLiteral(node.parent)
+    ) {
+      const names = expressionNames(node.initializer, new Set())
+      for (const name of names) {
+        const kind = classify(name)
+        if (!kind) continue
+        if (!isCoveredByColumnLiteral(node)) {
+          rendered.push({ path: relPath, line: lineOf(sourceFile, node), identifier: name, kind })
+        }
+        break
       }
     }
 
@@ -368,7 +547,7 @@ function printSection(title, findings, note) {
   for (const [path, group] of groupByFile(findings)) {
     process.stdout.write(`\n  ${path}\n`)
     for (const finding of group.sort((a, b) => a.line - b.line)) {
-      const attr = finding.attribute ? ` [${finding.attribute}]` : ''
+      const attr = finding.attribute ? ` [${finding.attribute} on ${finding.host}]` : ''
       process.stdout.write(`    ${path}:${finding.line}  ${finding.identifier}${attr}\n`)
     }
   }
@@ -411,8 +590,11 @@ function main() {
     printSection(
       '🔴 PII IN AN ATTRIBUTE THE TRACKER DOES NOT MASK',
       attributes,
-      '   Attributes are NEVER masked outside privateMode. Remove the value or move it\n' +
-        '   into a <Tooltip> whose content is a text node.'
+      '   On a DOM element the value reaches the recording verbatim — attributes are\n' +
+        '   NEVER masked outside privateMode. Remove it, or move it into a <Tooltip>\n' +
+        '   whose content is a text node. On a COMPONENT, read where the prop lands:\n' +
+        '   forwarded to a DOM node (Link, Button) — same fix; rendered as content\n' +
+        '   (ModalHeader) — wrap the interpolated part in <Pii> instead.'
     )
     printSection(
       'ℹ️  free-text candidates (advisory, not part of --check)',
@@ -445,4 +627,9 @@ function main() {
   }
 }
 
-main()
+// Only when run as a command. The module is also imported by its test, and an
+// import that audits the whole repository and calls `process.exit` would take
+// the test runner with it.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main()
+}
