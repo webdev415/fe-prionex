@@ -51,6 +51,18 @@ export const LEGAL_COMPANY_INFO: { name: string; phone: string | null } = {
   phone: null,
 }
 
+export function projectCompanyInfo(
+  country: string,
+  project: { full_company_name?: string | null; hotline_phone?: string | null } | null | undefined
+): { name: string | null; phone: string | null } {
+  const name = project?.full_company_name?.trim() || null
+  const phone = project?.hotline_phone?.trim() || null
+  return {
+    name: name ?? (country === 'ES' ? null : LEGAL_COMPANY_INFO.name),
+    phone: phone ?? LEGAL_COMPANY_INFO.phone,
+  }
+}
+
 const FALLBACK_EMPTY = '—'
 
 /**

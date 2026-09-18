@@ -24,6 +24,7 @@ import {
   formatTemplateDate,
   LEGAL_LETTER_TEMPLATE_VARIABLES,
   LEGAL_LETTER_VARIABLE_GROUP_ORDER,
+  projectCompanyInfo,
 } from '../letterTemplateVariables'
 
 describe('applyLetterTemplatePlaceholders', () => {
@@ -168,5 +169,31 @@ describe('formatTemplateDate', () => {
     expect(formatTemplateDate('', 'en-GB')).toBeNull()
     expect(formatTemplateDate('not-a-date', 'en-GB')).toBeNull()
     expect(formatTemplateDate(null, 'en-GB')).toBeNull()
+  })
+})
+
+describe('projectCompanyInfo', () => {
+  it('signs with the company set on the project', () => {
+    expect(
+      projectCompanyInfo('ES', {
+        full_company_name: 'Recobros Ibéricos, S.L.',
+        hotline_phone: '+34 910 000 000',
+      })
+    ).toEqual({ name: 'Recobros Ibéricos, S.L.', phone: '+34 910 000 000' })
+  })
+
+  it('keeps the current company for a Ukrainian project without one', () => {
+    expect(projectCompanyInfo('UA', { full_company_name: '  ', hotline_phone: null })).toEqual({
+      name: 'ТОВ «ФК «ТЕХНОФІНАНС»',
+      phone: null,
+    })
+    expect(projectCompanyInfo('UA', undefined).name).toBe('ТОВ «ФК «ТЕХНОФІНАНС»')
+  })
+
+  it('leaves the company for the lawyer to fill in a Spanish project without one', () => {
+    expect(projectCompanyInfo('ES', { full_company_name: null })).toEqual({
+      name: null,
+      phone: null,
+    })
   })
 })
