@@ -13,7 +13,16 @@ export type TelephonyType = 'white' | 'grey'
 export type AnswerMode = 'auto' | 'manual'
 
 /** Queue (a.k.a. campaign / preset) activity state. */
-export type QueueStatus = 'active' | 'paused' | 'empty' | 'inactive'
+export type QueueStatus =
+  | 'active'
+  | 'paused'
+  | 'empty'
+  | 'inactive'
+  /**
+   * Held by the project's calling window rather than by a supervisor.
+   * `is_active` still reads true — the queue resumes on its own.
+   */
+  | 'paused_calling_window'
 
 /** Per-number call result (final status mapping confirmed with telephony team). */
 export type CallResult =
@@ -78,7 +87,7 @@ export interface DialerQueue {
    */
   telephony_synced?: boolean
   /**
-   * The calling window is holding this queue, not a supervisor (KAN-1107).
+   * The calling window is holding this queue, not a supervisor.
    * The supervisor's own toggle still reads on, so without this the queue
    * looks active while placing no calls.
    */
