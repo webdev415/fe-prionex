@@ -386,6 +386,7 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
                   </DropdownMenu>
                 </div>
                 <SearchableSelect
+                  obscured
                   options={clientOptions}
                   value={clientId}
                   onValueChange={handleClientChange}

@@ -603,6 +603,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
       key: 'recorded_by_name',
       header: t('pages.clientChains.history.operator'),
       align: 'left',
+      obscured: true,
       render: (row) => {
         const display =
           (row.recorded_by != null ? operatorNameById.get(row.recorded_by) : null) ??

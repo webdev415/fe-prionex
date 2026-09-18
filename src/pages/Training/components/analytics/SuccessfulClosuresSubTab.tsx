@@ -19,6 +19,7 @@ import {
   ANALYTICS_TABLE_TD,
   ANALYTICS_TABLE_TH,
 } from './analyticsTableStyles'
+import { piiProps } from '@/lib/openreplay/pii'
 
 /**
  * Successful Closures sub-tab (KAN-734). Trainer-facing list of VERIFIED
@@ -395,7 +396,7 @@ export function SuccessfulClosuresSubTab() {
               {t('pages.training.closures.filters.allOperators', 'All operators')}
             </option>
             {operators.map((op) => (
-              <option key={op.id} value={String(op.id)}>
+              <option key={op.id} value={String(op.id)} {...piiProps}>
                 {op.full_name}
               </option>
             ))}
@@ -550,7 +551,9 @@ function ClosureRow({
               {initials}
             </span>
           ) : null}
-          <span className="text-xs font-medium text-[#05040D]">{displayName}</span>
+          <span className="text-xs font-medium text-[#05040D]" {...piiProps}>
+            {displayName}
+          </span>
         </div>
       </td>
       <td className={ANALYTICS_TABLE_TD}>

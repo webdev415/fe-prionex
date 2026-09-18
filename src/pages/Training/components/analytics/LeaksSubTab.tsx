@@ -21,6 +21,7 @@ import {
   ANALYTICS_TABLE_TD,
   ANALYTICS_TABLE_TH,
 } from './analyticsTableStyles'
+import { piiProps } from '@/lib/openreplay/pii'
 
 /**
  * Leaks sub-tab (KAN-735). Layout / UI styling mirror the Figma frame verbatim
@@ -459,7 +460,9 @@ function LeakRow({
               {initials}
             </span>
           ) : null}
-          <span className="text-xs font-medium text-[#05040D]">{operatorName}</span>
+          <span className="text-xs font-medium text-[#05040D]" {...piiProps}>
+            {operatorName}
+          </span>
         </div>
       </td>
       <td className={`${ANALYTICS_TABLE_TD} text-[#3B82F6]`}>

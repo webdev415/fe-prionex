@@ -312,6 +312,7 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
                       {t('pages.clients.modals.assignClient.employee')}
                     </Label>
                     <SearchableSelect
+                      obscured
                       id="employee"
                       options={userOptions}
                       value={employeeId}
@@ -329,6 +330,7 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
                       {t('pages.clients.modals.assignClient.searcher')}
                     </Label>
                     <SearchableSelect
+                      obscured
                       id="searcher"
                       options={userOptions}
                       value={searcherId}

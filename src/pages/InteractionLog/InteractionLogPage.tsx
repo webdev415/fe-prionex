@@ -225,6 +225,9 @@ export function InteractionLogPage() {
       key: 'notes',
       header: t('pages.interactionLog.columns.notes'),
       align: 'left',
+      // Free text an operator typed about the interaction — read verbatim in a
+      // replay, and found by no field-name dictionary.
+      obscured: true,
       render: (row) => (
         <span className="text-muted-foreground text-xs">
           {row.notes ? (row.notes.length > 40 ? row.notes.slice(0, 40) + '...' : row.notes) : '-'}
@@ -235,6 +238,7 @@ export function InteractionLogPage() {
       key: 'recorded_by_name',
       header: t('pages.interactionLog.columns.operator'),
       align: 'left',
+      obscured: true,
       render: (row) => (
         <span className="text-muted-foreground text-xs">{row.recorded_by_name ?? '-'}</span>
       ),

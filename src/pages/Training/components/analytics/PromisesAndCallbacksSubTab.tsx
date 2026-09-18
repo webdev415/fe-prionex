@@ -26,6 +26,7 @@ import {
   ANALYTICS_TABLE_TD,
   ANALYTICS_TABLE_TH,
 } from './analyticsTableStyles'
+import { piiProps } from '@/lib/openreplay/pii'
 
 /**
  * Promises and Callbacks sub-tab (KAN-733). Layout / UI styling mirror the
@@ -310,7 +311,7 @@ export function PromisesAndCallbacksSubTab() {
                 {t('pages.training.promises.filters.allOperators', 'All operators')}
               </option>
               {operators.map((op) => (
-                <option key={op.id} value={String(op.id)}>
+                <option key={op.id} value={String(op.id)} {...piiProps}>
                   {op.full_name}
                 </option>
               ))}
@@ -452,7 +453,9 @@ function PromiseRow({ row }: { row: PromiseCallbackItem }) {
               {initials}
             </span>
           ) : null}
-          <span className="text-xs font-medium text-[#05040D]">{operatorName}</span>
+          <span className="text-xs font-medium text-[#05040D]" {...piiProps}>
+            {operatorName}
+          </span>
         </div>
       </td>
       <td className={ANALYTICS_TABLE_TD}>

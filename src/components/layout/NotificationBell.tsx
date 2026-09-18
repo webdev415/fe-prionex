@@ -34,6 +34,7 @@ import {
 import { useNotificationSocket } from '@/features/notifications/hooks/useNotificationSocket'
 import { NotificationType } from '@/features/notifications/types'
 import type { NotificationItem } from '@/features/notifications/types'
+import { piiProps } from '@/lib/openreplay/pii'
 
 function getIntlLocale(language: string): string {
   const base = language.split('-')[0] ?? 'en'
@@ -849,7 +850,7 @@ function PaymentNotificationItem({
     <>
       <div className="flex flex-wrap items-center gap-1.5">
         {!n.read && <span className="bg-primary-500 h-2 w-2 shrink-0 rounded-full" />}
-        <p className="text-foreground line-clamp-1 text-xs font-semibold">
+        <p className="text-foreground line-clamp-1 text-xs font-semibold" {...piiProps}>
           {meta.client_name ?? t('notificationBell.clientNumber', { id: meta.client_id })}
           <span className="text-foreground ml-1 font-normal">
             ({t('notificationBell.idLabel', { id: meta.client_id })})
@@ -927,7 +928,7 @@ function TaskNotificationItem({
       <div className="flex flex-wrap items-center gap-1.5 pr-5">
         {!n.read && <span className="bg-primary-500 h-2 w-2 shrink-0 rounded-full" />}
         {hasClient ? (
-          <p className="text-foreground line-clamp-1 text-xs font-semibold">
+          <p className="text-foreground line-clamp-1 text-xs font-semibold" {...piiProps}>
             {meta.client_name ?? t('notificationBell.clientNumber', { id: meta.client_id })}
             {meta.client_id && (
               <span className="text-foreground ml-1 font-normal">
@@ -1299,7 +1300,7 @@ function TrainingNotificationItem({
           )}
         </div>
         {isOneOnOne && trainerName && (
-          <p className="text-foreground line-clamp-1 w-full min-w-0 text-xs">
+          <p className="text-foreground line-clamp-1 w-full min-w-0 text-xs" {...piiProps}>
             {t('notificationBell.training.withTrainer', { name: trainerName })}
           </p>
         )}

@@ -6,6 +6,7 @@ import { useOneOnOnes } from '@/features/quality/coaching/hooks'
 import type { OneOnOneRecord } from '@/features/quality/coaching/types'
 import { useOperators } from '@/features/users/hooks'
 import { useAuthStore } from '@/stores/authStore'
+import { piiProps } from '@/lib/openreplay/pii'
 
 /**
  * "1-on-1 today" drill-down dialog (Tanya's 13.08 complaint: the header tile
@@ -101,7 +102,9 @@ export function OneOnOneTodayDialog({ open, onClose }: OneOnOneTodayDialogProps)
                 <div className="flex items-center justify-between gap-3">
                   <span className="flex min-w-0 items-center gap-2 text-sm font-medium text-gray-800">
                     <Icons.User size={14} className="flex-shrink-0 text-gray-500" />
-                    <span className="truncate">{operatorName(session.operator_id)}</span>
+                    <span className="truncate" {...piiProps}>
+                      {operatorName(session.operator_id)}
+                    </span>
                   </span>
                   <span className="flex flex-shrink-0 items-center gap-1 text-sm text-gray-600">
                     <Icons.Calendar size={14} className="text-gray-500" />

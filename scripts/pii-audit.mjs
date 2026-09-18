@@ -86,7 +86,7 @@ const PII_NAME = [
   // `clientName` is not `full_name` and not `fullName`. Found by reading
   // `pages/LawyerWorkplace`, where the entire section renders client names under
   // this spelling and the audit reported nothing at all.
-  /\b\w*(client|contact|operator|employee|trainer|lawyer|debtor|recipient|sender|author|manager|person|customer)_?[nN]ame\b/i,
+  /\b\w*(client|contact|operator|employee|trainer|lawyer|debtor|recipient|sender|author|manager|person|customer|recorded_?by|created_?by|assigned_?by|updated_?by)_?[nN]ame\b/i,
 ]
 
 const PII_ADDR = [/[A-Za-z_]*[aA]ddress\b/]

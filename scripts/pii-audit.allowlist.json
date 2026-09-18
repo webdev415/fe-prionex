@@ -1,32 +1,12 @@
 [
   {
-    "path": "src/features/users/components/CreateUserForm.tsx",
-    "identifier": "errors.first_name",
-    "reason": "react-hook-form validation state, not a value: the node renders errors.<field>.message (\"First name is required\"), which is UI copy. The input's own value is already dropped by defaultInputMode: 2, and marking the block would put the field LABEL in asterisks."
+    "path": "src/pages/ClientManagement/components/ClientFiltersBar.tsx",
+    "identifier": "portfolio.displayName",
+    "reason": "A portfolio's name (\"Portfolio 2024-Q1\"), not a person's. Matched only because the dictionary learned `displayName` from the employee-card formatter."
   },
   {
-    "path": "src/features/users/components/CreateUserForm.tsx",
-    "identifier": "errors.last_name",
-    "reason": "react-hook-form validation state, not a value: the node renders errors.<field>.message (\"First name is required\"), which is UI copy. The input's own value is already dropped by defaultInputMode: 2, and marking the block would put the field LABEL in asterisks."
-  },
-  {
-    "path": "src/features/users/components/CreateUserForm.tsx",
-    "identifier": "errors.middle_name",
-    "reason": "react-hook-form validation state, not a value: the node renders errors.<field>.message (\"First name is required\"), which is UI copy. The input's own value is already dropped by defaultInputMode: 2, and marking the block would put the field LABEL in asterisks."
-  },
-  {
-    "path": "src/features/users/components/EditUserForm.tsx",
-    "identifier": "errors.first_name",
-    "reason": "react-hook-form validation state, not a value: the node renders errors.<field>.message (\"First name is required\"), which is UI copy. The input's own value is already dropped by defaultInputMode: 2, and marking the block would put the field LABEL in asterisks."
-  },
-  {
-    "path": "src/features/users/components/EditUserForm.tsx",
-    "identifier": "errors.last_name",
-    "reason": "react-hook-form validation state, not a value: the node renders errors.<field>.message (\"First name is required\"), which is UI copy. The input's own value is already dropped by defaultInputMode: 2, and marking the block would put the field LABEL in asterisks."
-  },
-  {
-    "path": "src/features/users/components/EditUserForm.tsx",
-    "identifier": "errors.middle_name",
-    "reason": "react-hook-form validation state, not a value: the node renders errors.<field>.message (\"First name is required\"), which is UI copy. The input's own value is already dropped by defaultInputMode: 2, and marking the block would put the field LABEL in asterisks."
+    "path": "src/pages/ClientManagement/components/PortfolioDropdown.tsx",
+    "identifier": "portfolio.displayName",
+    "reason": "Same: a portfolio is not a person."
   }
 ]

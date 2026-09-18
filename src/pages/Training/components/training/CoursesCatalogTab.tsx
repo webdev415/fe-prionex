@@ -24,6 +24,7 @@ import {
 import { CourseMaterialSelect } from './CourseMaterialSelect'
 import { EmployeeSearchList } from '../dialogue/EmployeeMultiSelect'
 import { TrainingPrimaryButton, TrainingSearchBar } from './TrainingToolbar'
+import { Pii, piiProps } from '@/lib/openreplay/pii'
 
 const CATEGORY_OPTIONS = [
   'Scripts',
@@ -239,7 +240,9 @@ function CourseCard({
           <div className="flex items-center gap-2">
             <p className="text-xs text-[#4B5563]">
               {t('pages.training.training.courses.author', 'Author')}:{' '}
-              {course.author_name ?? t('pages.training.training.courses.noAuthor', 'No author')}
+              <Pii>
+                {course.author_name ?? t('pages.training.training.courses.noAuthor', 'No author')}
+              </Pii>
             </p>
             {course.category ? (
               <span className="rounded-full bg-[#F3F4F6] px-2 py-0.5 text-[10px] font-medium text-[#374151]">
@@ -463,7 +466,7 @@ function CreateCoursePanel({ onClose }: { onClose: () => void }) {
               <select value={author} onChange={(e) => setAuthor(e.target.value)} className={field}>
                 <option value="">{t('common.none', '—')}</option>
                 {operators.map((op) => (
-                  <option key={op.id} value={op.full_name}>
+                  <option key={op.id} value={op.full_name} {...piiProps}>
                     {op.full_name}
                   </option>
                 ))}
@@ -614,9 +617,11 @@ export function CourseDetailsDialog({
           <div className="flex flex-col gap-1">
             <h3 className="text-lg font-semibold text-[#05040D]">{detail.title}</h3>
             <p className="text-xs text-[#4B5563]">
-              {detail.author_name
-                ? `${t('pages.training.training.courses.author', 'Author')}: ${detail.author_name}`
-                : ''}
+              {detail.author_name ? (
+                <Pii>{`${t('pages.training.training.courses.author', 'Author')}: ${detail.author_name}`}</Pii>
+              ) : (
+                ''
+              )}
               {detail.author_name && detail.category ? ' · ' : ''}
               {detail.category ?? ''}
             </p>

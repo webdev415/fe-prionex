@@ -72,6 +72,7 @@ function ReassignBody({
             {t('pages.clients.modals.reassignEmployee.newLabel')}
           </Label>
           <SearchableSelect
+            obscured
             id="reassign-target"
             options={userOptions}
             value={selectedUserId}

@@ -26,6 +26,7 @@ import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 
 import { DialerKpiStrip } from '../DialerKpiStrip'
+import { piiProps } from '@/lib/openreplay/pii'
 
 const ALL = 'all'
 type StatusFilter = 'all' | 'in_conversation' | 'awaiting_call'
@@ -122,11 +123,14 @@ export function AnalysisTab() {
                   'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-medium',
                   avatarClass(r.operator_id, inConv)
                 )}
+                {...piiProps}
               >
                 {initials(r.operator_name)}
               </span>
               <div className="min-w-0">
-                <p className="text-foreground truncate text-sm font-medium">{r.operator_name}</p>
+                <p className="text-foreground truncate text-sm font-medium" {...piiProps}>
+                  {r.operator_name}
+                </p>
                 {r.operator_email && (
                   <p className="text-muted-foreground truncate text-xs">{r.operator_email}</p>
                 )}

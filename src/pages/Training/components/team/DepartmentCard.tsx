@@ -4,6 +4,7 @@ import { Icons } from '@/lib/icons'
 import type { TeamDepartmentRow } from '../../mocks/trainerWorkplaceMocks'
 import { TEAM_SCORE_TEXT } from './teamStyles'
 import { TeamCard } from './TeamCard'
+import { Pii } from '@/lib/openreplay/pii'
 
 export interface DepartmentCardProps {
   department: TeamDepartmentRow
@@ -68,7 +69,8 @@ export function DepartmentCard({ department, onSelectOperator }: DepartmentCardP
           <p className="text-xs leading-4 text-[#4B5563]">
             {department.managerName && department.managerName !== '—' ? (
               <>
-                {t('pages.training.team.dept.manager', 'Manager')}: {department.managerName}
+                {t('pages.training.team.dept.manager', 'Manager')}:{' '}
+                <Pii>{department.managerName}</Pii>
                 {' · '}
               </>
             ) : null}

@@ -39,6 +39,7 @@ import { useHasPermission, useHasAnyPermission } from '@/hooks'
 import { PERMISSIONS } from '@/constants/permissions'
 import { DocumentTypePill } from '@/components/DocumentTypePill'
 import { DocumentTemplatesTab, DocumentTypesTab } from './components'
+import { piiProps } from '@/lib/openreplay/pii'
 
 const ACTIONS: DocumentAction[] = ['uploaded', 'generated']
 
@@ -184,10 +185,12 @@ export function DocumentGenerationPage() {
       {
         key: 'client',
         header: t('pages.documentGeneration.journal.columns.client', 'Client'),
+        obscured: true,
         render: (row) => (
           <Link
             to={`/dashboard/clients/${row.client_id}`}
             className="text-primary-600 hover:underline"
+            data-openreplay-label="client-name-link"
           >
             {row.client_full_name}
           </Link>
@@ -482,7 +485,10 @@ export function DocumentGenerationPage() {
                     {t('pages.documentGeneration.filters.all', 'All')}
                   </SelectItem>
                   {sortedOperators.map((op) => (
-                    <SelectItem key={op.id} value={String(op.id)}>
+                    /* Radix Select renders its content in a PORTAL, so nothing
+                       above it in the tree can cover this — the attribute goes on
+                       the item itself. */
+                    <SelectItem key={op.id} value={String(op.id)} {...piiProps}>
                       {op.full_name}
                     </SelectItem>
                   ))}

@@ -14,6 +14,7 @@ import {
   useFlags,
 } from '@/features/training'
 import type { AutoFlagRule, FlagEventCard, FlagEventStatus } from '@/features/training'
+import { Pii } from '@/lib/openreplay/pii'
 
 const STATUS_TABS: { id: FlagEventStatus; key: string; fallback: string }[] = [
   { id: 'pending', key: 'pages.training.autoFlags.status.pending', fallback: 'Pending' },
@@ -263,7 +264,7 @@ function FlagRow({
             ) : null}
           </div>
           <p className="text-[11px] text-[#6B7280]">
-            {t('pages.training.autoFlags.operator', 'Operator')}: {operatorName}
+            {t('pages.training.autoFlags.operator', 'Operator')}: <Pii>{operatorName}</Pii>
             {flag.call_id ? (
               <>
                 {' · '}

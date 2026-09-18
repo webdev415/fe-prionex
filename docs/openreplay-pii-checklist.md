@@ -33,7 +33,7 @@
 | 3.2 | `pages/EmployeeCard` + `features/users` | `feat/kanban-54/markup-employees` | ✅ |
 | 3.3 | `pages/LawyerWorkplace` | `feat/kanban-54/markup-lawyer` | ✅ |
 | 3.4 | `pages/ActionAnalysis` | `feat/kanban-54/markup-action-analysis` | ✅ |
-| 3.5 | `pages/Training` + остальные разделы | `feat/kanban-54/markup-training-rest` | ⬜ |
+| 3.5 | `pages/Training` + остальные разделы | `feat/kanban-54/markup-training-rest` | ✅ |
 | 4 + 5.7 | ПДн в атрибутах, `<iframe>` | `feat/kanban-54/attributes` | ⬜ |
 | 5 | Порталы | `feat/kanban-54/portals` | ⬜ |
 | 7 | Барьер в CI | `feat/kanban-54/ci-barrier` | ⬜ |
@@ -129,6 +129,22 @@
 | `/dashboard/training` → аналитика | `InteractionsSubTab`, `PromisesAndCallbacksSubTab`, `LeaksSubTab` | ФИО клиента (в т. ч. бывшее в `title`) | `#client_id`, даты, суммы, статусы |
 | `/dashboard/training` → диалоги | `ScorecardListView`, `DialogueDetail` | ФИО клиента и оператора, комментарии | баллы, критерии, даты |
 | `/dashboard/training` → материалы | `MaterialPreviewModal` | — (материал не ПДн; `<iframe>` не пишется) | название материала |
+
+> **Закрыто в 3.5** — `npm run pii-audit` даёт **0 мест рендера по всему `src/`**, не только
+> по этому разделу. Кроме `pages/Training` (таблицы, аналитика, диалоги, инбокс, отдел, курсы,
+> тесты) сюда вошли: шапка приложения целиком (`DashboardLayout`, `NotificationBell`,
+> `TaskBell`, `UserProfile`, обе свёрнутые плашки звонка и цепочки), `features/calls`,
+> четыре отчётные таблицы (`communicationGap`, `contactTag`, `inboundFollowup`,
+> `searcherFollowup`), `pages/Dialer`, `pages/Operations` (превью массовых операций),
+> `pages/Credit`, `pages/UbkiIntegration`, `pages/DocumentGeneration`, `pages/InteractionLog`,
+> `pages/RoleManagement`, `features/quality`, а также оставшиеся места в `ClientManagement`,
+> которых расширенный словарь не видел в фазе 3.1.
+>
+> `SearchableSelect` получил проп `obscured` — тем же способом, что `Column.obscured`:
+> компонент выбирает и людей, и портфели, и статусы, и различить их изнутри нельзя,
+> а вызывающий знает всегда. Проставлен в 11 местах, где выбирают человека.
+>
+> В allowlist осталось **две** записи, обе про `portfolio.displayName`: портфель — не человек.
 
 ### Остальное
 
