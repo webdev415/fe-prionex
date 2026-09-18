@@ -285,6 +285,14 @@
     "answerMode": {
       "auto": "Automatic",
       "manual": "Manual (operator accepts)"
+    },
+    "callingWindow": {
+      "closedTitle": "Outside calling hours",
+      "resumes": "Dialling resumes {{when}}.",
+      "resumesUnknown": "No reopening time can be given — check the project’s holiday calendar.",
+      "allowed": "Allowed: {{hours}}, {{days}} ({{timezone}})",
+      "open": "Calling hours {{hours}} · {{days}} · open now",
+      "everyDay": "every day"
     }
   },
   "search": {
@@ -6955,8 +6963,7 @@
         "cancelled": "Cancelled",
         "completed": "Completed",
         "completedEarly": "Completed early",
-        "withoutRr": "Without RR",
-        "completedEarly": "Completed early"
+        "withoutRr": "Without RR"
       },
       "presets": {
         "label": "Filter Presets",
