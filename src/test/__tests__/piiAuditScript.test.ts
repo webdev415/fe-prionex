@@ -180,6 +180,24 @@ describe('pii-audit — what counts as a render site', () => {
     expect(rendered).toHaveLength(1)
   })
 
+  it('reports an attachment or document name by its owner', () => {
+    // A file attached to a client's case is named after the client more often
+    // than not; a bulk-import CSV or a template file is not. The owner is the
+    // only thing that tells them apart, so this rule is tested against the whole
+    // chain rather than the tail.
+    const { rendered, attributes } = audit(`
+      export const C = () => (
+        <>
+          <p>{attachment.filename}</p>
+          <img alt={attachment.name} />
+          <p>{job.file_name}</p>
+        </>
+      )
+    `)
+    expect(rendered.map((f) => f.identifier)).toEqual(['attachment.filename'])
+    expect(attributes.map((f) => f.identifier)).toEqual(['attachment.name'])
+  })
+
   it('leaves alone the addresses that are not a person', () => {
     const { rendered } = audit(`
       export const C = () => (

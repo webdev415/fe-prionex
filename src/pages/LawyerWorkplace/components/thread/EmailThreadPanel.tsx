@@ -94,7 +94,9 @@ function AttachmentPill({
         </span>
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-foreground truncate text-[11px] font-medium">{attachment.filename}</p>
+        <p className="text-foreground truncate text-[11px] font-medium" {...piiProps}>
+          {attachment.filename}
+        </p>
         <p className="text-muted-foreground text-[10px]">{attachment.sizeLabel}</p>
       </div>
       <button

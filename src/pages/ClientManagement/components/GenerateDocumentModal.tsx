@@ -39,6 +39,7 @@ import {
   type DeliveryChannel,
 } from '@/features/documents'
 import { downloadBlob } from '@/features/messaging/utils/downloadBlob'
+import { piiProps } from '@/lib/openreplay/pii'
 
 interface Loan {
   id: number
@@ -493,7 +494,9 @@ export function GenerateDocumentModal({
             <p className="text-foreground text-base font-medium">
               {t('pages.clients.detail.generateModal.successTitle', 'Документ згенеровано')}
             </p>
-            <p className="text-muted-foreground text-sm">{generated.document_name}</p>
+            <p className="text-muted-foreground text-sm" {...piiProps}>
+              {generated.document_name}
+            </p>
             <p className="text-muted-foreground text-xs">
               {t('pages.clients.detail.generateModal.indexNum', 'Вихідний №')}:{' '}
               {generated.index_num}

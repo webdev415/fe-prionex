@@ -859,7 +859,8 @@
       "slashHelp": "довідка про можливості",
       "slashNewChat": "почати новий чат",
       "answerInProgress": "Відповідь ще готується — з’явиться тут, коли буде готова",
-      "attachmentFrameTitle": "Перегляд вкладення"
+      "attachmentFrameTitle": "Перегляд вкладення",
+      "attachmentRemoveShort": "Видалити вкладення"
     },
     "lawyerWorkplace": {
       "navAria": "Навігація робочого місця юриста",
@@ -11462,6 +11463,9 @@
         "showEarlier": "Показати попередні розділи",
         "showLater": "Показати наступні розділи"
       }
+    },
+    "messaging": {
+      "attachmentPreview": "Перегляд вкладення"
     }
   },
   "contactTypes": {

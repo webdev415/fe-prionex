@@ -170,6 +170,7 @@ export function DocumentGenerationPage() {
       {
         key: 'document_name',
         header: t('pages.documentGeneration.journal.columns.documentName', 'Document Name'),
+        obscured: true,
         render: (row) => <span className="text-sm">{row.document_name}</span>,
       },
       {

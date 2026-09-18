@@ -132,7 +132,9 @@ export function DocumentPreviewModal({
         <DialogPrimitive.Content className="fixed inset-0 z-50 flex flex-col">
           {/* Top bar: filename + controls */}
           <div className="flex shrink-0 items-center justify-between bg-black/60 px-4 py-2 text-white backdrop-blur-sm">
-            <span className="truncate text-sm font-medium">{filename}</span>
+            <span className="truncate text-sm font-medium" {...piiProps}>
+              {filename}
+            </span>
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
@@ -205,7 +207,11 @@ export function DocumentPreviewModal({
               >
                 <img
                   src={blobUrl}
-                  alt={filename}
+                  // The role, not the file name — same reason the iframe's title
+                  // below is a role. The image is a client's document; under the
+                  // attribute the tracker sends a placeholder instead of it.
+                  alt={t('pages.clients.documents.previewFrameTitle', 'Document preview')}
+                  {...piiProps}
                   className="object-contain select-none"
                   style={{
                     maxWidth: '100%',

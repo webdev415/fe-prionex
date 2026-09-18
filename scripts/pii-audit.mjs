@@ -92,6 +92,26 @@ const PII_NAME = [
 const PII_ADDR = [/[A-Za-z_]*[aA]ddress\b/]
 
 /**
+ * Rules whose signal is the OWNER, tested against the whole chain.
+ *
+ * `classify` judges by the last segment on purpose — `address.is_primary` must
+ * not count as an address — so a rule that needs the object half lives here.
+ *
+ * Names of ATTACHMENTS and DOCUMENTS: `attachment.name`, `document.filename`,
+ * `generated.document_name`. Added after review of KAN-KB-54 found an uploaded
+ * file's name in a `title` inside the assistant — a file attached to a client's
+ * case is called 'Іваненко_договір.pdf' more often than not, which is why phase
+ * 4 removed the same value from `DocumentPreviewModal`'s iframe title.
+ * Deliberately NOT every `fileName`: a bulk-import CSV or a template file is
+ * named after a date or a form, and a rule that fired on those (22 sites when
+ * tried) would have bought a dozen allowlist entries and no leak closed.
+ */
+const PII_NAME_BY_OWNER = [
+  /\b(attachment|document)s?\??\.(name|filename|fileName|file_name|document_name)$/,
+  /\b\w*document_?name$/i,
+]
+
+/**
  * Identifiers that match the shape but are not letters-of-a-person.
  *
  * `ip_address` is a network address, `email_address` is already masked by the
@@ -242,6 +262,7 @@ function classify(text) {
   if (NOT_PII.some((re) => re.test(tail))) return null
   if (PII_NAME.some((re) => re.test(tail))) return 'PII_NAME'
   if (PII_ADDR.some((re) => re.test(tail))) return 'PII_ADDR'
+  if (PII_NAME_BY_OWNER.some((re) => re.test(text))) return 'PII_NAME'
   return null
 }
 

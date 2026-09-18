@@ -11,7 +11,7 @@ import {
   useAssistantFileBlob,
   type AssistantFileErrorCode,
 } from './useAssistantFileBlob'
-import { piiProps } from '@/lib/openreplay/pii'
+import { Pii, piiProps } from '@/lib/openreplay/pii'
 
 /** Files the operator can look at without leaving the chat. */
 function isPreviewable(kind: AssistantFileKind): boolean {
@@ -69,7 +69,7 @@ function AssistantFilePreviewModal({ onClose, url, name, kind }: PreviewModalPro
         >
           <div className="flex shrink-0 items-center justify-between gap-3 bg-black/60 px-4 py-2 text-white backdrop-blur-sm">
             <DialogPrimitive.Title className="truncate text-sm font-medium">
-              {name}
+              <Pii>{name}</Pii>
             </DialogPrimitive.Title>
             <div className="flex shrink-0 items-center gap-2">
               <button
@@ -105,7 +105,9 @@ function AssistantFilePreviewModal({ onClose, url, name, kind }: PreviewModalPro
             {state.status === 'ready' && kind === 'image' && (
               <img
                 src={state.objectUrl}
-                alt={name}
+                // The role, not the file name (KAN-KB-54): `alt` is sent to the
+                // recording verbatim, and the name is shown as masked text above.
+                alt={t('pages.aiAssistant.attachmentFrameTitle', 'Attachment preview')}
                 className="max-h-full max-w-full object-contain"
               />
             )}

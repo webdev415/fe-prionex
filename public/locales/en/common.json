@@ -850,7 +850,8 @@
       "slashHelp": "what the assistant can do",
       "slashNewChat": "start a new chat",
       "answerInProgress": "The answer is still being prepared — it will appear here when ready",
-      "attachmentFrameTitle": "Attachment preview"
+      "attachmentFrameTitle": "Attachment preview",
+      "attachmentRemoveShort": "Remove attachment"
     },
     "lawyerWorkplace": {
       "navAria": "Lawyer Workplace navigation",
@@ -11440,6 +11441,9 @@
         "showEarlier": "Show earlier sections",
         "showLater": "Show later sections"
       }
+    },
+    "messaging": {
+      "attachmentPreview": "Attachment preview"
     }
   },
   "contactTypes": {
