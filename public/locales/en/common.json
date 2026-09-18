@@ -4432,6 +4432,11 @@
           "hint": "All amounts in this project are shown in this currency.",
           "UAH": "Hryvnia (₴)",
           "EUR": "Euro (€)"
+        },
+        "country": {
+          "label": "Country",
+          "UA": "Ukraine",
+          "ES": "Spain"
         }
       }
     },

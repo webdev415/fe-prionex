@@ -15,9 +15,12 @@ import { Alert } from '@/components/ui/Alert'
 import { DateSelect } from '@/components/ui/DateSelect'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { Label } from '@/components/ui/Label'
-import { RadioGroup, RadioItem } from '@/components/ui/Radio'
 import { useCreateProject } from '@/features/projects/hooks/useProjectMutations'
-import type { CreateProjectInput } from '@/features/projects/types'
+import {
+  PROJECT_COUNTRIES,
+  PROJECT_CURRENCIES,
+  type CreateProjectInput,
+} from '@/features/projects/types'
 import { formatPickerDateAsYMD } from '@/lib/dateUtils'
 import { Icons } from '@/lib/icons'
 import {
@@ -26,6 +29,7 @@ import {
   validateCompanyBankingField,
   type CompanyBankingFieldName,
 } from './companyBankingFields'
+import { ProjectChoiceField } from './ProjectChoiceField'
 
 interface CreateProjectModalProps {
   open: boolean
@@ -44,6 +48,7 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
     start_date: '',
     end_date: '',
     currency: 'UAH',
+    country: 'UA',
     // Company legal & banking details, all optional
     full_company_name: '',
     address: '',
@@ -106,6 +111,7 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
         start_date: formData.start_date || undefined,
         end_date: noEndDate ? undefined : formData.end_date || undefined,
         currency: formData.currency,
+        country: formData.country,
         // Spread the serialized company/banking payload (undefined for
         // empty fields so the BE stores NULL, not "").
         ...serializeCompanyBankingFields(formData),
@@ -121,6 +127,7 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
         start_date: '',
         end_date: '',
         currency: 'UAH',
+        country: 'UA',
         full_company_name: '',
         address: '',
         edrpou_code: '',
@@ -211,31 +218,30 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
                 error={errors.code}
               />
             </div>
-            <div>
-              <Label className="mb-2 block text-sm font-light">
-                {t('pages.projects.modals.currency.label')}
-              </Label>
-              <RadioGroup
-                value={formData.currency}
-                onValueChange={(value) => handleChange('currency', value)}
+            <div className="grid grid-cols-2 gap-4">
+              <ProjectChoiceField
+                name="country"
+                label={t('pages.projects.modals.country.label')}
+                options={PROJECT_COUNTRIES.map((country) => ({
+                  value: country,
+                  label: t(`pages.projects.modals.country.${country}`),
+                }))}
+                value={formData.country}
+                onChange={(value) => handleChange('country', value)}
                 disabled={createMutation.isPending}
-                className="flex gap-6"
-              >
-                {(['UAH', 'EUR'] as const).map((currency) => (
-                  <div key={currency} className="flex items-center gap-2">
-                    <RadioItem value={currency} id={`currency-${currency}`} />
-                    <Label
-                      htmlFor={`currency-${currency}`}
-                      className="mb-0 cursor-pointer text-sm font-light"
-                    >
-                      {t(`pages.projects.modals.currency.${currency}`)}
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
-              <p className="text-muted-foreground mt-1 text-xs">
-                {t('pages.projects.modals.currency.hint')}
-              </p>
+              />
+              <ProjectChoiceField
+                name="currency"
+                label={t('pages.projects.modals.currency.label')}
+                options={PROJECT_CURRENCIES.map((currency) => ({
+                  value: currency,
+                  label: t(`pages.projects.modals.currency.${currency}`),
+                }))}
+                value={formData.currency}
+                onChange={(value) => handleChange('currency', value)}
+                disabled={createMutation.isPending}
+                hint={t('pages.projects.modals.currency.hint')}
+              />
             </div>
             <div className="bg-border h-px w-full" />
           </div>
