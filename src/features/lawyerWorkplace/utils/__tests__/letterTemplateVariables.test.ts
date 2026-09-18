@@ -158,6 +158,21 @@ describe('extractCaseNo', () => {
     expect(extractCaseNo('Payment complaint')).toBeNull()
     expect(extractCaseNo(null)).toBeNull()
   })
+  it.each([
+    ['Procedimiento Ordinario 123/2024 - requerimiento', '123/2024'],
+    ['Autos nº 456/2024 sobre reclamación de cantidad', '456/2024'],
+    ['Juicio monitorio n.º 1234/2024', '1234/2024'],
+    ['Recurso de apelación núm. 34/2025', '34/2025'],
+    ['Expediente R-202412345 del Banco de España', 'R-202412345'],
+    ['Re: procedimiento: 789/2023', '789/2023'],
+  ])('reads the Spanish case number in "%s"', (subject, expected) => {
+    expect(extractCaseNo(subject)).toBe(expected)
+  })
+
+  it('ignores Spanish case words without a number', () => {
+    expect(extractCaseNo('Procedimiento de reclamación de deuda')).toBeNull()
+    expect(extractCaseNo('Recurso contra la resolución')).toBeNull()
+  })
 })
 
 describe('formatTemplateDate', () => {

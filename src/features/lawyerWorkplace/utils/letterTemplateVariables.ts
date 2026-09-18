@@ -99,15 +99,21 @@ export function extractIncomingRef(subject: string | null | undefined): string |
 
 const CASE_TOKEN = '[0-9A-Za-zА-Яа-яІіЇїЄєҐґ]+(?:[-/][0-9A-Za-zА-Яа-яІіЇїЄєҐґ]+)*'
 const CASE_NO_RE = new RegExp(`справ[аіи]?\\s*(?:№|N|#)?\\s*(${CASE_TOKEN})`, 'iu')
+const SPANISH_CASE_NO_RE = new RegExp(
+  '\\b(?:procedimiento|autos|juicio|expediente|recurso|rollo)' +
+    '(?:\\s+[a-záéíóúüñ]+){0,3}?\\s*:?\\s*' +
+    '(?:n\\.?\\s?º|núm\\.?|num\\.?|número|#)?\\s*' +
+    '((?=[0-9A-Za-z/-]*\\d)[0-9A-Za-z]+(?:[-/][0-9A-Za-z]+)*)',
+  'iu'
+)
 
 /**
  * Best-effort court case number lifted from a subject line
- * ("у справі №910/456/24" → "910/456/24"). Null when there is no "справ…"
- * marker, so the caller leaves `{{caseNo}}` intact.
+ * ("у справі №910/456/24" → "910/456/24").
  */
 export function extractCaseNo(subject: string | null | undefined): string | null {
   if (!subject) return null
-  const match = subject.match(CASE_NO_RE)
+  const match = subject.match(CASE_NO_RE) ?? subject.match(SPANISH_CASE_NO_RE)
   return match?.[1] ?? null
 }
 
