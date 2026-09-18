@@ -159,6 +159,30 @@ describe('startOpenReplay', () => {
     expect(factory).toHaveBeenCalledTimes(2)
   })
 
+  it('keeps the constructed instance when start() itself throws', async () => {
+    // Review round 5. A rejection of the chain used to drop `construction`
+    // whatever its cause — but a `start()` that THROWS after a good
+    // construction is not a construction failure, and rebuilding would put a
+    // second set of DOM observers on the same document. The instance is kept
+    // and `start()` retried on it.
+    let calls = 0
+    const { mod, construct, start } = await loadWithMockedTracker({
+      enabled: true,
+      start: () => {
+        calls += 1
+        if (calls === 1) return Promise.reject('app is null')
+        return Promise.resolve({ success: true } as StartResult)
+      },
+    })
+    mod.startOpenReplay()
+    await expect(mod.getTracker()).resolves.toBeNull()
+
+    mod.startOpenReplay()
+    await expect(mod.getTracker()).resolves.not.toBeNull()
+    expect(start).toHaveBeenCalledTimes(2)
+    expect(construct).toHaveBeenCalledTimes(1)
+  })
+
   it('resolves to the tracker on a successful start', async () => {
     const { mod } = await loadWithMockedTracker({ enabled: true })
 

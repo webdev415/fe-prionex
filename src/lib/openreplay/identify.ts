@@ -173,6 +173,13 @@ export function bindOperatorIdentity(): () => void {
   // instead produced one anonymous two-second stub session per new tab (Fable
   // review of this pass).
   const continuingAtBoot = hasReplayToken()
+  // Whether THIS binding stopped the session on an observed logout. After that
+  // nothing is running, and the next login has to start something whatever
+  // the owner key says — a fresh tab has no owner and no token at boot, so
+  // without this the A-logs-in / A-logs-out / B-logs-in sequence in a new tab
+  // left the tracker stopped for the rest of the tab's life, unrecorded and
+  // silent (review of KAN-KB-54, round 5).
+  let stoppedByLogout = false
   // Applications are serialised: the store can change while an earlier
   // `await getTracker()` is still pending, and the last write must win.
   let queue: Promise<void> = Promise.resolve()
@@ -205,6 +212,7 @@ export function bindOperatorIdentity(): () => void {
         // in: a page that loaded with nobody never reaches this branch.
         applied = null
         writeOwner(null)
+        stoppedByLogout = true
         stopOpenReplay()
         return
       }
@@ -213,10 +221,13 @@ export function bindOperatorIdentity(): () => void {
       if (
         applied === null &&
         owner !== next.actorId &&
-        // A fresh tab (no owner, no token at boot) has nothing to inherit: the
-        // page-load session is adopted below rather than replaced.
-        (owner !== null || continuingAtBoot)
+        // A fresh tab (no owner, no token at boot, nothing stopped) has nothing
+        // to inherit: the page-load session is adopted below rather than
+        // replaced. Everything else predates this operator, or was stopped and
+        // needs a start.
+        (owner !== null || continuingAtBoot || stoppedByLogout)
       ) {
+        stoppedByLogout = false
         // Somebody signed in, and this tab's session is not theirs: nobody
         // owned it but it predates them (a login screen after a logout of any
         // kind — the previous operator's token still continues it), or

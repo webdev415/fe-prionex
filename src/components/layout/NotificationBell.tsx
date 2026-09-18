@@ -942,7 +942,9 @@ function TaskNotificationItem({
             )}
           </p>
         ) : (
-          <p className="text-foreground line-clamp-1 text-xs font-semibold">{n.title}</p>
+          <p className="text-foreground line-clamp-1 text-xs font-semibold" {...piiProps}>
+            {n.title}
+          </p>
         )}
         {meta.priority && (
           <span
@@ -1096,7 +1098,13 @@ function CallNotificationItem({
       <div className="flex items-center gap-2">
         {!n.read && <span className="bg-primary-500 h-2 w-2 shrink-0 rounded-full" />}
         <Icons.Phone size={14} strokeWidth={1.5} className="text-success-500" />
-        <p className="text-foreground text-xs font-semibold">{n.title}</p>
+        {/* The title comes from the same server payload as the body — «Пропущенный
+            звонок от …» names the client as readily as the body does. Marked in
+            every variant for the same reason; the icon, the status pills and the
+            timestamp are what say which notification this was. */}
+        <p className="text-foreground text-xs font-semibold" {...piiProps}>
+          {n.title}
+        </p>
       </div>
       <p className="text-foreground text-xs" {...piiProps}>
         {n.body}
@@ -1157,7 +1165,9 @@ function UbkiNotificationItem({
       >
         <div className="flex flex-wrap items-center gap-1.5 pr-5">
           {!n.read && <span className="bg-primary-500 h-2 w-2 shrink-0 rounded-full" />}
-          <p className="text-foreground line-clamp-1 text-xs font-semibold">{n.title}</p>
+          <p className="text-foreground line-clamp-1 text-xs font-semibold" {...piiProps}>
+            {n.title}
+          </p>
         </div>
         {n.body && (
           <p className="text-foreground w-full min-w-0 text-xs whitespace-normal" {...piiProps}>
@@ -1198,7 +1208,9 @@ function RRPaymentNotificationItem({
     <>
       <div className="flex flex-wrap items-center gap-1.5 pr-5">
         {!n.read && <span className="bg-primary-500 h-2 w-2 shrink-0 rounded-full" />}
-        <p className="text-foreground line-clamp-1 text-xs font-semibold">
+        {/* Usually the i18n headline; the fallback is the server's own title,
+            which can name the client. Marked because the fallback can. */}
+        <p className="text-foreground line-clamp-1 text-xs font-semibold" {...piiProps}>
           {t('notificationBell.rrPayment.title', { defaultValue: n.title })}
         </p>
         {meta.amount && (
@@ -1306,7 +1318,9 @@ function TrainingNotificationItem({
       >
         <div className="flex flex-wrap items-center gap-1.5 pr-5">
           {!n.read && <span className="bg-primary-500 h-2 w-2 shrink-0 rounded-full" />}
-          <p className="text-foreground line-clamp-1 text-xs font-semibold">{n.title}</p>
+          <p className="text-foreground line-clamp-1 text-xs font-semibold" {...piiProps}>
+            {n.title}
+          </p>
           {typeLabel && (
             <span className="bg-information-100 text-information-600 rounded px-1.5 py-0.5 text-[10px] font-medium">
               {typeLabel}
@@ -1392,7 +1406,9 @@ function GenericNotificationItem({
     <>
       <div className="flex flex-wrap items-center gap-1.5 pr-5">
         {!n.read && <span className="bg-primary-500 h-2 w-2 shrink-0 rounded-full" />}
-        <p className="text-foreground line-clamp-1 text-xs font-semibold">{n.title || n.type}</p>
+        <p className="text-foreground line-clamp-1 text-xs font-semibold" {...piiProps}>
+          {n.title || n.type}
+        </p>
       </div>
       {n.body && (
         <p

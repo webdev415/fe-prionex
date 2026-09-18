@@ -178,81 +178,93 @@ export function startOpenReplay(options: StartOpenReplayOptions = {}): void {
   if (!OPENREPLAY_ENABLED || trackerPromise) return
 
   const construct = (): Promise<Tracker> =>
-    (construction ??= import('@openreplay/tracker').then(
-      ({ default: OpenReplayTracker }) =>
-        new OpenReplayTracker({
-          projectKey: OPENREPLAY_PROJECT_KEY,
-          ingestPoint: OPENREPLAY_INGEST_URL,
+    (construction ??= import('@openreplay/tracker')
+      .then(
+        ({ default: OpenReplayTracker }) =>
+          new OpenReplayTracker({
+            projectKey: OPENREPLAY_PROJECT_KEY,
+            ingestPoint: OPENREPLAY_INGEST_URL,
 
-          // Strict mode — off today, see config.ts. Wired so that turning it on
-          // costs a repository variable and a rebuild rather than a code change.
-          privateMode: OPENREPLAY_PRIVATE_MODE,
+            // Strict mode — off today, see config.ts. Wired so that turning it on
+            // costs a repository variable and a rebuild rather than a code change.
+            privateMode: OPENREPLAY_PRIVATE_MODE,
 
-          // Text nodes. `obscureTextNumbers` defaults to FALSE in the package and
-          // is off on the project itself, so client phone numbers and loan amounts
-          // would otherwise be recorded verbatim. This is the blocking one.
-          obscureTextNumbers: true,
-          obscureTextEmails: true,
+            // Text nodes. `obscureTextNumbers` defaults to FALSE in the package and
+            // is off on the project itself, so client phone numbers and loan amounts
+            // would otherwise be recorded verbatim. This is the blocking one.
+            obscureTextNumbers: true,
+            obscureTextEmails: true,
 
-          // Input fields. The package default is `Obscured` (the value is dropped
-          // but its length is still sent); `Hidden` sends nothing at all.
-          // `InputMode` is not exported by the package, so the literal is the only
-          // way to say this: 0 = Plain, 1 = Obscured, 2 = Hidden.
-          obscureInputNumbers: true,
-          obscureInputEmails: true,
-          defaultInputMode: 2,
+            // Input fields. The package default is `Obscured` (the value is dropped
+            // but its length is still sent); `Hidden` sends nothing at all.
+            // `InputMode` is not exported by the package, so the literal is the only
+            // way to say this: 0 = Plain, 1 = Obscured, 2 = Hidden.
+            obscureInputNumbers: true,
+            obscureInputEmails: true,
+            defaultInputMode: 2,
 
-          // Console capture is ON by default (log/info/warn/error/debug/assert) and
-          // is masked by nothing except privateMode. `src/` holds ~78 `console.*`
-          // calls that nobody writes with a session recorder in mind, so the module
-          // is switched off entirely rather than filtered.
-          consoleMethods: null,
+            // Console capture is ON by default (log/info/warn/error/debug/assert) and
+            // is masked by nothing except privateMode. `src/` holds ~78 `console.*`
+            // calls that nobody writes with a session recorder in mind, so the module
+            // is switched off entirely rather than filtered.
+            consoleMethods: null,
 
-          // Canvas snapshots are images, and images bypass every DOM-level mask.
-          canvas: { disableCanvas: true },
+            // Canvas snapshots are images, and images bypass every DOM-level mask.
+            canvas: { disableCanvas: true },
 
-          // Every field is spelled out because the package's own types demand it:
-          // `network` is declared as full `NetworkOptions` in one place and as
-          // `Partial<NetworkOptions>` in another, and the intersection makes the
-          // three below required. The values ARE the package defaults, except
-          // `sessionTokenHeader`, which is a decision: an `X-OpenReplay-SessionToken`
-          // header on cross-origin API calls would force a preflight, and if Kong
-          // does not list it in `Access-Control-Allow-Headers`, every request to the
-          // API fails. Recordings are correlated by `getSessionURL()` instead.
-          network: {
-            capturePayload: false,
+            // Every field is spelled out because the package's own types demand it:
+            // `network` is declared as full `NetworkOptions` in one place and as
+            // `Partial<NetworkOptions>` in another, and the intersection makes the
+            // three below required. The values ARE the package defaults, except
+            // `sessionTokenHeader`, which is a decision: an `X-OpenReplay-SessionToken`
+            // header on cross-origin API calls would force a preflight, and if Kong
+            // does not list it in `Access-Control-Allow-Headers`, every request to the
+            // API fails. Recordings are correlated by `getSessionURL()` instead.
+            network: {
+              capturePayload: false,
 
-            // The same list the sanitizer uses, so the two cannot drift apart: a
-            // credential added to one is covered by both. `ignoreHeaders` drops the
-            // header before it is ever recorded; the sanitizer is the second line,
-            // for anything that reaches the record under different casing.
-            ignoreHeaders: SENSITIVE_HEADERS,
-            sessionTokenHeader: false,
-            failuresOnly: false,
-            captureInIframes: true,
+              // The same list the sanitizer uses, so the two cannot drift apart: a
+              // credential added to one is covered by both. `ignoreHeaders` drops the
+              // header before it is ever recorded; the sanitizer is the second line,
+              // for anything that reaches the record under different casing.
+              ignoreHeaders: SENSITIVE_HEADERS,
+              sessionTokenHeader: false,
+              failuresOnly: false,
+              captureInIframes: true,
 
-            // Bodies are not captured, but that covers neither URLs nor headers,
-            // and this codebase carries credentials in both: a JWT in the
-            // transcription socket's query string, and X-Internal-Api-Key on every
-            // credit-service request. The sanitizer runs before the record is sent
-            // and its return value replaces it, so nothing redacted here leaves the
-            // browser.
-            sanitizer: (data) => {
-              data.url = redactSensitiveQueryParams(data.url)
-              redactSensitiveHeaders(data.request?.headers)
-              redactSensitiveHeaders(data.response?.headers)
-              return data
+              // Bodies are not captured, but that covers neither URLs nor headers,
+              // and this codebase carries credentials in both: a JWT in the
+              // transcription socket's query string, and X-Internal-Api-Key on every
+              // credit-service request. The sanitizer runs before the record is sent
+              // and its return value replaces it, so nothing redacted here leaves the
+              // browser.
+              sanitizer: (data) => {
+                data.url = redactSensitiveQueryParams(data.url)
+                redactSensitiveHeaders(data.request?.headers)
+                redactSensitiveHeaders(data.response?.headers)
+                return data
+              },
             },
-          },
 
-          // 🔴 Required, not optional. The constructor checks
-          // `location.protocol !== 'https:'` — localhost is NOT exempt — and
-          // returns silently, after which `start()` rejects with a string about
-          // doNotTrack that points nowhere near the real cause. Vite strips this
-          // branch from production builds, where the stands serve over HTTPS.
-          __DISABLE_SECURE_MODE: import.meta.env.DEV,
-        })
-    ))
+            // 🔴 Required, not optional. The constructor checks
+            // `location.protocol !== 'https:'` — localhost is NOT exempt — and
+            // returns silently, after which `start()` rejects with a string about
+            // doNotTrack that points nowhere near the real cause. Vite strips this
+            // branch from production builds, where the stands serve over HTTPS.
+            __DISABLE_SECURE_MODE: import.meta.env.DEV,
+          })
+      )
+      // Reset belongs to the CONSTRUCTION's own failure — the import did not
+      // arrive — so the next start re-imports. It must not sit in the outer
+      // catch below: that one also sees a `start()` that threw after a
+      // perfectly good construction, and dropping the instance there would let
+      // the next start build a SECOND tracker on the same document, two sets
+      // of observers — the very thing this indirection exists to prevent
+      // (review of KAN-KB-54, round 5).
+      .catch((error: unknown) => {
+        construction = null
+        throw error
+      }))
 
   // Behind the stop in progress (see `stopping`), then behind the construction.
   //
@@ -290,15 +302,14 @@ export function startOpenReplay(options: StartOpenReplayOptions = {}): void {
       return tracker
     })
     // A rejection here is a plain string, not an Error, and arrives when the
-    // import failed or the constructor never built its app (not a browser,
-    // doNotTrack, secure mode). Swallowed on purpose: a missing session
-    // recording is not worth an error in front of an operator, and there is
-    // nothing they could do about it. The construction is dropped too, so a
-    // retry re-imports rather than reusing an instance without an app.
-    .catch(() => {
-      construction = null
-      return null
-    })
+    // import failed (already handled above) or `start()` threw — in 18.0.6 that
+    // is the "app never built" path: not a browser, doNotTrack, secure mode.
+    // Swallowed on purpose: a missing session recording is not worth an error
+    // in front of an operator, and there is nothing they could do about it.
+    // The construction is KEPT: `start()` on the same instance is retried on
+    // the next login, and an instance without an app has no observers to
+    // duplicate.
+    .catch(() => null)
     .then((tracker) => {
       if (tracker === null && trackerPromise === attempt) trackerPromise = null
       return tracker

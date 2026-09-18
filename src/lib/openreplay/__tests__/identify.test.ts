@@ -339,6 +339,34 @@ describe('bindOperatorIdentity — the running session', () => {
     unbind()
   })
 
+  it('restarts after a logout in a FRESH tab — the guard must not leave the tracker dead', async () => {
+    // 🔴 Review round 5. New tab: no owner, no replay token at boot. A signs in
+    // and adopts the page-load session; A signs out (owner cleared, tracker
+    // stopped); B signs in. Every clause of the "predates them" test was false
+    // — no owner, nothing continuing at boot — so nothing restarted, and the
+    // rest of the tab went unrecorded in silence. The stop itself is the fact
+    // that has to be remembered.
+    const { useAuthStore, index, identify, start, stop } = await load()
+    index.startOpenReplay()
+    const unbind = identify.bindOperatorIdentity()
+    await settle()
+
+    useAuthStore.setState({ user: user({ id: '1042' }), isAuthenticated: true })
+    await settle()
+    expect(start).toHaveBeenCalledTimes(1) // adopted, not restarted
+
+    useAuthStore.setState({ user: null, isAuthenticated: false })
+    await settle()
+    expect(stop).toHaveBeenCalledTimes(1)
+
+    useAuthStore.setState({ user: user({ id: '2077' }), isAuthenticated: true })
+    await settle()
+    expect(start).toHaveBeenCalledTimes(2)
+    expect(start.mock.calls[1][0]).toMatchObject({ forceNew: true, userID: '2077' })
+    await expect(index.getTracker()).resolves.not.toBeNull()
+    unbind()
+  })
+
   it('forgets the owner on logout', async () => {
     const { useAuthStore, index, identify, tabOwnedBy } = await load()
     tabOwnedBy('1042')
