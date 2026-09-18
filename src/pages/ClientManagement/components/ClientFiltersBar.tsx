@@ -41,6 +41,7 @@ import { useOperatorFilterOptions } from '../hooks/useOperatorFilterOptions'
 import { useAuthStore } from '@/stores/authStore'
 import { formatPickerDateAsYMD } from '@/lib/dateUtils'
 import type { ClientFilters } from '../ClientManagementPage'
+import { currencySymbol } from '@/lib/projectCurrency'
 
 // Debounced number input component to avoid re-rendering on every keystroke
 function DebouncedNumberInput({
@@ -300,7 +301,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
               </label>
               <div className="flex w-full items-center gap-2 sm:flex-1">
                 <span className="text-muted-foreground text-sm leading-[155%] font-medium tracking-[-0.28px] sm:text-base sm:tracking-[-0.32px]">
-                  ₴
+                  {currencySymbol()}
                 </span>
                 <DebouncedNumberInput
                   value={filters.debtRangeFrom}
@@ -382,7 +383,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
               </label>
               <div className="flex w-full items-center gap-2 sm:flex-1">
                 <span className="text-muted-foreground text-sm leading-[155%] font-medium tracking-[-0.28px] sm:text-base sm:tracking-[-0.32px]">
-                  ₴
+                  {currencySymbol()}
                 </span>
                 <DebouncedNumberInput
                   value={filters.principalRangeFrom}

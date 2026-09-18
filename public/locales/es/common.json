@@ -439,6 +439,10 @@
     },
     "connection": {
       "reconnecting": "Problema de conexión — reconectando…"
+    },
+    "currencyUnit": {
+      "UAH": "UAH",
+      "EUR": "€"
     }
   },
   "status": {
@@ -5396,7 +5400,7 @@
         "lowPriority": "Prioridad baja",
         "totalDebt": "Deuda total:",
         "client": "Cliente:",
-        "ariaSummary": "{{count}} clientes, {{debt}} UAH de deuda total",
+        "ariaSummary": "{{count}} clientes, {{debt}} {{currency}} de deuda total",
         "ariaSelected": "(seleccionado)"
       },
       "filters": {
@@ -7141,7 +7145,7 @@
       "requiredByLeaf": "Obligatorio según la configuración del nodo hoja",
       "promiseDate": "Fecha de la promesa de pago",
       "promiseAmount": "Importe de la promesa de pago",
-      "promiseAmountUAH": "Importe de la promesa de pago (UAH)",
+      "promiseAmountUAH": "Importe de la promesa de pago ({{currency}})",
       "credit": "Crédito",
       "creditPlaceholder": "Seleccionar un crédito...",
       "notes": "Notas",
@@ -9483,7 +9487,6 @@
         "allOperators": "Todos los operadores"
       },
       "exportCsv": "Exportar CSV",
-      "currencySymbol": "₴",
       "estimated": "Estimado",
       "callsMadeModal": {
         "title": "Llamadas realizadas",
@@ -10036,9 +10039,9 @@
         "bodyRequired": "El cuerpo del mensaje es obligatorio.",
         "bodyTooLong": "El cuerpo supera el límite de {{max}} caracteres para {{channel}}.",
         "charCount": "{{count}} / {{max}}",
-        "bodyPlaceholderSms": "Hola {{client_name}}, su pago de {{debt_amount}} UAH vence el {{due_date}}. — CRM Prionex",
-        "bodyPlaceholderViber": "Hola {{client_name}}, su pago de {{debt_amount}} UAH vence el {{due_date}}. Toque responder para confirmar.",
-        "bodyPlaceholderEmail": "Estimado/a {{client_name}}:\n\nLe recordamos que su pago de {{debt_amount}} UAH del contrato {{contract_number}} vence el {{due_date}}.\n\nAtentamente,\nCRM Prionex"
+        "bodyPlaceholderSms": "Hola {{client_name}}, su pago de {{debt_amount}} {{currency}} vence el {{due_date}}. — CRM Prionex",
+        "bodyPlaceholderViber": "Hola {{client_name}}, su pago de {{debt_amount}} {{currency}} vence el {{due_date}}. Toque responder para confirmar.",
+        "bodyPlaceholderEmail": "Estimado/a {{client_name}}:\n\nLe recordamos que su pago de {{debt_amount}} {{currency}} del contrato {{contract_number}} vence el {{due_date}}.\n\nAtentamente,\nCRM Prionex"
       },
       "view": {
         "title": "Ver borrador",
@@ -11751,7 +11754,7 @@
       },
       "cards": {
         "notToBeCalled": "no llamar",
-        "expected": "≈ {{amount}} UAH esperados"
+        "expected": "≈ {{amount}} {{currency}} esperados"
       },
       "panel": {
         "title": "Prioridad v3",

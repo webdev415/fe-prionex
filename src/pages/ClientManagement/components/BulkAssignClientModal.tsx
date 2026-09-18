@@ -26,6 +26,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useHasAnyPermission } from '@/hooks'
 import { PERMISSIONS } from '@/constants/permissions'
 import { toast } from 'sonner'
+import { withCurrency } from '@/lib/formatters'
 
 // Format currency for Ukrainian Hryvnia
 const formatUAH = (amount: string | number) => {
@@ -208,7 +209,7 @@ export function BulkAssignClientModal({
                       <PriorityBadge priority={client.priority} variant="compact" />
                     </div>
                     <span className="text-foreground w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[25%] sm:text-sm sm:tracking-[-0.28px]">
-                      {formatUAH(client.debt)} ₴
+                      {withCurrency(formatUAH(client.debt), 'suffix')}
                     </span>
                   </div>
                 ))}
@@ -229,7 +230,9 @@ export function BulkAssignClientModal({
                 <div>
                   <span className="text-foreground text-xs leading-[150%] font-light tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
                     {t('pages.clients.modals.bulkAssignClient.totalDebt')}{' '}
-                    <span className="font-medium">{formatUAH(summary.totalDebt)} ₴</span>
+                    <span className="font-medium">
+                      {withCurrency(formatUAH(summary.totalDebt), 'suffix')}
+                    </span>
                   </span>
                 </div>
                 <div>

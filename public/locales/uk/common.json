@@ -439,6 +439,10 @@
     },
     "connection": {
       "reconnecting": "Проблема зі з’єднанням — повторне підключення…"
+    },
+    "currencyUnit": {
+      "UAH": "грн",
+      "EUR": "євро"
     }
   },
   "status": {
@@ -5401,7 +5405,7 @@
         "lowPriority": "Низький пріоритет",
         "totalDebt": "Загальний борг:",
         "client": "Клієнт:",
-        "ariaSummary": "клієнтів: {{count}}, загальний борг {{debt}} грн",
+        "ariaSummary": "клієнтів: {{count}}, загальний борг {{debt}} {{currency}}",
         "ariaSelected": "(вибрано)"
       },
       "filters": {
@@ -7147,7 +7151,7 @@
       "requiredByLeaf": "Обов'язково за налаштуванням вузла",
       "promiseDate": "Дата обіцянки",
       "promiseAmount": "Сума обіцянки",
-      "promiseAmountUAH": "Сума обіцянки (₴)",
+      "promiseAmountUAH": "Сума обіцянки ({{currency}})",
       "credit": "Кредит",
       "creditPlaceholder": "Оберіть кредит...",
       "notes": "Нотатки",
@@ -8789,7 +8793,6 @@
         "allOperators": "Усі оператори"
       },
       "exportCsv": "Експортувати CSV",
-      "currencySymbol": "₴",
       "estimated": "Приблизно",
       "callsMadeModal": {
         "title": "Зроблено дзвінків",
@@ -10028,9 +10031,9 @@
         "bodyRequired": "Текст повідомлення обов'язковий.",
         "bodyTooLong": "Текст перевищує ліміт {{max}} символів для {{channel}}.",
         "charCount": "{{count}} / {{max}}",
-        "bodyPlaceholderSms": "Вітаємо, {{client_name}}! Сума {{debt_amount}} грн має бути сплачена до {{due_date}}. — CRM Prionex",
-        "bodyPlaceholderViber": "Вітаємо, {{client_name}}! Сума {{debt_amount}} грн має бути сплачена до {{due_date}}. Відповідайте, щоб підтвердити.",
-        "bodyPlaceholderEmail": "Шановний(а) {{client_name}},\n\nНагадуємо, що платіж {{debt_amount}} грн за договором {{contract_number}} має бути здійснений до {{due_date}}.\n\nЗ повагою,\nCRM Prionex"
+        "bodyPlaceholderSms": "Вітаємо, {{client_name}}! Сума {{debt_amount}} {{currency}} має бути сплачена до {{due_date}}. — CRM Prionex",
+        "bodyPlaceholderViber": "Вітаємо, {{client_name}}! Сума {{debt_amount}} {{currency}} має бути сплачена до {{due_date}}. Відповідайте, щоб підтвердити.",
+        "bodyPlaceholderEmail": "Шановний(а) {{client_name}},\n\nНагадуємо, що платіж {{debt_amount}} {{currency}} за договором {{contract_number}} має бути здійснений до {{due_date}}.\n\nЗ повагою,\nCRM Prionex"
       },
       "view": {
         "title": "Перегляд чернетки",
@@ -11743,7 +11746,7 @@
       },
       "cards": {
         "notToBeCalled": "не дзвонити",
-        "expected": "≈ {{amount}} грн очікується"
+        "expected": "≈ {{amount}} {{currency}} очікується"
       },
       "panel": {
         "title": "Пріоритет v3",

@@ -13,7 +13,7 @@ import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { RadioGroup, RadioItem } from '@/components/ui/Radio'
 import { Label } from '@/components/ui/Label'
 import { Icons } from '@/lib/icons'
-import { formatClientFullName } from '@/lib/formatters'
+import { formatClientFullName, withCurrency } from '@/lib/formatters'
 import { useClient } from '@/features/clients/hooks/useClients'
 import { usePriorityThresholds } from '@/features/clients/hooks/useConfig'
 import { mapScoreToPriority } from '@/features/clients/api/configApi'
@@ -272,7 +272,7 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
                       {t('pages.clients.modals.assignClient.totalDebt')}
                     </span>
                     <span className="text-foreground flex-1 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
-                      {formatUAH(totalDebt)} ₴ ({debtCount}{' '}
+                      {withCurrency(formatUAH(totalDebt), 'suffix')} ({debtCount}{' '}
                       {debtCount === 1
                         ? t('pages.clients.modals.assignClient.debt')
                         : t('pages.clients.modals.assignClient.debts')}

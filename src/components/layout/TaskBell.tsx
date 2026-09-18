@@ -20,7 +20,12 @@ import { taskApi } from '@/features/clients/api/taskApi'
 import { useTransitionCorrectionTask } from '@/features/training'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/authStore'
-import { dateSeparator, formatTaskDueDateForDisplay } from '@/lib/formatters'
+import {
+  dateSeparator,
+  formatTaskDueDateForDisplay,
+  uiLocale,
+  withCurrency,
+} from '@/lib/formatters'
 import { cn } from '@/lib/utils'
 
 function formatDateTime(isoDate: string, timezone?: string): string {
@@ -206,10 +211,11 @@ export function TaskBell() {
                         </span>
                       </div>
                       <p className="w-full min-w-0 truncate text-xs text-black">
-                        ₴{' '}
-                        {Number(payment.amount).toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                        })}
+                        {withCurrency(
+                          Number(payment.amount).toLocaleString(uiLocale(), {
+                            minimumFractionDigits: 2,
+                          })
+                        )}
                         <span className="ml-2 uppercase">{payment.payment_method}</span>
                       </p>
                       <div className="flex items-center gap-1 text-black">

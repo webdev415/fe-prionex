@@ -133,6 +133,7 @@ export function mapBackendUserToUser(backendUser: CurrentUserResponse): User {
         id: String(p.id),
         name: p.name,
         code: p.code,
+        currency: p.currency,
         roles: [{ id: String(p.id), name: p.role_name }],
       })) || [],
     active_project_id: backendUser.active_project ? String(backendUser.active_project.id) : null,
@@ -184,6 +185,7 @@ export function mergeUserFromProjectsResponse(
       role_name: string
       permissions?: string[]
       is_active?: boolean
+      currency?: string
     }>
     active_project_id?: number
   }
@@ -194,6 +196,7 @@ export function mergeUserFromProjectsResponse(
     id: String(p.project_id),
     name: p.project_name,
     code: p.project_code,
+    currency: p.currency,
     roles: [{ id: String(p.role_id), name: p.role_name }],
   }))
 

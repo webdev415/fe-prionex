@@ -8,6 +8,7 @@ import { Icons } from '@/lib/icons'
 
 import { CallProgressRing } from './CallProgressRing'
 import { RecentInteractions } from './RecentInteractions'
+import { uiLocale, withCurrency } from '@/lib/formatters'
 
 interface ClientInfoPopupProps {
   open: boolean
@@ -17,30 +18,30 @@ interface ClientInfoPopupProps {
   phone: string
 }
 
-function formatMoney(amount: number, currency: string): string {
-  return `${currency} ${amount.toLocaleString(undefined, {
+function formatMoney(amount: number): string {
+  const text = amount.toLocaleString(uiLocale(), {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  })}`
+  })
+  return withCurrency(text)
 }
 
 interface PaymentTileProps {
   icon: React.ReactNode
   label: string
   stat: MoneyStat
-  currency: string
   countLabel: string
   highlight?: boolean
 }
 
-function PaymentTile({ icon, label, stat, currency, countLabel, highlight }: PaymentTileProps) {
+function PaymentTile({ icon, label, stat, countLabel, highlight }: PaymentTileProps) {
   return (
     <div className="border-border bg-card relative flex flex-col gap-2 overflow-hidden rounded-xl border p-4">
       <div className="text-muted-foreground flex items-center gap-2 text-xs">
         {icon}
         {label}
       </div>
-      <p className="text-foreground text-lg font-semibold">{formatMoney(stat.amount, currency)}</p>
+      <p className="text-foreground text-lg font-semibold">{formatMoney(stat.amount)}</p>
       <div className="border-border mt-1 border-t pt-2">
         <p className="text-muted-foreground text-xs">{countLabel}</p>
         <p className="text-foreground text-base font-semibold">{stat.count}</p>
@@ -60,7 +61,6 @@ export function ClientInfoPopup({
   const { t } = useTranslation('common')
   const { data: summary, isLoading } = useClientCallSummary(clientId, open)
 
-  const currency = summary?.currency ?? '₴'
   const isActive = (summary?.status ?? 'active') === 'active'
 
   return (
@@ -112,9 +112,7 @@ export function ClientInfoPopup({
 
               <p className="text-foreground text-lg">
                 {t('dialer.call.totalPaid', 'Total Paid')}:{' '}
-                <span className="font-semibold">
-                  {formatMoney(summary?.total_paid ?? 0, currency)}
-                </span>
+                <span className="font-semibold">{formatMoney(summary?.total_paid ?? 0)}</span>
               </p>
 
               <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-3">
@@ -122,7 +120,6 @@ export function ClientInfoPopup({
                   icon={<Icons.Wallet01 size={16} />}
                   label={t('dialer.call.totalPayments', 'Total Payments')}
                   stat={summary?.total_payments ?? { amount: 0, count: 0 }}
-                  currency={currency}
                   countLabel={t('dialer.call.numberOfPayments', 'Number of Payments')}
                   highlight
                 />
@@ -130,14 +127,12 @@ export function ClientInfoPopup({
                   icon={<Icons.Invoice01 size={16} />}
                   label={t('dialer.call.verified', 'Verified')}
                   stat={summary?.verified ?? { amount: 0, count: 0 }}
-                  currency={currency}
                   countLabel={t('dialer.call.numberOfPayments', 'Number of Payments')}
                 />
                 <PaymentTile
                   icon={<Icons.Invoice01 size={16} />}
                   label={t('dialer.call.pending', 'Pending')}
                   stat={summary?.pending ?? { amount: 0, count: 0 }}
-                  currency={currency}
                   countLabel={t('dialer.call.numberOfPayments', 'Number of Payments')}
                 />
               </div>

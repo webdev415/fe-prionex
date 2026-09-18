@@ -18,7 +18,7 @@ import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
 import { safeHttpUrl } from '@/lib/safeUrl'
 import { useAuthStore } from '@/stores/authStore'
-import { formatTaskDueDateForDisplay } from '@/lib/formatters'
+import { formatTaskDueDateForDisplay, uiLocale, withCurrency } from '@/lib/formatters'
 import { spanishLocaleOr } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
@@ -866,7 +866,7 @@ function PaymentNotificationItem({
         </span>
       </div>
       <p className="text-foreground w-full min-w-0 truncate text-xs">
-        ₴ {Number(meta.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+        {withCurrency(Number(meta.amount).toLocaleString(uiLocale(), { minimumFractionDigits: 2 }))}
         <span className="ml-2">{translatePaymentMethod(meta.payment_method, t)}</span>
       </p>
       <div className="text-foreground flex items-center gap-1">
@@ -1194,7 +1194,7 @@ function RRPaymentNotificationItem({
         </p>
         {meta.amount && (
           <span className="bg-information-100 text-information-600 rounded px-1.5 py-0.5 text-[10px] font-medium">
-            ₴ {meta.amount}
+            {withCurrency(String(meta.amount))}
           </span>
         )}
       </div>

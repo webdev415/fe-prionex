@@ -439,6 +439,10 @@
     },
     "connection": {
       "reconnecting": "Connection problem — reconnecting…"
+    },
+    "currencyUnit": {
+      "UAH": "UAH",
+      "EUR": "EUR"
     }
   },
   "status": {
@@ -5388,7 +5392,7 @@
         "lowPriority": "Low Priority",
         "totalDebt": "Total Debt:",
         "client": "Client:",
-        "ariaSummary": "{{count}} clients, {{debt}} UAH total debt",
+        "ariaSummary": "{{count}} clients, {{debt}} {{currency}} total debt",
         "ariaSelected": "(selected)"
       },
       "filters": {
@@ -7105,7 +7109,7 @@
       "requiredByLeaf": "Required by leaf node config",
       "promiseDate": "Promise date",
       "promiseAmount": "Promise amount",
-      "promiseAmountUAH": "Promise amount (UAH)",
+      "promiseAmountUAH": "Promise amount ({{currency}})",
       "credit": "Credit",
       "creditPlaceholder": "Select a credit...",
       "notes": "Notes",
@@ -9445,7 +9449,6 @@
         "allOperators": "All Operators"
       },
       "exportCsv": "Export CSV",
-      "currencySymbol": "₴",
       "estimated": "Estimated",
       "callsMadeModal": {
         "title": "Calls Made",
@@ -9996,9 +9999,9 @@
         "bodyRequired": "Message body is required.",
         "bodyTooLong": "Body exceeds the {{max}}-character limit for {{channel}}.",
         "charCount": "{{count}} / {{max}}",
-        "bodyPlaceholderSms": "Hi {{client_name}}, your payment of {{debt_amount}} UAH is due on {{due_date}}. — CRM Prionex",
-        "bodyPlaceholderViber": "Hi {{client_name}}, your payment of {{debt_amount}} UAH is due on {{due_date}}. Tap reply to confirm.",
-        "bodyPlaceholderEmail": "Dear {{client_name}},\n\nThis is a reminder that your payment of {{debt_amount}} UAH for contract {{contract_number}} is due on {{due_date}}.\n\nBest regards,\nCRM Prionex"
+        "bodyPlaceholderSms": "Hi {{client_name}}, your payment of {{debt_amount}} {{currency}} is due on {{due_date}}. — CRM Prionex",
+        "bodyPlaceholderViber": "Hi {{client_name}}, your payment of {{debt_amount}} {{currency}} is due on {{due_date}}. Tap reply to confirm.",
+        "bodyPlaceholderEmail": "Dear {{client_name}},\n\nThis is a reminder that your payment of {{debt_amount}} {{currency}} for contract {{contract_number}} is due on {{due_date}}.\n\nBest regards,\nCRM Prionex"
       },
       "view": {
         "title": "View draft",
@@ -11711,7 +11714,7 @@
       },
       "cards": {
         "notToBeCalled": "not to be called",
-        "expected": "≈ {{amount}} UAH expected"
+        "expected": "≈ {{amount}} {{currency}} expected"
       },
       "panel": {
         "title": "v3 Priority",

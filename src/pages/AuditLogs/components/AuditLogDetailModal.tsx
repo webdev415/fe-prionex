@@ -11,7 +11,12 @@ import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import type { AuditLog, AuditLogChange } from '../AuditLogsPage'
 import { formatCurrency } from '@/lib/formatters'
+import { isEuroCurrency } from '@/lib/projectCurrency'
 import { cn } from '@/lib/utils'
+
+function uahSuffix(): string {
+  return isEuroCurrency() ? '' : ' UAH'
+}
 
 interface AuditLogDetailModalProps {
   open: boolean
@@ -91,7 +96,7 @@ export function AuditLogDetailModal({ open, log, onClose }: AuditLogDetailModalP
           const diff = newNum - oldNum
           if (diff === 0) return t('pages.auditLogs.detailModal.modified')
           const formattedDiff = formatCurrency(Math.abs(diff))
-          return `${diff > 0 ? '+' : '-'}${formattedDiff} UAH`
+          return `${diff > 0 ? '+' : '-'}${formattedDiff}${uahSuffix()}`
         }
         return t('pages.auditLogs.detailModal.modified')
       }
@@ -109,7 +114,7 @@ export function AuditLogDetailModal({ open, log, onClose }: AuditLogDetailModalP
       const diff = newNum - oldNum
       if (diff === 0) return t('pages.auditLogs.detailModal.modified')
       const formattedDiff = formatCurrency(Math.abs(diff))
-      return `${diff > 0 ? '+' : '-'}${formattedDiff} UAH`
+      return `${diff > 0 ? '+' : '-'}${formattedDiff}${uahSuffix()}`
     }
     return t('pages.auditLogs.detailModal.modified')
   }
@@ -175,7 +180,7 @@ export function AuditLogDetailModal({ open, log, onClose }: AuditLogDetailModalP
     if (value === null || value === undefined) return '(null)'
     const num = parseFloat(value)
     if (isNaN(num)) return value
-    return `${formatCurrency(num)} UAH`
+    return `${formatCurrency(num)}${uahSuffix()}`
   }
 
   return (

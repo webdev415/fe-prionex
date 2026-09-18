@@ -1,5 +1,6 @@
 import i18n, { intlLocaleForUiLanguage } from './i18n'
 import { isRealCalendarDate } from './calendarDate'
+import { activeCurrency, isEuroCurrency } from './projectCurrency'
 
 /**
  * Formatting utilities for display
@@ -19,6 +20,37 @@ export function uiLocale(): string | undefined {
 
 export function uiDecimal(text: string): string {
   return isSpanishUi() ? text.replace('.', ',') : text
+}
+
+function amountOrZero(amount: string | number | null | undefined): number {
+  const num = typeof amount === 'string' ? parseFloat(amount) : Number(amount ?? 0)
+  return Number.isNaN(num) ? 0 : num
+}
+
+function formatEuro(num: number, fractionDigits: number, useGrouping = true): string {
+  return new Intl.NumberFormat(intlLocaleForUiLanguage(i18n.language), {
+    style: 'currency',
+    currency: 'EUR',
+    currencyDisplay: 'narrowSymbol',
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+    useGrouping,
+  }).format(num)
+}
+
+export function withCurrency(
+  amountText: string,
+  uahStyle: 'prefix' | 'suffix' | 'tight' = 'prefix',
+  currency: string | null | undefined = activeCurrency()
+): string {
+  if (isEuroCurrency(currency)) {
+    if (intlLocaleForUiLanguage(i18n.language) !== 'en-US') return `${amountText} €`
+    const sign = amountText.startsWith('-') ? '-' : ''
+    return `${sign}€${amountText.slice(sign.length).trim()}`
+  }
+  if (uahStyle === 'suffix') return `${amountText} ₴`
+  if (uahStyle === 'tight') return `₴${amountText}`
+  return `₴ ${amountText}`
 }
 
 /**
@@ -78,16 +110,9 @@ export function formatCurrency(amount?: string | number | null, currency?: strin
   const num = typeof amount === 'string' ? parseFloat(amount) : amount
   if (isNaN(num)) return '—'
 
-  const locale = intlLocaleForUiLanguage(i18n.language)
+  if (isEuroCurrency(currency ?? activeCurrency())) return formatEuro(num, 0)
 
-  if (currency === 'EUR') {
-    return new Intl.NumberFormat(locale, {
-      style: 'currency',
-      currency: 'EUR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(num)
-  }
+  const locale = intlLocaleForUiLanguage(i18n.language)
 
   // Format with locale-aware number formatting
   const formatted = new Intl.NumberFormat(locale, {
@@ -106,6 +131,7 @@ export function formatCurrency(amount?: string | number | null, currency?: strin
  * spec is `₴5000.00` exactly.
  */
 export function formatMoneyKopeckTight(amount: string | number | null | undefined): string {
+  if (isEuroCurrency()) return formatEuro(amountOrZero(amount), 2, false)
   if (amount === undefined || amount === null || amount === '') return '₴0.00'
   const num = typeof amount === 'string' ? parseFloat(amount) : Number(amount)
   if (Number.isNaN(num)) return '₴0.00'
@@ -124,6 +150,7 @@ export function formatMoneyKopeckTight(amount: string | number | null | undefine
  * Examples: 50 → "₴ 50.00", 50.5 → "₴ 50.50", 50.559 → "₴ 50.56"
  */
 export function formatMoneyUAHTwoDecimals(amount: string | number | null | undefined): string {
+  if (isEuroCurrency()) return formatEuro(amountOrZero(amount), 2)
   if (amount === undefined || amount === null || amount === '') {
     return '₴ 0.00'
   }

@@ -7,7 +7,12 @@
 import { useState, useEffect, useMemo, useRef, useCallback, useTransition } from 'react'
 import { useTranslation } from 'react-i18next'
 import { intlLocaleForUiLanguage } from '@/lib/i18n'
-import { convertUTCToUserTimezone, formatClientFullName, formatIsoDate } from '@/lib/formatters'
+import {
+  convertUTCToUserTimezone,
+  formatClientFullName,
+  formatIsoDate,
+  withCurrency,
+} from '@/lib/formatters'
 import { getDateStringInTimezone } from '@/lib/dateUtils'
 import { useAuthStore } from '@/stores/authStore'
 import { useTrackEvent } from '@/features/operatorAnalytics'
@@ -759,14 +764,16 @@ export function PaymentHistoryPage() {
 
   const formatCurrency = (amount: string | number) => {
     const num = typeof amount === 'string' ? parseFloat(amount) : amount
-    if (isNaN(num)) return '₴ 0'
+    if (isNaN(num)) return withCurrency('0')
     const locale = intlLocaleForUiLanguage(i18n.language)
-    return `₴ ${num
-      .toLocaleString(locale, {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      })
-      .replace(/,/g, ' ')}`
+    return withCurrency(
+      num
+        .toLocaleString(locale, {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        })
+        .replace(/,/g, ' ')
+    )
   }
 
   const getStatusDot = (status: Payment['status']) => {

@@ -12,6 +12,7 @@ import {
 import i18n, { applyPersistedLanguageFromServer } from '@/lib/i18n'
 import { applyPersistedThemeFromServer } from '@/stores/themeStore'
 import { cancelSessionHeartbeat, scheduleSessionHeartbeat } from '@/lib/sessionHeartbeat'
+import { activeProjectCurrency, setActiveCurrency } from '@/lib/projectCurrency'
 import type { User, LoginRequest, AuthErrorState } from '@/types/api'
 import {
   buildUserFromJwtToken,
@@ -1009,6 +1010,10 @@ useAuthStore.subscribe((state) => {
     lastPersistedTimezone = tz
     localStorage.setItem('user_timezone', tz)
   }
+})
+
+useAuthStore.subscribe((state) => {
+  setActiveCurrency(activeProjectCurrency(state.user))
 })
 
 export default useAuthStore

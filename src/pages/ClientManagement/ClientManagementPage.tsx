@@ -29,7 +29,7 @@ import { TooltipProvider } from '@/components/ui/Tooltip'
 import { ClientFiltersBar } from './components/ClientFiltersBar'
 import { AssignClientModal } from './components/AssignClientModal'
 import { BulkAssignClientModal } from './components/BulkAssignClientModal'
-import { formatClientFullName, formatDate, formatDateTime } from '@/lib/formatters'
+import { formatClientFullName, formatDate, formatDateTime, withCurrency } from '@/lib/formatters'
 import { TagSelectorModal } from './components/TagSelectorModal'
 import { BulkTagModal } from './components/BulkTagModal'
 import { BulkSendMessageModal } from './components/BulkSendMessageModal'
@@ -1878,7 +1878,7 @@ export function ClientManagementPage() {
       align: 'right',
       sortable: true,
       sortKey: 'debt',
-      render: (client) => `${formatCurrency(client.debt)} ₴`,
+      render: (client) => withCurrency(formatCurrency(client.debt), 'suffix'),
     },
     {
       key: 'priority',

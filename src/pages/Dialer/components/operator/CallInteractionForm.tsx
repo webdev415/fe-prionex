@@ -18,6 +18,7 @@ import {
   useInteractionTypes,
 } from '@/features/clients/hooks/useNoteInteraction'
 import { Icons } from '@/lib/icons'
+import { uiLocale, withCurrency } from '@/lib/formatters'
 
 interface CallInteractionFormProps {
   clientId: number
@@ -34,10 +35,15 @@ function LoanFactRow({ label, value }: { label: string; value: string }) {
   )
 }
 
-function LoanCard({ loan, currency }: { loan: CallSummaryLoan; currency: string }) {
+function LoanCard({ loan }: { loan: CallSummaryLoan }) {
   const { t } = useTranslation('common')
-  const money = (n: number) =>
-    `${currency}${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  const money = (n: number) => {
+    const text = n.toLocaleString(uiLocale(), {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
+    return withCurrency(text, 'tight')
+  }
   return (
     <div className="border-border bg-muted/30 rounded-lg border p-4">
       <LoanFactRow label={t('dialer.call.loanNumber', 'Number')} value={loan.number} />
@@ -100,8 +106,6 @@ export function CallInteractionForm({ clientId, clientName, phone }: CallInterac
       void 0
     }
   }
-
-  const currency = summary?.currency ?? '₴'
 
   return (
     <div className="flex flex-col gap-4">
@@ -179,7 +183,7 @@ export function CallInteractionForm({ clientId, clientName, phone }: CallInterac
         />
       </div>
 
-      {summary?.loan && <LoanCard loan={summary.loan} currency={currency} />}
+      {summary?.loan && <LoanCard loan={summary.loan} />}
 
       <Button
         variant="primary"

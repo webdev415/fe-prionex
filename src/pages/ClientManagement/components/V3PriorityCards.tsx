@@ -21,6 +21,7 @@
 import { useTranslation } from 'react-i18next'
 import { V3BucketBadge } from '@/pages/OperatorWorkList/components/V3BucketBadge'
 import { uiLocale } from '@/lib/formatters'
+import { activeCurrency } from '@/lib/projectCurrency'
 import type { V3Bucket, V3ClientBucketCount } from '@/features/scoring/api/types'
 
 const ORDER: V3Bucket[] = ['CRIT', 'HIGH', 'AVG', 'LOW', 'EXIT']
@@ -95,6 +96,7 @@ export function V3PriorityCards({
                   ? t('pages.scoringV3.cards.notToBeCalled')
                   : t('pages.scoringV3.cards.expected', {
                       amount: compactMoney(row?.priority_dollar ?? 0),
+                      currency: t(`components.currencyUnit.${activeCurrency()}`),
                     })}
               </span>
             </div>

@@ -36,6 +36,7 @@ import { toast } from 'sonner'
 import { useHasPermission, useUserPermissions } from '@/hooks/usePermissions'
 import { PERMISSIONS } from '@/constants/permissions'
 import { auditEntityLink, RECORD_AFTER_CLIENT_TYPES } from './auditEntityLink'
+import { activeCurrency } from '@/lib/projectCurrency'
 
 const DEFAULT_PAGE_SIZE = 10
 
@@ -487,7 +488,7 @@ export function AuditLogsPage() {
         log.old_value &&
         log.new_value
       ) {
-        return `Debt: ${formatCurrency(log.old_value)} → ${formatCurrency(log.new_value)} UAH`
+        return `Debt: ${formatCurrency(log.old_value)} → ${formatCurrency(log.new_value)} ${activeCurrency()}`
       }
       if (log.action === 'CREATE' && log.entity_type === 'user') {
         return `Role: ${log.new_value || 'N/A'}, Project: ${log.entity_name || 'N/A'}`

@@ -46,6 +46,7 @@ import type { ContactMedium } from '@/features/taChains/api/types'
 import type { ContactSource } from '@/features/taChains/api/types'
 import { getErrorMessage } from '@/lib/errors'
 import { formatMoneyKopeckTight } from '@/lib/formatters'
+import { currencySymbol } from '@/lib/projectCurrency'
 
 // Shared display/entry format for the manually-typeable date field.
 const MANUAL_DATE_FORMAT = 'dd.MM.yyyy HH:mm'
@@ -467,7 +468,7 @@ export function EditTAInteractionModal({
                       min={0}
                       step="0.01"
                       placeholder="0.00"
-                      leftIcon={<span className="text-foreground">₴</span>}
+                      leftIcon={<span className="text-foreground">{currencySymbol()}</span>}
                       value={value}
                       onChange={(e) => setStepValue(step.id, e.target.value)}
                     />
@@ -594,14 +595,14 @@ export function EditTAInteractionModal({
             {showPromiseAmount && (
               <div className="flex flex-col gap-1">
                 <Label className="text-foreground text-sm">
-                  {t('pages.clientChains.promiseAmountUAH')}
+                  {t('pages.clientChains.promiseAmountUAH', { currency: currencySymbol() })}
                 </Label>
                 <Input
                   type="number"
                   min={0}
                   step="0.01"
                   placeholder="0.00"
-                  leftIcon={<span className="text-foreground">₴</span>}
+                  leftIcon={<span className="text-foreground">{currencySymbol()}</span>}
                   value={promiseAmount}
                   onChange={(e) => setPromiseAmount(e.target.value)}
                 />

@@ -42,6 +42,7 @@ import {
 } from '@/features/messaging'
 import type { MessagingChannel, MessagingDraft, MessagingDraftTrash } from '@/features/messaging'
 import { formatDateTime } from '@/lib/formatters'
+import { activeCurrency } from '@/lib/projectCurrency'
 import { useAuthStore } from '@/stores/authStore'
 import { DeleteDraftModal } from './DeleteDraftModal'
 import { DraftViewModal } from './DraftViewModal'
@@ -228,6 +229,8 @@ function DraftFormModal({ draft, open, onClose }: DraftFormModalProps) {
         })
       : undefined
 
+  const placeholderValues = { currency: t(`components.currencyUnit.${activeCurrency()}`) }
+
   return (
     <Modal open={open} onClose={onClose} maxWidth="xl">
       <ModalHeader
@@ -323,16 +326,19 @@ function DraftFormModal({ draft, open, onClose }: DraftFormModalProps) {
               channel === 'sms'
                 ? t(
                     'pages.messagingDrafts.form.bodyPlaceholderSms',
-                    'Hi {{client_name}}, your payment of {{debt_amount}} UAH is due on {{due_date}}. — CRM Prionex'
+                    'Hi {{client_name}}, your payment of {{debt_amount}} {{currency}} is due on {{due_date}}. — CRM Prionex',
+                    placeholderValues
                   )
                 : channel === 'viber'
                   ? t(
                       'pages.messagingDrafts.form.bodyPlaceholderViber',
-                      'Hi {{client_name}}, your payment of {{debt_amount}} UAH is due on {{due_date}}. Tap reply to confirm.'
+                      'Hi {{client_name}}, your payment of {{debt_amount}} {{currency}} is due on {{due_date}}. Tap reply to confirm.',
+                      placeholderValues
                     )
                   : t(
                       'pages.messagingDrafts.form.bodyPlaceholderEmail',
-                      'Dear {{client_name}},\n\nThis is a reminder that your payment of {{debt_amount}} UAH for contract {{contract_number}} is due on {{due_date}}.\n\nBest regards,\nCRM Prionex'
+                      'Dear {{client_name}},\n\nThis is a reminder that your payment of {{debt_amount}} {{currency}} for contract {{contract_number}} is due on {{due_date}}.\n\nBest regards,\nCRM Prionex',
+                      placeholderValues
                     )
             }
             textareaSize="lg"

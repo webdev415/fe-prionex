@@ -7,7 +7,7 @@
 
 import { useTranslation } from 'react-i18next'
 import i18n, { spanishLocaleOr } from '@/lib/i18n'
-import { dateSeparator } from '@/lib/formatters'
+import { dateSeparator, withCurrency } from '@/lib/formatters'
 import { Modal, ModalContent, ModalFooter, ModalTitle } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { ProgressBar } from '@/components/ui/ProgressBar'
@@ -81,8 +81,7 @@ export function PaymentsCollectedModal({
       useGrouping: true,
     }).format(amount)
 
-    // Add ₴ symbol manually
-    return `₴${formatted}`
+    return withCurrency(formatted, 'tight')
   }
 
   const formatDate = () => {
