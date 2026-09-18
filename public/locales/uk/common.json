@@ -6435,7 +6435,9 @@
           "close": "Закрити",
           "previousWriteUpLost": "Попередній дзвінок не було оформлено — взаємодію не збережено.",
           "restore": "Повернутися до дзвінка",
-          "telephonyUnavailable": "Телефонія тимчасово недоступна"
+          "telephonyUnavailable": "Телефонія тимчасово недоступна",
+          "manualPhoneHintSpain": "Лише цифри: 11 символів, починається з 34.",
+          "manualPhonePlaceholderSpain": "34XXXXXXXXX"
         },
         "callLogCard": {
           "message": "Повідомлення",

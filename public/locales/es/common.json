@@ -5696,7 +5696,9 @@
           "close": "Cerrar",
           "previousWriteUpLost": "La llamada anterior no se registró: esa interacción no se guardó.",
           "restore": "Volver a la llamada",
-          "telephonyUnavailable": "La telefonía no está disponible temporalmente"
+          "telephonyUnavailable": "La telefonía no está disponible temporalmente",
+          "manualPhoneHintSpain": "Solo dígitos: 11 caracteres, empezando por 34.",
+          "manualPhonePlaceholderSpain": "34XXXXXXXXX"
         },
         "callLogCard": {
           "message": "Mensaje",

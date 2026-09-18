@@ -1,10 +1,18 @@
 /**
- * Phone normalization helpers for Ukrainian numbers.
- *
- * Database numbers are expected in "380XXXXXXXXX" format.
+ * Phone normalization helpers.
  */
 
 const DIGITS_ONLY = /\D/g
+const DIALABLE_PHONE = /^((\+?38)?0\d{9}|(\+|00)?34[6-9]\d{8})$/
+const MANUAL_DIAL_DIGITS = /^(380\d{9}|34[6-9]\d{8})$/
+
+export function isDialablePhone(value: string): boolean {
+  return DIALABLE_PHONE.test(value.replace(/[\s\-().]/g, ''))
+}
+
+export function isValidManualDialDigits(digits: string): boolean {
+  return MANUAL_DIAL_DIGITS.test(digits)
+}
 
 function stripToDigits(value: string): string {
   return value.replace(DIGITS_ONLY, '')

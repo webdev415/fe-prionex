@@ -185,7 +185,7 @@ import { useTAHotkeyBindings } from '@/features/taHotkeys/hooks/useTAHotkeys'
 import { resolveRecentCallPhone } from '@/features/taHotkeys/recentCallPhone'
 import { RelatedTagsTab } from './components/RelatedTagsTab'
 import type { PhoneMeta } from '@/features/tags/hooks/useLinkedClientsRelatedTags'
-import { formatUkrainePhoneForDisplay } from '@/lib/phone'
+import { formatUkrainePhoneForDisplay, isDialablePhone } from '@/lib/phone'
 import { isAdminRole } from '@/features/tags/utils/visibility'
 import {
   ALL_MESSAGING_SEND_PERMISSIONS,
@@ -238,10 +238,6 @@ type ExtendedCallItem = {
 /** Strip formatting for phone match / API lookup (backend normalizes further). */
 const stripPhoneFormat = (value: string) => value.replace(/[\s\-().]/g, '')
 
-/** True if value looks like a Ukrainian mobile/phone number (incl. 380… without +). */
-const looksLikeUkrainePhone = (value: string) =>
-  /^(\+?38)?0\d{9}$/.test(stripPhoneFormat(value)) || /^380\d{9}$/.test(stripPhoneFormat(value))
-
 /** Today at local midnight — used as max/default for closure-date pickers. */
 const getTodayAtMidnight = (): Date => {
   const now = new Date()
@@ -280,9 +276,6 @@ export function ClientDetailPage() {
 
   useClientCardOpenTracking(id, trackEvent)
 
-  // Returns true if the value looks like a Ukrainian phone number,
-  // regardless of the contact type's isPhone flag
-  const looksLikePhone = (value: string) => looksLikeUkrainePhone(value)
   const [selectedRaId, setSelectedRaId] = useState<number | null>(null)
   // KAN-335: loan whose "detailed calculation after sale" modal is open.
   const [calcLoan, setCalcLoan] = useState<{ id: number; loanNumber?: string | null } | null>(null)
@@ -1501,10 +1494,10 @@ export function ClientDetailPage() {
     client.phones?.forEach((p) => add(p.number))
     // Recommenders / contacts: referrer, third-party phones, etc. (not only types 1,2,29)
     client.recommenders?.forEach((r) => {
-      if (r.isPhone || looksLikeUkrainePhone(r.contactValue)) add(r.contactValue)
+      if (r.isPhone || isDialablePhone(r.contactValue)) add(r.contactValue)
     })
     const wp = client.work?.workPhone
-    if (wp && wp !== '-' && looksLikeUkrainePhone(wp)) add(wp)
+    if (wp && wp !== '-' && isDialablePhone(wp)) add(wp)
     return Array.from(set)
   }, [client])
 
@@ -1573,7 +1566,7 @@ export function ClientDetailPage() {
       })
     )
     client.recommenders?.forEach((recommender) => {
-      if (recommender.isPhone || looksLikeUkrainePhone(recommender.contactValue)) {
+      if (recommender.isPhone || isDialablePhone(recommender.contactValue)) {
         addPhone(recommender.contactValue, {
           contactTypeId: null,
           spamAllowed: true,
@@ -1587,7 +1580,7 @@ export function ClientDetailPage() {
       }
     })
     const workPhone = client.work?.workPhone
-    if (workPhone && workPhone !== '-' && looksLikeUkrainePhone(workPhone)) {
+    if (workPhone && workPhone !== '-' && isDialablePhone(workPhone)) {
       addPhone(workPhone, {
         contactTypeId: null,
         spamAllowed: true,
@@ -3660,7 +3653,7 @@ export function ClientDetailPage() {
                           </span>
                           {client.work?.workPhone &&
                             client.work.workPhone !== '-' &&
-                            looksLikePhone(client.work.workPhone) &&
+                            isDialablePhone(client.work.workPhone) &&
                             renderLinkedContactBadges(client.work.workPhone, 'end')}
                         </div>
                         {client.work?.workPhone && client.work.workPhone !== '-' && (

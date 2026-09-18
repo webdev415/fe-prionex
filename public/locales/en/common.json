@@ -5688,7 +5688,9 @@
           "close": "Close",
           "previousWriteUpLost": "The previous call was not written up — that interaction was not saved.",
           "restore": "Return to the call",
-          "telephonyUnavailable": "Telephony is temporarily unavailable"
+          "telephonyUnavailable": "Telephony is temporarily unavailable",
+          "manualPhoneHintSpain": "Digits only: 11 characters, starting with 34.",
+          "manualPhonePlaceholderSpain": "34XXXXXXXXX"
         },
         "callLogCard": {
           "message": "Message",

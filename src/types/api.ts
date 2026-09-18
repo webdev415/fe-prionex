@@ -31,6 +31,7 @@ export interface UserProject {
   name: string
   code?: string // Project code (available from /api/v1/users/me)
   currency?: string
+  country?: string
   roles: UserRole[]
 }
 
@@ -78,6 +79,7 @@ export interface CurrentUserResponse {
     code: string
     role_name: string
     currency?: string
+    country?: string
   }>
   permissions: string[]
   last_login_at?: string | null
