@@ -139,7 +139,8 @@
       "active": "Active",
       "paused": "Pause",
       "empty": "Queue is empty",
-      "inactive": "Inactive"
+      "inactive": "Inactive",
+      "pausedCallingWindow": "Outside calling hours"
     },
     "queueList": {
       "found": "Found: {{count}} queues",
@@ -163,7 +164,9 @@
       "deleteMessage": "This action is irreversible. The queue will be deleted along with all settings.",
       "deleted": "Queue deleted",
       "notSynced": "Not synced",
-      "notSyncedHint": "This queue has no campaign on the dialer and cannot place calls. Re-save it to retry."
+      "notSyncedHint": "This queue has no campaign on the dialer and cannot place calls. Re-save it to retry.",
+      "pausedByWindow": "Outside calling hours",
+      "pausedByWindowHint": "Outside this project’s allowed calling hours. Dialling resumes automatically at the next allowed time."
     },
     "queueForm": {
       "createTitle": "Add a new queue",

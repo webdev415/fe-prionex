@@ -43,12 +43,31 @@ function statusMeta(
         textClass: 'text-muted-foreground',
         dotClass: 'bg-muted-foreground',
       }
-    default:
+    case 'paused_calling_window':
+      // Not "Inactive": nobody switched it off, and it resumes on its own.
       return {
-        label: t('dialer.queueStatus.inactive', 'Inactive'),
-        textClass: 'text-muted-foreground',
-        dotClass: 'bg-muted-foreground',
+        label: t('dialer.queueStatus.pausedCallingWindow', 'Outside calling hours'),
+        textClass: 'text-info-600',
+        dotClass: 'bg-info-500',
       }
+    case 'inactive':
+      return inactiveMeta(t)
+    default: {
+      // A new QueueStatus without a case here is a compile error rather than a
+      // silent "Inactive" — which is how the calling-window hold first slipped
+      // through. At runtime a driver-written value still falls back safely.
+      const unhandled: never = status
+      void unhandled
+      return inactiveMeta(t)
+    }
+  }
+}
+
+function inactiveMeta(t: (key: string, fallback: string) => string) {
+  return {
+    label: t('dialer.queueStatus.inactive', 'Inactive'),
+    textClass: 'text-muted-foreground',
+    dotClass: 'bg-muted-foreground',
   }
 }
 
