@@ -29,6 +29,7 @@ interface Result {
   attributes: Finding[]
   freeText: Finding[]
   iframes: Finding[]
+  htmlSinks: Finding[]
 }
 
 const audit = (source: string): Result => auditSource('src/fixture.tsx', source) as Result
@@ -317,7 +318,64 @@ describe('pii-audit — iframes', () => {
   })
 })
 
+describe('pii-audit — dangerouslySetInnerHTML', () => {
+  it('reports a sink outside any marked node', () => {
+    // 🔴 Nothing this renders has an identifier: the text nodes come out of a
+    // string at runtime. Review of KAN-KB-54 found a client's whole letter
+    // rendered this way outside every marked node in its file, invisible to
+    // every other rule here. So the rule is structural.
+    const { htmlSinks } = audit(
+      `export const C = () => <div dangerouslySetInnerHTML={{ __html: safeHtml }} />`
+    )
+    expect(htmlSinks).toHaveLength(1)
+  })
+
+  it('accepts the attribute on the sink itself', () => {
+    const { htmlSinks } = audit(
+      `export const C = () => <div dangerouslySetInnerHTML={{ __html: safeHtml }} {...piiProps} />`
+    )
+    expect(htmlSinks).toHaveLength(0)
+  })
+
+  it('accepts a marked ancestor — inheritance covers what the HTML produces', () => {
+    const { htmlSinks } = audit(`
+      export const C = () => (
+        <Pii as="div">
+          <div dangerouslySetInnerHTML={{ __html: safeHtml }} />
+        </Pii>
+      )
+    `)
+    expect(htmlSinks).toHaveLength(0)
+  })
+})
+
 describe('pii-audit — free text', () => {
+  it('reports rendered client-facing text by the shape of a bare identifier', () => {
+    // `previewBody` is a resolved template that opens with the client's name.
+    // No field-name rule can see it; the identifier's own shape can.
+    const { freeText } = audit(`export const C = () => <pre>{previewBody}</pre>`)
+    expect(freeText).toHaveLength(1)
+  })
+
+  it('reports a letter subject and a message body by their owner', () => {
+    const { freeText } = audit(`
+      export const C = () => (
+        <>
+          <h3>{letter.subject}</h3>
+          <div>{messageData.body}</div>
+        </>
+      )
+    `)
+    expect(freeText).toHaveLength(2)
+  })
+
+  it('does not report the unrendered template', () => {
+    // `template.body` is UI copy with {{placeholders}} in it; the rendered
+    // result is what carries personal data, and that has another owner.
+    const { freeText } = audit(`export const C = () => <pre>{template.body}</pre>`)
+    expect(freeText).toHaveLength(0)
+  })
+
   it('reports client prose as an advisory candidate', () => {
     const { freeText, rendered } = audit(`export const C = () => <p>{contact.comment}</p>`)
     expect(freeText).toHaveLength(1)

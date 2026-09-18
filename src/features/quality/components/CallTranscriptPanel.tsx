@@ -39,6 +39,7 @@ import type {
   TranscriptUtterance,
   TranscriptUtteranceFlag,
 } from '../types'
+import { piiProps } from '@/lib/openreplay/pii'
 
 export interface CallTranscriptPanelProps {
   callId?: string | null
@@ -214,7 +215,9 @@ function UtteranceRow({
             <span className="opacity-60">~{Math.round(utt.conf * 100)}%</span>
           ) : null}
         </div>
-        <div>{utt.text}</div>
+        {/* A call transcript is the client speaking — names, addresses and
+            everything else, verbatim. Same class as a rendered letter. */}
+        <div {...piiProps}>{utt.text}</div>
         {hasFlags ? (
           <div
             data-testid={`transcript-utt-flags-${utt.i}`}

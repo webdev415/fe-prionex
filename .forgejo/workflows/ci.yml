@@ -124,11 +124,23 @@ jobs:
       - name: Check formatting
         run: npm run format:check
 
-      # 🔒 KAN-KB-54. A new place that renders a client's name, address or
-      # free-text comment without `data-openreplay-obscured` fails the build.
-      # Without this the markup decays inside a month: the leak is added in an
-      # ordinary PR, nothing reports it, and the next person to notice is
-      # whoever opens the recording.
+      # 🔒 KAN-KB-54. A new place that renders a client's name or address
+      # without `data-openreplay-obscured` fails the build, as does personal data
+      # in `title`/`alt`/`aria-label`, an `<iframe>` left capturing, or a
+      # `dangerouslySetInnerHTML` sink outside any marked node. Without this the
+      # markup decays inside a month: the leak is added in an ordinary PR,
+      # nothing reports it, and the next person to notice is whoever opens the
+      # recording.
+      #
+      # ⚠️ WHAT IT DOES NOT ENFORCE, so nobody reads a green step as more than it
+      # is: the check is a dictionary over identifiers. FREE TEXT — notes,
+      # comments, message bodies, letter subjects, transcripts — is REPORTED in
+      # an advisory section and does not fail the build, because the same words
+      # name UI copy as often as client prose and the script cannot tell them
+      # apart. Those sites are triaged by hand; `docs/openreplay-pii-markup.md`
+      # says how. A rendered value the dictionary has no name for is not seen
+      # at all — that is what the runtime detector and phase 6 of the plan
+      # (a walk through a real recording, still open) are for.
       #
       # A STEP of `lint`, deliberately not a job of its own. The required status
       # checks on `main` name four jobs (eight contexts, push + pull_request);

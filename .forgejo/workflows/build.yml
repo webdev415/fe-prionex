@@ -652,22 +652,38 @@ jobs:
             #    `::warning::` took its place. A warning stops nothing; it was an
             #    honest label on an open hole, not a guard.
             #
-            # Both are removed now because the hole is closed. KAN-KB-54 landed:
-            # client names, addresses and free-text operator comments are wrapped
-            # in `data-openreplay-obscured` across `src/`, personal data is out of
-            # `title`/`alt`/`aria-label`, and every `<iframe>` is excluded from
-            # capture. `privateMode` stays OFF on purpose — it would also strip
-            # page URLs, titles and click labels, which is what makes a replay
-            # readable at all.
+            # The gate stays removed — that was Oleg's decision on 2026-09-17 and
+            # this file does not reopen it. What changed since is the WORK the
+            # gate waited for: KAN-KB-54 landed. Client names and addresses are
+            # wrapped in `data-openreplay-obscured` across `src/`, personal data
+            # is out of `title`/`alt`/`aria-label`, every `<iframe>` and HTML
+            # sink is excluded from capture, and rendered client-facing text
+            # (letters, sent messages, transcripts) is marked. `privateMode`
+            # stays OFF on purpose — it would also strip page URLs, titles and
+            # click labels, which is what makes a replay readable at all.
             #
-            # 🔒 WHAT KEEPS IT CLOSED is not this file and not a promise: it is
-            # `npm run pii-audit -- --check`, a step of the `lint` job in BOTH
-            # `.forgejo/workflows/ci.yml` and `.github/workflows/CI.yml`. A new
-            # place that renders a client's name, address or free-text comment
-            # without the attribute fails CI before it can be merged. That is the
-            # guard a `::warning::` here could never be — see
-            # `docs/openreplay-pii-markup.md`.
+            # 🔒 WHAT HOLDS THE SOURCE-LEVEL HALF is `npm run pii-audit -- --check`,
+            # a step of the `lint` job in BOTH `.forgejo/workflows/ci.yml` and
+            # `.github/workflows/CI.yml`. Said precisely, because a comment that
+            # claims more than the check does is how the next hole opens: it
+            # fails CI on a NAME or ADDRESS rendered without the attribute, on
+            # personal data in an attribute, on an unmarked `<iframe>` or
+            # `dangerouslySetInnerHTML`. It does NOT fail on free text (reported
+            # as advisory, triaged by hand), and it cannot see a value the
+            # dictionary has no name for. `docs/openreplay-pii-markup.md`.
             #
+            # ⚠️ WHAT IS STILL OPEN: phase 6 of the plan — a walk through ONE real
+            # DEV recording, screen by screen, with `window.__piiAudit()` — is a
+            # human step and has not been recorded yet
+            # (`docs/openreplay-pii-checklist.md`, "Что осталось за человеком").
+            # Until it is, a prod build with a key gets the `::warning::` below.
+            # It stops nothing, and it is not meant to: it names the one control
+            # that is still missing, so that whoever sets
+            # `VITE_OPENREPLAY_PROJECT_KEY_PROD` does so knowing that. Remove the
+            # `if` block when phase 6 is signed off — and only then.
+            if [ "$ENVIRONMENT" = prod ]; then
+              echo "::warning::OpenReplay is ENABLED for PROD. The PII markup (KAN-KB-54) is in place and CI-guarded, but phase 6 — acceptance on a real DEV recording — has not been recorded yet. See docs/openreplay-pii-checklist.md."
+            fi
             # The key is not secret, but there is no reason to print it either.
             echo "OpenReplay for '${ENVIRONMENT}': ENABLED (ingest ${OR_INGEST})"
           else

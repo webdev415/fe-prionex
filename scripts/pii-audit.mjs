@@ -119,11 +119,20 @@ const NOT_PII = [
  * TypeChecker, not for this script. So the section is triaged by hand, by the
  * name of the receiver.
  */
-const PII_FREE = [/\b(notes|comment|comments|description)\b/]
+const PII_FREE = [
+  /\b(notes|comment|comments|description)\b/,
+  // Rendered client-facing text: a letter, a sent SMS, a resolved template, a
+  // call transcript. Added after review of KAN-KB-54 found the message preview
+  // in SendMessageModal unmarked — `previewBody` is a resolved template that
+  // routinely opens with the client's full name, and no field-name rule can see
+  // it. The owner filter below is what keeps `template.body` (the unrendered
+  // template, UI copy) out of the list.
+  /\b(body|message|text|subject|content|html)\b/,
+]
 
 /** Receivers whose free text is operator/client prose rather than UI copy. */
 const FREE_TEXT_OWNERS =
-  /\b(client|contact|interaction|payment|row|item|detail|call|lead|debtor|promise)\w*$/i
+  /\b(client|contact|interaction|payment|row|item|detail|call|lead|debtor|promise|letter|message|sms|preview|email|mail|note|utt|utterance|segment|transcript|feedback|reply|rendered|display|safe)\w*$/i
 
 /**
  * Property tails that read something OTHER than the value: a key, a count, a
@@ -237,10 +246,21 @@ function classify(text) {
 }
 
 function classifyFree(text) {
-  if (!PII_FREE.some((re) => re.test(text))) return null
+  const tail = tailOf(text)
+  // A bare identifier has no owner to filter on, so it is judged by its own
+  // shape: `previewBody`, `renderedBody`, `safeHtml`, `displayBody` are the
+  // resolved text of a message and were the sites review found unmarked.
+  if (!text.includes('.')) {
+    return /^(preview|rendered|display|safe|message|letter|sms|email)\w*(Body|Text|Html|Subject|Content)$/.test(
+      text
+    )
+      ? 'PII_FREE'
+      : null
+  }
+  if (!PII_FREE.some((re) => re.test(tail))) return null
   // `client.notes` yes, `template.description` no — decided by the owner, which
   // is the only signal available without a type checker.
-  const owner = text.includes('.') ? text.slice(0, text.lastIndexOf('.')) : text
+  const owner = text.slice(0, text.lastIndexOf('.'))
   return FREE_TEXT_OWNERS.test(owner) ? 'PII_FREE' : null
 }
 
@@ -479,6 +499,7 @@ export function auditSource(relPath, text) {
   const attributes = []
   const freeText = []
   const iframes = []
+  const htmlSinks = []
 
   const visit = (node) => {
     // ── <iframe> still open to capture ───────────────────────────────────
@@ -496,6 +517,23 @@ export function auditSource(relPath, text) {
           line: lineOf(sourceFile, node),
           identifier: '<iframe>',
           kind: 'IFRAME',
+        })
+      }
+    }
+
+    // ── dangerouslySetInnerHTML: a sink with no identifiers ───────────────
+    // Whatever this renders, the walk below cannot see: the text nodes come out
+    // of a string at runtime and nothing in the source names them. So the rule
+    // is structural — the sink must sit under a marked node, its own or an
+    // ancestor's. Review of KAN-KB-54 found a client's whole letter rendered
+    // this way (`EmailMessageBody`) outside every marked node in the file.
+    if (ts.isJsxAttribute(node) && node.name.getText() === 'dangerouslySetInnerHTML') {
+      if (!isCoveredInSource(node)) {
+        htmlSinks.push({
+          path: relPath,
+          line: lineOf(sourceFile, node),
+          identifier: 'dangerouslySetInnerHTML',
+          kind: 'HTML_SINK',
         })
       }
     }
@@ -576,7 +614,7 @@ export function auditSource(relPath, text) {
   }
 
   visit(sourceFile)
-  return { rendered, attributes, freeText, iframes }
+  return { rendered, attributes, freeText, iframes, htmlSinks }
 }
 
 // ── Allowlist ────────────────────────────────────────────────────────────────
@@ -640,25 +678,35 @@ function main() {
   const attributes = []
   const freeText = []
   const iframes = []
+  const htmlSinks = []
 
   for (const file of files) {
     const result = auditFile(file)
-    iframes.push(...result.iframes.filter((f) => !allowed.has(allowKey(f))))
-    for (const finding of [...result.rendered, ...result.attributes]) {
+    // One pass over every section, so an allowlist entry is marked as USED
+    // whichever section it silences — otherwise a free-text entry that does its
+    // job is reported as stale, and the stale report stops being read.
+    const keep = (finding) => {
       const key = allowKey(finding)
-      if (allowed.has(key)) {
-        used.add(key)
-        continue
-      }
+      if (!allowed.has(key)) return true
+      used.add(key)
+      return false
+    }
+    iframes.push(...result.iframes.filter(keep))
+    htmlSinks.push(...result.htmlSinks.filter(keep))
+    freeText.push(...result.freeText.filter(keep))
+    for (const finding of [...result.rendered, ...result.attributes]) {
+      if (!keep(finding)) continue
       ;(finding.attribute ? attributes : rendered).push(finding)
     }
-    freeText.push(...result.freeText.filter((f) => !allowed.has(allowKey(f))))
   }
 
   if (JSON_OUT) {
     process.stdout.write(
-      JSON.stringify({ files: files.length, rendered, attributes, iframes, freeText }, null, 2) +
-        '\n'
+      JSON.stringify(
+        { files: files.length, rendered, attributes, iframes, htmlSinks, freeText },
+        null,
+        2
+      ) + '\n'
     )
   } else if (!QUIET) {
     process.stdout.write(`pii-audit: ${files.length} .tsx files\n`)
@@ -684,12 +732,24 @@ function main() {
         '   recording otherwise.'
     )
     printSection(
+      '🔴 dangerouslySetInnerHTML OUTSIDE ANY MARKED NODE',
+      htmlSinks,
+      '   Nothing this renders has an identifier the audit could see, so the sink\n' +
+        '   itself (or an ancestor) must carry the attribute. Inheritance then covers\n' +
+        '   every text node the HTML produces.'
+    )
+    printSection(
       'ℹ️  free-text candidates (advisory, not part of --check)',
       freeText,
       '   Triage by hand: client/contact/payment prose gets marked up, UI copy goes\n' +
         '   in the allowlist with a reason.'
     )
-    if (rendered.length === 0 && attributes.length === 0 && iframes.length === 0) {
+    if (
+      rendered.length === 0 &&
+      attributes.length === 0 &&
+      iframes.length === 0 &&
+      htmlSinks.length === 0
+    ) {
       process.stdout.write('\n✅ no unmarked personal data\n')
     }
     const stale = allowlist.filter((e) => !used.has(allowKey(e)) && files.length > 0)
@@ -705,9 +765,10 @@ function main() {
     }
   }
 
-  if (CHECK && rendered.length + attributes.length + iframes.length > 0) {
+  const blocking = rendered.length + attributes.length + iframes.length + htmlSinks.length
+  if (CHECK && blocking > 0) {
     process.stderr.write(
-      `\npii-audit: ${rendered.length + attributes.length + iframes.length} unmarked site(s). ` +
+      `\npii-audit: ${blocking} unmarked site(s). ` +
         `Mark them up, or add an entry with a reason to scripts/pii-audit.allowlist.json.\n`
     )
     process.exit(1)

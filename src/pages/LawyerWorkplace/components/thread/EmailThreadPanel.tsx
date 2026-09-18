@@ -554,7 +554,12 @@ export function EmailThreadPanel({
             <span className="bg-muted text-muted-foreground border-border w-fit shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] font-medium tracking-wide uppercase">
               {formatReferenceId(letter.referenceId)}
             </span>
-            <h3 className="text-foreground min-w-0 text-[15px] leading-snug font-medium sm:truncate sm:text-[18px]">
+            {/* The subject, not the reference id beside it: the id is what keeps
+                the thread identifiable in a replay. */}
+            <h3
+              className="text-foreground min-w-0 text-[15px] leading-snug font-medium sm:truncate sm:text-[18px]"
+              {...piiProps}
+            >
               {letter.subject}
             </h3>
           </div>

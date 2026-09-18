@@ -45,11 +45,13 @@ export const OPENREPLAY_ENABLED = OPENREPLAY_PROJECT_KEY !== '' && OPENREPLAY_IN
  * name suggests — page URLs, document titles and click labels go with the text,
  * leaving a replay in which the screen the operator was on cannot be told.
  *
- * The gap it used to leave is CLOSED (KAN-KB-54). With `privateMode` off the
- * tracker masks digits (`obscureTextNumbers`) and input values, and nothing in
- * the tracker masks letters — client names, addresses and free-text operator
- * comments would reach a recording verbatim. They no longer do, because the
- * blocks that hold them carry `data-openreplay-obscured`:
+ * The gap it used to leave is closed IN THE SOURCE (KAN-KB-54); acceptance on
+ * a real recording — phase 6 of the plan, a human step — is still open, and
+ * `build.yml` says so on every prod build until it is recorded. With
+ * `privateMode` off the tracker masks digits (`obscureTextNumbers`) and input
+ * values, and nothing in the tracker masks letters — client names, addresses
+ * and free-text operator comments would reach a recording verbatim. The blocks
+ * that hold them now carry `data-openreplay-obscured`:
  *
  * - text is marked per container (`src/lib/openreplay/pii.tsx`, plus the
  *   declarative flags `Column.obscured`, `FieldGrid`'s `obscured` and
@@ -57,16 +59,20 @@ export const OPENREPLAY_ENABLED = OPENREPLAY_PROJECT_KEY !== '' && OPENREPLAY_IN
  * - personal data is OUT of `title`/`alt`/`aria-label`/`placeholder`, which the
  *   tracker does not mask at all outside `privateMode` — a hover-reveal is now
  *   `<PiiTooltip>`, whose content is a text node;
- * - every `<iframe>` carries the attribute on the node itself, so no
- *   same-origin document is captured.
+ * - every `<iframe>` and `dangerouslySetInnerHTML` sink carries the attribute,
+ *   so no same-origin document or injected HTML is captured;
+ * - rendered client-facing text — letters, sent messages, transcripts — is
+ *   marked by container, since no field name describes it.
  *
- * 🔒 WHAT KEEPS IT CLOSED is not this comment. `npm run pii-audit -- --check`
- * runs as a step of the `lint` job in both `.forgejo/workflows/ci.yml` and
- * `.github/workflows/CI.yml`: a new place that renders a client's name, address
- * or free-text comment without the attribute fails CI. `window.__piiAudit()`
- * (dev builds) and a jsdom smoke check cover the other half — markup that is
- * correct in the source and wrong in the DOM. See
- * `docs/openreplay-pii-markup.md`.
+ * 🔒 WHAT KEEPS THE SOURCE HALF CLOSED is not this comment.
+ * `npm run pii-audit -- --check` runs as a step of the `lint` job in both
+ * `.forgejo/workflows/ci.yml` and `.github/workflows/CI.yml`. It fails CI on a
+ * client's NAME or ADDRESS rendered without the attribute, on personal data in
+ * an attribute, on an unmarked iframe or HTML sink. It does NOT fail on free
+ * text — that is reported as advisory and triaged by hand — and it cannot see a
+ * value the dictionary has no name for. `window.__piiAudit()` (dev builds) and
+ * a jsdom smoke check cover the other half: markup that is correct in the
+ * source and wrong in the DOM. See `docs/openreplay-pii-markup.md`.
  *
  * History, so nobody reconstructs it from the git log: `build.yml` used to
  * REFUSE a prod build carrying an OpenReplay key, naming KAN-KB-54. That gate

@@ -109,7 +109,10 @@ export function LetterListItem({ letter, isSelected, onSelect }: LetterListItemP
         )}
       </div>
 
-      <p className="text-foreground mt-2 mb-2 line-clamp-2 text-[12.5px] leading-snug">
+      <p
+        className="text-foreground mt-2 mb-2 line-clamp-2 text-[12.5px] leading-snug"
+        {...piiProps}
+      >
         {letter.subject}
       </p>
 

@@ -153,6 +153,9 @@
 | любой экран | `NotificationBell` | `trainer_full_name` в уведомлении | тип уведомления, время |
 | входящий звонок | `IncomingCallWindow`, `IncomingCallWindowContainer`, `MinimizedCallPill`, `IncomingCallPrompt`, `CallDialogModal` | ФИО звонящего | номер линии, кнопки «Принять»/«Отклонить», таймер |
 | поиск клиента | `CallClientSearch`, `SearchResults` | ФИО в результатах | подпись поля поиска, «Ничего не найдено» |
+| текст для клиента | `SendMessageModal` (превью), `ViewMessageModal`, `CallLogCard` (тело SMS), `CampaignDetailModal`, `EmailMessageBody`/`EmailThreadPanel` (письмо и тема), `SaleNoteCard` | тело и тема письма/сообщения целиком, заметка о продаже | подпись «Сообщение:», название шаблона, статус доставки, референс письма |
+| расшифровки и фидбек | `CallTranscriptPanel`, `TranscriptV7View`, `TranscriptConclusion`, `FeedbackThreadView`, `FeedbackSubTab` ×2, `FeedbackSection` | реплики звонка, рекомендации, текст фидбека | таймкоды, роли, оценки, флаги |
+| ИИ-ассистент | `AiAssistantBetaPage`, `AssistantMemorySection` | пузырь сообщения целиком (вопрос, ответ, цитаты, вложения), записи памяти | заголовок экрана, кнопки, «ход рассуждения» |
 | тосты | `Toaster` (`sonner`) | ФИО/логин **внутри конкретного тоста** | системные сообщения об ошибках целиком |
 | просмотр документа | `DocumentPreviewModal`, `DocumentFileViewer` | содержимое `<iframe>` не пишется вовсе; имя файла убрано из `title` | заголовок модалки, кнопки |
 | генерация документов | `DocumentGenerationPage`, `DocumentTemplatesTab` | ФИО в полях договора | названия шаблонов, их описания |

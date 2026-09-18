@@ -95,6 +95,7 @@ import {
   type ToolStep,
   type ToolStepStatus,
 } from './ReasoningActivityPanel'
+import { piiProps } from '@/lib/openreplay/pii'
 
 const QUICK_ACTION_KEYS = ['quickClientData', 'quickDebt', 'quickReport', 'quickEmployee'] as const
 type QuickActionKey = (typeof QUICK_ACTION_KEYS)[number]
@@ -3074,6 +3075,11 @@ export function AiAssistantBetaPage() {
                             'whitespace-pre-wrap',
                           item.isError && 'border-error-200 bg-error-50/60 text-error-700'
                         )}
+                        // The conversation itself (KAN-KB-54): operators ask about
+                        // clients by name and the answers quote the data back. One
+                        // attribute on the bubble covers the question, the answer,
+                        // the citations and the attachment names inside it.
+                        {...piiProps}
                       >
                         {item.attachments && item.attachments.length > 0 && (
                           <div className={cn('flex flex-col gap-2', item.content && 'mb-2')}>

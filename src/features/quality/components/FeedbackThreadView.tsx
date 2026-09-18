@@ -18,6 +18,7 @@ import {
   useMarkFeedbackRead,
   useReplyToFeedback,
 } from '../hooks/useFeedback'
+import { piiProps } from '@/lib/openreplay/pii'
 
 interface FeedbackThreadViewProps {
   feedbackId: number
@@ -159,7 +160,7 @@ export function FeedbackThreadView({ feedbackId, viewerRole }: FeedbackThreadVie
         </div>
       ) : null}
 
-      <div className="bg-muted text-foreground rounded-md p-3 text-sm">
+      <div className="bg-muted text-foreground rounded-md p-3 text-sm" {...piiProps}>
         {feedback.text}
         {feedback.timestamp_ms != null ? (
           <div className="text-muted-foreground mt-1 font-mono text-xs">
@@ -183,7 +184,7 @@ export function FeedbackThreadView({ feedbackId, viewerRole }: FeedbackThreadVie
                 {t(`pages.training.feedback.role.${reply.author_role}`, reply.author_role)} ·{' '}
                 {new Date(reply.created_at).toLocaleString()}
               </div>
-              <div>{reply.text}</div>
+              <div {...piiProps}>{reply.text}</div>
             </li>
           ))}
         </ul>
