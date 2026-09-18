@@ -1079,8 +1079,8 @@
       },
       "reply": {
         "replyFrom": "Responder desde",
-        "markNbuResponse": "Marcar como respuesta al NBU",
-        "markNbuShort": "NBU",
+        "markNbuResponse": "Marcar como respuesta al regulador",
+        "markNbuShort": "Regulador",
         "placeholder": "Escriba su respuesta...",
         "reassign": "Reasignar",
         "saveDraft": "Guardar borrador",
@@ -1113,7 +1113,7 @@
         "to": "Para",
         "recipientType": "Destinatario",
         "toClient": "Cliente del CRM",
-        "toInstitution": "Institución / Tribunal / NBU",
+        "toInstitution": "Institución / Tribunal / Regulador",
         "client": "Cliente",
         "selectClient": "Buscar cliente...",
         "selectEmail": "Seleccionar correo electrónico...",
@@ -1127,7 +1127,7 @@
         "clientSearchHint": "Escriba 2 o más caracteres para buscar…",
         "send": "Enviar",
         "institutionName": "Nombre de la institución",
-        "institutionNamePlaceholder": "p. ej. Banco Nacional de Ucrania",
+        "institutionNamePlaceholder": "p. ej. Banco de España",
         "noClientEmail": "No hay correo electrónico registrado",
         "sending": "Enviando..."
       },
@@ -1145,7 +1145,7 @@
         "selectType": "Seleccionar tipo",
         "types": {
           "complaint": "Reclamación",
-          "nbuInquiry": "Consulta del NBU",
+          "nbuInquiry": "Consulta del regulador",
           "courtClaim": "Demanda judicial",
           "attorneyRequest": "Solicitud de abogado",
           "inquiry": "Consulta"
@@ -1298,7 +1298,7 @@
         "stats": {
           "incoming": "ENT · entrada",
           "outgoing": "SAL · salida",
-          "nbu": "NBU · respuestas",
+          "nbu": "Regulador · respuestas",
           "generated": "Generados",
           "countOfYear": "{{count}} / {{year}}",
           "generatedPercent": "{{percent}} %"
@@ -1307,14 +1307,14 @@
           "allTypes": "Todos los tipos",
           "incoming": "ENT",
           "outgoing": "SAL",
-          "nbu": "NBU",
+          "nbu": "Regulador",
           "uploaded": "Subidos",
           "generated": "Generados"
         },
         "types": {
           "incoming": "Entrada",
           "outgoing": "Salida",
-          "nbuResponse": "Respuesta del NBU"
+          "nbuResponse": "Respuesta al regulador"
         },
         "actions": {
           "generated": "generado",
@@ -1350,8 +1350,8 @@
             "submit": "Generar y registrar",
             "success": "Documento generado",
             "types": {
-              "outgoing": "Saliente (ВИХ)",
-              "nbu": "Respuesta al NBU (НБУ)"
+              "outgoing": "Saliente",
+              "nbu": "Respuesta al regulador"
             }
           },
           "incoming": {
@@ -1620,7 +1620,7 @@
           "items": {
             "legal": "Departamento jurídico",
             "court": "Correspondencia judicial",
-            "nbu": "Regulatorio NBU",
+            "nbu": "Regulador",
             "accounting": "Contabilidad",
             "compliance": "Cumplimiento normativo",
             "collections": "Cobros"
@@ -1684,7 +1684,7 @@
           "replyTitle": "Plantillas de carta",
           "replyDesc": "Se usan en los menús de plantillas del hilo y del compositor de cartas nuevas",
           "documentTitle": "Preajustes de documentos",
-          "documentDesc": "Se usan al generar documentos salientes y del NBU",
+          "documentDesc": "Se usan al generar documentos salientes y respuestas al regulador",
           "addReply": "Añadir plantilla",
           "addPreset": "Añadir preajuste",
           "addReplyTitle": "Añadir plantilla de carta",
@@ -1725,8 +1725,8 @@
             "assignee": "Responsable predeterminado"
           },
           "documentTypes": {
-            "outgoing": "Saliente (ВИХ)",
-            "nbu": "Respuesta NBU (НБУ)"
+            "outgoing": "Saliente",
+            "nbu": "Respuesta al regulador"
           },
           "fields": {
             "name": "Nombre de la plantilla",
@@ -1878,8 +1878,8 @@
           "button": "Exportar (CSV)",
           "exporting": "Exportando…",
           "failed": "Error al exportar",
-          "incomingFileName": "incoming-register-{{date}}.csv",
-          "outgoingFileName": "outgoing-register-{{date}}.csv"
+          "incomingFileName": "registro-entrada-{{date}}.csv",
+          "outgoingFileName": "registro-salida-{{date}}.csv"
         },
         "loadError": {
           "title": "No se pudo cargar el registro",
@@ -4088,7 +4088,7 @@
       "gateToastError": "No se ha podido actualizar la aplicación de la lista blanca de IP.",
       "ipLabel": "Dirección IPv4",
       "labelHeading": "Etiqueta",
-      "labelPlaceholder": "Oficina de Kiev (opcional)",
+      "labelPlaceholder": "Oficina de Madrid (opcional)",
       "addButton": "Añadir IP",
       "colIp": "Dirección IP",
       "colLabel": "Etiqueta",
@@ -6394,7 +6394,7 @@
           "deliveryChannel": "Canal de entrega al cliente",
           "deliveryChannelPlaceholder": "Elija un canal",
           "deliveryContact": "Contacto (destino)",
-          "deliveryContactPlaceholder": "+380… o correo electrónico",
+          "deliveryContactPlaceholder": "+34… o correo electrónico",
           "contactHints": {
             "primary": "principal",
             "email": "correo"
