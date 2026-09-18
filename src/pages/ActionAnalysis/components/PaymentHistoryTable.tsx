@@ -101,6 +101,7 @@ export function PaymentHistoryTable({ data, userTimezone, sort, onSortChange }: 
     {
       key: 'operator',
       header: t('pages.actionAnalysis.columns.operator', 'Operator'),
+      obscured: true,
       render: (r) => (
         <span className="text-foreground text-sm">{r.assigned_user_full_name ?? '—'}</span>
       ),

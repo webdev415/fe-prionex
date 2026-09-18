@@ -32,7 +32,7 @@
 | 3.1 | `pages/ClientManagement` | `feat/kanban-54/markup-client-management` | ✅ |
 | 3.2 | `pages/EmployeeCard` + `features/users` | `feat/kanban-54/markup-employees` | ✅ |
 | 3.3 | `pages/LawyerWorkplace` | `feat/kanban-54/markup-lawyer` | ✅ |
-| 3.4 | `pages/ActionAnalysis` | `feat/kanban-54/markup-action-analysis` | ⬜ |
+| 3.4 | `pages/ActionAnalysis` | `feat/kanban-54/markup-action-analysis` | ✅ |
 | 3.5 | `pages/Training` + остальные разделы | `feat/kanban-54/markup-training-rest` | ⬜ |
 | 4 + 5.7 | ПДн в атрибутах, `<iframe>` | `feat/kanban-54/attributes` | ⬜ |
 | 5 | Порталы | `feat/kanban-54/portals` | ⬜ |
@@ -112,6 +112,15 @@
 | `/dashboard/action-analysis` | `CallsTable`, `InteractionHistoryTable`, `PaymentHistoryTable`, `TaHistoryTable` | колонки ФИО клиента и оператора, тексты взаимодействий | заголовки колонок, оценки, длительности, статусы |
 | фильтр оператора | `EmployeeFilterDropdown` | ФИО в списке и в выбранном значении | подпись фильтра, «Все операторы» |
 | диалоги инбокса | `RateDialogueDialog`, `ScheduleOneOnOneDialog` | ФИО оператора | заголовок диалога, шкала оценки |
+
+> **Закрыто в 3.4** (`npm run pii-audit src/pages/ActionAnalysis` → 0): колонки ФИО в
+> `CallsTable`, `InteractionHistoryTable`, `PaymentHistoryTable`, `TaHistoryTable`
+> (две колонки — «кто создал» и «ответственный на момент создания»),
+> `EmployeeFilterDropdown`, `DynamicsSubTab` (атрибут на самом `<option>`: `<Pii>`
+> не является валидным потомком `<select>`), диалоги инбокса, комментарий оператора
+> в `MarkersSubTab`.
+>
+> Оценки, длительности, статусы, даты и заголовки колонок — читаемы.
 
 ### Обучение
 
