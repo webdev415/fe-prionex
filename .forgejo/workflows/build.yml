@@ -652,44 +652,33 @@ jobs:
             #    `::warning::` took its place. A warning stops nothing; it was an
             #    honest label on an open hole, not a guard.
             #
-            # 🔒 THE PROD GATE, RESTORED — and keyed to the thing it waits for.
+            # ⚠️ PROD WITH A KEY BEFORE PHASE 6 IS ACCEPTED: A WARNING, NOT A GATE.
             #
             # History, so nobody reconstructs it from the log: a gate stood here
             # (prod build with a key fails, naming KAN-KB-54); it was removed on
             # 2026-09-17 by explicit decision while the task was open (KAN-KB-58)
-            # and a `::warning::` took its place; then KAN-KB-54 landed the
-            # markup and replaced the warning with a comment saying CI now holds
-            # the line. Code review (rounds 2–4) pushed back on that last step,
-            # and was right: `npm run pii-audit -- --check` guards the SOURCE —
-            # names and addresses by dictionary, attributes, iframes, HTML sinks
-            # — and is blind by design to free text and to any value the
-            # dictionary has no name for. The control the markup was always
-            # meant to be accepted by is phase 6 of the plan: a walk through one
-            # real DEV recording, screen by screen, with `window.__piiAudit()`.
-            # That is a human step and it has not been recorded.
+            # and a `::warning::` took its place; KAN-KB-54 then landed the
+            # markup. Code review (rounds 2–4) asked for the gate back until phase
+            # 6 — a walk through one real DEV recording — is recorded, and a
+            # version of this file did restore it as `exit 1`, keyed to
+            # `docs/openreplay-pii-acceptance.md`. Oleg's decision (2026-09-18):
+            # a prod build must NOT fail on this. So the same condition emits a
+            # warning instead. Recorded as a decision, not disguised as cleanup.
             #
-            # So the gate is back, but it no longer asks "is the task done" — a
-            # question this file cannot answer — it asks "was the acceptance
-            # recorded", which is a file in the repository. Whoever performs
-            # phase 6 commits `docs/openreplay-pii-acceptance.md` (what was
-            # checked, on which recording, by whom, on which date) and the gate
-            # opens by itself. Nobody has to touch this workflow to lift it, and
-            # nobody can lift it without leaving that record behind.
+            # What is therefore true, in one sentence a future reader must not
+            # have to reconstruct: the markup is in place and `npm run pii-audit
+            # -- --check` guards the SOURCE half of it in CI (names and addresses
+            # by dictionary, attributes, iframes, HTML sinks; NOT free text,
+            # which is advisory, and NOT any value the dictionary has no name
+            # for). Acceptance on a real recording is the control still missing,
+            # and setting `VITE_OPENREPLAY_PROJECT_KEY_PROD` before it is
+            # recorded is a choice this warning makes visible, not one it stops.
             #
-            # ⚠️ Until then a prod build that carries a key FAILS here, before
-            # `docker build`. DEV and PRE-PROD are unaffected — their data is
-            # synthetic, which is the whole reason the rollout order is DEV first.
-            # `-s`, not `-f`: the record has to have content. `touch` is not an
-            # acceptance.
+            # Committing `docs/openreplay-pii-acceptance.md` (what was checked,
+            # on which recording, by whom, when — see
+            # docs/openreplay-pii-checklist.md) silences it. Nothing else should.
             if [ "$ENVIRONMENT" = prod ] && [ ! -s docs/openreplay-pii-acceptance.md ]; then
-              echo "FAIL: OpenReplay is configured for PROD, but phase 6 of KAN-KB-54 — acceptance of the"
-              echo "  PII markup on a real DEV recording — has not been recorded."
-              echo "  The markup is in place and CI-guarded (npm run pii-audit -- --check); what is missing"
-              echo "  is the human pass over a recording. Perform it per docs/openreplay-pii-checklist.md,"
-              echo "  commit docs/openreplay-pii-acceptance.md, and this gate opens on its own."
-              echo "  Do NOT remove this check instead: it is the only control that survives a"
-              echo "  repository-variable change."
-              exit 1
+              echo "::warning::OpenReplay is ENABLED for PROD before phase 6 of KAN-KB-54 (acceptance on a real DEV recording) was recorded. The PII markup is in place and CI-guarded; the human pass over a recording is not. Perform it per docs/openreplay-pii-checklist.md and commit docs/openreplay-pii-acceptance.md."
             fi
             # The key is not secret, but there is no reason to print it either.
             echo "OpenReplay for '${ENVIRONMENT}': ENABLED (ingest ${OR_INGEST})"
