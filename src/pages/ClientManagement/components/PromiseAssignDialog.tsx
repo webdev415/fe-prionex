@@ -80,7 +80,12 @@ export function PromiseAssignDialog({
           ...(promiseAmount ? { promise_amount: Number(promiseAmount) } : {}),
         },
       })
-      toast.success(`${tagName} назначен клиенту ${clientName}`)
+      toast.success(
+        <span>
+          {`${tagName} назначен клиенту `}
+          <Pii>{clientName}</Pii>
+        </span>
+      )
       queryClient.invalidateQueries({ queryKey: ['clients', clientId, 'tags'] })
       // Inside the try, so a failed assign never arms auto-open. Reached only
       // after assignTagExtended resolved, and this dialog writes exactly one

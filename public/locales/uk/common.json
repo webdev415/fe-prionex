@@ -3777,7 +3777,7 @@
         "reenableTwoFactor": "Увімкнути 2FA"
       },
       "messages": {
-        "nowViewingAs": "Тепер перегляд як {{username}}",
+        "nowViewingAsPrefix": "Тепер перегляд як",
         "failedToImpersonate": "Не вдалося переглянути як користувача",
         "failedToExitImpersonation": "Не вдалося вийти з режиму перегляду",
         "exitedImpersonation": "Вийдено з режиму перегляду",
@@ -6460,7 +6460,7 @@
           "payloadTagBadge": "потрібна ЦД",
           "payloadTagHint": "Цей тег потребує ЦД та/або суму — відкриється окрема форма",
           "saveTags": "Зберегти теги",
-          "tagsUpdated": "Теги оновлено для {{name}}",
+          "tagsUpdatedPrefix": "Теги оновлено для",
           "updateFailed": "Не вдалося оновити теги",
           "protectedRemoveBlocked": "Захищені теги можуть знімати лише уповноважені ролі"
         },

@@ -5,6 +5,7 @@ import { Icons } from '@/lib/icons'
 import { formatDate } from '@/lib/localeFormat'
 import { formatMoneyUAHTwoDecimals } from '@/lib/formatters'
 import { cn } from '@/lib/utils'
+import { Pii } from '@/lib/openreplay/pii'
 
 export interface CallContract {
   id: string
@@ -75,7 +76,7 @@ function labelFor(client: CallMatchedClient, t: (key: string, fallback: string) 
     category === 'guarantor'
       ? t('pages.clients.modals.callDialog.contracts.guarantor', 'Guarantor by contracts')
       : t('pages.clients.modals.callDialog.contracts.thirdParty', 'Third party by contracts')
-  return client.thirdPartyName ? `${heading}: ${client.thirdPartyName}` : heading
+  return heading
 }
 
 /**
@@ -93,6 +94,16 @@ export function CallClientContracts({
 }: CallClientContractsProps) {
   const { t } = useTranslation('common')
   const label = labelFor(client, t)
+  /**
+   * The third party's name used to be appended to `label` (KAN-KB-54).
+   *
+   * That string went two places: into this `<span>`, where markup could have
+   * covered it, and into `ariaLabel` on the toggle — where markup does nothing,
+   * because OpenReplay sends attribute values verbatim outside `privateMode`.
+   * So it is kept apart from the heading: the heading stays readable in both,
+   * and the name is a node of its own that the markup can reach.
+   */
+  const thirdPartyName = client.thirdPartyName ?? null
 
   return (
     <div className="flex flex-col gap-2">
@@ -104,7 +115,15 @@ export function CallClientContracts({
           strokeWidth={1.5}
           aria-hidden
         />
-        <span className="text-foreground truncate text-xs font-medium sm:text-sm">{label}</span>
+        <span className="text-foreground truncate text-xs font-medium sm:text-sm">
+          {label}
+          {thirdPartyName ? (
+            <>
+              {': '}
+              <Pii>{thirdPartyName}</Pii>
+            </>
+          ) : null}
+        </span>
         <a
           href={`/dashboard/clients/${client.clientId}?from=dialer`}
           target="_blank"

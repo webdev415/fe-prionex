@@ -70,6 +70,7 @@ import {
   type UserFilterState,
   type WorkFormatFilter,
 } from './lib/userFilterDefaults'
+import { Pii } from '@/lib/openreplay/pii'
 
 function EmployeeStatus({ status }: { status: 'active' | 'disabled' | 'inactive' | 'suspended' }) {
   const { t } = useTranslation('common')
@@ -326,7 +327,15 @@ export function UserManagementPage() {
     setImpersonatingUserId(user.id)
     try {
       await startImpersonation(user.id)
-      toast.success(t('pages.users.messages.nowViewingAs', { username: user.username }))
+      // A login is not a name, but it identifies the person just as well, and
+      // this toast is the one place it is announced on screen rather than shown
+      // in a column a reviewer can skip.
+      toast.success(
+        <span>
+          {t('pages.users.messages.nowViewingAsPrefix', 'Now viewing as')}{' '}
+          <Pii>{user.username}</Pii>
+        </span>
+      )
 
       // Redirect to dashboard to avoid permission issues
       // (impersonated user may not have access to current page)

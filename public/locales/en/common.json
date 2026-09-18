@@ -3764,7 +3764,7 @@
         "reenableTwoFactor": "Re-enable 2FA"
       },
       "messages": {
-        "nowViewingAs": "Now viewing as {{username}}",
+        "nowViewingAsPrefix": "Now viewing as",
         "failedToImpersonate": "Failed to impersonate user",
         "failedToExitImpersonation": "Failed to exit impersonation",
         "exitedImpersonation": "Exited impersonation mode",
@@ -5734,7 +5734,7 @@
           "payloadTagBadge": "requires PTP",
           "payloadTagHint": "This tag requires PTP date and/or amount — a separate form will open",
           "saveTags": "Save Tags",
-          "tagsUpdated": "Tags updated for {{name}}",
+          "tagsUpdatedPrefix": "Tags updated for",
           "updateFailed": "Failed to update tags",
           "protectedRemoveBlocked": "Protected tags can only be removed by authorized roles"
         },
