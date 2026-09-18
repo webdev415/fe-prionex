@@ -11,6 +11,7 @@ import {
   useAssistantFileBlob,
   type AssistantFileErrorCode,
 } from './useAssistantFileBlob'
+import { piiProps } from '@/lib/openreplay/pii'
 
 /** Files the operator can look at without leaving the chat. */
 function isPreviewable(kind: AssistantFileKind): boolean {
@@ -109,7 +110,13 @@ function AssistantFilePreviewModal({ onClose, url, name, kind }: PreviewModalPro
               />
             )}
             {state.status === 'ready' && kind === 'pdf' && (
-              <iframe src={state.objectUrl} title={name} className="h-full w-full border-0" />
+              <iframe
+                /* 🔴 On the <iframe> itself — see DocumentPreviewModal. */
+                src={state.objectUrl}
+                title={t('pages.aiAssistant.attachmentFrameTitle', 'Attachment preview')}
+                className="h-full w-full border-0"
+                {...piiProps}
+              />
             )}
           </div>
         </DialogPrimitive.Content>

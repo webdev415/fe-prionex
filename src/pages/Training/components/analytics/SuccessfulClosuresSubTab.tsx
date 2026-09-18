@@ -20,6 +20,7 @@ import {
   ANALYTICS_TABLE_TH,
 } from './analyticsTableStyles'
 import { piiProps } from '@/lib/openreplay/pii'
+import { PiiTooltip } from '@/components/ui/PiiTooltip'
 
 /**
  * Successful Closures sub-tab (KAN-734). Trainer-facing list of VERIFIED
@@ -557,14 +558,11 @@ function ClosureRow({
         </div>
       </td>
       <td className={ANALYTICS_TABLE_TD}>
-        <button
-          type="button"
-          title={row.client_name ?? undefined}
-          onClick={onOpenClient}
-          className="text-[#3B82F6] hover:underline"
-        >
-          #{row.client_id}
-        </button>
+        <PiiTooltip label={row.client_name}>
+          <button type="button" onClick={onOpenClient} className="text-[#3B82F6] hover:underline">
+            #{row.client_id}
+          </button>
+        </PiiTooltip>
       </td>
       <td className={ANALYTICS_TABLE_TD}>{row.contract_number ?? '—'}</td>
       <td className={`${ANALYTICS_TABLE_TD} font-semibold text-[#05040D]`}>

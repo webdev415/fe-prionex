@@ -30,6 +30,7 @@ import { PromiseAssignDialog } from './PromiseAssignDialog'
 import { useAuthStore } from '@/stores/authStore'
 import { canRemoveProtectedTag } from '@/features/tags/utils/protected'
 import type { TagDefinition } from '@/features/tags/types'
+import { Pii } from '@/lib/openreplay/pii'
 
 interface TagSelectorModalProps {
   clientId: number
@@ -222,7 +223,12 @@ export const TagSelectorModal = memo(function TagSelectorModal({
             <Icons.Contact size={21} className="text-primary-foreground" strokeWidth={1.5} />
           </div>
         }
-        title={t('pages.clients.modals.tagSelector.title', { name: clientName })}
+        title={
+          <>
+            {t('pages.clients.modals.tagSelector.titlePrefix', 'Manage Tags —')}{' '}
+            <Pii>{clientName}</Pii>
+          </>
+        }
       />
 
       <ModalContent>

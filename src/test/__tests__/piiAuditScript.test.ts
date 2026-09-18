@@ -28,6 +28,7 @@ interface Result {
   rendered: Finding[]
   attributes: Finding[]
   freeText: Finding[]
+  iframes: Finding[]
 }
 
 const audit = (source: string): Result => auditSource('src/fixture.tsx', source) as Result
@@ -283,6 +284,36 @@ describe('pii-audit — attributes', () => {
       )
     `)
     expect(attributes).toHaveLength(0)
+  })
+})
+
+describe('pii-audit — iframes', () => {
+  it('reports an <iframe> with no attribute of its own', () => {
+    const { iframes } = audit(`export const C = () => <iframe src={blobUrl} title="x" />`) as {
+      iframes: Finding[]
+    }
+    expect(iframes).toHaveLength(1)
+  })
+
+  it('is NOT satisfied by a marked wrapper', () => {
+    // 🔴 `TopObserver` reads the attribute off the node in its own callback, so
+    // inheritance plays no part — a wrapper that covers the text does nothing
+    // for the frame.
+    const { iframes } = audit(`
+      export const C = () => (
+        <div data-openreplay-obscured="">
+          <iframe src={blobUrl} title="x" />
+        </div>
+      )
+    `) as { iframes: Finding[] }
+    expect(iframes).toHaveLength(1)
+  })
+
+  it('accepts the attribute on the iframe itself', () => {
+    const { iframes } = audit(
+      `export const C = () => <iframe src={blobUrl} title="x" {...piiProps} />`
+    ) as { iframes: Finding[] }
+    expect(iframes).toHaveLength(0)
   })
 })
 

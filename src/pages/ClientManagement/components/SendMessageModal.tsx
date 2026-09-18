@@ -53,6 +53,7 @@ import {
   unresolvedVariables,
 } from '@/features/messaging/utils/unresolvedVariables'
 import { SendMessageModalSkeleton } from './SendMessageModalSkeleton'
+import { Pii } from '@/lib/openreplay/pii'
 
 const formatClientNameInitials = (fullName: string): string => {
   const parts = fullName.trim().split(/\s+/)
@@ -468,10 +469,15 @@ export function SendMessageModal({
             <Icons.Message01 size={18} className="text-primary-foreground" strokeWidth={1.5} />
           </div>
         }
-        title={t('pages.clients.modals.sendMessage.title', {
-          clientName,
-          defaultValue: `Send message to ${clientName}`,
-        })}
+        title={
+          /* `ModalHeader.title` is a ReactNode rendered as a text node, so the
+             name CAN be masked here — but only if it is a node of its own. The
+             key now holds the static half, punctuation included. */
+          <>
+            {t('pages.clients.modals.sendMessage.titlePrefix', 'Send message to')}{' '}
+            <Pii>{clientName}</Pii>
+          </>
+        }
       />
       <ModalContent>
         {isFormLoading ? (

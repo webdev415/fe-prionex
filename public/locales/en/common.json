@@ -472,6 +472,7 @@
     "tabsScrollRight": "Scroll tabs right"
   },
   "common": {
+    "userAvatar": "User avatar",
     "step": "Step",
     "selected": "Selected",
     "of": "of",
@@ -848,7 +849,8 @@
       "slashReset": "clear the brain context (conversation stays)",
       "slashHelp": "what the assistant can do",
       "slashNewChat": "start a new chat",
-      "answerInProgress": "The answer is still being prepared — it will appear here when ready"
+      "answerInProgress": "The answer is still being prepared — it will appear here when ready",
+      "attachmentFrameTitle": "Attachment preview"
     },
     "lawyerWorkplace": {
       "navAria": "Lawyer Workplace navigation",
@@ -5582,7 +5584,7 @@
           "sendSMS": "Send SMS"
         },
         "sendMessage": {
-          "title": "Send message to {{clientName}}",
+          "titlePrefix": "Send message to",
           "channel": "Channel",
           "service": "Service",
           "servicePlaceholder": "Select a service",
@@ -5723,7 +5725,7 @@
           "apply": "Apply"
         },
         "tagSelector": {
-          "title": "Manage Tags — {{name}}",
+          "titlePrefix": "Manage Tags —",
           "loadingTags": "Loading tags...",
           "searchTags": "Search tags...",
           "selectedCount": "{{selected}} of {{total}} tags selected",
@@ -6877,6 +6879,9 @@
         "cancelled": "Cancelled",
         "completed": "Completed",
         "completedEarly": "Completed early"
+      },
+      "documents": {
+        "previewFrameTitle": "Document preview"
       }
     },
     "clientChains": {

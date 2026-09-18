@@ -27,6 +27,7 @@ import {
   ANALYTICS_TABLE_TH,
 } from './analyticsTableStyles'
 import { piiProps } from '@/lib/openreplay/pii'
+import { PiiTooltip } from '@/components/ui/PiiTooltip'
 
 /**
  * Promises and Callbacks sub-tab (KAN-733). Layout / UI styling mirror the
@@ -459,14 +460,15 @@ function PromiseRow({ row }: { row: PromiseCallbackItem }) {
         </div>
       </td>
       <td className={ANALYTICS_TABLE_TD}>
-        <button
-          type="button"
-          title={row.client_full_name ?? undefined}
-          onClick={() => navigate(`/dashboard/clients/${row.client_id}`)}
-          className="text-[#3B82F6] hover:underline"
-        >
-          #{row.client_id}
-        </button>
+        <PiiTooltip label={row.client_full_name}>
+          <button
+            type="button"
+            onClick={() => navigate(`/dashboard/clients/${row.client_id}`)}
+            className="text-[#3B82F6] hover:underline"
+          >
+            #{row.client_id}
+          </button>
+        </PiiTooltip>
       </td>
       <td className={ANALYTICS_TABLE_TD}>{row.contract_number ?? '—'}</td>
       <td className={`${ANALYTICS_TABLE_TD} font-semibold text-[#05040D]`}>

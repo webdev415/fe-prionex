@@ -199,6 +199,7 @@ import {
 } from '@/features/messaging'
 import { useOperators } from '@/features/users/hooks/useUsers'
 import { piiProps } from '@/lib/openreplay/pii'
+import { PiiTooltip } from '@/components/ui/PiiTooltip'
 
 // Extended types for SMS and Call items with API-specific properties
 type ExtendedSMSItem = {
@@ -1610,15 +1611,15 @@ export function ClientDetailPage() {
         className={cn('flex flex-wrap gap-1', align === 'end' ? 'justify-end' : 'justify-start')}
       >
         {linkedContacts.map((linkedContact) => (
-          <Link
-            key={linkedContact.id}
-            to={`/dashboard/clients/${linkedContact.id}`}
-            className="border-primary-200 bg-primary/10 text-primary-700 hover:border-primary-300 hover:bg-primary-100 inline-flex max-w-full items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] leading-3 font-medium"
-            title={linkedContact.fullName}
-          >
-            <span aria-hidden="true">🔗</span>
-            <span>{linkedContact.clientNumber}</span>
-          </Link>
+          <PiiTooltip key={linkedContact.id} label={linkedContact.fullName}>
+            <Link
+              to={`/dashboard/clients/${linkedContact.id}`}
+              className="border-primary-200 bg-primary/10 text-primary-700 hover:border-primary-300 hover:bg-primary-100 inline-flex max-w-full items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] leading-3 font-medium"
+            >
+              <span aria-hidden="true">🔗</span>
+              <span>{linkedContact.clientNumber}</span>
+            </Link>
+          </PiiTooltip>
         ))}
       </div>
     )

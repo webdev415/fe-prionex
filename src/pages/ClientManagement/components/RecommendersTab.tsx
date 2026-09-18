@@ -52,6 +52,7 @@ import {
 import { formatDate } from '@/lib/formatters'
 import { piiProps } from '@/lib/openreplay/pii'
 import { useHasAnyPermission, useHasPermission } from '@/hooks/usePermissions'
+import { PiiTooltip } from '@/components/ui/PiiTooltip'
 
 export type RecommenderContactTag = {
   value_id: number
@@ -358,15 +359,15 @@ function LinkedContactPills({ linked }: { linked: LinkedContactBadge[] }) {
   return (
     <div className="flex flex-wrap gap-1.5" data-testid="related-contact-pills">
       {linked.map((item) => (
-        <Link
-          key={item.id}
-          to={`/dashboard/clients/${item.id}`}
-          className="border-success-200 bg-success-50 text-success-700 hover:border-success-300 hover:bg-success-100 inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] leading-3 font-semibold no-underline"
-          title={item.fullName}
-        >
-          <Icons.Link01 size={9} strokeWidth={2.2} className="shrink-0" />
-          <span className="truncate">{item.clientNumber}</span>
-        </Link>
+        <PiiTooltip key={item.id} label={item.fullName}>
+          <Link
+            to={`/dashboard/clients/${item.id}`}
+            className="border-success-200 bg-success-50 text-success-700 hover:border-success-300 hover:bg-success-100 inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] leading-3 font-semibold no-underline"
+          >
+            <Icons.Link01 size={9} strokeWidth={2.2} className="shrink-0" />
+            <span className="truncate">{item.clientNumber}</span>
+          </Link>
+        </PiiTooltip>
       ))}
     </div>
   )

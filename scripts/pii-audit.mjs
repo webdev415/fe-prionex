@@ -396,6 +396,20 @@ function isCoveredInSource(node) {
 }
 
 /**
+ * Does this element ITSELF carry the obscuring attribute?
+ *
+ * Deliberately not the ancestor walk used for text: iframe capture reads the
+ * attribute off the node, so a marked wrapper counts for nothing here.
+ */
+function ownAttributesMark(opening) {
+  for (const attr of opening.attributes?.properties ?? []) {
+    if (ts.isJsxAttribute(attr) && attr.name.getText() === OBSCURED_ATTR) return true
+    if (ts.isJsxSpreadAttribute(attr) && /\bpiiProps\b/.test(attr.getText())) return true
+  }
+  return false
+}
+
+/**
  * Does this object literal look like a `Column<T>`?
  *
  * `key` plus `header` is the shape, and it is checked rather than assumed so
@@ -464,8 +478,28 @@ export function auditSource(relPath, text) {
   const rendered = []
   const attributes = []
   const freeText = []
+  const iframes = []
 
   const visit = (node) => {
+    // ── <iframe> still open to capture ───────────────────────────────────
+    // `TopObserver` captures a frame when
+    // `captureIFrames && !hasOpenreplayAttribute(node, 'obscured')`, reading the
+    // attribute off the NODE in its own callback. Inheritance plays no part, so
+    // this cannot be folded into the checks below, and `captureIFrames` defaults
+    // to true and is not set in `src/lib/openreplay/index.ts`. A same-origin
+    // frame — including every `blob:` URL, which inherits the creator's origin —
+    // therefore has its whole document written into the recording.
+    if (ts.isJsxSelfClosingElement(node) || ts.isJsxOpeningElement(node)) {
+      if (node.tagName.getText() === 'iframe' && !ownAttributesMark(node)) {
+        iframes.push({
+          path: relPath,
+          line: lineOf(sourceFile, node),
+          identifier: '<iframe>',
+          kind: 'IFRAME',
+        })
+      }
+    }
+
     // ── PII in an unmasked attribute ──────────────────────────────────────
     if (ts.isJsxAttribute(node) && ATTRS_UNMASKED.has(node.name.getText())) {
       const initializer = node.initializer
@@ -542,7 +576,7 @@ export function auditSource(relPath, text) {
   }
 
   visit(sourceFile)
-  return { rendered, attributes, freeText }
+  return { rendered, attributes, freeText, iframes }
 }
 
 // ── Allowlist ────────────────────────────────────────────────────────────────
@@ -605,9 +639,11 @@ function main() {
   const rendered = []
   const attributes = []
   const freeText = []
+  const iframes = []
 
   for (const file of files) {
     const result = auditFile(file)
+    iframes.push(...result.iframes.filter((f) => !allowed.has(allowKey(f))))
     for (const finding of [...result.rendered, ...result.attributes]) {
       const key = allowKey(finding)
       if (allowed.has(key)) {
@@ -621,7 +657,8 @@ function main() {
 
   if (JSON_OUT) {
     process.stdout.write(
-      JSON.stringify({ files: files.length, rendered, attributes, freeText }, null, 2) + '\n'
+      JSON.stringify({ files: files.length, rendered, attributes, iframes, freeText }, null, 2) +
+        '\n'
     )
   } else if (!QUIET) {
     process.stdout.write(`pii-audit: ${files.length} .tsx files\n`)
@@ -640,12 +677,19 @@ function main() {
         '   (ModalHeader) — wrap the interpolated part in <Pii> instead.'
     )
     printSection(
+      '🔴 <iframe> STILL CAPTURED',
+      iframes,
+      '   Put the attribute on the <iframe> ITSELF (a wrapper does nothing): the\n' +
+        '   whole same-origin document, blob: URLs included, is written into the\n' +
+        '   recording otherwise.'
+    )
+    printSection(
       'ℹ️  free-text candidates (advisory, not part of --check)',
       freeText,
       '   Triage by hand: client/contact/payment prose gets marked up, UI copy goes\n' +
         '   in the allowlist with a reason.'
     )
-    if (rendered.length === 0 && attributes.length === 0) {
+    if (rendered.length === 0 && attributes.length === 0 && iframes.length === 0) {
       process.stdout.write('\n✅ no unmarked personal data\n')
     }
     const stale = allowlist.filter((e) => !used.has(allowKey(e)) && files.length > 0)
@@ -661,9 +705,9 @@ function main() {
     }
   }
 
-  if (CHECK && rendered.length + attributes.length > 0) {
+  if (CHECK && rendered.length + attributes.length + iframes.length > 0) {
     process.stderr.write(
-      `\npii-audit: ${rendered.length + attributes.length} unmarked site(s). ` +
+      `\npii-audit: ${rendered.length + attributes.length + iframes.length} unmarked site(s). ` +
         `Mark them up, or add an entry with a reason to scripts/pii-audit.allowlist.json.\n`
     )
     process.exit(1)

@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/Button'
 import { documentApi } from '@/features/clients/api/documentApi'
 import { useTranslation } from 'react-i18next'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
+import { piiProps } from '@/lib/openreplay/pii'
 
 interface DocumentPreviewModalProps {
   open: boolean
@@ -220,7 +221,22 @@ export function DocumentPreviewModal({
 
             {/* PDF: fullscreen iframe */}
             {!loading && !error && isPdf && blobUrl && (
-              <iframe src={blobUrl} title={filename} className="h-full w-full border-0" />
+              <iframe
+                /* 🔴 The attribute goes on the <iframe> ITSELF, never on a wrapper:
+                   `TopObserver` captures a frame when
+                   `captureIFrames && !hasOpenreplayAttribute(node, 'obscured')`,
+                   reading the attribute off the node in its own callback, so
+                   inheritance plays no part. `captureIFrames` defaults to true and
+                   is not set in our options, which means the document inside is
+                   recorded today (a `blob:` URL inherits our origin). `hidden`
+                   would not do instead: attributes of a hidden node are still
+                   sent, so `title={filename}` leaked the file name — which is why
+                   the title below is a role rather than the name. */
+                src={blobUrl}
+                title={t('pages.clients.documents.previewFrameTitle', 'Document preview')}
+                className="h-full w-full border-0"
+                {...piiProps}
+              />
             )}
 
             {/* Non-previewable */}

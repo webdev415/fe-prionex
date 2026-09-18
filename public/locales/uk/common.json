@@ -479,6 +479,7 @@
     "tabsScrollRight": "Прокрутити вкладки вправо"
   },
   "common": {
+    "userAvatar": "Аватар користувача",
     "step": "Крок",
     "selected": "Вибрано",
     "of": "з",
@@ -857,7 +858,8 @@
       "slashReset": "очистити контекст мозку (розмова лишається)",
       "slashHelp": "довідка про можливості",
       "slashNewChat": "почати новий чат",
-      "answerInProgress": "Відповідь ще готується — з’явиться тут, коли буде готова"
+      "answerInProgress": "Відповідь ще готується — з’явиться тут, коли буде готова",
+      "attachmentFrameTitle": "Перегляд вкладення"
     },
     "lawyerWorkplace": {
       "navAria": "Навігація робочого місця юриста",
@@ -6321,7 +6323,7 @@
           "sendSMS": "Відправити SMS"
         },
         "sendMessage": {
-          "title": "Надіслати повідомлення — {{clientName}}",
+          "titlePrefix": "Надіслати повідомлення —",
           "channel": "Канал",
           "service": "Сервіс",
           "servicePlaceholder": "Оберіть сервіс",
@@ -6449,7 +6451,7 @@
           "apply": "Застосувати"
         },
         "tagSelector": {
-          "title": "Керування тегами — {{name}}",
+          "titlePrefix": "Керування тегами —",
           "loadingTags": "Завантаження тегів...",
           "searchTags": "Пошук тегів...",
           "selectedCount": "{{selected}} з {{total}} тегів вибрано",
@@ -6917,6 +6919,9 @@
         "cancelled": "Скасовано",
         "completed": "Завершено",
         "completedEarly": "Завершено достроково"
+      },
+      "documents": {
+        "previewFrameTitle": "Перегляд документа"
       }
     },
     "clientChains": {
