@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isDialablePhone, isValidManualDialDigits } from '@/lib/phone'
+import { formatUkrainePhoneForDisplay, isDialablePhone, isValidManualDialDigits } from '@/lib/phone'
 import { activeProjectCountry } from '@/lib/projectCountry'
 import { mapBackendUserToUser, mergeUserFromProjectsResponse } from '@/lib/mapBackendUser'
 import type { CurrentUserResponse, User } from '@/types/api'
@@ -95,5 +95,24 @@ describe('project country', () => {
 
     expect(activeProjectCountry(fromMe)).toBe('ES')
     expect(activeProjectCountry(fromProjects)).toBe('ES')
+  })
+})
+
+describe('formatUkrainePhoneForDisplay', () => {
+  it.each(['34612345678', '+34 612 345 678', '0034612345678'])(
+    'shows the Spanish number %s with its country code',
+    (value) => {
+      expect(formatUkrainePhoneForDisplay(value)).toBe('+34612345678')
+    }
+  )
+
+  it('keeps showing Ukrainian numbers as before', () => {
+    expect(formatUkrainePhoneForDisplay('380971234567')).toBe('+380971234567')
+    expect(formatUkrainePhoneForDisplay('0971234567')).toBe('+380971234567')
+  })
+
+  it('leaves anything else as typed', () => {
+    expect(formatUkrainePhoneForDisplay('34512345678')).toBe('34512345678')
+    expect(formatUkrainePhoneForDisplay('')).toBe('-')
   })
 })

@@ -5,6 +5,7 @@
 const DIGITS_ONLY = /\D/g
 const DIALABLE_PHONE = /^((\+?38)?0\d{9}|(\+|00)?34[6-9]\d{8})$/
 const MANUAL_DIAL_DIGITS = /^(380\d{9}|34[6-9]\d{8})$/
+const SPANISH_WITH_CODE = /^(00)?34([6-9]\d{8})$/
 
 export function isDialablePhone(value: string): boolean {
   return DIALABLE_PHONE.test(value.replace(/[\s\-().]/g, ''))
@@ -37,10 +38,12 @@ export function normalizeUkrainePhoneToDb(value?: string | null): string | null 
 
 /**
  * Format a phone value for UI display.
- * If the number can be normalized, show it as +380XXXXXXXXX.
  */
 export function formatUkrainePhoneForDisplay(value?: string | null, fallback = '-'): string {
   if (!value?.trim()) return fallback
+
+  const spanish = SPANISH_WITH_CODE.exec(stripToDigits(value))
+  if (spanish) return `+34${spanish[2]}`
 
   const normalized = normalizeUkrainePhoneToDb(value)
   if (normalized) return `+${normalized}`
