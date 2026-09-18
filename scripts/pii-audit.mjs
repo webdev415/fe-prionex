@@ -81,6 +81,12 @@ const PII_NAME = [
   // `Component.displayName = '…'` assignments, which are not JSX expressions and
   // so never reach this rule.
   /^displayName$/,
+  // Names that arrive at the JSX already renamed after their owner. The task's
+  // five-field grep cannot see any of these, and neither could the rules above:
+  // `clientName` is not `full_name` and not `fullName`. Found by reading
+  // `pages/LawyerWorkplace`, where the entire section renders client names under
+  // this spelling and the audit reported nothing at all.
+  /\b\w*(client|contact|operator|employee|trainer|lawyer|debtor|recipient|sender|author|manager|person|customer)_?[nN]ame\b/i,
 ]
 
 const PII_ADDR = [/[A-Za-z_]*[aA]ddress\b/]
@@ -272,6 +278,36 @@ function expressionNames(node, names) {
       ts.isJsxExpression(current) ||
       ts.isStringLiteralLike(current)
     ) {
+      return
+    }
+
+    // A CONDITION TESTS A VALUE, IT DOES NOT RENDER ONE.
+    // `{clientName ? <span>{clientName}</span> : null}` renders the name in the
+    // branch, and the branch is what gets marked up. Reading the condition too
+    // reports the OUTER expression as a second site — one that marking up the
+    // inner span can never clear, because the marked element is not its
+    // ancestor. Same failure as descending into nested JSX, reached from the
+    // other side.
+    if (ts.isConditionalExpression(current)) {
+      visit(current.whenTrue)
+      visit(current.whenFalse)
+      return
+    }
+    if (
+      ts.isBinaryExpression(current) &&
+      (current.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken ||
+        current.operatorToken.kind === ts.SyntaxKind.BarBarToken)
+    ) {
+      // `{name && <span>…</span>}` guards; `{name || '—'}` renders. Only the
+      // first has a left side that is a test rather than a value.
+      const right = current.right
+      const guardsJsx =
+        ts.isJsxElement(right) ||
+        ts.isJsxSelfClosingElement(right) ||
+        ts.isJsxFragment(right) ||
+        ts.isParenthesizedExpression(right)
+      if (!guardsJsx) visit(current.left)
+      visit(right)
       return
     }
 

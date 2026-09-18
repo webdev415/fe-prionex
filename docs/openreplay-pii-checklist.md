@@ -31,7 +31,7 @@
 | 1–2 | Инфраструктура, аудит, детектор | `feat/kanban-54/infra` | ✅ |
 | 3.1 | `pages/ClientManagement` | `feat/kanban-54/markup-client-management` | ✅ |
 | 3.2 | `pages/EmployeeCard` + `features/users` | `feat/kanban-54/markup-employees` | ✅ |
-| 3.3 | `pages/LawyerWorkplace` | `feat/kanban-54/markup-lawyer` | ⬜ |
+| 3.3 | `pages/LawyerWorkplace` | `feat/kanban-54/markup-lawyer` | ✅ |
 | 3.4 | `pages/ActionAnalysis` | `feat/kanban-54/markup-action-analysis` | ⬜ |
 | 3.5 | `pages/Training` + остальные разделы | `feat/kanban-54/markup-training-rest` | ⬜ |
 | 4 + 5.7 | ПДн в атрибутах, `<iframe>` | `feat/kanban-54/attributes` | ⬜ |
@@ -92,6 +92,18 @@
 | Маршрут | Компоненты | В звёздочках | Читаемо |
 |---|---|---|---|
 | `/dashboard/lawyer-workplace` | `LawyerWorkplacePage`, канбан, треды | ФИО клиента в карточках задач, в письмах и в выборе клиента | статусы задач, названия колонок канбана, даты |
+
+> **Закрыто в 3.3** (`npm run pii-audit src/pages/LawyerWorkplace` → 0): канбан
+> (`KanbanCard`, `KanbanTaskDetailPanel`), входящие (`LetterListItem` — отправитель и клиент),
+> тред (`EmailThreadPanel` — имя отправителя, инициалы в аватаре, чип клиента),
+> `LetterContextPanel` (ФИО в контексте письма), документы (`DocumentsTable`,
+> `DocumentDetailDrawer`), реестр (`registryColumns` — колонка «ФИО / учреждение»).
+>
+> Код клиента, номер договора, исходящий номер, тема письма и статусы — **читаемы**:
+> ими запись остаётся узнаваемой, когда имя ушло в звёздочки.
+>
+> ⚠️ Этот раздел статический аудит не видел вовсе: он пишет ФИО как `clientName`, а
+> словарь искал `full_name`/`fullName`. Правило расширено тем же PR — см. описание.
 
 ### Анализ действий
 

@@ -31,6 +31,7 @@ import type { LetterDetail, ThreadAttachment } from '../../types'
 import { AttachClientDocumentModal } from './AttachClientDocumentModal'
 import { ReplyComposer } from './ReplyComposer'
 import { EmailMessageBody } from './EmailMessageBody'
+import { piiProps } from '@/lib/openreplay/pii'
 
 function formatReferenceId(referenceId: string): string {
   return referenceId.replace(/-/g, ' · ')
@@ -124,13 +125,20 @@ function MessageCard({
   return (
     <div className="bg-card overflow-hidden rounded-[12px] shadow-sm">
       <div className="flex items-start gap-3 px-4 pt-3.5 pb-2.5">
-        <div className="bg-secondary-100 text-secondary-800 mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-sans text-[14px] font-medium">
+        <div
+          className="bg-secondary-100 text-secondary-800 mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-sans text-[14px] font-medium"
+          {...piiProps}
+        >
           {initials(message.senderName)}
         </div>
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0">
-            <span className="text-foreground text-[13px] font-semibold">{message.senderName}</span>
+            <span className="text-foreground text-[13px] font-semibold" {...piiProps}>
+              {message.senderName}
+            </span>
+            {/* The address is already masked by `obscureTextEmails` in the
+                tracker options, so it needs nothing here. */}
             <span className="text-muted-foreground text-[11px]">{message.senderEmail}</span>
           </div>
           {message.toMailbox && (
@@ -557,7 +565,10 @@ export function EmailThreadPanel({
               title={t('pages.lawyerWorkplace.openClientCard', 'Open client card')}
             >
               <Icons.User size={12} strokeWidth={1.5} />
-              <span className="max-w-[160px] truncate">
+              {/* The name and the client code arrive as one string, so the
+                  whole span goes. The code is digits, which the tracker masks
+                  anyway. */}
+              <span className="max-w-[160px] truncate" {...piiProps}>
                 {letter.clientName
                   ? `${letter.clientName} · ${letter.clientCode}`
                   : letter.clientCode}

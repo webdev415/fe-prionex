@@ -4,6 +4,7 @@ import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { formatLetterTime } from '../../utils/formatters'
 import type { LetterListItem as LetterListItemType } from '../../types'
+import { piiProps } from '@/lib/openreplay/pii'
 
 const STATUS_KEYS: Record<
   'new' | 'in_progress' | 'auto_processed' | 'done',
@@ -71,7 +72,10 @@ export function LetterListItem({ letter, isSelected, onSelect }: LetterListItemP
       )}
     >
       <div className="mb-1.5 flex items-baseline justify-between gap-2">
-        <span className="text-foreground min-w-0 truncate text-[13px] leading-tight font-medium">
+        <span
+          className="text-foreground min-w-0 truncate text-[13px] leading-tight font-medium"
+          {...piiProps}
+        >
           {letter.senderName}
         </span>
         <span className="text-muted-foreground shrink-0 text-[11px]">
@@ -157,7 +161,9 @@ export function LetterListItem({ letter, isSelected, onSelect }: LetterListItemP
             >
               {letter.clientName ? (
                 <>
-                  <span className="text-foreground text-[11px]">{letter.clientName}</span>
+                  <span className="text-foreground text-[11px]" {...piiProps}>
+                    {letter.clientName}
+                  </span>
                   <span className="text-muted-foreground text-[11px]"> · </span>
                 </>
               ) : null}
@@ -167,7 +173,9 @@ export function LetterListItem({ letter, isSelected, onSelect }: LetterListItemP
             <div className="flex items-center gap-1">
               {letter.clientName ? (
                 <>
-                  <span className="text-foreground text-[11px]">{letter.clientName}</span>
+                  <span className="text-foreground text-[11px]" {...piiProps}>
+                    {letter.clientName}
+                  </span>
                   <span className="text-muted-foreground text-[11px]"> · </span>
                 </>
               ) : null}

@@ -87,6 +87,31 @@ describe('pii-audit — what counts as a render site', () => {
     expect(rendered[0].identifier).toBe('client.fullName')
   })
 
+  it('does not report a guard that only TESTS the value', () => {
+    // 🔴 `{clientName ? <span>{clientName}</span> : null}` renders the name in
+    // the branch, and the branch is what gets marked up. If the condition were
+    // read as a render too, the outer expression would be a second finding —
+    // and one that marking up the inner span could never clear, because the
+    // marked element is not its ancestor. The same dead end as bubbling out of
+    // nested JSX, reached from the other side; `pages/LawyerWorkplace` writes
+    // every client name this way.
+    const { rendered } = audit(`
+      export const C = () => (
+        <div>
+          {clientName ? <span data-openreplay-obscured="">{clientName}</span> : null}
+          {client.fullName && <span data-openreplay-obscured="">{client.fullName}</span>}
+        </div>
+      )
+    `)
+    expect(rendered).toHaveLength(0)
+  })
+
+  it('still reports a fallback, which renders rather than guards', () => {
+    // `{name || '—'}` is not a guard: the name IS what reaches the screen.
+    const { rendered } = audit(`export const C = () => <p>{client.fullName || '—'}</p>`)
+    expect(rendered).toHaveLength(1)
+  })
+
   it('still sees a name in the non-JSX branch of a conditional', () => {
     const { rendered } = audit(
       `export const C = () => <div>{loading ? <Spinner /> : client.fullName}</div>`

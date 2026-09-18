@@ -114,6 +114,10 @@ export function buildOutgoingColumns(
     {
       key: 'party',
       header: t('pages.lawyerWorkplace.registry.columns.partyName', 'Full name / Institution'),
+      // The column mixes people and institutions; an institution is not personal
+      // data, but the two cannot be told apart from here, and a column masked
+      // one row in three would be worse than one masked throughout.
+      obscured: true,
       render: (row) => (
         <span className="text-foreground text-xs">{row.recipient_name || DASH}</span>
       ),
