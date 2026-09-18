@@ -47,11 +47,12 @@ export const OPENREPLAY_ENABLED = OPENREPLAY_PROJECT_KEY !== '' && OPENREPLAY_IN
  *
  * The gap it used to leave is closed IN THE SOURCE (KAN-KB-54); acceptance on
  * a real recording — phase 6 of the plan, a human step — is still open, and
- * `build.yml` says so on every prod build until it is recorded. With
- * `privateMode` off the tracker masks digits (`obscureTextNumbers`) and input
- * values, and nothing in the tracker masks letters — client names, addresses
- * and free-text operator comments would reach a recording verbatim. The blocks
- * that hold them now carry `data-openreplay-obscured`:
+ * `build.yml` REFUSES a prod build that carries a key until
+ * `docs/openreplay-pii-acceptance.md` records that pass. With `privateMode` off
+ * the tracker masks digits (`obscureTextNumbers`) and input values, and nothing
+ * in the tracker masks letters — client names, addresses and free-text operator
+ * comments would reach a recording verbatim. The blocks that hold them now carry
+ * `data-openreplay-obscured`:
  *
  * - text is marked per container (`src/lib/openreplay/pii.tsx`, plus the
  *   declarative flags `Column.obscured`, `FieldGrid`'s `obscured` and
@@ -77,9 +78,9 @@ export const OPENREPLAY_ENABLED = OPENREPLAY_PROJECT_KEY !== '' && OPENREPLAY_IN
  * History, so nobody reconstructs it from the git log: `build.yml` used to
  * REFUSE a prod build carrying an OpenReplay key, naming KAN-KB-54. That gate
  * was replaced by a `::warning::` on 2026-09-17 by explicit decision while the
- * task was still open (KAN-KB-58). Both are gone now — the gate because the
- * work it waited for is done, the warning because it described a hole that no
- * longer exists.
+ * task was still open (KAN-KB-58). The markup then landed and the warning went
+ * with it — and code review put the gate back, keyed to the acceptance record
+ * rather than to the task: it opens by itself the moment phase 6 is committed.
  *
  * Same convention as the key and as `VITE_ASSISTANT_REPORT_TABLES_ENABLED`:
  * empty or unset means off, and only a literal 'true'/'1' turns it on.

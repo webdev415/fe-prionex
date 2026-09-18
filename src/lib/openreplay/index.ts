@@ -92,15 +92,32 @@ export function redactSensitiveHeaders(headers: Record<string, string> | undefin
 let trackerPromise: Promise<Tracker | null> | null = null
 
 /**
- * The one constructed instance, kept across stop/start.
+ * The one constructed instance, as the promise of its construction.
  *
- * The tracker is built once and RESTARTED, not rebuilt: `stop()` ends the
- * session and `start()` on the same instance opens a new one. A fresh
- * `new Tracker()` per login would register a second set of DOM observers on the
- * same document, which is exactly what the single-start guard above exists to
- * prevent.
+ * 🔴 A PROMISE, not the resolved value, and that is the guard against a second
+ * `new Tracker()`. The instance is built once and RESTARTED — `stop()` ends the
+ * session, `start()` on the same instance opens a new one — because a second
+ * instance would register a second set of DOM observers on the same document.
+ * Holding the resolved value here left a window: a stop/start while the chunk
+ * was still downloading saw `null`, took the import branch again and built a
+ * second tracker (review of KAN-KB-54, round 3). An in-flight promise has no
+ * such window — whoever asks second gets the same construction.
  */
-let instance: Tracker | null = null
+let construction: Promise<Tracker> | null = null
+
+/**
+ * The stop that is in progress, if any.
+ *
+ * Start chains behind it, so the transitions are SERIALISED rather than
+ * reasoned about in terms of microtask order. The previous version argued
+ * "microtasks are FIFO" — which is true of callbacks that are already eligible
+ * and false of a stop waiting on a start that has not resolved yet, while a new
+ * start's own chain becomes eligible immediately. The concrete failure: a
+ * logout+login during the first start ran the new `start()` first and the
+ * queued `stop()` second, on the same instance, and left the tab with a dead
+ * recording for the rest of its life, silently.
+ */
+let stopping: Promise<void> = Promise.resolve()
 
 /** The started tracker, or `null`. Used by `identify.ts` to name the operator. */
 export function getTracker(): Promise<Tracker | null> {
@@ -119,19 +136,51 @@ export function stopOpenReplay(): void {
   const running = trackerPromise
   trackerPromise = null
   if (!running) return
-  // `stop()` is queued behind the start it ends. A start that is still pending
-  // (the chunk is downloading) is stopped the moment it resolves, before any
-  // later `startOpenReplay()`'s own chain runs — microtasks are FIFO.
-  void running.then((tracker) => tracker?.stop()).catch(() => undefined)
+  stopping = running
+    .then((tracker) => {
+      tracker?.stop()
+    })
+    .catch(() => undefined)
 }
 
-export function startOpenReplay(): void {
+/** What a start may ask for. A subset of the package's own `StartOptions`. */
+export interface StartOpenReplayOptions {
+  /**
+   * Open a NEW session rather than continue the one this tab already has.
+   *
+   * 🔴 Required after a logout, and not implied by `stop()`. Verified in
+   * `@openreplay/tracker@18.0.6` (`dist/lib/index.js`): `stop()` clears the
+   * observers and the message queue but leaves the session token in
+   * `sessionStorage`, and `checkSessionToken(forceNew)` continues the session
+   * whenever a token is present and `forceNew` is not set — that is how a page
+   * navigation keeps one session. Without this flag the logout/login sequence
+   * produced ONE session whose user id was rewritten to the second operator:
+   * precisely the mis-attribution `identify.ts` exists to prevent.
+   *
+   * Off for the first start of a page load on purpose, so that navigating
+   * within the app keeps one session.
+   */
+  forceNew?: boolean
+  /**
+   * Identity set together with the session start.
+   *
+   * On the RESTART path (`identify.ts`, after a logout or on a login screen
+   * that booted with nobody) this is what gives the new session an owner from
+   * its first frame. On a plain page load `main.tsx` starts without it and the
+   * identity arrives one round-trip later via `setUserID` — that session is
+   * being continued, not opened, so its owner is already on record.
+   */
+  userID?: string
+  metadata?: Record<string, string>
+}
+
+export function startOpenReplay(options: StartOpenReplayOptions = {}): void {
   if (!OPENREPLAY_ENABLED || trackerPromise) return
 
-  const construct: Promise<Tracker> = instance
-    ? Promise.resolve(instance)
-    : import('@openreplay/tracker').then(({ default: OpenReplayTracker }) => {
-        instance = new OpenReplayTracker({
+  const construct = (): Promise<Tracker> =>
+    (construction ??= import('@openreplay/tracker').then(
+      ({ default: OpenReplayTracker }) =>
+        new OpenReplayTracker({
           projectKey: OPENREPLAY_PROJECT_KEY,
           ingestPoint: OPENREPLAY_INGEST_URL,
 
@@ -203,14 +252,32 @@ export function startOpenReplay(): void {
           // branch from production builds, where the stands serve over HTTPS.
           __DISABLE_SECURE_MODE: import.meta.env.DEV,
         })
-        return instance
-      })
+    ))
 
-  trackerPromise = construct
+  // Behind the stop in progress (see `stopping`), then behind the construction.
+  //
+  // INVARIANT: nothing running ⇒ `trackerPromise === null`. A start that ends
+  // in `null` — the import rejected, or `start()` refused — releases the guard
+  // as it settles, so the NEXT `startOpenReplay()` tries again instead of
+  // hitting a promise that resolved to nothing and returning early. Without
+  // this a failed first start left the tab dead until a logout happened to
+  // null the guard (Fable review of this pass, scenario e). `attempt` is
+  // compared by identity before clearing, so a settle from an OLD attempt
+  // cannot clear a NEWER one that a stop/start cycle has since installed.
+  // `construct()` is called INSIDE the chain, not captured before it: an
+  // attempt queued behind a stop can outlive an import that rejected in the
+  // meantime, and a captured promise would hand it the rejection (or, with the
+  // `??=` already run, a `null`). Re-running `??=` at that point re-imports.
+  const attempt: Promise<Tracker | null> = stopping
+    .then(construct)
     .then(async (tracker) => {
       // An unsuccessful start RESOLVES with `{ success: false, reason }` — it
       // does not throw. Without this check the failure would pass unnoticed.
-      const result = await tracker.start()
+      const result = await tracker.start({
+        forceNew: options.forceNew,
+        userID: options.userID,
+        metadata: options.metadata,
+      })
       if (!result.success) {
         // `console.error` rather than `.info` because the project's lint rule
         // permits only that one — and it fits: this line is reached only when a
@@ -223,8 +290,19 @@ export function startOpenReplay(): void {
       return tracker
     })
     // A rejection here is a plain string, not an Error, and arrives when the
-    // constructor never built its app (not a browser, doNotTrack, secure mode).
-    // Swallowed on purpose: a missing session recording is not worth an error
-    // in front of an operator, and there is nothing they could do about it.
-    .catch(() => null)
+    // import failed or the constructor never built its app (not a browser,
+    // doNotTrack, secure mode). Swallowed on purpose: a missing session
+    // recording is not worth an error in front of an operator, and there is
+    // nothing they could do about it. The construction is dropped too, so a
+    // retry re-imports rather than reusing an instance without an app.
+    .catch(() => {
+      construction = null
+      return null
+    })
+    .then((tracker) => {
+      if (tracker === null && trackerPromise === attempt) trackerPromise = null
+      return tracker
+    })
+
+  trackerPromise = attempt
 }

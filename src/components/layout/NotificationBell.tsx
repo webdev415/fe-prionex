@@ -976,13 +976,19 @@ function TaskNotificationItem({
           </span>
         )}
         {meta.subject_name && !meta.status && (
-          <span className="bg-information-100 text-information-600 rounded px-1.5 py-0.5 text-[10px] font-medium">
+          <span
+            className="bg-information-100 text-information-600 rounded px-1.5 py-0.5 text-[10px] font-medium"
+            {...piiProps}
+          >
             {meta.subject_name}
           </span>
         )}
       </div>
+      {/* The body is server-rendered prose about a client — it carries the name
+          the line above masks, and whatever else the backend put in. Bodies are
+          marked in every notification variant below for the same reason. */}
       {(meta.description || n.body) && (
-        <p className="text-foreground w-full min-w-0 truncate text-xs">
+        <p className="text-foreground w-full min-w-0 truncate text-xs" {...piiProps}>
           {meta.description || n.body}
         </p>
       )}
@@ -1092,7 +1098,9 @@ function CallNotificationItem({
         <Icons.Phone size={14} strokeWidth={1.5} className="text-success-500" />
         <p className="text-foreground text-xs font-semibold">{n.title}</p>
       </div>
-      <p className="text-foreground text-xs">{n.body}</p>
+      <p className="text-foreground text-xs" {...piiProps}>
+        {n.body}
+      </p>
       <span className="text-muted-foreground text-[11px]">
         {n.created_at ? formatRelativeTime(n.created_at, t) : ''}
       </span>
@@ -1152,7 +1160,9 @@ function UbkiNotificationItem({
           <p className="text-foreground line-clamp-1 text-xs font-semibold">{n.title}</p>
         </div>
         {n.body && (
-          <p className="text-foreground w-full min-w-0 text-xs whitespace-normal">{n.body}</p>
+          <p className="text-foreground w-full min-w-0 text-xs whitespace-normal" {...piiProps}>
+            {n.body}
+          </p>
         )}
         <div className="text-foreground flex items-center gap-1">
           <Icons.Clock01 size={11} strokeWidth={1.5} />
@@ -1197,7 +1207,11 @@ function RRPaymentNotificationItem({
           </span>
         )}
       </div>
-      {n.body && <p className="text-foreground line-clamp-3 w-full min-w-0 text-xs">{n.body}</p>}
+      {n.body && (
+        <p className="text-foreground line-clamp-3 w-full min-w-0 text-xs" {...piiProps}>
+          {n.body}
+        </p>
+      )}
       <div className="text-foreground flex items-center gap-1">
         <Icons.Clock01 size={11} strokeWidth={1.5} />
         <span className="text-[11px]">
@@ -1321,7 +1335,11 @@ function TrainingNotificationItem({
           </div>
         ) : (
           n.body && (
-            <p className="text-foreground w-full min-w-0 text-xs whitespace-normal">{n.body}</p>
+            // The 1-on-1 fallback: the backend renders this with the trainer's
+            // name — the very name the branch above masks.
+            <p className="text-foreground w-full min-w-0 text-xs whitespace-normal" {...piiProps}>
+              {n.body}
+            </p>
           )
         )}
         <span className="text-muted-foreground text-[11px]">
@@ -1377,7 +1395,10 @@ function GenericNotificationItem({
         <p className="text-foreground line-clamp-1 text-xs font-semibold">{n.title || n.type}</p>
       </div>
       {n.body && (
-        <p className="text-foreground line-clamp-3 w-full min-w-0 text-xs whitespace-normal">
+        <p
+          className="text-foreground line-clamp-3 w-full min-w-0 text-xs whitespace-normal"
+          {...piiProps}
+        >
           {n.body}
         </p>
       )}

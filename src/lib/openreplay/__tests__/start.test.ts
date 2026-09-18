@@ -27,7 +27,10 @@ async function loadWithMockedTracker(options: {
   failImport?: boolean
 }) {
   const construct = vi.fn()
-  const start = vi.fn(options.start ?? (async () => ({ success: true }) as StartResult))
+  const start = vi.fn<(opts?: unknown) => Promise<StartResult>>(
+    options.start ?? (async () => ({ success: true }) as StartResult)
+  )
+  const stop = vi.fn()
   // Called only if something actually imports the package — that is the
   // assertion behind "a build without a key downloads no tracker".
   const factory = vi.fn(() => {
@@ -38,6 +41,7 @@ async function loadWithMockedTracker(options: {
           construct(opts)
         }
         start = start
+        stop = stop
       },
     }
   })
@@ -48,7 +52,7 @@ async function loadWithMockedTracker(options: {
   vi.doMock('@openreplay/tracker', factory)
 
   const mod = await import('../index')
-  return { mod, factory, construct, start }
+  return { mod, factory, construct, start, stop }
 }
 
 type SanitizedRecord = {
@@ -95,6 +99,64 @@ describe('startOpenReplay', () => {
 
     expect(construct).toHaveBeenCalledTimes(1)
     expect(start).toHaveBeenCalledTimes(1)
+  })
+
+  it('serialises stop and start called straight into the window of a pending start', async () => {
+    // 🔴 The race from code review (round 3), reproduced at the level it lives
+    // on: stop and start called directly while the FIRST start has not resolved
+    // — the chunk is still downloading. Reasoned by microtask order, the new
+    // `start()` ran first and the queued `stop()` second, on the same instance,
+    // leaving a dead recording for the life of the tab; or, with the import not
+    // yet resolved, a SECOND `new Tracker()` was built. Both must be
+    // impossible whatever the timing: the next start chains behind `stopping`,
+    // and the construction is one shared promise.
+    //
+    // This fails when the `stopping` chain is removed from index.ts (verified:
+    // the second start() then precedes stop()). The identity-level test in
+    // identify.test.ts cannot see this — its own queue orders the calls.
+    let release: (r: StartResult) => void = () => {}
+    let calls = 0
+    const { mod, construct, start, stop } = await loadWithMockedTracker({
+      enabled: true,
+      start: () => {
+        calls += 1
+        if (calls === 1) return new Promise<StartResult>((r) => (release = r))
+        return Promise.resolve({ success: true } as StartResult)
+      },
+    })
+
+    mod.startOpenReplay()
+    await Promise.resolve()
+    // Straight into the window: the first start is pending.
+    mod.stopOpenReplay()
+    mod.startOpenReplay({ forceNew: true, userID: '2077' })
+    await new Promise((r) => setTimeout(r, 0))
+
+    expect(stop).not.toHaveBeenCalled()
+    expect(start).toHaveBeenCalledTimes(1)
+
+    release({ success: true })
+    for (let i = 0; i < 3; i++) await new Promise((r) => setTimeout(r, 0))
+
+    expect(stop).toHaveBeenCalledTimes(1)
+    expect(start).toHaveBeenCalledTimes(2)
+    expect(stop.mock.invocationCallOrder[0]).toBeLessThan(start.mock.invocationCallOrder[1])
+    expect(start.mock.calls[1][0]).toMatchObject({ forceNew: true, userID: '2077' })
+    expect(construct).toHaveBeenCalledTimes(1)
+    await expect(mod.getTracker()).resolves.not.toBeNull()
+  })
+
+  it('lets a later start retry after a construction that rejected', async () => {
+    // Scenario (e) from the Fable pass: the dynamic import fails once. The next
+    // start must not be silenced by a `trackerPromise` that resolved to null.
+    const { mod, factory } = await loadWithMockedTracker({ enabled: true, failImport: true })
+    mod.startOpenReplay()
+    await expect(mod.getTracker()).resolves.toBeNull()
+    expect(factory).toHaveBeenCalledTimes(1)
+
+    mod.startOpenReplay()
+    await mod.getTracker()
+    expect(factory).toHaveBeenCalledTimes(2)
   })
 
   it('resolves to the tracker on a successful start', async () => {

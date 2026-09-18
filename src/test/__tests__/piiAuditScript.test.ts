@@ -247,6 +247,42 @@ describe('pii-audit — what counts as covered', () => {
     expect(rendered).toHaveLength(0)
   })
 
+  it('does NOT accept `obscured={false}` or a computed value as coverage', () => {
+    // 🔴 The name of the prop is not the coverage; its value is. Treating any
+    // `obscured` as covered let `<SearchableSelect obscured={false}>` silence
+    // the whole subtree — the first author to pass `obscured={isPerson}` would
+    // have exempted every name under it without a word from CI.
+    const { rendered } = audit(`
+      export const C = () => (
+        <>
+          <SearchableSelect obscured={false}>
+            <span>{client.fullName}</span>
+          </SearchableSelect>
+          <FieldGrid obscured={isPerson}>
+            <span>{client.fullName}</span>
+          </FieldGrid>
+        </>
+      )
+    `)
+    expect(rendered).toHaveLength(2)
+  })
+
+  it('accepts the shorthand and a literal true on a component flag', () => {
+    const { rendered } = audit(`
+      export const C = () => (
+        <>
+          <SearchableSelect obscured>
+            <span>{client.fullName}</span>
+          </SearchableSelect>
+          <FieldGrid obscured={true}>
+            <span>{client.fullName}</span>
+          </FieldGrid>
+        </>
+      )
+    `)
+    expect(rendered).toHaveLength(0)
+  })
+
   it('does NOT accept a column that opts out', () => {
     const { rendered } = audit(`
       const columns = [

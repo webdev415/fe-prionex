@@ -416,8 +416,26 @@ function isCoveredInSource(node) {
           const name = attr.name.getText()
           if (name === OBSCURED_ATTR || name === HIDDEN_ATTR) return true
           if (name === `"${OBSCURED_ATTR}"` || name === `'${OBSCURED_ATTR}'`) return true
-          // `obscured` / `obscured={true}` on a `<Column>`-shaped component.
-          if (name === 'obscured' || name === 'expandedObscured') return true
+          // `obscured` / `obscured={true}` on a component that forwards the flag
+          // (FieldGrid, SearchableSelect, DataTable's expandedObscured).
+          //
+          // 🔴 The VALUE decides, not the name (review of KAN-KB-54, round 4).
+          // Treating any prop called `obscured` as coverage let
+          // `<SearchableSelect obscured={false}>` — or `obscured={isPerson}` —
+          // silence `--check` for the whole subtree, including real renders of
+          // names inside it. Same rule as `isCoveredByColumnLiteral`: a bare
+          // shorthand or a literal `true` covers; a literal `false` does not; any
+          // OTHER expression does not either, because the audit cannot know
+          // which branch runs and a false negative here is a leak nobody sees.
+          if (name === 'obscured' || name === 'expandedObscured') {
+            if (!attr.initializer) return true
+            const value = attr.initializer
+              .getText()
+              .replace(/^\{|\}$/g, '')
+              .trim()
+            if (value === 'true') return true
+            continue
+          }
         } else if (ts.isJsxSpreadAttribute(attr)) {
           // `{...piiProps}` / `{...(x ? piiProps : {})}` — the constant is the
           // only sanctioned way to spread the attribute, so its name is enough.
@@ -480,9 +498,12 @@ function isCoveredByColumnLiteral(node) {
         if (!ts.isPropertyAssignment(prop) && !ts.isShorthandPropertyAssignment(prop)) continue
         const key = prop.name?.getText()
         if (key !== 'obscured') continue
-        if (ts.isShorthandPropertyAssignment(prop)) return true
-        const value = prop.initializer.getText()
-        if (value !== 'false') return true
+        // Literal `true` only — same reasoning as the JSX branch: a computed
+        // value is a branch the audit cannot see down. Unlike JSX, an object
+        // shorthand `{ key, header, obscured }` is a VARIABLE read, not `true`,
+        // so it does not count either.
+        if (ts.isShorthandPropertyAssignment(prop)) continue
+        if (prop.initializer.getText() === 'true') return true
       }
     }
   }
