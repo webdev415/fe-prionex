@@ -4329,7 +4329,7 @@
             "description": "Texto de ejemplo",
             "fullCompanyName": "Introduzca el nombre completo de la empresa",
             "address": "Introduzca la dirección",
-            "edrpouCode": "Introduzca el EDRPOU",
+            "edrpouCode": "Introduzca el NIF/CIF",
             "website": "Introduzca el sitio web",
             "email": "Introduzca el correo electrónico",
             "hotlinePhone": "Introduzca el teléfono de la línea de soporte",
@@ -4347,7 +4347,7 @@
             "title": "Datos de la empresa",
             "fullCompanyName": "Nombre completo de la empresa",
             "address": "Dirección",
-            "edrpouCode": "EDRPOU",
+            "edrpouCode": "NIF/CIF",
             "website": "Sitio web",
             "email": "Correo electrónico",
             "hotlinePhone": "Teléfono de la línea de soporte",
@@ -4389,7 +4389,7 @@
             "description": "Texto de ejemplo",
             "fullCompanyName": "Introduzca el nombre completo de la empresa",
             "address": "Introduzca la dirección",
-            "edrpouCode": "Introduzca el EDRPOU",
+            "edrpouCode": "Introduzca el NIF/CIF",
             "website": "Introduzca el sitio web",
             "email": "Introduzca el correo electrónico",
             "hotlinePhone": "Introduzca el teléfono de la línea de soporte",
@@ -4406,7 +4406,7 @@
             "title": "Datos de la empresa",
             "fullCompanyName": "Nombre completo de la empresa",
             "address": "Dirección",
-            "edrpouCode": "EDRPOU",
+            "edrpouCode": "NIF/CIF",
             "website": "Sitio web",
             "email": "Correo electrónico",
             "hotlinePhone": "Teléfono de la línea de soporte",
@@ -4426,10 +4426,16 @@
           "deleteProject": "Eliminar proyecto"
         },
         "errors": {
-          "edrpouCodeFormat": "El EDRPOU debe tener exactamente 8 dígitos",
+          "edrpouCodeFormat": "Introduzca 9 caracteres (NIF/CIF) u 8 dígitos (EDRPOU)",
           "ibanFormat": "El IBAN debe empezar con 2 letras mayúsculas seguidas de hasta 32 dígitos (máximo 34 caracteres)",
           "hotlinePhoneFormat": "El número de teléfono solo puede contener dígitos y espacios",
           "emailFormat": "Introduzca una dirección de correo electrónico válida"
+        },
+        "currency": {
+          "label": "Moneda",
+          "hint": "Todos los importes de este proyecto se muestran en esta moneda.",
+          "UAH": "Grivna (₴)",
+          "EUR": "Euro (€)"
         }
       }
     },
@@ -7623,7 +7629,7 @@
           "dueDate": "Fecha de vencimiento del próximo pago",
           "projectFullCompanyName": "Razón social completa",
           "projectAddress": "Dirección de la empresa",
-          "projectEdrpouCode": "Código EDRPOU",
+          "projectEdrpouCode": "NIF/CIF de la empresa",
           "projectWebsite": "Sitio web",
           "projectEmail": "Correo electrónico de contacto",
           "projectHotlinePhone": "Teléfono de la línea de asistencia",

@@ -4321,7 +4321,7 @@
             "description": "Placeholder text",
             "fullCompanyName": "Enter full company name",
             "address": "Enter address",
-            "edrpouCode": "Enter EDRPOU",
+            "edrpouCode": "Enter EDRPOU or NIF",
             "website": "Enter website",
             "email": "Enter email",
             "hotlinePhone": "Enter support hotline phone",
@@ -4339,7 +4339,7 @@
             "title": "Company details",
             "fullCompanyName": "Full company name",
             "address": "Address",
-            "edrpouCode": "EDRPOU",
+            "edrpouCode": "EDRPOU / NIF",
             "website": "Website",
             "email": "Email",
             "hotlinePhone": "Support hotline phone",
@@ -4381,7 +4381,7 @@
             "description": "Placeholder text",
             "fullCompanyName": "Enter full company name",
             "address": "Enter address",
-            "edrpouCode": "Enter EDRPOU",
+            "edrpouCode": "Enter EDRPOU or NIF",
             "website": "Enter website",
             "email": "Enter email",
             "hotlinePhone": "Enter support hotline phone",
@@ -4398,7 +4398,7 @@
             "title": "Company details",
             "fullCompanyName": "Full company name",
             "address": "Address",
-            "edrpouCode": "EDRPOU",
+            "edrpouCode": "EDRPOU / NIF",
             "website": "Website",
             "email": "Email",
             "hotlinePhone": "Support hotline phone",
@@ -4418,10 +4418,16 @@
           "deleteProject": "Delete Project"
         },
         "errors": {
-          "edrpouCodeFormat": "EDRPOU must be exactly 8 digits",
+          "edrpouCodeFormat": "Enter 8 digits (EDRPOU) or 9 characters (NIF/CIF)",
           "ibanFormat": "IBAN must start with 2 uppercase letters followed by up to 32 digits (max 34 characters)",
           "hotlinePhoneFormat": "Phone number may contain digits and spaces only",
           "emailFormat": "Enter a valid email address"
+        },
+        "currency": {
+          "label": "Currency",
+          "hint": "All amounts in this project are shown in this currency.",
+          "UAH": "Hryvnia (₴)",
+          "EUR": "Euro (€)"
         }
       }
     },
@@ -7587,7 +7593,7 @@
           "dueDate": "Next payment due date",
           "projectFullCompanyName": "Full company name",
           "projectAddress": "Company address",
-          "projectEdrpouCode": "EDRPOU code",
+          "projectEdrpouCode": "EDRPOU / NIF code",
           "projectWebsite": "Website",
           "projectEmail": "Contact email",
           "projectHotlinePhone": "Support hotline phone",

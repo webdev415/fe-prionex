@@ -15,6 +15,7 @@ import { Alert } from '@/components/ui/Alert'
 import { DateSelect } from '@/components/ui/DateSelect'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { Label } from '@/components/ui/Label'
+import { RadioGroup, RadioItem } from '@/components/ui/Radio'
 import { useCreateProject } from '@/features/projects/hooks/useProjectMutations'
 import type { CreateProjectInput } from '@/features/projects/types'
 import { formatPickerDateAsYMD } from '@/lib/dateUtils'
@@ -42,6 +43,7 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
     contract_number: '',
     start_date: '',
     end_date: '',
+    currency: 'UAH',
     // Company legal & banking details, all optional
     full_company_name: '',
     address: '',
@@ -103,6 +105,7 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
         contract_number: formData.contract_number || undefined,
         start_date: formData.start_date || undefined,
         end_date: noEndDate ? undefined : formData.end_date || undefined,
+        currency: formData.currency,
         // Spread the serialized company/banking payload (undefined for
         // empty fields so the BE stores NULL, not "").
         ...serializeCompanyBankingFields(formData),
@@ -117,6 +120,7 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
         contract_number: '',
         start_date: '',
         end_date: '',
+        currency: 'UAH',
         full_company_name: '',
         address: '',
         edrpou_code: '',
@@ -206,6 +210,32 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
                 variant={errors.code ? 'error' : 'default'}
                 error={errors.code}
               />
+            </div>
+            <div>
+              <Label className="mb-2 block text-sm font-light">
+                {t('pages.projects.modals.currency.label')}
+              </Label>
+              <RadioGroup
+                value={formData.currency}
+                onValueChange={(value) => handleChange('currency', value)}
+                disabled={createMutation.isPending}
+                className="flex gap-6"
+              >
+                {(['UAH', 'EUR'] as const).map((currency) => (
+                  <div key={currency} className="flex items-center gap-2">
+                    <RadioItem value={currency} id={`currency-${currency}`} />
+                    <Label
+                      htmlFor={`currency-${currency}`}
+                      className="mb-0 cursor-pointer text-sm font-light"
+                    >
+                      {t(`pages.projects.modals.currency.${currency}`)}
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
+              <p className="text-muted-foreground mt-1 text-xs">
+                {t('pages.projects.modals.currency.hint')}
+              </p>
             </div>
             <div className="bg-border h-px w-full" />
           </div>
@@ -310,7 +340,7 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
                 disabled={createMutation.isPending}
                 variant={errors.edrpou_code ? 'error' : 'default'}
                 error={errors.edrpou_code}
-                maxLength={8}
+                maxLength={9}
               />
             </div>
             <Textarea

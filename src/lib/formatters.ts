@@ -72,13 +72,22 @@ export function parseAmount(value: string | number | null | undefined): number {
  * Accepts both string and number inputs (backend sends financial fields as strings).
  * Example: "₴ 10 080" or "₴ 1,234" (depending on locale)
  */
-export function formatCurrency(amount?: string | number | null): string {
+export function formatCurrency(amount?: string | number | null, currency?: string | null): string {
   if (amount === undefined || amount === null) return '—'
 
   const num = typeof amount === 'string' ? parseFloat(amount) : amount
   if (isNaN(num)) return '—'
 
   const locale = intlLocaleForUiLanguage(i18n.language)
+
+  if (currency === 'EUR') {
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: 'EUR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(num)
+  }
 
   // Format with locale-aware number formatting
   const formatted = new Intl.NumberFormat(locale, {

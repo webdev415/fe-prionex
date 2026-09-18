@@ -4334,7 +4334,7 @@
             "description": "Текст-заповнювач",
             "fullCompanyName": "Введіть повну назву компанії",
             "address": "Введіть адресу",
-            "edrpouCode": "Введіть ЄДРПОУ",
+            "edrpouCode": "Введіть ЄДРПОУ або NIF",
             "website": "Введіть сайт",
             "email": "Введіть електронну пошту",
             "hotlinePhone": "Введіть номер телефону підтримки",
@@ -4352,7 +4352,7 @@
             "title": "Дані компанії",
             "fullCompanyName": "Повна назва компанії",
             "address": "Адреса",
-            "edrpouCode": "ЄДРПОУ",
+            "edrpouCode": "ЄДРПОУ / NIF",
             "website": "Сайт",
             "email": "Електронна пошта",
             "hotlinePhone": "Номер телефону підтримки",
@@ -4394,7 +4394,7 @@
             "description": "Текст-заповнювач",
             "fullCompanyName": "Введіть повну назву компанії",
             "address": "Введіть адресу",
-            "edrpouCode": "Введіть ЄДРПОУ",
+            "edrpouCode": "Введіть ЄДРПОУ або NIF",
             "website": "Введіть сайт",
             "email": "Введіть електронну пошту",
             "hotlinePhone": "Введіть номер телефону підтримки",
@@ -4411,7 +4411,7 @@
             "title": "Дані компанії",
             "fullCompanyName": "Повна назва компанії",
             "address": "Адреса",
-            "edrpouCode": "ЄДРПОУ",
+            "edrpouCode": "ЄДРПОУ / NIF",
             "website": "Сайт",
             "email": "Електронна пошта",
             "hotlinePhone": "Номер телефону підтримки",
@@ -4431,10 +4431,16 @@
           "deleteProject": "Видалити проєкт"
         },
         "errors": {
-          "edrpouCodeFormat": "ЄДРПОУ має містити рівно 8 цифр",
+          "edrpouCodeFormat": "Введіть 8 цифр (ЄДРПОУ) або 9 символів (NIF/CIF)",
           "ibanFormat": "IBAN має починатися з 2 великих латинських літер, далі до 32 цифр (макс. 34 символи)",
           "hotlinePhoneFormat": "Номер телефону може містити лише цифри та пробіли",
           "emailFormat": "Введіть коректну електронну адресу"
+        },
+        "currency": {
+          "label": "Валюта",
+          "hint": "Усі суми в цьому проєкті показуються в цій валюті.",
+          "UAH": "Гривня (₴)",
+          "EUR": "Євро (€)"
         }
       }
     },
@@ -7855,7 +7861,7 @@
           "dueDate": "Наступна дата платежу",
           "projectFullCompanyName": "Повна назва компанії",
           "projectAddress": "Адреса",
-          "projectEdrpouCode": "ЄДРПОУ",
+          "projectEdrpouCode": "ЄДРПОУ / NIF",
           "projectWebsite": "Сайт",
           "projectEmail": "Електронна пошта",
           "projectHotlinePhone": "Номер телефону підтримки",

@@ -49,6 +49,7 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
     start_date: project.start_date || '',
     end_date: project.end_date || '',
     status: project.status === 'archived' ? 'inactive' : project.status,
+    currency: project.currency ?? 'UAH',
     // Company legal & banking details; hydrated from the project
     // detail (NULL → '' so the inputs stay controlled).
     full_company_name: project.full_company_name ?? '',
@@ -116,6 +117,7 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
       }
       if (formData.status !== project.status && project.status !== 'archived')
         updateData.status = formData.status
+      if (formData.currency !== (project.currency ?? 'UAH')) updateData.currency = formData.currency
 
       // Diff each company/banking field against the persisted value and only
       // include it in the payload if the operator actually touched it. A
@@ -253,6 +255,32 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
                 </RadioGroup>
               </div>
             )}
+            <div>
+              <Label className="mb-2 block text-sm font-light">
+                {t('pages.projects.modals.currency.label')}
+              </Label>
+              <RadioGroup
+                value={formData.currency}
+                onValueChange={(value) => handleChange('currency', value)}
+                disabled={updateMutation.isPending}
+                className="flex gap-6"
+              >
+                {(['UAH', 'EUR'] as const).map((currency) => (
+                  <div key={currency} className="flex items-center gap-2">
+                    <RadioItem value={currency} id={`currency-${currency}`} />
+                    <Label
+                      htmlFor={`currency-${currency}`}
+                      className="mb-0 cursor-pointer text-sm font-light"
+                    >
+                      {t(`pages.projects.modals.currency.${currency}`)}
+                    </Label>
+                  </div>
+                ))}
+              </RadioGroup>
+              <p className="text-muted-foreground mt-1 text-xs">
+                {t('pages.projects.modals.currency.hint')}
+              </p>
+            </div>
             <div className="bg-border h-px w-full" />
           </div>
 
@@ -356,7 +384,7 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
                 disabled={updateMutation.isPending}
                 variant={errors.edrpou_code ? 'error' : 'default'}
                 error={errors.edrpou_code}
-                maxLength={8}
+                maxLength={9}
               />
             </div>
             <Textarea
