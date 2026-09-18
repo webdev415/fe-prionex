@@ -36,7 +36,7 @@
 | 3.5 | `pages/Training` + остальные разделы | `feat/kanban-54/markup-training-rest` | ✅ |
 | 4 + 5.7 | ПДн в атрибутах, `<iframe>` | `feat/kanban-54/attributes` | ✅ |
 | 5 | Порталы | `feat/kanban-54/portals` | ✅ |
-| 7 | Барьер в CI | `feat/kanban-54/ci-barrier` | ⬜ |
+| 7 | Барьер в CI | `feat/kanban-54/ci-barrier` | ✅ |
 | 8 | Снятие гейта | `feat/kanban-54/gate` | ⬜ |
 
 ## Маршруты

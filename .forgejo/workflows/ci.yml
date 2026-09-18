@@ -124,6 +124,21 @@ jobs:
       - name: Check formatting
         run: npm run format:check
 
+      # 🔒 KAN-KB-54. A new place that renders a client's name, address or
+      # free-text comment without `data-openreplay-obscured` fails the build.
+      # Without this the markup decays inside a month: the leak is added in an
+      # ordinary PR, nothing reports it, and the next person to notice is
+      # whoever opens the recording.
+      #
+      # A STEP of `lint`, deliberately not a job of its own. The required status
+      # checks on `main` name four jobs (eight contexts, push + pull_request);
+      # a fifth job would not be in that set, so it could fail while the merge
+      # button stayed green — a gate that does not gate. Adding a step instead
+      # needs no change to branch protection, and costs ~2s against the `npm ci`
+      # a separate job would repeat.
+      - name: Check for unmarked personal data (KAN-KB-54)
+        run: npm run pii-audit -- --check
+
   typecheck:
     name: Type Check
     runs-on: node-20
