@@ -74,6 +74,13 @@ const PII_NAME = [
   /\b[A-Za-z_]*(first|last|middle|First|Last|Middle)_?[nN]ame\b/,
   /\b\w*EmployeeName\b/,
   /\b\w*[pP]atronymic\b/,
+  // `displayName(user)` — `features/employeeCard/lib/displayName`, which builds
+  // a person's name out of the parts. Added because reading the employee list
+  // found a render site the field names alone could not: the identifier here
+  // names the FORMATTER, not the field. Its 40 namesakes in `src/` are
+  // `Component.displayName = '…'` assignments, which are not JSX expressions and
+  // so never reach this rule.
+  /^displayName$/,
 ]
 
 const PII_ADDR = [/[A-Za-z_]*[aA]ddress\b/]

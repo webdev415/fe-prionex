@@ -30,7 +30,7 @@
 |---|---|---|---|
 | 1–2 | Инфраструктура, аудит, детектор | `feat/kanban-54/infra` | ✅ |
 | 3.1 | `pages/ClientManagement` | `feat/kanban-54/markup-client-management` | ✅ |
-| 3.2 | `pages/EmployeeCard` + `features/users` | `feat/kanban-54/markup-employees` | ⬜ |
+| 3.2 | `pages/EmployeeCard` + `features/users` | `feat/kanban-54/markup-employees` | ✅ |
 | 3.3 | `pages/LawyerWorkplace` | `feat/kanban-54/markup-lawyer` | ⬜ |
 | 3.4 | `pages/ActionAnalysis` | `feat/kanban-54/markup-action-analysis` | ⬜ |
 | 3.5 | `pages/Training` + остальные разделы | `feat/kanban-54/markup-training-rest` | ⬜ |
@@ -72,6 +72,20 @@
 | `/dashboard/team-management/users` | `UserManagementPage`, `DataTable` | колонка ФИО | логин, роль, отдел, статус |
 | `/dashboard/team-management/users/:userId` | `EmployeeCardPage` и вкладки | ФИО сотрудника | должность, отдел, роль, метрики |
 | модалки пользователя | `CreateUserForm`, `EditUserForm`, `ViewUserForm` | значения и ошибки полей ФИО | подписи полей, названия ролей, текст ошибок валидации без ПДн |
+
+> **Закрыто в 3.2** (`npm run pii-audit src/pages/EmployeeCard src/features/users src/pages/UserManagement` → 0):
+> `FieldGrid` получил флаг `obscured` на поле — атрибут садится на `<dd>`, подпись в `<dt>`
+> остаётся читаемой; отмечены ФИО, домашний адрес, ФИО контактного лица и детей.
+> `ProfilePanel` — ФИО в заголовке (должность читаема). `UserManagementPage` — колонка ФИО
+> плюс `data-openreplay-label`. `ViewUserForm` — значения полей ФИО.
+>
+> В allowlist: `errors.first_name|last_name|middle_name` в `CreateUserForm`/`EditUserForm` —
+> это состояние валидации, а рендерится `errors.<field>.message` («First name is required»),
+> то есть текст интерфейса. Значение самого инпута уже снято `defaultInputMode: 2`,
+> а разметка блока увела бы в звёздочки подпись поля.
+>
+> Осталось на фазу 4: `UserAvatar` кладёт ФИО в `alt`, `title` и `aria-label` — атрибут,
+> разметкой не лечится, и это **общий** компонент, то есть утечка на каждом экране со списком людей.
 
 ### Рабочее место юриста
 

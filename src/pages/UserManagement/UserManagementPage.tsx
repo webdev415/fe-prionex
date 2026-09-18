@@ -543,11 +543,15 @@ export function UserManagementPage() {
       header: t('pages.users.tableHeaders.fullName'),
       sortable: true,
       sortKey: 'full_name',
+      obscured: true,
       render: (user) => (
         <button
           type="button"
           onClick={() => openEmployeeCard(user)}
           className="text-foreground hover:text-primary group flex cursor-pointer items-center gap-3 text-left font-medium"
+          // The cell's text is asterisks in a replay, so the click label must
+          // not be derived from it.
+          data-openreplay-label="employee-card-open"
         >
           <UserAvatar
             userId={user.id}

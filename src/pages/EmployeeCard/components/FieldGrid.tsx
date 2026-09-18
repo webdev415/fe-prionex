@@ -1,8 +1,18 @@
 import type { ReactNode } from 'react'
 
+import { piiProps } from '@/lib/openreplay/pii'
+
 export interface Field {
   label: string
   value: ReactNode
+  /**
+   * Record this field's VALUE as asterisks in an OpenReplay replay (KAN-KB-54).
+   *
+   * Set it on every field holding a person's name or a home address. The label
+   * is never marked: it is the only thing that says what the asterisks are, and
+   * a card where nothing can be told apart is `privateMode` by another route.
+   */
+  obscured?: boolean
 }
 
 export interface FieldGridProps {
@@ -28,7 +38,7 @@ export function FieldGrid({ fields }: FieldGridProps) {
       {fields.map((field) => (
         <div key={field.label} className="space-y-1">
           <dt className="text-muted-foreground text-xs">{field.label}</dt>
-          <dd className="text-foreground text-sm">
+          <dd className="text-foreground text-sm" {...(field.obscured ? piiProps : {})}>
             {field.value || <span className="text-muted-foreground">—</span>}
           </dd>
         </div>
