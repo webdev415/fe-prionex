@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth'
 import { useV3UiEnabled } from '@/features/scoring/hooks/useV3Scores'
 import { useAuthStore } from '@/stores/authStore'
+import { useUbkiAvailable } from '@/features/ubki/hooks/useUbkiAvailable'
 import { useSidebarStore } from '@/stores/sidebarStore'
 import { useSearchStore } from '@/stores/searchStore'
 import { usePermissionRefresh } from '@/hooks'
@@ -728,6 +729,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   ]
 
   const user = useAuthStore((state) => state.user)
+  const ubkiAvailable = useUbkiAvailable()
 
   const canViewLegalWorkplace = useMemo(
     () =>
@@ -999,14 +1001,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             ],
             mode: 'any' as const,
           },
-          {
-            // TODO(ubki): swap to a dedicated manage_integrations permission
-            // once it exists (reusing messaging integrations for now).
-            path: '/dashboard/system-settings/integrations/ubki',
-            label: t('navigation.ubkiIntegration', 'UBKI Integration'),
-            icon: 'briefcase-01',
-            requiredPermission: PERMISSIONS.MESSAGING.MANAGE_INTEGRATIONS,
-          },
+          ...(ubkiAvailable
+            ? [
+                {
+                  // TODO(ubki): swap to a dedicated manage_integrations permission
+                  // once it exists (reusing messaging integrations for now).
+                  path: '/dashboard/system-settings/integrations/ubki',
+                  label: t('navigation.ubkiIntegration', 'UBKI Integration'),
+                  icon: 'briefcase-01',
+                  requiredPermission: PERMISSIONS.MESSAGING.MANAGE_INTEGRATIONS,
+                },
+              ]
+            : []),
           {
             path: '/dashboard/system-settings/tags',
             label: t('navigation.tags', 'Tags'),
@@ -1169,7 +1175,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     return { navItems: regularItems, bottomNavItems: bottomItems }
     // i18n.language is needed to recalculate navigation items when language changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.permissions, t, i18n.language, legalUnprocessedCount, v3UiEnabled])
+  }, [user?.permissions, t, i18n.language, legalUnprocessedCount, v3UiEnabled, ubkiAvailable])
 
   const { navItems, bottomNavItems } = navItemsResult
   const { toggleSidebar } = useSidebarStore()

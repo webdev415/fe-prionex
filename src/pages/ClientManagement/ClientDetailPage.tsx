@@ -175,7 +175,12 @@ import { PaymentMethodCell } from '@/features/payments/components/PaymentMethodC
 import { useUserDepartment } from '@/features/users'
 import { PermissionGuard } from '@/components/auth'
 import { useHasAnyPermission, useHasPermission } from '@/hooks/usePermissions'
-import { useSubmitDebtToUbki, useBulkSubmitToUbki, ubkiKeys } from '@/features/ubki'
+import {
+  useSubmitDebtToUbki,
+  useBulkSubmitToUbki,
+  ubkiKeys,
+  useUbkiAvailable,
+} from '@/features/ubki'
 import { PERMISSIONS } from '@/constants/permissions'
 import { searchClientsByPhoneExact } from '@/api/clientSearchApi'
 import { ChainExecutor, TAInteractionHistory } from './components/taChains'
@@ -669,7 +674,8 @@ export function ClientDetailPage() {
   // --- UBKI (credit bureau) outbound submission ---
   const ubkiQueryClient = useQueryClient()
   // Client opt-out flag (backend exposes it on the client detail response).
-  const canSubmitToUbki = useHasPermission(PERMISSIONS.UBKI.SUBMIT)
+  const ubkiAvailable = useUbkiAvailable()
+  const canSubmitToUbki = useHasPermission(PERMISSIONS.UBKI.SUBMIT) && ubkiAvailable
   const { mutate: submitDebtToUbki, isPending: isSubmittingToUbki } = useSubmitDebtToUbki()
   const { mutate: bulkSubmitToUbki, isPending: isBulkSubmittingToUbki } = useBulkSubmitToUbki()
   const doNotSendToUbki = clientDetail?.do_not_send_to_ubki ?? false
@@ -4328,7 +4334,9 @@ export function ClientDetailPage() {
                           ) : undefined
                         }
                         ubkiHistory={
-                          <UbkiSubmissionHistory clientId={clientId} loans={ubkiLoans} />
+                          ubkiAvailable ? (
+                            <UbkiSubmissionHistory clientId={clientId} loans={ubkiLoans} />
+                          ) : undefined
                         }
                       />
                     )}
