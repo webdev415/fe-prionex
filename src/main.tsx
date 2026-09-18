@@ -80,3 +80,12 @@ if ('requestIdleCallback' in window) {
 } else {
   setTimeout(startOpenReplay, 0)
 }
+
+// `window.__piiAudit()` — lists the personal data readable on the current screen
+// (KAN-KB-54). Dev builds only, and structurally so: Vite resolves
+// `import.meta.env.DEV` to `false` when building for production and drops this
+// branch along with the chunk, so the detector costs the production bundle
+// nothing. A static import would have shipped it.
+if (import.meta.env.DEV) {
+  void import('./lib/openreplay/piiAudit.dev')
+}
