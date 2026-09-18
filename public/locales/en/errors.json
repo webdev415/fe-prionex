@@ -96,6 +96,21 @@
     "TASK_UPDATE_NOT_YOURS": "Operators can only update tasks assigned to them",
     "TASK_DELETE_NOT_YOURS": "Operators can only delete tasks assigned to them",
     "TASK_NOT_CORRECTION": "This task is not a correction task",
-    "TASK_DATETIME_INVALID": "Invalid date and time format"
+    "TASK_DATETIME_INVALID": "Invalid date and time format",
+    "EMPLOYEE_CARD_VIEW_FORBIDDEN": "You do not have permission to view employee cards",
+    "EMPLOYEE_CARD_EDIT_FORBIDDEN": "You do not have permission to edit employee cards",
+    "EMPLOYEE_TERMINATED_READONLY": "This employee has been terminated; their card is read-only.",
+    "NOT_IMPERSONATING": "Not in impersonation mode",
+    "ROLE_ARCHIVE_CONFLICT": "A user's assignments changed while this role was being archived. Reload and try again.",
+    "OWN_ACCOUNT_STATUS": "Cannot change your own account status",
+    "GROUP_REQUIRES_DEPARTMENT": "Cannot assign a group when the selected role has no department",
+    "USER_ASSIGNMENTS_CONFLICT": "This user's project assignments were changed by someone else. Reload the user and try again.",
+    "GROUP_OTHER_PROJECT": "Group does not belong to the selected project",
+    "GROUP_OTHER_DEPARTMENT": "Group does not belong to the role's department",
+    "AGENT_STATUS_AGENTS_ONLY": "Only agents may update agent status",
+    "EXTENSION_NOT_NUMERIC": "Extension must contain only digits",
+    "EXTENSION_TOO_LONG": "Extension must not exceed 10 characters",
+    "CURRENT_PASSWORD_REQUIRED": "Current password is required",
+    "NEW_PASSWORD_SAME_AS_CURRENT": "New password must be different from current password"
   }
 }

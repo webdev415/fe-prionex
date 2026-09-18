@@ -96,6 +96,21 @@
     "TASK_UPDATE_NOT_YOURS": "Los operadores solo pueden actualizar las tareas asignadas a ellos",
     "TASK_DELETE_NOT_YOURS": "Los operadores solo pueden eliminar las tareas asignadas a ellos",
     "TASK_NOT_CORRECTION": "Esta tarea no es una tarea de corrección",
-    "TASK_DATETIME_INVALID": "Formato de fecha y hora no válido"
+    "TASK_DATETIME_INVALID": "Formato de fecha y hora no válido",
+    "EMPLOYEE_CARD_VIEW_FORBIDDEN": "No tiene permiso para ver las fichas de empleado",
+    "EMPLOYEE_CARD_EDIT_FORBIDDEN": "No tiene permiso para editar las fichas de empleado",
+    "EMPLOYEE_TERMINATED_READONLY": "Este empleado ha sido dado de baja; su ficha es de solo lectura.",
+    "NOT_IMPERSONATING": "No está en modo de suplantación",
+    "ROLE_ARCHIVE_CONFLICT": "Las asignaciones de un usuario cambiaron mientras se archivaba este rol. Recargue e inténtelo de nuevo.",
+    "OWN_ACCOUNT_STATUS": "No puede cambiar el estado de su propia cuenta",
+    "GROUP_REQUIRES_DEPARTMENT": "No se puede asignar un grupo si el rol seleccionado no tiene departamento",
+    "USER_ASSIGNMENTS_CONFLICT": "Otra persona cambió las asignaciones de proyecto de este usuario. Recargue el usuario e inténtelo de nuevo.",
+    "GROUP_OTHER_PROJECT": "El grupo no pertenece al proyecto seleccionado",
+    "GROUP_OTHER_DEPARTMENT": "El grupo no pertenece al departamento del rol",
+    "AGENT_STATUS_AGENTS_ONLY": "Solo los agentes pueden actualizar el estado de agente",
+    "EXTENSION_NOT_NUMERIC": "La extensión solo puede contener dígitos",
+    "EXTENSION_TOO_LONG": "La extensión no puede superar los 10 caracteres",
+    "CURRENT_PASSWORD_REQUIRED": "Se requiere la contraseña actual",
+    "NEW_PASSWORD_SAME_AS_CURRENT": "La nueva contraseña debe ser diferente de la actual"
   }
 }
