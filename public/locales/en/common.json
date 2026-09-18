@@ -5353,7 +5353,7 @@
           }
         },
         "assignClient": {
-          "title": "Assign Client: {{fullName}}",
+          "titlePrefix": "Assign Client:",
           "clientInformation": "Client Information",
           "assignmentDetails": "Assignment Details",
           "name": "Name",

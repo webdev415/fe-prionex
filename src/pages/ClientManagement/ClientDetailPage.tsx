@@ -198,6 +198,7 @@ import {
   useMessagingClientHistory,
 } from '@/features/messaging'
 import { useOperators } from '@/features/users/hooks/useUsers'
+import { piiProps } from '@/lib/openreplay/pii'
 
 // Extended types for SMS and Call items with API-specific properties
 type ExtendedSMSItem = {
@@ -2911,7 +2912,10 @@ export function ClientDetailPage() {
                 <Icons.ArrowLeft02 size={24} className="text-primary-700" strokeWidth={1.5} />
               </button>
               <div className="flex min-w-0 items-center gap-2">
-                <h1 className="text-foreground truncate text-xl leading-[150%] font-light md:text-2xl">
+                <h1
+                  className="text-foreground truncate text-xl leading-[150%] font-light md:text-2xl"
+                  {...piiProps}
+                >
                   {client.fullName}
                 </h1>
                 <button
@@ -3196,7 +3200,10 @@ export function ClientDetailPage() {
                     <label className="text-foreground w-[110px] shrink-0 text-xs leading-[140%] font-light tracking-[-0.24px]">
                       {t('pages.clients.detail.personalAddress')}
                     </label>
-                    <p className="text-foreground ml-2 min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
+                    <p
+                      className="text-foreground ml-2 min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words"
+                      {...piiProps}
+                    >
                       {address?.fullAddress || '-'}
                     </p>
                   </div>
@@ -3209,7 +3216,10 @@ export function ClientDetailPage() {
                     <label className="text-foreground w-[110px] shrink-0 text-xs leading-[140%] font-light tracking-[-0.24px]">
                       {t('pages.clients.detail.registrationAddress')}
                     </label>
-                    <p className="text-foreground ml-2 min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
+                    <p
+                      className="text-foreground ml-2 min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words"
+                      {...piiProps}
+                    >
                       {address?.fullAddress || '-'}
                     </p>
                   </div>
@@ -3628,7 +3638,10 @@ export function ClientDetailPage() {
                           {t('pages.clients.detail.managerFullName')}
                         </label>
                       </div>
-                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p
+                        className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]"
+                        {...piiProps}
+                      >
                         {client.work?.managerFullName || '-'}
                       </p>
                     </div>
@@ -3958,7 +3971,15 @@ export function ClientDetailPage() {
                     <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
                       <span
                         role="button"
-                        aria-label={t('pages.clients.modals.assignClient.title', 'Assign client')}
+                        /* Was `…assignClient.title`, which since KAN-KB-54 holds only
+                           the heading's static half. `…assignClient.assignClient` is the
+                           plain action label and always was the right key here: the old
+                           one carried an unresolved `{{fullName}}` into the accessible
+                           name, because no values were ever passed to it. */
+                        aria-label={t(
+                          'pages.clients.modals.assignClient.assignClient',
+                          'Assign client'
+                        )}
                         tabIndex={-1}
                         onPointerDown={(e) => e.stopPropagation()}
                         onClick={(e) => {

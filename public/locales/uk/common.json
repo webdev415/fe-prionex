@@ -6092,7 +6092,7 @@
           }
         },
         "assignClient": {
-          "title": "Призначити клієнта: {{fullName}}",
+          "titlePrefix": "Призначити клієнта:",
           "clientInformation": "Інформація про клієнта",
           "assignmentDetails": "Деталі призначення",
           "name": "Ім'я",

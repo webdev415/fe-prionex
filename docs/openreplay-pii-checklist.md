@@ -29,7 +29,7 @@
 | Фаза | Раздел | Ветка | Статус |
 |---|---|---|---|
 | 1–2 | Инфраструктура, аудит, детектор | `feat/kanban-54/infra` | ✅ |
-| 3.1 | `pages/ClientManagement` | `feat/kanban-54/markup-client-management` | ⬜ |
+| 3.1 | `pages/ClientManagement` | `feat/kanban-54/markup-client-management` | ✅ |
 | 3.2 | `pages/EmployeeCard` + `features/users` | `feat/kanban-54/markup-employees` | ⬜ |
 | 3.3 | `pages/LawyerWorkplace` | `feat/kanban-54/markup-lawyer` | ⬜ |
 | 3.4 | `pages/ActionAnalysis` | `feat/kanban-54/markup-action-analysis` | ⬜ |
@@ -53,6 +53,17 @@
 | `/dashboard/clients/:id/debt-summary` | `DebtSummaryPage` | ФИО клиента | суммы задолженности, даты |
 | `/dashboard/operator-work-list` | `ClientManagementPage`, `DataTable` | колонка ФИО, колонка адреса | заголовки колонок, статусы, суммы, пагинация |
 | модалка назначения | `AssignClientModal` | ФИО клиента в подтверждении | заголовок модалки, кнопки |
+
+> **Закрыто в 3.1** (`npm run pii-audit src/pages/ClientManagement` → 0 мест рендера):
+> `ClientDetailPage` (ФИО в заголовке, оба адреса, ФИО руководителя с места работы),
+> `ActivityTimelinePage` (ФИО в заголовке), `ClientManagementPage`
+> (колонки `fullName`, `employeeName`, `searcherName`), `ClientReversalsTable`
+> (колонки клиента и оператора), `AssignClientModal`, `BulkAssignClientModal`,
+> `BulkSendMessageModal`, `DeleteClientModal`, `EditClientModal` (адрес),
+> `ReassignPaymentEmployeeModal`, `RecommendersTab` (комментарий контакта).
+>
+> Осталось на фазу 4: `title={…fullName}` на `<Link>` в `ClientDetailPage:1617`
+> и `RecommendersTab:365` — атрибут, разметкой не лечится.
 
 ### Сотрудники и пользователи
 

@@ -50,6 +50,7 @@ import {
   messageBlockReason,
 } from '@/features/clients/utils/contactBlocking'
 import { formatDate } from '@/lib/formatters'
+import { piiProps } from '@/lib/openreplay/pii'
 import { useHasAnyPermission, useHasPermission } from '@/hooks/usePermissions'
 
 export type RecommenderContactTag = {
@@ -713,6 +714,7 @@ function ContactCard({
         <div
           data-testid="contact-comment"
           className="border-border text-muted-foreground w-[320px] max-w-[36%] shrink-0 border-l py-0.5 pl-3.5 text-xs leading-[1.35] break-words md:max-w-none"
+          {...piiProps}
         >
           {contact.comment || '\u00A0'}
         </div>
