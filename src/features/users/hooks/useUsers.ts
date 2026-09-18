@@ -43,17 +43,22 @@ export function useUsers(params: UserListParams = {}) {
  */
 export function useOperators(
   projectId: number | null | undefined,
-  options: { includeInactive?: boolean } = {}
+  options: { includeInactive?: boolean; enabled?: boolean } = {}
 ) {
   // includeInactive returns active + inactive (never deleted), for filters
   // that must let you pick a now-blocked user. The status is part of the
   // queryKey so the active-only and all-status lists cache separately and
   // existing callers (default active-only) are unaffected.
+  //
+  // `enabled` lets a caller hold the fetch back until the control that needs
+  // the list is actually on screen — a popover that may never be opened should
+  // not pull a few hundred operators on mount. Defaults to true, so every
+  // existing caller keeps fetching exactly as before.
   const status = options.includeInactive ? 'all' : 'active'
   return useQuery({
     queryKey: ['users', 'operators', projectId, status],
     queryFn: () => usersApi.getOperators(projectId!, status),
-    enabled: !!projectId,
+    enabled: !!projectId && (options.enabled ?? true),
     staleTime: 2 * 60_000,
     select: (data) => data.operators,
   })

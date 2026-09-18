@@ -33,7 +33,7 @@ import { toast } from 'sonner'
 
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
-import { useOperators } from '@/features/users'
+import { useOperators, useOperatorPins, usePinOperator, useUnpinOperator } from '@/features/users'
 import { useAssignClient } from '@/features/clients/hooks/useClients'
 import { useAuthStore } from '@/stores/authStore'
 import { useHasPermission } from '@/hooks/usePermissions'
@@ -99,10 +99,23 @@ export function AssigneeDropdown({
   const dismiss = useDismiss(context, { outsidePress: false })
   const { getReferenceProps, getFloatingProps } = useInteractions([click, dismiss])
 
+  // Held back until the popover opens. The list runs to a few hundred
+  // operators, and a client card mounts two of these triggers that may never be
+  // clicked. The page happens to request the same query elsewhere today, so
+  // gating costs nothing now — it stops this popover from silently becoming the
+  // eager fetch if that other caller is ever removed or re-keyed.
   const { data: operators = [], isLoading } = useOperators(
-    activeProjectId ? Number(activeProjectId) : null
+    activeProjectId ? Number(activeProjectId) : null,
+    { enabled: isOpen }
   )
   const assignMutation = useAssignClient()
+
+  // Held back until the popover opens, like the operator list above it. Both
+  // rows on a card share one cached set, which is what makes the pins the same
+  // in the employee and searcher popovers without either knowing about the other.
+  const { data: pinnedIds } = useOperatorPins(isOpen)
+  const pinOperator = usePinOperator()
+  const unpinOperator = useUnpinOperator()
 
   const onCloseRef = useRef(onClose)
   useEffect(() => {
@@ -248,8 +261,6 @@ export function AssigneeDropdown({
             style={floatingStyles}
             {...{ [ATTR_POPOVER]: '' }}
             {...getFloatingProps()}
-            role="listbox"
-            aria-label={triggerTitle}
             className="border-border bg-card z-50 w-67 rounded-lg border p-1.5 shadow-lg"
           >
             <AssigneeOptionList
@@ -259,6 +270,11 @@ export function AssigneeDropdown({
               onSelect={(operatorId) => save(operatorId)}
               disabled={isSaving}
               autoFocusSearch
+              listLabel={triggerTitle}
+              pinnedIds={pinnedIds}
+              onTogglePin={(operatorId, nextPinned) =>
+                nextPinned ? pinOperator.mutate(operatorId) : unpinOperator.mutate(operatorId)
+              }
               footer={
                 currentUserId !== null ? (
                   <button

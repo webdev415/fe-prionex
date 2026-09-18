@@ -5370,7 +5370,6 @@
           "notes": "Notes (Optional)",
           "selectEmployee": "Select employee...",
           "selectSearcher": "Select searcher...",
-          "noUsersAvailable": "No users available",
           "enterAdditionalNotes": "Enter additional notes...",
           "warningMessage": "Note: At least one assignment (Employee or Searcher) must be selected.",
           "assignClient": "Assign Client",
@@ -6882,7 +6881,10 @@
         "searchPlaceholder": "Search employee",
         "allEmployees": "All employees",
         "noMatches": "No matches",
-        "unassign": "Unassign"
+        "unassign": "Unassign",
+        "pinned": "Pinned",
+        "pin": "Pin",
+        "unpin": "Unpin"
       }
     },
     "clientChains": {

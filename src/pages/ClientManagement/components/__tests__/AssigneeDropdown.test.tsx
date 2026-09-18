@@ -42,6 +42,20 @@ vi.mock('@/features/users/hooks/useUsers', () => ({
   useOperators: () => ({ data: mockOperators.value, isLoading: false }),
 }))
 
+// Pins come from a query, so without this the component reaches a real
+// `useQuery` and every test dies on "No QueryClient set". Mocked at the module
+// the barrel re-exports, which is what the operators mock above relies on too.
+const mockPins = vi.hoisted(() => ({
+  value: new Set<number>(),
+  pin: vi.fn(),
+  unpin: vi.fn(),
+}))
+vi.mock('@/features/users/hooks/useOperatorPins', () => ({
+  useOperatorPins: () => ({ data: mockPins.value }),
+  usePinOperator: () => ({ mutate: mockPins.pin }),
+  useUnpinOperator: () => ({ mutate: mockPins.unpin }),
+}))
+
 // `mutate` is captured so a test can inspect the payload and drive either
 // branch of the callbacks the component passes in.
 const assignMutate = vi.hoisted(() => vi.fn())
@@ -71,6 +85,7 @@ vi.mock('@/stores/authStore', () => ({
 import { toast } from 'sonner'
 import { AssigneeDropdown } from '../AssigneeDropdown'
 import { PERMISSIONS } from '@/constants/permissions'
+import { isTypingTarget } from '@/features/taHotkeys/hotkey'
 
 function renderOpen(props: Partial<React.ComponentProps<typeof AssigneeDropdown>> = {}): {
   onClose: ReturnType<typeof vi.fn>
@@ -108,6 +123,7 @@ function resolveLastCall(outcome: 'success' | 'error') {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockPins.value = new Set()
   mockPermissions.clear()
   mockPermissions.add(PERMISSIONS.CLIENTS.EDIT)
   mockPermissions.add(PERMISSIONS.CLIENTS.REASSIGN_RESPONSIBLE)
@@ -285,5 +301,72 @@ describe('AssigneeDropdown', () => {
     fireEvent.click(screen.getByText('Іван Петренко'))
 
     expect(assignMutate).not.toHaveBeenCalled()
+  })
+
+  it('keeps TA quick-launch hotkeys suppressed while it is open', () => {
+    renderOpen({ currentUserId: 11 })
+
+    // Asserted against the real guard rather than against markup, because the
+    // coupling is invisible from this component: the hotkey handler suppresses
+    // bare-key bindings for any keypress the guard calls "typing", and that is
+    // the only thing stopping a letter typed in here from launching a TA
+    // template over an open popover.
+    //
+    // Three things carry that today, and any one of them is enough, because the
+    // guard matches with `closest`: the search field is an `input`, the rows and
+    // Unassign carry `role="option"`, and both sit inside the `role="listbox"`
+    // wrapper. Deleting the rows' `role="option"` alone was tried here and did
+    // NOT regress it — the listbox still matched. So this pins the property
+    // rather than any one attribute, and it goes red only when a restructure
+    // leaves some element with none of the three.
+    //
+    // Every element below is one that can really receive a keydown; the
+    // heading and the empty state are not focusable and never will be targets.
+    expect(isTypingTarget(screen.getByPlaceholderText('Search employee'))).toBe(true)
+    expect(isTypingTarget(screen.getByText('Іван Петренко'))).toBe(true)
+    expect(isTypingTarget(screen.getByText('Unassign'))).toBe(true)
+  })
+
+  it('hides the PINNED section while nothing is pinned', () => {
+    renderOpen()
+
+    // A section with no rows must not leave its heading behind.
+    expect(screen.queryByText('Pinned')).not.toBeInTheDocument()
+    expect(screen.getByText('All employees')).toBeInTheDocument()
+  })
+
+  it('splits pinned operators into their own section', () => {
+    mockPins.value = new Set([22])
+    renderOpen()
+
+    expect(screen.getByText('Pinned')).toBeInTheDocument()
+    expect(screen.getByText('All employees')).toBeInTheDocument()
+    // The pinned operator belongs to the PINNED group, not the other one.
+    const pinnedGroup = screen.getByRole('group', { name: 'Pinned' })
+    expect(pinnedGroup).toHaveTextContent('Олена Коваль')
+    expect(pinnedGroup).not.toHaveTextContent('Іван Петренко')
+  })
+
+  it('pins without assigning and without closing', () => {
+    const { onClose } = renderOpen({ currentUserId: null })
+
+    fireEvent.click(screen.getAllByLabelText('Pin')[0])
+
+    expect(mockPins.pin).toHaveBeenCalledWith(11)
+    // The two are siblings rather than nested, so a pin press must never reach
+    // the assign handler — this is the assertion that holds that structure.
+    expect(assignMutate).not.toHaveBeenCalled()
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('unpins an already-pinned operator', () => {
+    mockPins.value = new Set([11])
+    const { onClose } = renderOpen({ currentUserId: null })
+
+    fireEvent.click(screen.getByLabelText('Unpin'))
+
+    expect(mockPins.unpin).toHaveBeenCalledWith(11)
+    expect(assignMutate).not.toHaveBeenCalled()
+    expect(onClose).not.toHaveBeenCalled()
   })
 })

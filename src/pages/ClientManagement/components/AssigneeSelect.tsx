@@ -17,6 +17,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { useOperatorPins, usePinOperator, useUnpinOperator } from '@/features/users'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { AssigneeOptionList, type AssigneeOption } from './AssigneeOptionList'
@@ -44,6 +45,13 @@ export function AssigneeSelect({
   const { t } = useTranslation('common')
   const [isOpen, setIsOpen] = useState(false)
   const wrapperRef = useRef<HTMLDivElement | null>(null)
+
+  // Fetched here rather than passed down, so the modals that host this control
+  // need no changes to gain pinning — the requirement that both use the same
+  // dropdown is then satisfied by construction rather than by wiring.
+  const { data: pinnedIds } = useOperatorPins(isOpen)
+  const pinOperator = usePinOperator()
+  const unpinOperator = useUnpinOperator()
 
   const selectedId = value ? Number(value) : null
   const selected = operators.find((o) => o.id === selectedId) ?? null
@@ -109,16 +117,17 @@ export function AssigneeSelect({
       </button>
 
       {isOpen && (
-        <div
-          role="listbox"
-          aria-label={placeholder}
-          className="border-border bg-card absolute top-[calc(100%+4px)] right-0 left-0 z-[200] rounded-lg border p-1.5 shadow-lg"
-        >
+        <div className="border-border bg-card absolute top-[calc(100%+4px)] right-0 left-0 z-[200] rounded-lg border p-1.5 shadow-lg">
           <AssigneeOptionList
             operators={operators}
             isLoading={isLoading}
             selectedId={selectedId}
             autoFocusSearch
+            listLabel={placeholder}
+            pinnedIds={pinnedIds}
+            onTogglePin={(operatorId, nextPinned) =>
+              nextPinned ? pinOperator.mutate(operatorId) : unpinOperator.mutate(operatorId)
+            }
             onSelect={(operatorId) => {
               onValueChange(String(operatorId))
               // Only the picker closes. The modal stays open with its Cancel /
