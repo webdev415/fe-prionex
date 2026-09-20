@@ -13,7 +13,6 @@ import type { CreditApplicationSummary, CreditLoanSummary, CreditOverview } from
 const OVERVIEW: CreditOverview = {
   role: 'underwriter',
   permissions: [],
-  roles_available: [],
   applications: { referred: 2, scoring: 1, declined: 118, disbursed: 257, approved: 4 },
   loans: { active: 61, delinquent: 224, closed: 22 },
   application_statuses: ['scoring', 'referred', 'approved', 'declined', 'disbursed'],

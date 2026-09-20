@@ -43,7 +43,6 @@ const SOURCE = Object.values(
 const OVERVIEW: CreditOverview = {
   role: 'underwriter',
   permissions: ['credit.applications.read', 'credit.decisions.decide'],
-  roles_available: ['verifier', 'underwriter', 'risk_manager'],
   applications: { referred: 20, scoring: 1, declined: 118, disbursed: 257 },
   loans: { active: 61 },
   application_statuses: ['in_progress', 'scoring', 'referred', 'approved', 'declined', 'disbursed'],
