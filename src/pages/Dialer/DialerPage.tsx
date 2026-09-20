@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next'
 import { PERMISSIONS } from '@/constants/permissions'
 import { useHasPermission } from '@/hooks/usePermissions'
 
+import { CallingWindowBanner } from './components/CallingWindowBanner'
 import { OperatorDialerView } from './components/operator/OperatorDialerView'
 import { SupervisorDialerView } from './components/supervisor/SupervisorDialerView'
 
@@ -27,6 +28,8 @@ export function DialerPage() {
           {t('dialer.title', 'Dialer')}
         </h1>
       </header>
+
+      <CallingWindowBanner />
 
       {isSupervisor ? <SupervisorDialerView /> : <OperatorDialerView />}
     </div>
