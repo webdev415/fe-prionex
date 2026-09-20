@@ -704,11 +704,21 @@ export interface ManualDecisionPayload {
   underwriter_id?: number
 }
 
-/** Сводка стенда: счётчики и права текущей роли (демо-контур этапа 1). */
+/**
+ * Шапка рабочего места: счётчики и ЭФФЕКТИВНЫЕ права предъявленного пропуска.
+ *
+ * Тип объявляет то, что фронт ЧИТАЕТ, а не всё, что шлёт модуль: `user_id` и
+ * `switches` контракт отдаёт, но здесь их намеренно нет — переключатели берутся
+ * отдельной ручкой `GET /admin/switches`. Не «дополнять» тип по контракту.
+ */
 export interface CreditOverview {
-  role: string
+  /**
+   * Локализованное имя роли CRM как есть. `null` — роли в пропуске нет;
+   * умолчания у модуля нет намеренно (контракт 0.1.26, `OperatorOverview.role`:
+   * `type: [string, 'null']`). Поле НЕ основание что-либо прятать на экране.
+   */
+  role: string | null
   permissions: string[]
-  roles_available: string[]
   applications: Record<string, number>
   loans: Record<string, number>
   application_statuses: CreditApplicationStatus[]
