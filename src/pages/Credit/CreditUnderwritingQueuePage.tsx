@@ -42,7 +42,6 @@ import { formatCreditMoney } from '@/features/credit/api/money'
 import { CREDIT_QUEUE_STATUSES } from '@/features/credit/api/enums'
 import type { CreditQueueItem, CreditQueueStatus } from '@/features/credit/api/types'
 import { CreditStatusBadge } from './components/CreditStatusBadge'
-import { CreditStandBanner } from './components/CreditStandBanner'
 import { CreditModuleUnavailable } from './components/CreditModuleUnavailable'
 import { formatDateTime } from '@/lib/formatters'
 import { formatIdle, idleMinutes } from '@/features/credit/api/idle'
@@ -75,7 +74,7 @@ export function CreditUnderwritingQueuePage() {
   const [statusParam, setStatusParam] = useURLState<string>('status', 'pending')
   const status = parseStatus(statusParam)
 
-  const { data: overview, error: overviewError } = useCreditOverview()
+  const { error: overviewError } = useCreditOverview()
   const { data, isLoading, error } = useCreditUnderwritingQueue(status)
 
   // Мемоизуем сам массив: `data?.items ?? []` создаёт новую ссылку на каждый
@@ -223,8 +222,6 @@ export function CreditUnderwritingQueuePage() {
           {t('credit.queue.total', { count: items.length })}
         </span>
       </div>
-
-      <CreditStandBanner overview={overview} />
 
       <div className="border-border bg-card mb-4 rounded-xl border p-4 shadow-sm">
         <div className="flex flex-wrap gap-2">
