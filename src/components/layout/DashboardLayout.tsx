@@ -8,6 +8,7 @@ import { useUbkiAvailable } from '@/features/ubki/hooks/useUbkiAvailable'
 import { useSidebarStore } from '@/stores/sidebarStore'
 import { useSearchStore } from '@/stores/searchStore'
 import { usePermissionRefresh } from '@/hooks'
+import { useProjectCountry } from '@/hooks/useProjectCountry'
 import { ImpersonationBanner } from '@/features/auth/components/ImpersonationBanner'
 import { LogoutConfirmationModal } from './LogoutConfirmationModal'
 import { Sidebar, type SidebarItem, type SidebarSubItem } from './Sidebar'
@@ -73,13 +74,18 @@ export function AiAssistantHeaderButton() {
   const location = useLocation()
   const { t } = useTranslation('common')
   const canUseAssistant = useHasPermission(PERMISSIONS.AI_ASSISTANT.USE)
+  const assistantSpeaksTheProjectLanguage = useProjectCountry() === 'UA'
   const { data: aiSettings } = useAiAssistantSettings()
   const isActive = location.pathname === '/dashboard/ai-assistant'
 
   // Entitlement + kill-switch: hide for users without use_ai_assistant and
   // for everyone while the global switch is off. Fail-open: while settings
   // are loading/unavailable the button stays (backend still enforces).
-  if (!canUseAssistant || aiSettings?.assistant_enabled === false) {
+  if (
+    !canUseAssistant ||
+    !assistantSpeaksTheProjectLanguage ||
+    aiSettings?.assistant_enabled === false
+  ) {
     return null
   }
 
