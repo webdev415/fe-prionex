@@ -1,3 +1,5 @@
+import type { CallingWindowReason } from '@/features/calls/types'
+
 /**
  * Dialer feature types (KAN-379 — Aggressive Dialer)
  *
@@ -235,4 +237,24 @@ export interface ClientCallSummary {
   pending: MoneyStat
   loan?: CallSummaryLoan | null
   recent_interactions: RecentInteractionItem[]
+}
+
+/**
+ * The project's calling window as the Dialer page shows it. `unavailable`
+ * means it could not be read — the sweep then leaves queues untouched, so the
+ * banner must not claim the window is open.
+ */
+export type DialerCallingWindowState = 'open' | 'closed' | 'disabled' | 'unavailable'
+
+export interface DialerCallingWindow {
+  state: DialerCallingWindowState
+  start?: string | null
+  end?: string | null
+  /** ISO weekday numbers, 1 = Monday. Null means every day. */
+  weekdays?: number[] | null
+  timezone?: string | null
+  reason?: CallingWindowReason | null
+  detail?: string | null
+  /** UTC instant; null when closed and the reopening cannot be known. */
+  next_open_at?: string | null
 }

@@ -285,6 +285,14 @@
     "answerMode": {
       "auto": "Автоматичний",
       "manual": "Ручний (оператор приймає)"
+    },
+    "callingWindow": {
+      "closedTitle": "Поза годинами дзвінків",
+      "resumes": "Обдзвін відновиться {{when}}.",
+      "resumesUnknown": "Час відновлення невідомий — перевірте календар свят проєкту.",
+      "allowed": "Дозволено: {{hours}}, {{days}} ({{timezone}})",
+      "open": "Години дзвінків {{hours}} · {{days}} · зараз відкрито",
+      "everyDay": "щодня"
     }
   },
   "search": {
@@ -6995,8 +7003,7 @@
         "cancelled": "Скасовано",
         "completed": "Завершено",
         "completedEarly": "Завершено достроково",
-        "withoutRr": "Без РР",
-        "completedEarly": "Завершено достроково"
+        "withoutRr": "Без РР"
       },
       "presets": {
         "label": "Пресети фільтрів",
