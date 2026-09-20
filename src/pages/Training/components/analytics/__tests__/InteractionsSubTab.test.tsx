@@ -10,6 +10,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { render as rtlRender, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import { setActiveCurrency } from '@/lib/projectCurrency'
 
 // The client cell renders a client-page link, so the component needs a Router.
 const render = (ui: React.ReactElement) => rtlRender(<MemoryRouter>{ui}</MemoryRouter>)
@@ -102,6 +103,13 @@ describe('InteractionsSubTab', () => {
   it('formats promise amount with locale thousands separators and ₴ suffix', () => {
     render(<InteractionsSubTab />)
     expect(screen.getByText(/2,500 ₴/)).toBeInTheDocument()
+  })
+
+  it('shows the promise amount in euros for a euro project', () => {
+    setActiveCurrency('EUR')
+    render(<InteractionsSubTab />)
+    expect(screen.getByText('€2,500')).toBeInTheDocument()
+    setActiveCurrency('UAH')
   })
 
   it('renders the result_name as the status pill', () => {

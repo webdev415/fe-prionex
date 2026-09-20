@@ -19,6 +19,7 @@ import {
   ANALYTICS_TABLE_TD,
   ANALYTICS_TABLE_TH,
 } from './analyticsTableStyles'
+import { withCurrency } from '@/lib/formatters'
 
 /**
  * Successful Closures sub-tab (KAN-734). Trainer-facing list of VERIFIED
@@ -89,7 +90,7 @@ function formatDate(iso: string | null, language: string): string {
 function formatAmount(raw: string, language: string): string {
   const n = Number(raw)
   if (!Number.isFinite(n)) return raw
-  return `${formatNumber(n, language)} ₴`
+  return withCurrency(formatNumber(n, language), 'suffix')
 }
 
 /** Inline trophy SVG — no trophy glyph in the Icons module. */

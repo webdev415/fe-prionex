@@ -21,6 +21,7 @@ import {
   ANALYTICS_TABLE_TD,
   ANALYTICS_TABLE_TH,
 } from './analyticsTableStyles'
+import { withCurrency } from '@/lib/formatters'
 
 /**
  * Leaks sub-tab (KAN-735). Layout / UI styling mirror the Figma frame verbatim
@@ -474,7 +475,9 @@ function LeakRow({
       </td>
       <td className={ANALYTICS_TABLE_TD}>{row.contract_number ?? '—'}</td>
       <td className={`${ANALYTICS_TABLE_TD} font-semibold text-[#05040D]`}>
-        {row.promise_amount != null ? `${formatAmount(row.promise_amount, language)} ₴` : '—'}
+        {row.promise_amount != null
+          ? withCurrency(formatAmount(row.promise_amount, language), 'suffix')
+          : '—'}
       </td>
       <td className={ANALYTICS_TABLE_TD}>{formatShortDate(row.promise_date, language)}</td>
       <td className={ANALYTICS_TABLE_TD}>
