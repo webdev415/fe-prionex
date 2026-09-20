@@ -185,6 +185,7 @@ export const timezoneOptions = [
   { value: 'America/Denver', label: 'America/Denver (MST/MDT)' },
   { value: 'America/Los_Angeles', label: 'America/Los Angeles (PST/PDT)' },
   { value: 'Europe/London', label: 'Europe/London (GMT/BST)' },
+  { value: 'Europe/Madrid', label: 'Europe/Madrid (CET/CEST)' },
   { value: 'Europe/Paris', label: 'Europe/Paris (CET/CEST)' },
   { value: 'Europe/Kiev', label: 'Europe/Kiev (EET/EEST)' },
   { value: 'Asia/Tokyo', label: 'Asia/Tokyo (JST)' },
