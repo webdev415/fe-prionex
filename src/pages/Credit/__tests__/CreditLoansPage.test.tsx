@@ -21,15 +21,17 @@ vi.mock('@/features/credit/hooks/useCredit', () => ({
   useCreditLoans: vi.fn(),
 }))
 
-const OVERVIEW = {
+// Аннотация типом, а не `as unknown as`: двойное приведение снимает
+// excess-property-check, и снятое контрактом поле вернулось бы в фикстуру
+// молча — `tsc` о нём не сказал бы ни слова.
+const OVERVIEW: CreditOverview = {
   role: 'underwriter',
   permissions: ['credit.loans.read'],
-  roles_available: ['underwriter'],
   applications: {},
   loans: { active: 61 },
   application_statuses: ['disbursed'],
   demo_mode: true,
-} as unknown as CreditOverview
+}
 
 /** Снимок живой строки стенда `GET /loans` (FB-000074). */
 const ROW: CreditLoanSummary = {

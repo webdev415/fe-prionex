@@ -62,7 +62,6 @@ function overviewWith(permissions: string[]): CreditOverview {
   return {
     role: permissions.includes('credit.parameters.read') ? 'risk_manager' : 'underwriter',
     permissions,
-    roles_available: ['verifier', 'underwriter', 'risk_manager'],
     applications: {},
     loans: {},
     application_statuses: [],
