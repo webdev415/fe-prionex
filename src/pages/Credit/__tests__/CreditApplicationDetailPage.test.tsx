@@ -125,3 +125,35 @@ describe('CreditApplicationDetailPage → идентификаторы', () => {
     expect(screen.getByText('a249ee86-b723-483a-bbba-1ad400cc5bdd')).toBeInTheDocument()
   })
 })
+
+describe('CreditApplicationDetailPage → этап заявки доезжает до ленты', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('передаёт ленте три поля этапа, а не обрезанную заявку', () => {
+    // Единственная точка стыка — <CreditStageProgress application={application} />.
+    // Компонентные случаи подают поля НАПРЯМУЮ в проп, минуя страницу, поэтому
+    // обрезка объекта на вызове (`{ status, missing_fields }`) откатила бы CRM
+    // к своей старой нумерации из зеркала и осталась бы зелёной: вход
+    // помощника структурный, и сужённый объект ему подходит, а утверждения
+    // сборки ловят только УДАЛЕНИЕ поля из типа.
+    renderPage({
+      ...APPLICATION,
+      stage: 'decision',
+      stage_index: 4,
+      stage_total: 5,
+    } as CreditApplicationDetail)
+    // Маркер именно ответа модуля: зеркало на этой фикстуре
+    // (`missing_fields` с анкетой) назвало бы ВТОРОЙ шаг, а подписи «крок N з M»
+    // не нарисовало бы вовсе — её нет ни в одной прежней сборке.
+    expect(screen.getByText(/credit\.card\.stageOfTotal index=4 total=5/)).toBeVisible()
+    const rows = Array.from(document.querySelectorAll('li')).map((li) =>
+      (li.textContent ?? '').replace(/\s+/g, ' ')
+    )
+    expect(rows).toHaveLength(5)
+    expect(rows[3]).toContain('credit.stage.decision')
+    expect(rows[3]).toContain('credit.stageState.current')
+    expect(rows[1]).not.toContain('credit.stageState.current')
+  })
+})

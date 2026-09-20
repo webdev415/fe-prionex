@@ -21,7 +21,9 @@
  * него. Утверждение без объяснения бесполезно: следующий не поймёт, можно ли
  * его удалить.
  */
+import type { CreditApplicationStage } from './applicationStages'
 import type {
+  CreditApplicationDetail,
   CreditApplicationStatus,
   CreditJournalEntry,
   CreditLoanStatus,
@@ -80,3 +82,34 @@ export type _app_status_referred = Assert<Includes<CreditApplicationStatus, 'ref
 export type _app_status_declined = Assert<Includes<CreditApplicationStatus, 'declined'>>
 export type _app_status_disbursed = Assert<Includes<CreditApplicationStatus, 'disbursed'>>
 export type _app_status_scoring = Assert<Includes<CreditApplicationStatus, 'scoring'>>
+
+/* ─── Этап заявки ───────────────────────────────────────────────────────
+   Позиция ленты в карточке читается из ответа модуля. Эти три утверждения
+   стерегут СОСТАВ ТИПА, и только его: удалит кто-нибудь поле из
+   `CreditApplicationDetail` — красная сборка с именем строки. Чего они НЕ
+   стерегут, надо знать: ответ приходит неконтролируемым приведением типа, без
+   разбора схемы, и объект уходит в компонент целиком, а компонент объявляет
+   нужные поля в СВОЁМ структурном типе. Поэтому сцену «страница передала ленте
+   обрезанный объект» эти строки не поймают — её стережёт отдельный тест
+   уровня страницы (`CreditApplicationDetailPage.test.tsx`, «передаёт ленте три
+   поля этапа»). `Has` ловит локальное удаление и ничего не говорит о
+   контракте (см. шапку про два класса утверждений). */
+export type _app_has_stage = Assert<Has<CreditApplicationDetail, 'stage'>>
+export type _app_has_stage_index = Assert<Has<CreditApplicationDetail, 'stage_index'>>
+export type _app_has_stage_total = Assert<Has<CreditApplicationDetail, 'stage_total'>>
+/* А это — второй класс: утверждение о СОДЕРЖИМОМ перечня. Переименуют этап
+   обратно в `bank` — красная сборка с именем строки, а не молча неверный
+   экран: имя этапа уезжает в ключ словаря и на экран оператора. */
+export type _app_stage_income_check = Assert<Includes<CreditApplicationStage, 'income_check'>>
+
+/* ─── Статусы, на которых стоит состояние строки ленты ──────────────────
+   `serverStepState` (`applicationStages.ts`) сравнивает статус заявки с этими
+   строками поимённо: 'contracted'/'disbursed' → шаг пройден, 'expired'/
+   'abandoned' → у мёртвой заявки текущего шага нет, 'declined' → сбой.
+   'declined' и 'disbursed' уже утверждены выше; ниже — три недостающие.
+   Переименует модуль любую из них — без этих строк сборка останется зелёной,
+   а на экране строка индекса молча станет «поточний крок»: ровно тот класс
+   отказа, ради которого файл и заведён. */
+export type _app_status_contracted = Assert<Includes<CreditApplicationStatus, 'contracted'>>
+export type _app_status_expired = Assert<Includes<CreditApplicationStatus, 'expired'>>
+export type _app_status_abandoned = Assert<Includes<CreditApplicationStatus, 'abandoned'>>

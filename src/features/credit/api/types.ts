@@ -236,6 +236,20 @@ export interface CreditApplicationDetail extends CreditApplicationSummary {
   loan_id: string | null
   resume_step?: string
   missing_fields?: string[]
+  /**
+   * ЭТАП ПУТИ — ответ модуля, а не расчёт CRM: `getInternalApplication` →
+   * `InternalApplication` (`openapi.yaml:7236`) = `allOf Application` (`:5671`),
+   * поля `:5680`/`:5690`/`:5699`. `?` — ни одно не в `required`
+   * (`ApplicationRef.required = [application_id, status]`, `:5659`): стенд,
+   * отстающий от контракта, их не пришлёт. `| null` — как у соседних полей
+   * этого же интерфейса (`client_standing`, `expires_at`): модуль вправе
+   * прислать `null`, и разбор в `creditApplicationStageView` на него рассчитан.
+   * `stage` типизирован `string`, а не `CreditApplicationStage` (union закрыт,
+   * `applicationStages.ts`): сужение делается рантаймом, через `includes(...)`.
+   */
+  stage?: string | null
+  stage_index?: number | null
+  stage_total?: number | null
   client_standing?: CreditClientStanding | null
   expires_at?: string | null
   paydays: string[]

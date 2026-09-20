@@ -11902,6 +11902,7 @@
       "disbursementUnknown": "Disbursement state is unknown — the core did not answer. This does NOT mean no transfer was made: it may have gone out and failed. Refresh or come back later.",
       "stagesTitle": "Client path",
       "stagesHint": "the same five steps the client sees in their cabinet",
+      "stageOfTotal": "step {{index}} of {{total}}",
       "identifiers": "Identifiers"
     },
     "stand": {
@@ -12302,7 +12303,7 @@
     "stage": {
       "registration": "Registration",
       "questionnaire": "Application form",
-      "bank": "Income check",
+      "income_check": "Income check",
       "decision": "Decision",
       "signing": "Signing"
     },
