@@ -7,7 +7,7 @@
  *  - фильтр по статусу уходит в запрос, а не фильтрует локально: страниц много,
  *    локальная фильтрация показывала бы верификатору неполную очередь;
  *  - метрики считаются из сводки, а не выдумываются нулями;
- *  - плашка этапа 1 честно предупреждает, что роль — макет стенда.
+ *  - колонка шага появляется по данным модуля, а не по релизу фронта.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
@@ -118,11 +118,6 @@ describe('CreditApplicationsPage', () => {
     await screen.findByText('DEMO-202608-03A17C')
     // счётчик статуса «ручной разбор» из overview
     expect(await screen.findByText('2')).toBeInTheDocument()
-  })
-
-  it('честно предупреждает, что роль — макет стенда этапа 1', async () => {
-    renderPage()
-    expect(await screen.findByText('credit.stand.notice')).toBeInTheDocument()
   })
 
   // Колонка шага. Модуль начал отдавать `resume_step` в сводке позже самого

@@ -16,7 +16,6 @@ import { CreditIntegrationsSection } from './components/CreditIntegrationsSectio
 import { CreditSwitchesSection } from './components/CreditSwitchesSection'
 import { Alert } from '@/components/ui/Alert'
 import { useCreditSectionEnabled } from '@/features/credit/hooks/useCredit'
-import { CreditStandBanner } from './components/CreditStandBanner'
 
 type SettingsTab = 'products' | 'parameters' | 'integrations' | 'switches'
 
@@ -61,8 +60,6 @@ export function CreditSettingsPage() {
           </h1>
           <p className="text-muted-foreground text-sm font-light">{t('credit.settings.helper')}</p>
         </div>
-
-        <CreditStandBanner overview={overview} />
 
         <SegmentedTabs
           items={tabs}

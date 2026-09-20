@@ -11905,9 +11905,6 @@
       "stageOfTotal": "step {{index}} of {{total}}",
       "identifiers": "Identifiers"
     },
-    "stand": {
-      "notice": "Stage 1: the module still runs outside the Kong gateway — the browser calls it directly. Rights come from your CRM pass."
-    },
     "settings": {
       "title": "Credit module settings",
       "helper": "Products, decision-engine parameters and the external integrations of the module.",
@@ -12198,7 +12195,7 @@
     },
     "unavailable": {
       "title": "The credit module is not deployed on this stand",
-      "hint": "The section is in place, but the credit service is not routed here yet: on stage 1 it runs outside Kong. Locally it is served on localhost:8020; on the dev server the route /api/v1/credit will appear together with the module deployment."
+      "hint": "The section is in place, but the credit service does not answer on this stand. This is not a problem with your access: contact an administrator or the support team — the technical reason is shown below."
     },
     "idle": {
       "underHour": "under an hour",
@@ -12327,7 +12324,7 @@
       "notAuthenticated": "The module did not accept your sign-in",
       "notAuthenticatedHint": "Your session may have expired. Sign in to CRM again; if that does not help, contact an administrator — the module verifies sign-in with CRM.",
       "noRights": "No access to the credit section",
-      "noRightsHint": "The usual cause is the wrong project: credit permissions live in the “Finboost” project. Check the selected project or ask an administrator to assign a role."
+      "noRightsHint": "Your CRM pass carries no credit-section permissions. A CRM administrator grants them — ask to be assigned the matching role."
     }
   }
 }

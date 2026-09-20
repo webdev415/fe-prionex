@@ -790,7 +790,7 @@ export type CreditSwitches = Record<CreditSwitchName, boolean>
 export interface CreditSwitchChange {
   switch: CreditSwitchName
   enabled: boolean
-  /** Роль оператора (этап 1); идентификатор из JWT появится с WS-20. */
+  /** Роль оператора из его пропуска CRM; идентификатор появится с WS-20. */
   actor: string
   reason: string | null
   occurred_at: string

@@ -29,7 +29,6 @@ import { formatCreditMoney } from '@/features/credit/api/money'
 import type { CreditLoanStatus, CreditLoanSummary } from '@/features/credit/api/types'
 import { CreditStatusBadge } from './components/CreditStatusBadge'
 import { CreditMetricCards } from './components/CreditMetricCards'
-import { CreditStandBanner } from './components/CreditStandBanner'
 import { CreditModuleUnavailable } from './components/CreditModuleUnavailable'
 import { formatDate } from '@/lib/formatters'
 
@@ -192,8 +191,6 @@ export function CreditLoansPage() {
           {t('credit.loans.total', { count: page_total ?? items.length })}
         </span>
       </div>
-
-      <CreditStandBanner overview={overview} />
 
       <div className="border-border bg-card mb-4 rounded-xl border p-4 shadow-sm">
         <form
