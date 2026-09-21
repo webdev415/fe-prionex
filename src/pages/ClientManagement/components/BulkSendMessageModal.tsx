@@ -39,6 +39,7 @@ import {
 import type { MessagingChannel, MessagingDraft } from '@/features/messaging'
 import { CHANNEL_SPECS } from '@/pages/MessagingDrafts/draftModalShared'
 import { BulkSendMessageModalSkeleton } from './BulkSendMessageModalSkeleton'
+import { piiProps } from '@/lib/openreplay/pii'
 
 const NO_DRAFT_VALUE = 'none'
 
@@ -447,7 +448,7 @@ export function BulkSendMessageModal({
                   key={client.id}
                   className="flex flex-col gap-1 md:flex-row md:items-center md:gap-3"
                 >
-                  <span className="text-foreground font-medium">
+                  <span className="text-foreground font-medium" {...piiProps}>
                     {client.fullName} (#{client.id})
                   </span>
                   <span>{client.priority}</span>

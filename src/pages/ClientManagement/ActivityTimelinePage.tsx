@@ -48,6 +48,7 @@ import { PERMISSIONS } from '@/constants/permissions'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { useOperators } from '@/features/users/hooks/useUsers'
 import { useAuthStore } from '@/stores/authStore'
+import { piiProps } from '@/lib/openreplay/pii'
 import { formatUkrainePhoneForDisplay, normalizeUkrainePhoneToDb } from '@/lib/phone'
 
 export function ActivityTimelinePage() {
@@ -406,7 +407,10 @@ export function ActivityTimelinePage() {
             >
               <Icons.ArrowLeft02 size={24} className="text-primary-700" strokeWidth={1.5} />
             </button>
-            <h1 className="text-foreground text-center text-xl leading-[150%] font-light md:text-2xl">
+            <h1
+              className="text-foreground text-center text-xl leading-[150%] font-light md:text-2xl"
+              {...piiProps}
+            >
               {client?.fullName ?? '-'}
             </h1>
           </div>

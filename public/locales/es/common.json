@@ -585,6 +585,7 @@
     "tabsScrollRight": "Desplazar pestañas a la derecha"
   },
   "common": {
+    "userAvatar": "Avatar del usuario",
     "step": "Paso",
     "selected": "Seleccionado",
     "of": "de",
@@ -773,7 +774,6 @@
       "reasoningAnalyzing": "Analizando la solicitud…",
       "reasoningSteps_one": "{{count}} paso",
       "reasoningSteps_other": "{{count}} pasos",
-      "reasoningSteps_many": "{{count}} pasos",
       "activityTitle": "Actividad",
       "activityClose": "Cerrar",
       "activityResize": "Cambiar tamaño del panel",
@@ -962,7 +962,10 @@
       "slashReset": "borrar el contexto interno (la conversación se conserva)",
       "slashHelp": "qué puede hacer el asistente",
       "slashNewChat": "iniciar un nuevo chat",
-      "answerInProgress": "La respuesta aún se está preparando — aparecerá aquí cuando esté lista"
+      "answerInProgress": "La respuesta aún se está preparando — aparecerá aquí cuando esté lista",
+      "attachmentFrameTitle": "Vista previa del archivo adjunto",
+      "attachmentRemoveShort": "Quitar archivo adjunto",
+      "reasoningSteps_many": "{{count}} pasos"
     },
     "lawyerWorkplace": {
       "navAria": "Navegación del área jurídica",
@@ -3880,7 +3883,7 @@
         "reenableTwoFactor": "Reactivar 2FA"
       },
       "messages": {
-        "nowViewingAs": "Ahora está viendo como {{username}}",
+        "nowViewingAsPrefix": "Viendo ahora como",
         "failedToImpersonate": "No se ha podido suplantar al usuario",
         "failedToExitImpersonation": "No se ha podido salir del modo de suplantación",
         "exitedImpersonation": "Se ha salido del modo de suplantación",
@@ -5550,7 +5553,7 @@
           }
         },
         "assignClient": {
-          "title": "Asignar cliente: {{fullName}}",
+          "titlePrefix": "Asignar cliente:",
           "clientInformation": "Información del cliente",
           "assignmentDetails": "Detalles de la asignación",
           "name": "Nombre",
@@ -5782,7 +5785,7 @@
           "sendSMS": "Enviar SMS"
         },
         "sendMessage": {
-          "title": "Enviar mensaje a {{clientName}}",
+          "titlePrefix": "Enviar mensaje a",
           "channel": "Canal",
           "service": "Servicio",
           "servicePlaceholder": "Seleccionar un servicio",
@@ -5923,7 +5926,7 @@
           "apply": "Aplicar"
         },
         "tagSelector": {
-          "title": "Gestionar etiquetas — {{name}}",
+          "titlePrefix": "Gestionar etiquetas —",
           "loadingTags": "Cargando etiquetas…",
           "searchTags": "Buscar etiquetas…",
           "selectedCount": "{{selected}} de {{total}} etiquetas seleccionadas",
@@ -5932,7 +5935,7 @@
           "payloadTagBadge": "requiere promesa de pago",
           "payloadTagHint": "Esta etiqueta requiere fecha y/o importe de la promesa de pago; se abrirá un formulario aparte",
           "saveTags": "Guardar etiquetas",
-          "tagsUpdated": "Etiquetas actualizadas para {{name}}",
+          "tagsUpdatedPrefix": "Etiquetas actualizadas para",
           "updateFailed": "No se pudieron actualizar las etiquetas",
           "protectedRemoveBlocked": "Las etiquetas protegidas solo pueden eliminarlas los roles autorizados"
         },
@@ -6243,14 +6246,14 @@
           "fileSizeKb": "{{size}} KB"
         },
         "promiseAssign": {
-          "title": "Asignar «{{tag}}» — {{client}}",
+          "titlePrefix": "Asignar «{{tag}}» —",
           "description": "Esta etiqueta requiere una fecha objetivo de pago. Cuando llegue esa fecha, una regla en segundo plano sustituirá automáticamente «{{tag}}» por «Promesa incumplida».",
           "dateLabel": "Fecha de la promesa (fecha + hora)",
           "amountLabel": "Importe de la promesa (opcional)",
           "amountPlaceholder": "p. ej., 1500",
           "dateInFuture": "La fecha de la promesa debe ser futura",
           "amountPositive": "El importe debe ser un número positivo",
-          "assigned": "«{{tag}}» asignada a {{client}}",
+          "assignedPrefix": "«{{tag}}» asignada a",
           "assignFailed": "No se ha podido asignar la etiqueta",
           "assign": "Asignar"
         }
@@ -7129,6 +7132,9 @@
         "cancelled": "Cancelado",
         "completed": "Completado",
         "completedEarly": "Completado anticipadamente"
+      },
+      "documents": {
+        "previewFrameTitle": "Vista previa del documento"
       }
     },
     "clientChains": {
@@ -12008,6 +12014,9 @@
         "loadingWorkList": "Cargando lista de trabajo…",
         "loadingPriorityWorkList": "Cargando lista de trabajo prioritaria…"
       }
+    },
+    "messaging": {
+      "attachmentPreview": "Vista previa del archivo adjunto"
     }
   },
   "contactTypes": {

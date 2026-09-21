@@ -6,6 +6,7 @@
  */
 
 import { useTranslation } from 'react-i18next'
+import { piiProps } from '@/lib/openreplay/pii'
 import type { UserDetailResponse } from '../types'
 
 interface ViewUserFormProps {
@@ -69,7 +70,7 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
             <span className="text-muted-foreground text-sm font-light">
               {t('pages.users.forms.firstName')}
             </span>
-            <span className="text-foreground text-sm font-semibold break-words">
+            <span className="text-foreground text-sm font-semibold break-words" {...piiProps}>
               {user.first_name || '—'}
             </span>
           </div>
@@ -78,7 +79,7 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
             <span className="text-muted-foreground text-sm font-light">
               {t('pages.users.forms.lastName')}
             </span>
-            <span className="text-foreground text-sm font-semibold break-words">
+            <span className="text-foreground text-sm font-semibold break-words" {...piiProps}>
               {user.last_name || '—'}
             </span>
           </div>
@@ -89,7 +90,7 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
             <span className="text-muted-foreground text-sm font-light">
               {t('pages.users.forms.middleName')}
             </span>
-            <span className="text-foreground text-sm font-semibold break-words">
+            <span className="text-foreground text-sm font-semibold break-words" {...piiProps}>
               {user.middle_name || '—'}
             </span>
           </div>

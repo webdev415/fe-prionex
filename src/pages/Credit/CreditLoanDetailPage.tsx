@@ -45,6 +45,7 @@ import {
   CreditNotice,
   type CreditHeaderMetric,
 } from './components/CreditCardHeader'
+import { Pii } from '@/lib/openreplay/pii'
 
 /** Часовой пояс кредита: окно отказа регуляторное, показывать его надо
  *  в зоне юрисдикции, иначе киевский оператор увидит чужие сутки. */
@@ -258,7 +259,7 @@ export function CreditLoanDetailPage() {
                 to={`/dashboard/credit/applications/${loan.application_id}`}
                 className="text-foreground font-medium hover:underline"
               >
-                {borrower.fullName || t('credit.card.borrowerUnknown')}
+                <Pii>{borrower.fullName || t('credit.card.borrowerUnknown')}</Pii>
               </Link>
               {borrower.phone && <span>{borrower.phone}</span>}
               {borrower.email && <span>{borrower.email}</span>}

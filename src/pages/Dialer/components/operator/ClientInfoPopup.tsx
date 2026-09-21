@@ -9,6 +9,7 @@ import { Icons } from '@/lib/icons'
 import { CallProgressRing } from './CallProgressRing'
 import { RecentInteractions } from './RecentInteractions'
 import { uiLocale, withCurrency } from '@/lib/formatters'
+import { piiProps } from '@/lib/openreplay/pii'
 
 interface ClientInfoPopupProps {
   open: boolean
@@ -90,7 +91,9 @@ export function ClientInfoPopup({
             <span className="bg-card border-border flex h-9 w-9 shrink-0 items-center justify-center rounded-full border shadow-sm">
               <Icons.UserCircle02Icon size={20} className="text-muted-foreground" />
             </span>
-            <h2 className="text-foreground text-xl font-semibold">{clientName}</h2>
+            <h2 className="text-foreground text-xl font-semibold" {...piiProps}>
+              {clientName}
+            </h2>
           </div>
 
           {isLoading ? (

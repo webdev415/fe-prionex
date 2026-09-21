@@ -82,6 +82,7 @@ import type {
   PaymentMethod as BackendPaymentMethod,
   PaymentStatus as BackendPaymentStatus,
 } from '@/features/payments/api/types'
+import { piiProps } from '@/lib/openreplay/pii'
 
 // Types
 interface Payment {
@@ -1160,8 +1161,12 @@ export function PaymentHistoryPage() {
             <span className="sm:hidden">{t('common.back')}</span>
           </Button>
           <span className="text-foreground text-center text-lg leading-tight font-light tracking-[-0.48px] sm:text-2xl">
+            {/* Only the interpolated half. The screen's title has to stay
+                readable or a replay stops saying where the operator was. */}
             {t('pages.clients.paymentHistory.title')}:{' '}
-            <span className="font-medium">{paymentHistory.customerName}</span>
+            <span className="font-medium" {...piiProps}>
+              {paymentHistory.customerName}
+            </span>
           </span>
         </div>
         <PermissionGuard permission={PERMISSIONS.DATA.EXPORT}>
@@ -1187,7 +1192,10 @@ export function PaymentHistoryPage() {
                 <div className="bg-card flex items-center gap-2.5 rounded-full p-2">
                   <Icons.User size={20} className="text-foreground sm:size-[24px]" />
                 </div>
-                <span className="text-foreground text-base leading-[132%] font-medium tracking-[-0.4px] sm:text-xl">
+                <span
+                  className="text-foreground text-base leading-[132%] font-medium tracking-[-0.4px] sm:text-xl"
+                  {...piiProps}
+                >
                   {paymentHistory.customerName}
                 </span>
               </div>

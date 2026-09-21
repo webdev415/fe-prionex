@@ -20,6 +20,7 @@ import { Icons } from '@/lib/icons'
 import { toast } from 'sonner'
 import { assignTagExtended } from '@/features/tags/api/tagsApi'
 import { useQueryClient } from '@tanstack/react-query'
+import { Pii } from '@/lib/openreplay/pii'
 
 interface PromiseAssignDialogProps {
   open: boolean
@@ -84,7 +85,10 @@ export function PromiseAssignDialog({
         },
       })
       toast.success(
-        t('pages.clients.modals.promiseAssign.assigned', { tag: tagName, client: clientName })
+        <span>
+          {t('pages.clients.modals.promiseAssign.assignedPrefix', { tag: tagName })}{' '}
+          <Pii>{clientName}</Pii>
+        </span>
       )
       queryClient.invalidateQueries({ queryKey: ['clients', clientId, 'tags'] })
       // Inside the try, so a failed assign never arms auto-open. Reached only
@@ -110,7 +114,12 @@ export function PromiseAssignDialog({
             <Icons.Clock01 size={18} strokeWidth={2} className="text-warning-700" />
           </div>
         }
-        title={t('pages.clients.modals.promiseAssign.title', { tag: tagName, client: clientName })}
+        title={
+          <>
+            {t('pages.clients.modals.promiseAssign.titlePrefix', { tag: tagName })}{' '}
+            <Pii>{clientName}</Pii>
+          </>
+        }
       />
       <ModalContent>
         <div className="space-y-4">

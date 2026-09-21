@@ -86,10 +86,13 @@ describe('LeaksSubTab', () => {
     expect(screen.getByText('Artem Honchar')).toBeInTheDocument()
   })
 
-  it('renders the client as a #id link with the full name in the title', () => {
+  it('renders the client as a #id link, with the name OUT of the title (KAN-KB-54)', () => {
+    // The hover-reveal moved from `title` into a tooltip: Radix renders its
+    // content as a text node, which OpenReplay masks, whereas an attribute is
+    // sent verbatim.
     render(<LeaksSubTab />)
     const clientLink = screen.getByRole('button', { name: '#236200' })
-    expect(clientLink).toHaveAttribute('title', 'Smith Alice')
+    expect(clientLink).not.toHaveAttribute('title')
   })
 
   it('renders the contract code in the Agreement column', () => {

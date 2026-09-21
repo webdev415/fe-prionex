@@ -8,6 +8,7 @@ import { formatDocumentDateLines } from '../../utils/formatters'
 import type { LegalDocumentRow } from '../../documents/types'
 import { getDocumentDisplayName } from './constants'
 import { DocumentTypeBadge } from './DocumentTypeBadge'
+import { piiProps } from '@/lib/openreplay/pii'
 
 interface DocumentsTableProps {
   documents: LegalDocumentRow[]
@@ -60,7 +61,11 @@ export function DocumentsTable({
         header: t('pages.lawyerWorkplace.documents.columns.clientContract', 'Client - Contract'),
         render: (row) => (
           <div className="min-w-[140px]">
-            <p className="text-foreground text-[13px] font-medium">{row.clientName}</p>
+            {/* Only the name. The contract number below it is what keeps the
+                row identifiable in a replay. */}
+            <p className="text-foreground text-[13px] font-medium" {...piiProps}>
+              {row.clientName}
+            </p>
             <p className="text-muted-foreground text-[11px]">{row.contractId}</p>
           </div>
         ),

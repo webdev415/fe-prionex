@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/Label'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { useOperators } from '@/features/users/hooks/useUsers'
 import { useAuthStore } from '@/stores/authStore'
+import { piiProps } from '@/lib/openreplay/pii'
 
 interface ReassignPaymentEmployeeModalProps {
   open: boolean
@@ -61,7 +62,9 @@ function ReassignBody({
           <Label className="text-foreground text-xs font-medium">
             {t('pages.clients.modals.reassignEmployee.currentLabel')}
           </Label>
-          <p className="text-foreground text-sm font-medium">{currentEmployeeName || '—'}</p>
+          <p className="text-foreground text-sm font-medium" {...piiProps}>
+            {currentEmployeeName || '—'}
+          </p>
         </div>
 
         <div className="space-y-1">
@@ -69,6 +72,7 @@ function ReassignBody({
             {t('pages.clients.modals.reassignEmployee.newLabel')}
           </Label>
           <SearchableSelect
+            obscured
             id="reassign-target"
             options={userOptions}
             value={selectedUserId}

@@ -38,6 +38,7 @@ import {
   formatCreditPercent,
   formatCreditRate,
 } from '@/features/credit/api/money'
+import { Pii } from '@/lib/openreplay/pii'
 
 const DECLINE_CODES = ['RC-04', 'RC-08', 'RC-11']
 const DECIDABLE_STATUSES = ['scoring', 'referred']
@@ -239,11 +240,17 @@ function ApplicationForm({ application }: { application: CreditApplicationDetail
         </Alert>
       )}
       <Panel title={t('credit.card.applicant')}>
-        <Field label={t('credit.fields.name')}>{applicant.fullName || '—'}</Field>
+        {/* `Field` takes {label, children} and forwards nothing, so the
+            attribute cannot be spread onto it — the wrapper goes inside. */}
+        <Field label={t('credit.fields.name')}>
+          <Pii>{applicant.fullName || '—'}</Pii>
+        </Field>
         <Field label={t('credit.fields.email')}>{applicant.email ?? '—'}</Field>
         <Field label={t('credit.fields.phone')}>{applicant.phone ?? '—'}</Field>
         <Field label={t('credit.fields.birthDate')}>{applicant.birthDate ?? '—'}</Field>
-        <Field label={t('credit.fields.address')}>{applicant.address ?? '—'}</Field>
+        <Field label={t('credit.fields.address')}>
+          <Pii>{applicant.address ?? '—'}</Pii>
+        </Field>
         {identityMatch !== undefined && (
           <Field label={t('credit.fields.identityMatch')}>
             <span className={identityMatch >= 0.9 ? 'text-success-700' : 'text-warning-800'}>

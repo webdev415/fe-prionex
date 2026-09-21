@@ -22,6 +22,8 @@ import {
   ANALYTICS_TABLE_TH,
 } from './analyticsTableStyles'
 import { withCurrency } from '@/lib/formatters'
+import { piiProps } from '@/lib/openreplay/pii'
+import { PiiTooltip } from '@/components/ui/PiiTooltip'
 
 /**
  * Leaks sub-tab (KAN-735). Layout / UI styling mirror the Figma frame verbatim
@@ -460,18 +462,21 @@ function LeakRow({
               {initials}
             </span>
           ) : null}
-          <span className="text-xs font-medium text-[#05040D]">{operatorName}</span>
+          <span className="text-xs font-medium text-[#05040D]" {...piiProps}>
+            {operatorName}
+          </span>
         </div>
       </td>
       <td className={`${ANALYTICS_TABLE_TD} text-[#3B82F6]`}>
-        <button
-          type="button"
-          title={row.client_full_name ?? undefined}
-          onClick={() => navigate(`/dashboard/clients/${row.client_id}`)}
-          className="hover:underline"
-        >
-          #{row.client_id}
-        </button>
+        <PiiTooltip label={row.client_full_name}>
+          <button
+            type="button"
+            onClick={() => navigate(`/dashboard/clients/${row.client_id}`)}
+            className="hover:underline"
+          >
+            #{row.client_id}
+          </button>
+        </PiiTooltip>
       </td>
       <td className={ANALYTICS_TABLE_TD}>{row.contract_number ?? '—'}</td>
       <td className={`${ANALYTICS_TABLE_TD} font-semibold text-[#05040D]`}>

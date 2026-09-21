@@ -9,6 +9,7 @@ import { useCreateScorecard, useTemplates } from '@/features/quality'
 import { useOperators } from '@/features/users/hooks'
 import { useAuthStore } from '@/stores/authStore'
 import { formatDate, formatTimeShort } from '@/lib/localeFormat'
+import { piiProps } from '@/lib/openreplay/pii'
 
 /**
  * New-assessment picker (KAN-504 / Scorecard Review Panel redesign).
@@ -252,6 +253,7 @@ export function RateDialogueDialog({ open, onClose, operatorId }: RateDialogueDi
                               setSelectedCall(null)
                             }}
                             className="hover:bg-primary-50 block w-full px-3 py-2 text-left text-sm text-gray-700"
+                            {...piiProps}
                           >
                             {op.full_name ?? `#${op.id}`}
                           </button>
@@ -263,7 +265,7 @@ export function RateDialogueDialog({ open, onClose, operatorId }: RateDialogueDi
               </div>
             ) : (
               <div className="flex items-center justify-between gap-2 rounded-lg bg-gray-50 px-3 py-2">
-                <span className="text-dark-500 truncate text-sm font-medium">
+                <span className="text-dark-500 truncate text-sm font-medium" {...piiProps}>
                   {operator?.full_name ?? `#${selectedOperatorId}`}
                 </span>
                 <button

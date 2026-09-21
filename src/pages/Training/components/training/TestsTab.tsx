@@ -4,6 +4,7 @@ import { Icons } from '@/lib/icons'
 import { MOCK_TESTS, type MockTest, type TestStatus } from '../../mocks/trainerWorkplaceMocks'
 import { PendingFeatureDialog } from '../inbox/PendingFeatureDialog'
 import { TrainingFilterChips, TrainingPrimaryButton } from './TrainingToolbar'
+import { piiProps } from '@/lib/openreplay/pii'
 
 const STATUS_TONE: Record<TestStatus, { label: string; tone: string }> = {
   passed: { label: 'Passed', tone: 'bg-[#F0FDF4] text-[#15803D]' },
@@ -121,7 +122,7 @@ function TestCard({ test }: { test: MockTest }) {
             {test.authorInitials}
           </div>
           <div className="flex min-w-0 flex-1 flex-col">
-            <span className="truncate text-[11px] font-medium text-[#05040D]">
+            <span className="truncate text-[11px] font-medium text-[#05040D]" {...piiProps}>
               {test.authorName}
             </span>
             <span className="text-[10px] text-[#6B7280]">

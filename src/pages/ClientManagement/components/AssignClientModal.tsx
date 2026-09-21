@@ -22,6 +22,7 @@ import { useOperators } from '@/features/users/hooks/useUsers'
 import { useAuthStore } from '@/stores/authStore'
 import { useGuardedAction, useHasPermission } from '@/hooks'
 import { PERMISSIONS } from '@/constants/permissions'
+import { Pii, piiProps } from '@/lib/openreplay/pii'
 import { toast } from 'sonner'
 
 // Format currency for Ukrainian Hryvnia
@@ -166,7 +167,17 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
             <Icons.Tick02 size={20} className="text-primary-foreground" strokeWidth={1.5} />
           </div>
         }
-        title={t('pages.clients.modals.assignClient.title', { fullName })}
+        title={
+          /* The heading carried the client's name interpolated into the
+             translated string, which cannot be marked up as a whole: "Assign
+             Client:" has to stay readable or a replay stops saying which screen
+             the operator was on. The key now holds only the static half —
+             punctuation included, so a translator still owns it — and the name
+             is a sibling node that markup can reach. */
+          <>
+            {t('pages.clients.modals.assignClient.titlePrefix')} <Pii>{fullName}</Pii>
+          </>
+        }
       />
       <ModalContent>
         {isLoading ? (
@@ -233,7 +244,10 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
                     <span className="text-muted-foreground w-full text-xs leading-[150%] font-light tracking-[-0.24px] sm:w-[120px] sm:text-sm sm:tracking-[-0.28px]">
                       {t('pages.clients.modals.assignClient.name')}
                     </span>
-                    <span className="text-foreground flex-1 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
+                    <span
+                      className="text-foreground flex-1 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]"
+                      {...piiProps}
+                    >
                       {fullName}
                     </span>
                   </div>
@@ -299,6 +313,7 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
                       {t('pages.clients.modals.assignClient.employee')}
                     </Label>
                     <SearchableSelect
+                      obscured
                       id="employee"
                       options={userOptions}
                       value={employeeId}
@@ -316,6 +331,7 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
                       {t('pages.clients.modals.assignClient.searcher')}
                     </Label>
                     <SearchableSelect
+                      obscured
                       id="searcher"
                       options={userOptions}
                       value={searcherId}

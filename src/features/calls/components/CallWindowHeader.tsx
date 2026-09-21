@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { formatCallDuration } from '../utils/duration'
+import { piiProps } from '@/lib/openreplay/pii'
 
 interface CallWindowHeaderProps {
   phoneNumber: string
@@ -58,7 +59,7 @@ export function CallWindowHeader({
             single client owns it — naming one, or calling the caller unknown,
             both assert something the payload does not support. */}
         {(clientName || unknown) && (
-          <div className="text-foreground truncate text-lg font-semibold sm:text-xl">
+          <div className="text-foreground truncate text-lg font-semibold sm:text-xl" {...piiProps}>
             {clientName || t('pages.clients.modals.callDialog.unknownContact', 'Unknown contact')}
           </div>
         )}

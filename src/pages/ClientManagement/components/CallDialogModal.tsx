@@ -34,6 +34,7 @@ import {
   CALL_MODAL_AUTO_CLOSE_SECONDS,
   CALL_MODAL_AUTO_CLOSE_MAX_WAIT_MS,
 } from '@/features/calls/constants/callModal'
+import { piiProps } from '@/lib/openreplay/pii'
 
 export type CallState = 'initial' | 'dialing' | 'connected' | 'ended' | 'failed' | 'incoming'
 export type CallType = 'white-line' | 'gray-line' | 'spam-calls'
@@ -1044,7 +1045,10 @@ export function CallDialogModal({
               <div className="border-border bg-muted flex h-16 w-16 items-center justify-center rounded-full border-2 sm:h-20 sm:w-20">
                 <Icons.Headset size={32} className="text-foreground sm:size-10" strokeWidth={1.5} />
               </div>
-              <div className="text-foreground text-center text-xl font-semibold sm:text-2xl">
+              <div
+                className="text-foreground text-center text-xl font-semibold sm:text-2xl"
+                {...piiProps}
+              >
                 {clientName}
               </div>
               <div
@@ -1280,7 +1284,7 @@ function IncomingClientPicker({
                 value={String(candidate.client_id)}
                 id={`incoming-client-${candidate.client_id}`}
               />
-              <span className="text-foreground text-xs font-medium sm:text-sm">
+              <span className="text-foreground text-xs font-medium sm:text-sm" {...piiProps}>
                 {candidate.client_name}
               </span>
             </label>
@@ -1349,7 +1353,9 @@ function IncomingCallContext({
   return (
     <div className="border-border flex flex-col gap-3 rounded-lg border p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="text-foreground text-sm font-semibold">{context.client_name}</span>
+        <span className="text-foreground text-sm font-semibold" {...piiProps}>
+          {context.client_name}
+        </span>
         {targetClientId ? (
           <a
             href={`/dashboard/clients/${targetClientId}`}
@@ -1461,7 +1467,9 @@ function LoanCard({ loan }: { loan: IncomingModalLoan }) {
             {loan.score}
           </div>
           <div className="flex flex-col">
-            <div className="text-foreground text-xs font-medium sm:text-sm">
+            {/* Name and loan number arrive as one line; the number is digits,
+                which the tracker masks anyway. */}
+            <div className="text-foreground text-xs font-medium sm:text-sm" {...piiProps}>
               {loan.clientName} - {t('pages.clients.detail.tableHeaders.loanNumber')} #
               {loan.loanNumber}
             </div>

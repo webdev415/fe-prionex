@@ -41,7 +41,11 @@ export function CardSections({ card, onEdit }: CardSectionsProps) {
       >
         <FieldGrid
           fields={[
-            { label: t('pages.employeeCard.fields.fullName'), value: displayName(card.header) },
+            {
+              label: t('pages.employeeCard.fields.fullName'),
+              value: displayName(card.header),
+              obscured: true,
+            },
             {
               label: t('pages.employeeCard.fields.dateOfBirth'),
               value: day(card.personal.date_of_birth),
@@ -50,7 +54,11 @@ export function CardSections({ card, onEdit }: CardSectionsProps) {
             { label: t('pages.employeeCard.fields.telegram'), value: card.personal.telegram },
             { label: t('pages.employeeCard.fields.email'), value: card.header.email },
             { label: t('pages.employeeCard.fields.city'), value: card.personal.city },
-            { label: t('pages.employeeCard.fields.address'), value: card.personal.address },
+            {
+              label: t('pages.employeeCard.fields.address'),
+              value: card.personal.address,
+              obscured: true,
+            },
             {
               label: t('pages.employeeCard.fields.novaPoshta'),
               value: card.personal.nova_poshta_branch,
@@ -131,6 +139,7 @@ export function CardSections({ card, onEdit }: CardSectionsProps) {
                         {
                           label: t('pages.employeeCard.fields.name'),
                           value: contact.full_name,
+                          obscured: true,
                         },
                         {
                           label: t('pages.employeeCard.fields.relation'),
@@ -163,6 +172,7 @@ export function CardSections({ card, onEdit }: CardSectionsProps) {
                         {
                           label: t('pages.employeeCard.fields.name'),
                           value: child.full_name,
+                          obscured: true,
                         },
                         {
                           label: t('pages.employeeCard.fields.dateOfBirth'),

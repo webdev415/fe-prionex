@@ -5,6 +5,7 @@ import { displayFormatForLanguage } from '@/lib/dateUtils'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import type { SaleNote } from '@/features/clients/types/saleNotes'
+import { piiProps } from '@/lib/openreplay/pii'
 
 interface Props {
   note: SaleNote
@@ -73,6 +74,7 @@ export function SaleNoteCard({ note, isLatest, canDelete, onDelete }: Props) {
         <div
           className="text-foreground text-sm leading-relaxed"
           dangerouslySetInnerHTML={{ __html: note.content }}
+          {...piiProps}
         />
       </div>
     </div>

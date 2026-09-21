@@ -18,6 +18,7 @@ import { Icons } from '@/lib/icons'
 import { useCallStore } from '@/stores/callStore'
 import { CallMaterialsPanel } from '@/pages/Training/components/training/CallMaterialsPanel'
 import { CallPlayer, type CallPlayerHandle } from './CallPlayer'
+import { piiProps } from '@/lib/openreplay/pii'
 
 export interface CallRecordingModalProps {
   open: boolean
@@ -191,11 +192,13 @@ export const CallRecordingModal = forwardRef<CallRecordingModalHandle, CallRecor
                   to={`/dashboard/clients/${callData.clientId}`}
                   className="text-primary-700 hover:underline"
                   onClick={onClose}
+                  data-openreplay-label="client-name-link"
+                  {...piiProps}
                 >
                   {callData.clientName}
                 </Link>
               ) : (
-                callData.clientName
+                <span {...piiProps}>{callData.clientName}</span>
               )}{' '}
               - {formatDate(callData.date, callData.time)}
             </div>

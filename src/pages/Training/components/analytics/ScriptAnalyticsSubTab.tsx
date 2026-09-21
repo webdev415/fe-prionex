@@ -7,6 +7,7 @@ import { useStageFunnel } from '@/features/quality'
 import type { FunnelDateType, StageFunnelFilters } from '@/features/quality'
 import { StageFunnel } from './funnel/StageFunnel'
 import { PainPointsPanel } from './funnel/PainPointsPanel'
+import { piiProps } from '@/lib/openreplay/pii'
 
 type FunnelPeriod = 'today' | 'yesterday' | '7d' | '30d'
 
@@ -110,7 +111,7 @@ export function ScriptAnalyticsSubTab() {
               {t('pages.training.interactions.filters.allOperators', 'All operators')}
             </option>
             {operators.map((op) => (
-              <option key={op.id} value={String(op.id)}>
+              <option key={op.id} value={String(op.id)} {...piiProps}>
                 {op.full_name}
               </option>
             ))}

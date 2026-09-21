@@ -2,6 +2,7 @@
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
+import { piiProps } from '@/lib/openreplay/pii'
 
 /**
  * Generic placeholder modal for Quick Actions whose backend lives in a
@@ -45,7 +46,9 @@ export function PendingFeatureDialog({
           {operatorName ? (
             <div className="flex items-center gap-2 rounded-lg bg-gray-50 px-3 py-2">
               <Icons.User size={14} className="text-gray-500" />
-              <span className="text-sm font-medium text-gray-800">{operatorName}</span>
+              <span className="text-sm font-medium text-gray-800" {...piiProps}>
+                {operatorName}
+              </span>
             </div>
           ) : null}
 

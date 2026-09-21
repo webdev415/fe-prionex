@@ -587,6 +587,7 @@
     "tabsScrollRight": "Прокрутити вкладки вправо"
   },
   "common": {
+    "userAvatar": "Аватар користувача",
     "step": "Крок",
     "selected": "Вибрано",
     "of": "з",
@@ -965,7 +966,9 @@
       "slashReset": "очистити контекст мозку (розмова лишається)",
       "slashHelp": "довідка про можливості",
       "slashNewChat": "почати новий чат",
-      "answerInProgress": "Відповідь ще готується — з’явиться тут, коли буде готова"
+      "answerInProgress": "Відповідь ще готується — з’явиться тут, коли буде готова",
+      "attachmentFrameTitle": "Перегляд вкладення",
+      "attachmentRemoveShort": "Видалити вкладення"
     },
     "lawyerWorkplace": {
       "navAria": "Навігація робочого місця юриста",
@@ -3885,7 +3888,7 @@
         "reenableTwoFactor": "Увімкнути 2FA"
       },
       "messages": {
-        "nowViewingAs": "Тепер перегляд як {{username}}",
+        "nowViewingAsPrefix": "Тепер перегляд як",
         "failedToImpersonate": "Не вдалося переглянути як користувача",
         "failedToExitImpersonation": "Не вдалося вийти з режиму перегляду",
         "exitedImpersonation": "Вийдено з режиму перегляду",
@@ -6289,7 +6292,7 @@
           }
         },
         "assignClient": {
-          "title": "Призначити клієнта: {{fullName}}",
+          "titlePrefix": "Призначити клієнта:",
           "clientInformation": "Інформація про клієнта",
           "assignmentDetails": "Деталі призначення",
           "name": "Ім'я",
@@ -6521,7 +6524,7 @@
           "sendSMS": "Відправити SMS"
         },
         "sendMessage": {
-          "title": "Надіслати повідомлення — {{clientName}}",
+          "titlePrefix": "Надіслати повідомлення —",
           "channel": "Канал",
           "service": "Сервіс",
           "servicePlaceholder": "Оберіть сервіс",
@@ -6649,7 +6652,7 @@
           "apply": "Застосувати"
         },
         "tagSelector": {
-          "title": "Керування тегами — {{name}}",
+          "titlePrefix": "Керування тегами —",
           "loadingTags": "Завантаження тегів...",
           "searchTags": "Пошук тегів...",
           "selectedCount": "{{selected}} з {{total}} тегів вибрано",
@@ -6658,7 +6661,7 @@
           "payloadTagBadge": "потрібна ЦД",
           "payloadTagHint": "Цей тег потребує ЦД та/або суму — відкриється окрема форма",
           "saveTags": "Зберегти теги",
-          "tagsUpdated": "Теги оновлено для {{name}}",
+          "tagsUpdatedPrefix": "Теги оновлено для",
           "updateFailed": "Не вдалося оновити теги",
           "protectedRemoveBlocked": "Захищені теги можуть знімати лише уповноважені ролі"
         },
@@ -6982,14 +6985,14 @@
           "fileSizeKb": "{{size}} КБ"
         },
         "promiseAssign": {
-          "title": "Призначити «{{tag}}» — {{client}}",
+          "titlePrefix": "Призначити «{{tag}}» —",
           "description": "Цей тег потребує цільової дати оплати. Коли вона настане, фонове правило автоматично замінить «{{tag}}» на «Порушена обіцянка».",
           "dateLabel": "Дата обіцянки (дата + час)",
           "amountLabel": "Сума обіцянки (необов’язково)",
           "amountPlaceholder": "наприклад, 1500",
           "dateInFuture": "Дата обіцянки має бути в майбутньому",
           "amountPositive": "Сума має бути додатним числом",
-          "assigned": "«{{tag}}» призначено клієнту {{client}}",
+          "assignedPrefix": "«{{tag}}» призначено клієнту",
           "assignFailed": "Не вдалося призначити тег",
           "assign": "Призначити"
         }
@@ -7135,6 +7138,9 @@
         "cancelled": "Скасовано",
         "completed": "Завершено",
         "completedEarly": "Завершено достроково"
+      },
+      "documents": {
+        "previewFrameTitle": "Перегляд документа"
       }
     },
     "clientChains": {
@@ -12003,6 +12009,9 @@
         "loadingWorkList": "Завантаження списку роботи…",
         "loadingPriorityWorkList": "Завантаження пріоритетного списку роботи…"
       }
+    },
+    "messaging": {
+      "attachmentPreview": "Перегляд вкладення"
     }
   },
   "contactTypes": {

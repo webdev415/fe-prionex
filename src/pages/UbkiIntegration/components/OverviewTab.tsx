@@ -346,6 +346,7 @@ export function OverviewTab() {
     },
     {
       key: 'client',
+      obscured: true,
       header: t('pages.ubkiIntegration.overview.columns.client', 'Client'),
       render: (r) => (
         <div className="text-xs">

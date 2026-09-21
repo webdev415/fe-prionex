@@ -27,6 +27,7 @@ import {
   withCurrency,
 } from '@/lib/formatters'
 import { cn } from '@/lib/utils'
+import { piiProps } from '@/lib/openreplay/pii'
 
 function formatDateTime(isoDate: string, timezone?: string): string {
   try {
@@ -194,7 +195,7 @@ export function TaskBell() {
                       className="flex min-w-0 flex-1 flex-col gap-1.5 px-4 py-3 text-left disabled:cursor-default"
                     >
                       <div className="flex flex-wrap items-center gap-1.5 pr-5">
-                        <p className="line-clamp-1 text-xs font-semibold text-black">
+                        <p className="line-clamp-1 text-xs font-semibold text-black" {...piiProps}>
                           {payment.client_name ?? `Client #${payment.client_id}`}
                           <span className="ml-1 font-normal text-black">
                             (ID: {payment.client_id})
@@ -252,7 +253,7 @@ export function TaskBell() {
                     >
                       {/* Client name + ID + Priority + Status on same line */}
                       <div className="flex flex-wrap items-center gap-1.5 pr-5">
-                        <p className="line-clamp-1 text-xs font-semibold text-black">
+                        <p className="line-clamp-1 text-xs font-semibold text-black" {...piiProps}>
                           {task.client_name ?? `Client #${task.client_id}`}
                           {task.client_id && (
                             <span className="ml-1 font-normal text-black">

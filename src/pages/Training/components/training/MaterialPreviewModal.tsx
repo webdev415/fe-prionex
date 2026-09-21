@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Modal, ModalContent, ModalHeader } from '@/components/ui/Modal'
 import { previewMaterial } from '@/features/training/api/materialsService'
 import { isPreviewable, type Material } from '@/features/training/types/materials'
+import { piiProps } from '@/lib/openreplay/pii'
 
 /**
  * In-CRM preview for PDFs and video. Fetches the file with auth
@@ -60,9 +61,14 @@ export function MaterialPreviewModal({ material, onClose }: MaterialPreviewModal
           )}
           {!isLoading && !isError && objectUrl && material?.type === 'pdf' && (
             <iframe
+              /* Training material, not personal data — but the frame's contents
+                 are recorded all the same (`blob:` inherits our origin), and the
+                 rule is the same for every iframe so that it does not depend on
+                 today's judgement about what is inside. */
               src={objectUrl}
               title={material.title}
               className="h-[70vh] w-full rounded-md border border-[#EBECE8]"
+              {...piiProps}
             />
           )}
           {!isLoading && !isError && objectUrl && material?.type === 'video' && (
