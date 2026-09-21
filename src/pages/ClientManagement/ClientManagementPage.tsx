@@ -27,6 +27,7 @@ import {
 import { TagBadge } from '@/components/ui/TagBadge'
 import { TooltipProvider } from '@/components/ui/Tooltip'
 import { ClientFiltersBar } from './components/ClientFiltersBar'
+import { countAppliedFilters } from './utils/appliedFiltersCount'
 import { AssignClientModal } from './components/AssignClientModal'
 import { BulkAssignClientModal } from './components/BulkAssignClientModal'
 import { formatClientFullName, formatDate, formatDateTime, withCurrency } from '@/lib/formatters'
@@ -57,7 +58,6 @@ import type { Client as APIClient } from '@/features/clients/api/types'
 import type { PriorityThresholds } from '@/features/clients/api/configApi'
 import { useURLState } from '@/hooks/useURLState'
 import { useClampPage } from '@/hooks/useClampPage'
-import { countAppliedFilters } from './appliedFiltersCount'
 import { useOperatorFilterOptions, coversAllOptions } from './hooks/useOperatorFilterOptions'
 import { NO_INTERACTIONS_ID, NO_RESPONSIBLE_ID } from './components/OperatorMultiSelectDropdown'
 import type { StepValueEntry } from './components/ClientStepValueRow'
@@ -1175,8 +1175,8 @@ export function ClientManagementPage() {
 
   // Count applied filters
   const appliedFiltersCount = useMemo(
-    () => countAppliedFilters(filters, selectedPriorities.length, selectedV3Buckets.length),
-    [filters, selectedPriorities.length, selectedV3Buckets.length]
+    () => countAppliedFilters(filters, selectedPriorities, selectedV3Buckets),
+    [filters, selectedPriorities, selectedV3Buckets]
   )
 
   // All filtering (including search) is now handled server-side

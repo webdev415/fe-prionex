@@ -1,9 +1,21 @@
-import type { ClientFilters } from './ClientManagementPage'
+import type { ClientFilters } from '../ClientManagementPage'
 
+/**
+ * How many filters the user has applied, for the "(N applied)" label and the
+ * Clear All button that shows whenever this is above zero.
+ *
+ * One per GROUP, not per value: three tags is one filter applied, and tags,
+ * excluded tags and a segment share a single count between them. RR status
+ * follows the same rule -- it was simply left out of this tally when the
+ * filter was added, so the list filtered while the label still read 0 and
+ * Clear All never appeared (KAN-1119).
+ *
+ * Exported so the count can be tested without standing up the whole page.
+ */
 export function countAppliedFilters(
   filters: ClientFilters,
-  selectedPriorityCount: number,
-  selectedV3BucketCount: number
+  selectedPriorities: string[],
+  selectedV3Buckets: string[]
 ): number {
   let count = 0
   if (filters.debtRangeFrom || filters.debtRangeTo) count++
@@ -30,7 +42,7 @@ export function countAppliedFilters(
   if (filters.chainIds && filters.chainIds.length > 0) count++
   if (filters.chainStepIds && filters.chainStepIds.length > 0) count++
   if (filters.stepValues && Object.keys(filters.stepValues).length > 0) count++
-  if (selectedPriorityCount > 0) count++
-  if (selectedV3BucketCount > 0) count++
+  if (selectedPriorities.length > 0) count++
+  if (selectedV3Buckets.length > 0) count++
   return count
 }

@@ -5439,6 +5439,7 @@
         "payments": "Payments",
         "hasVerifiedPayment": "Has verified payment(s)",
         "rrStatus": "RR status",
+        "clearRrStatus": "Clear RR status",
         "searchPlaceholder": "Search...",
         "selectAll": "Select all",
         "selectAllEmployees": "All employees",
@@ -7788,9 +7789,14 @@
         "required": "Required",
         "notInPast": "Date cannot be in the past",
         "showClosedCredits": "Show closed credits",
+        "countAsPromiseDate": "Count as promise date",
+        "countAsPromiseAmount": "Count as promise amount",
+        "promiseDateTaken": "Step {{step}} is already counted as the promise date. Untick it first.",
+        "promiseAmountTaken": "Step {{step}} is already counted as the promise amount. Untick it first.",
         "contactSource": "Contact source",
         "contactSourceClient": "Client contacts",
-        "contactSourceRecommender": "Recommender contacts"
+        "contactSourceRecommender": "Recommender contacts",
+        "promiseNeedsBothHalves": "A promise needs both a Date step and an Amount step counted. Flag the other one, or untick this."
       },
       "modals": {
         "create": {

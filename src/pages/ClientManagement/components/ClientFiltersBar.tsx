@@ -809,6 +809,20 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                     </label>
                   )
                 })}
+                {/* Opt-in ×, like the inputs and dropdowns above: shown only
+                    when there is a selection to clear. These are bare
+                    checkboxes with no control to host it, so the button sits
+                    after the last one rather than inside a trigger. */}
+                {selectedRrStatusIds.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => onFilterChange({ ...filters, rrStatusIds: [] })}
+                    aria-label={t('pages.clients.filters.clearRrStatus', 'Clear RR status')}
+                    className="text-muted-foreground hover:text-foreground flex items-center self-center"
+                  >
+                    <Icons.Cancel01 size={14} />
+                  </button>
+                )}
               </div>
             </div>
             <div className="hidden sm:flex sm:min-w-[220px] sm:flex-1" />

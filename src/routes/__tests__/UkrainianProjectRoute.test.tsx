@@ -51,3 +51,14 @@ describe('UkrainianProjectRoute', () => {
     expect(screen.queryByText('Assistant')).not.toBeInTheDocument()
   })
 })
+
+const ROUTES_SOURCE = Object.values(
+  import.meta.glob('../index.tsx', { query: '?raw', import: 'default', eager: true })
+)[0] as string
+
+describe('the routes that only Ukrainian projects may open', () => {
+  it.each(['AiAssistantPage', 'UbkiIntegrationPage'])('guards %s', (page) => {
+    const wrapped = new RegExp(`<UkrainianProjectRoute>\\s*\\{withSuspense\\(<${page} />\\)\\}`)
+    expect(ROUTES_SOURCE).toMatch(wrapped)
+  })
+})

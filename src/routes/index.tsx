@@ -614,7 +614,7 @@ export const router = createBrowserRouter([
         path: 'system-settings/integrations/ubki',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.MESSAGING.MANAGE_INTEGRATIONS}>
-            {withSuspense(<UbkiIntegrationPage />)}
+            <UkrainianProjectRoute>{withSuspense(<UbkiIntegrationPage />)}</UkrainianProjectRoute>
           </PermissionRoute>
         ),
       },

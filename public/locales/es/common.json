@@ -5456,7 +5456,8 @@
         "lastInteractionResultSearchPlaceholder": "Buscar...",
         "stepValueUnsupported": "No hay filtro de valores disponible para este paso.",
         "selectedCount": "{{count}} seleccionados",
-        "onlyLastChain": "Solo la última interacción"
+        "onlyLastChain": "Solo la última interacción",
+        "clearRrStatus": "Borrar estado RR"
       },
       "statuses": {
         "active": "Activo",
@@ -7826,7 +7827,12 @@
         "showClosedCredits": "Mostrar créditos cerrados",
         "contactSource": "Origen del contacto",
         "contactSourceClient": "Contactos del cliente",
-        "contactSourceRecommender": "Contactos del recomendador"
+        "contactSourceRecommender": "Contactos del recomendador",
+        "countAsPromiseDate": "Contar como fecha de la promesa",
+        "countAsPromiseAmount": "Contar como importe de la promesa",
+        "promiseDateTaken": "El paso {{step}} ya se cuenta como fecha de la promesa. Desmárquelo primero.",
+        "promiseAmountTaken": "El paso {{step}} ya se cuenta como importe de la promesa. Desmárquelo primero.",
+        "promiseNeedsBothHalves": "Una promesa necesita un paso de fecha y otro de importe. Marque el otro o desmarque este."
       },
       "modals": {
         "create": {

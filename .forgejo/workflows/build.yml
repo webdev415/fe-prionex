@@ -589,6 +589,97 @@ jobs:
 
           { echo "phone_url<<__EOF__"; printf '%s\n' "$PHONE_URL"; echo "__EOF__"; } >> "$GITHUB_OUTPUT"
 
+      # ─────────────────────────────────────────────────────────────────────
+      # OpenReplay session replay — the project key and the ingest URL.
+      #
+      # The key is PUBLIC by nature: it is inlined into the bundle every browser
+      # downloads. So it lives in a repository VARIABLE, like the phone URL above
+      # and unlike anything in OpenBao. Treating it as a secret would be theatre.
+      #
+      # 🔴 THIS STEP NEVER FAILS, deliberately, unlike both steps above it.
+      # An absent variable means "the tracker is off for this environment", and
+      # that is a real state rather than a misconfiguration: environments are
+      # switched on ONE AT A TIME (dev first, then preprod, then prod), and the
+      # act of adding the variable IS the switch. A build for an environment that
+      # has not been switched on yet must stay green — an `exit 1` here would turn
+      # a deliberate rollout order into a wall of red releases.
+      #
+      # Both halves are required together: an ingest URL with no key, or a key
+      # with no ingest URL, is not a usable configuration, so the pair is blanked
+      # rather than passed on half-set. src/lib/openreplay/config.ts applies the
+      # same rule on its side; this one exists so the build log SAYS which it was.
+      #
+      # `ingest` is one variable for all three environments on purpose: there is a
+      # single OpenReplay backend and three projects inside it. Three copies of one
+      # URL would be three places to drift apart.
+      - name: Select the OpenReplay project key for this environment
+        id: openreplay
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+          OR_KEY_DEV: ${{ vars.VITE_OPENREPLAY_PROJECT_KEY_DEV }}
+          OR_KEY_PREPROD: ${{ vars.VITE_OPENREPLAY_PROJECT_KEY_PREPROD }}
+          OR_KEY_PROD: ${{ vars.VITE_OPENREPLAY_PROJECT_KEY_PROD }}
+          OR_INGEST: ${{ vars.VITE_OPENREPLAY_INGEST_URL }}
+          OR_PRIV_DEV: ${{ vars.VITE_OPENREPLAY_PRIVATE_MODE_DEV }}
+          OR_PRIV_PREPROD: ${{ vars.VITE_OPENREPLAY_PRIVATE_MODE_PREPROD }}
+          OR_PRIV_PROD: ${{ vars.VITE_OPENREPLAY_PRIVATE_MODE_PROD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # `*)` is the only failure in this step, and it is NOT belt-and-braces:
+          # the three-value `choice` exists on workflow_dispatch only, while the
+          # workflow_call input is a plain string (a callee may not declare
+          # `choice`). Any caller can pass anything.
+          case "$ENVIRONMENT" in
+            dev)     OR_KEY="${OR_KEY_DEV:-}";     OR_PRIV="${OR_PRIV_DEV:-}" ;;
+            preprod) OR_KEY="${OR_KEY_PREPROD:-}"; OR_PRIV="${OR_PRIV_PREPROD:-}" ;;
+            prod)    OR_KEY="${OR_KEY_PROD:-}";    OR_PRIV="${OR_PRIV_PROD:-}" ;;
+            *) echo "FAIL: unknown environment '${ENVIRONMENT}'."; exit 1 ;;
+          esac
+
+          OR_INGEST="${OR_INGEST:-}"
+
+          if [ -n "$OR_KEY" ] && [ -n "$OR_INGEST" ]; then
+            # 🔴 TEMPORARY GATE — remove together with KAN-KB-54.
+            #
+            # With the tracker enabled, digits are masked and input values are
+            # dropped, but NOTHING masks letters: client names, addresses and
+            # free-text operator comments go into the recording verbatim. The fix
+            # is `data-openreplay-obscured` on the blocks that hold them, which
+            # spans 102 components across 18 areas and is tracked separately as
+            # KAN-KB-54.
+            #
+            # Until that lands, PROD must not be switched on — and "must not" is
+            # worth exactly nothing as a comment, because switching it on takes
+            # one repository variable and no code review. So the build refuses.
+            # DEV and PRE-PROD are unaffected: their data is synthetic, which is
+            # the whole reason the rollout order is DEV first.
+            if [ "$ENVIRONMENT" = prod ]; then
+              echo "FAIL: OpenReplay is configured for prod, and that is blocked on purpose."
+              echo "  Client names, addresses and operator comments are NOT masked yet —"
+              echo "  only digits and input values are. See KAN-KB-54:"
+              echo "  https://git.crm-prionex.com/Tasks/Kanbanboard/issues/54"
+              echo "  Remove this gate as part of that task, not around it."
+              exit 1
+            fi
+            # The key is not secret, but there is no reason to print it either.
+            echo "OpenReplay for '${ENVIRONMENT}': ENABLED (ingest ${OR_INGEST})"
+          else
+            echo "OpenReplay for '${ENVIRONMENT}': NOT CONFIGURED - the tracker will not start."
+            echo "  key present: $([ -n "$OR_KEY" ] && echo yes || echo no);" \
+                 "ingest present: $([ -n "$OR_INGEST" ] && echo yes || echo no)"
+            OR_KEY=""; OR_INGEST=""
+          fi
+
+          # Passed through as-is: config.ts reads empty as "off", so normalising
+          # it here would put the same rule in two places.
+          echo "OpenReplay privateMode for '${ENVIRONMENT}': ${OR_PRIV:-<unset> -> OFF}"
+
+          { echo "project_key<<__EOF__"; printf '%s\n' "$OR_KEY";     echo "__EOF__"; } >> "$GITHUB_OUTPUT"
+          { echo "ingest<<__EOF__";      printf '%s\n' "$OR_INGEST";  echo "__EOF__"; } >> "$GITHUB_OUTPUT"
+          { echo "private_mode<<__EOF__"; printf '%s\n' "${OR_PRIV:-}"; echo "__EOF__"; } >> "$GITHUB_OUTPUT"
+
       - name: Compute tags from the checked-out commit
         id: tags
         # 🔴 `inputs.ref` reaches this script through `env:`, NEVER through
@@ -1190,6 +1281,9 @@ jobs:
             VITE_API_BASE_URL=${{ steps.app_urls.outputs.api_url }}
             VITE_WS_URL=${{ steps.app_urls.outputs.ws_url }}
             VITE_OPERATOR_PHONE_URL=${{ steps.phone.outputs.phone_url }}
+            VITE_OPENREPLAY_PROJECT_KEY=${{ steps.openreplay.outputs.project_key }}
+            VITE_OPENREPLAY_INGEST_URL=${{ steps.openreplay.outputs.ingest }}
+            VITE_OPENREPLAY_PRIVATE_MODE=${{ steps.openreplay.outputs.private_mode }}
 
           # 🔴 Story 3.5, decided by measurement rather than by argument.
           #
