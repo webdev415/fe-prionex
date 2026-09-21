@@ -135,7 +135,8 @@
       "active": "Active",
       "paused": "Pause",
       "empty": "Queue is empty",
-      "inactive": "Inactive"
+      "inactive": "Inactive",
+      "pausedCallingWindow": "Outside calling hours"
     },
     "queueList": {
       "found": "Found: {{count}} queues",
@@ -159,7 +160,9 @@
       "deleteMessage": "This action is irreversible. The queue will be deleted along with all settings.",
       "deleted": "Queue deleted",
       "notSynced": "Not synced",
-      "notSyncedHint": "This queue has no campaign on the dialer and cannot place calls. Re-save it to retry."
+      "notSyncedHint": "This queue has no campaign on the dialer and cannot place calls. Re-save it to retry.",
+      "pausedByWindow": "Outside calling hours",
+      "pausedByWindowHint": "Outside this project’s allowed calling hours. Dialling resumes automatically at the next allowed time."
     },
     "queueForm": {
       "createTitle": "Add a new queue",
@@ -272,6 +275,14 @@
     "telephonyType": {
       "white": "White",
       "grey": "Grey"
+    },
+    "callingWindow": {
+      "closedTitle": "Outside calling hours",
+      "resumes": "Dialling resumes {{when}}.",
+      "resumesUnknown": "No reopening time can be given — check the project’s holiday calendar.",
+      "allowed": "Allowed: {{hours}}, {{days}} ({{timezone}})",
+      "open": "Calling hours {{hours}} · {{days}} · open now",
+      "everyDay": "every day"
     }
   },
   "search": {
@@ -4285,6 +4296,72 @@
           "hotlinePhoneFormat": "Phone number may contain digits and spaces only",
           "emailFormat": "Enter a valid email address"
         }
+      },
+      "callingWindow": {
+        "country": "Holiday calendar",
+        "countryPlaceholder": "Select a country",
+        "days": {
+          "1": "Mon",
+          "2": "Tue",
+          "3": "Wed",
+          "4": "Thu",
+          "5": "Fri",
+          "6": "Sat",
+          "7": "Sun"
+        },
+        "enable": "Enforce a calling window",
+        "enableHint": "Calls outside the window are refused by the system. Operators cannot override it.",
+        "end": "Closes",
+        "endHint": "Exclusive — set it short of the legal limit so no call is still running at the cut-off.",
+        "errors": {
+          "start": "Start must be HH:MM",
+          "end": "End must be HH:MM",
+          "same": "Start and end cannot be equal",
+          "timezone": "A fallback timezone is required"
+        },
+        "noCountry": "No holiday calendar: public holidays are not observed for this project. Hours and allowed days still apply.",
+        "saveFailed": "Could not save the calling window",
+        "saved": "Calling window saved",
+        "start": "Opens",
+        "subdivision": "Region (optional)",
+        "subdivisionPlaceholder": "National only",
+        "tabHolidays": "Holidays",
+        "tabWindow": "Window",
+        "timezone": "Fallback timezone",
+        "timezoneHint": "Used when the debtor's own timezone cannot be determined.",
+        "title": "Calling window",
+        "weekdays": "Allowed days",
+        "weekdaysHint": "Select none to allow every day.",
+        "loadFailed": "Could not load the calling window.",
+        "countryNone": "No holiday calendar"
+      },
+      "holidayCalendar": {
+        "year": "Year",
+        "noCountry": "No country is set, so public holidays are not observed. Choose one on the Window tab to enforce them.",
+        "loadFailed": "Could not load the calendar. Try again before generating, so an existing one is not overwritten.",
+        "notGenerated": "No calendar exists for this year. Until one does, every call in that year is refused.",
+        "generate": "Generate {{year}}",
+        "generateFailed": "Could not generate the calendar",
+        "computedEmpty": "This country has no public holidays recorded for that year. Check before relying on it.",
+        "emptyCalendar": "This calendar has no dates. That is a valid answer for some countries, but confirm it is right — calls will be allowed on every working day of the year.",
+        "reviewed": "Reviewed",
+        "unreviewed": "Not yet reviewed",
+        "added": "added",
+        "addDate": "Add a date",
+        "addName": "Name (optional)",
+        "addFailed": "Could not add that date",
+        "removeFailed": "Could not remove that date",
+        "regenerate": "Recompute from the calendar",
+        "regenerateHint": "Recomputing keeps dates you added and clears the reviewed mark.",
+        "confirm": "Mark as reviewed",
+        "confirmed": "Calendar marked as reviewed",
+        "confirmFailed": "Could not mark the calendar as reviewed",
+        "badDate": "Enter the date as YYYY-MM-DD",
+        "wrongYear": "That date is not in {{year}}",
+        "alreadyAdded": "That date is already on the calendar",
+        "regenerateTitle": "Recompute {{year}}?",
+        "regenerateConfirm": "Computed dates are re-derived from the country calendar, dates you added by hand are kept, and the reviewed mark is cleared.",
+        "countryUnsaved": "Save the window first. The calendar is computed from the saved country, so generating now would use the previous one."
       }
     },
     "roles": {
@@ -11449,6 +11526,16 @@
       "tabs": {
         "showEarlier": "Show earlier sections",
         "showLater": "Show later sections"
+      }
+    },
+    "calls": {
+      "callingWindow": {
+        "blocked": "Calling is not allowed right now",
+        "holiday": "Today is a public holiday",
+        "outsideHours": "Outside the allowed calling hours",
+        "unavailable": "Calling hours cannot be checked right now",
+        "weekend": "Calls are not allowed today",
+        "noCalendar": "Calling is blocked until this year’s holiday calendar is set up"
       }
     },
     "messaging": {
