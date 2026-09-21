@@ -6113,7 +6113,6 @@
           "notes": "Примітки (необов'язково)",
           "selectEmployee": "Виберіть співробітника...",
           "selectSearcher": "Виберіть шукача...",
-          "noUsersAvailable": "Користувачі відсутні",
           "enterAdditionalNotes": "Введіть додаткові примітки...",
           "warningMessage": "Примітка: Має бути вибрано принаймні одне призначення (Співробітник або Шукач).",
           "assignClient": "Призначити клієнта",
@@ -6921,6 +6920,15 @@
         "cancelled": "Скасовано",
         "completed": "Завершено",
         "completedEarly": "Завершено достроково"
+      },
+      "assignee": {
+        "searchPlaceholder": "Пошук співробітника",
+        "allEmployees": "Усі співробітники",
+        "noMatches": "Збігів не знайдено",
+        "unassign": "Зняти призначення",
+        "pinned": "Закріплені",
+        "pin": "Закріпити",
+        "unpin": "Відкріпити"
       },
       "documents": {
         "previewFrameTitle": "Перегляд документа"

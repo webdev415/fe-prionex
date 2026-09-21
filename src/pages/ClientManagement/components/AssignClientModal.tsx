@@ -4,11 +4,11 @@
  * Modal for assigning a single client to an employee or searcher.
  */
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
-import { SearchableSelect } from '@/components/ui/SearchableSelect'
+import { AssigneeSelect } from './AssigneeSelect'
 import { RadioGroup, RadioItem } from '@/components/ui/Radio'
 import { Label } from '@/components/ui/Label'
 import { Icons } from '@/lib/icons'
@@ -57,20 +57,25 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
 
   // Fetch active users for employee and searcher dropdowns
-  const { data: operators } = useOperators(activeProjectId ? Number(activeProjectId) : null)
+  const { data: operators, isLoading: operatorsLoading } = useOperators(
+    activeProjectId ? Number(activeProjectId) : null
+  )
 
-  // Map users to dropdown options (full name format)
-  const userOptions = useMemo(() => {
-    if (!operators) return []
-    return operators.map((user) => ({
-      id: user.id.toString(),
-      name: user.full_name,
-    }))
-  }, [operators])
+  // Handed to the picker as they arrive: it renders the department under each
+  // name, which the old `{id, name}` option shape threw away.
+  const operatorOptions = useMemo(() => operators ?? [], [operators])
 
-  const [employeeId, setEmployeeId] = useState<string>('')
-  const [searcherId, setSearcherId] = useState<string>('')
+  // What the operator picked, or null while they have not picked yet. The value
+  // the form shows is derived from the client just below rather than copied into
+  // state when the modal opens, which removes the seeding step altogether: there
+  // is no frame in which a pick can be overwritten by the seed, and a refetch of
+  // the client underneath an open modal no longer discards an edit in progress.
+  const [employeePick, setEmployeePick] = useState<string | null>(null)
+  const [searcherPick, setSearcherPick] = useState<string | null>(null)
   const [reason, setReason] = useState<string>('')
+
+  const employeeId = employeePick ?? client?.responsible_employee_id?.toString() ?? ''
+  const searcherId = searcherPick ?? client?.responsible_searcher_id?.toString() ?? ''
 
   // Pattern Y per-field reassign rule (KAN-562):
   //   - Setting a previously-NULL employee/searcher → initial assignment →
@@ -81,17 +86,6 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
   // field(s) actually being changed-from-non-null require the reassign perm.
   const hasReassignPerm = useHasPermission(PERMISSIONS.CLIENTS.REASSIGN_RESPONSIBLE)
   const guardBaseAssign = useGuardedAction(PERMISSIONS.CLIENTS.EDIT, 'errors:permissions.required')
-
-  // Populate current assignments when modal opens
-  useEffect(() => {
-    if (open && client) {
-      // Use requestAnimationFrame to defer state update and avoid lint error
-      requestAnimationFrame(() => {
-        setEmployeeId(client.responsible_employee_id?.toString() || '')
-        setSearcherId(client.responsible_searcher_id?.toString() || '')
-      })
-    }
-  }, [open, client])
 
   const handleSubmit = () => {
     if (!employeeId && !searcherId) {
@@ -124,18 +118,18 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
         reason,
       })
 
-      // Reset form
-      setEmployeeId('')
-      setSearcherId('')
+      // Drop the picks so a reopen reads the client's values afresh.
+      setEmployeePick(null)
+      setSearcherPick(null)
       setReason('')
       onClose()
     })
   }
 
   const handleCancel = () => {
-    // Reset form
-    setEmployeeId('')
-    setSearcherId('')
+    // Drop the picks so a reopen reads the client's values afresh.
+    setEmployeePick(null)
+    setSearcherPick(null)
     setReason('')
     onClose()
   }
@@ -311,12 +305,12 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
                     >
                       {t('pages.clients.modals.assignClient.employee')}
                     </Label>
-                    <SearchableSelect
-                      obscured
+                    <AssigneeSelect
                       id="employee"
-                      options={userOptions}
+                      operators={operatorOptions}
+                      isLoading={operatorsLoading}
                       value={employeeId}
-                      onValueChange={setEmployeeId}
+                      onValueChange={setEmployeePick}
                       placeholder={t('pages.clients.modals.assignClient.selectEmployee')}
                     />
                   </div>
@@ -329,12 +323,12 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
                     >
                       {t('pages.clients.modals.assignClient.searcher')}
                     </Label>
-                    <SearchableSelect
-                      obscured
+                    <AssigneeSelect
                       id="searcher"
-                      options={userOptions}
+                      operators={operatorOptions}
+                      isLoading={operatorsLoading}
                       value={searcherId}
-                      onValueChange={setSearcherId}
+                      onValueChange={setSearcherPick}
                       placeholder={t('pages.clients.modals.assignClient.selectSearcher')}
                     />
                   </div>
