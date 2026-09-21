@@ -4355,7 +4355,9 @@
         "confirmFailed": "Could not mark the calendar as reviewed",
         "badDate": "Enter the date as YYYY-MM-DD",
         "wrongYear": "That date is not in {{year}}",
-        "alreadyAdded": "That date is already on the calendar"
+        "alreadyAdded": "That date is already on the calendar",
+        "regenerateTitle": "Recompute {{year}}?",
+        "regenerateConfirm": "Computed dates are re-derived from the country calendar, dates you added by hand are kept, and the reviewed mark is cleared."
       }
     },
     "roles": {

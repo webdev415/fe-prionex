@@ -842,6 +842,14 @@ export function ClientDetailPage() {
       )
       return
     }
+    // Gated here, not on each button: this is the single door to the call
+    // dialog, so checking it once is what makes "every entry point agrees"
+    // true for the per-phone buttons and the loans tab as well as the header
+    // — the alternative is remembering to wrap each new one.
+    if (!callingWindow.allowed && callingWindow.message) {
+      toast.warning(callingWindow.message)
+      return
+    }
     const meta = contactTypeId != null ? contactTypesById.get(contactTypeId) : undefined
     const initialCallType: CallType =
       meta?.default_call_line === 'gray' ? 'gray-line' : 'white-line'
@@ -2994,7 +3002,10 @@ export function ClientDetailPage() {
             </PermissionGuard>
             {/* Header "Add Task" button removed — entry moved to the Tasks tab "+" hover button. */}
             <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
-              <CallingWindowTooltip message={callingWindow.allowed ? null : callingWindow.message}>
+              <CallingWindowTooltip
+                message={callingWindow.allowed ? null : callingWindow.message}
+                className="w-full flex-1 xl:w-auto xl:flex-none"
+              >
                 <Button
                   size="md"
                   leftIcon={<Icons.Headset size={20} />}

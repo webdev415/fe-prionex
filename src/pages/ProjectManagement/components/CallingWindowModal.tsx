@@ -356,7 +356,7 @@ function CallingWindowForm({ projectId, initial, hidden, onClose }: CallingWindo
             <Alert variant="warning">
               {t(
                 'pages.projects.callingWindow.noCountry',
-                'Without a holiday calendar, calls are refused on every day of a year that has no calendar generated.'
+                'No holiday calendar: public holidays are not observed for this project. Hours and allowed days still apply.'
               )}
             </Alert>
           )}

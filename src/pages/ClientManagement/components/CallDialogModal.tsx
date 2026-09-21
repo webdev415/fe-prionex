@@ -1035,10 +1035,17 @@ export function CallDialogModal({
                     ? t('status.loading')
                     : isCallCooldown
                       ? `Try again in ${cooldownSecondsRemaining || 1}s`
-                      : !callingWindow.allowed
-                        ? callingWindow.message
-                        : t('pages.clients.modals.callDialog.callNow')}
+                      : t('pages.clients.modals.callDialog.callNow')}
                 </Button>
+              )}
+              {/* Under the button, not in it: the refusal is a sentence, and a
+                  sentence as a label wraps across a full-width button and
+                  costs it its identity. The cooldown case beside it keeps a
+                  short label for the same reason. */}
+              {callType !== 'spam-calls' && !callingWindow.allowed && callingWindow.message && (
+                <p className="text-muted-foreground mt-2 w-full text-center text-xs leading-[140%]">
+                  {callingWindow.message}
+                </p>
               )}
             </ModalFooter>
           </>

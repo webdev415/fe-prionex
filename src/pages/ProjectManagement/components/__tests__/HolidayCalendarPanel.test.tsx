@@ -40,8 +40,12 @@ vi.mock('@/features/projects/api/callingWindowApi', () => ({
 
 import { HolidayCalendarPanel } from '../HolidayCalendarPanel'
 
+// Every date is built from the same year the panel will ask for, so the file
+// cannot start failing on 1 January for reasons unrelated to any change.
+const YEAR = new Date().getFullYear()
+
 const CALENDAR: HolidayCalendar = {
-  year: new Date().getFullYear(),
+  year: YEAR,
   country: 'ES',
   subdivision: null,
   source_version: '0.104',
@@ -49,8 +53,8 @@ const CALENDAR: HolidayCalendar = {
   reviewed_at: null,
   reviewed_by: null,
   dates: [
-    { holiday_date: '2026-01-01', name: "New Year's Day", origin: 'computed' },
-    { holiday_date: '2026-05-30', name: 'Local feast', origin: 'manual' },
+    { holiday_date: `${YEAR}-01-01`, name: "New Year's Day", origin: 'computed' },
+    { holiday_date: `${YEAR}-05-30`, name: 'Local feast', origin: 'manual' },
   ],
 }
 
@@ -73,7 +77,7 @@ describe('HolidayCalendarPanel', () => {
   it('lists the calendar and marks which dates an admin added', async () => {
     getCalendar.mockResolvedValue(CALENDAR)
     renderPanel()
-    expect(await screen.findByText('2026-01-01')).toBeInTheDocument()
+    expect(await screen.findByText(`${YEAR}-01-01`)).toBeInTheDocument()
     expect(screen.getByText('Local feast')).toBeInTheDocument()
     // The manual row is distinguishable — a regenerate keeps it, so an admin
     // needs to know which rows are theirs.
@@ -111,6 +115,53 @@ describe('HolidayCalendarPanel', () => {
     expect(screen.queryByText('pages.projects.holidayCalendar.notGenerated')).toBeNull()
   })
 
+  it('asks before recomputing over a calendar', async () => {
+    // Recomputing re-derives the computed set, so a computed date an admin
+    // deliberately removed comes back and the reviewed mark is cleared. One
+    // click did all of that with nothing said.
+    getCalendar.mockResolvedValue(CALENDAR)
+    generate.mockResolvedValue(CALENDAR)
+    renderPanel()
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'pages.projects.holidayCalendar.regenerate',
+      })
+    )
+    // Awaited, not asserted synchronously: mutate() resolves on a later tick,
+    // so a bare not.toHaveBeenCalled() here passes even with no dialog at all.
+    expect(
+      await screen.findByText('pages.projects.holidayCalendar.regenerateConfirm')
+    ).toBeInTheDocument()
+    expect(generate).not.toHaveBeenCalled()
+
+    // The dialog reuses the action's own label, so the confirm button is the
+    // second of the two on screen.
+    const confirmButton = screen
+      .getAllByRole('button', { name: 'pages.projects.holidayCalendar.regenerate' })
+      .at(-1)!
+    fireEvent.click(confirmButton)
+    await waitFor(() => expect(generate).toHaveBeenCalledWith(7, YEAR, true))
+  })
+
+  it('does not recompute when the confirmation is dismissed', async () => {
+    getCalendar.mockResolvedValue(CALENDAR)
+    renderPanel()
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'pages.projects.holidayCalendar.regenerate',
+      })
+    )
+    fireEvent.click(screen.getByRole('button', { name: /actions\.cancel|Cancel/i }))
+    await waitFor(() =>
+      expect(
+        screen.getAllByRole('button', {
+          name: 'pages.projects.holidayCalendar.regenerate',
+        })
+      ).toHaveLength(1)
+    )
+    expect(generate).not.toHaveBeenCalled()
+  })
+
   it('warns when a generate returns nothing at all', async () => {
     // Ukraine under martial law computes to zero. Correct, but indisting-
     // uishable from a failure unless it is called out.
@@ -141,10 +192,10 @@ describe('HolidayCalendarPanel', () => {
     fireEvent.change(input, { target: { value: `${CALENDAR.year}-12-24` } })
     fireEvent.click(screen.getByRole('button', { name: 'actions.add' }))
     await waitFor(() => expect(addDate).toHaveBeenCalled())
-    expect(addDate.mock.calls[0][2]).toBe('2026-12-24')
+    expect(addDate.mock.calls[0][2]).toBe(`${YEAR}-12-24`)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Delete 2026-01-01' }))
-    await waitFor(() => expect(removeDate).toHaveBeenCalledWith(7, CALENDAR.year, '2026-01-01'))
+    fireEvent.click(screen.getByRole('button', { name: `Delete ${YEAR}-01-01` }))
+    await waitFor(() => expect(removeDate).toHaveBeenCalledWith(7, CALENDAR.year, `${YEAR}-01-01`))
   })
 
   it('cannot be given a malformed date at all', async () => {

@@ -14,6 +14,7 @@ import { toast } from 'sonner'
 import { ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
+import { useConfirm } from '@/components/ui/useConfirm'
 import { Input } from '@/components/ui/Input'
 import { Label } from '@/components/ui/Label'
 import { Icons } from '@/lib/icons'
@@ -48,6 +49,7 @@ export function HolidayCalendarPanel({ projectId, country, onClose }: HolidayCal
   const addDate = useAddHolidayDate(projectId, year)
   const removeDate = useRemoveHolidayDate(projectId, year)
   const confirm = useConfirmHolidayCalendar(projectId, year)
+  const { confirm: askFirst, confirmDialog } = useConfirm()
 
   // A 404 means the year has never been generated. Anything else is a real
   // failure and must not be shown as "nothing here yet" — that would invite
@@ -76,6 +78,23 @@ export function HolidayCalendarPanel({ projectId, country, onClose }: HolidayCal
           t('pages.projects.holidayCalendar.generateFailed', 'Could not generate the calendar')
         ),
     })
+
+  // Behind a confirmation: this re-derives the computed set, so a computed
+  // date an admin deliberately removed comes back, and the reviewed mark is
+  // cleared — an admin who has just finished checking the year would have to
+  // check it again, with no warning that they were about to.
+  const handleRegenerate = async () => {
+    const ok = await askFirst({
+      title: t('pages.projects.holidayCalendar.regenerateTitle', 'Recompute {{year}}?', { year }),
+      message: t(
+        'pages.projects.holidayCalendar.regenerateConfirm',
+        'Computed dates are re-derived from the country calendar, dates you added by hand are kept, and the reviewed mark is cleared.'
+      ),
+      confirmLabel: t('pages.projects.holidayCalendar.regenerate', 'Recompute from the calendar'),
+      tone: 'danger',
+    })
+    if (ok) handleGenerate(true)
+  }
 
   const handleAdd = () => {
     // Says why instead of returning quietly. The first version silently did
@@ -275,7 +294,7 @@ export function HolidayCalendarPanel({ projectId, country, onClose }: HolidayCal
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={() => handleGenerate(true)}
+                onClick={handleRegenerate}
                 disabled={busy}
                 className="self-start"
               >
@@ -291,6 +310,7 @@ export function HolidayCalendarPanel({ projectId, country, onClose }: HolidayCal
           )}
         </div>
       </ModalContent>
+      {confirmDialog}
       <ModalFooter>
         <Button variant="secondary" onClick={onClose} disabled={busy}>
           {t('actions.close', 'Close')}

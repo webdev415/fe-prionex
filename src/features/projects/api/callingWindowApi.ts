@@ -45,7 +45,7 @@ export async function getHolidayCountries(): Promise<HolidayCountry[]> {
 
 export async function getSubdivisions(country: string): Promise<string[]> {
   const response = await api.get<string[]>(
-    `/api/v1/projects/calling-window/countries/${country}/subdivisions`
+    `/api/v1/projects/calling-window/countries/${encodeURIComponent(country)}/subdivisions`
   )
   return response.data
 }
@@ -96,7 +96,9 @@ export async function removeHolidayDate(
   year: number,
   holidayDate: string
 ): Promise<void> {
-  await api.delete(`/api/v1/projects/${projectId}/holiday-calendar/${year}/dates/${holidayDate}`)
+  await api.delete(
+    `/api/v1/projects/${projectId}/holiday-calendar/${year}/dates/${encodeURIComponent(holidayDate)}`
+  )
 }
 
 export async function confirmHolidayCalendar(

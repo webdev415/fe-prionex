@@ -77,7 +77,9 @@ export function QueueStatusBadge({
   // an unsynced queue is a fault that needs someone to act and never clears
   // itself, while a window hold is normal and self-resolving — showing the
   // benign one would hide the fault behind it.
-  if (pausedByWindow) {
+  // Gated on `active`: the hold's wording promises the queue resumes by
+  // itself, which is only true while the supervisor's own switch is on.
+  if (active && pausedByWindow) {
     return (
       <span
         className="bg-info-100 text-info-700 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs leading-[130%] font-medium tracking-[-0.02em]"
