@@ -1,6 +1,7 @@
 import api from '@/lib/api'
 
 import type {
+  DialerCallingWindow,
   ClientCallSummary,
   DialerQueue,
   DialerSession,
@@ -21,6 +22,11 @@ const API_BASE_URL =
 const base = `${API_BASE_URL}/api/v1/dialer`
 
 export class DialerHttpService {
+  async getCallingWindow(): Promise<DialerCallingWindow> {
+    const response = await api.get(`${base}/calling-window`)
+    return response.data
+  }
+
   async listQueues(params?: {
     department_id?: number
     active_only?: boolean

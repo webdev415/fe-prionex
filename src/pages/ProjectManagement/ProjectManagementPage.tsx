@@ -11,6 +11,7 @@ import { useURLState, useAutoPersistedState } from '@/hooks'
 import { useProjects, useProjectDetail } from '@/features/projects/hooks/useProjects'
 import { useProjectExport } from '@/features/projects/hooks/useProjectMutations'
 import { EditProjectModal } from './components/EditProjectModal'
+import { CallingWindowModal } from './components/CallingWindowModal'
 import { ProjectDetailPanel } from './components/ProjectDetailPanel'
 import { ProjectDetailModal } from './components/ProjectDetailModal'
 import { SearchFiltersBar } from './components/SearchFiltersBar'
@@ -94,6 +95,7 @@ export function ProjectManagementPage() {
 
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null)
   const [editingProject, setEditingProject] = useState<ApiProjectDetail | null>(null)
+  const [callingWindowProject, setCallingWindowProject] = useState<ApiProjectDetail | null>(null)
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024) // lg breakpoint
   const [showDetailModal, setShowDetailModal] = useState(false)
 
@@ -365,6 +367,9 @@ export function ProjectManagementPage() {
                     project={projectDetail as ApiProjectDetail | null}
                     hasProjects={projects.length > 0}
                     onEdit={handleEditFromPanel}
+                    onCallingWindow={() =>
+                      setCallingWindowProject(projectDetail as ApiProjectDetail)
+                    }
                     isLoading={effectiveSelectedProjectId !== null && isDetailLoading}
                   />
                 </div>
@@ -398,6 +403,15 @@ export function ProjectManagementPage() {
             onSuccess={handleEditSuccess}
           />
         )}
+
+        {/* Calling window (KAN-1107) — its own modal, not a section of the
+            project form: it decides whether a call is legal to place. */}
+        <CallingWindowModal
+          projectId={callingWindowProject?.id ?? null}
+          projectName={callingWindowProject?.name}
+          open={callingWindowProject !== null}
+          onClose={() => setCallingWindowProject(null)}
+        />
       </PermissionGuard>
 
       {/* Project Detail Modal - shown on mobile when project is clicked */}
