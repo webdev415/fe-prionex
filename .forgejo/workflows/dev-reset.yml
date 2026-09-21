@@ -164,7 +164,30 @@ name: Weekly DEV Reset
 # (destructive command's own stderr discarded); both fixed below, in the same idiom, not a new one.
 
 on:
-  schedule:
+  # 🔴 ── DISARMED ON MERGE, DELIBERATELY (code review Medium, 2026-09-21) ────────────────────
+  # The whole `schedule:` block below is commented out, in this file's own pre-agreed disarm
+  # shape (see the disarm note in the header: comment the ENTIRE block, never leave the key with
+  # zero items — an empty `schedule:` may be rejected outright, and a rejected file surfaces as a
+  # run with one job and no log, indistinguishable from success).
+  #
+  # Why it ships disarmed rather than armed. A push to `main` re-registers this repository's
+  # schedules, so merging an armed block would arm `1 0 * * 1` **immediately** — and the branch
+  # half of this job has never executed live. As of this commit the reset step has been exercised
+  # only against local fixture repositories; the SSH path, the deploy key, the branch-protection
+  # interaction and the leased push have never run end to end from the `deploy-dev-preprod`
+  # runner. The plan's own phase 4 requires a manual `workflow_dispatch` as the proof BEFORE any
+  # scheduled run, and with Story 4.5 still open there is no failure notification — so an armed
+  # merge late in the week would make the first-ever execution of this code both unattended and
+  # unwatched. Commit loss is well guarded (the archive tag is written and read back before the
+  # branch moves), so the realistic worst case is a red run or a reset without its deploy; that
+  # is still not a thing to discover on a Monday at 00:01 UTC.
+  #
+  # ✅ TO ARM: uncomment the two lines below — the `schedule:` key and its single `- cron:` item —
+  # and push to `main`. The push itself is the registration; no separate action is needed. Do it
+  # only after a manual `workflow_dispatch` of this workflow has driven the branch reset for real
+  # (plan §6, phase 4). One line of diff, and it is the whole of phase 4's arming step.
+  #
+  # schedule:
     # 🔴 2026-09-21, Oleg's decision (`docs/dev-weekly-reset-plan.md` §5): `1 0 * * 1`, replacing
     # `0 2 * * 0`. Literal 00:01 UTC on MONDAY — 02:01 CEST in summer, 01:01 CET in winter. The
     # move from Sunday to Monday is the point: this job now resets the BRANCH, and the week's work
@@ -198,7 +221,7 @@ on:
     # own — not `PRIONEX_HUB`'s 1s, recorded as this repository's own measurement rather than
     # assumed to generalise. Post-PR-B state re-verified by query: exactly one `action_schedule_spec`
     # row survives (`spec='0 2 * * 0'`), the probe spec is gone.
-    - cron: '1 0 * * 1'
+    # - cron: '1 0 * * 1'
   workflow_dispatch: {}
     # Zero inputs, deliberately (AC1). The epic's own text only asks for "can also be dispatched
     # manually" — this is stronger, and the strength is the point: with no ref/tag/environment a
@@ -533,9 +556,14 @@ jobs:
         run: |
           set -euo pipefail
           echo "⚠️ SWEEP STEP FAILED — hygiene was skipped this cycle. This is NOT fatal to the"\
-               "reset (the dispatch below still runs unconditionally), but it means stale"\
-               "images/holders were NOT cleaned this time. See the sweep step's own output above"\
-               "for where it broke."
+               "reset: BOTH the branch reset and the dispatch below carry 'if: always()' and run"\
+               "regardless. It means only that stale images/holders were NOT cleaned this time."\
+               "See the sweep step's own output above for where it broke."
+          # 🔴 Code review Medium, 2026-09-21: this message used to say "the dispatch below still
+          # runs unconditionally" and name only the dispatch. That was true of the dispatch and
+          # FALSE of the branch reset, which had no `if:` at all and was therefore skipped by the
+          # implicit `success()` exactly when this notice was printing that nothing was wrong.
+          # Both now carry `always()`; the sentence names both so it cannot drift back.
 
       # ═══════════════════════════════════════════════════════════════════════════════════════
       # THE DESTRUCTIVE STEP. Everything above this point either reads or removes debris; this
@@ -595,6 +623,26 @@ jobs:
       # instance's host key is ever rotated this step goes red saying exactly that; update the
       # literal, deliberately, rather than removing the check.
       - name: "Reset the dev branch to main (plan §4.2 — archive, count, refuse, update)"
+        # 🔴 Code review Medium, 2026-09-21. Without this the step carries the IMPLICIT
+        # `success()` and is therefore skipped whenever the sweep above it fails — which silently
+        # reverses this file's own H4 decision. The failure mode is quiet and compounding: image
+        # hygiene breaking on the runner would stop the BRANCH being reset week after week, the
+        # unique-commit count would climb past MAX_DISCARDED, and from then on the job would
+        # refuse on the ceiling instead — a second wrong reason stacked on the first. The sweep is
+        # a chore attached to this job; it was never a gate on it, and the notice step above says
+        # so in as many words.
+        #
+        # `always()` and not `!cancelled()`, deliberately: `always()` is proven live on this
+        # runner (this file's own notice and dispatch steps), whereas `cancelled()` appears
+        # nowhere in this repository and has never been exercised on this instance. This file does
+        # not put an unmeasured platform function in a destructive path — that is the same rule
+        # that got `continue-on-error` removed from the sweep.
+        # ⚠️ The cost of that choice, named rather than hidden: `always()` also fires while a run
+        # is being CANCELLED, so cancelling this job mid-flight can still let the reset execute.
+        # The step is safe to interrupt at any point (the ordering note above), and a cancel
+        # during the ~10s between the tag and the push is the only window where it matters.
+        # Revisit if `cancelled()` is ever measured on this instance.
+        if: ${{ always() }}
         id: reset
         env:
           # 🔴 Repository secret, NOT an org secret. `secrets: inherit` hands a callee every secret
@@ -648,7 +696,21 @@ jobs:
           chmod 600 "$KEY_FILE"
 
           echo "--- pinning the host key for ${SSH_HOST}:${SSH_PORT} ---"
-          if ! ssh-keyscan -T 10 -p "$SSH_PORT" "$SSH_HOST" > "$KNOWN_HOSTS" 2>/dev/null; then
+          # 🔴 Code review Medium, 2026-09-21 — `-t ed25519` is load-bearing, not tidiness.
+          # Without it `ssh-keyscan` writes EVERY key type the host offers (rsa, ecdsa, ed25519)
+          # into this known_hosts, and the check below only asserts that the pinned ED25519
+          # fingerprint appears SOMEWHERE in that list. The whole file is then handed to ssh. So
+          # an active MITM on this port could answer the scan with the genuine ED25519 key (it is
+          # public) alongside its own RSA key, pass the fingerprint check, then advertise only RSA
+          # during negotiation — ssh would find the attacker's RSA key in the very known_hosts the
+          # scan had just produced, and the deploy key would be offered to the attacker. The
+          # comment below was right that the comparison, not the scan, is the authentication; it
+          # was wrong that the comparison was load-bearing for the connection that followed.
+          # Scanning one algorithm and negotiating that same one is what makes it load-bearing:
+          # the only key ssh can accept is now the only key this check covers. The matching
+          # `-o HostKeyAlgorithms=ssh-ed25519` is on GIT_SSH_COMMAND below — the two belong
+          # together and neither works alone.
+          if ! ssh-keyscan -t ed25519 -T 10 -p "$SSH_PORT" "$SSH_HOST" > "$KNOWN_HOSTS" 2>/dev/null; then
             echo "FAIL: ssh-keyscan could not reach ${SSH_HOST}:${SSH_PORT}. This is a network or"\
                  "instance problem, not a credential one. Nothing has been changed."
             exit 1
@@ -657,8 +719,10 @@ jobs:
           # trust-on-first-use performed fresh on every run, which for an unattended job means no
           # host authentication whatsoever.
           SCANNED_FPS="$(ssh-keygen -lf "$KNOWN_HOSTS" 2>/dev/null | awk '{print $2}')"
+          # With `-t ed25519` above, this file holds exactly one key, so "appears among the
+          # scanned fingerprints" and "is the key ssh will use" are now the same statement.
           if ! printf '%s\n' "$SCANNED_FPS" | grep -qxF "$HOST_KEY_FINGERPRINT"; then
-            echo "FAIL: the host key offered by ${SSH_HOST}:${SSH_PORT} does not include the"\
+            echo "FAIL: the ED25519 host key offered by ${SSH_HOST}:${SSH_PORT} does not match the"\
                  "pinned fingerprint. Refusing to offer the deploy key to a host this step cannot"\
                  "identify. Nothing has been changed."
             echo "  pinned:  ${HOST_KEY_FINGERPRINT}"
@@ -672,7 +736,11 @@ jobs:
           # BatchMode=yes so nothing can ever block on a prompt in an unattended job;
           # IdentitiesOnly/IdentityAgent so a stray agent key on this shared runner can never be
           # offered in place of the one this job is supposed to act as.
-          export GIT_SSH_COMMAND="ssh -i ${KEY_FILE} -o IdentitiesOnly=yes -o IdentityAgent=none -o UserKnownHostsFile=${KNOWN_HOSTS} -o StrictHostKeyChecking=yes -o BatchMode=yes -p ${SSH_PORT}"
+          # 🔴 `HostKeyAlgorithms=ssh-ed25519` is the other half of the pin above (code review
+          # Medium, 2026-09-21): it forbids ssh from negotiating any host key type other than the
+          # one that was scanned and fingerprint-checked. Without it the check can be satisfied by
+          # one key while the connection is secured by another.
+          export GIT_SSH_COMMAND="ssh -i ${KEY_FILE} -o IdentitiesOnly=yes -o IdentityAgent=none -o UserKnownHostsFile=${KNOWN_HOSTS} -o StrictHostKeyChecking=yes -o HostKeyAlgorithms=ssh-ed25519 -o BatchMode=yes -p ${SSH_PORT}"
           REMOTE_URL="ssh://git@${SSH_HOST}:${SSH_PORT}/${REPO_PATH}.git"
 
           echo "--- cloning (history only, no working tree) ---"
