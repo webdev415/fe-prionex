@@ -13,6 +13,8 @@ import { MemoryRouter } from 'react-router-dom'
 import { V3PriorityCards } from '../V3PriorityCards'
 import type { V3ClientBucketCount } from '@/features/scoring/api/types'
 
+vi.mock('react-i18next', async () => (await import('@/test/englishI18n')).englishReactI18nextMock())
+
 const BUCKETS: V3ClientBucketCount[] = [
   { bucket: 'CRIT', clients: 0, priority_dollar: 0 },
   { bucket: 'HIGH', clients: 2, priority_dollar: 217 },

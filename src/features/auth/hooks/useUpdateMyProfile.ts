@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import i18n from '@/lib/i18n'
 import { authApi } from '@/features/auth/api/authApi'
 import { usersKeys } from '@/features/users/hooks/useUsers'
 import { rolesKeys } from '@/features/roles/hooks/useRoles'
@@ -15,7 +16,7 @@ export function useUpdateMyProfile() {
   return useMutation({
     mutationFn: (data: UpdateMyProfileInput) => authApi.updateMyProfile(data),
     onSuccess: () => {
-      toast.success('User updated successfully')
+      toast.success(i18n.t('toasts.users.updated', { defaultValue: 'User updated successfully' }))
       if (user?.id) {
         queryClient.invalidateQueries({ queryKey: usersKeys.detail(Number(user.id)) })
       }

@@ -180,7 +180,7 @@ export function ImportHistoryFiltersBar({
                 <button
                   type="button"
                   className="text-primary-foreground bg-primary-300 hover:bg-primary-500 active:bg-primary-600 group flex h-9 w-9 min-w-0 cursor-pointer items-center justify-center rounded-full border-0 p-0 shadow-none transition-all duration-200 hover:shadow-md focus:outline-none active:shadow-sm disabled:cursor-not-allowed disabled:opacity-50 data-[state=open]:focus:ring-0 data-[state=open]:focus:ring-offset-0"
-                  aria-label="Filters"
+                  aria-label={t('pages.imports.history.filters.filtersAria')}
                   disabled={isLoading}
                 >
                   <Icons.Filter
@@ -483,7 +483,7 @@ export function ImportHistoryFiltersBar({
           onClick={handleSearch}
           disabled={isLoading}
           className="bg-primary-300 hidden h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-200 hover:scale-105 disabled:opacity-60 lg:flex"
-          aria-label="Search import history"
+          aria-label={t('pages.imports.history.filters.searchAria')}
         >
           <Icons.Search size={18} className="text-primary-foreground" strokeWidth={1.5} />
         </button>

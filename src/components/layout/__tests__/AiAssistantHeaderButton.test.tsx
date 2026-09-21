@@ -66,6 +66,21 @@ describe('AiAssistantHeaderButton', () => {
     )
   })
 
+  it('stays hidden in a Spanish project, where the assistant does not speak the language', () => {
+    useAuthStore.setState({
+      user: {
+        id: '1',
+        permissions: [PERMISSIONS.AI_ASSISTANT.USE],
+        projects: [{ id: '2', name: 'Madrid', country: 'ES', roles: [] }],
+        active_project_id: '2',
+      } as unknown as User,
+      isAuthenticated: true,
+    })
+    mockGetAiAssistantSettings.mockResolvedValue({ assistant_enabled: true })
+    renderButton()
+    expect(screen.queryByLabelText('pages.aiAssistant.headerButtonAria')).not.toBeInTheDocument()
+  })
+
   it('fails open (stays visible) while the settings request is pending', () => {
     setUser([PERMISSIONS.AI_ASSISTANT.USE])
     mockGetAiAssistantSettings.mockReturnValue(new Promise(() => {}))

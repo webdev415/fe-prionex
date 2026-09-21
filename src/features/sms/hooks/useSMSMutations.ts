@@ -5,6 +5,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import i18n from '@/lib/i18n'
 import type { AxiosError } from 'axios'
 import {
   sendSMS,
@@ -53,7 +54,9 @@ export function useSendSMS() {
       queryClient.invalidateQueries({ queryKey: ['sms', 'templates'] })
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to send SMS'
+      const message =
+        error?.response?.data?.detail ||
+        i18n.t('toasts.sms.sendFailed', { defaultValue: 'Failed to send SMS' })
       toast.error(message)
     },
   })
@@ -70,10 +73,12 @@ export function useSendBulkSMS() {
     onSuccess: () => {
       // Invalidate templates to update usage stats
       queryClient.invalidateQueries({ queryKey: ['sms', 'templates'] })
-      toast.success('Bulk SMS sending started')
+      toast.success(i18n.t('toasts.sms.bulkStarted', { defaultValue: 'Bulk SMS sending started' }))
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to send bulk SMS'
+      const message =
+        error?.response?.data?.detail ||
+        i18n.t('toasts.sms.bulkSendFailed', { defaultValue: 'Failed to send bulk SMS' })
       toast.error(message)
     },
   })
@@ -92,7 +97,9 @@ export function useCreateSMSTemplate() {
       // Toast notification is handled by the component (CreateTemplateForm)
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to create template'
+      const message =
+        error?.response?.data?.detail ||
+        i18n.t('toasts.sms.templateCreateFailed', { defaultValue: 'Failed to create template' })
       toast.error(message)
     },
   })
@@ -116,7 +123,9 @@ export function useUpdateSMSTemplate() {
       // Toast notification is handled by the component (EditTemplateForm)
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to update template'
+      const message =
+        error?.response?.data?.detail ||
+        i18n.t('toasts.sms.templateUpdateFailed', { defaultValue: 'Failed to update template' })
       toast.error(message)
     },
   })
@@ -138,7 +147,9 @@ export function useDeleteSMSTemplate() {
       // Toast notification is handled by the component (DeleteTemplateModal)
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to delete template'
+      const message =
+        error?.response?.data?.detail ||
+        i18n.t('toasts.sms.templateDeleteFailed', { defaultValue: 'Failed to delete template' })
       toast.error(message)
     },
   })
@@ -159,7 +170,9 @@ export function useRestoreSMSTemplate() {
       queryClient.invalidateQueries({ queryKey: ['sms', 'templates'] })
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to restore template'
+      const message =
+        error?.response?.data?.detail ||
+        i18n.t('toasts.sms.templateRestoreFailed', { defaultValue: 'Failed to restore template' })
       toast.error(message)
     },
   })
@@ -175,10 +188,18 @@ export function useUpdateSMSConfig() {
     mutationFn: (config: SMSConfigUpdate) => updateSMSConfig(config),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sms', 'config'] })
-      toast.success('SMS configuration updated successfully')
+      toast.success(
+        i18n.t('toasts.sms.configUpdated', {
+          defaultValue: 'SMS configuration updated successfully',
+        })
+      )
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to update SMS configuration'
+      const message =
+        error?.response?.data?.detail ||
+        i18n.t('toasts.sms.configUpdateFailed', {
+          defaultValue: 'Failed to update SMS configuration',
+        })
       toast.error(message)
     },
   })

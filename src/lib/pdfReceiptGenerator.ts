@@ -354,6 +354,7 @@
 
 import jsPDF from 'jspdf'
 import { loadNotoSansFont } from './loadNotoFont'
+import { isEuroCurrency } from './projectCurrency'
 
 export interface PaymentReceiptData {
   receiptNumber: string
@@ -387,6 +388,13 @@ const formatCurrency = (amount: string | number): string => {
   // Example: ₴ 125 450,00 (matches UI format)
   // Handle negative numbers correctly: - ₴ 10 000,00
   const num = typeof amount === 'string' ? parseFloat(amount) : amount
+  if (isEuroCurrency()) {
+    const euros = (isNaN(num) ? 0 : num).toLocaleString('es-ES', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
+    return `${euros} €`
+  }
   if (isNaN(num)) return '₴ 0,00'
   const isNegative = num < 0
   const absAmount = Math.abs(num)

@@ -199,7 +199,7 @@ export function useSetMessagingIntegrationChannels() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: messagingKeys.integrations() })
       queryClient.invalidateQueries({ queryKey: messagingKeys.integration(variables.service) })
-      toast.success('Enabled channels updated')
+      toast.success(messagingToast('toasts.messaging.channelsUpdated', 'Enabled channels updated'))
     },
     onError: (error) => toast.error(getErrorMessage(error)),
   })

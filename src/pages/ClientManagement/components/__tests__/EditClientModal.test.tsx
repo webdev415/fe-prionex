@@ -6,6 +6,7 @@ import { EditClientModal } from '../EditClientModal'
 import * as useClientsModule from '@/features/clients/hooks/useClients'
 import { toast } from 'sonner'
 import { useHasPermission } from '@/hooks'
+import { useAuthStore } from '@/stores/authStore'
 
 vi.mock('@/features/clients/hooks/useClients')
 vi.mock('@/hooks', () => ({
@@ -301,6 +302,27 @@ describe('EditClientModal', () => {
   })
 
   describe('UBKI opt-out toggle', () => {
+    it('is not offered in a Spanish project', () => {
+      useAuthStore.setState({
+        user: {
+          id: '1',
+          username: 'operator',
+          projects: [{ id: '2', name: 'Madrid', country: 'ES', roles: [] }],
+          active_project_id: '2',
+          active_role_id: null,
+          active_role_name: null,
+          active_department_id: null,
+          is_agent: false,
+          agent_status: 'offline',
+        },
+      })
+
+      render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
+
+      expect(screen.queryByLabelText('Do not send data to UBKI')).not.toBeInTheDocument()
+      useAuthStore.setState({ user: null })
+    })
+
     it('seeds the toggle from the profile', () => {
       vi.mocked(useClientsModule.useClientProfile).mockReturnValue({
         data: { ...mockProfileData, do_not_send_to_ubki: true },

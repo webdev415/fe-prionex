@@ -20,6 +20,7 @@
  */
 
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import {
   Bar,
@@ -52,6 +53,7 @@ import {
 import type { V3Bucket } from '@/features/scoring/api/types'
 import { useThemeStore } from '@/stores/themeStore'
 import { isDarkBase } from '@/theme/constants'
+import { uiDecimal, uiLocale } from '@/lib/formatters'
 import { ScoringV3MonitoringPageSkeleton } from './ScoringV3MonitoringPageSkeleton'
 
 // Severity order — never sorted by value, so the shape is comparable month to month.
@@ -102,15 +104,15 @@ function parseMonthStart(monthStart: string): Date {
 
 /** "2026-07-01" -> "July 2026" — a month label, not an ISO date. */
 function monthLabel(monthStart: string): string {
-  return parseMonthStart(monthStart).toLocaleDateString(undefined, {
+  return parseMonthStart(monthStart).toLocaleDateString(uiLocale(), {
     month: 'long',
     year: 'numeric',
   })
 }
 
 const pct = (v: number | null | undefined, digits = 1) =>
-  v == null ? '—' : `${(v * 100).toFixed(digits)}%`
-const num = (v: number | null | undefined) => (v == null ? '—' : v.toLocaleString())
+  v == null ? '—' : `${uiDecimal((v * 100).toFixed(digits))}%`
+const num = (v: number | null | undefined) => (v == null ? '—' : v.toLocaleString(uiLocale()))
 
 function StatTile({
   label,
@@ -176,6 +178,7 @@ function ScrollX({ children, minWidth }: { children: React.ReactNode; minWidth?:
 }
 
 export function ScoringV3MonitoringPage() {
+  const { t } = useTranslation('common')
   const projectId = useActiveProjectId()
   const cutoverOn = useV3UiEnabled()
   // The other "Run now" button lives on the Priority Work List, whose nav entry
@@ -193,12 +196,16 @@ export function ScoringV3MonitoringPage() {
     if (!projectId) return
     const turningOn = !cutoverOn
     const ok = await confirm({
-      title: turningOn ? 'Show v3 priorities to operators?' : 'Hide v3 priorities from operators?',
+      title: turningOn
+        ? t('pages.scoringV3.monitoring.confirmEnableTitle')
+        : t('pages.scoringV3.monitoring.confirmHideTitle'),
       message: turningOn
-        ? 'Every operator on this brand will see v3 buckets instead of the old priority, and the Priority Work List becomes available. Do this only after the client has signed off on the report above. You can undo it here at any time.'
-        : 'Operators go back to the old priority immediately. Scoring keeps running in the background, so no data is lost.',
-      confirmLabel: turningOn ? 'Enable for operators' : 'Hide from operators',
-      cancelLabel: 'Cancel',
+        ? t('pages.scoringV3.monitoring.confirmEnableMessage')
+        : t('pages.scoringV3.monitoring.confirmHideMessage'),
+      confirmLabel: turningOn
+        ? t('pages.scoringV3.monitoring.enableForOperators')
+        : t('pages.scoringV3.monitoring.hideFromOperators'),
+      cancelLabel: t('common.cancel'),
       tone: turningOn ? 'default' : 'danger',
     })
     if (!ok) return
@@ -287,10 +294,11 @@ export function ScoringV3MonitoringPage() {
         <div className="flex w-full min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex min-w-0 flex-col gap-1">
             <h1 className="text-foreground text-xl font-light sm:text-2xl">
-              Scoring v3 — <span className="font-semibold">shadow-run report</span>
+              {t('pages.scoringV3.titlePrefix')}{' '}
+              <span className="font-semibold">{t('pages.scoringV3.monitoring.titleEmphasis')}</span>
             </h1>
             <p className="text-muted-foreground text-xs">
-              Review these numbers before turning v3 on for operators.
+              {t('pages.scoringV3.monitoring.subtitle')}
             </p>
           </div>
           {/* The app's standard calendar (same control as Reports / Action
@@ -311,17 +319,19 @@ export function ScoringV3MonitoringPage() {
                 disabled={!projectId || trigger.isPending}
                 className="w-full shrink-0 sm:w-auto"
               >
-                {trigger.isPending ? 'Starting…' : 'Run now'}
+                {trigger.isPending ? t('pages.scoringV3.starting') : t('pages.scoringV3.runNow')}
               </Button>
             )}
             <div className="flex min-w-0 flex-1 items-center gap-2 sm:flex-none">
-              <span className="text-muted-foreground shrink-0 text-sm">Month</span>
+              <span className="text-muted-foreground shrink-0 text-sm">
+                {t('pages.scoringV3.month')}
+              </span>
               <DateSelect
                 value={month ? parseMonthStart(month) : null}
                 onChange={({ value }) => setPicked(value ? toMonthStart(value) : null)}
                 showMonthYearPicker
                 format="MMMM yyyy"
-                placeholder="Select month"
+                placeholder={t('pages.scoringV3.monitoring.selectMonth')}
                 className="min-w-0 flex-1 sm:w-[190px] sm:flex-none [&_input]:h-10 [&_input]:text-sm"
               />
             </div>
@@ -340,8 +350,8 @@ export function ScoringV3MonitoringPage() {
         >
           <span className="min-w-0 leading-relaxed">
             {cutoverOn
-              ? 'Live — operators are seeing v3 priorities for this brand.'
-              : 'Shadow run — scores are being calculated and stored, but operators do NOT see them yet.'}
+              ? t('pages.scoringV3.monitoring.statusLive')
+              : t('pages.scoringV3.monitoring.statusShadow')}
           </span>
           {canRun && (
             <Button
@@ -352,79 +362,83 @@ export function ScoringV3MonitoringPage() {
               className="w-full shrink-0 sm:w-auto"
             >
               {setCutover.isPending
-                ? 'Saving…'
+                ? t('pages.scoringV3.saving')
                 : cutoverOn
-                  ? 'Hide from operators'
-                  : 'Enable for operators'}
+                  ? t('pages.scoringV3.monitoring.hideFromOperators')
+                  : t('pages.scoringV3.monitoring.enableForOperators')}
             </Button>
           )}
         </div>
         {confirmDialog}
 
         {reportLoading && <ScoringV3MonitoringPageSkeleton />}
-        {!reportLoading && isError && (
-          <Empty>Could not load the report. Is the scoring service running?</Empty>
-        )}
+        {!reportLoading && isError && <Empty>{t('pages.scoringV3.monitoring.loadError')}</Empty>}
 
         {!reportLoading && months.length === 0 && (
-          <Empty>
-            Nothing scored yet for this brand. The v3 job runs on the 1st of each month — once it
-            has run, the results appear here.
-          </Empty>
+          <Empty>{t('pages.scoringV3.monitoring.nothingScored')}</Empty>
         )}
 
         {!reportLoading && month && months.length > 0 && !months.includes(month) && (
           <Empty>
-            {monthLabel(month)} was never scored. Months with data:{' '}
-            {months.map(monthLabel).join(', ')}.
+            {t('pages.scoringV3.monitoring.neverScored', {
+              month: monthLabel(month),
+              months: months.map(monthLabel).join(', '),
+            })}
           </Empty>
         )}
 
         {!reportLoading && summary && summary.total === 0 && months.includes(month) && (
           <Empty>
-            No debts scored for {monthLabel(month)} yet. The job runs on the 1st of each month, or
-            can be started manually.
+            {t('pages.scoringV3.monitoring.noDebtsScored', { month: monthLabel(month) })}
           </Empty>
         )}
 
         {!reportLoading && summary && summary.total > 0 && (
           <>
             <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <StatTile label="Debts scored" value={num(summary.total)} hint={monthLabel(month)} />
               <StatTile
-                label="Worth calling (AVG or higher)"
+                label={t('pages.scoringV3.monitoring.stats.debtsScored')}
+                value={num(summary.total)}
+                hint={monthLabel(month)}
+              />
+              <StatTile
+                label={t('pages.scoringV3.monitoring.stats.worthCalling')}
                 value={pct(avgShare)}
-                hint={`target ≈ ${pct(AVG_SHARE_TARGET, 0)} — set by tau`}
+                hint={t('pages.scoringV3.monitoring.stats.targetHint', {
+                  target: pct(AVG_SHARE_TARGET, 0),
+                })}
                 tone={avgShareOff ? 'warn' : 'good'}
               />
               <StatTile
-                label="Excluded (EXIT)"
+                label={t('pages.scoringV3.monitoring.stats.excluded')}
                 value={pct(summary.exit_rate)}
-                hint="dead / closed / paid / legal"
+                hint={t('pages.scoringV3.monitoring.stats.excludedHint')}
               />
               <StatTile
-                label="Average pay chance"
+                label={t('pages.scoringV3.monitoring.stats.avgPayChance')}
                 value={pct(summary.hazard_mean, 2)}
-                hint={`top 10% ≈ ${pct(summary.hazard_p90, 2)}`}
+                hint={t('pages.scoringV3.monitoring.stats.top10Hint', {
+                  value: pct(summary.hazard_p90, 2),
+                })}
               />
             </div>
 
             {avgShareOff && (
               <div className="border-warning-500 bg-warning-50 text-warning-800 w-full min-w-0 rounded-xl border px-4 py-3 text-sm leading-relaxed">
-                The AVG share is off target. tau is the knob that moves it —{' '}
+                {t('pages.scoringV3.monitoring.offTargetBefore')}{' '}
                 <Link
                   to="/dashboard/system-settings/scoring-v3-settings"
                   className="font-medium underline"
                 >
-                  adjust it in v3 scoring settings
+                  {t('pages.scoringV3.monitoring.offTargetLink')}
                 </Link>
-                . The change applies on the next scoring run.
+                {t('pages.scoringV3.monitoring.offTargetAfter')}
               </div>
             )}
 
             <Panel
-              title="How debts were split"
-              subtitle="Ordered by urgency. Compare the shape month to month — one bucket holding almost everything is a problem."
+              title={t('pages.scoringV3.monitoring.split.title')}
+              subtitle={t('pages.scoringV3.monitoring.split.subtitle')}
             >
               <div className="h-[220px] w-full min-w-0 sm:h-[260px]">
                 <ResponsiveContainer width="100%" height="100%" minWidth={0}>
@@ -451,8 +465,11 @@ export function ScoringV3MonitoringPage() {
                     <Tooltip
                       cursor={{ fill: chart.tooltipCursor }}
                       formatter={(v: number, _n, p) => [
-                        `${v.toLocaleString()} debts (${pct(p.payload.pct)})`,
-                        'Count',
+                        t('pages.scoringV3.monitoring.split.tooltipDebts', {
+                          count: num(v),
+                          share: pct(p.payload.pct),
+                        }),
+                        t('pages.scoringV3.monitoring.split.count'),
                       ]}
                     />
                     <Bar dataKey="count" radius={[0, 4, 4, 0]} barSize={22}>
@@ -474,10 +491,18 @@ export function ScoringV3MonitoringPage() {
                 <table className="text-foreground w-full text-sm">
                   <thead>
                     <tr className="text-muted-foreground text-left text-xs">
-                      <th className="py-2 pr-3 font-medium">Bucket</th>
-                      <th className="py-2 pr-3 font-medium">Meaning</th>
-                      <th className="py-2 pl-3 text-right font-medium">Debts</th>
-                      <th className="py-2 pl-3 text-right font-medium">Share</th>
+                      <th className="py-2 pr-3 font-medium">
+                        {t('pages.scoringV3.monitoring.table.bucket')}
+                      </th>
+                      <th className="py-2 pr-3 font-medium">
+                        {t('pages.scoringV3.monitoring.table.meaning')}
+                      </th>
+                      <th className="py-2 pl-3 text-right font-medium">
+                        {t('pages.scoringV3.monitoring.table.debts')}
+                      </th>
+                      <th className="py-2 pl-3 text-right font-medium">
+                        {t('pages.scoringV3.monitoring.table.share')}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -487,11 +512,7 @@ export function ScoringV3MonitoringPage() {
                           <V3BucketBadge bucket={r.bucket} />
                         </td>
                         <td className="text-muted-foreground py-2 pr-3">
-                          {r.bucket === 'CRIT' && 'Call today'}
-                          {r.bucket === 'HIGH' && 'Call this week'}
-                          {r.bucket === 'AVG' && 'Normal cadence'}
-                          {r.bucket === 'LOW' && 'Only with spare capacity'}
-                          {r.bucket === 'EXIT' && 'Do not call'}
+                          {t(`pages.scoringV3.bucketMeaning.${r.bucket}`)}
                         </td>
                         <td className="py-2 pl-3 text-right tabular-nums">{num(r.count)}</td>
                         <td className="py-2 pl-3 text-right tabular-nums">{pct(r.pct)}</td>
@@ -503,14 +524,11 @@ export function ScoringV3MonitoringPage() {
             </Panel>
 
             <Panel
-              title="Does the model actually predict payment?"
-              subtitle="Debts split into ten groups by predicted pay chance. The bars on the right should be taller than the bars on the left — that means the model ranks payers correctly."
+              title={t('pages.scoringV3.monitoring.calibration.title')}
+              subtitle={t('pages.scoringV3.monitoring.calibration.subtitle')}
             >
               {calibrationRows.length === 0 ? (
-                <Empty>
-                  Not available yet. This needs the scored month to have finished so real payments
-                  can be compared against the prediction.
-                </Empty>
+                <Empty>{t('pages.scoringV3.monitoring.calibration.notAvailable')}</Empty>
               ) : (
                 <>
                   <div
@@ -523,17 +541,18 @@ export function ScoringV3MonitoringPage() {
                     }`}
                   >
                     {!hasOutcomes ? (
-                      'Not measurable for this month — no payments were recorded against these debts, so there is nothing to compare the prediction with. This says nothing about the model; pick a month with payment activity.'
+                      t('pages.scoringV3.monitoring.calibration.notMeasurable')
                     ) : (
                       <>
                         {rankingHolds
-                          ? 'Ranking holds — debts predicted more likely to pay did pay more often.'
-                          : 'Ranking does NOT hold — this blocks sign-off. Investigate before cutover.'}
+                          ? t('pages.scoringV3.monitoring.calibration.rankingHolds')
+                          : t('pages.scoringV3.monitoring.calibration.rankingFails')}
                         {calibration?.calibration_error != null && (
                           <>
                             {' '}
-                            Average gap between predicted and actual:{' '}
-                            {pct(calibration.calibration_error, 2)}.
+                            {t('pages.scoringV3.monitoring.calibration.averageGap', {
+                              value: pct(calibration.calibration_error, 2),
+                            })}
                           </>
                         )}
                       </>
@@ -567,7 +586,7 @@ export function ScoringV3MonitoringPage() {
                           <Legend wrapperStyle={{ fontSize: 12, color: chart.axis }} />
                           <Bar
                             dataKey="predicted"
-                            name="Predicted"
+                            name={t('pages.scoringV3.monitoring.table.predicted')}
                             fill={chart.seriesTwo}
                             radius={[4, 4, 0, 0]}
                             stroke={chart.barStroke}
@@ -575,7 +594,7 @@ export function ScoringV3MonitoringPage() {
                           />
                           <Bar
                             dataKey="actual"
-                            name="Actually paid"
+                            name={t('pages.scoringV3.monitoring.table.actuallyPaid')}
                             fill={chart.seriesOne}
                             radius={[4, 4, 0, 0]}
                             stroke={chart.barStroke}
@@ -589,10 +608,18 @@ export function ScoringV3MonitoringPage() {
                     <table className="text-foreground w-full text-sm">
                       <thead>
                         <tr className="text-muted-foreground text-left text-xs">
-                          <th className="py-2 pr-3 font-medium">Group</th>
-                          <th className="py-2 pl-3 text-right font-medium">Debts</th>
-                          <th className="py-2 pl-3 text-right font-medium">Predicted</th>
-                          <th className="py-2 pl-3 text-right font-medium">Actually paid</th>
+                          <th className="py-2 pr-3 font-medium">
+                            {t('pages.scoringV3.monitoring.table.group')}
+                          </th>
+                          <th className="py-2 pl-3 text-right font-medium">
+                            {t('pages.scoringV3.monitoring.table.debts')}
+                          </th>
+                          <th className="py-2 pl-3 text-right font-medium">
+                            {t('pages.scoringV3.monitoring.table.predicted')}
+                          </th>
+                          <th className="py-2 pl-3 text-right font-medium">
+                            {t('pages.scoringV3.monitoring.table.actuallyPaid')}
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
@@ -616,16 +643,22 @@ export function ScoringV3MonitoringPage() {
             </Panel>
 
             <Panel
-              title="Why each debt got its priority"
-              subtitle="Which rule decided. A healthy mix has most debts decided by the model (ml_low / ml_avg) and a minority by events."
+              title={t('pages.scoringV3.monitoring.rules.title')}
+              subtitle={t('pages.scoringV3.monitoring.rules.subtitle')}
             >
               <ScrollX minWidth="22rem">
                 <table className="text-foreground w-full text-sm">
                   <thead>
                     <tr className="text-muted-foreground text-left text-xs">
-                      <th className="py-2 pr-3 font-medium">Rule</th>
-                      <th className="py-2 pl-3 text-right font-medium">Debts</th>
-                      <th className="py-2 pl-3 text-right font-medium">Share</th>
+                      <th className="py-2 pr-3 font-medium">
+                        {t('pages.scoringV3.monitoring.table.rule')}
+                      </th>
+                      <th className="py-2 pl-3 text-right font-medium">
+                        {t('pages.scoringV3.monitoring.table.debts')}
+                      </th>
+                      <th className="py-2 pl-3 text-right font-medium">
+                        {t('pages.scoringV3.monitoring.table.share')}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -644,21 +677,26 @@ export function ScoringV3MonitoringPage() {
             </Panel>
 
             <Panel
-              title="Change since last month"
-              subtitle="Big swings without a business reason are a warning sign."
+              title={t('pages.scoringV3.monitoring.drift.title')}
+              subtitle={t('pages.scoringV3.monitoring.drift.subtitle')}
             >
               {!drift ? (
                 <Empty>
-                  Needs two scored months. Available once{' '}
-                  {prevMonth ? monthLabel(prevMonth) : 'an earlier month'} and {monthLabel(month)}{' '}
-                  both have data.
+                  {t('pages.scoringV3.monitoring.drift.needsTwoMonths', {
+                    previous: prevMonth
+                      ? monthLabel(prevMonth)
+                      : t('pages.scoringV3.monitoring.drift.earlierMonth'),
+                    current: monthLabel(month),
+                  })}
                 </Empty>
               ) : (
                 <ScrollX minWidth="20rem">
                   <table className="text-foreground w-full text-sm">
                     <tbody>
                       <tr className="border-border border-t">
-                        <td className="text-muted-foreground py-2 pr-3">Debts scored</td>
+                        <td className="text-muted-foreground py-2 pr-3">
+                          {t('pages.scoringV3.monitoring.stats.debtsScored')}
+                        </td>
                         <td className="py-2 pl-3 text-right tabular-nums">
                           {drift.deltas.total_delta >= 0 ? '+' : ''}
                           {num(drift.deltas.total_delta)}
@@ -666,7 +704,7 @@ export function ScoringV3MonitoringPage() {
                       </tr>
                       <tr className="border-border border-t">
                         <td className="text-muted-foreground py-2 pr-3">
-                          Worth calling (AVG or higher)
+                          {t('pages.scoringV3.monitoring.stats.worthCalling')}
                         </td>
                         <td className="py-2 pl-3 text-right tabular-nums">
                           {drift.deltas.avg_or_higher_share_delta >= 0 ? '+' : ''}
@@ -674,7 +712,9 @@ export function ScoringV3MonitoringPage() {
                         </td>
                       </tr>
                       <tr className="border-border border-t">
-                        <td className="text-muted-foreground py-2 pr-3">Excluded (EXIT)</td>
+                        <td className="text-muted-foreground py-2 pr-3">
+                          {t('pages.scoringV3.monitoring.stats.excluded')}
+                        </td>
                         <td className="py-2 pl-3 text-right tabular-nums">
                           {drift.deltas.exit_rate_delta >= 0 ? '+' : ''}
                           {pct(drift.deltas.exit_rate_delta)}

@@ -356,7 +356,7 @@ export function SellerManagementPage() {
                   onClick={() => setSearchQuery('')}
                   className="hover:bg-muted flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition-colors"
                   type="button"
-                  aria-label="Clear search"
+                  aria-label={t('pages.sellers.clearSearch')}
                 >
                   <Icons.Close size={14} className="text-muted-foreground" />
                 </button>

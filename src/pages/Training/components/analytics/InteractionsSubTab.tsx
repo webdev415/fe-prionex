@@ -21,6 +21,7 @@ import {
   ANALYTICS_TABLE_TH,
 } from './analyticsTableStyles'
 import { InteractionsKpiStrip } from './InteractionsKpiStrip'
+import { withCurrency } from '@/lib/formatters'
 import { piiProps } from '@/lib/openreplay/pii'
 import { PiiTooltip } from '@/components/ui/PiiTooltip'
 
@@ -51,23 +52,32 @@ const PERIOD_TO_BACKEND: Record<InteractionPeriod, CallMonitoringPeriod> = {
 }
 
 // Keyword-based tone mapping for the status pill — works against the BE's
-// free-form `result_name` (en/uk/ru) without depending on a fixed id list.
+// free-form `result_name` without depending on a fixed id list.
 const TONE_KEYWORDS: { tone: string; keywords: string[] }[] = [
   {
     tone: 'bg-[#ECFDF5] text-[#047857]',
-    keywords: ['promise', 'обіцянк', 'обещание', 'pay'],
+    keywords: ['promise', 'обіцянк', 'обещание', 'pay', 'promesa', 'pago'],
   },
   {
     tone: 'bg-[#FEF2F2] text-[#B91C1C]',
-    keywords: ['missed', 'no answer', 'no_answer', 'пропущ', 'без відпов', 'без ответа'],
+    keywords: [
+      'missed',
+      'no answer',
+      'no_answer',
+      'пропущ',
+      'без відпов',
+      'без ответа',
+      'sin respuesta',
+      'no contesta',
+    ],
   },
   {
     tone: 'bg-[#FFEDD5] text-[#C2410C]',
-    keywords: ['refus', 'відмов', 'отказ'],
+    keywords: ['refus', 'відмов', 'отказ', 'rechaz', 'se niega'],
   },
   {
     tone: 'bg-[#FEF9C3] text-[#A16207]',
-    keywords: ['will pass', 'will_pass', 'передаст', 'передасть'],
+    keywords: ['will pass', 'will_pass', 'передаст', 'передасть', 'transmitir', 'pasará'],
   },
   {
     tone: 'bg-[#EFF6FF] text-[#1D4ED8]',
@@ -117,7 +127,7 @@ function formatAmount(raw: string | null, language: string): string {
   if (raw == null) return '—'
   const n = Number(raw)
   if (!Number.isFinite(n)) return raw
-  return `${formatNumber(n, language)} ₴`
+  return withCurrency(formatNumber(n, language), 'suffix')
 }
 
 export function InteractionsSubTab() {

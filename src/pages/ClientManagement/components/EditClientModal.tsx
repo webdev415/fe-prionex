@@ -18,6 +18,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query'
 import { useHasPermission } from '@/hooks'
 import { PERMISSIONS } from '@/constants/permissions'
+import { useUbkiAvailable } from '@/features/ubki'
 import { piiProps } from '@/lib/openreplay/pii'
 import {
   useClientProfile,
@@ -145,6 +146,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
   // change someone else made while the form was open.
   const [doNotSendToUbki, setDoNotSendToUbki] = useState(profile.do_not_send_to_ubki ?? false)
   const { mutate: updateUbkiOptOut, isPending: isSavingUbkiOptOut } = useUpdateClient()
+  const ubkiAvailable = useUbkiAvailable()
 
   const handleToggleUbkiOptOut = (checked: boolean) => {
     const previous = doNotSendToUbki
@@ -609,28 +611,30 @@ function EditForm({ profile, clientId }: EditFormProps) {
               />
             </div>
           </div>
-          <div className="flex w-full flex-col gap-4 sm:flex-row sm:gap-5">
-            <div className="flex flex-1 items-center justify-between gap-3">
-              <label
-                className="text-foreground text-xs font-medium sm:text-sm"
-                title={t(
-                  'pages.clients.detail.ubki.doNotSendHint',
-                  'When enabled, this client is excluded from all UBKI submissions.'
-                )}
-              >
-                {t('pages.clients.detail.ubki.doNotSendLabel', 'Do not send data to UBKI')}
-              </label>
-              <ToggleSwitch
-                checked={doNotSendToUbki}
-                onChange={handleToggleUbkiOptOut}
-                disabled={!canEditAll || isSavingUbkiOptOut}
-                ariaLabel={t(
-                  'pages.clients.detail.ubki.doNotSendLabel',
-                  'Do not send data to UBKI'
-                )}
-              />
+          {ubkiAvailable && (
+            <div className="flex w-full flex-col gap-4 sm:flex-row sm:gap-5">
+              <div className="flex flex-1 items-center justify-between gap-3">
+                <label
+                  className="text-foreground text-xs font-medium sm:text-sm"
+                  title={t(
+                    'pages.clients.detail.ubki.doNotSendHint',
+                    'When enabled, this client is excluded from all UBKI submissions.'
+                  )}
+                >
+                  {t('pages.clients.detail.ubki.doNotSendLabel', 'Do not send data to UBKI')}
+                </label>
+                <ToggleSwitch
+                  checked={doNotSendToUbki}
+                  onChange={handleToggleUbkiOptOut}
+                  disabled={!canEditAll || isSavingUbkiOptOut}
+                  ariaLabel={t(
+                    'pages.clients.detail.ubki.doNotSendLabel',
+                    'Do not send data to UBKI'
+                  )}
+                />
+              </div>
             </div>
-          </div>
+          )}
           <div className="flex w-full flex-col gap-4 sm:flex-row sm:gap-5">
             <div className="flex flex-1 flex-col gap-1">
               <label className="text-foreground text-xs font-medium sm:text-sm">

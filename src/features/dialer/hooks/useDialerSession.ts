@@ -9,6 +9,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import i18n from '@/lib/i18n'
 
 import { dialerService } from '../api/dialerService'
 import type { DialerSession } from '../types'
@@ -36,7 +37,11 @@ export function useJoinQueue() {
       queryClient.setQueryData(dialerSessionKeys.me(), session)
       queryClient.invalidateQueries({ queryKey: dialerSessionKeys.me() })
     },
-    onError: (error) => toast.error(error.message || 'Failed to join the dialer'),
+    onError: (error) =>
+      toast.error(
+        error.message ||
+          i18n.t('toasts.dialer.joinFailed', { defaultValue: 'Failed to join the dialer' })
+      ),
   })
 }
 
@@ -45,6 +50,10 @@ export function useLeaveQueue() {
   return useMutation<void, Error, void>({
     mutationFn: () => dialerService.leaveQueue(),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: dialerSessionKeys.me() }),
-    onError: (error) => toast.error(error.message || 'Failed to leave the dialer'),
+    onError: (error) =>
+      toast.error(
+        error.message ||
+          i18n.t('toasts.dialer.leaveFailed', { defaultValue: 'Failed to leave the dialer' })
+      ),
   })
 }

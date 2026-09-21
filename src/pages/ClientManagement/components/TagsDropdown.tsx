@@ -169,7 +169,7 @@ export function TagsDropdown({
           <button
             type="button"
             onClick={onClear}
-            aria-label="Clear"
+            aria-label={t('pages.clients.modals.tagsDropdown.clear')}
             className="text-muted-foreground hover:text-foreground flex shrink-0 items-center"
           >
             <Icons.Cancel01 size={14} />
@@ -275,7 +275,11 @@ export function TagsDropdown({
                 {t('pages.clients.modals.tagsDropdown.noSegmentsFound')}
               </div>
             ) : (
-              <div className="space-y-1" role="radiogroup" aria-label="Segments">
+              <div
+                className="space-y-1"
+                role="radiogroup"
+                aria-label={t('pages.clients.modals.tagsDropdown.tabSegments')}
+              >
                 {filteredSegments.map((segment) => {
                   const selected = tempSegmentId === segment.id
                   return (

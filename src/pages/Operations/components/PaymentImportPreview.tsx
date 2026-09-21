@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import i18n, { spanishLocaleOr } from '@/lib/i18n'
 import type { TFunction } from 'i18next'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
@@ -60,7 +61,7 @@ function SummaryCard({
 }
 
 function formatAmount(amount: number): string {
-  return new Intl.NumberFormat('uk-UA', {
+  return new Intl.NumberFormat(spanishLocaleOr(i18n.language, 'uk-UA'), {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(amount)

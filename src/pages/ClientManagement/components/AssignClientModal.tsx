@@ -6,13 +6,14 @@
 
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import i18n, { spanishLocaleOr } from '@/lib/i18n'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { AssigneeSelect } from './AssigneeSelect'
 import { RadioGroup, RadioItem } from '@/components/ui/Radio'
 import { Label } from '@/components/ui/Label'
 import { Icons } from '@/lib/icons'
-import { formatClientFullName } from '@/lib/formatters'
+import { formatClientFullName, withCurrency } from '@/lib/formatters'
 import { useClient } from '@/features/clients/hooks/useClients'
 import { usePriorityThresholds } from '@/features/clients/hooks/useConfig'
 import { mapScoreToPriority } from '@/features/clients/api/configApi'
@@ -26,7 +27,7 @@ import { toast } from 'sonner'
 
 // Format currency for Ukrainian Hryvnia
 const formatUAH = (amount: number) => {
-  return new Intl.NumberFormat('uk-UA', {
+  return new Intl.NumberFormat(spanishLocaleOr(i18n.language, 'uk-UA'), {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
     useGrouping: true,
@@ -279,7 +280,7 @@ export function AssignClientModal({ open, clientId, onClose, onAssign }: AssignC
                       {t('pages.clients.modals.assignClient.totalDebt')}
                     </span>
                     <span className="text-foreground flex-1 text-xs leading-[150%] font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
-                      {formatUAH(totalDebt)} ₴ ({debtCount}{' '}
+                      {withCurrency(formatUAH(totalDebt), 'suffix')} ({debtCount}{' '}
                       {debtCount === 1
                         ? t('pages.clients.modals.assignClient.debt')
                         : t('pages.clients.modals.assignClient.debts')}

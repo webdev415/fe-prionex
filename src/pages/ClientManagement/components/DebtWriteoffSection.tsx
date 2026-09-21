@@ -15,6 +15,7 @@
 
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { spanishLocaleOr } from '@/lib/i18n'
 
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
@@ -44,7 +45,7 @@ export function DebtWriteoffSection({ debtId, showHeader = true }: DebtWriteoffS
   const [editTarget, setEditTarget] = useState<WriteoffEntry | null>(null)
 
   const entries = data?.items ?? []
-  const dateLocale = i18n.language === 'uk' ? 'uk-UA' : 'en-US'
+  const dateLocale = i18n.language === 'uk' ? 'uk-UA' : spanishLocaleOr(i18n.language, 'en-US')
 
   return (
     <div className="flex flex-col gap-3">

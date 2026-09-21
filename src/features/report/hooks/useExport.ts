@@ -6,6 +6,7 @@
 
 import { useMutation } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import i18n from '@/lib/i18n'
 import type { AxiosError } from 'axios'
 import { reportApi } from '../api/reportApi'
 import type { ExportFormat, ExportParams } from '../api/types'
@@ -78,7 +79,11 @@ export function useExportDashboard() {
       toast.success(`Downloaded ${filename}`)
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to export dashboard'
+      const message =
+        error?.response?.data?.detail ||
+        i18n.t('toasts.reports.dashboardExportFailed', {
+          defaultValue: 'Failed to export dashboard',
+        })
       toast.error(message)
     },
   })
@@ -127,7 +132,11 @@ export function useExportOperatorPerformance() {
       toast.success(`Downloaded ${filename}`)
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to export operator performance'
+      const message =
+        error?.response?.data?.detail ||
+        i18n.t('toasts.reports.operatorPerformanceExportFailed', {
+          defaultValue: 'Failed to export operator performance',
+        })
       toast.error(message)
     },
   })
@@ -165,7 +174,11 @@ export function useExportClientStatistics() {
       toast.success(`Downloaded ${filename}`)
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to export client statistics'
+      const message =
+        error?.response?.data?.detail ||
+        i18n.t('toasts.reports.clientStatisticsExportFailed', {
+          defaultValue: 'Failed to export client statistics',
+        })
       toast.error(message)
     },
   })
@@ -210,7 +223,11 @@ export function useExportCommunicationStatistics() {
       toast.success(`Downloaded ${filename}`)
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to export communication statistics'
+      const message =
+        error?.response?.data?.detail ||
+        i18n.t('toasts.reports.communicationStatisticsExportFailed', {
+          defaultValue: 'Failed to export communication statistics',
+        })
       toast.error(message)
     },
   })

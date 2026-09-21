@@ -4,6 +4,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import i18n from '@/lib/i18n'
 import { paymentImportApi } from '../api/paymentImportApi'
 import { importsApi } from '../api/importsApi'
 import { importJobsKeys } from './useImportJobs'
@@ -33,7 +34,11 @@ export function usePaymentImportExecute() {
     mutationFn: ({ jobId, request }: { jobId: number; request?: PaymentImportExecuteRequest }) =>
       paymentImportApi.executePaymentImport(jobId, request),
     onSuccess: () => {
-      toast.success('Payment import job started')
+      toast.success(
+        i18n.t('toasts.imports.paymentImportStarted', {
+          defaultValue: 'Payment import job started',
+        })
+      )
       queryClient.invalidateQueries({ queryKey: importJobsKeys.lists() })
     },
     onError: async (error, { jobId }) => {

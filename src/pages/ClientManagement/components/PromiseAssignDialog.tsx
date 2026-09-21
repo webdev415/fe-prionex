@@ -11,6 +11,7 @@
  */
 
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -51,6 +52,7 @@ export function PromiseAssignDialog({
   onClose,
   onAssigned,
 }: PromiseAssignDialogProps) {
+  const { t } = useTranslation('common')
   const queryClient = useQueryClient()
   const [promiseDate, setPromiseDate] = useState<Date | null>(() => {
     const d = new Date()
@@ -62,10 +64,12 @@ export function PromiseAssignDialog({
   const [isSaving, setIsSaving] = useState(false)
 
   const dateError =
-    !promiseDate || promiseDate.getTime() <= Date.now() ? 'ЦД должна быть в будущем' : undefined
+    !promiseDate || promiseDate.getTime() <= Date.now()
+      ? t('pages.clients.modals.promiseAssign.dateInFuture')
+      : undefined
   const amountError =
     promiseAmount && (isNaN(Number(promiseAmount)) || Number(promiseAmount) <= 0)
-      ? 'Сумма должна быть положительным числом'
+      ? t('pages.clients.modals.promiseAssign.amountPositive')
       : undefined
 
   const canSave = !dateError && !amountError && !isSaving
@@ -82,7 +86,7 @@ export function PromiseAssignDialog({
       })
       toast.success(
         <span>
-          {`${tagName} назначен клиенту `}
+          {t('pages.clients.modals.promiseAssign.assignedPrefix', { tag: tagName })}{' '}
           <Pii>{clientName}</Pii>
         </span>
       )
@@ -94,7 +98,9 @@ export function PromiseAssignDialog({
       onAssigned?.()
       onClose()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Не удалось назначить тег')
+      toast.error(
+        err instanceof Error ? err.message : t('pages.clients.modals.promiseAssign.assignFailed')
+      )
     } finally {
       setIsSaving(false)
     }
@@ -110,7 +116,7 @@ export function PromiseAssignDialog({
         }
         title={
           <>
-            {`Назначить «${tagName}» — `}
+            {t('pages.clients.modals.promiseAssign.titlePrefix', { tag: tagName })}{' '}
             <Pii>{clientName}</Pii>
           </>
         }
@@ -118,11 +124,10 @@ export function PromiseAssignDialog({
       <ModalContent>
         <div className="space-y-4">
           <p className="text-muted-foreground text-sm">
-            Этот тег требует целевую дату оплаты. Когда ЦД наступит, фоновое правило автоматически
-            заменит «{tagName}» на «Порушена обіцянка».
+            {t('pages.clients.modals.promiseAssign.description', { tag: tagName })}
           </p>
           <DateSelect
-            label="ЦД (дата + время) *"
+            label={`${t('pages.clients.modals.promiseAssign.dateLabel')} *`}
             value={promiseDate}
             onChange={(e: { value: Date | null }) => setPromiseDate(e.value)}
             showTimeSelect
@@ -133,11 +138,11 @@ export function PromiseAssignDialog({
             required
           />
           <Input
-            label="Сумма обещания (необязательно)"
+            label={t('pages.clients.modals.promiseAssign.amountLabel')}
             type="number"
             step="0.01"
             min="0"
-            placeholder="например, 1500.00"
+            placeholder={t('pages.clients.modals.promiseAssign.amountPlaceholder')}
             value={promiseAmount}
             onChange={(e) => setPromiseAmount(e.target.value)}
             error={amountError}
@@ -146,10 +151,10 @@ export function PromiseAssignDialog({
       </ModalContent>
       <ModalFooter>
         <Button variant="outline" onClick={onClose} disabled={isSaving}>
-          Отмена
+          {t('common.cancel')}
         </Button>
         <Button onClick={handleSave} disabled={!canSave} isLoading={isSaving}>
-          Назначить
+          {t('pages.clients.modals.promiseAssign.assign')}
         </Button>
       </ModalFooter>
     </Modal>

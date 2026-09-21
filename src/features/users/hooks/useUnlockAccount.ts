@@ -6,6 +6,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import i18n from '@/lib/i18n'
 import { usersApi } from '../api/usersApi'
 import { usersKeys } from './useUsers'
 import { getErrorMessage } from '@/lib/errors'
@@ -22,7 +23,7 @@ import { getErrorMessage } from '@/lib/errors'
  * const handleUnlock = (userId: number) => {
  *   mutate(userId, {
  *     onSuccess: () => {
- *       toast.success('Account unlocked successfully')
+ *       toast.success(i18n.t('toasts.users.unlocked', { defaultValue: 'Account unlocked successfully' }))
  *     },
  *   })
  * }
@@ -34,7 +35,9 @@ export function useUnlockAccount() {
   return useMutation({
     mutationFn: (userId: number) => usersApi.unlockAccount(userId),
     onSuccess: (_, userId) => {
-      toast.success('Account unlocked successfully')
+      toast.success(
+        i18n.t('toasts.users.unlocked', { defaultValue: 'Account unlocked successfully' })
+      )
       queryClient.invalidateQueries({ queryKey: usersKeys.detail(userId) })
       queryClient.invalidateQueries({ queryKey: usersKeys.lists() })
     },

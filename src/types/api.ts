@@ -30,6 +30,8 @@ export interface UserProject {
   id: string
   name: string
   code?: string // Project code (available from /api/v1/users/me)
+  currency?: string
+  country?: string
   roles: UserRole[]
 }
 
@@ -76,6 +78,8 @@ export interface CurrentUserResponse {
     name: string
     code: string
     role_name: string
+    currency?: string
+    country?: string
   }>
   permissions: string[]
   last_login_at?: string | null
@@ -138,7 +142,7 @@ export interface UpdateMyProfileInput {
   last_name?: string
   middle_name?: string
   phone?: string
-  language?: 'uk' | 'en'
+  language?: 'uk' | 'en' | 'es'
   timezone?: string
   theme_base?: string
   theme_accent?: string

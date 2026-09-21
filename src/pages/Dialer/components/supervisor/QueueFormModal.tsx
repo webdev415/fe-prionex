@@ -57,24 +57,30 @@ import { Icons } from '@/lib/icons'
 import { useAuthStore } from '@/stores/authStore'
 
 const schema = z.object({
-  name: z.string().trim().min(1, 'Queue name is required').max(120),
+  name: z.string().trim().min(1, 'dialer.queueForm.validation.nameRequired').max(120),
   // Empty arrays are valid — they mean "All departments" / "All groups".
   department_ids: z.array(z.number().int()),
   access_groups: z.array(z.string()),
   telephony_type: z.enum(['white', 'grey']),
   // Mirrors the gateway's campaign range; 0 is rejected upstream.
   priority: z
-    .number({ error: 'Enter a number from 1 to 5' })
+    .number({ error: 'dialer.queueForm.validation.priorityNumber' })
     .int()
-    .min(1, 'Minimum is 1')
-    .max(5, 'Maximum is 5'),
-  sim_card_limit: z.number({ error: 'Enter a number' }).int().min(1, 'Minimum is 1'),
+    .min(1, 'dialer.queueForm.validation.minimumOne')
+    .max(5, 'dialer.queueForm.validation.maximumFive'),
+  sim_card_limit: z
+    .number({ error: 'dialer.queueForm.validation.enterNumber' })
+    .int()
+    .min(1, 'dialer.queueForm.validation.minimumOne'),
   // Total attempts, not retries. Never 0 — upstream that means dial-once.
-  max_attempts: z.number({ error: 'Enter a number' }).int().min(1, 'At least 1 attempt'),
-  retry_delay_failed_seconds: z
-    .number({ error: 'Enter a number of seconds' })
+  max_attempts: z
+    .number({ error: 'dialer.queueForm.validation.enterNumber' })
     .int()
-    .min(0, 'Cannot be negative'),
+    .min(1, 'dialer.queueForm.validation.atLeastOneAttempt'),
+  retry_delay_failed_seconds: z
+    .number({ error: 'dialer.queueForm.validation.enterSeconds' })
+    .int()
+    .min(0, 'dialer.queueForm.validation.notNegative'),
 })
 
 type FormData = z.infer<typeof schema>
@@ -228,7 +234,9 @@ export function QueueFormModal({ open, queue, onClose }: QueueFormModalProps) {
                 placeholder={t('dialer.queueForm.namePlaceholder', 'Enter the queue name')}
                 variant={errors.name ? 'error' : 'default'}
               />
-              {errors.name && <p className="text-error-500 mt-1 text-xs">{errors.name.message}</p>}
+              {errors.name && (
+                <p className="text-error-500 mt-1 text-xs">{t(errors.name.message ?? '')}</p>
+              )}
             </div>
 
             {/* Department (multi-select) */}
@@ -342,7 +350,7 @@ export function QueueFormModal({ open, queue, onClose }: QueueFormModalProps) {
                       max={5}
                       id="queue-priority"
                       {...register('priority', { valueAsNumber: true })}
-                      error={errors.priority?.message}
+                      error={errors.priority?.message && t(errors.priority.message)}
                     />
                     <p className="text-muted-foreground mt-1 text-xs">
                       {t('dialer.queueForm.priorityHint', '1–5. Higher wins when SIMs are scarce.')}
@@ -362,7 +370,7 @@ export function QueueFormModal({ open, queue, onClose }: QueueFormModalProps) {
                       min={1}
                       id="queue-sim_card_limit"
                       {...register('sim_card_limit', { valueAsNumber: true })}
-                      error={errors.sim_card_limit?.message}
+                      error={errors.sim_card_limit?.message && t(errors.sim_card_limit.message)}
                     />
                     <p className="text-muted-foreground mt-1 text-xs">
                       {t(
@@ -387,7 +395,7 @@ export function QueueFormModal({ open, queue, onClose }: QueueFormModalProps) {
                       min={1}
                       id="queue-max_attempts"
                       {...register('max_attempts', { valueAsNumber: true })}
-                      error={errors.max_attempts?.message}
+                      error={errors.max_attempts?.message && t(errors.max_attempts.message)}
                     />
                     <p className="text-muted-foreground mt-1 text-xs">
                       {t(
@@ -410,7 +418,10 @@ export function QueueFormModal({ open, queue, onClose }: QueueFormModalProps) {
                       min={0}
                       id="queue-retry_delay_failed_seconds"
                       {...register('retry_delay_failed_seconds', { valueAsNumber: true })}
-                      error={errors.retry_delay_failed_seconds?.message}
+                      error={
+                        errors.retry_delay_failed_seconds?.message &&
+                        t(errors.retry_delay_failed_seconds.message)
+                      }
                     />
                     <p className="text-muted-foreground mt-1 text-xs">
                       {t('dialer.queueForm.retryDelayFailedHint', '0 disables retrying failures.')}

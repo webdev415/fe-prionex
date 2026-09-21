@@ -7,19 +7,24 @@
 
 import { forwardRef, useEffect, useId, useRef, useState } from 'react'
 import DatePicker from 'react-datepicker'
+import { useTranslation } from 'react-i18next'
 import 'react-datepicker/dist/react-datepicker.css'
 import './DateSelect.theme.css'
 import { format as formatFns } from 'date-fns'
+import i18n from '@/lib/i18n'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import {
   applyDefaultTimeToDate,
   DATE_DISPLAY_FORMAT,
   DATETIME_DISPLAY_FORMAT,
+  displayFormatForLanguage,
+  isSpanishLanguage,
   maskDateInput,
   maskDateTimeInput,
   parseManualDate,
   parseManualDateTime,
+  pickerLocaleForLanguage,
 } from '@/lib/dateUtils'
 import { opaqueFieldName, PASSWORD_MANAGER_OPT_OUT } from './autofill'
 
@@ -222,6 +227,11 @@ const parseDate = (date: Date | string | null | undefined): Date | null => {
   return isNaN(parsed.getTime()) ? null : parsed
 }
 
+const manualPlaceholder = (dateOnly: boolean, spanish: boolean): string => {
+  const date = spanish ? 'DD/MM/AAAA' : 'DD.MM.YYYY'
+  return dateOnly ? date : `${date} HH:MM`
+}
+
 const DateSelect = forwardRef<DatePicker, DateSelectProps>(
   (
     {
@@ -232,7 +242,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
       className,
       id,
       value,
-      placeholder = 'Select date',
+      placeholder,
       onChange,
       disabled,
       min,
@@ -284,8 +294,15 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
     // it is left alone deliberately.
     const opaqueFieldId = opaqueFieldName('ds', generatedId)
 
+    const { t } = useTranslation('common')
+    const language = i18n.language
+    const spanish = isSpanishLanguage(language)
+    const dateSeparator = spanish ? '/' : '.'
     const isDateOnlyManual = allowManualInput && !showTimeSelect
-    const manualDisplayFormat = isDateOnlyManual ? DATE_DISPLAY_FORMAT : DATETIME_DISPLAY_FORMAT
+    const manualDisplayFormat = displayFormatForLanguage(
+      isDateOnlyManual ? DATE_DISPLAY_FORMAT : DATETIME_DISPLAY_FORMAT,
+      language
+    )
 
     // ── Manual-input state (only used when allowManualInput) ──────────────
     // Visible masked text. Driven by us, not react-datepicker.
@@ -313,7 +330,7 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
       setManualInvalid(false)
       onValidityChange?.(false)
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [value, allowManualInput])
+    }, [value, allowManualInput, manualDisplayFormat])
 
     // If a field unmounts while invalid, clear the parent's invalid flag so a
     // stale entry can't block a later save.
@@ -362,7 +379,9 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
     // manual entry always includes the time (the mask requires HH:MM), so the
     // 09:00 default doesn't apply there — the typed time wins.
     const handleManualType = (raw: string) => {
-      const masked = isDateOnlyManual ? maskDateInput(raw) : maskDateTimeInput(raw)
+      const masked = isDateOnlyManual
+        ? maskDateInput(raw, dateSeparator)
+        : maskDateTimeInput(raw, dateSeparator)
       setText(masked)
       if (masked === '') {
         setManualInvalid(false)
@@ -370,7 +389,9 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
         onChange?.({ value: null })
         return
       }
-      const parsed = isDateOnlyManual ? parseManualDate(masked) : parseManualDateTime(masked)
+      const parsed = isDateOnlyManual
+        ? parseManualDate(masked, manualDisplayFormat)
+        : parseManualDateTime(masked, manualDisplayFormat)
       if (parsed) {
         setManualInvalid(false)
         onValidityChange?.(false)
@@ -427,11 +448,10 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
     )
 
     const effectivePlaceholder =
-      allowManualInput && placeholder === 'Select date'
-        ? isDateOnlyManual
-          ? 'DD.MM.YYYY'
-          : 'DD.MM.YYYY HH:MM'
-        : placeholder
+      placeholder ??
+      (allowManualInput
+        ? manualPlaceholder(isDateOnlyManual, spanish)
+        : t('components.dateSelect.selectDate', 'Select date'))
 
     return (
       <div id={id} className={`w-full ${className || ''}`}>
@@ -473,7 +493,8 @@ const DateSelect = forwardRef<DatePicker, DateSelectProps>(
                     customInput: <PlainDateInput />,
                     onChangeRaw: (e?: React.SyntheticEvent) => e?.preventDefault(),
                   })}
-              dateFormat={format}
+              dateFormat={displayFormatForLanguage(format, language)}
+              locale={pickerLocaleForLanguage(language)}
               placeholderText={effectivePlaceholder}
               disabled={disabled}
               minDate={parseDate(min) || undefined}

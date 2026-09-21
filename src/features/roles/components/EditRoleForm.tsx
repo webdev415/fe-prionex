@@ -33,10 +33,10 @@ interface EditRoleFormProps {
 
 // Schema for editing roles - always use full schema, disable fields for default roles
 const editRoleSchema = z.object({
-  name: z.string().min(1, 'Role name is required'),
+  name: z.string().min(1, 'pages.roles.validation.nameRequired'),
   description: z.string().optional(),
   department_id: z.number().nullable().optional(),
-  permission_ids: z.array(z.number()).min(1, 'Please select at least one permission'),
+  permission_ids: z.array(z.number()).min(1, 'pages.roles.validation.permissionsRequired'),
 })
 
 // Combined type for form data
@@ -205,7 +205,7 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
             />
             {errors.name && (
               <p className="text-error-500 mt-1 text-sm">
-                {(errors.name as { message?: string })?.message}
+                {t((errors.name as { message?: string })?.message ?? '')}
               </p>
             )}
           </>
@@ -236,7 +236,9 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
         <div>
           <Label htmlFor="department_id">
             {t('pages.roles.forms.department')}
-            <span className="text-muted-foreground ml-1 text-sm font-light">(Optional)</span>
+            <span className="text-muted-foreground ml-1 text-sm font-light">
+              {t('pages.roles.forms.optional')}
+            </span>
           </Label>
           <select
             id="department_id"
@@ -274,7 +276,10 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
         <Label>
           {t('pages.roles.forms.permissions')}
           <span className="text-muted-foreground ml-2 text-sm font-light">
-            (Selected: {selectedPermissions.length} of {permissions.length} permissions)
+            {t('pages.roles.forms.selectedPermissions', {
+              selected: selectedPermissions.length,
+              total: permissions.length,
+            })}
           </span>
         </Label>
 
@@ -346,7 +351,7 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
           )}
         </div>
         {errors.permission_ids && (
-          <p className="text-error-500 mt-1 text-sm">{errors.permission_ids.message}</p>
+          <p className="text-error-500 mt-1 text-sm">{t(errors.permission_ids.message ?? '')}</p>
         )}
       </div>
 
@@ -354,7 +359,7 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
       {updateMutation.isError && (
         <Alert variant="error">
           <p className="text-sm">
-            {updateMutation.error?.message || 'Failed to update role. Please try again.'}
+            {updateMutation.error?.message || t('pages.roles.forms.errors.failedToUpdate')}
           </p>
         </Alert>
       )}

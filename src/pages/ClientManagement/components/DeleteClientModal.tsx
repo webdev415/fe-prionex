@@ -17,6 +17,7 @@ import { Checkbox } from '@/components/ui/Checkbox'
 import { Icons } from '@/lib/icons'
 import { piiProps } from '@/lib/openreplay/pii'
 import { toast } from 'sonner'
+import { withCurrency } from '@/lib/formatters'
 
 export interface DeleteClientModalProps {
   open: boolean
@@ -44,10 +45,12 @@ export function DeleteClientModal({
   const { mutate: deleteClient, isPending: isDeleting } = useDeleteClient()
 
   const formatCurrency = (amount: number) => {
-    return `₴ ${amount.toLocaleString(intlLocaleForUiLanguage(i18n.language), {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`
+    return withCurrency(
+      amount.toLocaleString(intlLocaleForUiLanguage(i18n.language), {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })
+    )
   }
 
   const handleClose = () => {

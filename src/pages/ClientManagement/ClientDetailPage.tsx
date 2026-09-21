@@ -5,6 +5,7 @@
  */
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import { spanishLocaleOr } from '@/lib/i18n'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQueries, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -177,7 +178,12 @@ import { PaymentMethodCell } from '@/features/payments/components/PaymentMethodC
 import { useUserDepartment } from '@/features/users'
 import { PermissionGuard } from '@/components/auth'
 import { useHasAnyPermission, useHasPermission } from '@/hooks/usePermissions'
-import { useSubmitDebtToUbki, useBulkSubmitToUbki, ubkiKeys } from '@/features/ubki'
+import {
+  useSubmitDebtToUbki,
+  useBulkSubmitToUbki,
+  ubkiKeys,
+  useUbkiAvailable,
+} from '@/features/ubki'
 import { PERMISSIONS } from '@/constants/permissions'
 import { searchClientsByPhoneExact } from '@/api/clientSearchApi'
 import { ChainExecutor, TAInteractionHistory } from './components/taChains'
@@ -187,7 +193,7 @@ import { useTAHotkeyBindings } from '@/features/taHotkeys/hooks/useTAHotkeys'
 import { resolveRecentCallPhone } from '@/features/taHotkeys/recentCallPhone'
 import { RelatedTagsTab } from './components/RelatedTagsTab'
 import type { PhoneMeta } from '@/features/tags/hooks/useLinkedClientsRelatedTags'
-import { formatUkrainePhoneForDisplay } from '@/lib/phone'
+import { formatUkrainePhoneForDisplay, isDialablePhone } from '@/lib/phone'
 import { isAdminRole } from '@/features/tags/utils/visibility'
 import {
   ALL_MESSAGING_SEND_PERMISSIONS,
@@ -242,10 +248,6 @@ type ExtendedCallItem = {
 /** Strip formatting for phone match / API lookup (backend normalizes further). */
 const stripPhoneFormat = (value: string) => value.replace(/[\s\-().]/g, '')
 
-/** True if value looks like a Ukrainian mobile/phone number (incl. 380… without +). */
-const looksLikeUkrainePhone = (value: string) =>
-  /^(\+?38)?0\d{9}$/.test(stripPhoneFormat(value)) || /^380\d{9}$/.test(stripPhoneFormat(value))
-
 /** Today at local midnight — used as max/default for closure-date pickers. */
 const getTodayAtMidnight = (): Date => {
   const now = new Date()
@@ -284,9 +286,6 @@ export function ClientDetailPage() {
 
   useClientCardOpenTracking(id, trackEvent)
 
-  // Returns true if the value looks like a Ukrainian phone number,
-  // regardless of the contact type's isPhone flag
-  const looksLikePhone = (value: string) => looksLikeUkrainePhone(value)
   const [selectedRaId, setSelectedRaId] = useState<number | null>(null)
   // KAN-335: loan whose "detailed calculation after sale" modal is open.
   const [calcLoan, setCalcLoan] = useState<{ id: number; loanNumber?: string | null } | null>(null)
@@ -681,7 +680,8 @@ export function ClientDetailPage() {
   // --- UBKI (credit bureau) outbound submission ---
   const ubkiQueryClient = useQueryClient()
   // Client opt-out flag (backend exposes it on the client detail response).
-  const canSubmitToUbki = useHasPermission(PERMISSIONS.UBKI.SUBMIT)
+  const ubkiAvailable = useUbkiAvailable()
+  const canSubmitToUbki = useHasPermission(PERMISSIONS.UBKI.SUBMIT) && ubkiAvailable
   const { mutate: submitDebtToUbki, isPending: isSubmittingToUbki } = useSubmitDebtToUbki()
   const { mutate: bulkSubmitToUbki, isPending: isBulkSubmittingToUbki } = useBulkSubmitToUbki()
   const doNotSendToUbki = clientDetail?.do_not_send_to_ubki ?? false
@@ -1146,7 +1146,9 @@ export function ClientDetailPage() {
             position: profile.employment.position ?? '-',
             experience:
               profile.employment.work_experience_months != null
-                ? `${profile.employment.work_experience_months} міс.`
+                ? t('pages.clients.detail.workExperienceMonths', {
+                    count: profile.employment.work_experience_months,
+                  })
                 : '-',
             managerFullName: profile.employment.manager_full_name ?? '-',
             employmentType: profile.employment.employment_type
@@ -1520,10 +1522,10 @@ export function ClientDetailPage() {
     client.phones?.forEach((p) => add(p.number))
     // Recommenders / contacts: referrer, third-party phones, etc. (not only types 1,2,29)
     client.recommenders?.forEach((r) => {
-      if (r.isPhone || looksLikeUkrainePhone(r.contactValue)) add(r.contactValue)
+      if (r.isPhone || isDialablePhone(r.contactValue)) add(r.contactValue)
     })
     const wp = client.work?.workPhone
-    if (wp && wp !== '-' && looksLikeUkrainePhone(wp)) add(wp)
+    if (wp && wp !== '-' && isDialablePhone(wp)) add(wp)
     return Array.from(set)
   }, [client])
 
@@ -1592,7 +1594,7 @@ export function ClientDetailPage() {
       })
     )
     client.recommenders?.forEach((recommender) => {
-      if (recommender.isPhone || looksLikeUkrainePhone(recommender.contactValue)) {
+      if (recommender.isPhone || isDialablePhone(recommender.contactValue)) {
         addPhone(recommender.contactValue, {
           contactTypeId: null,
           spamAllowed: true,
@@ -1606,7 +1608,7 @@ export function ClientDetailPage() {
       }
     })
     const workPhone = client.work?.workPhone
-    if (workPhone && workPhone !== '-' && looksLikeUkrainePhone(workPhone)) {
+    if (workPhone && workPhone !== '-' && isDialablePhone(workPhone)) {
       addPhone(workPhone, {
         contactTypeId: null,
         spamAllowed: true,
@@ -2101,12 +2103,14 @@ export function ClientDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-16">
         <Icons.Warning className="text-error-500 h-8 w-8" strokeWidth={2} />
-        <p className="text-foreground font-medium">Failed to load client</p>
+        <p className="text-foreground font-medium">
+          {t('pages.clients.debtSummary.failedToLoadClient')}
+        </p>
         <p className="text-muted-foreground text-sm">
-          {profileError?.message || 'An error occurred'}
+          {profileError?.message || t('pages.clients.detail.errorOccurred')}
         </p>
         <Button variant="outline" onClick={() => navigate('/dashboard/client')} className="mt-4">
-          Back to Clients
+          {t('pages.clients.detail.backToClients')}
         </Button>
       </div>
     )
@@ -3706,7 +3710,7 @@ export function ClientDetailPage() {
                           </span>
                           {client.work?.workPhone &&
                             client.work.workPhone !== '-' &&
-                            looksLikePhone(client.work.workPhone) &&
+                            isDialablePhone(client.work.workPhone) &&
                             renderLinkedContactBadges(client.work.workPhone, 'end')}
                         </div>
                         {client.work?.workPhone && client.work.workPhone !== '-' && (
@@ -4389,7 +4393,9 @@ export function ClientDetailPage() {
                           ) : undefined
                         }
                         ubkiHistory={
-                          <UbkiSubmissionHistory clientId={clientId} loans={ubkiLoans} />
+                          ubkiAvailable ? (
+                            <UbkiSubmissionHistory clientId={clientId} loans={ubkiLoans} />
+                          ) : undefined
                         }
                       />
                     )}
@@ -4778,7 +4784,9 @@ export function ClientDetailPage() {
                                             }
                                           ).initiated_at || item.date
                                   const locale =
-                                    i18n.language?.split('-')[0] === 'uk' ? 'uk-UA' : 'en-GB'
+                                    i18n.language?.split('-')[0] === 'uk'
+                                      ? 'uk-UA'
+                                      : spanishLocaleOr(i18n.language, 'en-GB')
                                   const date = new Date(String(timestamp)).toLocaleDateString(
                                     locale,
                                     {
@@ -4905,7 +4913,9 @@ export function ClientDetailPage() {
                                           new Date().toISOString()
                                         const dt = new Date(String(timestamp))
                                         const time = dt.toLocaleTimeString(
-                                          i18n.language?.split('-')[0] === 'uk' ? 'uk-UA' : 'en-GB',
+                                          i18n.language?.split('-')[0] === 'uk'
+                                            ? 'uk-UA'
+                                            : spanishLocaleOr(i18n.language, 'en-GB'),
                                           {
                                             hour: '2-digit',
                                             minute: '2-digit',
@@ -5079,7 +5089,9 @@ export function ClientDetailPage() {
                                         ? call.initiated_at
                                         : call.date
                                     const locale =
-                                      i18n.language?.split('-')[0] === 'uk' ? 'uk-UA' : 'en-GB'
+                                      i18n.language?.split('-')[0] === 'uk'
+                                        ? 'uk-UA'
+                                        : spanishLocaleOr(i18n.language, 'en-GB')
                                     const date = new Date(String(timestamp)).toLocaleDateString(
                                       locale,
                                       {
@@ -5241,7 +5253,9 @@ export function ClientDetailPage() {
                                     const timestamp =
                                       'sent_at' in sms && sms.sent_at ? sms.sent_at : sms.date
                                     const locale =
-                                      i18n.language?.split('-')[0] === 'uk' ? 'uk-UA' : 'en-GB'
+                                      i18n.language?.split('-')[0] === 'uk'
+                                        ? 'uk-UA'
+                                        : spanishLocaleOr(i18n.language, 'en-GB')
                                     const date = new Date(String(timestamp)).toLocaleDateString(
                                       locale,
                                       {
@@ -5344,7 +5358,9 @@ export function ClientDetailPage() {
                                         item.failed_at ||
                                         new Date().toISOString()
                                       const locale =
-                                        i18n.language?.split('-')[0] === 'uk' ? 'uk-UA' : 'en-GB'
+                                        i18n.language?.split('-')[0] === 'uk'
+                                          ? 'uk-UA'
+                                          : spanishLocaleOr(i18n.language, 'en-GB')
                                       const date = new Date(String(timestamp)).toLocaleDateString(
                                         locale,
                                         {
@@ -5383,7 +5399,7 @@ export function ClientDetailPage() {
                                             const time = dt.toLocaleTimeString(
                                               i18n.language?.split('-')[0] === 'uk'
                                                 ? 'uk-UA'
-                                                : 'en-GB',
+                                                : spanishLocaleOr(i18n.language, 'en-GB'),
                                               {
                                                 hour: '2-digit',
                                                 minute: '2-digit',
@@ -5624,7 +5640,7 @@ export function ClientDetailPage() {
                   setChainExecutorInitialTemplateId(null)
                 }}
                 className="hover:bg-muted flex h-8 w-8 items-center justify-center rounded-md transition-colors"
-                aria-label="Close modal"
+                aria-label={t('components.modal.close', 'Close modal')}
               >
                 <Icons.Cancel01 size={20} className="text-foreground" strokeWidth={1.5} />
               </button>

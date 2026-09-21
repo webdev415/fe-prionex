@@ -52,9 +52,9 @@ const DATE_FORMATS = [
 ]
 
 const FIELD_DELIMITERS = [
-  { value: ',', label: 'Comma (,)' },
-  { value: ';', label: 'Semicolon (;)' },
-  { value: '\t', label: 'Tab' },
+  { value: ',', labelKey: 'pages.auditLogs.csvExport.delimiters.comma' },
+  { value: ';', labelKey: 'pages.auditLogs.csvExport.delimiters.semicolon' },
+  { value: '\t', labelKey: 'pages.auditLogs.csvExport.delimiters.tab' },
 ]
 
 const ENCODINGS = [
@@ -181,7 +181,7 @@ export function CSVExportDialog({ open, totalEntries, onClose, onExport }: CSVEx
                     <SelectContent>
                       {FIELD_DELIMITERS.map((delimiter) => (
                         <SelectItem key={delimiter.value} value={delimiter.value}>
-                          {delimiter.label}
+                          {t(delimiter.labelKey)}
                         </SelectItem>
                       ))}
                     </SelectContent>

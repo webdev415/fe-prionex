@@ -168,7 +168,9 @@ export function DocumentUploadModal({ open, onClose, clientId, loans }: Document
               </svg>
               <span className="text-foreground text-sm font-medium">{file.name}</span>
               <span className="text-muted-foreground text-xs">
-                {(file.size / 1024).toFixed(0)} KB
+                {t('pages.clients.modals.documentUpload.fileSizeKb', {
+                  size: (file.size / 1024).toFixed(0),
+                })}
               </span>
             </div>
           ) : (

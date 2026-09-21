@@ -3,6 +3,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { authApi } from '@/features/auth/api/authApi'
 import { mapBackendUserToUser } from '@/lib/mapBackendUser'
 import { toast } from 'sonner'
+import i18n from '@/lib/i18n'
 
 const REFRESH_INTERVAL = 5 * 60 * 1000 // 5 minutes
 
@@ -49,9 +50,14 @@ export function usePermissionRefresh() {
           useAuthStore.setState({ user: updatedUser })
 
           // Show notification to user
-          toast.info('Your permissions have been updated. Page will refresh.', {
-            duration: 2000,
-          })
+          toast.info(
+            i18n.t('components.permissionRefresh.updated', {
+              defaultValue: 'Your permissions have been updated. Page will refresh.',
+            }),
+            {
+              duration: 2000,
+            }
+          )
 
           // Refresh page after 2 seconds to apply new permissions
           setTimeout(() => {

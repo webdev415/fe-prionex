@@ -129,7 +129,7 @@ export function UserFilterDropdown({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search"
+                placeholder={t('pages.auditLogs.searchFilters.search')}
                 className="text-foreground focus:border-primary-500 border-border bg-card placeholder:text-muted-foreground w-full rounded-lg border px-3 py-2 pr-10 text-sm outline-none"
               />
               <Icons.Search
@@ -144,7 +144,7 @@ export function UserFilterDropdown({
           <div className="max-h-[200px] overflow-y-auto sm:max-h-[300px]">
             {filteredUsers.length === 0 && searchQuery ? (
               <div className="text-muted-foreground py-4 text-center text-sm">
-                {t('common.noUsersFound')}
+                {t('pages.users.noUsersFound')}
               </div>
             ) : (
               <div className="divide-border divide-y">
