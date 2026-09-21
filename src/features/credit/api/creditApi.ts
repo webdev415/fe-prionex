@@ -2,10 +2,10 @@
  * HTTP-клиент кредитного модуля (credit-service).
  *
  * Отдельный инстанс, а не общий `@/lib/api`, по одной причине: у модуля свой
- * адрес и своя фаза интеграции. Локально запросы идут в credit-service на
- * :8020 (vite-прокси `/api/v1/credit`), на этапе 2 — тем же путём через Kong,
- * и тогда меняется ровно одна константа. Интерцептор авторизации ставим тот
- * же, что у CRM: на этапе 2 сервис будет принимать JWT пользователя.
+ * адрес. Куда именно уходит запрос, решает одна константа `CREDIT_API_BASE_URL`
+ * ниже, а не рассказ в этом комментарии: пусто = тот же origin, что у CRM.
+ * Интерцептор авторизации ставим тот же, что у CRM: модуль проверяет пропуск
+ * оператора у самой CRM и берёт права из её ответа.
  *
  * Правило 28: фронт разговаривает ТОЛЬКО с API модуля. Никаких обращений в
  * credit_db и никакой бизнес-логики здесь — только транспорт и адаптация
@@ -29,78 +29,47 @@ import type {
   CreditParameter,
   CreditProduct,
   CreditQueueItem,
+  CreditQueueStatus,
+  CreditSwitchName,
+  CreditSwitchPayload,
+  CreditSwitchState,
   CreditScheduleVersion,
   ManualDecisionPayload,
 } from './types'
 
 /**
- * База API модуля. Пусто = тот же origin (локально это vite-прокси, на этапе 2
- * — Kong). Отдельная переменная нужна, чтобы фронт можно было направить на
- * чужой стенд, не трогая общий VITE_API_BASE_URL.
+ * База API модуля. Пусто = тот же origin, что у CRM. Отдельная переменная
+ * нужна, чтобы фронт можно было направить на чужой стенд, не трогая общий
+ * VITE_API_BASE_URL.
  */
 export const CREDIT_API_BASE_URL = import.meta.env.VITE_CREDIT_API_BASE_URL ?? ''
 
 const CREDIT_PREFIX = '/api/v1/credit'
 
 /**
- * Роль этапа 1: до JWT/RBAC (WS-20) credit-service разграничивает доступ
- * заголовком `X-Operator-Role`. Это МАКЕТ, а не защита — сервер всё равно
- * решает сам; заголовок лишь позволяет проверять раздел под разными ролями,
- * пока в CRM нет кредитных ролей. На этапе 2 строка удаляется вместе с
- * ключом стенда.
- */
-const STAND_ROLE_STORAGE_KEY = 'credit.stand.role'
-const STAND_KEY_STORAGE_KEY = 'credit.stand.apiKey'
-
-function readSetting(storage: Storage | undefined, key: string): string {
-  if (!storage) return ''
-  try {
-    return storage.getItem(key) ?? ''
-  } catch {
-    return ''
-  }
-}
-
-/**
- * Роль — не секрет: держим её в localStorage, чтобы не выбирать заново
- * каждую сессию.
- */
-export function getStandRole(): string {
-  if (typeof window === 'undefined') return 'underwriter'
-  return readSetting(window.localStorage, STAND_ROLE_STORAGE_KEY) || 'underwriter'
-}
-
-export function setStandRole(role: string): void {
-  try {
-    window.localStorage.setItem(STAND_ROLE_STORAGE_KEY, role)
-  } catch {
-    /* приватный режим — роль просто не запомнится */
-  }
-}
-
-/**
- * Сервисный ключ стенда — ТОЛЬКО sessionStorage.
+ * Уборка за прежней схемой доступа.
  *
- * В localStorage он пережил бы закрытие вкладки и остался бы лежать на общей
- * машине, доступный любому same-origin скрипту или расширению. sessionStorage
- * умирает вместе с вкладкой (SEC L-02, 29.08). На этапе 2 ключа в браузере не
- * будет вовсе: авторизацию берёт на себя JWT CRM.
+ * До перехода на пропуск браузер хранил служебный ключ модуля в
+ * `sessionStorage`, а выбранную роль стенда — в `localStorage`. Ключа больше
+ * никто не читает, но у всех, кто открывал раздел раньше, он ЛЕЖИТ в браузере
+ * до сих пор: перестать отправлять секрет и убрать секрет с машины — разные
+ * вещи. Стираем оба ключа при загрузке модуля, один раз.
+ *
+ * `credit.stand.apiKey` чистим и в session-, и в localStorage: в ранних
+ * версиях он попадал во второй.
  */
-export function getStandApiKey(): string {
-  if (typeof window === 'undefined') return ''
-  return readSetting(window.sessionStorage, STAND_KEY_STORAGE_KEY)
-}
-
-export function setStandApiKey(key: string): void {
+function purgeStandCredentials(): void {
+  if (typeof window === 'undefined') return
   try {
-    if (key) window.sessionStorage.setItem(STAND_KEY_STORAGE_KEY, key)
-    else window.sessionStorage.removeItem(STAND_KEY_STORAGE_KEY)
-    // Подчищаем ключ, если он остался в localStorage от прежних версий.
-    window.localStorage.removeItem(STAND_KEY_STORAGE_KEY)
+    window.sessionStorage.removeItem('credit.stand.apiKey')
+    window.localStorage.removeItem('credit.stand.apiKey')
+    window.localStorage.removeItem('credit.stand.role')
   } catch {
-    /* см. выше */
+    /* приватный режим — хранилище недоступно, чистить нечего */
   }
 }
+
+purgeStandCredentials()
 
 export const creditHttp = axios.create({
   baseURL: CREDIT_API_BASE_URL,
@@ -118,10 +87,19 @@ creditHttp.interceptors.request.use((config: InternalAxiosRequestConfig) => {
    */
   const token = getAccessToken()
   if (token) config.headers.set('Authorization', `Bearer ${token}`)
-  // Этап 1 (см. комментарий выше): роль и ключ стенда.
-  config.headers.set('X-Operator-Role', getStandRole())
-  const standKey = getStandApiKey()
-  if (standKey) config.headers.set('X-Internal-Api-Key', standKey)
+  // ⚠️ Служебный ключ и роль отсюда УБРАНЫ. Модуль теперь проверяет пропуск
+  // оператора у самой CRM (`POST /api/v1/auth/validate`) и берёт права из его
+  // же тела — они там есть: `jwt_handler.py:123` кладёт `permissions` рядом с
+  // `active_project_id` и `active_role_name`.
+  //
+  // Почему это не «упрощение», а закрытие двери. Пока браузер слал
+  // `X-Internal-Api-Key`, ключ от всего модуля лежал в `sessionStorage` у
+  // каждого, кто открыл раздел, — и любой, кто его знал, назначал себе роль
+  // заголовком `X-Operator-Role` поверх настоящих прав. Роль приходит из
+  // проверенного пропуска, а не из переключателя стенда.
+  //
+  // Служебный ключ у модуля остался — но только для служебных вызовов
+  // (расписания, сверки) и стенда без CRM. Из браузера он не уходит вовсе.
   return config
 })
 
@@ -183,7 +161,17 @@ async function post<T>(path: string, body: unknown, headers?: Record<string, str
   }
 }
 
-function idempotencyKey(prefix: string): string {
+/**
+ * Новый ключ идемпотентности.
+ *
+ * Функция МИНТИТ ключ, а не «выдаёт ключ запроса»: каждый вызов даёт новый.
+ * Поэтому звать её на каждую отправку — значит выключить идемпотентность
+ * совсем: повтор после сетевого таймаута придёт с другим ключом, и модуль
+ * честно выполнит его во второй раз. Решать, сколько живёт ключ, обязан тот,
+ * кто знает границы ДЕЙСТВИЯ пользователя, — то есть слой хуков, а не
+ * транспорт. Отсюда и `export`.
+ */
+export function newIdempotencyKey(prefix: string): string {
   const random =
     typeof crypto !== 'undefined' && 'randomUUID' in crypto
       ? crypto.randomUUID()
@@ -210,12 +198,46 @@ export const creditApi = {
   applicationDocuments: (applicationId: string) =>
     get<CreditPage<CreditDocumentMeta>>(`/applications/${applicationId}/documents`),
 
-  underwritingQueue: (status?: 'pending' | 'in_review' | 'done') =>
+  /**
+   * Очередь ручного разбора.
+   *
+   * Кроме `status` ручка не принимает НИЧЕГО: `limit`, `cursor` и `sort` в её
+   * сигнатуре отсутствуют и молча отбрасываются FastAPI (проверено живьём
+   * 31.08.2026: `?limit=5` и `?sort=bogus` — оба 200 и все 31 строка, тогда
+   * как `/applications?sort=bogus` честно отвечает 422). Поэтому здесь не
+   * появляется параметров «на будущее»: объявленный параметр, который сервер
+   * игнорирует, читается вызывающим как работающий.
+   */
+  underwritingQueue: (status?: CreditQueueStatus) =>
     get<CreditPage<CreditQueueItem>>('/underwriting/queue', { status }),
+
+  /**
+   * Положение рубильников и история переключений.
+   *
+   * Читаем именно эту ручку, а не демо-сводку: та отвечает 403 при выключенном
+   * демо-режиме, и раздел, который в бою обязан знать, выключен ли он, узнавал
+   * бы это только на стенде.
+   */
+  switches: () => get<CreditSwitchState>('/admin/switches'),
+
+  /**
+   * Переключить рубильник. Право есть только у риск-менеджера.
+   *
+   * Ключ идемпотентности приходит СНАРУЖИ и обязателен — параметра по
+   * умолчанию здесь нет намеренно. История переключений физически append-only
+   * и она же весь наш аудит: повтор после сетевого таймаута с новым ключом
+   * навсегда оставил бы в ней вторую запись о переключении, которого не было.
+   * Раньше ключ минтился прямо здесь, то есть на каждый вызов, — защита от
+   * повтора не работала ни разу.
+   */
+  setSwitch: (name: CreditSwitchName, payload: CreditSwitchPayload, idempotencyKey: string) =>
+    post<CreditSwitchState>(`/admin/switches/${name}`, payload, {
+      'Idempotency-Key': idempotencyKey,
+    }),
 
   decide: (applicationId: string, payload: ManualDecisionPayload) =>
     post<CreditDecision>(`/applications/${applicationId}/decision`, payload, {
-      'Idempotency-Key': idempotencyKey(`fe-decision:${applicationId}`),
+      'Idempotency-Key': newIdempotencyKey(`fe-decision:${applicationId}`),
     }),
 
   /**

@@ -25,6 +25,7 @@ import type { IncomingModalLoan } from '@/stores/callStore'
 import { useCallDetails, useHangupCall, useRejectCall } from '@/features/calls/hooks/useCall'
 import type { IncomingCallClient } from '@/features/calls/types'
 import { useCallStateUpdates } from '@/features/calls/hooks/useCallStateUpdates'
+import { useCallingWindow } from '@/features/calls/hooks/useCallingWindow'
 import { useSetLastCallResultFromCall } from '@/features/contactTags/hooks/useContactTags'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { formatMoneyUAHTwoDecimals } from '@/lib/formatters'
@@ -289,9 +290,16 @@ export function CallDialogModal({
     }
   }, [open])
 
-  const canPlaceCall = !manualPhoneEnabled
+  // The project's calling window (KAN-1107). Server-decided; the button only
+  // reflects it. Origination is refused server-side either way — this stops
+  // the operator making a call they will be told off for, rather than being
+  // the control itself.
+  const callingWindow = useCallingWindow(clientId)
+
+  const hasDialTarget = !manualPhoneEnabled
     ? String(phoneNumber).trim().length > 0
     : isValidManualDialPhone(manualPhoneDigits)
+  const canPlaceCall = hasDialTarget && callingWindow.allowed
 
   const handleManualPhoneChange = (raw: string) => {
     setManualPhoneDigits(raw.replace(/\D/g, '').slice(0, 12))
@@ -984,7 +992,7 @@ export function CallDialogModal({
                 </div>
               </div>
             </ModalContent>
-            <ModalFooter className="flex-col gap-2 sm:flex-row sm:gap-3">
+            <ModalFooter className="flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
               <Button
                 variant="cancel"
                 size="sm"
@@ -1030,6 +1038,15 @@ export function CallDialogModal({
                       ? `Try again in ${cooldownSecondsRemaining || 1}s`
                       : t('pages.clients.modals.callDialog.callNow')}
                 </Button>
+              )}
+              {/* Under the button, not in it: the refusal is a sentence, and a
+                  sentence as a label wraps across a full-width button and
+                  costs it its identity. The cooldown case beside it keeps a
+                  short label for the same reason. */}
+              {callType !== 'spam-calls' && !callingWindow.allowed && callingWindow.message && (
+                <p className="text-muted-foreground mt-2 w-full basis-full text-center text-xs leading-[140%]">
+                  {callingWindow.message}
+                </p>
               )}
             </ModalFooter>
           </>

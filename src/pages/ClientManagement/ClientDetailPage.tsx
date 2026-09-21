@@ -167,6 +167,9 @@ import {
 import { useCallStore } from '@/stores/callStore'
 import { useClientTags } from '@/features/tags/hooks/useTags'
 import { TagSelectorModal } from './components/TagSelectorModal'
+import { useCallingWindow } from '@/features/calls/hooks/useCallingWindow'
+import { callDialogBlockedReason } from './callDialogGate'
+import { CallingWindowTooltip } from '@/features/calls/components/CallingWindowTooltip'
 import { useCallOrigination } from '@/features/calls/hooks/useCallOrigination'
 import { useAuthStore } from '@/stores/authStore'
 import { backendToFrontendPaymentMethod } from '@/features/payments/utils'
@@ -463,6 +466,7 @@ export function ClientDetailPage() {
     handleCloseCallModal,
     handleCallEnd,
   } = useCallOrigination()
+  const callingWindow = useCallingWindow(id ? Number(id) : null)
 
   // Client detail: one profile + section endpoints
   const clientId = id ? Number(id) : 0
@@ -846,6 +850,15 @@ export function ClientDetailPage() {
       meta?.default_call_line === 'gray' ? 'gray-line' : 'white-line'
     const spamOptionEnabled =
       spamAllowedOverride !== undefined ? spamAllowedOverride : meta?.spam_allowed !== false
+
+    // Gated at the one door rather than on each button, so the per-phone
+    // buttons and the loans tab are covered without each new one having to be
+    // remembered.
+    const blocked = callDialogBlockedReason(callingWindow, spamOptionEnabled)
+    if (blocked) {
+      toast.warning(blocked)
+      return
+    }
     setCallModalPreferences({ phone, initialCallType, spamOptionEnabled })
     setOpenCallModal('call-dialog')
     setIsCallModalOpen(true)
@@ -2996,23 +3009,32 @@ export function ClientDetailPage() {
             </PermissionGuard>
             {/* Header "Add Task" button removed — entry moved to the Tasks tab "+" hover button. */}
             <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
-              <Button
-                size="md"
-                leftIcon={<Icons.Headset size={20} />}
-                className="w-full flex-1 rounded-full xl:w-auto xl:flex-none"
-                disabled={!user?.is_agent || !user?.asterisk_extension}
-                onClick={() => {
-                  const phoneNumber = client.phones?.[0]?.number
-                  if (!phoneNumber) {
-                    toast.error(t('errors.clientHasNoPhone', 'Client has no phone number'))
-                    return
-                  }
-
-                  openOutboundCall(phoneNumber, client.phones?.[0]?.contactTypeId ?? null)
-                }}
+              <CallingWindowTooltip
+                message={callingWindow.allowed ? null : callingWindow.message}
+                className="w-full flex-1 xl:w-auto xl:flex-none"
               >
-                {t('pages.clients.activity.call')}
-              </Button>
+                <Button
+                  size="md"
+                  leftIcon={<Icons.Headset size={20} />}
+                  className="w-full flex-1 rounded-full xl:w-auto xl:flex-none"
+                  // The calling window disables the entry point too, not just
+                  // the dial button inside the dialog: letting an operator open
+                  // a call dialog that cannot place a call reads as a broken
+                  // dialog rather than a closed window.
+                  disabled={!user?.is_agent || !user?.asterisk_extension || !callingWindow.allowed}
+                  onClick={() => {
+                    const phoneNumber = client.phones?.[0]?.number
+                    if (!phoneNumber) {
+                      toast.error(t('errors.clientHasNoPhone', 'Client has no phone number'))
+                      return
+                    }
+
+                    openOutboundCall(phoneNumber, client.phones?.[0]?.contactTypeId ?? null)
+                  }}
+                >
+                  {t('pages.clients.activity.call')}
+                </Button>
+              </CallingWindowTooltip>
             </PermissionGuard>
             <Button
               size="md"

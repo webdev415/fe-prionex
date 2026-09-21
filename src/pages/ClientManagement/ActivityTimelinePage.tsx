@@ -9,6 +9,8 @@ import { useTranslation } from 'react-i18next'
 import { intlLocaleForUiLanguage } from '@/lib/i18n'
 import { useParams, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
+import { useCallingWindow } from '@/features/calls/hooks/useCallingWindow'
+import { CallingWindowTooltip } from '@/features/calls/components/CallingWindowTooltip'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
 import { Checkbox } from '@/components/ui/Checkbox'
@@ -54,6 +56,7 @@ import { formatUkrainePhoneForDisplay, normalizeUkrainePhoneToDb } from '@/lib/p
 export function ActivityTimelinePage() {
   const { t, i18n } = useTranslation('common')
   const { id } = useParams<{ id: string }>()
+  const callingWindow = useCallingWindow(id ? Number(id) : null)
   const navigate = useNavigate()
   const { isCallActive, setOpenCallModal } = useCallStore()
   const { user } = useAuth()
@@ -434,25 +437,30 @@ export function ActivityTimelinePage() {
             </Button>
           </PermissionGuard>
           <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
-            <Button
-              size="md"
-              leftIcon={<Icons.Headset size={20} />}
-              className="flex w-full flex-row rounded-full text-xs font-medium md:w-auto md:text-sm"
-              disabled={!user?.is_agent || !user?.asterisk_extension}
-              onClick={() => {
-                if (isCallActive()) {
-                  toast.warning(
-                    t('pages.clients.modals.callDialog.callInProgress') ||
-                      'Another call or recording is already in progress. Please finish or close it first.'
-                  )
-                  return
-                }
-                setOpenCallModal('call-dialog')
-                setIsCallModalOpen(true)
-              }}
+            <CallingWindowTooltip
+              message={callingWindow.allowed ? null : callingWindow.message}
+              className="w-full md:w-auto"
             >
-              {t('pages.clients.activity.call')}
-            </Button>
+              <Button
+                size="md"
+                leftIcon={<Icons.Headset size={20} />}
+                className="flex w-full flex-row rounded-full text-xs font-medium md:w-auto md:text-sm"
+                disabled={!user?.is_agent || !user?.asterisk_extension || !callingWindow.allowed}
+                onClick={() => {
+                  if (isCallActive()) {
+                    toast.warning(
+                      t('pages.clients.modals.callDialog.callInProgress') ||
+                        'Another call or recording is already in progress. Please finish or close it first.'
+                    )
+                    return
+                  }
+                  setOpenCallModal('call-dialog')
+                  setIsCallModalOpen(true)
+                }}
+              >
+                {t('pages.clients.activity.call')}
+              </Button>
+            </CallingWindowTooltip>
           </PermissionGuard>
         </div>
       </div>
