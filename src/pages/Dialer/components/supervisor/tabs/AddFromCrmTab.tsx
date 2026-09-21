@@ -196,6 +196,7 @@ export function AddFromCrmTab() {
         key: 'name',
         header: t('dialer.crm.client', 'Client'),
         className: 'w-1/4',
+        obscured: true,
         render: (c) => clientName(c),
       },
       {

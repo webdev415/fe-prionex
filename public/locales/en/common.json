@@ -483,6 +483,7 @@
     "tabsScrollRight": "Scroll tabs right"
   },
   "common": {
+    "userAvatar": "User avatar",
     "step": "Step",
     "selected": "Selected",
     "of": "of",
@@ -859,7 +860,9 @@
       "slashReset": "clear the brain context (conversation stays)",
       "slashHelp": "what the assistant can do",
       "slashNewChat": "start a new chat",
-      "answerInProgress": "The answer is still being prepared — it will appear here when ready"
+      "answerInProgress": "The answer is still being prepared — it will appear here when ready",
+      "attachmentFrameTitle": "Attachment preview",
+      "attachmentRemoveShort": "Remove attachment"
     },
     "lawyerWorkplace": {
       "navAria": "Lawyer Workplace navigation",
@@ -3773,7 +3776,7 @@
         "reenableTwoFactor": "Re-enable 2FA"
       },
       "messages": {
-        "nowViewingAs": "Now viewing as {{username}}",
+        "nowViewingAsPrefix": "Now viewing as",
         "failedToImpersonate": "Failed to impersonate user",
         "failedToExitImpersonation": "Failed to exit impersonation",
         "exitedImpersonation": "Exited impersonation mode",
@@ -5431,7 +5434,7 @@
           }
         },
         "assignClient": {
-          "title": "Assign Client: {{fullName}}",
+          "titlePrefix": "Assign Client:",
           "clientInformation": "Client Information",
           "assignmentDetails": "Assignment Details",
           "name": "Name",
@@ -5660,7 +5663,7 @@
           "sendSMS": "Send SMS"
         },
         "sendMessage": {
-          "title": "Send message to {{clientName}}",
+          "titlePrefix": "Send message to",
           "channel": "Channel",
           "service": "Service",
           "servicePlaceholder": "Select a service",
@@ -5801,7 +5804,7 @@
           "apply": "Apply"
         },
         "tagSelector": {
-          "title": "Manage Tags — {{name}}",
+          "titlePrefix": "Manage Tags —",
           "loadingTags": "Loading tags...",
           "searchTags": "Search tags...",
           "selectedCount": "{{selected}} of {{total}} tags selected",
@@ -5810,7 +5813,7 @@
           "payloadTagBadge": "requires PTP",
           "payloadTagHint": "This tag requires PTP date and/or amount — a separate form will open",
           "saveTags": "Save Tags",
-          "tagsUpdated": "Tags updated for {{name}}",
+          "tagsUpdatedPrefix": "Tags updated for",
           "updateFailed": "Failed to update tags",
           "protectedRemoveBlocked": "Protected tags can only be removed by authorized roles"
         },
@@ -6955,6 +6958,9 @@
         "cancelled": "Cancelled",
         "completed": "Completed",
         "completedEarly": "Completed early"
+      },
+      "documents": {
+        "previewFrameTitle": "Document preview"
       }
     },
     "clientChains": {
@@ -11523,6 +11529,9 @@
         "weekend": "Calls are not allowed today",
         "noCalendar": "Calling is blocked until this year’s holiday calendar is set up"
       }
+    },
+    "messaging": {
+      "attachmentPreview": "Attachment preview"
     }
   },
   "contactTypes": {

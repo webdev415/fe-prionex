@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/Button'
 import { UserAvatar } from '@/components/ui/UserAvatar'
 import { Icons } from '@/lib/icons'
 import { displayName } from '@/features/employeeCard/lib/displayName'
+import { piiProps } from '@/lib/openreplay/pii'
 import type { CardHeader } from '@/features/employeeCard/types.card'
 
 export interface ProfilePanelProps {
@@ -70,7 +71,11 @@ export function ProfilePanel({
       />
 
       <div className="space-y-1 text-center">
-        <h1 className="text-foreground text-lg font-semibold">{displayName(header)}</h1>
+        <h1 className="text-foreground text-lg font-semibold" {...piiProps}>
+          {displayName(header)}
+        </h1>
+        {/* The position stays readable: a job title is not personal data, and it
+            is what tells a replay whose card this was once the name is gone. */}
         {header.position && <p className="text-muted-foreground text-sm">{header.position}</p>}
       </div>
 

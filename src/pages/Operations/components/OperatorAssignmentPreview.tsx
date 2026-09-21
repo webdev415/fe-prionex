@@ -87,6 +87,7 @@ function usePreviewColumns(): Column<OAPreviewRowWithId>[] {
       {
         key: 'client',
         header: t(`${p}.client`),
+        obscured: true,
         render: (row: OAPreviewRowWithId) => (
           <>
             <span className="text-foreground font-medium">
@@ -109,6 +110,7 @@ function usePreviewColumns(): Column<OAPreviewRowWithId>[] {
       {
         key: 'new_operator',
         header: t(`${p}.newOperator`),
+        obscured: true,
         render: (row: OAPreviewRowWithId) => (
           <>
             <span className="text-foreground font-medium">

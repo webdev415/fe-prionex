@@ -158,8 +158,22 @@ describe('UserAvatar', () => {
     expect(monogram?.getAttribute('style')).not.toContain('background-color')
   })
 
-  it('is announced by name to assistive tech', () => {
+  it('is announced by ROLE, not by the name (KAN-KB-54)', () => {
+    // This used to assert the name, and the name is exactly what had to go.
+    // OpenReplay does not mask attributes outside `privateMode` —
+    // `sendNodeAttribute` sends `alt`, `title` and `aria-label` verbatim — so an
+    // avatar labelled with its owner put a name into every recording, on every
+    // screen that lists people. Being shared made it the widest single leak in
+    // the application.
+    //
+    // The accessibility cost is real and accepted: a screen reader hears "user
+    // avatar" instead of the name. It is not a regression to zero, because every
+    // place that renders an avatar renders the name beside it — the name is
+    // still announced, once, from the text rather than twice from the image.
     render(<UserAvatar firstName="Olena" lastName="Kovalchuk" />)
-    expect(screen.getByRole('img', { name: 'Olena Kovalchuk' })).toBeInTheDocument()
+    const avatar = screen.getByRole('img')
+    expect(avatar).toBeInTheDocument()
+    expect(avatar.getAttribute('aria-label')).not.toContain('Kovalchuk')
+    expect(avatar.getAttribute('title')).not.toContain('Kovalchuk')
   })
 })

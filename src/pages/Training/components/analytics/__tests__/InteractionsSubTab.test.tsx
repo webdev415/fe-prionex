@@ -87,11 +87,14 @@ describe('InteractionsSubTab', () => {
     expect(screen.getAllByText('Olena Kovalenko').length).toBeGreaterThanOrEqual(1)
   })
 
-  it('renders the client as a #id link to the client page (name in the title)', () => {
+  it('renders the client as a #id link, with the name OUT of the title (KAN-KB-54)', () => {
+    // The hover-reveal survives — it moved from `title` into a tooltip, whose
+    // content Radix renders as a text node and OpenReplay therefore masks.
+    // `title` was sent to the recording verbatim; a text node is not.
     render(<InteractionsSubTab />)
     const clientLink = screen.getByRole('button', { name: '#200' })
     expect(clientLink).toBeInTheDocument()
-    expect(clientLink).toHaveAttribute('title', 'Smith Alice')
+    expect(clientLink).not.toHaveAttribute('title')
   })
 
   it('renders debt_id+contract_number in the Deal column (KAN-731 Phase B)', () => {

@@ -18,6 +18,7 @@
     "preview": "vite preview",
     "typecheck": "tsc -b",
     "prepare": "husky",
+    "pii-audit": "node scripts/pii-audit.mjs",
     "ledger:prod": "node scripts/gen-prod-ledger.mjs"
   },
   "dependencies": {

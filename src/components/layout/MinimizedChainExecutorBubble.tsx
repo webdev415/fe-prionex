@@ -13,6 +13,7 @@ import { Icons } from '@/lib/icons'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/Tooltip'
 import { Modal, ModalContent } from '@/components/ui/Modal'
 import { ChainExecutor } from '@/pages/ClientManagement/components/taChains/ChainExecutor'
+import { piiProps } from '@/lib/openreplay/pii'
 
 export function MinimizedChainExecutorBubble() {
   const { t } = useTranslation('common')
@@ -73,7 +74,7 @@ export function MinimizedChainExecutorBubble() {
                     <Icons.PlayCircle02 size={20} className="text-white" strokeWidth={1.5} />
                   </div>
                   <div className="flex min-w-0 flex-1 flex-col">
-                    <div className="text-foreground truncate text-sm font-semibold">
+                    <div className="text-foreground truncate text-sm font-semibold" {...piiProps}>
                       {info.clientName}
                     </div>
                     <div className="text-muted-foreground text-xs">

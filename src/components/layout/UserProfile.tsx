@@ -10,6 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/DropdownMenu'
+import { piiProps } from '@/lib/openreplay/pii'
 
 interface UserProfileProps {
   onLogoutClick?: () => void
@@ -44,7 +45,7 @@ export function UserProfile({ onLogoutClick }: UserProfileProps) {
       <DropdownMenuTrigger asChild>
         <button className="bg-secondary-800 flex h-10 w-[175px] cursor-pointer items-center gap-2 rounded-md px-3 transition-all duration-200 hover:opacity-90">
           <Icons.User02 size={20} className="text-primary-500" strokeWidth={1.5} />
-          <span className="flex-1 truncate text-left text-xs font-medium text-white">
+          <span className="flex-1 truncate text-left text-xs font-medium text-white" {...piiProps}>
             {displayName}
           </span>
           <Icons.ArrowDown size={16} className="text-white" strokeWidth={1.5} />

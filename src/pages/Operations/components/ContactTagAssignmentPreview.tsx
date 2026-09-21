@@ -8,6 +8,7 @@ import type {
   ContactTagPreviewRow,
   ContactTagRowStatus,
 } from '@/features/imports/types/contactTagAssignment'
+import { piiProps } from '@/lib/openreplay/pii'
 
 interface Props {
   preview: ContactTagAssignmentPreviewResponse
@@ -122,7 +123,9 @@ function usePreviewColumns(): Column<RowWithId>[] {
         render: (row: RowWithId) => (
           <div className="flex flex-col">
             <span className="text-dark-500 font-medium">{row.contact_value}</span>
-            <span className="text-xs text-gray-400">
+            {/* The TIN shares this line, but it is digits — masked by the
+                tracker's own `obscureTextNumbers`. */}
+            <span className="text-xs text-gray-400" {...piiProps}>
               {row.client_name ? `${row.client_name} · ` : ''}
               {t(`${p}.tinPrefix`, 'TIN')} {row.tin}
             </span>

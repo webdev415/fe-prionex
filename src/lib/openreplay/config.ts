@@ -11,7 +11,10 @@
  * only form Vite substitutes; a computed lookup (`import.meta.env[name]`) would
  * silently stay undefined in the bundle.
  *
- * See docs/openreplay-integration-plan.md for the full contract.
+ * The integration's full contract lived in `docs/openreplay-integration-plan.md`,
+ * which was never pushed to `origin` — the link is removed rather than left
+ * pointing at nothing. What a reader needs from it is here and in
+ * `docs/openreplay-pii-markup.md`.
  */
 
 /** Names kept as constants so tests and error messages cannot drift from them. */
@@ -42,22 +45,44 @@ export const OPENREPLAY_ENABLED = OPENREPLAY_PROJECT_KEY !== '' && OPENREPLAY_IN
  * name suggests — page URLs, document titles and click labels go with the text,
  * leaving a replay in which the screen the operator was on cannot be told.
  *
- * 🔴 WHICH LEAVES A REAL GAP, AND IT IS NOT CLOSED YET. With this off, the
- * tracker masks digits (`obscureTextNumbers`) and input values, so phone numbers
- * and amounts are covered — but NOTHING masks letters. Client first and last
- * names, addresses (`types/api.ts`) and free-text operator comments are recorded
- * verbatim.
+ * The gap it used to leave is closed IN THE SOURCE (KAN-KB-54); acceptance on
+ * a real recording — phase 6 of the plan, a human step — is still open, and
+ * `build.yml` WARNS on a prod build that carries a key until
+ * `docs/openreplay-pii-acceptance.md` records that pass (a warning, not a
+ * refusal — Oleg's decision, 2026-09-18). With `privateMode` off
+ * the tracker masks digits (`obscureTextNumbers`) and input values, and nothing
+ * in the tracker masks letters — client names, addresses and free-text operator
+ * comments would reach a recording verbatim. The blocks that hold them now carry
+ * `data-openreplay-obscured`:
  *
- * The fix is `data-openreplay-obscured` on the blocks that hold that data, which
- * spans 102 components across 18 areas and is tracked as **KAN-KB-54**
- * (Tasks/Kanbanboard#54). It does NOT exist in `src/` today: grep for the
- * attribute and this comment is most of what you will find.
+ * - text is marked per container (`src/lib/openreplay/pii.tsx`, plus the
+ *   declarative flags `Column.obscured`, `FieldGrid`'s `obscured` and
+ *   `SearchableSelect`'s `obscured`);
+ * - personal data is OUT of `title`/`alt`/`aria-label`/`placeholder`, which the
+ *   tracker does not mask at all outside `privateMode` — a hover-reveal is now
+ *   `<PiiTooltip>`, whose content is a text node;
+ * - every `<iframe>` and `dangerouslySetInnerHTML` sink carries the attribute,
+ *   so no same-origin document or injected HTML is captured;
+ * - rendered client-facing text — letters, sent messages, transcripts — is
+ *   marked by container, since no field name describes it.
  *
- * 🔒 So that this is not a promise guarding a hole: `build.yml` REFUSES a prod
- * build that carries an OpenReplay key, and the refusal names KAN-KB-54. DEV and
- * PRE-PROD are unaffected — their data is synthetic, which is the whole reason
- * the rollout order is DEV first. Remove that gate as part of KAN-KB-54, not
- * around it.
+ * 🔒 WHAT KEEPS THE SOURCE HALF CLOSED is not this comment.
+ * `npm run pii-audit -- --check` runs as a step of the `lint` job in both
+ * `.forgejo/workflows/ci.yml` and `.github/workflows/CI.yml`. It fails CI on a
+ * client's NAME or ADDRESS rendered without the attribute, on personal data in
+ * an attribute, on an unmarked iframe or HTML sink. It does NOT fail on free
+ * text — that is reported as advisory and triaged by hand — and it cannot see a
+ * value the dictionary has no name for. `window.__piiAudit()` (dev builds) and
+ * a jsdom smoke check cover the other half: markup that is correct in the
+ * source and wrong in the DOM. See `docs/openreplay-pii-markup.md`.
+ *
+ * History, so nobody reconstructs it from the git log: `build.yml` used to
+ * REFUSE a prod build carrying an OpenReplay key, naming KAN-KB-54. That gate
+ * was replaced by a `::warning::` on 2026-09-17 by explicit decision while the
+ * task was still open (KAN-KB-58). The markup then landed and the warning went
+ * with it; code review asked for the gate back, keyed to the acceptance record,
+ * and the decision was to keep the build green and warn instead. The warning
+ * goes away by itself the moment phase 6 is committed.
  *
  * Same convention as the key and as `VITE_ASSISTANT_REPORT_TABLES_ENABLED`:
  * empty or unset means off, and only a literal 'true'/'1' turns it on.

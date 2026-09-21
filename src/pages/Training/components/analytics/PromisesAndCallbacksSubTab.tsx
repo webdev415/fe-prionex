@@ -26,6 +26,8 @@ import {
   ANALYTICS_TABLE_TD,
   ANALYTICS_TABLE_TH,
 } from './analyticsTableStyles'
+import { piiProps } from '@/lib/openreplay/pii'
+import { PiiTooltip } from '@/components/ui/PiiTooltip'
 
 /**
  * Promises and Callbacks sub-tab (KAN-733). Layout / UI styling mirror the
@@ -310,7 +312,7 @@ export function PromisesAndCallbacksSubTab() {
                 {t('pages.training.promises.filters.allOperators', 'All operators')}
               </option>
               {operators.map((op) => (
-                <option key={op.id} value={String(op.id)}>
+                <option key={op.id} value={String(op.id)} {...piiProps}>
                   {op.full_name}
                 </option>
               ))}
@@ -452,18 +454,21 @@ function PromiseRow({ row }: { row: PromiseCallbackItem }) {
               {initials}
             </span>
           ) : null}
-          <span className="text-xs font-medium text-[#05040D]">{operatorName}</span>
+          <span className="text-xs font-medium text-[#05040D]" {...piiProps}>
+            {operatorName}
+          </span>
         </div>
       </td>
       <td className={ANALYTICS_TABLE_TD}>
-        <button
-          type="button"
-          title={row.client_full_name ?? undefined}
-          onClick={() => navigate(`/dashboard/clients/${row.client_id}`)}
-          className="text-[#3B82F6] hover:underline"
-        >
-          #{row.client_id}
-        </button>
+        <PiiTooltip label={row.client_full_name}>
+          <button
+            type="button"
+            onClick={() => navigate(`/dashboard/clients/${row.client_id}`)}
+            className="text-[#3B82F6] hover:underline"
+          >
+            #{row.client_id}
+          </button>
+        </PiiTooltip>
       </td>
       <td className={ANALYTICS_TABLE_TD}>{row.contract_number ?? '—'}</td>
       <td className={`${ANALYTICS_TABLE_TD} font-semibold text-[#05040D]`}>

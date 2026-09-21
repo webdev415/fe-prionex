@@ -140,6 +140,19 @@ jobs:
       # time, so it has to be a build-arg. The repository variable is normally
       # unset: it then expands to an empty string and the feature stays off;
       # set it to "true" to ship the feature.
+      #
+      # 🔴 NO `VITE_OPENREPLAY_*` HERE, AND THAT IS LOAD-BEARING (KAN-KB-54,
+      # step 8.3). This is the SECOND build path — `.forgejo/workflows/build.yml`
+      # is the first — and it passes no OpenReplay arguments at all, so a bundle
+      # built here carries no project key and the tracker never starts. That is
+      # why the prod gate, which lived only in `build.yml`, was never a gate on
+      # this path: there was nothing here to gate.
+      #
+      # Whoever adds an OpenReplay build-arg to this file is switching session
+      # recording on for whatever it deploys. Before doing it, read
+      # `docs/openreplay-pii-markup.md`: the PII markup is what makes that safe,
+      # and `npm run pii-audit -- --check` in the `lint` job of BOTH CI files is
+      # what keeps it so.
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:

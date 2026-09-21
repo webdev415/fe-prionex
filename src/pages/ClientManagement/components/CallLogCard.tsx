@@ -5,6 +5,7 @@ import { useCallStore } from '@/stores/callStore'
 import { TelephonyTypeBadge } from '@/components/ui/TelephonyTypeBadge'
 import { Icons } from '@/lib/icons'
 import { classifyCallOutcome, OUTCOME_PALETTE_CLASSES } from '@/lib/callOutcome'
+import { piiProps } from '@/lib/openreplay/pii'
 
 function cn(...parts: Array<string | undefined | false>) {
   return parts.filter(Boolean).join(' ')
@@ -267,7 +268,12 @@ export function CallLogCard({
                 {template || t('pages.clients.modals.sendSMS.customMessage') || 'Custom Message'}
               </div>
 
-              <div className="text-muted-foreground line-clamp-2 overflow-hidden text-sm break-words">
+              {/* The sent message as the client received it — a rendered
+                  template, name and all. The template NAME above stays readable. */}
+              <div
+                className="text-muted-foreground line-clamp-2 overflow-hidden text-sm break-words"
+                {...piiProps}
+              >
                 {message}
               </div>
             </>
