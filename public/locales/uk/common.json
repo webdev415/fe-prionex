@@ -828,7 +828,6 @@
       "thinkingUsedOn": "31B · з міркуваннями",
       "thinkingUsedOff": "31B · без міркувань",
       "thinkingUsedMismatch": "Сервер відповів інакше, ніж налаштовано",
-      "thinkingFlagUnsupported": "Вимкнення міркувань ще не підтримується сервером",
       "voiceSilenceTimeout": "Тайм-аут тиші (авто-стоп)",
       "voiceMaxDuration": "Макс. довжина запису",
       "voiceSeconds": "{{count}} с",

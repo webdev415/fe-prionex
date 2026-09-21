@@ -819,7 +819,6 @@
       "thinkingUsedOn": "31B · with reasoning",
       "thinkingUsedOff": "31B · without reasoning",
       "thinkingUsedMismatch": "The server answered differently from the setting",
-      "thinkingFlagUnsupported": "Turning reasoning off is not supported by the server yet",
       "voiceSilenceTimeout": "Silence timeout (auto-stop)",
       "voiceMaxDuration": "Max recording length",
       "voiceSeconds": "{{count}}s",

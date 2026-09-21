@@ -298,18 +298,6 @@ function formatRecordingTime(totalSec: number): string {
 }
 
 /**
- * Отказ «не знаю поле `thinking`»: прокси старой версии не умеет выключать
- * раздумья и отвергает тело по схеме. Имя поля живёт в `detail[].loc` — текст
- * у FastAPI один на любое лишнее поле, поэтому смотрим на `fields`; прокси,
- * отказавший своими словами, ловится по упоминанию поля в тексте.
- */
-function isUnknownThinkingField(error: unknown): boolean {
-  if (!(error instanceof AssistantChatStreamError) || error.status !== 422) return false
-  if (error.fields?.includes('thinking')) return true
-  return /\bthinking\b/i.test(error.serverDetail ?? '')
-}
-
-/**
  * Reasoning elapsed for the chip/panel timer: the frozen duration once settled,
  * otherwise live from the start marker (updates as the component re-renders on
  * streamed deltas — no interval needed). Null when the turn has no start marker.
@@ -1069,12 +1057,6 @@ export function AiAssistantBetaPage() {
    * `await`, so the second one bounces off the same guard.
    */
   const respondingRef = useRef(false)
-  /**
-   * Шлюз этой версии не знает поля `thinking` (ответил 422 на него). Взводится
-   * один раз за сессию страницы после успешного повтора без поля: дальше ходы
-   * уходят сразу без него, а не платят лишним запросом за один и тот же отказ.
-   */
-  const thinkingFlagUnsupportedRef = useRef(false)
   const hasConversation = chatMessages.length > 0
 
   const { mutateAsync: sendChat } = useSendAssistantMessage()
@@ -2118,9 +2100,8 @@ export function AiAssistantBetaPage() {
       let streamedReasoning = ''
       let toolSteps: ToolStep[] = []
       /**
-       * Один ход к мозгу. Вынесен в функцию ради повтора тем же телом минус
-       * поле `thinking`: прокси, ещё не знающий поля, отвечает на него 422, и
-       * оператор должен получить ответ, а не отказ (см. ниже).
+       * Один ход к мозгу. Вынесен в отдельную функцию, чтобы тело собиралось в
+       * одном месте; `thinking` уходит только у «думающего» хода (см. ниже).
        */
       const sendTurn = (thinking: boolean | undefined) =>
         sendChat({
@@ -2223,15 +2204,17 @@ export function AiAssistantBetaPage() {
               const snapshot = extractContextUsage(done)
               if (snapshot) setContextUsage(snapshot)
               // Факт хода 31B — что модель РЕАЛЬНО сделала. Берём его только у
-              // «думающего» хода и только когда шлюз им поделился: у fast и
-              // эксперта чипа нет, а старый шлюз полей не шлёт.
+              // «думающего» хода и только когда шлюз прислал thinking_used: у fast
+              // и эксперта чипа нет.
               if (isThinking && typeof done.thinking_used === 'boolean') {
                 patchLoadingMessage({
                   thinkingUsed: done.thinking_used,
-                  thinkingRequested:
-                    typeof done.thinking_requested === 'boolean'
-                      ? done.thinking_requested
-                      : undefined,
+                  // Что ПРОСИЛИ — авторитетно локальное намерение оператора, а не
+                  // эхо сервера: старый шлюз молча игнорирует thinking и может не
+                  // прислать thinking_requested (или прислать своё). Сравнение
+                  // thinking_used с этим значением (чип renderThinkingFact) и есть
+                  // детектор «сервер не применил мой флаг».
+                  thinkingRequested: wantsReasoning,
                 })
               }
             },
@@ -2239,22 +2222,13 @@ export function AiAssistantBetaPage() {
         })
 
       try {
-        // Поле уходит только у «думающего» хода и только пока шлюз его
-        // понимает. Отказ ровно по этому полю (422) означает старый прокси:
-        // повторяем ход без поля, говорим об этом один раз и дальше в этой
-        // сессии поле не шлём вовсе.
-        const thinkingFlag =
-          isThinking && !thinkingFlagUnsupportedRef.current ? wantsReasoning : undefined
-        const result = await sendTurn(thinkingFlag).catch(async (error: unknown) => {
-          const turnStarted = receivedDelta || streamedReasoning !== '' || toolSteps.length > 0
-          if (thinkingFlag === undefined || turnStarted || !isUnknownThinkingField(error)) {
-            throw error
-          }
-          thinkingFlagUnsupportedRef.current = true
-          const retried = await sendTurn(undefined)
-          toast.info(t('pages.aiAssistant.thinkingFlagUnsupported'))
-          return retried
-        })
+        // Поле уходит только у «думающего» хода. Оно forward-compatible: старый
+        // прокси его молча игнорирует (у ChatRequest extra="ignore", ответ 200, а
+        // не 422), новый — применяет. «Сервер не применил флаг» ловится по
+        // done.thinking_used против локального намерения (чип ниже), а не повтором
+        // запроса; любой реальный отказ идёт в общий обработчик ошибок как раньше.
+        const thinkingFlag = isThinking ? wantsReasoning : undefined
+        const result = await sendTurn(thinkingFlag)
         // The turn reached the brain, so the page context it carried is spent —
         // a conversation must not be re-stamped with the same page on every
         // message. Consumed by identity, so a page the host published while the

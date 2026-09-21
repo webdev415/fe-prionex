@@ -231,38 +231,27 @@ describe('AiAssistantBetaPage — переключатель «Міркуван�
     expect(screen.queryByTestId('assistant-thinking-fact')).not.toBeInTheDocument()
   })
 
-  it('старый шлюз не знает поля: ход повторяется без него и оператора предупреждают', async () => {
+  it('старый шлюз молча игнорирует thinking: ответ без повтора, чип ловит расхождение', async () => {
     await withStoredSettings({ mode: 'thinking', showReasoning: false })
-    mockedSendChatMessage
-      .mockRejectedValueOnce(
-        new AssistantChatStreamError({
-          status: 422,
-          message: 'Extra inputs are not permitted',
-          fields: ['thinking'],
-        })
-      )
-      .mockImplementation(
-        async (_payload, callbacks?: SendChatMessageCallbacks): Promise<AssistantChatResponse> => {
-          callbacks?.onText?.('Готово')
-          return {
-            conversation_id: 1,
-            message_id: 5,
-            response: 'Готово',
-            coverage_flag: null,
-            tool_calls: [],
-          }
-        }
-      )
+    // У ChatRequest extra="ignore" (не forbid): прокси, ещё не знающий поля,
+    // НЕ отвечает 422 — он молча его роняет и отдаёт 200, раздумья всё равно
+    // идут. Старый шлюз может и не прислать thinking_requested. Детектор «сервер
+    // не применил мой флаг» — done.thinking_used против локального намерения, а
+    // не повтор запроса без поля.
+    mockTurn({ thinking_used: true })
     renderPage()
     send('думай')
-
-    // Оператор получает ответ, а не отказ: повтор ушёл тем же телом минус поле.
     await screen.findByText('Готово')
-    expect(mockedSendChatMessage).toHaveBeenCalledTimes(2)
-    expect(sentPayload(0).thinking).toBe(false)
-    expect(JSON.stringify(sentPayload(1))).not.toContain('"thinking":')
-    expect(toast.info).toHaveBeenCalledWith('pages.aiAssistant.thinkingFlagUnsupported')
-    expect(toast.error).not.toHaveBeenCalled()
+
+    // Ровно один запрос — никакого повтора без поля.
+    expect(mockedSendChatMessage).toHaveBeenCalledTimes(1)
+    // Поле ушло (forward-compatible), но никаких «поле не поддерживается» тостов.
+    expect(sentPayload().thinking).toBe(false)
+    expect(toast.info).not.toHaveBeenCalled()
+    // Просили без раздумий, а ход шёл с ними — чип честно предупреждает.
+    const chip = await screen.findByTestId('assistant-thinking-fact')
+    expect(chip).toHaveAttribute('data-mismatch', 'true')
+    expect(chip).toHaveAttribute('title', 'pages.aiAssistant.thinkingUsedMismatch')
   })
 
   it('чужой отказ 422 не превращается в повтор', async () => {
