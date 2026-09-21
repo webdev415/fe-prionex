@@ -257,7 +257,7 @@ env:
 
 jobs:
   reset:
-    name: "Weekly reset — sweep, reset dev to main, then dispatch deploy-dev.yml"
+    name: "Weekly reset — sweep, catch dev up to main, then dispatch deploy-dev.yml"
     runs-on: deploy-dev-preprod
     # Task 3.4: small on purpose. This job dispatches and sweeps; it does not deploy, and it must
     # not be able to sit inside the shared concurrency group for long (see the self-deadlock note
@@ -593,16 +593,16 @@ jobs:
       #                                             so a push landing on `main` mid-run cannot make
       #                                             the count describe one commit and the reset
       #                                             another
-      #   2. count what would be discarded        — `git cherry`, the same measure §2 of the plan
+      #   2. count what would be superseded       — `git cherry`, the same measure §2 of the plan
       #                                             took by hand (commits already in `main` in
       #                                             another shape are NOT counted as losses)
       #   3. refuse if over MAX_DISCARDED         — before anything is written, so a refusal costs
       #                                             nothing and changes nothing
       #   4. write the ANNOTATED archive tag      — BEFORE the branch moves. If the job dies here,
       #                                             the state is a harmless extra tag.
-      #   5. move `dev` under a LEASE             — against the SHA step 1 pinned, so if `dev`
+      #   5. fast-forward `dev` under a LEASE     — against the SHA step 1 pinned, so if `dev`
       #                                             moved after the count the server refuses,
-      #                                             rather than the job silently discarding the
+      #                                             rather than the job silently superseding the
       #                                             commits that arrived in between
       #   6. read the branch back                 — an exit code is not evidence on this instance
       #                                             (Story 1.10)
@@ -672,9 +672,9 @@ jobs:
           # The same ED25519 fingerprint the operator's workstation already trusts for this host.
           HOST_KEY_FINGERPRINT: "SHA256:QAfK8OXxclqteczzPHnOn6CsMH9r9d0jBPctTE99FD0"
           REPO_PATH: CRM/fe-prionex
-          # 🔴 A blast-radius ceiling in the same sense as MAX_CANDIDATES in the sweep above — the
-          # question it answers is "how much unwatched destruction is acceptable in one run", not
-          # "what is a nice round number". Measured, not assigned: weekly unique-commit volume on
+          # 🔴 NOT a blast-radius ceiling any more — see the note at the check itself. A catch-up
+          # commit destroys nothing, so there is no damage to bound; what survives is a "this
+          # schedule has not been running" sanity guard. The value is still measured, not chosen: Measured, not assigned: weekly unique-commit volume on
           # the old `dev` was 41–99 in an ordinary week (W23–W38 2026) with peaks to 279, and a
           # month of the schedule silently not running is ≈260. 150 passes every ordinary week and
           # refuses exactly where a large count means the schedule has NOT been working — which is
@@ -845,7 +845,10 @@ jobs:
           # keeps reporting them for the rest of the branch's life: measured on a fixture, week 2
           # answered "3" when the true answer was 0, and the figure only grows. Left uncorrected
           # it would inflate every report and eventually trip MAX_DISCARDED on a week that
-          # changed nothing — the ceiling firing for a reason that does not exist.
+          # changed nothing. 🔴 And the opposite mistake is the dangerous one: a limit picked
+          # WRONGLY (a quoting commit, a changed marker) makes the count too LOW and the guard
+          # silently useless — which is why the candidate test below is structural, and why a
+          # rev-list failure above is a hard stop rather than an empty result.
           # `git cherry <upstream> <head> <limit>` counts only commits in `head` not reachable
           # from `limit`, and `limit` is the previous catch-up commit, found by the marker its
           # own message carries.
@@ -863,14 +866,40 @@ jobs:
           # So each candidate is checked STRUCTURALLY, by what a catch-up commit provably is: a
           # merge (it has a second parent) whose tree equals that second parent's tree (it
           # carries main's tree). A quoting commit has no second parent and is skipped.
+          # 🔴 Review round 4: `2>/dev/null || true` used to swallow a rev-list FAILURE and
+          # present it as "no previous catch-up" — which now SKIPS the ceiling (see below). That
+          # is the optimistic direction, the one this file may not fail in, and it would have
+          # been invisible. A failure to enumerate and an empty enumeration are separated here.
+          if ! CANDIDATES="$(git rev-list --format='%H %s' --no-commit-header "$DEV_SHA" 2>&1)"; then
+            echo "FAIL: could not enumerate dev's history to find the previous catch-up commit."\
+                 "That is the baseline the whole count depends on, and guessing it would either"\
+                 "inflate the report or skip the ceiling. git said:"
+            printf '%s\n' "$CANDIDATES"
+            echo "Nothing has been changed."
+            exit 1
+          fi
+          # 🔴 Anchored on the SUBJECT, not anywhere in the body. `--grep` matches any line of
+          # the message, so an ordinary PR merge whose body merely quotes a catch-up message
+          # would qualify — and a PR merge has a second parent and, when it branched off dev's
+          # tip, the same tree as that parent, so it passes the structural test too. Reproduced
+          # on a fixture: such a merge was chosen as the limit and the count came back 0 where
+          # the truth was 2. Forgejo's own merge subjects always start with "Merge pull request",
+          # so requiring the marker at the START OF THE SUBJECT leaves only deliberate spoofing.
           LAST_CATCHUP=""
-          for CANDIDATE in $(git rev-list --grep="^${RESET_MARKER}" "$DEV_SHA" 2>/dev/null || true); do
-            CAND_P2="$(git rev-parse -q --verify "${CANDIDATE}^2" 2>/dev/null || true)"
+          while IFS=' ' read -r CAND_SHA CAND_SUBJECT; do
+            [ -n "$CAND_SHA" ] || continue
+            case "$CAND_SUBJECT" in
+              "${RESET_MARKER}"*) ;;
+              *) continue ;;
+            esac
+            # Structural confirmation on top of the subject: a catch-up commit is a merge whose
+            # tree is its second parent's tree. Both must hold.
+            CAND_P2="$(git rev-parse -q --verify "${CAND_SHA}^2" 2>/dev/null || true)"
             [ -n "$CAND_P2" ] || continue
-            [ "$(git rev-parse "${CANDIDATE}^{tree}")" = "$(git rev-parse "${CAND_P2}^{tree}")" ] || continue
-            LAST_CATCHUP="$CANDIDATE"
+            [ "$(git rev-parse "${CAND_SHA}^{tree}")" = "$(git rev-parse "${CAND_P2}^{tree}")" ] || continue
+            LAST_CATCHUP="$CAND_SHA"
             break
-          done
+          done <<< "$CANDIDATES"
           if [ -n "$LAST_CATCHUP" ]; then
             echo "previous catch-up commit: ${LAST_CATCHUP} — counting only what landed after it."
             set -- "refs/remotes/origin/main" "refs/remotes/origin/dev" "$LAST_CATCHUP"
@@ -923,14 +952,17 @@ jobs:
                  "catch-up commit supersedes content, it does not discard history. The refusal"\
                  "is about surprise, not damage — a week this size usually means the schedule"\
                  "has not been running (41–99 is ordinary, a month of silence is about 260)."
-            echo "  To proceed deliberately after looking: re-run this workflow by"\
-                 "workflow_dispatch once the reason is understood, or raise MAX_DISCARDED in the"\
-                 "same commit that records why. Do NOT follow §2's manual force-push — this"\
-                 "instance refuses it from every actor (§12)."
+            echo "  🔴 Re-dispatching this workflow will NOT clear this: it has no inputs, so a"\
+                 "manual run repeats the identical job over identical state and refuses again."\
+                 "There are exactly two real exits, and both are deliberate acts: land the"\
+                 "superseded work on main (which drops the count to what is genuinely unmerged),"\
+                 "or raise MAX_DISCARDED in a PR whose message records why this week was"\
+                 "legitimately that size. Do NOT follow §2's manual force-push — this instance"\
+                 "refuses it from every actor (§12)."
             exit 1
           fi
 
-          # ── 4. ARCHIVE TAG, annotated, on the server BEFORE the branch moves. ──────────────
+          # ── 4. Decide the archive tag NAME (nothing is written yet). ────────────────────
           TAG_DATE="$(date -u +%Y-%m-%d)"
           TAG_NAME="archive/dev-${TAG_DATE}"
           # Collision: a second run on the same UTC day. If the existing tag already points at the
@@ -968,60 +1000,6 @@ jobs:
             fi
           fi
           echo "archive_tag=${TAG_NAME}" >> "$GITHUB_OUTPUT"
-
-          if [ "$SKIP_TAG_WRITE" -eq 0 ]; then
-            # 🔴 ANNOTATED (-a with -F), not lightweight. A lightweight tag carries no message, and
-            # the message is the entire point: it is this run's permanent, readable record on an
-            # instance where the log is not retrievable. `git tag -a` needs an identity, supplied
-            # per-command so nothing is written into a config that outlives this step.
-            #
-            # 🔴 The heredoc body below is written FLUSH LEFT in this file, deliberately, and
-            # that is not a formatting slip. A `run: |` block scalar is de-indented by YAML before
-            # the shell ever sees it, so these lines arrive at column 0 — which is exactly what
-            # the terminator needs and exactly how the message should read in `git show`. The
-            # obvious-looking alternatives are both worse: `<<-TAGMSG` strips TABS only and this
-            # file is space-indented throughout, and an indented body "fixed up" afterwards with
-            # `sed -i` adds a portability dependency (BSD `sed -i` requires an argument; BusyBox's
-            # does not) in exchange for nothing at all.
-            TAG_MESSAGE_FILE="${WORKDIR}/tagmsg"
-            cat > "$TAG_MESSAGE_FILE" <<TAGMSG
-          Weekly DEV reset — where dev stood before it was caught up to main.
-
-          discarded commits : ${DISCARDED} (no equivalent in main)
-          also dropped      : ${EQUIVALENT} already present in main in another shape
-          main was ahead by : ${BEHIND} commit(s)
-          old dev           : ${DEV_SHA}
-          new dev           : ${MAIN_SHA}
-          forgejo run id    : ${RUN_ID} (run number ${RUN_NUMBER})
-          archived at       : $(date -u +%Y-%m-%dT%H:%M:%SZ)
-
-          The ${DISCARDED} superseded commit(s) are reachable from this tag AND from dev itself
-          (the catch-up commit keeps them on its first-parent line) — this tag is a record of
-          where the branch stood, not the only way back.
-          To read them: git fetch origin ${TAG_NAME} && git log ${TAG_NAME}
-          Procedure and rationale: docs/dev-weekly-reset-plan.md
-          TAGMSG
-
-            git -c user.name="Weekly DEV Reset" -c user.email="dev-weekly-reset@crm-prionex.com" \
-                tag -a "$TAG_NAME" "$DEV_SHA" -F "$TAG_MESSAGE_FILE"
-
-            if ! git push origin "refs/tags/${TAG_NAME}" 2>&1; then
-              echo "FAIL: could not write the archive tag ${TAG_NAME} to the server. REFUSING TO"\
-                   "TOUCH THE BRANCH — the archive is what makes this operation reversible, and a"\
-                   "reset without it would discard ${DISCARDED} commit(s) with no way back. dev is"\
-                   "UNCHANGED."
-              exit 1
-            fi
-            # An exit code is not evidence on this instance (Story 1.10) — read it back.
-            WRITTEN_PEELED="$(git ls-remote --tags origin "refs/tags/${TAG_NAME}^{}" 2>/dev/null | awk '{print $1}' | head -n1)"
-            if [ "$WRITTEN_PEELED" != "$DEV_SHA" ]; then
-              echo "FAIL: wrote ${TAG_NAME}, but reading it back from the server peels to"\
-                   "'${WRITTEN_PEELED:-nothing}', not the archived '${DEV_SHA}'. The archive is"\
-                   "not confirmed, so the reset does not happen. dev is UNCHANGED."
-              exit 1
-            fi
-            echo "OK: ${TAG_NAME} -> ${DEV_SHA} (annotated, verified by read-back)."
-          fi
 
           # ── 5. CATCH dev UP to main with a FAST-FORWARD commit. ────────────────────
           # 🔴 THIS IS NOT A FORCE-PUSH, AND IT CANNOT BE ONE. Forgejo 15.0.5+gitea-1.22.0
@@ -1065,6 +1043,11 @@ jobs:
           forgejo run id     : ${RUN_ID} (run number ${RUN_NUMBER})
           caught up at       : $(date -u +%Y-%m-%dT%H:%M:%SZ)
           
+          To put superseded work back on dev, a plain merge WILL NOT WORK: the old branch is now
+          an ancestor of dev, so git answers "Already up to date" and changes nothing. Rebase the
+          branch onto origin/dev, or revert this commit with "git revert -m 1 <this sha>" and
+          open a PR.
+
           Why a catch-up commit and not a reset: this instance refuses any non-fast-forward
           push to a protected branch before it checks who is pushing. Procedure and
           rationale: docs/dev-weekly-reset-plan.md
@@ -1097,6 +1080,66 @@ jobs:
                  "message and every --first-parent read of this branch depend on it. Nothing has"\
                  "been changed on the server."
             exit 1
+          fi
+
+          if [ "$SKIP_TAG_WRITE" -eq 0 ]; then
+            # 🔴 ANNOTATED (-a with -F), not lightweight. A lightweight tag carries no message, and
+            # the message is the entire point: it is this run's permanent, readable record on an
+            # instance where the log is not retrievable. `git tag -a` needs an identity, supplied
+            # per-command so nothing is written into a config that outlives this step.
+            #
+            # 🔴 The heredoc body below is written FLUSH LEFT in this file, deliberately, and
+            # that is not a formatting slip. A `run: |` block scalar is de-indented by YAML before
+            # the shell ever sees it, so these lines arrive at column 0 — which is exactly what
+            # the terminator needs and exactly how the message should read in `git show`. The
+            # obvious-looking alternatives are both worse: `<<-TAGMSG` strips TABS only and this
+            # file is space-indented throughout, and an indented body "fixed up" afterwards with
+            # `sed -i` adds a portability dependency (BSD `sed -i` requires an argument; BusyBox's
+            # does not) in exchange for nothing at all.
+            TAG_MESSAGE_FILE="${WORKDIR}/tagmsg"
+            cat > "$TAG_MESSAGE_FILE" <<TAGMSG
+          Weekly DEV reset — where dev stood before it was caught up to main.
+
+          superseded commits : ${DISCARDED} (no equivalent in main)
+          also superseded    : ${EQUIVALENT} already present in main in another shape
+          main was ahead by  : ${BEHIND} commit(s)
+          dev before         : ${DEV_SHA}
+          dev after          : ${CATCHUP_SHA}
+          tree carried       : ${MAIN_SHA} (main)
+          forgejo run id     : ${RUN_ID} (run number ${RUN_NUMBER})
+          archived at        : $(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+          The ${DISCARDED} superseded commit(s) are reachable from this tag, and — once the
+          catch-up commit above lands — from dev itself through its first parent. This tag is a
+          record of where the branch stood, not the only way back.
+
+          To put superseded work back on dev, a plain merge WILL NOT WORK: the old branch is an
+          ancestor of the new dev, so git answers "Already up to date" and changes nothing.
+          Rebase it onto origin/dev, or revert the catch-up commit with
+          "git revert -m 1 ${CATCHUP_SHA}" and open a PR.
+          To read them: git fetch origin ${TAG_NAME} && git log ${TAG_NAME}
+          Procedure and rationale: docs/dev-weekly-reset-plan.md
+          TAGMSG
+
+            git -c user.name="Weekly DEV Reset" -c user.email="dev-weekly-reset@crm-prionex.com" \
+                tag -a "$TAG_NAME" "$DEV_SHA" -F "$TAG_MESSAGE_FILE"
+
+            if ! git push origin "refs/tags/${TAG_NAME}" 2>&1; then
+              echo "FAIL: could not write the archive tag ${TAG_NAME} to the server. REFUSING TO"\
+                   "TOUCH THE BRANCH — the archive is what makes this operation reversible, and a"\
+                   "reset without it would discard ${DISCARDED} commit(s) with no way back. dev is"\
+                   "UNCHANGED."
+              exit 1
+            fi
+            # An exit code is not evidence on this instance (Story 1.10) — read it back.
+            WRITTEN_PEELED="$(git ls-remote --tags origin "refs/tags/${TAG_NAME}^{}" 2>/dev/null | awk '{print $1}' | head -n1)"
+            if [ "$WRITTEN_PEELED" != "$DEV_SHA" ]; then
+              echo "FAIL: wrote ${TAG_NAME}, but reading it back from the server peels to"\
+                   "'${WRITTEN_PEELED:-nothing}', not the archived '${DEV_SHA}'. The archive is"\
+                   "not confirmed, so the reset does not happen. dev is UNCHANGED."
+              exit 1
+            fi
+            echo "OK: ${TAG_NAME} -> ${DEV_SHA} (annotated, verified by read-back)."
           fi
 
           echo "--- fast-forwarding refs/heads/dev: ${DEV_SHA} -> ${CATCHUP_SHA} (tree = main) ---"
@@ -1193,7 +1236,7 @@ jobs:
               ;;
           esac
 
-      - name: Dispatch deploy-dev.yml with the commit this run pinned (Task 4, AC3, AC6)
+      - name: Dispatch deploy-dev.yml with the image commit this run pinned (Task 4, AC3, AC6)
         if: always()
         # Code review H4/Task 5.6: unconditional — this step must run whether the sweep above
         # succeeded, failed, or was itself skipped for any reason. The reset's whole purpose is the
@@ -1203,9 +1246,11 @@ jobs:
           FJ_TOKEN: ${{ github.token }}
           SERVER_URL: ${{ github.server_url }}
           REPO_SLUG: ${{ github.repository }}
-          # The commit the reset step pinned and put on `dev`. Empty when that step refused,
-          # failed, or was skipped — this step runs `if: always()`, so it must cope with that, and
-          # the body below says how and why.
+          # 🔴 main's commit — the one whose IMAGE the deploy resolves. It is NOT the commit
+          # `dev` now points at (that is the catch-up commit, which has no image); the two carry
+          # the identical tree, which is what makes pinning this one correct. Empty when the
+          # reset step refused, failed or was skipped — this step runs `if: always()`, so it must
+          # cope with that, and the body below says how.
           PINNED_SHA: ${{ steps.reset.outputs.main_sha }}
         run: |
           set -euo pipefail
@@ -1286,8 +1331,7 @@ jobs:
           # only ever lives on main once merged. What changed is the INNER `inputs.ref`: the exact
           # commit this run pinned and just put on `dev`, instead of the literal `main`.
           #
-          # Why the SHA and not the branch name, when they are equal by construction the moment
-          # this line runs: they are equal AT THIS INSTANT, and the deploy resolves its ref later,
+          # Why the SHA and not the branch name `main`: the deploy resolves its ref later,
           # in its own run, which cannot start until this job leaves the shared concurrency group.
           # A merge to `main` inside that window would make `ref=main` deploy a commit this run
           # never reset to, never counted, and never archived against. The SHA closes that window,
