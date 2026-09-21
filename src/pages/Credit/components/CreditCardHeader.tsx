@@ -32,7 +32,14 @@ const TONE_CLASS: Record<string, string> = {
   danger: 'text-error-700',
 }
 
-function CopyButton({ value, label }: { value: string; label: string }) {
+/**
+ * Копирование значения одной кнопкой.
+ *
+ * Экспортируется, потому что нужна не только шапке: ключи операции рельса
+ * (`provider_tx_id`, `client_transaction_id`) оператор диктует в поддержку
+ * провайдера, и набирать 40 символов руками он будет с ошибкой.
+ */
+export function CopyButton({ value, label }: { value: string; label: string }) {
   const [copied, setCopied] = useState(false)
   return (
     <button
