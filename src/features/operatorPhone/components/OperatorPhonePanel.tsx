@@ -3,6 +3,7 @@ import { useRef } from 'react'
 import { OPERATOR_PHONE_CONFIGURED, OPERATOR_PHONE_URL } from '../constants'
 import { useOperatorPhone } from '../hooks/useOperatorPhone'
 import { OperatorPhoneStatus } from './OperatorPhoneStatus'
+import { piiProps } from '@/lib/openreplay/pii'
 
 /**
  * The operator phone as a hidden background tab plus its status pill (KAN-353).
@@ -26,11 +27,15 @@ export function OperatorPhonePanel() {
 
   return (
     <>
+      {/* Cross-origin today, so the tracker cannot reach its DOM anyway. Marked
+          by the same rule regardless: the decision must not depend on whether
+          the origins happen to match this week. */}
       <iframe
         ref={iframeRef}
         src={OPERATOR_PHONE_URL}
         title="Operator phone"
         aria-hidden
+        {...piiProps}
         allow="microphone; autoplay"
         style={{
           position: 'fixed',

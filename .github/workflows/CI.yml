@@ -29,6 +29,17 @@ jobs:
       - name: Check formatting
         run: npm run format:check
 
+      # 🔒 KAN-KB-54, mirrored from `.forgejo/workflows/ci.yml`. The barrier has
+      # to stand on BOTH paths: this file is what runs for a push to
+      # `development`, which `mirror-github.yml` pushes here. A gate on one path
+      # out of two is the same mistake the prod build gate made.
+      #
+      # ⚠️ It fails on names, addresses, attributes, iframes and HTML sinks. It
+      # does NOT fail on free text — that is reported as advisory and triaged by
+      # hand. See the fuller note in the Forgejo file.
+      - name: Check for unmarked personal data (KAN-KB-54)
+        run: npm run pii-audit -- --check
+
   typecheck:
     name: Type Check
     runs-on: ubuntu-latest

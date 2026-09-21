@@ -80,101 +80,216 @@ export function redactSensitiveHeaders(headers: Record<string, string> | undefin
 }
 
 /**
- * The single instance, as a promise. Also the guard against a second start:
- * `StrictMode` runs effects twice in development, and two `new Tracker().start()`
- * calls mean two sessions for one page load.
+ * The RUNNING tracker, as a promise. Also the guard against a second start:
+ * `StrictMode` runs effects twice in development, and two `start()` calls mean
+ * two sessions for one page load.
  *
  * It resolves to `null` when the tracker is disabled, refused to start, or threw
- * — callers must handle that, which is why the type says so.
+ * — callers must handle that, which is why the type says so. It is `null`
+ * (not a promise) while nothing is running: before the first start and after
+ * `stopOpenReplay()`.
  */
 let trackerPromise: Promise<Tracker | null> | null = null
 
-/** The started tracker, or `null`. Used by the code that identifies the operator. */
+/**
+ * The one constructed instance, as the promise of its construction.
+ *
+ * 🔴 A PROMISE, not the resolved value, and that is the guard against a second
+ * `new Tracker()`. The instance is built once and RESTARTED — `stop()` ends the
+ * session, `start()` on the same instance opens a new one — because a second
+ * instance would register a second set of DOM observers on the same document.
+ * Holding the resolved value here left a window: a stop/start while the chunk
+ * was still downloading saw `null`, took the import branch again and built a
+ * second tracker (review of KAN-KB-54, round 3). An in-flight promise has no
+ * such window — whoever asks second gets the same construction.
+ */
+let construction: Promise<Tracker> | null = null
+
+/**
+ * The stop that is in progress, if any.
+ *
+ * Start chains behind it, so the transitions are SERIALISED rather than
+ * reasoned about in terms of microtask order. The previous version argued
+ * "microtasks are FIFO" — which is true of callbacks that are already eligible
+ * and false of a stop waiting on a start that has not resolved yet, while a new
+ * start's own chain becomes eligible immediately. The concrete failure: a
+ * logout+login during the first start ran the new `start()` first and the
+ * queued `stop()` second, on the same instance, and left the tab with a dead
+ * recording for the rest of its life, silently.
+ */
+let stopping: Promise<void> = Promise.resolve()
+
+/** The started tracker, or `null`. Used by `identify.ts` to name the operator. */
 export function getTracker(): Promise<Tracker | null> {
   return trackerPromise ?? Promise.resolve(null)
 }
 
-export function startOpenReplay(): void {
+/**
+ * End the current session, so that the next `startOpenReplay()` opens a new one.
+ *
+ * Called on logout by `identify.ts`. A session is one per tab and the tracker
+ * has no way to unset its user id, so without this a logout followed by another
+ * login in the same tab would attribute the WHOLE session to whoever logged in
+ * last — on a shared call-centre workstation, the normal case.
+ */
+export function stopOpenReplay(): void {
+  const running = trackerPromise
+  trackerPromise = null
+  if (!running) return
+  stopping = running
+    .then((tracker) => {
+      tracker?.stop()
+    })
+    .catch(() => undefined)
+}
+
+/** What a start may ask for. A subset of the package's own `StartOptions`. */
+export interface StartOpenReplayOptions {
+  /**
+   * Open a NEW session rather than continue the one this tab already has.
+   *
+   * 🔴 Required after a logout, and not implied by `stop()`. Verified in
+   * `@openreplay/tracker@18.0.6` (`dist/lib/index.js`): `stop()` clears the
+   * observers and the message queue but leaves the session token in
+   * `sessionStorage`, and `checkSessionToken(forceNew)` continues the session
+   * whenever a token is present and `forceNew` is not set — that is how a page
+   * navigation keeps one session. Without this flag the logout/login sequence
+   * produced ONE session whose user id was rewritten to the second operator:
+   * precisely the mis-attribution `identify.ts` exists to prevent.
+   *
+   * Off for the first start of a page load on purpose, so that navigating
+   * within the app keeps one session.
+   */
+  forceNew?: boolean
+  /**
+   * Identity set together with the session start.
+   *
+   * On the RESTART path (`identify.ts`, after a logout or on a login screen
+   * that booted with nobody) this is what gives the new session an owner from
+   * its first frame. On a plain page load `main.tsx` starts without it and the
+   * identity arrives one round-trip later via `setUserID` — that session is
+   * being continued, not opened, so its owner is already on record.
+   */
+  userID?: string
+  metadata?: Record<string, string>
+}
+
+export function startOpenReplay(options: StartOpenReplayOptions = {}): void {
   if (!OPENREPLAY_ENABLED || trackerPromise) return
 
-  trackerPromise = import('@openreplay/tracker')
-    .then(async ({ default: OpenReplayTracker }) => {
-      const tracker = new OpenReplayTracker({
-        projectKey: OPENREPLAY_PROJECT_KEY,
-        ingestPoint: OPENREPLAY_INGEST_URL,
+  const construct = (): Promise<Tracker> =>
+    (construction ??= import('@openreplay/tracker')
+      .then(
+        ({ default: OpenReplayTracker }) =>
+          new OpenReplayTracker({
+            projectKey: OPENREPLAY_PROJECT_KEY,
+            ingestPoint: OPENREPLAY_INGEST_URL,
 
-        // Strict mode — off today, see config.ts. Wired so that turning it on
-        // costs a repository variable and a rebuild rather than a code change.
-        privateMode: OPENREPLAY_PRIVATE_MODE,
+            // Strict mode — off today, see config.ts. Wired so that turning it on
+            // costs a repository variable and a rebuild rather than a code change.
+            privateMode: OPENREPLAY_PRIVATE_MODE,
 
-        // Text nodes. `obscureTextNumbers` defaults to FALSE in the package and
-        // is off on the project itself, so client phone numbers and loan amounts
-        // would otherwise be recorded verbatim. This is the blocking one.
-        obscureTextNumbers: true,
-        obscureTextEmails: true,
+            // Text nodes. `obscureTextNumbers` defaults to FALSE in the package and
+            // is off on the project itself, so client phone numbers and loan amounts
+            // would otherwise be recorded verbatim. This is the blocking one.
+            obscureTextNumbers: true,
+            obscureTextEmails: true,
 
-        // Input fields. The package default is `Obscured` (the value is dropped
-        // but its length is still sent); `Hidden` sends nothing at all.
-        // `InputMode` is not exported by the package, so the literal is the only
-        // way to say this: 0 = Plain, 1 = Obscured, 2 = Hidden.
-        obscureInputNumbers: true,
-        obscureInputEmails: true,
-        defaultInputMode: 2,
+            // Input fields. The package default is `Obscured` (the value is dropped
+            // but its length is still sent); `Hidden` sends nothing at all.
+            // `InputMode` is not exported by the package, so the literal is the only
+            // way to say this: 0 = Plain, 1 = Obscured, 2 = Hidden.
+            obscureInputNumbers: true,
+            obscureInputEmails: true,
+            defaultInputMode: 2,
 
-        // Console capture is ON by default (log/info/warn/error/debug/assert) and
-        // is masked by nothing except privateMode. `src/` holds ~78 `console.*`
-        // calls that nobody writes with a session recorder in mind, so the module
-        // is switched off entirely rather than filtered.
-        consoleMethods: null,
+            // Console capture is ON by default (log/info/warn/error/debug/assert) and
+            // is masked by nothing except privateMode. `src/` holds ~78 `console.*`
+            // calls that nobody writes with a session recorder in mind, so the module
+            // is switched off entirely rather than filtered.
+            consoleMethods: null,
 
-        // Canvas snapshots are images, and images bypass every DOM-level mask.
-        canvas: { disableCanvas: true },
+            // Canvas snapshots are images, and images bypass every DOM-level mask.
+            canvas: { disableCanvas: true },
 
-        // Every field is spelled out because the package's own types demand it:
-        // `network` is declared as full `NetworkOptions` in one place and as
-        // `Partial<NetworkOptions>` in another, and the intersection makes the
-        // three below required. The values ARE the package defaults, except
-        // `sessionTokenHeader`, which is a decision: an `X-OpenReplay-SessionToken`
-        // header on cross-origin API calls would force a preflight, and if Kong
-        // does not list it in `Access-Control-Allow-Headers`, every request to the
-        // API fails. Recordings are correlated by `getSessionURL()` instead.
-        network: {
-          capturePayload: false,
+            // Every field is spelled out because the package's own types demand it:
+            // `network` is declared as full `NetworkOptions` in one place and as
+            // `Partial<NetworkOptions>` in another, and the intersection makes the
+            // three below required. The values ARE the package defaults, except
+            // `sessionTokenHeader`, which is a decision: an `X-OpenReplay-SessionToken`
+            // header on cross-origin API calls would force a preflight, and if Kong
+            // does not list it in `Access-Control-Allow-Headers`, every request to the
+            // API fails. Recordings are correlated by `getSessionURL()` instead.
+            network: {
+              capturePayload: false,
 
-          // The same list the sanitizer uses, so the two cannot drift apart: a
-          // credential added to one is covered by both. `ignoreHeaders` drops the
-          // header before it is ever recorded; the sanitizer is the second line,
-          // for anything that reaches the record under different casing.
-          ignoreHeaders: SENSITIVE_HEADERS,
-          sessionTokenHeader: false,
-          failuresOnly: false,
-          captureInIframes: true,
+              // The same list the sanitizer uses, so the two cannot drift apart: a
+              // credential added to one is covered by both. `ignoreHeaders` drops the
+              // header before it is ever recorded; the sanitizer is the second line,
+              // for anything that reaches the record under different casing.
+              ignoreHeaders: SENSITIVE_HEADERS,
+              sessionTokenHeader: false,
+              failuresOnly: false,
+              captureInIframes: true,
 
-          // Bodies are not captured, but that covers neither URLs nor headers,
-          // and this codebase carries credentials in both: a JWT in the
-          // transcription socket's query string, and X-Internal-Api-Key on every
-          // credit-service request. The sanitizer runs before the record is sent
-          // and its return value replaces it, so nothing redacted here leaves the
-          // browser.
-          sanitizer: (data) => {
-            data.url = redactSensitiveQueryParams(data.url)
-            redactSensitiveHeaders(data.request?.headers)
-            redactSensitiveHeaders(data.response?.headers)
-            return data
-          },
-        },
+              // Bodies are not captured, but that covers neither URLs nor headers,
+              // and this codebase carries credentials in both: a JWT in the
+              // transcription socket's query string, and X-Internal-Api-Key on every
+              // credit-service request. The sanitizer runs before the record is sent
+              // and its return value replaces it, so nothing redacted here leaves the
+              // browser.
+              sanitizer: (data) => {
+                data.url = redactSensitiveQueryParams(data.url)
+                redactSensitiveHeaders(data.request?.headers)
+                redactSensitiveHeaders(data.response?.headers)
+                return data
+              },
+            },
 
-        // 🔴 Required, not optional. The constructor checks
-        // `location.protocol !== 'https:'` — localhost is NOT exempt — and
-        // returns silently, after which `start()` rejects with a string about
-        // doNotTrack that points nowhere near the real cause. Vite strips this
-        // branch from production builds, where the stands serve over HTTPS.
-        __DISABLE_SECURE_MODE: import.meta.env.DEV,
-      })
+            // 🔴 Required, not optional. The constructor checks
+            // `location.protocol !== 'https:'` — localhost is NOT exempt — and
+            // returns silently, after which `start()` rejects with a string about
+            // doNotTrack that points nowhere near the real cause. Vite strips this
+            // branch from production builds, where the stands serve over HTTPS.
+            __DISABLE_SECURE_MODE: import.meta.env.DEV,
+          })
+      )
+      // Reset belongs to the CONSTRUCTION's own failure — the import did not
+      // arrive — so the next start re-imports. It must not sit in the outer
+      // catch below: that one also sees a `start()` that threw after a
+      // perfectly good construction, and dropping the instance there would let
+      // the next start build a SECOND tracker on the same document, two sets
+      // of observers — the very thing this indirection exists to prevent
+      // (review of KAN-KB-54, round 5).
+      .catch((error: unknown) => {
+        construction = null
+        throw error
+      }))
 
+  // Behind the stop in progress (see `stopping`), then behind the construction.
+  //
+  // INVARIANT: nothing running ⇒ `trackerPromise === null`. A start that ends
+  // in `null` — the import rejected, or `start()` refused — releases the guard
+  // as it settles, so the NEXT `startOpenReplay()` tries again instead of
+  // hitting a promise that resolved to nothing and returning early. Without
+  // this a failed first start left the tab dead until a logout happened to
+  // null the guard (Fable review of this pass, scenario e). `attempt` is
+  // compared by identity before clearing, so a settle from an OLD attempt
+  // cannot clear a NEWER one that a stop/start cycle has since installed.
+  // `construct()` is called INSIDE the chain, not captured before it: an
+  // attempt queued behind a stop can outlive an import that rejected in the
+  // meantime, and a captured promise would hand it the rejection (or, with the
+  // `??=` already run, a `null`). Re-running `??=` at that point re-imports.
+  const attempt: Promise<Tracker | null> = stopping
+    .then(construct)
+    .then(async (tracker) => {
       // An unsuccessful start RESOLVES with `{ success: false, reason }` — it
       // does not throw. Without this check the failure would pass unnoticed.
-      const result = await tracker.start()
+      const result = await tracker.start({
+        forceNew: options.forceNew,
+        userID: options.userID,
+        metadata: options.metadata,
+      })
       if (!result.success) {
         // `console.error` rather than `.info` because the project's lint rule
         // permits only that one — and it fits: this line is reached only when a
@@ -187,8 +302,18 @@ export function startOpenReplay(): void {
       return tracker
     })
     // A rejection here is a plain string, not an Error, and arrives when the
-    // constructor never built its app (not a browser, doNotTrack, secure mode).
+    // import failed (already handled above) or `start()` threw — in 18.0.6 that
+    // is the "app never built" path: not a browser, doNotTrack, secure mode.
     // Swallowed on purpose: a missing session recording is not worth an error
     // in front of an operator, and there is nothing they could do about it.
+    // The construction is KEPT: `start()` on the same instance is retried on
+    // the next login, and an instance without an app has no observers to
+    // duplicate.
     .catch(() => null)
+    .then((tracker) => {
+      if (tracker === null && trackerPromise === attempt) trackerPromise = null
+      return tracker
+    })
+
+  trackerPromise = attempt
 }

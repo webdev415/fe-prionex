@@ -53,6 +53,7 @@ import { RouteChangeTracker, TrackingProvider } from '@/features/operatorAnalyti
 import { LawyerWorkplaceHeaderNav } from '@/pages/LawyerWorkplace/components/LawyerWorkplaceHeaderNav'
 import { useLegalInboxSummary } from '@/features/lawyerWorkplace'
 import { useAiAssistantSettings } from '@/features/aiSettings/hooks/useAiAssistantSettings'
+import { piiProps } from '@/lib/openreplay/pii'
 
 // Minimum digit count required to fire a phone-type search. Mirrors the
 // backend guard at services/client/app/routers/search.py (PHONE_MIN_DIGITS).
@@ -239,7 +240,10 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
               <Icons.Headset size={20} className="text-white" strokeWidth={1.5} />
             </div>
             <div className="flex min-w-0 flex-1 flex-col">
-              <div className="text-foreground truncate text-sm font-semibold">
+              {/* The phone below stays readable — it is digits, which the
+                  tracker masks on its own, and it is what keeps the bubble
+                  identifiable in a replay. */}
+              <div className="text-foreground truncate text-sm font-semibold" {...piiProps}>
                 {minimizedCall.clientName}
               </div>
               <div className="text-muted-foreground text-xs">
@@ -288,7 +292,7 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
               <Icons.Voice size={20} className="text-white" strokeWidth={1.5} />
             </div>
             <div className="flex min-w-0 flex-1 flex-col">
-              <div className="text-foreground truncate text-sm font-semibold">
+              <div className="text-foreground truncate text-sm font-semibold" {...piiProps}>
                 {minimizedCall.callData?.clientName || minimizedCall.clientName}
               </div>
               <div className="text-muted-foreground text-xs">
@@ -360,7 +364,12 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuItem disabled className="text-foreground text-sm">
             <Icons.User02 size={16} className="mr-2" />
-            <span className="truncate">{displayName}</span>
+            {/* The operator's own name, and a PORTAL: Radix renders the menu
+                under document.body, so inheritance from anything in the header
+                would not reach it. The attribute goes inside the content. */}
+            <span className="truncate" {...piiProps}>
+              {displayName}
+            </span>
           </DropdownMenuItem>
 
           {minimizedCall && (

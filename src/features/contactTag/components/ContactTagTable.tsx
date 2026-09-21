@@ -152,6 +152,7 @@ export function ContactTagTable({ rows, emptyMessage }: ContactTagTableProps) {
       {
         key: 'employee_name',
         header: t('pages.reports.contactTag.columns.employee'),
+        obscured: true,
         // Null only when the directory ships a non-string label. An employee
         // the directory does not know at all takes their clients out of the
         // feed entirely (card parity), so this is not the "unassigned" case.

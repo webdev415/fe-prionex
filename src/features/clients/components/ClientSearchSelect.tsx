@@ -124,6 +124,7 @@ export function ClientSearchSelect({
         </DropdownMenu>
       </div>
       <SearchableSelect
+        obscured
         options={options}
         value={value}
         onValueChange={(val) => {

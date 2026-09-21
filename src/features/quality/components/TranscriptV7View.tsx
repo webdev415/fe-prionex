@@ -62,6 +62,7 @@ import {
   type NormalizedDivergence,
   type TrendKind,
 } from '../lib/transcriptAudio'
+import { piiProps } from '@/lib/openreplay/pii'
 
 export interface TranscriptV7ViewProps {
   transcript: CallTranscript
@@ -661,6 +662,10 @@ function V7TurnRow({
       </div>
       <div
         className={`text-dark-500 rounded-xl border px-3 py-2 text-sm leading-relaxed ${styles.bubble} ${polarityBorder}`}
+        // The spoken words. The bubble is marked rather than each text segment,
+        // so the inline pause and tag markers inside it go too — a transcript
+        // that is asterisks with readable gaps between them says nothing extra.
+        {...piiProps}
       >
         {row.segments.map((segment, i) => {
           if (segment.kind === 'text') {

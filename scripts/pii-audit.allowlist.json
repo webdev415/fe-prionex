@@ -1,0 +1,67 @@
+[
+  {
+    "path": "src/pages/ClientManagement/components/ClientFiltersBar.tsx",
+    "identifier": "portfolio.displayName",
+    "reason": "A portfolio's name (\"Portfolio 2024-Q1\"), not a person's. Matched only because the dictionary learned `displayName` from the employee-card formatter."
+  },
+  {
+    "path": "src/pages/ClientManagement/components/PortfolioDropdown.tsx",
+    "identifier": "portfolio.displayName",
+    "reason": "Same: a portfolio is not a person."
+  },
+  {
+    "path": "src/components/forms/ColorPickerField.tsx",
+    "identifier": "previewText",
+    "reason": "A colour swatch's sample caption ('Tag Name'), not rendered client text."
+  },
+  {
+    "path": "src/pages/DocumentGeneration/components/DocumentTemplateEditor.tsx",
+    "identifier": "previewText",
+    "reason": "Template preview rendered with `sampleMap` — synthetic sample values, not a real client's."
+  },
+  {
+    "path": "src/pages/LawyerWorkplace/components/settings/templates/ReplyTemplateModal.tsx",
+    "identifier": "previewText",
+    "reason": "Template preview rendered with a hard-coded sample context (the fixture client 'Іваненко Іван Іванович'), not real data."
+  },
+  {
+    "path": "src/pages/RRNotifications/RRNotificationsPage.tsx",
+    "identifier": "previewBody",
+    "reason": "`renderTemplate(templateText, SAMPLE_CTX)` — a synthetic sample context, not a real client's."
+  },
+  {
+    "path": "src/pages/DocumentGeneration/components/DocumentTemplatesTab.tsx",
+    "identifier": "row.body",
+    "reason": "The UNRENDERED template with its {{placeholders}} — UI copy. The rendered result is what carries personal data, and that lives in SendMessageModal/CampaignDetailModal, which are marked."
+  },
+  {
+    "path": "src/pages/DocumentGeneration/components/DocumentTemplatesTab.tsx",
+    "identifier": "row.description",
+    "reason": "A template's description — UI copy."
+  },
+  {
+    "path": "src/pages/Training/components/training/CoursesCatalogTab.tsx",
+    "identifier": "detail.description",
+    "reason": "A training course's description — UI copy."
+  },
+  {
+    "path": "src/pages/LawyerWorkplace/components/kanban/CreateKanbanTaskModal.tsx",
+    "identifier": "item.content",
+    "reason": "Dropdown option content — letter types, not free text."
+  },
+  {
+    "path": "src/pages/LawyerWorkplace/components/parameters/LetterParametersPanel.tsx",
+    "identifier": "item.content",
+    "reason": "Dropdown option content — letter types, not free text."
+  },
+  {
+    "path": "src/features/users/components/CreateUserForm.tsx",
+    "identifier": "errors.email.message",
+    "reason": "react-hook-form validation message ('Invalid email') — UI copy; the input value itself is dropped by defaultInputMode: 2."
+  },
+  {
+    "path": "src/features/users/components/EditUserForm.tsx",
+    "identifier": "errors.email.message",
+    "reason": "Same: a validation message, not a value."
+  }
+]

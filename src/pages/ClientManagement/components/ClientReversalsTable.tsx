@@ -94,6 +94,7 @@ export function ClientReversalsTable({
         key: 'clientFullName',
         header: t('pages.clients.detail.reversalsTable.clientFullName'),
         align: 'left',
+        obscured: true,
         render: (r) => r.client_full_name ?? clientFullName ?? '-',
       },
       {
@@ -106,6 +107,7 @@ export function ClientReversalsTable({
         key: 'user',
         header: t('pages.clients.detail.reversalsTable.user'),
         align: 'left',
+        obscured: true,
         render: (r) =>
           r.user_full_name ??
           resolveUserName?.(r.user_id) ??

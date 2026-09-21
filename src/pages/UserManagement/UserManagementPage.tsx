@@ -70,6 +70,7 @@ import {
   type UserFilterState,
   type WorkFormatFilter,
 } from './lib/userFilterDefaults'
+import { Pii } from '@/lib/openreplay/pii'
 
 function EmployeeStatus({ status }: { status: 'active' | 'disabled' | 'inactive' | 'suspended' }) {
   const { t } = useTranslation('common')
@@ -326,7 +327,15 @@ export function UserManagementPage() {
     setImpersonatingUserId(user.id)
     try {
       await startImpersonation(user.id)
-      toast.success(t('pages.users.messages.nowViewingAs', { username: user.username }))
+      // A login is not a name, but it identifies the person just as well, and
+      // this toast is the one place it is announced on screen rather than shown
+      // in a column a reviewer can skip.
+      toast.success(
+        <span>
+          {t('pages.users.messages.nowViewingAsPrefix', 'Now viewing as')}{' '}
+          <Pii>{user.username}</Pii>
+        </span>
+      )
 
       // Redirect to dashboard to avoid permission issues
       // (impersonated user may not have access to current page)
@@ -543,11 +552,15 @@ export function UserManagementPage() {
       header: t('pages.users.tableHeaders.fullName'),
       sortable: true,
       sortKey: 'full_name',
+      obscured: true,
       render: (user) => (
         <button
           type="button"
           onClick={() => openEmployeeCard(user)}
           className="text-foreground hover:text-primary group flex cursor-pointer items-center gap-3 text-left font-medium"
+          // The cell's text is asterisks in a replay, so the click label must
+          // not be derived from it.
+          data-openreplay-label="employee-card-open"
         >
           <UserAvatar
             userId={user.id}

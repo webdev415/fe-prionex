@@ -77,7 +77,15 @@ describe('MarkdownMessage — предпросмотр графиков асси
     fireEvent.click(await screen.findByTestId('assistant-image'))
 
     expect(await screen.findByTestId('assistant-file-preview-modal')).toBeInTheDocument()
-    expect(await screen.findByRole('img', { name: 'payments_2026.png' })).toBeInTheDocument()
+    // The image's accessible name is a ROLE, not the file name (KAN-KB-54):
+    // `alt` is sent to the recording verbatim, and an operator's upload is
+    // named after the client more often than not. The name is still on screen,
+    // as masked text in the modal's header.
+    const preview = await screen.findByRole('img', {
+      name: 'pages.aiAssistant.attachmentFrameTitle',
+    })
+    expect(preview).toBeInTheDocument()
+    expect(preview).not.toHaveAttribute('alt', 'payments_2026.png')
   })
 
   it('битая картинка даёт плейсхолдер, а не сломанную иконку', async () => {

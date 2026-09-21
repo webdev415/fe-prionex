@@ -59,6 +59,7 @@ export function SaleNotesPreview({ preview, onConfirm, onCancel, isExecuting }: 
       {
         key: 'client',
         header: t(`${p}.columns.client`, 'Client'),
+        obscured: true,
         render: (row: RowWithId) => (
           <span className="text-sm">
             {row.client_id ?? '—'}

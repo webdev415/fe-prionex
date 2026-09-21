@@ -25,6 +25,7 @@ import { cn } from '@/lib/utils'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/Tooltip'
 import { CallDialogModal } from '@/pages/ClientManagement/components/CallDialogModal'
 import { CallRecordingModal } from '@/pages/ClientManagement/components/CallRecordingModal'
+import { piiProps } from '@/lib/openreplay/pii'
 
 /**
  * Consecutive not-found polls before a call window is discarded. The poll runs
@@ -305,7 +306,10 @@ export function MinimizedCallBubble() {
               <Icons.Headset size={20} className="text-white" strokeWidth={1.5} />
             </div>
             <div className="flex min-w-0 flex-1 flex-col">
-              <div className="text-foreground truncate text-sm font-semibold">
+              {/* The phone below stays readable — it is digits, which the
+                  tracker masks on its own, and it is what keeps the bubble
+                  identifiable in a replay. */}
+              <div className="text-foreground truncate text-sm font-semibold" {...piiProps}>
                 {minimizedCall.clientName}
               </div>
               <div className="text-muted-foreground text-xs">
@@ -354,7 +358,7 @@ export function MinimizedCallBubble() {
               <Icons.Voice size={20} className="text-white" strokeWidth={1.5} />
             </div>
             <div className="flex min-w-0 flex-1 flex-col">
-              <div className="text-foreground truncate text-sm font-semibold">
+              <div className="text-foreground truncate text-sm font-semibold" {...piiProps}>
                 {minimizedCall.callData?.clientName || minimizedCall.clientName}
               </div>
               <div className="text-muted-foreground text-xs">

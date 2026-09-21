@@ -15,6 +15,7 @@ import { useMarkersForCall } from '@/features/quality/hooks/useMarkers'
 import { CallPlayer, type CallPlayerHandle } from '@/pages/ClientManagement/components/CallPlayer'
 import { CreateCorrectionTaskDialog } from '../inbox/CreateCorrectionTaskDialog'
 import { LoanLink } from './LoanLink'
+import { Pii, piiProps } from '@/lib/openreplay/pii'
 
 /**
  * Inline trainer review panel (Scorecard Review Panel redesign) — the right
@@ -98,7 +99,7 @@ export function CallReviewPanel({
         container so the marker / feedback popovers aren't clipped. */}
       <div className="flex flex-col gap-3 p-4">
         <div className="border-b border-[#EBECE8] pb-3">
-          <p className="truncate text-sm font-semibold text-[#05040D]">
+          <p className="truncate text-sm font-semibold text-[#05040D]" {...piiProps}>
             {operatorName ?? `#${operatorId}`}
           </p>
           {createdAt ? (
@@ -114,7 +115,7 @@ export function CallReviewPanel({
                 to={`/dashboard/clients/${clientId}`}
                 className="font-medium text-[#204E4D] hover:underline"
               >
-                {clientName ?? `#${clientId}`}
+                <Pii>{clientName ?? `#${clientId}`}</Pii>
               </Link>
               <LoanLink clientId={clientId} debts={clientDebts} />
             </p>
