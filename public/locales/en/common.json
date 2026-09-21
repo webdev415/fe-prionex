@@ -4328,7 +4328,9 @@
         "timezoneHint": "Used when the debtor's own timezone cannot be determined.",
         "title": "Calling window",
         "weekdays": "Allowed days",
-        "weekdaysHint": "Select none to allow every day."
+        "weekdaysHint": "Select none to allow every day.",
+        "loadFailed": "Could not load the calling window.",
+        "countryNone": "No holiday calendar"
       },
       "holidayCalendar": {
         "year": "Year",

@@ -303,7 +303,7 @@ export function PaymentHistoryPage() {
     handleCloseCallModal,
     handleCallEnd,
   } = useCallOrigination()
-  const callingWindow = useCallingWindow()
+  const callingWindow = useCallingWindow(id ? Number(id) : null)
 
   // Fetch client data from API (same as DebtSummaryPage)
   const clientId = id ? Number(id) : 0

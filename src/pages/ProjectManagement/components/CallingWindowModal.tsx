@@ -18,6 +18,7 @@ import { Checkbox } from '@/components/ui/Checkbox'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { HolidayCalendarPanel } from './HolidayCalendarPanel'
+import { withNoneOption } from './holidayOptions'
 import {
   useCallingWindow,
   useHolidayCountries,
@@ -53,7 +54,13 @@ export function CallingWindowModal({
   onClose,
 }: CallingWindowModalProps) {
   const { t } = useTranslation('common')
-  const { data: current, isLoading } = useCallingWindow(open ? projectId : null)
+  const {
+    data: current,
+    isLoading,
+    isError,
+    refetch,
+    isFetching,
+  } = useCallingWindow(open ? projectId : null)
   const [view, setView] = useState<'window' | 'holidays'>('window')
 
   return (
@@ -65,7 +72,20 @@ export function CallingWindowModal({
         }
         onClose={onClose}
       />
-      {isLoading || !current ? (
+      {isError || (!isLoading && !current) ? (
+        <ModalContent>
+          <Alert variant="error">
+            <div className="flex flex-col items-start gap-2">
+              <span>
+                {t('pages.projects.callingWindow.loadFailed', 'Could not load the calling window.')}
+              </span>
+              <Button size="sm" variant="secondary" onClick={() => refetch()} disabled={isFetching}>
+                {t('actions.retry', 'Retry')}
+              </Button>
+            </div>
+          </Alert>
+        </ModalContent>
+      ) : isLoading || !current ? (
         <ModalContent>
           <p className="text-muted-foreground text-sm">{t('status.loading', 'Loading…')}</p>
         </ModalContent>
@@ -95,16 +115,18 @@ export function CallingWindowModal({
             </Button>
           </div>
 
-          {view === 'window' ? (
-            /* Mounted only once the window has loaded, so the form initialises
-               from props instead of syncing server data in with an effect. */
-            <CallingWindowForm
-              key={projectId ?? 'none'}
-              projectId={projectId as number}
-              initial={current}
-              onClose={onClose}
-            />
-          ) : (
+          {/* The form stays mounted across the tab switch and renders nothing
+              while hidden. Unmounting it discarded unsaved edits on exactly the
+              journey this screen is for: choose a country, go and generate its
+              calendar, come back. */}
+          <CallingWindowForm
+            key={projectId ?? 'none'}
+            projectId={projectId as number}
+            initial={current}
+            hidden={view !== 'window'}
+            onClose={onClose}
+          />
+          {view === 'holidays' && (
             <HolidayCalendarPanel
               projectId={projectId as number}
               country={current.holiday_country}
@@ -120,10 +142,11 @@ export function CallingWindowModal({
 interface CallingWindowFormProps {
   projectId: number
   initial: CallingWindowConfig
+  hidden?: boolean
   onClose: () => void
 }
 
-function CallingWindowForm({ projectId, initial, onClose }: CallingWindowFormProps) {
+function CallingWindowForm({ projectId, initial, hidden, onClose }: CallingWindowFormProps) {
   const { t } = useTranslation('common')
   const save = useSetCallingWindow(projectId)
   const { data: countries = [] } = useHolidayCountries(true)
@@ -186,6 +209,10 @@ function CallingWindowForm({ projectId, initial, onClose }: CallingWindowFormPro
   }
 
   const dayLabel = (day: IsoWeekday) => t(`pages.projects.callingWindow.days.${day}`, String(day))
+
+  // Rendering nothing rather than unmounting: the component keeps its state,
+  // so edits survive a trip to the Holidays tab.
+  if (hidden) return null
 
   return (
     <>
@@ -291,7 +318,10 @@ function CallingWindowForm({ projectId, initial, onClose }: CallingWindowFormPro
             <div>
               <Label>{t('pages.projects.callingWindow.country', 'Holiday calendar')}</Label>
               <SearchableSelect
-                options={countries.map((c) => ({ id: c.code, name: c.name }))}
+                options={withNoneOption(
+                  countries.map((c) => ({ id: c.code, name: c.name })),
+                  t('pages.projects.callingWindow.countryNone', 'No holiday calendar')
+                )}
                 value={country}
                 onValueChange={(next) => {
                   setCountry(next)
@@ -307,7 +337,10 @@ function CallingWindowForm({ projectId, initial, onClose }: CallingWindowFormPro
               <div>
                 <Label>{t('pages.projects.callingWindow.subdivision', 'Region (optional)')}</Label>
                 <SearchableSelect
-                  options={subdivisions.map((code) => ({ id: code, name: code }))}
+                  options={withNoneOption(
+                    subdivisions.map((code) => ({ id: code, name: code })),
+                    t('pages.projects.callingWindow.subdivisionPlaceholder', 'National only')
+                  )}
                   value={subdivision}
                   onValueChange={setSubdivision}
                   placeholder={t(

@@ -11,18 +11,24 @@ import type { CallingWindowReason, CallingWindowStatus } from '../types'
  * operator whose machine is an hour fast would otherwise see an enabled button
  * outside the legal hours, click it, and get a 403 with no explanation.
  *
+ * Takes the debtor when one is known, because origination resolves the window
+ * in that debtor's own timezone — without it the button and the call can
+ * disagree by an hour for a Canary debtor.
+ *
  * Polled rather than fetched once because the window closes *during* a shift.
  * A minute is close enough: the backend refuses regardless, so the only cost
  * of being briefly stale is a button that looks live for a few seconds.
  */
 const POLL_INTERVAL_MS = 60_000
 
-export function useCallingWindow() {
+export function useCallingWindow(clientId?: number | null) {
   const { t } = useTranslation('common')
 
   const { data, isLoading } = useQuery<CallingWindowStatus>({
-    queryKey: ['callingWindowStatus'],
-    queryFn: () => callService.getCallingWindowStatus(),
+    // The client is part of the key: in Spain the window is judged in the
+    // debtor's own zone, so two debtors in one project can differ by an hour.
+    queryKey: ['callingWindowStatus', clientId ?? null],
+    queryFn: () => callService.getCallingWindowStatus(clientId),
     refetchInterval: POLL_INTERVAL_MS,
     refetchOnWindowFocus: true,
     staleTime: 30_000,

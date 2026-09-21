@@ -293,7 +293,7 @@ export function CallDialogModal({
   // reflects it. Origination is refused server-side either way — this stops
   // the operator making a call they will be told off for, rather than being
   // the control itself.
-  const callingWindow = useCallingWindow()
+  const callingWindow = useCallingWindow(clientId)
 
   const hasDialTarget = !manualPhoneEnabled
     ? String(phoneNumber).trim().length > 0

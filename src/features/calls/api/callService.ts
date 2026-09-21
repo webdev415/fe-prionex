@@ -51,8 +51,10 @@ export interface FetchRecordingOptions {
 
 class CallService {
   /** Whether the project's calling window allows a call right now (KAN-1107). */
-  async getCallingWindowStatus(): Promise<CallingWindowStatus> {
-    const response = await api.get(`${API_BASE_URL}/api/v1/calls/calling-window/status`)
+  async getCallingWindowStatus(clientId?: number | null): Promise<CallingWindowStatus> {
+    const response = await api.get(`${API_BASE_URL}/api/v1/calls/calling-window/status`, {
+      params: clientId != null ? { client_id: clientId } : undefined,
+    })
     return response.data
   }
 

@@ -13,6 +13,29 @@ import type { CallingWindowConfig } from '@/features/projects/types'
 const setWindow = vi.fn()
 const getWindow = vi.fn()
 
+interface SelectOption {
+  id: string
+  name: string
+}
+const { selectOptions } = vi.hoisted(() => ({
+  selectOptions: {} as Record<string, SelectOption[]>,
+}))
+// The dropdown's own rendering is not what this file is pinning — what the
+// modal hands it is. Recording the props keeps the assertion off
+// SearchableSelect's internals, which an unrelated change to it could break.
+vi.mock('@/components/ui/SearchableSelect', () => ({
+  SearchableSelect: ({
+    options,
+    placeholder,
+  }: {
+    options: SelectOption[]
+    placeholder?: string
+  }) => {
+    selectOptions[placeholder ?? ''] = options
+    return null
+  },
+}))
+
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 vi.mock('@/features/projects/api/callingWindowApi', () => ({
   getCallingWindow: (...a: unknown[]) => getWindow(...a),
@@ -127,5 +150,45 @@ describe('CallingWindowModal', () => {
     // overstates the consequence is worse than none.
     renderModal({ ...SPAIN, holiday_country: null })
     expect(await screen.findByText('pages.projects.callingWindow.noCountry')).toBeInTheDocument()
+  })
+
+  it('offers a retry instead of loading forever when the window cannot be read', async () => {
+    // isLoading goes false on error while the data stays undefined, so the
+    // loading branch never ended: the admin saw "Loading…" with no way out.
+    getWindow.mockRejectedValue(new Error('boom'))
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={queryClient}>
+        <CallingWindowModal projectId={7} projectName="SolventaPro" open onClose={vi.fn()} />
+      </QueryClientProvider>
+    )
+    expect(await screen.findByText('pages.projects.callingWindow.loadFailed')).toBeInTheDocument()
+    expect(screen.queryByText('status.loading')).toBeNull()
+    expect(screen.getByRole('button', { name: 'actions.retry' })).toBeInTheDocument()
+  })
+
+  it('keeps unsaved edits when the admin visits the Holidays tab', async () => {
+    // The journey this screen exists for: choose a country, go and generate
+    // its calendar, come back. Unmounting the form lost the choice silently.
+    renderModal()
+    const start = await screen.findByDisplayValue('09:00')
+    fireEvent.change(start, { target: { value: '11:30' } })
+    fireEvent.click(screen.getByRole('tab', { name: 'pages.projects.callingWindow.tabHolidays' }))
+    fireEvent.click(screen.getByRole('tab', { name: 'pages.projects.callingWindow.tabWindow' }))
+    expect(screen.getByDisplayValue('11:30')).toBeInTheDocument()
+  })
+
+  it('offers a way to clear the holiday country', async () => {
+    // "No holiday calendar" is a supported state, but SearchableSelect lists
+    // only what it is given — so without an explicit empty entry it was
+    // reachable only by never choosing a country in the first place.
+    renderModal()
+    await screen.findByDisplayValue('09:00')
+    await waitFor(() =>
+      expect(selectOptions['pages.projects.callingWindow.countryPlaceholder']).toBeTruthy()
+    )
+    const options = selectOptions['pages.projects.callingWindow.countryPlaceholder']
+    expect(options[0].id).toBe('')
+    expect(options.map((o) => o.id)).toContain('ES')
   })
 })

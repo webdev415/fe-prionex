@@ -106,3 +106,36 @@ describe('reasonMessage', () => {
     expect(reasonMessage(t, 'something_new' as CallingWindowReason)).toBeTruthy()
   })
 })
+
+describe('useCallingWindow client scoping', () => {
+  it('asks about the debtor, so the button matches what origination decides', async () => {
+    // Origination resolves the window in the debtor's own zone, so a Canary
+    // and a mainland debtor in one project differ by an hour. Without the
+    // client the button could be enabled for a call that returns 403.
+    mocked.getCallingWindowStatus.mockResolvedValue({
+      allowed: true,
+      reason: null,
+      detail: null,
+    })
+    const { result } = renderHook(() => useCallingWindow(42), { wrapper: createWrapper() })
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(mocked.getCallingWindowStatus).toHaveBeenCalledWith(42)
+  })
+
+  it('keeps separate answers per debtor rather than one shared one', async () => {
+    mocked.getCallingWindowStatus.mockImplementation((id?: number | null) =>
+      Promise.resolve({
+        allowed: id === 1,
+        reason: id === 1 ? null : 'before_window_start',
+        detail: null,
+      })
+    )
+    const wrapper = createWrapper()
+    const a = renderHook(() => useCallingWindow(1), { wrapper })
+    const b = renderHook(() => useCallingWindow(2), { wrapper })
+    await waitFor(() => expect(a.result.current.isLoading).toBe(false))
+    await waitFor(() => expect(b.result.current.isLoading).toBe(false))
+    expect(a.result.current.allowed).toBe(true)
+    expect(b.result.current.allowed).toBe(false)
+  })
+})

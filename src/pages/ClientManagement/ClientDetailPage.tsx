@@ -463,7 +463,7 @@ export function ClientDetailPage() {
     handleCloseCallModal,
     handleCallEnd,
   } = useCallOrigination()
-  const callingWindow = useCallingWindow()
+  const callingWindow = useCallingWindow(id ? Number(id) : null)
 
   // Client detail: one profile + section endpoints
   const clientId = id ? Number(id) : 0

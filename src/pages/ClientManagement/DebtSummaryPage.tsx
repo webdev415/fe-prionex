@@ -243,7 +243,7 @@ export function DebtSummaryPage() {
     handleCloseCallModal,
     handleCallEnd,
   } = useCallOrigination()
-  const callingWindow = useCallingWindow()
+  const callingWindow = useCallingWindow(id ? Number(id) : null)
 
   // Fetch client data from API (same as ClientDetailPage). ``clientId`` is
   // hoisted above (right after useParams) so earlier hooks can use it.
