@@ -79,22 +79,20 @@ describe('a toast is marked, not the Toaster', () => {
 })
 
 describe('react-datepicker (step 5.4)', () => {
-  // The scan below reads EVERY `src/**/*.tsx` as raw text, so its time grows
-  // with the repository, not with the subject: 4.4 s alone on a workstation,
-  // over the default 20 s on the CI runner once the credit frontend (+67 files)
-  // landed (three red runs in a row, 21.09.2026). The bound is generous on
-  // purpose — the test is a repository scan, not a rendering benchmark.
-  it('still renders inline, with no portal to mark', { timeout: 60_000 }, async () => {
+  it('still renders inline, with no portal to mark', async () => {
     // The step is a CHECK, not a change: `withPortal` and `portalId` are not
     // used anywhere in `src/`, so the calendar renders in place and ordinary
     // inheritance covers it. This test is what makes that a fact with an expiry
     // date rather than a sentence in a document — the day somebody adds
     // `withPortal`, it fails and phase 5 gets revisited.
-    const modules = import.meta.glob('/src/**/*.tsx', { query: '?raw', import: 'default' })
+    const modules = import.meta.glob<string>('/src/**/*.tsx', {
+      query: '?raw',
+      import: 'default',
+      eager: true,
+    })
     const offenders: string[] = []
-    for (const [path, load] of Object.entries(modules)) {
+    for (const [path, text] of Object.entries(modules)) {
       if (path.includes('__tests__') || /\.(test|spec)\.tsx$/.test(path)) continue
-      const text = (await load()) as string
       if (/\bwithPortal\b|\bportalId\b/.test(text)) offenders.push(path)
     }
     expect(
