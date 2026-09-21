@@ -21,6 +21,7 @@ interface ProjectDetailPanelProps {
   project: ApiProjectDetail | null
   hasProjects: boolean
   onEdit: () => void
+  onCallingWindow?: () => void
   isLoading?: boolean
 }
 
@@ -28,6 +29,7 @@ export function ProjectDetailPanel({
   project,
   hasProjects,
   onEdit,
+  onCallingWindow,
   isLoading = false,
 }: ProjectDetailPanelProps) {
   const { t } = useTranslation('common')
@@ -232,6 +234,17 @@ export function ProjectDetailPanel({
           >
             {t('pages.projects.detailPanel.edit')}
           </Button>
+          {onCallingWindow && (
+            <Button
+              variant="secondary"
+              size="xl"
+              onClick={onCallingWindow}
+              className="h-[45px] flex-1 rounded-md text-sm"
+              leftIcon={<Icons.Clock01 size={20} className="text-foreground" strokeWidth={2} />}
+            >
+              {t('pages.projects.callingWindow.title', 'Calling window')}
+            </Button>
+          )}
         </div>
       </PermissionGuard>
     </div>

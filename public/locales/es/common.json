@@ -169,7 +169,8 @@
       "active": "Activa",
       "paused": "Pausa",
       "empty": "La cola está vacía",
-      "inactive": "Inactiva"
+      "inactive": "Inactiva",
+      "pausedCallingWindow": "Fuera del horario de llamadas"
     },
     "queueList": {
       "found": "Encontradas: {{count}} colas",
@@ -193,7 +194,9 @@
       "deleteMessage": "Esta acción es irreversible. La cola se eliminará junto con toda su configuración.",
       "deleted": "Cola eliminada",
       "notSynced": "No sincronizada",
-      "notSyncedHint": "Esta cola no tiene ninguna campaña en el marcador y no puede realizar llamadas. Vuelva a guardarla para reintentarlo."
+      "notSyncedHint": "Esta cola no tiene ninguna campaña en el marcador y no puede realizar llamadas. Vuelva a guardarla para reintentarlo.",
+      "pausedByWindow": "Fuera del horario de llamadas",
+      "pausedByWindowHint": "Fuera del horario de llamadas permitido de este proyecto. La marcación se reanuda automáticamente en el siguiente horario permitido."
     },
     "queueForm": {
       "createTitle": "Añadir nueva cola",
@@ -317,6 +320,14 @@
     "telephonyType": {
       "white": "Blanco",
       "grey": "Gris"
+    },
+    "callingWindow": {
+      "closedTitle": "Fuera del horario de llamadas",
+      "resumes": "La marcación se reanuda {{when}}.",
+      "resumesUnknown": "No se puede indicar cuándo se reanuda: revise el calendario de festivos del proyecto.",
+      "allowed": "Permitido: {{hours}}, {{days}} ({{timezone}})",
+      "open": "Horario de llamadas {{hours}} · {{days}} · abierto ahora",
+      "everyDay": "todos los días"
     }
   },
   "search": {
@@ -4449,6 +4460,73 @@
           "UA": "Ucrania",
           "ES": "España"
         }
+      },
+      "callingWindow": {
+        "country": "Calendario de festivos",
+        "countryPlaceholder": "Seleccione un país",
+        "days": {
+          "1": "Lun",
+          "2": "Mar",
+          "3": "Mié",
+          "4": "Jue",
+          "5": "Vie",
+          "6": "Sáb",
+          "7": "Dom"
+        },
+        "enable": "Aplicar un horario de llamadas",
+        "enableHint": "El sistema rechaza las llamadas fuera del horario. Los operadores no pueden saltárselo.",
+        "end": "Cierre",
+        "endHint": "No incluido: fíjelo antes del límite legal para que ninguna llamada siga en curso a la hora de corte.",
+        "errors": {
+          "start": "El inicio debe tener el formato HH:MM",
+          "end": "El final debe tener el formato HH:MM",
+          "same": "El inicio y el final no pueden coincidir",
+          "timezone": "Se requiere una zona horaria de respaldo"
+        },
+        "noCountry": "Sin calendario de festivos: en este proyecto no se tienen en cuenta los días festivos. El horario y los días permitidos siguen aplicándose.",
+        "saveFailed": "No se ha podido guardar el horario de llamadas",
+        "saved": "Horario de llamadas guardado",
+        "start": "Apertura",
+        "subdivision": "Región (opcional)",
+        "subdivisionPlaceholder": "Solo nacional",
+        "tabHolidays": "Festivos",
+        "tabWindow": "Horario",
+        "timezone": "Zona horaria de respaldo",
+        "timezoneHint": "Se usa cuando no se puede determinar la zona horaria del deudor.",
+        "title": "Horario de llamadas",
+        "weekdays": "Días permitidos",
+        "weekdaysHint": "No seleccione ninguno para permitir todos los días.",
+        "loadFailed": "No se ha podido cargar el horario de llamadas.",
+        "refreshFailed": "No se ha podido actualizar el horario de llamadas. Se muestran los últimos valores cargados.",
+        "countryNone": "Sin calendario de festivos"
+      },
+      "holidayCalendar": {
+        "year": "Año",
+        "noCountry": "No hay ningún país configurado, así que no se tienen en cuenta los días festivos. Elija uno en la pestaña Horario para aplicarlos.",
+        "loadFailed": "No se ha podido cargar el calendario. Vuelva a intentarlo antes de generarlo, para no sobrescribir uno existente.",
+        "notGenerated": "No existe ningún calendario para este año. Mientras no exista, se rechazarán todas las llamadas de ese año.",
+        "generate": "Generar {{year}}",
+        "generateFailed": "No se ha podido generar el calendario",
+        "computedEmpty": "Este país no tiene días festivos registrados para ese año. Compruébelo antes de darlo por bueno.",
+        "emptyCalendar": "Este calendario no tiene fechas. Para algunos países es correcto, pero confirme que lo es: se permitirán llamadas todos los días laborables del año.",
+        "reviewed": "Revisado",
+        "unreviewed": "Sin revisar",
+        "added": "añadida",
+        "addDate": "Añadir una fecha",
+        "addName": "Nombre (opcional)",
+        "addFailed": "No se ha podido añadir esa fecha",
+        "removeFailed": "No se ha podido quitar esa fecha",
+        "regenerate": "Volver a calcular desde el calendario",
+        "regenerateHint": "Al volver a calcular se conservan las fechas añadidas a mano y se quita la marca de revisado.",
+        "confirm": "Marcar como revisado",
+        "confirmed": "Calendario marcado como revisado",
+        "confirmFailed": "No se ha podido marcar el calendario como revisado",
+        "badDate": "Introduzca la fecha con el formato AAAA-MM-DD",
+        "wrongYear": "Esa fecha no es de {{year}}",
+        "alreadyAdded": "Esa fecha ya está en el calendario",
+        "regenerateTitle": "¿Volver a calcular {{year}}?",
+        "regenerateConfirm": "Las fechas calculadas se vuelven a obtener del calendario del país, las fechas añadidas a mano se conservan y se quita la marca de revisado.",
+        "countryUnsaved": "Guarde primero el horario. El calendario se calcula a partir del país guardado, así que generarlo ahora usaría el anterior."
       }
     },
     "roles": {
@@ -5570,7 +5648,6 @@
           "notes": "Notas (opcional)",
           "selectEmployee": "Seleccionar empleado…",
           "selectSearcher": "Seleccionar localizador…",
-          "noUsersAvailable": "No hay usuarios disponibles",
           "enterAdditionalNotes": "Introduzca notas adicionales…",
           "warningMessage": "Nota: debe seleccionar al menos una asignación (empleado o localizador).",
           "assignClient": "Asignar cliente",
@@ -7132,6 +7209,15 @@
         "cancelled": "Cancelado",
         "completed": "Completado",
         "completedEarly": "Completado anticipadamente"
+      },
+      "assignee": {
+        "searchPlaceholder": "Buscar empleado",
+        "allEmployees": "Todos los empleados",
+        "noMatches": "Sin coincidencias",
+        "unassign": "Quitar asignación",
+        "pinned": "Fijados",
+        "pin": "Fijar",
+        "unpin": "Dejar de fijar"
       },
       "documents": {
         "previewFrameTitle": "Vista previa del documento"
@@ -12013,6 +12099,16 @@
         "pageOf": "Página {{page}} de {{total}}",
         "loadingWorkList": "Cargando lista de trabajo…",
         "loadingPriorityWorkList": "Cargando lista de trabajo prioritaria…"
+      }
+    },
+    "calls": {
+      "callingWindow": {
+        "blocked": "Ahora no se permiten llamadas",
+        "holiday": "Hoy es festivo",
+        "outsideHours": "Fuera del horario de llamadas permitido",
+        "unavailable": "Ahora no se puede comprobar el horario de llamadas",
+        "weekend": "Hoy no se permiten llamadas",
+        "noCalendar": "Las llamadas están bloqueadas hasta que se configure el calendario de festivos de este año"
       }
     },
     "messaging": {
