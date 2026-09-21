@@ -125,25 +125,28 @@ describe('AssigneeSelect', () => {
   })
 
   it('closes on Escape without letting the key reach the dialog', () => {
-    const onKeyDown = vi.fn()
-    const onValueChange = vi.fn()
-    render(
-      <div data-testid="dialog-content">
-        <AssigneeSelect operators={operators} value="" onValueChange={onValueChange} />
-      </div>
-    )
-    // Attached imperatively rather than as a JSX handler: this stands in for
-    // Radix's own listener on the dialog content, and jsx-a11y rightly refuses
-    // an onKeyDown prop on a static element.
-    screen.getByTestId('dialog-content').addEventListener('keydown', onKeyDown)
+    // Stands in for Radix's dialog: a capture listener on `document`,
+    // registered before the picker opens, that dismisses unless the event was
+    // already default-prevented.
+    const dismissDialog = vi.fn()
+    const radixEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !event.defaultPrevented) dismissDialog()
+    }
+    document.addEventListener('keydown', radixEscape, true)
 
-    fireEvent.click(trigger())
-    fireEvent.keyDown(screen.getByPlaceholderText('Search employee'), { key: 'Escape' })
+    try {
+      setup()
 
-    expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
-    // Radix listens above this component; if Escape bubbles, the whole modal
-    // closes and the operator loses the form.
-    expect(onKeyDown).not.toHaveBeenCalled()
+      fireEvent.click(trigger())
+      fireEvent.keyDown(screen.getByPlaceholderText('Search employee'), { key: 'Escape' })
+
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument()
+      // If Radix sees an un-prevented Escape, the whole modal closes and the
+      // operator loses the form.
+      expect(dismissDialog).not.toHaveBeenCalled()
+    } finally {
+      document.removeEventListener('keydown', radixEscape, true)
+    }
   })
 
   it('closes when the pointer goes down outside it', () => {

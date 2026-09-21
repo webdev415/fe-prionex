@@ -39,7 +39,8 @@ import { useAuthStore } from '@/stores/authStore'
 import { useHasPermission } from '@/hooks/usePermissions'
 import { useGuardedAction } from '@/hooks/useGuardedAction'
 import { PERMISSIONS } from '@/constants/permissions'
-import { AssigneeOptionList } from './AssigneeOptionList'
+import { HOTKEY_PASSTHROUGH_TRIGGER_ATTR } from '@/features/taHotkeys/hotkey'
+import { ASSIGNEE_FOCUS_RING, AssigneeOptionList } from './AssigneeOptionList'
 
 // Outside-press zones, matched with element.closest() so the check never
 // depends on ref timing. Same approach as the contact-tag dropdown.
@@ -244,7 +245,7 @@ export function AssigneeDropdown({
         ref={setTriggerRef}
         type="button"
         data-testid={dataTestId}
-        {...{ [ATTR_TRIGGER]: '' }}
+        {...{ [ATTR_TRIGGER]: '', [HOTKEY_PASSTHROUGH_TRIGGER_ATTR]: '' }}
         {...getReferenceProps()}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
@@ -293,6 +294,7 @@ export function AssigneeDropdown({
                     onClick={() => save(null)}
                     className={cn(
                       'text-muted-foreground flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs',
+                      ASSIGNEE_FOCUS_RING,
                       !isSaving && 'hover:bg-muted cursor-pointer',
                       isSaving && 'cursor-wait opacity-60'
                     )}

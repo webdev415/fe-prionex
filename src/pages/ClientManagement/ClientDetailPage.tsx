@@ -967,6 +967,10 @@ export function ClientDetailPage() {
   const { data: responsibleEmployeeDepartment } = useUserDepartment(
     profile?.responsible_employee_id || 0
   )
+  // Same lookup for the searcher, so that row reads "Name (Department)" too.
+  const { data: responsibleSearcherDepartment } = useUserDepartment(
+    profile?.responsible_searcher_id || 0
+  )
 
   // Assign client mutation (used by the Operators-tab assign flow; the two
   // responsible rows drive their own copy inside AssigneeDropdown).
@@ -1093,6 +1097,7 @@ export function ClientDetailPage() {
       department: responsibleEmployeeDepartment || '-',
       responsibleEmployee: profile.responsible_employee_name ?? '-',
       responsibleResearcher: profile.responsible_searcher_name ?? '-',
+      searcherDepartment: responsibleSearcherDepartment || '-',
       phones,
       // Personal details (nested for compatibility)
       personalDetails: {
@@ -1431,6 +1436,7 @@ export function ClientDetailPage() {
     documents,
     activities,
     responsibleEmployeeDepartment,
+    responsibleSearcherDepartment,
     clientTags,
     t,
     userTimezone,
@@ -2119,6 +2125,10 @@ export function ClientDetailPage() {
     client.responsibleEmployee && client.department && client.department !== '-'
       ? `${client.responsibleEmployee} (${client.department})`
       : client.responsibleEmployee
+  const responsibleSearcherWithDepartment =
+    client.responsibleResearcher && client.searcherDepartment && client.searcherDepartment !== '-'
+      ? `${client.responsibleResearcher} (${client.searcherDepartment})`
+      : client.responsibleResearcher
   // Date of birth carries the age inline. The model keeps the raw ISO value —
   // other consumers parse it — so format for display here. `age` is computed
   // server-side per request, so it is always current.
@@ -3153,7 +3163,7 @@ export function ClientDetailPage() {
                   <div className="ml-2 flex flex-1 items-center justify-end gap-1">
                     {profile?.responsible_searcher_id && (
                       <p className="text-foreground truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                        {client.responsibleResearcher}
+                        {responsibleSearcherWithDepartment}
                       </p>
                     )}
                     {/* Same component as the employee row above — only `role`

@@ -15,6 +15,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { HOTKEY_BLOCKING_ATTR } from '@/features/taHotkeys/hotkey'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 
@@ -23,6 +24,16 @@ export interface AssigneeOption {
   full_name: string
   department_name?: string | null
 }
+
+/**
+ * Keyboard focus ring for every button in the list and its footer.
+ *
+ * Without it the browser draws its own black outline, which shows the moment a
+ * key is pressed after a pin toggle hands focus back to the pin. Inset because
+ * the rows run edge to edge inside a scrolling box that would clip an outer ring.
+ */
+export const ASSIGNEE_FOCUS_RING =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary-500'
 
 /** Shared empty set, so an unpinned caller does not allocate one per render. */
 const NO_PINS: ReadonlySet<number> = new Set()
@@ -114,6 +125,23 @@ export function AssigneeOptionList({
 
   const isEmpty = pinnedRows.length === 0 && otherRows.length === 0
 
+  // A pin toggle moves its row into the other section, which remounts it, so
+  // the pin button that held focus is gone and focus falls to <body>. Put it
+  // back on the same operator's pin once the move has rendered — the keyboard
+  // user keeps their place. Keyed on `pinnedIds` because the move lands when
+  // the pin set changes, which is after the click (the cache update is async).
+  const listRef = useRef<HTMLDivElement | null>(null)
+  const refocusPinFor = useRef<number | null>(null)
+  useEffect(() => {
+    const operatorId = refocusPinFor.current
+    if (operatorId === null) return
+    const pin = listRef.current?.querySelector<HTMLButtonElement>(`[data-pin-for="${operatorId}"]`)
+    if (pin && pin !== document.activeElement) {
+      pin.focus()
+      refocusPinFor.current = null
+    }
+  }, [pinnedIds])
+
   const renderRow = (operator: AssigneeOption) => {
     const isAssigned = operator.id === selectedId
     const isPinned = (pinnedIds ?? NO_PINS).has(operator.id)
@@ -134,6 +162,7 @@ export function AssigneeOptionList({
           onClick={() => onSelect(operator.id)}
           className={cn(
             'flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-left',
+            ASSIGNEE_FOCUS_RING,
             !disabled && 'hover:bg-muted cursor-pointer',
             disabled && 'cursor-wait opacity-60'
           )}
@@ -159,9 +188,14 @@ export function AssigneeOptionList({
             aria-label={pinLabel}
             title={pinLabel}
             aria-pressed={isPinned}
-            onClick={() => onTogglePin(operator.id, !isPinned)}
+            data-pin-for={operator.id}
+            onClick={() => {
+              refocusPinFor.current = operator.id
+              onTogglePin(operator.id, !isPinned)
+            }}
             className={cn(
               'hover:bg-muted shrink-0 cursor-pointer rounded-md p-1.5',
+              ASSIGNEE_FOCUS_RING,
               isPinned ? 'text-primary-500' : 'text-muted-foreground'
             )}
           >
@@ -206,7 +240,12 @@ export function AssigneeOptionList({
         />
       </div>
 
-      <div className="mt-1.5 flex max-h-54 flex-col gap-px overflow-auto">
+      {/* Mounted only while a picker is open, so this marker is what silences
+          TA quick-launch for exactly that long — see HOTKEY_BLOCKING_ATTR. */}
+      <div
+        {...{ [HOTKEY_BLOCKING_ATTR]: '' }}
+        className="mt-1.5 flex max-h-54 flex-col gap-px overflow-auto"
+      >
         {isLoading ? (
           <p className="text-muted-foreground px-2 py-2.5 text-xs">
             {t('common.loading', 'Loading...')}
@@ -226,7 +265,7 @@ export function AssigneeOptionList({
             any keypress inside `[role="listbox"], [role="option"], …`, so
             removing the role would let hotkeys fire under an open popover with
             no test to notice. Narrowing it to the options satisfies both. */}
-        <div role="listbox" aria-label={listLabel} className="flex flex-col gap-px">
+        <div ref={listRef} role="listbox" aria-label={listLabel} className="flex flex-col gap-px">
           {!isLoading && (
             <>
               {renderSection(pinnedRows, t('pages.clients.assignee.pinned', 'Pinned'))}

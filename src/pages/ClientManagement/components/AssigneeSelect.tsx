@@ -72,7 +72,10 @@ export function AssigneeSelect({
   }, [isOpen, close])
 
   // Escape closes the picker only. Radix would otherwise take the same key as
-  // "close the modal", losing the operator's half-finished form.
+  // "close the modal", losing the operator's half-finished form. Radix listens
+  // on `document` in the capture phase and registered first (when the dialog
+  // opened), so a `document` listener here would run too late; `window` capture
+  // runs before any `document` listener.
   useEffect(() => {
     if (!isOpen) return
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -81,8 +84,8 @@ export function AssigneeSelect({
       event.stopPropagation()
       close()
     }
-    document.addEventListener('keydown', handleKeyDown, true)
-    return () => document.removeEventListener('keydown', handleKeyDown, true)
+    window.addEventListener('keydown', handleKeyDown, true)
+    return () => window.removeEventListener('keydown', handleKeyDown, true)
   }, [isOpen, close])
 
   return (

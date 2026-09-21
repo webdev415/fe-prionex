@@ -6,6 +6,12 @@ export const operatorPinKeys = {
   all: ['operator-pins'] as const,
 }
 
+// Hoisted so its reference stays stable across renders. An inline arrow here
+// would defeat React Query's select memoization — the function reference is
+// part of the memo key — and allocate a fresh Set every render, which then
+// invalidates downstream useMemos that depend on the returned set.
+const toPinnedSet = (data: OperatorPinListResponse) => new Set(data.operator_ids)
+
 /**
  * The operators this user pinned, as a Set so each row is an O(1) lookup.
  *
@@ -23,7 +29,7 @@ export function useOperatorPins(enabled = true) {
     // therefore costs nothing and saves a request every time a client card
     // mounts, which is every client an operator opens.
     staleTime: 5 * 60 * 1000,
-    select: (data) => new Set(data.operator_ids),
+    select: toPinnedSet,
   })
 }
 

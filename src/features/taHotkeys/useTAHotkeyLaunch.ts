@@ -16,7 +16,11 @@ import { toast } from 'sonner'
 import { useChainExecutorStore } from '@/stores/chainExecutorStore'
 import { decideHotkeyLaunch } from './decideHotkeyLaunch'
 import { useTAHotkeyBindings } from './hooks/useTAHotkeys'
-import { resolveHotkeyTarget, TA_EXECUTOR_DIALOG_SELECTOR } from './hotkey'
+import {
+  isHotkeyBlockingPopupOpen,
+  resolveHotkeyTarget,
+  TA_EXECUTOR_DIALOG_SELECTOR,
+} from './hotkey'
 
 export function useTAHotkeyLaunch(params: {
   /** False on pages/states where quick-launch must not apply (e.g. no client). */
@@ -41,6 +45,11 @@ export function useTAHotkeyLaunch(params: {
     if (!enabled) return
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      // A popup that owns the keyboard while it is open (the assignee picker)
+      // silences every binding, wherever focus happens to be. Left alone like
+      // an unassigned key — the popup's own search box needs the keystroke.
+      if (isHotkeyBlockingPopupOpen()) return
+
       const current = latest.current
       // The executor's own dialog is exempt from the "inside a dialog counts
       // as typing" rule: otherwise the press is dropped here and the

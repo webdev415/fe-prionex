@@ -85,7 +85,7 @@ vi.mock('@/stores/authStore', () => ({
 import { toast } from 'sonner'
 import { AssigneeDropdown } from '../AssigneeDropdown'
 import { PERMISSIONS } from '@/constants/permissions'
-import { isTypingTarget } from '@/features/taHotkeys/hotkey'
+import { isHotkeyBlockingPopupOpen, isTypingTarget } from '@/features/taHotkeys/hotkey'
 
 function renderOpen(props: Partial<React.ComponentProps<typeof AssigneeDropdown>> = {}): {
   onClose: ReturnType<typeof vi.fn>
@@ -319,12 +319,76 @@ describe('AssigneeDropdown', () => {
     // NOT regress it — the listbox still matched. So this pins the property
     // rather than any one attribute, and it goes red only when a restructure
     // leaves some element with none of the three.
-    //
-    // Every element below is one that can really receive a keydown; the
-    // heading and the empty state are not focusable and never will be targets.
     expect(isTypingTarget(screen.getByPlaceholderText('Search employee'))).toBe(true)
     expect(isTypingTarget(screen.getByText('Іван Петренко'))).toBe(true)
     expect(isTypingTarget(screen.getByText('Unassign'))).toBe(true)
+  })
+
+  it('silences quick-launch while open even when focus has left it', () => {
+    // The focus rule above is not enough on its own: a click on a heading or on
+    // padding focuses nothing, and a pin toggle remounts the focused row. Both
+    // leave the keydown target on <body>, which the guard does not call typing —
+    // so a bound key launched a template over the open popover.
+    const onClose = vi.fn()
+    const props = {
+      clientId: 7,
+      slot: 'employee' as const,
+      currentUserId: null,
+      onOpen: vi.fn(),
+      onClose,
+    }
+    const { rerender } = render(<AssigneeDropdown {...props} isOpen />)
+
+    expect(isTypingTarget(document.body)).toBe(false)
+    expect(isHotkeyBlockingPopupOpen()).toBe(true)
+
+    // And only while open — a closed popover must not keep hotkeys off.
+    rerender(<AssigneeDropdown {...props} isOpen={false} />)
+    expect(isHotkeyBlockingPopupOpen()).toBe(false)
+  })
+
+  it('hands hotkeys back once closed, although focus returns to the trigger', () => {
+    // Closing puts focus back on the pencil. It carries `aria-haspopup`, which
+    // the hotkey guard reads as a widget that owns its keys; unless it lets go
+    // while collapsed, every binding stays silent until the next click.
+    const props = {
+      clientId: 7,
+      slot: 'employee' as const,
+      currentUserId: null,
+      onOpen: vi.fn(),
+      onClose: vi.fn(),
+    }
+    const { rerender } = render(<AssigneeDropdown {...props} isOpen />)
+    const pencil = screen.getByRole('button', { expanded: true })
+    expect(isTypingTarget(pencil)).toBe(true)
+
+    rerender(<AssigneeDropdown {...props} isOpen={false} />)
+    pencil.focus()
+
+    expect(document.activeElement).toBe(pencil)
+    expect(isTypingTarget(pencil)).toBe(false)
+  })
+
+  it('keeps focus on the pin once its row has moved section', () => {
+    const props = {
+      clientId: 7,
+      slot: 'employee' as const,
+      currentUserId: null,
+      isOpen: true,
+      onOpen: vi.fn(),
+      onClose: vi.fn(),
+    }
+    const { rerender } = render(<AssigneeDropdown {...props} />)
+
+    fireEvent.click(screen.getAllByLabelText('Pin')[0])
+    // What the optimistic cache update does: the pin set changes, and the row
+    // re-renders under PINNED as a new element.
+    mockPins.value = new Set([11])
+    rerender(<AssigneeDropdown {...props} />)
+
+    const pinnedGroup = screen.getByRole('group', { name: 'Pinned' })
+    expect(pinnedGroup).toContainElement(document.activeElement as HTMLElement)
+    expect(document.activeElement).toHaveAttribute('aria-label', 'Unpin')
   })
 
   it('hides the PINNED section while nothing is pinned', () => {
