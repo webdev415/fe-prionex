@@ -76,7 +76,7 @@ export function AssigneeDropdown({
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
 
   const [isSaving, setIsSaving] = useState(false)
-  const [triggerEl, setTriggerEl] = useState<HTMLButtonElement | null>(null)
+  const triggerRef = useRef<HTMLButtonElement | null>(null)
 
   // Permission model, unchanged from the modal this replaces: filling an empty
   // slot is an initial assignment (edit_clients); changing or clearing one that
@@ -98,6 +98,18 @@ export function AssigneeDropdown({
   const click = useClick(context)
   const dismiss = useDismiss(context, { outsidePress: false })
   const { getReferenceProps, getFloatingProps } = useInteractions([click, dismiss])
+
+  // Combined ref must be stable: Floating UI updates its internal reference
+  // state on every setReference call, so an inline callback (new function each
+  // render) triggers detach/attach → state update → re-render → new function →
+  // infinite loop. Memoized on ``refs``, which is itself stable.
+  const setTriggerRef = useCallback(
+    (node: HTMLButtonElement | null) => {
+      refs.setReference(node)
+      triggerRef.current = node
+    },
+    [refs]
+  )
 
   // Held back until the popover opens. The list runs to a few hundred
   // operators, and a client card mounts two of these triggers that may never be
@@ -140,10 +152,9 @@ export function AssigneeDropdown({
   const handleClose = useCallback(() => {
     onClose()
     // Focus returns to the trigger so the control stays keyboard-operable and
-    // focus is not stranded on the unmounted popover. The node is held in
-    // state rather than read off a ref during render.
-    triggerEl?.focus()
-  }, [onClose, triggerEl])
+    // focus is not stranded on the unmounted popover.
+    triggerRef.current?.focus()
+  }, [onClose])
 
   // Escape closes without changes, like an outside press.
   useEffect(() => {
@@ -230,10 +241,7 @@ export function AssigneeDropdown({
   return (
     <>
       <button
-        ref={(node) => {
-          refs.setReference(node)
-          setTriggerEl(node)
-        }}
+        ref={setTriggerRef}
         type="button"
         data-testid={dataTestId}
         {...{ [ATTR_TRIGGER]: '' }}
