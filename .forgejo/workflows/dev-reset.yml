@@ -854,13 +854,30 @@ jobs:
           # — falls back to the whole branch. That is deliberately the PESSIMISTIC direction: an
           # over-count can only make the ceiling refuse and report, never act at a scale nobody
           # authorised.
-          LAST_CATCHUP="$(git rev-list --max-count=1 --grep="^${RESET_MARKER}" "$DEV_SHA" 2>/dev/null || true)"
+          # 🔴 The marker alone is NOT enough to identify a catch-up commit, and trusting it
+          # would fail in the OPTIMISTIC direction — the one direction this file is not allowed
+          # to fail in. `--grep` matches any LINE of the message body, so a developer commit that
+          # merely quotes a catch-up message (a workflow fix pasting an example is the obvious
+          # way) would be picked as the limit and the week's count would come back too LOW.
+          # Measured on a fixture: such a commit made the count report 0 where the truth was 2.
+          # So each candidate is checked STRUCTURALLY, by what a catch-up commit provably is: a
+          # merge (it has a second parent) whose tree equals that second parent's tree (it
+          # carries main's tree). A quoting commit has no second parent and is skipped.
+          LAST_CATCHUP=""
+          for CANDIDATE in $(git rev-list --grep="^${RESET_MARKER}" "$DEV_SHA" 2>/dev/null || true); do
+            CAND_P2="$(git rev-parse -q --verify "${CANDIDATE}^2" 2>/dev/null || true)"
+            [ -n "$CAND_P2" ] || continue
+            [ "$(git rev-parse "${CANDIDATE}^{tree}")" = "$(git rev-parse "${CAND_P2}^{tree}")" ] || continue
+            LAST_CATCHUP="$CANDIDATE"
+            break
+          done
           if [ -n "$LAST_CATCHUP" ]; then
             echo "previous catch-up commit: ${LAST_CATCHUP} — counting only what landed after it."
             set -- "refs/remotes/origin/main" "refs/remotes/origin/dev" "$LAST_CATCHUP"
           else
-            echo "no previous catch-up commit on dev — counting the whole branch (pessimistic:"\
-                 "it can only make the ceiling refuse, never act wider)."
+            echo "no previous catch-up commit on dev — counting the WHOLE branch. The number"\
+                 "below is therefore a cumulative total, not this week's work, and the ceiling"\
+                 "does not apply to it (see the ceiling note)."
             set -- "refs/remotes/origin/main" "refs/remotes/origin/dev"
           fi
           CHERRY_OUT="$(git cherry "$@" 2>&1)" || {
@@ -878,17 +895,38 @@ jobs:
           echo "discarded=${DISCARDED}" >> "$GITHUB_OUTPUT"
 
           # ── 3. REFUSE if over the ceiling — before anything is written. ─────────────────────
-          if [ "$DISCARDED" -gt "$MAX_DISCARDED" ]; then
-            echo "FAIL: this reset would discard ${DISCARDED} commit(s), over the"\
-                 "${MAX_DISCARDED}-commit ceiling. REFUSING AND REPORTING rather than acting"\
-                 "quietly at this scale. NOTHING HAS BEEN CHANGED: no archive tag was written and"\
-                 "dev was not moved."
-            echo "  A count this high does not mean the week was busy — an ordinary week on this"\
-                 "branch produced 41–99. It means this schedule has probably not been running,"\
-                 "and a month of not running is about 260. Find out why before resetting; the"\
-                 "ceiling is a decision about acceptable unwatched destruction, not a knob."
-            echo "  To reset deliberately after looking: do it by hand, the way"\
-                 "docs/dev-weekly-reset-plan.md §2 records, where a human sees what goes."
+          # 🔴 WHAT THIS CEILING IS NOW, after the catch-up redesign (§12). It is NOT a
+          # blast-radius ceiling any more: a catch-up commit destroys nothing, every superseded
+          # commit stays reachable from `dev`, so there is no damage for a ceiling to bound. It
+          # survives as one thing only — a "this schedule has not been running" sanity guard, on
+          # the reasoning that an unexpectedly large week is worth a human's eye before the job
+          # quietly rewrites what everyone on `dev` sees next pull.
+          #
+          # And it must NOT apply to the no-marker case, which is the trap this replaced. Without
+          # a previous catch-up the count is cumulative over the whole branch — 40 on the day
+          # this was written and climbing at the plan's own 41–99/week — so it would cross 150
+          # within two or three weeks and then refuse FOREVER, each week counting higher. Worse,
+          # the old refusal text sent the reader to §2's manual `git push --force-with-lease`,
+          # which §12 establishes this instance refuses from everyone. A guard whose only advice
+          # is an impossible act, and which can never clear itself, is not a guard.
+          if [ -z "$LAST_CATCHUP" ]; then
+            echo "NOTE: no previous catch-up commit, so ${DISCARDED} is a cumulative count over"\
+                 "the whole branch rather than this week's work. The ceiling is NOT applied to"\
+                 "it — the first run has nothing to compare against, and refusing here would"\
+                 "block the very commit that gives every later run its baseline."
+          elif [ "$DISCARDED" -gt "$MAX_DISCARDED" ]; then
+            echo "FAIL: ${DISCARDED} commit(s) have landed on dev since the last catch-up"\
+                 "(${LAST_CATCHUP}), over the ${MAX_DISCARDED} this job expects in a week."\
+                 "REFUSING AND REPORTING rather than quietly rewriting what everyone on dev"\
+                 "sees. NOTHING HAS BEEN CHANGED: no tag was written and dev was not touched."
+            echo "  🔴 To be clear about the stakes: NO COMMIT WOULD BE LOST if this ran. A"\
+                 "catch-up commit supersedes content, it does not discard history. The refusal"\
+                 "is about surprise, not damage — a week this size usually means the schedule"\
+                 "has not been running (41–99 is ordinary, a month of silence is about 260)."
+            echo "  To proceed deliberately after looking: re-run this workflow by"\
+                 "workflow_dispatch once the reason is understood, or raise MAX_DISCARDED in the"\
+                 "same commit that records why. Do NOT follow §2's manual force-push — this"\
+                 "instance refuses it from every actor (§12)."
             exit 1
           fi
 
@@ -1039,20 +1077,25 @@ jobs:
                  "has been changed on the server."
             exit 1
           fi
-          # Assert the two properties the whole design rests on, before offering it to the
-          # server: the new commit must contain main's tree exactly, and it must be a descendant
-          # of the dev this run measured (otherwise the push is not a fast-forward and the
-          # protection rule will refuse it — better to say so here than to read it off a remote
-          # rejection).
-          if [ "$(git rev-parse "${CATCHUP_SHA}^{tree}")" != "$(git rev-parse "${MAIN_SHA}^{tree}")" ]; then
-            echo "FAIL: the catch-up commit's tree is not main's tree. Refusing to push a commit"\
-                 "that would leave dev's files different from main's. Nothing has been changed."
-            exit 1
-          fi
-          if ! git merge-base --is-ancestor "$DEV_SHA" "$CATCHUP_SHA"; then
-            echo "FAIL: the catch-up commit is not a descendant of dev (${DEV_SHA}), so pushing"\
-                 "it would be a non-fast-forward that this instance refuses outright. Nothing"\
-                 "has been changed."
+          # 🔴 These assert PARENT ORDER, and that is deliberate — the two checks that were
+          # here before (tree == main's tree, and descendant-of-dev) were TAUTOLOGIES: the tree
+          # is the one just handed to `commit-tree` and `DEV_SHA` is its first parent, so both
+          # were true by construction and could not fail. A check that cannot fail proves
+          # nothing; this file says so about other people's code in three places, so it does not
+          # get to keep two of its own.
+          #
+          # Parent order is the thing that actually varies (swap the two `-p` flags and
+          # `commit-tree` accepts it happily) and the thing two durable records depend on: the
+          # commit message promises the superseded commits are "reachable through this commit's
+          # first parent", and `git log --first-parent dev` — how anyone reads this branch's
+          # history — follows dev's line only if dev is parent 1.
+          CATCHUP_P1="$(git rev-parse "${CATCHUP_SHA}^1")"
+          CATCHUP_P2="$(git rev-parse "${CATCHUP_SHA}^2")"
+          if [ "$CATCHUP_P1" != "$DEV_SHA" ] || [ "$CATCHUP_P2" != "$MAIN_SHA" ]; then
+            echo "FAIL: the catch-up commit's parents are [${CATCHUP_P1}, ${CATCHUP_P2}], not"\
+                 "[dev ${DEV_SHA}, main ${MAIN_SHA}]. First parent MUST be dev: the commit"\
+                 "message and every --first-parent read of this branch depend on it. Nothing has"\
+                 "been changed on the server."
             exit 1
           fi
 
@@ -1071,8 +1114,6 @@ jobs:
             echo "  (b) the deploy key cannot write dev — the protection rule is not admitting"\
                  "deploy keys (push_whitelist_deploy_keys), or the key was removed (the"\
                  "documented exit plan, §3.4 A1.4)."
-            echo "  (c) the push was judged non-fast-forward after all — which would mean dev"\
-                 "moved between the ancestry assertion above and this push."
             echo "  Archive: ${TAG_NAME:-none written — this run superseded nothing}."
             exit 1
           fi
@@ -1104,7 +1145,7 @@ jobs:
                  "${TAG_NAME}. Nothing was destroyed: they remain reachable from dev."
           fi
 
-      - name: "Report what this reset discarded (plan §4.2.3 — silence is not success)"
+      - name: "Report what this run did to dev (plan §4.2.3 — silence is not success)"
         if: ${{ always() }}
         env:
           RESET_OUTCOME: ${{ steps.reset.outcome }}
@@ -1112,6 +1153,12 @@ jobs:
           ARCHIVE_TAG: ${{ steps.reset.outputs.archive_tag }}
           OLD_DEV: ${{ steps.reset.outputs.old_dev_sha }}
           NEW_DEV: ${{ steps.reset.outputs.main_sha }}
+          # 🔴 The commit dev actually points at after a catch-up. Without it this report —
+          # the only record anyone can read on this instance — named main's SHA as "where dev
+          # was moved to", which is a commit dev has never pointed at: the Monday reader would
+          # run `git rev-parse origin/dev`, get a third value, and conclude either that someone
+          # pushed afterwards or that the read-back lied.
+          CATCHUP: ${{ steps.reset.outputs.catchup_sha }}
           PERFORMED: ${{ steps.reset.outputs.reset_performed }}
         run: |
           set -euo pipefail
@@ -1129,11 +1176,14 @@ jobs:
           case "${RESET_OUTCOME:-}" in
             success)
               if [ "${PERFORMED:-}" = "true" ]; then
-                echo "dev was reset:     ${OLD_DEV} -> ${NEW_DEV}"
-                echo "commits discarded: ${DISCARDED:-unknown}"
-                echo "recoverable from:  ${ARCHIVE_TAG:-<no tag recorded>}"
+                echo "dev caught up:        ${OLD_DEV} -> ${CATCHUP:-unknown}"
+                echo "  (that commit carries main's tree, main = ${NEW_DEV:-unknown})"
+                echo "commits superseded:   ${DISCARDED:-unknown}"
+                echo "  nothing was destroyed — they stay reachable from dev"
+                echo "recorded at:          ${ARCHIVE_TAG:-<none — nothing was superseded>}"
               else
-                echo "dev already equalled main (${NEW_DEV:-unknown}) — nothing discarded, no tag written."
+                echo "dev already carried main's tree (main = ${NEW_DEV:-unknown}) — no commit"
+                echo "created, nothing superseded, no tag written."
               fi
               ;;
             *)
@@ -1249,15 +1299,24 @@ jobs:
           #
           # ⚠️ Expected, and not a defect: from the moment the reset step moves `dev`, a WEEKLY RUN
           # PRODUCES TWO DEPLOYS. The branch push triggers `dev-branch-autodeploy.yml`, and this
-          # step then dispatches `deploy-dev.yml` as it always has. Both carry the shared
-          # concurrency group `deploy-dev-fe-prionex-dev`, which this job is holding, so neither
-          # can start until this job exits — they queue, then run one after the other, and both
-          # put the SAME image on the stand (autodeploy reuses the published one rather than
-          # rebuilding it, which is what phase 1 of the plan is for). The cost is one redundant
-          # pull→up -d; the benefit is that neither path depends on the other existing. The
-          # dispatch is deliberately NOT dropped in favour of the push trigger: this file's own
-          # read-back is the only confirmation any of this happened, and it can only confirm a run
-          # it asked for.
+          # step dispatches `deploy-dev.yml` as it always has. Both carry the shared concurrency
+          # group `deploy-dev-fe-prionex-dev`, which this job holds, so neither can start until
+          # this job exits.
+          #
+          # 🔴 Corrected 2026-09-21 (review round 3). They do NOT put the same image on the
+          # stand, and autodeploy does NOT reuse a published one. The catch-up commit was created
+          # seconds earlier, so `sha-<12>-dev` cannot exist for it, build.yml's decision step
+          # resolves `reuse=false`, and autodeploy performs a FULL BUILD of that commit every
+          # week. The Monday window is therefore: this job, then a build plus its deploy, plus
+          # this dispatch's deploy of main's image — two different digests of the IDENTICAL tree,
+          # so the stand holds the same content whichever lands last, and both pass
+          # deploy-stand's revision-label check. Budget for a build, not for two pulls.
+          # (Phase 1's reuse path is not wasted; its remaining case is a fast-forward merge of a
+          # branch CI already built. It is simply not this one.)
+          #
+          # The dispatch is deliberately NOT dropped in favour of the push trigger: this file's
+          # own read-back is the only confirmation any of this happened, and it can only confirm
+          # a run it asked for.
           # 🚨 And this job still must not WAIT for either of them — it holds the group they need.
           # See the self-deadlock warning in this file's header.
           DEPLOY_REF="${PINNED_SHA:-}"

@@ -24,16 +24,25 @@ name: DEV branch autodeploy
 # deploy each re-derive `dev` HEAD; `cancel-in-progress: false` plus the stand
 # file-lock bound the race to the same window build-main.yml already accepts.
 #
-# 🔴 ── `reuse_published_image: "true"` — the precondition for the weekly reset ──
-# Not an optimisation. This is the ONE caller of build.yml whose pushes are
-# routinely pushes of a commit that is ALREADY BUILT: the weekly reset
-# (`dev-reset.yml`) force-updates `dev` to a `main` commit whose `sha-<12>-dev`
-# image `build-main.yml` published hours earlier. Without this input the push
-# rebuilds that commit, `vite.config.ts:8` bakes a fresh `Date.now()` into the
-# bundle on the cache miss, the digest differs from the published one, and
-# `build.yml`'s Story 3.6 AC2 guard REFUSES to repoint the protected tag —
-# correctly. Measured, not predicted: run 1397 (2026-09-21, the manual reset)
-# failed at exactly that step, with the stand nevertheless correct.
+# 🔴 ── `reuse_published_image: "true"` ───────────────────────────────────────
+# Not an optimisation. This is the ONE caller of build.yml whose pushes are routinely
+# pushes of a commit that is ALREADY BUILT.
+#
+# 🔴 Corrected 2026-09-21 (review round 3) — the original reason given here is no longer
+# true and is not quietly repaired. It said the weekly reset force-updates `dev` onto an
+# already-built `main` commit. That design turned out to be impossible on this instance,
+# which refuses every non-fast-forward push to a protected branch before it even looks at
+# who is pushing (see `dev-reset.yml` §5 and plan §12). The weekly job now lands a freshly
+# created catch-up commit, which has no image at all — so on reset weeks this input does
+# nothing and autodeploy builds, as it should.
+#
+# The input stays because the case it actually covers is the ordinary one: a
+# fast-forward-only merge into `dev` of a feature branch whose head commit `ci.yml` has
+# already published as `sha-<12>-dev`. Without the input that push rebuilds the very same
+# commit, `vite.config.ts:8` bakes a fresh `Date.now()` into the bundle on the cache miss,
+# the digest differs from the published one, and `build.yml`'s Story 3.6 AC2 guard REFUSES
+# to repoint the protected tag — correctly. Measured, not predicted: run 1397 (2026-09-21,
+# the manual reset) failed at exactly that step, with the stand nevertheless correct.
 #
 # A weekly red run that means nothing is read for about a month and then not at
 # all, so it is fixed here rather than tolerated: with this input, a push of an

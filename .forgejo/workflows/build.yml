@@ -78,10 +78,13 @@ on:
           exists. Anything else — including the default — keeps the historical
           behaviour byte for byte.
 
-          Why this exists: `dev-branch-autodeploy.yml`. The weekly reset
-          force-updates `dev` to a `main` commit whose image `build-main.yml`
-          published hours earlier, so autodeploy rebuilds a commit that is
-          already published; `vite.config.ts:8` bakes a fresh `Date.now()` into
+          Why this exists: `dev-branch-autodeploy.yml`. 🔴 The original reason
+          — the weekly reset force-updating `dev` onto an already-published
+          `main` commit — turned out to be impossible on this instance (plan
+          §12), and the reset now lands a fresh catch-up commit that has no
+          image. The case that remains, and the one this input is for, is a
+          fast-forward-only merge into `dev` of a branch CI has already built:
+          autodeploy then rebuilds a commit that is already published; `vite.config.ts:8` bakes a fresh `Date.now()` into
           every cache-missing build, the digests differ, and the AC2 guard
           below correctly refuses to repoint the protected tag — a red run that
           means nothing, every week, on a stand that is in fact correct. The fix
