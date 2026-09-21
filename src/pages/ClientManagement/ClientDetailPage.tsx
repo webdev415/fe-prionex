@@ -168,6 +168,7 @@ import { useCallStore } from '@/stores/callStore'
 import { useClientTags } from '@/features/tags/hooks/useTags'
 import { TagSelectorModal } from './components/TagSelectorModal'
 import { useCallingWindow } from '@/features/calls/hooks/useCallingWindow'
+import { callDialogBlockedReason } from './callDialogGate'
 import { CallingWindowTooltip } from '@/features/calls/components/CallingWindowTooltip'
 import { useCallOrigination } from '@/features/calls/hooks/useCallOrigination'
 import { useAuthStore } from '@/stores/authStore'
@@ -842,19 +843,20 @@ export function ClientDetailPage() {
       )
       return
     }
-    // Gated here, not on each button: this is the single door to the call
-    // dialog, so checking it once is what makes "every entry point agrees"
-    // true for the per-phone buttons and the loans tab as well as the header
-    // — the alternative is remembering to wrap each new one.
-    if (!callingWindow.allowed && callingWindow.message) {
-      toast.warning(callingWindow.message)
-      return
-    }
     const meta = contactTypeId != null ? contactTypesById.get(contactTypeId) : undefined
     const initialCallType: CallType =
       meta?.default_call_line === 'gray' ? 'gray-line' : 'white-line'
     const spamOptionEnabled =
       spamAllowedOverride !== undefined ? spamAllowedOverride : meta?.spam_allowed !== false
+
+    // Gated at the one door rather than on each button, so the per-phone
+    // buttons and the loans tab are covered without each new one having to be
+    // remembered.
+    const blocked = callDialogBlockedReason(callingWindow, spamOptionEnabled)
+    if (blocked) {
+      toast.warning(blocked)
+      return
+    }
     setCallModalPreferences({ phone, initialCallType, spamOptionEnabled })
     setOpenCallModal('call-dialog')
     setIsCallModalOpen(true)

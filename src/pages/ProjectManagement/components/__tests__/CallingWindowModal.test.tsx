@@ -6,9 +6,10 @@
  * form shows as "every day" and the API rejects as "no day".
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { CallingWindowConfig } from '@/features/projects/types'
+import { callingWindowKeys } from '@/features/projects/hooks/useCallingWindow'
 
 const setWindow = vi.fn()
 const getWindow = vi.fn()
@@ -17,8 +18,9 @@ interface SelectOption {
   id: string
   name: string
 }
-const { selectOptions } = vi.hoisted(() => ({
+const { selectOptions, selectHandlers } = vi.hoisted(() => ({
   selectOptions: {} as Record<string, SelectOption[]>,
+  selectHandlers: {} as Record<string, (next: string) => void>,
 }))
 // The dropdown's own rendering is not what this file is pinning — what the
 // modal hands it is. Recording the props keeps the assertion off
@@ -27,16 +29,26 @@ vi.mock('@/components/ui/SearchableSelect', () => ({
   SearchableSelect: ({
     options,
     placeholder,
+    onValueChange,
   }: {
     options: SelectOption[]
     placeholder?: string
+    onValueChange: (next: string) => void
   }) => {
     selectOptions[placeholder ?? ''] = options
+    selectHandlers[placeholder ?? ''] = onValueChange
     return null
   },
 }))
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
+const { panelCountry } = vi.hoisted(() => ({ panelCountry: { value: undefined as unknown } }))
+vi.mock('../HolidayCalendarPanel', () => ({
+  HolidayCalendarPanel: ({ country }: { country: string | null }) => {
+    panelCountry.value = country
+    return <div data-testid="holiday-panel" />
+  },
+}))
 vi.mock('@/features/projects/api/callingWindowApi', () => ({
   getCallingWindow: (...a: unknown[]) => getWindow(...a),
   setCallingWindow: (...a: unknown[]) => setWindow(...a),
@@ -75,6 +87,10 @@ const saveButton = () => screen.getByRole('button', { name: /actions\.save|Save/
 
 beforeEach(() => {
   vi.clearAllMocks()
+  // clearAllMocks does not touch this: without it a test can assert against
+  // props recorded by an earlier test's render.
+  for (const key of Object.keys(selectOptions)) delete selectOptions[key]
+  for (const key of Object.keys(selectHandlers)) delete selectHandlers[key]
   setWindow.mockResolvedValue(SPAIN)
 })
 
@@ -176,6 +192,100 @@ describe('CallingWindowModal', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'pages.projects.callingWindow.tabHolidays' }))
     fireEvent.click(screen.getByRole('tab', { name: 'pages.projects.callingWindow.tabWindow' }))
     expect(screen.getByDisplayValue('11:30')).toBeInTheDocument()
+  })
+
+  it('keeps the form when a refresh fails but the last values are still there', async () => {
+    // react-query keeps `data` through a failed background refetch, so an
+    // error here is "could not refresh", not "nothing to show". Taking the
+    // error branch unmounted the form and lost every unsaved edit — the same
+    // silent loss the tab-switch fix was written to prevent, by another route.
+    getWindow.mockResolvedValue(SPAIN)
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={queryClient}>
+        <CallingWindowModal projectId={7} projectName="SolventaPro" open onClose={vi.fn()} />
+      </QueryClientProvider>
+    )
+    const start = await screen.findByDisplayValue('09:00')
+    fireEvent.change(start, { target: { value: '11:30' } })
+
+    getWindow.mockRejectedValue(new Error('network'))
+    await queryClient.refetchQueries()
+
+    expect(screen.getByDisplayValue('11:30')).toBeInTheDocument()
+    expect(
+      await screen.findByText('pages.projects.callingWindow.refreshFailed')
+    ).toBeInTheDocument()
+  })
+
+  it('shows the holidays tab the country just selected, not the saved one', async () => {
+    // The journey this screen exists for is: pick a country, go and generate
+    // its calendar, come back. Handing the panel the server value told the
+    // admin "no country is set" for the country they had just picked.
+    renderModal({ ...SPAIN, holiday_country: null })
+    await screen.findByDisplayValue('09:00')
+
+    const pick = selectHandlers['pages.projects.callingWindow.countryPlaceholder']
+    expect(pick).toBeTruthy()
+    act(() => pick('ES'))
+
+    fireEvent.click(screen.getByRole('tab', { name: 'pages.projects.callingWindow.tabHolidays' }))
+    await waitFor(() => expect(panelCountry.value).toBe('ES'))
+  })
+
+  it('opens on the window tab even after closing on holidays', async () => {
+    // The modal stays mounted across open/close, so the tab outlived the
+    // project: opening the window for another project landed on that
+    // project's holiday calendar.
+    getWindow.mockResolvedValue(SPAIN)
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const { rerender } = render(
+      <QueryClientProvider client={queryClient}>
+        <CallingWindowModal projectId={7} projectName="A" open onClose={vi.fn()} />
+      </QueryClientProvider>
+    )
+    await screen.findByDisplayValue('09:00')
+    fireEvent.click(screen.getByRole('tab', { name: 'pages.projects.callingWindow.tabHolidays' }))
+    expect(screen.getByTestId('holiday-panel')).toBeInTheDocument()
+
+    const tree = (open: boolean, projectId: number) => (
+      <QueryClientProvider client={queryClient}>
+        <CallingWindowModal projectId={projectId} projectName="B" open={open} onClose={vi.fn()} />
+      </QueryClientProvider>
+    )
+    rerender(tree(false, 7))
+    rerender(tree(true, 9))
+
+    // Waited for the new project's form to be on screen first: the panel is
+    // also absent while the reopened modal is loading, so asserting straight
+    // after the rerender passes whether or not the tab was reset.
+    await screen.findByDisplayValue('09:00')
+    expect(screen.queryByTestId('holiday-panel')).not.toBeInTheDocument()
+  })
+
+  it('returns to the window tab when the project changes without closing', async () => {
+    // The modal body unmounts on close, so closing already resets the tab.
+    // Switching project while it stays open does not — and that lands the
+    // admin on another project's holiday calendar.
+    getWindow.mockResolvedValue(SPAIN)
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const tree = (projectId: number) => (
+      <QueryClientProvider client={queryClient}>
+        <CallingWindowModal projectId={projectId} projectName="A" open onClose={vi.fn()} />
+      </QueryClientProvider>
+    )
+    const { rerender } = render(tree(7))
+    await screen.findByDisplayValue('09:00')
+    fireEvent.click(screen.getByRole('tab', { name: 'pages.projects.callingWindow.tabHolidays' }))
+    expect(screen.getByTestId('holiday-panel')).toBeInTheDocument()
+
+    // Primed, so the switch has no loading gap. Without one the body
+    // remounts anyway and the tab resets by accident — which is exactly what
+    // made this look fixed when it was not.
+    queryClient.setQueryData(callingWindowKeys.window(9), SPAIN)
+    rerender(tree(9))
+    await screen.findByDisplayValue('09:00')
+    expect(screen.queryByTestId('holiday-panel')).not.toBeInTheDocument()
   })
 
   it('offers a way to clear the holiday country', async () => {

@@ -61,8 +61,6 @@ export function CallingWindowModal({
     refetch,
     isFetching,
   } = useCallingWindow(open ? projectId : null)
-  const [view, setView] = useState<'window' | 'holidays'>('window')
-
   return (
     <Modal open={open} onClose={onClose} maxWidth="lg">
       <ModalHeader
@@ -72,7 +70,7 @@ export function CallingWindowModal({
         }
         onClose={onClose}
       />
-      {isError || (!isLoading && !current) ? (
+      {isError && !current ? (
         <ModalContent>
           <Alert variant="error">
             <div className="flex flex-col items-start gap-2">
@@ -90,52 +88,114 @@ export function CallingWindowModal({
           <p className="text-muted-foreground text-sm">{t('status.loading', 'Loading…')}</p>
         </ModalContent>
       ) : (
-        <>
-          {/* One modal with two views rather than a second modal opened from
-              the first: the window and its holiday calendar are one setting,
-              and nesting modals to edit halves of it reads as two features. */}
-          <div className="flex gap-2 px-6 pt-2" role="tablist">
-            <Button
-              variant={view === 'window' ? 'primary' : 'secondary'}
-              size="sm"
-              role="tab"
-              aria-selected={view === 'window'}
-              onClick={() => setView('window')}
-            >
-              {t('pages.projects.callingWindow.tabWindow', 'Window')}
-            </Button>
-            <Button
-              variant={view === 'holidays' ? 'primary' : 'secondary'}
-              size="sm"
-              role="tab"
-              aria-selected={view === 'holidays'}
-              onClick={() => setView('holidays')}
-            >
-              {t('pages.projects.callingWindow.tabHolidays', 'Holidays')}
-            </Button>
-          </div>
-
-          {/* The form stays mounted across the tab switch and renders nothing
-              while hidden. Unmounting it discarded unsaved edits on exactly the
-              journey this screen is for: choose a country, go and generate its
-              calendar, come back. */}
-          <CallingWindowForm
-            key={projectId ?? 'none'}
-            projectId={projectId as number}
-            initial={current}
-            hidden={view !== 'window'}
-            onClose={onClose}
-          />
-          {view === 'holidays' && (
-            <HolidayCalendarPanel
-              projectId={projectId as number}
-              country={current.holiday_country}
-              onClose={onClose}
-            />
-          )}
-        </>
+        // Keyed on the project and unmounted with the modal, so the tab and
+        // the pending country selection reset on their own. Holding them on
+        // the outer component — which ProjectManagementPage keeps mounted —
+        // meant reopening for another project landed on the previous one's
+        // holiday calendar.
+        <CallingWindowBody
+          key={projectId ?? 'none'}
+          projectId={projectId as number}
+          current={current}
+          isError={isError}
+          isFetching={isFetching}
+          refetch={refetch}
+          onClose={onClose}
+        />
       )}
     </Modal>
+  )
+}
+
+interface CallingWindowBodyProps {
+  projectId: number
+  current: CallingWindowConfig
+  isError: boolean
+  isFetching: boolean
+  refetch: () => void
+  onClose: () => void
+}
+
+function CallingWindowBody({
+  projectId,
+  current,
+  isError,
+  isFetching,
+  refetch,
+  onClose,
+}: CallingWindowBodyProps) {
+  const { t } = useTranslation('common')
+  const [view, setView] = useState<'window' | 'holidays'>('window')
+  // The Holidays tab is told which country is *selected*, not which one is
+  // saved. Handing it the server value told an admin "no country is set" for
+  // the country they had just picked — the first half of the journey this
+  // screen exists for.
+  const [selectedCountry, setSelectedCountry] = useState<string | null>(null)
+
+  return (
+    <>
+      {/* One modal with two views rather than a second modal opened from
+            the first: the window and its holiday calendar are one setting,
+            and nesting modals to edit halves of it reads as two features. */}
+      <div className="flex gap-2 px-6 pt-2" role="tablist">
+        <Button
+          variant={view === 'window' ? 'primary' : 'secondary'}
+          size="sm"
+          role="tab"
+          aria-selected={view === 'window'}
+          onClick={() => setView('window')}
+        >
+          {t('pages.projects.callingWindow.tabWindow', 'Window')}
+        </Button>
+        <Button
+          variant={view === 'holidays' ? 'primary' : 'secondary'}
+          size="sm"
+          role="tab"
+          aria-selected={view === 'holidays'}
+          onClick={() => setView('holidays')}
+        >
+          {t('pages.projects.callingWindow.tabHolidays', 'Holidays')}
+        </Button>
+      </div>
+
+      {/* The form stays mounted across the tab switch and renders nothing
+            while hidden. Unmounting it discarded unsaved edits on exactly the
+            journey this screen is for: choose a country, go and generate its
+            calendar, come back. */}
+      {isError && (
+        <div className="px-6 pt-2">
+          <Alert variant="warning">
+            <div className="flex flex-col items-start gap-2">
+              <span>
+                {t(
+                  'pages.projects.callingWindow.refreshFailed',
+                  'Could not refresh the calling window. You are seeing the last loaded values.'
+                )}
+              </span>
+              <Button size="sm" variant="secondary" onClick={() => refetch()} disabled={isFetching}>
+                {t('actions.retry', 'Retry')}
+              </Button>
+            </div>
+          </Alert>
+        </div>
+      )}
+
+      <CallingWindowForm
+        key={projectId ?? 'none'}
+        projectId={projectId as number}
+        initial={current}
+        hidden={view !== 'window'}
+        onCountryChange={setSelectedCountry}
+        onClose={onClose}
+      />
+      {view === 'holidays' && (
+        <HolidayCalendarPanel
+          projectId={projectId as number}
+          country={selectedCountry ?? current.holiday_country}
+          onClose={onClose}
+        />
+      )}
+    </>
   )
 }
 
@@ -143,10 +203,18 @@ interface CallingWindowFormProps {
   projectId: number
   initial: CallingWindowConfig
   hidden?: boolean
+  /** Reports the live selection so the Holidays tab follows it before a save. */
+  onCountryChange: (country: string) => void
   onClose: () => void
 }
 
-function CallingWindowForm({ projectId, initial, hidden, onClose }: CallingWindowFormProps) {
+function CallingWindowForm({
+  projectId,
+  initial,
+  hidden,
+  onCountryChange,
+  onClose,
+}: CallingWindowFormProps) {
   const { t } = useTranslation('common')
   const save = useSetCallingWindow(projectId)
   const { data: countries = [] } = useHolidayCountries(true)
@@ -325,6 +393,7 @@ function CallingWindowForm({ projectId, initial, hidden, onClose }: CallingWindo
                 value={country}
                 onValueChange={(next) => {
                   setCountry(next)
+                  onCountryChange(next)
                   setSubdivision('')
                 }}
                 placeholder={t(

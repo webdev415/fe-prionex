@@ -991,7 +991,7 @@ export function CallDialogModal({
                 </div>
               </div>
             </ModalContent>
-            <ModalFooter className="flex-col gap-2 sm:flex-row sm:gap-3">
+            <ModalFooter className="flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
               <Button
                 variant="cancel"
                 size="sm"
@@ -1043,7 +1043,7 @@ export function CallDialogModal({
                   costs it its identity. The cooldown case beside it keeps a
                   short label for the same reason. */}
               {callType !== 'spam-calls' && !callingWindow.allowed && callingWindow.message && (
-                <p className="text-muted-foreground mt-2 w-full text-center text-xs leading-[140%]">
+                <p className="text-muted-foreground mt-2 w-full basis-full text-center text-xs leading-[140%]">
                   {callingWindow.message}
                 </p>
               )}
