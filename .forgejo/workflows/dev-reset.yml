@@ -182,6 +182,15 @@ on:
   # branch moves), so the realistic worst case is a red run or a reset without its deploy; that
   # is still not a thing to discover on a Monday at 00:01 UTC.
   #
+  # 🔴 THE PRICE OF SHIPPING DISARMED, named because it is easy to miss (code review Low): a
+  # push to `main` WIPES and re-registers this repository's schedules, so merging this does not
+  # merely fail to arm the new cron — it REMOVES the `0 2 * * 0` row that is registered and live
+  # today, and with it the Sunday stand-only reset that has been running since runs 1019-1041.
+  # Between this merge and phase 4 the DEV stand is not brought to `main` on any schedule at all,
+  # and nothing announces that. Accepted deliberately: the stand reset is recoverable by a manual
+  # `workflow_dispatch` of this same file, whereas an armed-but-unproven destructive schedule is
+  # not recoverable by anything. Do not let phase 4 slip quietly.
+  #
   # ✅ TO ARM: uncomment the two lines below — the `schedule:` key and its single `- cron:` item —
   # and push to `main`. The push itself is the registration; no separate action is needed. Do it
   # only after a manual `workflow_dispatch` of this workflow has driven the branch reset for real
@@ -718,7 +727,21 @@ jobs:
           # 🔴 The scan is NOT the authentication — this comparison is. A scan alone is
           # trust-on-first-use performed fresh on every run, which for an unattended job means no
           # host authentication whatsoever.
-          SCANNED_FPS="$(ssh-keygen -lf "$KNOWN_HOSTS" 2>/dev/null | awk '{print $2}')"
+          # 🔴 Code review Low, 2026-09-21: `|| true` and the emptiness test below are not
+          # belt-and-braces. `ssh-keyscan` exits 0 having written NOTHING when the host answers
+          # but offers no key of the requested type — and then, under `set -euo pipefail`, a bare
+          # `SCANNED_FPS="$(ssh-keygen -lf … | awk …)"` dies at the assignment with no output at
+          # all (reproduced: exit 255, silent). The step would go red on a host-key rotation with
+          # nothing said, and the "update the pinned literal deliberately" guidance below — the
+          # entire reason that message exists — would never print.
+          if [ ! -s "$KNOWN_HOSTS" ]; then
+            echo "FAIL: ${SSH_HOST}:${SSH_PORT} answered but offered no ED25519 host key, so there"\
+                 "is nothing to compare against the pinned fingerprint. If the instance's host key"\
+                 "was rotated to another type deliberately, update the pinned literal AND the"\
+                 "`-t`/`HostKeyAlgorithms` pair in this step together. Nothing has been changed."
+            exit 1
+          fi
+          SCANNED_FPS="$(ssh-keygen -lf "$KNOWN_HOSTS" 2>/dev/null | awk '{print $2}' || true)"
           # With `-t ed25519` above, this file holds exactly one key, so "appears among the
           # scanned fingerprints" and "is the key ssh will use" are now the same statement.
           if ! printf '%s\n' "$SCANNED_FPS" | grep -qxF "$HOST_KEY_FINGERPRINT"; then
@@ -765,7 +788,16 @@ jobs:
           done
           echo "pinned main = ${MAIN_SHA}"
           echo "pinned dev  = ${DEV_SHA}"
-          echo "main_sha=${MAIN_SHA}" >> "$GITHUB_OUTPUT"
+          # 🔴 Code review Medium, 2026-09-21: `main_sha` is deliberately NOT written here.
+          # A value already appended to $GITHUB_OUTPUT survives the step exiting non-zero, so
+          # emitting it at this point made it a valid 40-hex string on EVERY later failure —
+          # the ceiling refusal, a failed tag write, a read-back mismatch, a rejected lease. The
+          # dispatch step below then took its "pinned" branch and announced a deploy of a commit
+          # this run never put on `dev`, while the report step two steps earlier said the reset
+          # had failed: the run's own record contradicting itself, on an instance where that
+          # record is the only thing anybody can read. `main_sha` is now written at exactly the
+          # two points where it is TRUE that `dev` carries it — the confirmed no-op below, and
+          # after the post-push read-back succeeds.
           echo "old_dev_sha=${DEV_SHA}" >> "$GITHUB_OUTPUT"
 
           if [ "$MAIN_SHA" = "$DEV_SHA" ]; then
@@ -779,6 +811,9 @@ jobs:
                  "to this commit regardless."
             echo "discarded=0" >> "$GITHUB_OUTPUT"
             echo "reset_performed=false" >> "$GITHUB_OUTPUT"
+            # True here and only here on the early-exit path: dev demonstrably carries this
+            # commit, because it equals it. The dispatch below may pin it.
+            echo "main_sha=${MAIN_SHA}" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -828,7 +863,21 @@ jobs:
           EXISTING_PEELED="$(git ls-remote --tags origin "refs/tags/${TAG_NAME}^{}" 2>/dev/null | awk '{print $1}' | head -n1)"
           EXISTING_ANY="$(git ls-remote --tags origin "refs/tags/${TAG_NAME}" 2>/dev/null | awk '{print $1}' | head -n1)"
           SKIP_TAG_WRITE=0
-          if [ -n "$EXISTING_ANY" ]; then
+          # 🔴 Code review Medium, 2026-09-21. The "no tag for a reset that discards nothing"
+          # rule stated above only covered `dev == main`, which is the RARE case. The common
+          # quiet week is `dev` strictly BEHIND `main`: everything that was on `dev` got merged,
+          # nobody pushed since, so DISCARDED is 0 while the two SHAs still differ. That wrote a
+          # permanent annotated tag every such week whose own message read "discarded commits: 0"
+          # and "The 0 discarded commit(s) are reachable from this tag and from nowhere else" —
+          # the second half flatly false, since they are on `main`. One ref per quiet week, in a
+          # namespace whose entire value is that an entry means something happened. The branch
+          # still moves and is still read back; not archiving an ancestor loses nothing.
+          if [ "$DISCARDED" -eq 0 ]; then
+            echo "NOTE: nothing is being discarded (dev is behind main, not diverged) — no"\
+                 "archive tag is written. The branch move below is unaffected."
+            SKIP_TAG_WRITE=1
+            TAG_NAME=""
+          elif [ -n "$EXISTING_ANY" ]; then
             if [ "$EXISTING_PEELED" = "$DEV_SHA" ]; then
               echo "NOTE: ${TAG_NAME} already exists and already points at ${DEV_SHA} — this run"\
                    "is redoing an archive that is already on the server. Keeping it as it is."
@@ -911,20 +960,28 @@ jobs:
             echo "  (b) the deploy key cannot write dev — the branch protection rule is not"\
                  "admitting deploy keys (push_whitelist_deploy_keys), or the key was removed (the"\
                  "documented exit plan, §3.4 A1.4)."
-            echo "  The archive tag ${TAG_NAME} is on the server either way, and is harmless."
+            echo "  Archive: ${TAG_NAME:-none written — this run discarded nothing}. If a tag"\
+                 "was written it is on the server either way, and is harmless."
             exit 1
           fi
           NEW_DEV="$(git ls-remote origin refs/heads/dev 2>/dev/null | awk '{print $1}' | head -n1)"
           if [ "$NEW_DEV" != "$MAIN_SHA" ]; then
             echo "FAIL: the push was accepted, but dev reads back as '${NEW_DEV:-nothing}', not"\
-                 "'${MAIN_SHA}'. Refusing to report a reset the server does not show. The archive"\
-                 "tag ${TAG_NAME} is on the server; nothing is lost."
+                 "'${MAIN_SHA}'. Refusing to report a reset the server does not show."\
+                 "Archive: ${TAG_NAME:-none written — this run discarded nothing}. Nothing is lost."
             exit 1
           fi
 
+          # Written only now, after the server itself has shown that dev carries this commit.
+          echo "main_sha=${MAIN_SHA}" >> "$GITHUB_OUTPUT"
           echo "reset_performed=true" >> "$GITHUB_OUTPUT"
-          echo "OK: dev == main == ${MAIN_SHA} (verified by read-back). ${DISCARDED} commit(s)"\
-               "discarded, archived at ${TAG_NAME}."
+          if [ "$DISCARDED" -eq 0 ]; then
+            echo "OK: dev == main == ${MAIN_SHA} (verified by read-back). Nothing was discarded —"\
+                 "dev was behind main, not diverged — so no archive tag was written."
+          else
+            echo "OK: dev == main == ${MAIN_SHA} (verified by read-back). ${DISCARDED} commit(s)"\
+                 "discarded, archived at ${TAG_NAME}."
+          fi
 
       - name: "Report what this reset discarded (plan §4.2.3 — silence is not success)"
         if: ${{ always() }}
