@@ -31,6 +31,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { Icon, Icons } from '@/lib/icons'
 import { getErrorMessage } from '@/lib/errors'
 import { cn } from '@/lib/utils'
+import { piiProps } from '@/lib/openreplay/pii'
 
 type RecipientMode = 'client' | 'institution'
 
@@ -386,6 +387,7 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
                   </DropdownMenu>
                 </div>
                 <SearchableSelect
+                  obscured
                   options={clientOptions}
                   value={clientId}
                   onValueChange={handleClientChange}
@@ -623,7 +625,9 @@ function NewOutgoingLetterForm({ onClose, onSent }: NewOutgoingLetterFormProps) 
                   key={attachment.id}
                   className="border-border text-foreground bg-card inline-flex max-w-[200px] items-center gap-1 rounded-full border px-2 py-0.5 text-[10px]"
                 >
-                  <span className="truncate">{attachment.filename}</span>
+                  <span className="truncate" {...piiProps}>
+                    {attachment.filename}
+                  </span>
                   <span className="text-muted-foreground shrink-0">
                     {formatAttachmentSize(attachment.size_bytes)}
                   </span>

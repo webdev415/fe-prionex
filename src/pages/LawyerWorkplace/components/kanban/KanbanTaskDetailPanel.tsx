@@ -29,6 +29,7 @@ import {
   useStagedDeadlinePicker,
 } from './KanbanTaskEditMenus'
 import { KanbanTypeBadge } from './KanbanTypeBadge'
+import { piiProps } from '@/lib/openreplay/pii'
 
 interface KanbanTaskDetailPanelProps {
   task: KanbanTask
@@ -188,7 +189,9 @@ export function KanbanTaskDetailPanel({
                   <>
                     <KanbanClientChip code={task.clientCode} />
                     {task.clientName ? (
-                      <span className="text-muted-foreground truncate">{task.clientName}</span>
+                      <span className="text-muted-foreground truncate" {...piiProps}>
+                        {task.clientName}
+                      </span>
                     ) : null}
                   </>
                 ) : (

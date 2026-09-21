@@ -124,6 +124,7 @@ function DocumentClientContractFieldsContent({
           </DropdownMenu>
         </div>
         <SearchableSelect
+          obscured
           options={clientOptions}
           value={clientId}
           onValueChange={(val) => {

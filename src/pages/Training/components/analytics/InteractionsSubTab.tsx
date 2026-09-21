@@ -21,6 +21,8 @@ import {
   ANALYTICS_TABLE_TH,
 } from './analyticsTableStyles'
 import { InteractionsKpiStrip } from './InteractionsKpiStrip'
+import { piiProps } from '@/lib/openreplay/pii'
+import { PiiTooltip } from '@/components/ui/PiiTooltip'
 
 /**
  * Interactions sub-tab (KAN-731 Block 1 — wired to /api/v1/interactions).
@@ -231,7 +233,7 @@ export function InteractionsSubTab() {
               {t('pages.training.interactions.filters.allOperators', 'All operators')}
             </option>
             {operators.map((op) => (
-              <option key={op.id} value={String(op.id)}>
+              <option key={op.id} value={String(op.id)} {...piiProps}>
                 {op.full_name}
               </option>
             ))}
@@ -382,7 +384,9 @@ function InteractionRowImpl({
               {initials}
             </span>
           ) : null}
-          <span className="text-xs font-medium text-[#05040D]">{operatorName}</span>
+          <span className="text-xs font-medium text-[#05040D]" {...piiProps}>
+            {operatorName}
+          </span>
         </div>
       </td>
       <td className={ANALYTICS_TABLE_TD}>—</td>
@@ -399,14 +403,15 @@ function InteractionRowImpl({
       </td>
       <td className={ANALYTICS_TABLE_TD}>—</td>
       <td className={ANALYTICS_TABLE_TD}>
-        <button
-          type="button"
-          title={row.client_full_name ?? undefined}
-          onClick={() => navigate(`/dashboard/clients/${row.client_id}`)}
-          className="text-[#3B82F6] hover:underline"
-        >
-          #{row.client_id}
-        </button>
+        <PiiTooltip label={row.client_full_name}>
+          <button
+            type="button"
+            onClick={() => navigate(`/dashboard/clients/${row.client_id}`)}
+            className="text-[#3B82F6] hover:underline"
+          >
+            #{row.client_id}
+          </button>
+        </PiiTooltip>
       </td>
       <td className={ANALYTICS_TABLE_TD}>{row.contract_number ?? '—'}</td>
       <td className={`${ANALYTICS_TABLE_TD} text-right font-medium`}>

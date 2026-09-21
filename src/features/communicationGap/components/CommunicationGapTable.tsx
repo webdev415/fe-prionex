@@ -120,6 +120,7 @@ export function CommunicationGapTable({ rows, emptyMessage }: CommunicationGapTa
       {
         key: 'employee_name',
         header: t('pages.reports.communicationGap.columns.employee'),
+        obscured: true,
         // Null only when the directory ships a non-string label: that one cell
         // degrades rather than taking the whole work list down.
         render: (row) => row.employee_name ?? EMPTY,

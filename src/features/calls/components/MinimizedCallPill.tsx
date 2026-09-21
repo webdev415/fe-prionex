@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { formatCallDuration } from '../utils/duration'
+import { piiProps } from '@/lib/openreplay/pii'
 
 interface MinimizedCallPillProps {
   phoneNumber: string
@@ -46,7 +47,7 @@ export function MinimizedCallPill({
         <Icons.Calling02 size={20} aria-hidden />
       </Button>
 
-      <span className="text-foreground max-w-40 truncate text-sm font-medium">
+      <span className="text-foreground max-w-40 truncate text-sm font-medium" {...piiProps}>
         {clientName || phoneNumber}
       </span>
 

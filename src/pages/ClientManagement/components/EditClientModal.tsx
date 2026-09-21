@@ -18,6 +18,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query'
 import { useHasPermission } from '@/hooks'
 import { PERMISSIONS } from '@/constants/permissions'
+import { piiProps } from '@/lib/openreplay/pii'
 import {
   useClientProfile,
   useUpdateClient,
@@ -1170,7 +1171,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
                         </span>
                       )}
                     </div>
-                    <span className="text-foreground text-xs font-light sm:text-sm">
+                    <span className="text-foreground text-xs font-light sm:text-sm" {...piiProps}>
                       {address.full_address ||
                         [address.city, address.street, address.building].filter(Boolean).join(', ')}
                     </span>

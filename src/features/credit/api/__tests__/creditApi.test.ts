@@ -59,8 +59,12 @@ describe('creditHttp — интерцептор авторизации', () => {
     const config = await sentConfig()
 
     expect(config.headers.get('Authorization')).toBe('Bearer JWT-FROM-CRM')
-    // Остальная часть интерцептора (этап 1) не должна пострадать от правки.
-    expect(config.headers.get('X-Operator-Role')).toBe('underwriter')
+    // Заголовок пропуска — теперь ЕДИНСТВЕННОЕ, чем модуль представляется.
+    // Роль и служебный ключ из браузера убраны на этапе 2 (`creditApi.ts`),
+    // права модуль берёт из проверенного пропуска CRM; правка #1213 не должна
+    // вернуть их обратно. Канонический разбор этой двери — `credentials.test.ts`.
+    expect(config.headers.get('X-Operator-Role')).toBeUndefined()
+    expect(config.headers.get('X-Internal-Api-Key')).toBeUndefined()
   })
 
   it('без токена не ставит заголовок вовсе', async () => {

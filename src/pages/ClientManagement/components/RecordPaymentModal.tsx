@@ -31,6 +31,7 @@ import {
   type EasyPayMethod,
   type PaymentType,
 } from '@/features/payments/api/types'
+import { piiProps } from '@/lib/openreplay/pii'
 
 /**
  * RR statuses a `payment_by_rr` payment may be recorded against.
@@ -439,7 +440,10 @@ export function RecordPaymentModal({
             <div className="bg-card flex items-center gap-2.5 rounded-full p-2">
               <Icons.User size={18} className="text-foreground sm:size-5" />
             </div>
-            <span className="text-foreground text-base leading-[150%] font-medium tracking-[-0.36px] sm:text-[18px]">
+            <span
+              className="text-foreground text-base leading-[150%] font-medium tracking-[-0.36px] sm:text-[18px]"
+              {...piiProps}
+            >
               {customerName}
             </span>
           </div>

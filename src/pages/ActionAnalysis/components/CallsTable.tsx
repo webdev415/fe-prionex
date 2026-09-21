@@ -102,6 +102,7 @@ export function CallsTable({ data, onOpenCall, operatorLookup }: Props) {
     {
       key: 'agent',
       header: t('pages.actionAnalysis.columns.agent', 'Employee'),
+      obscured: true,
       render: (r) => (
         <span className="text-foreground text-sm">
           {formatEmployeeName(operatorLookup?.[r.agent_extension], r.agent_extension)}

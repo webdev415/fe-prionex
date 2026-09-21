@@ -129,6 +129,7 @@ export function InboundFollowupTable({ rows, timezone, emptyMessage }: InboundFo
       {
         key: 'employee_name',
         header: t('pages.reports.inboundFollowup.columns.employee'),
+        obscured: true,
         // Null for unassigned clients and employees without org context in
         // the project — kept on purpose: they need follow-up the most.
         render: (row) => row.employee_name ?? EMPTY,

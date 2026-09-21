@@ -1,0 +1,29 @@
+{
+  "source_repo": "CRM/api-prionex",
+  "source_ref": "main",
+  "source_commit_sha": "c996777302a1acbdae8da53cc40e57af8f88b665",
+  "source_path": "services/auth/alembic/versions/20260902_1000_082_credit_module_roles.py",
+  "source_sha256": "e76476ef1c845a40a2727f9b55e15629b9391b6dd9ef42f2656162efb9ec2796",
+  "captured_at": "2026-09-20T12:17:39+00:00",
+  "captured_by": "curator e16-wave1 (F-FE-05), git tree api-prionex@c9967773",
+  "permissions": [
+    "credit.applications.read",
+    "credit.cob.read",
+    "credit.cob.run",
+    "credit.decisions.decide",
+    "credit.documents.read",
+    "credit.funding.run",
+    "credit.loans.read",
+    "credit.loans.resolve_funding",
+    "credit.pad.collect",
+    "credit.parameters.read",
+    "credit.products.activate",
+    "credit.products.read",
+    "credit.products.write",
+    "credit.rails.resolve_review",
+    "credit.rails.resume_disbursement",
+    "credit.switches.read",
+    "credit.switches.write"
+  ],
+  "sha256": "222d352f2e5bcdd7fbdcd937181a7462798b1e71f32c1217d135aeb31ff9f39f"
+}

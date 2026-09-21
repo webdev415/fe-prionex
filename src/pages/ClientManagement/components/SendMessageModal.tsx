@@ -53,6 +53,7 @@ import {
   unresolvedVariables,
 } from '@/features/messaging/utils/unresolvedVariables'
 import { SendMessageModalSkeleton } from './SendMessageModalSkeleton'
+import { Pii, piiProps } from '@/lib/openreplay/pii'
 
 const formatClientNameInitials = (fullName: string): string => {
   const parts = fullName.trim().split(/\s+/)
@@ -468,10 +469,15 @@ export function SendMessageModal({
             <Icons.Message01 size={18} className="text-primary-foreground" strokeWidth={1.5} />
           </div>
         }
-        title={t('pages.clients.modals.sendMessage.title', {
-          clientName,
-          defaultValue: `Send message to ${clientName}`,
-        })}
+        title={
+          /* `ModalHeader.title` is a ReactNode rendered as a text node, so the
+             name CAN be masked here — but only if it is a node of its own. The
+             key now holds the static half, punctuation included. */
+          <>
+            {t('pages.clients.modals.sendMessage.titlePrefix', 'Send message to')}{' '}
+            <Pii>{clientName}</Pii>
+          </>
+        }
       />
       <ModalContent>
         {isFormLoading ? (
@@ -797,14 +803,24 @@ export function SendMessageModal({
                     <span className="text-foreground font-medium">
                       {t('pages.clients.modals.sendMessage.previewSubject', 'Subject')}:
                     </span>{' '}
-                    <span className="text-muted-foreground">{previewSubject || '—'}</span>
+                    <span className="text-muted-foreground" {...piiProps}>
+                      {previewSubject || '—'}
+                    </span>
                   </div>
                 )}
                 <div>
                   <span className="text-foreground font-medium">
                     {t('pages.clients.modals.sendMessage.previewBody', 'Message')}:
                   </span>
-                  <pre className="text-foreground bg-card mt-1 overflow-auto rounded-lg p-3 text-xs whitespace-pre-wrap">
+                  {/* The RESOLVED template: variables are already substituted, so
+                      this text routinely opens with the client's full name. No
+                      field-name dictionary can see it — the identifier is
+                      `previewBody` — which is why rendered client-facing text is
+                      its own class in `docs/openreplay-pii-markup.md`. */}
+                  <pre
+                    className="text-foreground bg-card mt-1 overflow-auto rounded-lg p-3 text-xs whitespace-pre-wrap"
+                    {...piiProps}
+                  >
                     {previewBody.trim() || '—'}
                   </pre>
                 </div>

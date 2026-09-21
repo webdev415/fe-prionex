@@ -33,6 +33,7 @@ import {
 import { resolveOperatorPhone } from '@/features/messaging/utils/operatorPhone'
 import { resolveDueDate } from '@/features/messaging/utils/dueDate'
 import { formatDebtAmount } from '@/features/messaging/utils/debtAmount'
+import { Pii } from '@/lib/openreplay/pii'
 
 export interface SendSMSModalProps {
   open: boolean
@@ -345,7 +346,7 @@ export function SendSMSModal({
           {/* Recipient Info */}
           <div className="flex flex-col items-start justify-between gap-2 self-stretch sm:flex-row sm:items-center">
             <span className="text-foreground text-sm leading-[155%] font-light tracking-[-0.32px] sm:text-base">
-              {t('pages.clients.modals.sendSMS.sendSMSTo')} {clientName}
+              {t('pages.clients.modals.sendSMS.sendSMSTo')} <Pii>{clientName}</Pii>
             </span>
             <span className="text-foreground text-sm leading-[155%] font-light tracking-[-0.32px] sm:text-base">
               {phoneNumber}

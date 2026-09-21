@@ -13,6 +13,7 @@
 import { useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
+import { piiProps } from '@/lib/openreplay/pii'
 
 interface DocumentFileViewerProps {
   /** Server-rendered PDF blob (null while loading / on error). */
@@ -46,7 +47,24 @@ export function DocumentFileViewer({
   return (
     <div className={cn('relative h-full w-full bg-neutral-200 dark:bg-neutral-900', className)}>
       {blobUrl && !showLoading && !showError && (
-        <iframe src={blobUrl} title={title} className="h-full w-full border-0" />
+        <iframe
+          /* 🔴 The attribute is on the <iframe> ITSELF — `TopObserver` reads it
+             off the node in its own callback, so inheritance plays no part, and
+             `captureIFrames` defaults to true. Without it the rendered document
+             is recorded, because a `blob:` URL inherits our origin.
+
+             The `title` STAYS. The plan for KAN-KB-54 listed this file as a
+             client document, and reading it says otherwise: both callers
+             (`TemplatePreviewModal`, `DocumentTemplateEditor`) pass a TEMPLATE
+             name. A template name is not personal data, and removing an
+             accessible name that leaks nothing is an accessibility regression
+             traded for nothing — rule 4.5. `DocumentPreviewModal` is the one
+             that shows client files, and there the title did have to go. */
+          src={blobUrl}
+          title={title}
+          className="h-full w-full border-0"
+          {...piiProps}
+        />
       )}
 
       {showLoading && (

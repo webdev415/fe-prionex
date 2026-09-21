@@ -1356,6 +1356,7 @@ export function ChainBuilderPage() {
                                 </select>
                                 {newEffectConfig.assignee_mode === 'specific_user' && (
                                   <SearchableSelect
+                                    obscured
                                     options={operatorOptions}
                                     value={newEffectConfig.assigned_user_id ?? ''}
                                     onValueChange={(v) =>

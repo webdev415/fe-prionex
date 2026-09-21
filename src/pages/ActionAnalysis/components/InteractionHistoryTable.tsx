@@ -94,6 +94,7 @@ export function InteractionHistoryTable({
     {
       key: 'client',
       header: t('pages.actionAnalysis.columns.client', 'Client'),
+      obscured: true,
       render: (r) => (
         <Link
           to={`/dashboard/clients/${r.client_id}`}

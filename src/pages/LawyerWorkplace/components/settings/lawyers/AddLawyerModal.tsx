@@ -92,6 +92,7 @@ export function AddLawyerModal({
             {t('pages.lawyerWorkplace.settings.lawyer', 'Lawyer')}
           </Label>
           <SearchableSelect
+            obscured
             options={availableUsers.map((user) => ({ id: String(user.id), name: user.name }))}
             value={userId != null ? String(userId) : ''}
             onValueChange={(next) => setUserId(next ? Number(next) : null)}

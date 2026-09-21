@@ -21,6 +21,7 @@ import {
   type UbkiLogDetail,
   type UbkiLogDetailStep,
 } from '../api'
+import { piiProps } from '@/lib/openreplay/pii'
 
 function TimelineIcon({ state }: { state: UbkiLogDetailStep['state'] }) {
   if (state === 'ok') return <MdCheckCircle size={16} className="text-success-500" />
@@ -212,7 +213,7 @@ function SubmissionDrawerContent({
               })}
             </h3>
           </div>
-          <p className="text-muted-foreground mt-1 text-xs">
+          <p className="text-muted-foreground mt-1 text-xs" {...piiProps}>
             {clientName} · #{detail.client_id} · {clientTin}
           </p>
           <p className="text-muted-foreground text-xs">{creditDate}</p>
