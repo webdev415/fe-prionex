@@ -7,7 +7,7 @@
  */
 import { describe, expect, it } from 'vitest'
 
-import { canMutateInteraction } from '../useSelfEditWindow'
+import { canMutateInteraction, parseUtcTimestamp } from '../useSelfEditWindow'
 
 const AUTHOR = 42
 const OTHER = 43
@@ -89,5 +89,85 @@ describe('each record has its own timer', () => {
       false,
       true,
     ])
+  })
+})
+
+/**
+ * The API sends `self_edit_expires_at` with python's naive `utcnow()`, so it
+ * arrives with NO zone marker — `2026-09-18T12:05:00`. Every fixture above
+ * builds its timestamps with `Date.toISOString()`, which always appends `Z`,
+ * so none of them exercises the shape the backend actually produces.
+ *
+ * That gap hid a bug that made the whole feature a no-op in production: a bare
+ * `Date.parse` reads a zoneless date-time as LOCAL, shifting the instant by the
+ * viewer's offset. In Europe/Kyiv (UTC+3) the window read as closed the moment
+ * the record was saved, so the button never appeared for the operators this was
+ * built for.
+ *
+ * These pin the wire format itself. `naive()` deliberately strips the `Z`
+ * rather than taking a hand-written literal, so the fixtures stay tied to the
+ * instants the other tests use.
+ */
+describe('the timestamp the API actually sends', () => {
+  const naive = (ms: number) => new Date(ms).toISOString().replace(/\.\d+Z$/, '')
+
+  it('a zoneless expiry is read as UTC, not as the viewer’s local time', () => {
+    const open = row({ self_edit_expires_at: naive(T0 + 5 * MIN) })
+    expect(canMutateInteraction(open, AUTHOR, false, T0)).toBe(true)
+  })
+
+  it('a zoneless expiry that has passed still closes the window', () => {
+    const closed = row({ self_edit_expires_at: naive(T0 - MIN) })
+    expect(canMutateInteraction(closed, AUTHOR, false, T0)).toBe(false)
+  })
+
+  it('agrees with the Z-suffixed form for the same instant', () => {
+    const withZ = row({ self_edit_expires_at: new Date(T0 + MIN).toISOString() })
+    const without = row({ self_edit_expires_at: naive(T0 + MIN) })
+    expect(canMutateInteraction(without, AUTHOR, false, T0)).toBe(
+      canMutateInteraction(withZ, AUTHOR, false, T0)
+    )
+  })
+
+  it('the boundary lands in the same place with or without the marker', () => {
+    // One ms before expiry is open, exactly at expiry is closed — and the
+    // zoneless form must not move that by a whole timezone offset.
+    const at = naive(T0 + 5 * MIN)
+    expect(
+      canMutateInteraction(row({ self_edit_expires_at: at }), AUTHOR, false, T0 + 5 * MIN - 1)
+    ).toBe(true)
+    expect(
+      canMutateInteraction(row({ self_edit_expires_at: at }), AUTHOR, false, T0 + 5 * MIN)
+    ).toBe(false)
+  })
+})
+
+describe('parseUtcTimestamp', () => {
+  it('treats a zoneless timestamp as UTC', () => {
+    expect(parseUtcTimestamp('2026-09-18T12:00:00')).toBe(Date.parse('2026-09-18T12:00:00Z'))
+  })
+
+  it('leaves an explicit Z alone', () => {
+    expect(parseUtcTimestamp('2026-09-18T12:00:00Z')).toBe(Date.parse('2026-09-18T12:00:00Z'))
+  })
+
+  it('leaves an explicit offset alone', () => {
+    expect(parseUtcTimestamp('2026-09-18T15:00:00+03:00')).toBe(Date.parse('2026-09-18T12:00:00Z'))
+  })
+
+  it('accepts the space-separated form postgres sometimes yields', () => {
+    expect(parseUtcTimestamp('2026-09-18 12:00:00')).toBe(Date.parse('2026-09-18T12:00:00Z'))
+  })
+
+  it('keeps sub-second precision', () => {
+    expect(parseUtcTimestamp('2026-09-18T12:00:00.250')).toBe(
+      Date.parse('2026-09-18T12:00:00.250Z')
+    )
+  })
+
+  it('is NaN for junk, null and empty — every caller reads that as “no window”', () => {
+    expect(parseUtcTimestamp('nope')).toBeNaN()
+    expect(parseUtcTimestamp(null)).toBeNaN()
+    expect(parseUtcTimestamp('')).toBeNaN()
   })
 })

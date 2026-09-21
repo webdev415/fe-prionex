@@ -30,6 +30,7 @@ import type { TargetAction } from '@/features/targetActions/api/types'
 import type { TAInteraction } from '@/features/taInteractions/api/types'
 import {
   canMutateInteraction,
+  parseUtcTimestamp,
   useNowUntil,
 } from '@/features/taInteractions/hooks/useSelfEditWindow'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
@@ -284,14 +285,19 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
   // a number, so compare parsed values or every row looks like someone else's.
   const currentUserId = user?.id != null ? Number(user.id) : null
   // The last moment any of MY rows is still editable. Deliberately computed
-  // with Date.parse alone: reading the clock during render is impure (the
-  // value changes on every re-render), so the comparison lives inside
-  // useNowUntil, which stops ticking once this passes.
+  // without reading the clock: doing that during render is impure (the value
+  // changes on every re-render), so the comparison lives inside useNowUntil,
+  // which stops ticking once this passes.
+  //
+  // Must go through parseUtcTimestamp for the same reason canMutateInteraction
+  // does — a bare Date.parse reads the API's zoneless timestamp as local, and
+  // east of UTC that yields a deadline already in the past, so useNowUntil
+  // never starts a timer and the buttons never re-render away.
   const lastOwnSelfEditExpiry = useMemo(
     () =>
       items.reduce((latest, i) => {
         if (i.recorded_by !== currentUserId) return latest
-        const expiresAt = Date.parse(i.self_edit_expires_at)
+        const expiresAt = parseUtcTimestamp(i.self_edit_expires_at)
         return Number.isNaN(expiresAt) ? latest : Math.max(latest, expiresAt)
       }, 0),
     [items, currentUserId]
