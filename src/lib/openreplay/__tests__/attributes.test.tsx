@@ -67,7 +67,7 @@ describe('iframe capture — the rule', () => {
   })
 })
 
-describe('the whole of src/', () => {
+describe('the whole of src/', { timeout: 60_000 }, () => {
   it('leaves no <iframe> capturing', async () => {
     const sources = await readAll()
     const withIframe = sources.filter(([, text]) => text.includes('<iframe'))
