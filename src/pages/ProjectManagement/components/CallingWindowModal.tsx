@@ -192,6 +192,7 @@ function CallingWindowBody({
         <HolidayCalendarPanel
           projectId={projectId as number}
           country={selectedCountry ?? current.holiday_country}
+          countryUnsaved={selectedCountry !== null && selectedCountry !== current.holiday_country}
           onClose={onClose}
         />
       )}

@@ -4357,7 +4357,8 @@
         "wrongYear": "That date is not in {{year}}",
         "alreadyAdded": "That date is already on the calendar",
         "regenerateTitle": "Recompute {{year}}?",
-        "regenerateConfirm": "Computed dates are re-derived from the country calendar, dates you added by hand are kept, and the reviewed mark is cleared."
+        "regenerateConfirm": "Computed dates are re-derived from the country calendar, dates you added by hand are kept, and the reviewed mark is cleared.",
+        "countryUnsaved": "Save the window first. The calendar is computed from the saved country, so generating now would use the previous one."
       }
     },
     "roles": {

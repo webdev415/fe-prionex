@@ -58,11 +58,16 @@ const CALENDAR: HolidayCalendar = {
   ],
 }
 
-function renderPanel(country: string | null = 'ES') {
+function renderPanel(country: string | null = 'ES', countryUnsaved = false) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   render(
     <QueryClientProvider client={queryClient}>
-      <HolidayCalendarPanel projectId={7} country={country} onClose={vi.fn()} />
+      <HolidayCalendarPanel
+        projectId={7}
+        country={country}
+        countryUnsaved={countryUnsaved}
+        onClose={vi.fn()}
+      />
     </QueryClientProvider>
   )
 }
@@ -113,6 +118,38 @@ describe('HolidayCalendarPanel', () => {
       await screen.findByText('pages.projects.holidayCalendar.emptyCalendar')
     ).toBeInTheDocument()
     expect(screen.queryByText('pages.projects.holidayCalendar.notGenerated')).toBeNull()
+  })
+
+  it('withholds Generate while the chosen country is unsaved', async () => {
+    // Generation posts only the project id, so the server computes from the
+    // saved country. Offering the button here builds a calendar for the
+    // previous country while the panel names the new one.
+    getCalendar.mockRejectedValue(httpError(404))
+    renderPanel('ES', true)
+    // Waited for the lookup to settle: the unsaved warning renders without it,
+    // so asserting straight away finds no Generate button either way.
+    await waitFor(() => expect(screen.queryByText('status.loading')).not.toBeInTheDocument())
+    expect(screen.getByText('pages.projects.holidayCalendar.countryUnsaved')).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'pages.projects.holidayCalendar.generate' })
+    ).not.toBeInTheDocument()
+  })
+
+  it('offers Generate once the country is saved', async () => {
+    getCalendar.mockRejectedValue(httpError(404))
+    renderPanel('ES', false)
+    expect(
+      await screen.findByRole('button', { name: 'pages.projects.holidayCalendar.generate' })
+    ).toBeInTheDocument()
+  })
+
+  it('withholds Recompute too while the country is unsaved', async () => {
+    getCalendar.mockResolvedValue(CALENDAR)
+    renderPanel('ES', true)
+    const recompute = await screen.findByRole('button', {
+      name: 'pages.projects.holidayCalendar.regenerate',
+    })
+    expect(recompute).toBeDisabled()
   })
 
   it('asks before recomputing over a calendar', async () => {

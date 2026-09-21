@@ -42,10 +42,19 @@ vi.mock('@/components/ui/SearchableSelect', () => ({
 }))
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
-const { panelCountry } = vi.hoisted(() => ({ panelCountry: { value: undefined as unknown } }))
+const { panelProps } = vi.hoisted(() => ({
+  panelProps: { country: undefined as unknown, countryUnsaved: undefined as unknown },
+}))
 vi.mock('../HolidayCalendarPanel', () => ({
-  HolidayCalendarPanel: ({ country }: { country: string | null }) => {
-    panelCountry.value = country
+  HolidayCalendarPanel: ({
+    country,
+    countryUnsaved,
+  }: {
+    country: string | null
+    countryUnsaved?: boolean
+  }) => {
+    panelProps.country = country
+    panelProps.countryUnsaved = countryUnsaved
     return <div data-testid="holiday-panel" />
   },
 }))
@@ -230,7 +239,7 @@ describe('CallingWindowModal', () => {
     act(() => pick('ES'))
 
     fireEvent.click(screen.getByRole('tab', { name: 'pages.projects.callingWindow.tabHolidays' }))
-    await waitFor(() => expect(panelCountry.value).toBe('ES'))
+    await waitFor(() => expect(panelProps.country).toBe('ES'))
   })
 
   it('opens on the window tab even after closing on holidays', async () => {
@@ -286,6 +295,28 @@ describe('CallingWindowModal', () => {
     rerender(tree(9))
     await screen.findByDisplayValue('09:00')
     expect(screen.queryByTestId('holiday-panel')).not.toBeInTheDocument()
+  })
+
+  it('tells the holidays tab the selected country is not saved yet', async () => {
+    // The panel follows the selection, but generation sends only the project
+    // id — the server computes from the persisted country. Without this the
+    // Generate button was offered for a country the server had never seen,
+    // and the warning that used to block it had been removed.
+    renderModal({ ...SPAIN, holiday_country: null })
+    await screen.findByDisplayValue('09:00')
+    act(() => selectHandlers['pages.projects.callingWindow.countryPlaceholder']('ES'))
+
+    fireEvent.click(screen.getByRole('tab', { name: 'pages.projects.callingWindow.tabHolidays' }))
+    await waitFor(() => expect(panelProps.country).toBe('ES'))
+    expect(panelProps.countryUnsaved).toBe(true)
+  })
+
+  it('does not flag the saved country as unsaved', async () => {
+    renderModal(SPAIN)
+    await screen.findByDisplayValue('09:00')
+    fireEvent.click(screen.getByRole('tab', { name: 'pages.projects.callingWindow.tabHolidays' }))
+    await waitFor(() => expect(panelProps.country).toBe('ES'))
+    expect(panelProps.countryUnsaved).toBe(false)
   })
 
   it('offers a way to clear the holiday country', async () => {

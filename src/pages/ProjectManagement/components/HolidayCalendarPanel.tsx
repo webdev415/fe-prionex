@@ -30,6 +30,12 @@ interface HolidayCalendarPanelProps {
   projectId: number
   /** From the window config; without it the calendar cannot be computed. */
   country: string | null
+  /**
+   * The country shown is chosen but not yet saved. Generation sends only the
+   * project id, so the server computes from the persisted country — it would
+   * build the wrong calendar, or fail, while this panel names the new one.
+   */
+  countryUnsaved?: boolean
   onClose: () => void
 }
 
@@ -37,7 +43,12 @@ function statusOf(error: unknown): number | undefined {
   return (error as { response?: { status?: number } })?.response?.status
 }
 
-export function HolidayCalendarPanel({ projectId, country, onClose }: HolidayCalendarPanelProps) {
+export function HolidayCalendarPanel({
+  projectId,
+  country,
+  countryUnsaved,
+  onClose,
+}: HolidayCalendarPanelProps) {
   const { t } = useTranslation('common')
   const thisYear = new Date().getFullYear()
   const [year, setYear] = useState(thisYear)
@@ -174,7 +185,16 @@ export function HolidayCalendarPanel({ projectId, country, onClose }: HolidayCal
             <p className="text-muted-foreground text-sm">{t('status.loading', 'Loading…')}</p>
           )}
 
-          {notGenerated && country && (
+          {countryUnsaved && (
+            <Alert variant="warning">
+              {t(
+                'pages.projects.holidayCalendar.countryUnsaved',
+                'Save the window first. The calendar is computed from the saved country, so generating now would use the previous one.'
+              )}
+            </Alert>
+          )}
+
+          {notGenerated && country && !countryUnsaved && (
             <Alert variant="warning">
               <div className="flex flex-col gap-2">
                 <span>
@@ -295,7 +315,7 @@ export function HolidayCalendarPanel({ projectId, country, onClose }: HolidayCal
                 variant="secondary"
                 size="sm"
                 onClick={handleRegenerate}
-                disabled={busy}
+                disabled={busy || countryUnsaved}
                 className="self-start"
               >
                 {t('pages.projects.holidayCalendar.regenerate', 'Recompute from the calendar')}
