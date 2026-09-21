@@ -57,6 +57,7 @@ import type {
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
 import { useHasPermission } from '@/hooks/usePermissions'
+import { piiProps } from '@/lib/openreplay/pii'
 
 // Types
 interface Payment {
@@ -969,7 +970,10 @@ export function DebtSummaryPage() {
                 <div className="bg-card flex items-center gap-2.5 rounded-full p-2">
                   <Icons.User size={20} className="text-foreground sm:size-[24px]" />
                 </div>
-                <span className="text-foreground text-base leading-[132%] font-medium tracking-[-0.4px] sm:text-xl">
+                <span
+                  className="text-foreground text-base leading-[132%] font-medium tracking-[-0.4px] sm:text-xl"
+                  {...piiProps}
+                >
                   {debtSummary.customerName}
                 </span>
               </div>

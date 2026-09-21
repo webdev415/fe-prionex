@@ -358,6 +358,7 @@ export function CreateKanbanTaskModal({ open, onClose }: CreateKanbanTaskModalPr
               )}
             </div>
             <SearchableSelect
+              obscured
               options={clientOptions}
               value={clientId}
               onValueChange={(val) => {

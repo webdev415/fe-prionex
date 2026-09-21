@@ -25,6 +25,7 @@ import { useOperators } from '@/features/users/hooks/useUsers'
 import { useAuthStore } from '@/stores/authStore'
 import { useHasAnyPermission } from '@/hooks'
 import { PERMISSIONS } from '@/constants/permissions'
+import { piiProps } from '@/lib/openreplay/pii'
 import { toast } from 'sonner'
 
 // Format currency for Ukrainian Hryvnia
@@ -198,7 +199,10 @@ export function BulkAssignClientModal({
                     key={client.id}
                     className="flex w-full flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:gap-2"
                   >
-                    <span className="text-foreground w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[50%] sm:text-sm sm:tracking-[-0.28px]">
+                    <span
+                      className="text-foreground w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[50%] sm:text-sm sm:tracking-[-0.28px]"
+                      {...piiProps}
+                    >
                       {client.fullName} (#{client.id})
                     </span>
                     <div className="w-full sm:w-[25%]">

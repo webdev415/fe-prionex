@@ -35,6 +35,7 @@ import {
 import { activityLogQueryKey } from '@/features/clients/hooks/useClientActivityLog'
 import { pickerDayEndUtcIso, pickerDayStartUtcIso } from '@/lib/dateUtils'
 import { useAuthStore } from '@/stores/authStore'
+import { piiProps } from '@/lib/openreplay/pii'
 
 interface ClientActivityLogTabProps {
   clientId: number | null
@@ -507,7 +508,7 @@ function ClientActivityLogTabBody({
               </span>
 
               {entry.operator_name && (
-                <span className="text-muted-foreground text-xs whitespace-nowrap">
+                <span className="text-muted-foreground text-xs whitespace-nowrap" {...piiProps}>
                   {entry.operator_name}
                 </span>
               )}

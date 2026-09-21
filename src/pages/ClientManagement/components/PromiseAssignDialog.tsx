@@ -19,6 +19,7 @@ import { Icons } from '@/lib/icons'
 import { toast } from 'sonner'
 import { assignTagExtended } from '@/features/tags/api/tagsApi'
 import { useQueryClient } from '@tanstack/react-query'
+import { Pii } from '@/lib/openreplay/pii'
 
 interface PromiseAssignDialogProps {
   open: boolean
@@ -79,7 +80,12 @@ export function PromiseAssignDialog({
           ...(promiseAmount ? { promise_amount: Number(promiseAmount) } : {}),
         },
       })
-      toast.success(`${tagName} назначен клиенту ${clientName}`)
+      toast.success(
+        <span>
+          {`${tagName} назначен клиенту `}
+          <Pii>{clientName}</Pii>
+        </span>
+      )
       queryClient.invalidateQueries({ queryKey: ['clients', clientId, 'tags'] })
       // Inside the try, so a failed assign never arms auto-open. Reached only
       // after assignTagExtended resolved, and this dialog writes exactly one
@@ -102,7 +108,12 @@ export function PromiseAssignDialog({
             <Icons.Clock01 size={18} strokeWidth={2} className="text-warning-700" />
           </div>
         }
-        title={`Назначить «${tagName}» — ${clientName}`}
+        title={
+          <>
+            {`Назначить «${tagName}» — `}
+            <Pii>{clientName}</Pii>
+          </>
+        }
       />
       <ModalContent>
         <div className="space-y-4">

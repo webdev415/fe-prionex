@@ -472,6 +472,7 @@
     "tabsScrollRight": "Scroll tabs right"
   },
   "common": {
+    "userAvatar": "User avatar",
     "step": "Step",
     "selected": "Selected",
     "of": "of",
@@ -848,7 +849,9 @@
       "slashReset": "clear the brain context (conversation stays)",
       "slashHelp": "what the assistant can do",
       "slashNewChat": "start a new chat",
-      "answerInProgress": "The answer is still being prepared — it will appear here when ready"
+      "answerInProgress": "The answer is still being prepared — it will appear here when ready",
+      "attachmentFrameTitle": "Attachment preview",
+      "attachmentRemoveShort": "Remove attachment"
     },
     "lawyerWorkplace": {
       "navAria": "Lawyer Workplace navigation",
@@ -3762,7 +3765,7 @@
         "reenableTwoFactor": "Re-enable 2FA"
       },
       "messages": {
-        "nowViewingAs": "Now viewing as {{username}}",
+        "nowViewingAsPrefix": "Now viewing as",
         "failedToImpersonate": "Failed to impersonate user",
         "failedToExitImpersonation": "Failed to exit impersonation",
         "exitedImpersonation": "Exited impersonation mode",
@@ -5251,6 +5254,7 @@
         "payments": "Payments",
         "hasVerifiedPayment": "Has verified payment(s)",
         "rrStatus": "RR status",
+        "clearRrStatus": "Clear RR status",
         "searchPlaceholder": "Search...",
         "selectAll": "Select all",
         "selectAllEmployees": "All employees",
@@ -5353,7 +5357,7 @@
           }
         },
         "assignClient": {
-          "title": "Assign Client: {{fullName}}",
+          "titlePrefix": "Assign Client:",
           "clientInformation": "Client Information",
           "assignmentDetails": "Assignment Details",
           "name": "Name",
@@ -5581,7 +5585,7 @@
           "sendSMS": "Send SMS"
         },
         "sendMessage": {
-          "title": "Send message to {{clientName}}",
+          "titlePrefix": "Send message to",
           "channel": "Channel",
           "service": "Service",
           "servicePlaceholder": "Select a service",
@@ -5722,7 +5726,7 @@
           "apply": "Apply"
         },
         "tagSelector": {
-          "title": "Manage Tags — {{name}}",
+          "titlePrefix": "Manage Tags —",
           "loadingTags": "Loading tags...",
           "searchTags": "Search tags...",
           "selectedCount": "{{selected}} of {{total}} tags selected",
@@ -5731,7 +5735,7 @@
           "payloadTagBadge": "requires PTP",
           "payloadTagHint": "This tag requires PTP date and/or amount — a separate form will open",
           "saveTags": "Save Tags",
-          "tagsUpdated": "Tags updated for {{name}}",
+          "tagsUpdatedPrefix": "Tags updated for",
           "updateFailed": "Failed to update tags",
           "protectedRemoveBlocked": "Protected tags can only be removed by authorized roles"
         },
@@ -6885,6 +6889,9 @@
         "pinned": "Pinned",
         "pin": "Pin",
         "unpin": "Unpin"
+      },
+      "documents": {
+        "previewFrameTitle": "Document preview"
       }
     },
     "clientChains": {
@@ -7577,9 +7584,14 @@
         "required": "Required",
         "notInPast": "Date cannot be in the past",
         "showClosedCredits": "Show closed credits",
+        "countAsPromiseDate": "Count as promise date",
+        "countAsPromiseAmount": "Count as promise amount",
+        "promiseDateTaken": "Step {{step}} is already counted as the promise date. Untick it first.",
+        "promiseAmountTaken": "Step {{step}} is already counted as the promise amount. Untick it first.",
         "contactSource": "Contact source",
         "contactSourceClient": "Client contacts",
-        "contactSourceRecommender": "Recommender contacts"
+        "contactSourceRecommender": "Recommender contacts",
+        "promiseNeedsBothHalves": "A promise needs both a Date step and an Amount step counted. Flag the other one, or untick this."
       },
       "modals": {
         "create": {
@@ -11318,6 +11330,7 @@
         "workFormat": "Work Format",
         "referralSource": "Where referred from",
         "department": "Department",
+        "group": "Group",
         "position": "Position",
         "manager": "Manager",
         "hiredAt": "Date of Hire",
@@ -11426,6 +11439,7 @@
         "choose": "Choose",
         "noManager": "No manager",
         "noDepartment": "No department",
+        "noGroup": "No group",
         "documents": "Documents",
         "attachFile": "Attach a document (PDF or Word, up to 10 MB)",
         "searchManager": "Search by name",
@@ -11436,6 +11450,9 @@
         "showEarlier": "Show earlier sections",
         "showLater": "Show later sections"
       }
+    },
+    "messaging": {
+      "attachmentPreview": "Attachment preview"
     }
   },
   "contactTypes": {

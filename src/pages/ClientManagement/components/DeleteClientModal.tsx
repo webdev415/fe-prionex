@@ -15,6 +15,7 @@ import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/M
 import { Button } from '@/components/ui/Button'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { Icons } from '@/lib/icons'
+import { piiProps } from '@/lib/openreplay/pii'
 import { toast } from 'sonner'
 
 export interface DeleteClientModalProps {
@@ -103,7 +104,9 @@ export function DeleteClientModal({
             <div className="flex items-start gap-6 self-stretch">
               <span className="text-foreground text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                 {t('pages.clients.modals.deleteClient.fieldName')}{' '}
-                <span className="font-medium">{client.full_name}</span>
+                <span className="font-medium" {...piiProps}>
+                  {client.full_name}
+                </span>
               </span>
             </div>
             <div className="flex items-start gap-6 self-stretch">

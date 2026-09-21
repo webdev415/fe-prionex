@@ -9,6 +9,7 @@ import {
   ANALYTICS_TABLE_TH,
 } from '../analytics/analyticsTableStyles'
 import { AnalyticsMockTable } from '../analytics/AnalyticsMockTable'
+import { Pii, piiProps } from '@/lib/openreplay/pii'
 
 /** Client detail route — matches the link pattern used by NotificationBell. */
 const clientHref = (clientId: number) => `/dashboard/clients/${clientId}`
@@ -168,10 +169,13 @@ export function ScorecardListView({
                   <div
                     className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-semibold text-[#05040D]"
                     style={{ backgroundColor: row.avatarColor }}
+                    {...piiProps}
                   >
                     {row.operatorInitials}
                   </div>
-                  <span className="text-xs font-medium text-[#05040D]">{row.operatorName}</span>
+                  <span className="text-xs font-medium text-[#05040D]" {...piiProps}>
+                    {row.operatorName}
+                  </span>
                 </div>
               </td>
               <td className={ANALYTICS_TABLE_TD}>
@@ -181,7 +185,7 @@ export function ScorecardListView({
                     onClick={(e) => e.stopPropagation()}
                     className="text-xs font-medium text-[#204E4D] hover:underline"
                   >
-                    {row.clientName ?? `#${row.clientId}`}
+                    <Pii>{row.clientName ?? `#${row.clientId}`}</Pii>
                   </Link>
                 ) : (
                   <span className="text-xs text-gray-300">—</span>
@@ -221,7 +225,11 @@ export function ScorecardListView({
                   <ScoreRing score={row.score} outOf={row.scoreOutOf} hasScore={row.hasScore} />
                 </div>
               </td>
-              <td className={`${ANALYTICS_TABLE_TD} max-w-[160px] truncate text-[#4B5563]`}>
+              {/* Free text an operator typed about the call. */}
+              <td
+                className={`${ANALYTICS_TABLE_TD} max-w-[160px] truncate text-[#4B5563]`}
+                {...piiProps}
+              >
                 {row.comment ?? '—'}
               </td>
               <td className={`${ANALYTICS_TABLE_TD} text-right`}>

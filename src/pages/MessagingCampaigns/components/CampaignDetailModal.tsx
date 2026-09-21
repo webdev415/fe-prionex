@@ -21,6 +21,7 @@ import {
 import type { MessagingCampaignRecipient, MessagingCampaignSummary } from '@/features/messaging'
 import { useMessagingCampaign, useMessagingCampaignRecipients } from '@/features/messaging'
 import { useAuthStore } from '@/stores/authStore'
+import { piiProps } from '@/lib/openreplay/pii'
 
 const formatStatusFallback = (status: string) =>
   status
@@ -402,7 +403,9 @@ export function CampaignDetailModal({
                       <span className="text-muted-foreground text-xs font-light">
                         {t('pages.messagingCampaigns.detail.subject', 'Subject')}
                       </span>
-                      <p className="text-foreground mt-0.5 font-medium">{displaySubject}</p>
+                      <p className="text-foreground mt-0.5 font-medium" {...piiProps}>
+                        {displaySubject}
+                      </p>
                     </div>
                   )}
                   <div>
@@ -414,6 +417,7 @@ export function CampaignDetailModal({
                     <div
                       className="text-foreground border-border bg-muted ring-border mt-1.5 rounded-xl border px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ring-1 ring-inset"
                       role="article"
+                      {...piiProps}
                     >
                       {displayBody || '—'}
                     </div>

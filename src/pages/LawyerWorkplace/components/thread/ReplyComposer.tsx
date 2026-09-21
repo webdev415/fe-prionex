@@ -15,6 +15,7 @@ import { Icon, Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { formatAttachmentSize } from '@/features/lawyerWorkplace/api/mappers'
 import type { LegalMailbox, LegalStagedAttachment } from '@/features/lawyerWorkplace/api/types'
+import { piiProps } from '@/lib/openreplay/pii'
 
 export interface ReplyComposerTemplate {
   id: string
@@ -67,7 +68,9 @@ function StagedAttachmentChip({
   const { t } = useTranslation('common')
   return (
     <span className="border-border text-foreground bg-card inline-flex max-w-[180px] items-center gap-1 rounded-full border px-2 py-0.5 text-[10px]">
-      <span className="truncate">{attachment.filename}</span>
+      <span className="truncate" {...piiProps}>
+        {attachment.filename}
+      </span>
       <span className="text-muted-foreground shrink-0">
         {formatAttachmentSize(attachment.size_bytes)}
       </span>

@@ -30,6 +30,7 @@ import { PromiseAssignDialog } from './PromiseAssignDialog'
 import { useAuthStore } from '@/stores/authStore'
 import { canRemoveProtectedTag } from '@/features/tags/utils/protected'
 import type { TagDefinition } from '@/features/tags/types'
+import { Pii } from '@/lib/openreplay/pii'
 
 interface TagSelectorModalProps {
   clientId: number
@@ -177,7 +178,15 @@ export const TagSelectorModal = memo(function TagSelectorModal({
         ...allowedToRemove.map((tagId) => removeMutation.mutateAsync({ clientId, tagId })),
       ])
 
-      toast.success(t('pages.clients.modals.tagSelector.tagsUpdated', { name: clientName }))
+      // The toast, not `<Toaster />`. Marking the Toaster would take every
+      // system message with it — including the errors an operator needs to be
+      // able to read back off a recording.
+      toast.success(
+        <span>
+          {t('pages.clients.modals.tagSelector.tagsUpdatedPrefix', 'Tags updated for')}{' '}
+          <Pii>{clientName}</Pii>
+        </span>
+      )
       // Only when something was actually written. Promise.all([]) resolves, so
       // saving an unchanged selection reached here and armed 15s of 1.5s polling
       // for nothing. The same applied when the only intended change was removing
@@ -222,7 +231,12 @@ export const TagSelectorModal = memo(function TagSelectorModal({
             <Icons.Contact size={21} className="text-primary-foreground" strokeWidth={1.5} />
           </div>
         }
-        title={t('pages.clients.modals.tagSelector.title', { name: clientName })}
+        title={
+          <>
+            {t('pages.clients.modals.tagSelector.titlePrefix', 'Manage Tags —')}{' '}
+            <Pii>{clientName}</Pii>
+          </>
+        }
       />
 
       <ModalContent>

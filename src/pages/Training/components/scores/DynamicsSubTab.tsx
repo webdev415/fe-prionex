@@ -17,6 +17,7 @@ import {
   useOperatorDynamics,
 } from '@/features/quality'
 import type { DynamicsGranularity } from '@/features/quality'
+import { piiProps } from '@/lib/openreplay/pii'
 
 const GRANULARITIES: DynamicsGranularity[] = ['day', 'week', 'month']
 const PERIODS = ['last_7d', 'last_30d'] as const
@@ -63,7 +64,7 @@ export function DynamicsSubTab() {
                 {t('pages.training.filters.selectOperator', 'Select an operator…')}
               </option>
               {operators.map((op) => (
-                <option key={op.id} value={op.id}>
+                <option key={op.id} value={op.id} {...piiProps}>
                   {op.full_name ?? `#${op.id}`}
                 </option>
               ))}

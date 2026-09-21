@@ -479,6 +479,7 @@
     "tabsScrollRight": "Прокрутити вкладки вправо"
   },
   "common": {
+    "userAvatar": "Аватар користувача",
     "step": "Крок",
     "selected": "Вибрано",
     "of": "з",
@@ -857,7 +858,9 @@
       "slashReset": "очистити контекст мозку (розмова лишається)",
       "slashHelp": "довідка про можливості",
       "slashNewChat": "почати новий чат",
-      "answerInProgress": "Відповідь ще готується — з’явиться тут, коли буде готова"
+      "answerInProgress": "Відповідь ще готується — з’явиться тут, коли буде готова",
+      "attachmentFrameTitle": "Перегляд вкладення",
+      "attachmentRemoveShort": "Видалити вкладення"
     },
     "lawyerWorkplace": {
       "navAria": "Навігація робочого місця юриста",
@@ -3775,7 +3778,7 @@
         "reenableTwoFactor": "Увімкнути 2FA"
       },
       "messages": {
-        "nowViewingAs": "Тепер перегляд як {{username}}",
+        "nowViewingAsPrefix": "Тепер перегляд як",
         "failedToImpersonate": "Не вдалося переглянути як користувача",
         "failedToExitImpersonation": "Не вдалося вийти з режиму перегляду",
         "exitedImpersonation": "Вийдено з режиму перегляду",
@@ -5264,6 +5267,7 @@
         "payments": "Платежі",
         "hasVerifiedPayment": "Має підтверджені оплати",
         "rrStatus": "Статус РР",
+        "clearRrStatus": "Очистити статус РР",
         "searchPlaceholder": "Пошук...",
         "selectAll": "Вибрати всіх",
         "selectAllEmployees": "Усі співробітники",
@@ -6092,7 +6096,7 @@
           }
         },
         "assignClient": {
-          "title": "Призначити клієнта: {{fullName}}",
+          "titlePrefix": "Призначити клієнта:",
           "clientInformation": "Інформація про клієнта",
           "assignmentDetails": "Деталі призначення",
           "name": "Ім'я",
@@ -6320,7 +6324,7 @@
           "sendSMS": "Відправити SMS"
         },
         "sendMessage": {
-          "title": "Надіслати повідомлення — {{clientName}}",
+          "titlePrefix": "Надіслати повідомлення —",
           "channel": "Канал",
           "service": "Сервіс",
           "servicePlaceholder": "Оберіть сервіс",
@@ -6448,7 +6452,7 @@
           "apply": "Застосувати"
         },
         "tagSelector": {
-          "title": "Керування тегами — {{name}}",
+          "titlePrefix": "Керування тегами —",
           "loadingTags": "Завантаження тегів...",
           "searchTags": "Пошук тегів...",
           "selectedCount": "{{selected}} з {{total}} тегів вибрано",
@@ -6457,7 +6461,7 @@
           "payloadTagBadge": "потрібна ЦД",
           "payloadTagHint": "Цей тег потребує ЦД та/або суму — відкриється окрема форма",
           "saveTags": "Зберегти теги",
-          "tagsUpdated": "Теги оновлено для {{name}}",
+          "tagsUpdatedPrefix": "Теги оновлено для",
           "updateFailed": "Не вдалося оновити теги",
           "protectedRemoveBlocked": "Захищені теги можуть знімати лише уповноважені ролі"
         },
@@ -6925,6 +6929,9 @@
         "pinned": "Закріплені",
         "pin": "Закріпити",
         "unpin": "Відкріпити"
+      },
+      "documents": {
+        "previewFrameTitle": "Перегляд документа"
       }
     },
     "clientChains": {
@@ -7170,9 +7177,14 @@
         "required": "Обов'язково",
         "notInPast": "Дата не може бути в минулому",
         "showClosedCredits": "Показувати закриті кредити",
+        "countAsPromiseDate": "Враховувати як дату обіцянки",
+        "countAsPromiseAmount": "Враховувати як суму обіцянки",
+        "promiseDateTaken": "Крок {{step}} уже враховується як дата обіцянки. Спершу зніміть позначку з нього.",
+        "promiseAmountTaken": "Крок {{step}} уже враховується як сума обіцянки. Спершу зніміть позначку з нього.",
         "contactSource": "Джерело контакту",
         "contactSourceClient": "Контакти клієнта",
-        "contactSourceRecommender": "Контакти поручителя"
+        "contactSourceRecommender": "Контакти поручителя",
+        "promiseNeedsBothHalves": "Обіцянка потребує і кроку з датою, і кроку з сумою. Позначте другий або зніміть цю позначку."
       },
       "modals": {
         "create": {
@@ -11340,6 +11352,7 @@
         "workFormat": "Формат роботи",
         "referralSource": "Звідки дізнався",
         "department": "Відділ",
+        "group": "Група",
         "position": "Посада",
         "manager": "Керівник",
         "hiredAt": "Дата прийняття",
@@ -11448,6 +11461,7 @@
         "choose": "Оберіть",
         "noManager": "Без керівника",
         "noDepartment": "Без відділу",
+        "noGroup": "Без групи",
         "documents": "Документи",
         "attachFile": "Додати документ (PDF або Word, до 10 МБ)",
         "searchManager": "Пошук за іменем",
@@ -11458,6 +11472,9 @@
         "showEarlier": "Показати попередні розділи",
         "showLater": "Показати наступні розділи"
       }
+    },
+    "messaging": {
+      "attachmentPreview": "Перегляд вкладення"
     }
   },
   "contactTypes": {

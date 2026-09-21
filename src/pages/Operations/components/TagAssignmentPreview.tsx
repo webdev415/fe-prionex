@@ -83,6 +83,7 @@ function usePreviewColumns(): Column<TagPreviewRowWithId>[] {
       {
         key: 'client',
         header: t(`${p}.client`, 'Client'),
+        obscured: true,
         render: (row: TagPreviewRowWithId) => (
           <>
             <span className="text-foreground font-medium">

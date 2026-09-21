@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input'
 import { useScheduleOneOnOne } from '@/features/quality/coaching/hooks'
 import { useOperators } from '@/features/users/hooks'
 import { useAuthStore } from '@/stores/authStore'
+import { piiProps } from '@/lib/openreplay/pii'
 
 /**
  * Schedule 1-on-1 dialog (KAN-413, Quick Action #2).
@@ -138,7 +139,10 @@ export function ScheduleOneOnOneDialog({ open, onClose, operatorId }: ScheduleOn
               <span className="text-muted-foreground text-xs font-medium">
                 {t('pages.actionAnalysis.inbox.scheduleOneOnOne.operator', 'Operator')}
               </span>
-              <div className="bg-muted text-foreground rounded-lg px-3 py-2 text-sm font-medium">
+              <div
+                className="bg-muted text-foreground rounded-lg px-3 py-2 text-sm font-medium"
+                {...piiProps}
+              >
                 {operator?.full_name ?? `#${operatorId}`}
               </div>
             </div>

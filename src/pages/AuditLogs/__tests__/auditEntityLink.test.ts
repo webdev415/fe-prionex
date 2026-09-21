@@ -34,3 +34,25 @@ describe('auditEntityLink — loan_coefficient_range', () => {
     ).toBe('/dashboard/system-settings/repayment-configuration')
   })
 })
+
+describe('auditEntityLink — client.rr.activated', () => {
+  // A Draft RR going live is logged against the client, like every other RR
+  // event, so the row links to that client's card.
+  it('links to the client card', () => {
+    expect(
+      auditEntityLink(
+        { entity_type: 'client', entity_id: '6301', action_raw: 'client.rr.activated' },
+        allow
+      )
+    ).toBe('/dashboard/clients/6301')
+  })
+
+  it('falls back to plain text without the client view permission', () => {
+    expect(
+      auditEntityLink(
+        { entity_type: 'client', entity_id: '6301', action_raw: 'client.rr.activated' },
+        deny
+      )
+    ).toBeNull()
+  })
+})

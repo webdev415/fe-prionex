@@ -28,6 +28,11 @@ import { useOperators } from '@/features/users/hooks/useUsers'
 import { useAuthStore } from '@/stores/authStore'
 import type { TargetAction } from '@/features/targetActions/api/types'
 import type { TAInteraction } from '@/features/taInteractions/api/types'
+import {
+  canMutateInteraction,
+  parseUtcTimestamp,
+  useNowUntil,
+} from '@/features/taInteractions/hooks/useSelfEditWindow'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { formatDate, formatDateTime, formatMoneyKopeckTight } from '@/lib/formatters'
 import { Icons } from '@/lib/icons'
@@ -264,9 +269,44 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
     { refetchInterval: 8_000 }
   )
 
-  const items = data?.items ?? []
+  // Memoised so its identity is stable across renders: it is a dependency of
+  // the self-edit deadline below, and a fresh [] each render would recompute
+  // that (and anything else keying on it) forever.
+  const items = useMemo(() => data?.items ?? [], [data])
   const totalCount = data?.total_count ?? 0
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
+
+  // KAN-1110 — an operator without the edit/delete permission may still fix
+  // their OWN record for five minutes after saving it. Judged per row from
+  // that row's own `self_edit_expires_at`: several TAs saved minutes apart
+  // have independent timers, so this must never read "the latest interaction".
+  //
+  // `user.id` is a string on the auth store; the API returns `recorded_by` as
+  // a number, so compare parsed values or every row looks like someone else's.
+  const currentUserId = user?.id != null ? Number(user.id) : null
+  // The last moment any of MY rows is still editable. Deliberately computed
+  // without reading the clock: doing that during render is impure (the value
+  // changes on every re-render), so the comparison lives inside useNowUntil,
+  // which stops ticking once this passes.
+  //
+  // Must go through parseUtcTimestamp for the same reason canMutateInteraction
+  // does — a bare Date.parse reads the API's zoneless timestamp as local, and
+  // east of UTC that yields a deadline already in the past, so useNowUntil
+  // never starts a timer and the buttons never re-render away.
+  const lastOwnSelfEditExpiry = useMemo(
+    () =>
+      items.reduce((latest, i) => {
+        if (i.recorded_by !== currentUserId) return latest
+        const expiresAt = parseUtcTimestamp(i.self_edit_expires_at)
+        return Number.isNaN(expiresAt) ? latest : Math.max(latest, expiresAt)
+      }, 0),
+    [items, currentUserId]
+  )
+  const now = useNowUntil(lastOwnSelfEditExpiry)
+  const canEditRow = (row: TAInteraction) =>
+    canMutateInteraction(row, currentUserId, canEditInteractions, now)
+  const canDeleteRow = (row: TAInteraction) =>
+    canMutateInteraction(row, currentUserId, canDeleteInteractions, now)
 
   const parseDateString = (value: string): Date | null => {
     if (!value) return null
@@ -603,6 +643,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
       key: 'recorded_by_name',
       header: t('pages.clientChains.history.operator'),
       align: 'left',
+      obscured: true,
       render: (row) => {
         const display =
           (row.recorded_by != null ? operatorNameById.get(row.recorded_by) : null) ??
@@ -631,7 +672,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
           >
             <Icons.Pin size={14} strokeWidth={1.5} />
           </button>
-          {canEditInteractions && (
+          {canEditRow(row) && (
             <button
               type="button"
               onClick={() => setEditingId(row.id)}
@@ -642,7 +683,7 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
               <Icons.PencilEdit size={14} strokeWidth={1.5} />
             </button>
           )}
-          {canDeleteInteractions && (
+          {canDeleteRow(row) && (
             <button
               type="button"
               onClick={() => setDeletingId(row.id)}

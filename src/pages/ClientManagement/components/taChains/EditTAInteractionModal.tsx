@@ -2,9 +2,15 @@
  * EditTAInteractionModal — admin edit of a saved TA chain interaction.
  *
  * Surfaces every step's recorded value (from `step_data`) plus top-level
- * promise-date / promise-amount / credit / notes. Step rendering mirrors
- * ChainExecutor by field_type so the editor matches what was originally
- * entered. Submits to PUT /api/v1/ta-interactions/{id}.
+ * credit / notes. Step rendering mirrors ChainExecutor by field_type so the
+ * editor matches what was originally entered. Submits to
+ * PUT /api/v1/ta-interactions/{id}.
+ *
+ * The promise is normally NOT edited here (KAN-1069): on a chain whose steps
+ * carry the promise flags the operator edits the fields themselves and the
+ * server rewrites promise_date / promise_amount from `step_data`. The
+ * standalone inputs survive only for chains WITHOUT those flags — see
+ * `showLegacyPromise` below.
  */
 
 import { useMemo, useState } from 'react'
@@ -221,6 +227,7 @@ export function EditTAInteractionModal({
   // which would collide and lose values on lookup AND on save.
   const [seenInteractionId, setSeenInteractionId] = useState<number | null>(null)
   const [stepValues, setStepValues] = useState<Record<string, string>>({})
+  // Only ever bound to the legacy inputs — see showLegacyPromise.
   const [promiseDate, setPromiseDate] = useState<string>('')
   const [promiseAmount, setPromiseAmount] = useState<string>('')
   const [creditId, setCreditId] = useState<string>('')
@@ -280,29 +287,72 @@ export function EditTAInteractionModal({
     return [...chain.steps].sort((a, b) => a.step_order - b.step_order)
   }, [chain])
 
-  // Detect which optional fields the chain can actually collect, based on
-  // dropdown options present in any step's TA. We *also* surface a field if
-  // the saved interaction has a value for it, so admins can clear stale data
-  // even if the chain definition has since changed.
-  const chainCapabilities = useMemo(() => {
-    let promiseDate = false
-    let promiseAmount = false
-    let credit = false
-    for (const step of orderedSteps) {
-      const ta = taById.get(step.target_action_id)
-      if (!ta || ta.field_type !== 'dropdown') continue
-      for (const dv of ta.dropdown_values) {
-        if (dv.require_promise_date) promiseDate = true
-        if (dv.require_promise_amount) promiseAmount = true
-        if (dv.require_credit) credit = true
-      }
-    }
-    return { promiseDate, promiseAmount, credit }
-  }, [orderedSteps, taById])
+  // Detect whether the chain can actually collect a credit, based on dropdown
+  // options present in any step's TA. We *also* surface the field if the saved
+  // interaction has a value for it, so admins can clear stale data even if the
+  // chain definition has since changed.
+  const chainCollectsCredit = useMemo(
+    () =>
+      orderedSteps.some((step) => {
+        const ta = taById.get(step.target_action_id)
+        if (!ta || ta.field_type !== 'dropdown') return false
+        return ta.dropdown_values.some((dv) => dv.require_credit)
+      }),
+    [orderedSteps, taById]
+  )
 
-  const showPromiseDate = chainCapabilities.promiseDate || !!interaction?.promise_date
-  const showPromiseAmount = chainCapabilities.promiseAmount || !!interaction?.promise_amount
-  const showCredit = chainCapabilities.credit || interaction?.credit_id != null
+  const showCredit = chainCollectsCredit || interaction?.credit_id != null
+
+  /**
+   * Does this chain derive its promise from flagged steps (KAN-1069)?
+   *
+   * The two mechanisms are exclusive, and which one applies decides whether
+   * this modal may touch the promise columns at all. On a FLAGGED chain the
+   * server rewrites both from `step_data` on this very request — authoritative
+   * including empty, so clearing a field clears the promise — and sending
+   * top-level values here could only contradict it.
+   */
+  const chainDerivesPromise = useMemo(
+    () => orderedSteps.some((s) => s.is_promise_date || s.is_promise_amount),
+    [orderedSteps]
+  )
+
+  /**
+   * The unflagged chains still need the old inputs.
+   *
+   * ChainExecutor continues to set promise_date / promise_amount from a
+   * dropdown value's require_promise_* flags, and those interactions have no
+   * flagged step for the server to derive anything from — so on a chain like
+   * that this modal is the only place a wrong promise can be corrected or
+   * cleared. Chains that already hold interactions are structurally locked and
+   * cannot adopt the flags without cloning, so "they can just be migrated" is
+   * not an answer. Shown only when there is something to act on: the chain
+   * asks for a promise, or the saved interaction carries one.
+   */
+  const chainRequiresPromiseDate = useMemo(
+    () =>
+      orderedSteps.some((step) => {
+        const ta = taById.get(step.target_action_id)
+        if (!ta || ta.field_type !== 'dropdown') return false
+        return ta.dropdown_values.some((dv) => dv.require_promise_date)
+      }),
+    [orderedSteps, taById]
+  )
+  const chainRequiresPromiseAmount = useMemo(
+    () =>
+      orderedSteps.some((step) => {
+        const ta = taById.get(step.target_action_id)
+        if (!ta || ta.field_type !== 'dropdown') return false
+        return ta.dropdown_values.some((dv) => dv.require_promise_amount)
+      }),
+    [orderedSteps, taById]
+  )
+
+  const showLegacyPromiseDate =
+    !chainDerivesPromise && (chainRequiresPromiseDate || !!interaction?.promise_date)
+  const showLegacyPromiseAmount =
+    !chainDerivesPromise && (chainRequiresPromiseAmount || !!interaction?.promise_amount)
+  const showLegacyPromise = showLegacyPromiseDate || showLegacyPromiseAmount
 
   const handleSave = async () => {
     if (!interaction) return
@@ -356,10 +406,27 @@ export function EditTAInteractionModal({
         id: interaction.id,
         payload: {
           step_data: cleanedStepData,
-          promise_date: promiseDate ? `${promiseDate}T00:00:00` : undefined,
-          clear_promise_date: !promiseDate,
-          promise_amount: promiseAmount ? parseFloat(promiseAmount) : undefined,
-          clear_promise_amount: !promiseAmount,
+          // The promise travels one way or the other, never both (KAN-1069).
+          //
+          // On a FLAGGED chain nothing is sent: the server rewrites both
+          // columns from `step_data` on this very request, authoritatively and
+          // including empty — an absent or blanked flagged step clears the
+          // promise, which is why `cleanedStepData` dropping empty values is
+          // safe here. Sending `clear_*: true` unconditionally instead (the
+          // removed inputs always read empty) would wipe the promise on every
+          // edit of an unflagged chain and never refill it.
+          //
+          // On an UNFLAGGED chain the server leaves both columns alone, so
+          // these inputs are the only way to fix or clear a promise that came
+          // from the dropdown require_promise_* flow.
+          ...(showLegacyPromise
+            ? {
+                promise_date: promiseDate ? `${promiseDate}T00:00:00` : undefined,
+                clear_promise_date: !promiseDate,
+                promise_amount: promiseAmount ? parseFloat(promiseAmount) : undefined,
+                clear_promise_amount: !promiseAmount,
+              }
+            : {}),
           credit_id: creditId ? parseInt(creditId, 10) : undefined,
           clear_credit_id: !creditId,
           notes: trimmedNotes || '',
@@ -578,7 +645,7 @@ export function EditTAInteractionModal({
               )
             })}
 
-            {showPromiseDate && (
+            {showLegacyPromiseDate && (
               <div className="flex flex-col gap-1">
                 <Label className="text-foreground text-sm">
                   {t('pages.clientChains.promiseDate')}
@@ -591,7 +658,7 @@ export function EditTAInteractionModal({
               </div>
             )}
 
-            {showPromiseAmount && (
+            {showLegacyPromiseAmount && (
               <div className="flex flex-col gap-1">
                 <Label className="text-foreground text-sm">
                   {t('pages.clientChains.promiseAmountUAH')}
