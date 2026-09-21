@@ -1000,6 +1000,20 @@ jobs:
           # It also lands on a better tag: `deploy-stand.yml` maps a bare 40-hex ref straight to
           # `sha-<12>-dev`, the per-commit tag build-main.yml published, rather than through the
           # generic sanitizer to the mutable `main-dev`.
+          #
+          # ⚠️ Expected, and not a defect: from the moment the reset step moves `dev`, a WEEKLY RUN
+          # PRODUCES TWO DEPLOYS. The branch push triggers `dev-branch-autodeploy.yml`, and this
+          # step then dispatches `deploy-dev.yml` as it always has. Both carry the shared
+          # concurrency group `deploy-dev-fe-prionex-dev`, which this job is holding, so neither
+          # can start until this job exits — they queue, then run one after the other, and both
+          # put the SAME image on the stand (autodeploy reuses the published one rather than
+          # rebuilding it, which is what phase 1 of the plan is for). The cost is one redundant
+          # pull→up -d; the benefit is that neither path depends on the other existing. The
+          # dispatch is deliberately NOT dropped in favour of the push trigger: this file's own
+          # read-back is the only confirmation any of this happened, and it can only confirm a run
+          # it asked for.
+          # 🚨 And this job still must not WAIT for either of them — it holds the group they need.
+          # See the self-deadlock warning in this file's header.
           DEPLOY_REF="${PINNED_SHA:-}"
           if printf '%s' "$DEPLOY_REF" | grep -q '^[0-9a-f]\{40\}$'; then
             echo "Deploy target: the pinned commit ${DEPLOY_REF}."
