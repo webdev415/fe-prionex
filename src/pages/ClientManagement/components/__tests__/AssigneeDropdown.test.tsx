@@ -15,7 +15,7 @@
  *     modal's Submit that this control replaces.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 
@@ -242,14 +242,38 @@ describe('AssigneeDropdown', () => {
     expect(onClose).not.toHaveBeenCalled()
   })
 
-  it('closes on window resize', () => {
-    const { onClose } = renderOpen()
+  describe('on window resize', () => {
+    const initialWidth = window.innerWidth
+    const initialHeight = window.innerHeight
 
-    fireEvent(window, new Event('resize'))
+    function resizeTo(width: number, height: number) {
+      Object.defineProperty(window, 'innerWidth', { configurable: true, value: width })
+      Object.defineProperty(window, 'innerHeight', { configurable: true, value: height })
+      fireEvent(window, new Event('resize'))
+    }
 
-    // Deliberate: `autoUpdate` would re-anchor the popover instead, so without
-    // this the requirement passes review by looking right while never firing.
-    expect(onClose).toHaveBeenCalled()
+    afterEach(() => {
+      Object.defineProperty(window, 'innerWidth', { configurable: true, value: initialWidth })
+      Object.defineProperty(window, 'innerHeight', { configurable: true, value: initialHeight })
+    })
+
+    it('closes when the width changes', () => {
+      const { onClose } = renderOpen()
+
+      resizeTo(initialWidth - 200, initialHeight)
+
+      // Deliberate: `autoUpdate` would re-anchor the popover instead, so without
+      // this the requirement passes review by looking right while never firing.
+      expect(onClose).toHaveBeenCalled()
+    })
+
+    it('stays open when only the height shrinks — the on-screen keyboard', () => {
+      const { onClose } = renderOpen()
+
+      resizeTo(initialWidth, initialHeight - 300)
+
+      expect(onClose).not.toHaveBeenCalled()
+    })
   })
 
   it('does not close on scroll — it follows the trigger', () => {

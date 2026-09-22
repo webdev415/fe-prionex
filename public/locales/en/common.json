@@ -6965,7 +6965,9 @@
         "unassign": "Unassign",
         "pinned": "Pinned",
         "pin": "Pin",
-        "unpin": "Unpin"
+        "unpin": "Unpin",
+        "pinFailed": "Could not pin this employee",
+        "unpinFailed": "Could not unpin this employee"
       },
       "documents": {
         "previewFrameTitle": "Document preview"

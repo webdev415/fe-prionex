@@ -1,4 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import i18n from '@/lib/i18n'
 import * as operatorPinsApi from '../api/operatorPinsApi'
 import type { OperatorPinListResponse } from '../api/operatorPinsApi'
 
@@ -24,76 +26,77 @@ export function useOperatorPins(enabled = true) {
     queryKey: operatorPinKeys.all,
     queryFn: operatorPinsApi.getOperatorPins,
     enabled,
-    // Pins change only when this user toggles one, and both mutations below
-    // write the server's answer straight into this cache. A long window
-    // therefore costs nothing and saves a request every time a client card
-    // mounts, which is every client an operator opens.
+    // Pins change only when this user toggles one, and the toggles below keep
+    // this cache in step themselves. A long window therefore costs nothing and
+    // saves a request every time a client card mounts, which is every client an
+    // operator opens.
     staleTime: 5 * 60 * 1000,
     select: toPinnedSet,
   })
 }
 
-/**
- * Optimistically move `operatorId` in or out of the cached set.
- *
- * Shared by both mutations because the requirement is that the row jumps
- * between the PINNED and ALL EMPLOYEES sections without the popover closing or
- * flickering. Waiting for the round trip would leave the row visibly lagging
- * the click; the server's authoritative set replaces this in `onSuccess`.
- */
-function optimisticPinToggle(
+/** Shared by pin and unpin, so each can see whether the other is still in flight. */
+const PIN_TOGGLE_KEY = [...operatorPinKeys.all, 'toggle'] as const
+
+const translate = (key: string, defaultValue: string) => i18n.t(key, { ns: 'common', defaultValue })
+
+/** Move one operator in or out of whatever set is cached right now. */
+function applyToggle(
   queryClient: ReturnType<typeof useQueryClient>,
-  next: (ids: number[]) => number[]
+  operatorId: number,
+  pinned: boolean
 ) {
-  const previous = queryClient.getQueryData<OperatorPinListResponse>(operatorPinKeys.all)
-  if (previous) {
-    queryClient.setQueryData<OperatorPinListResponse>(operatorPinKeys.all, {
-      operator_ids: next(previous.operator_ids),
-    })
-  }
-  return { previous }
+  queryClient.setQueryData<OperatorPinListResponse>(operatorPinKeys.all, (current) => {
+    if (!current) return current
+    const without = current.operator_ids.filter((id) => id !== operatorId)
+    return { operator_ids: pinned ? [...without, operatorId] : without }
+  })
+}
+
+/**
+ * One toggle, applied optimistically.
+ *
+ * The row moves between PINNED and ALL EMPLOYEES the moment it is clicked, and
+ * several toggles can be in flight at once. That shapes every step:
+ *
+ * - A failure undoes only its own operator on the CURRENT cache. Restoring a
+ *   snapshot taken at click time would also wipe out any toggle made since.
+ * - Responses are not written into the cache: an earlier request's answer can
+ *   arrive after a later click and would put that row back where it was.
+ * - Only the last toggle to settle refetches, so a burst of clicks ends in one
+ *   read of the server's set instead of whichever response happened to be last.
+ */
+function usePinToggle(pinned: boolean) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationKey: PIN_TOGGLE_KEY,
+    mutationFn: (operatorId: number) =>
+      pinned ? operatorPinsApi.pinOperator(operatorId) : operatorPinsApi.unpinOperator(operatorId),
+    onMutate: async (operatorId) => {
+      await queryClient.cancelQueries({ queryKey: operatorPinKeys.all, exact: true })
+      applyToggle(queryClient, operatorId, pinned)
+    },
+    onError: (_error, operatorId) => {
+      applyToggle(queryClient, operatorId, !pinned)
+      toast.error(
+        pinned
+          ? translate('pages.clients.assignee.pinFailed', 'Could not pin this employee')
+          : translate('pages.clients.assignee.unpinFailed', 'Could not unpin this employee')
+      )
+    },
+    onSettled: () => {
+      // Still counted while its own callbacks run, so 1 means "only me".
+      if (queryClient.isMutating({ mutationKey: PIN_TOGGLE_KEY }) === 1) {
+        void queryClient.invalidateQueries({ queryKey: operatorPinKeys.all, exact: true })
+      }
+    },
+  })
 }
 
 export function usePinOperator() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (operatorId: number) => operatorPinsApi.pinOperator(operatorId),
-    onMutate: async (operatorId) => {
-      await queryClient.cancelQueries({ queryKey: operatorPinKeys.all })
-      return optimisticPinToggle(queryClient, (ids) =>
-        ids.includes(operatorId) ? ids : [...ids, operatorId]
-      )
-    },
-    onError: (_error, _operatorId, context) => {
-      // Put the old set back, so a failed pin does not leave the row sitting in
-      // a section the server never agreed to.
-      if (context?.previous) {
-        queryClient.setQueryData(operatorPinKeys.all, context.previous)
-      }
-    },
-    onSuccess: (data) => {
-      // The endpoint answers with the whole set, so this needs no refetch —
-      // which matters because a refetch would land under an open popover.
-      queryClient.setQueryData(operatorPinKeys.all, data)
-    },
-  })
+  return usePinToggle(true)
 }
 
 export function useUnpinOperator() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (operatorId: number) => operatorPinsApi.unpinOperator(operatorId),
-    onMutate: async (operatorId) => {
-      await queryClient.cancelQueries({ queryKey: operatorPinKeys.all })
-      return optimisticPinToggle(queryClient, (ids) => ids.filter((id) => id !== operatorId))
-    },
-    onError: (_error, _operatorId, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData(operatorPinKeys.all, context.previous)
-      }
-    },
-    onSuccess: (data) => {
-      queryClient.setQueryData(operatorPinKeys.all, data)
-    },
-  })
+  return usePinToggle(false)
 }

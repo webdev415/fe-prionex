@@ -176,9 +176,19 @@ export function AssigneeDropdown({
   // operator aimed at has moved somewhere else on screen, and silently
   // re-placing an open list over new content invites a mis-click. Reopening is
   // one click.
+  //
+  // Only a change of WIDTH counts. The popover focuses its search box as it
+  // opens, and on a touch device that raises the on-screen keyboard, which on
+  // some mobile browsers shrinks the viewport's height and fires `resize` — so
+  // closing on any resize shut the popover the instant it opened. A keyboard
+  // never changes the width; a real layout change (window resize, docking
+  // devtools beside the page, rotating the device) does.
   useEffect(() => {
     if (!isOpen) return
-    const handleResize = () => handleClose()
+    const openedWidth = window.innerWidth
+    const handleResize = () => {
+      if (window.innerWidth !== openedWidth) handleClose()
+    }
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [isOpen, handleClose])
