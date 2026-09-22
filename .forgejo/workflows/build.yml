@@ -589,6 +589,114 @@ jobs:
 
           { echo "phone_url<<__EOF__"; printf '%s\n' "$PHONE_URL"; echo "__EOF__"; } >> "$GITHUB_OUTPUT"
 
+      # ─────────────────────────────────────────────────────────────────────
+      # OpenReplay session replay — the project key and the ingest URL.
+      #
+      # The key is PUBLIC by nature: it is inlined into the bundle every browser
+      # downloads. So it lives in a repository VARIABLE, like the phone URL above
+      # and unlike anything in OpenBao. Treating it as a secret would be theatre.
+      #
+      # 🔴 THIS STEP NEVER FAILS, deliberately, unlike both steps above it.
+      # An absent variable means "the tracker is off for this environment", and
+      # that is a real state rather than a misconfiguration: environments are
+      # switched on ONE AT A TIME (dev first, then preprod, then prod), and the
+      # act of adding the variable IS the switch. A build for an environment that
+      # has not been switched on yet must stay green — an `exit 1` here would turn
+      # a deliberate rollout order into a wall of red releases.
+      #
+      # Both halves are required together: an ingest URL with no key, or a key
+      # with no ingest URL, is not a usable configuration, so the pair is blanked
+      # rather than passed on half-set. src/lib/openreplay/config.ts applies the
+      # same rule on its side; this one exists so the build log SAYS which it was.
+      #
+      # `ingest` is one variable for all three environments on purpose: there is a
+      # single OpenReplay backend and three projects inside it. Three copies of one
+      # URL would be three places to drift apart.
+      - name: Select the OpenReplay project key for this environment
+        id: openreplay
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+          OR_KEY_DEV: ${{ vars.VITE_OPENREPLAY_PROJECT_KEY_DEV }}
+          OR_KEY_PREPROD: ${{ vars.VITE_OPENREPLAY_PROJECT_KEY_PREPROD }}
+          OR_KEY_PROD: ${{ vars.VITE_OPENREPLAY_PROJECT_KEY_PROD }}
+          OR_INGEST: ${{ vars.VITE_OPENREPLAY_INGEST_URL }}
+          OR_PRIV_DEV: ${{ vars.VITE_OPENREPLAY_PRIVATE_MODE_DEV }}
+          OR_PRIV_PREPROD: ${{ vars.VITE_OPENREPLAY_PRIVATE_MODE_PREPROD }}
+          OR_PRIV_PROD: ${{ vars.VITE_OPENREPLAY_PRIVATE_MODE_PROD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # `*)` is the only failure in this step, and it is NOT belt-and-braces:
+          # the three-value `choice` exists on workflow_dispatch only, while the
+          # workflow_call input is a plain string (a callee may not declare
+          # `choice`). Any caller can pass anything.
+          case "$ENVIRONMENT" in
+            dev)     OR_KEY="${OR_KEY_DEV:-}";     OR_PRIV="${OR_PRIV_DEV:-}" ;;
+            preprod) OR_KEY="${OR_KEY_PREPROD:-}"; OR_PRIV="${OR_PRIV_PREPROD:-}" ;;
+            prod)    OR_KEY="${OR_KEY_PROD:-}";    OR_PRIV="${OR_PRIV_PROD:-}" ;;
+            *) echo "FAIL: unknown environment '${ENVIRONMENT}'."; exit 1 ;;
+          esac
+
+          OR_INGEST="${OR_INGEST:-}"
+
+          if [ -n "$OR_KEY" ] && [ -n "$OR_INGEST" ]; then
+            # 🔴 HISTORY OF THIS SPOT, because two things stood here and both are
+            # gone, and a future reader must not have to reconstruct why.
+            #
+            # 1. A GATE. A prod build carrying a non-empty OpenReplay key failed
+            #    here, before `docker build`, naming KAN-KB-54. Its own text said
+            #    "remove this gate as part of that task, not around it".
+            # 2. A WARNING. The gate was removed on 2026-09-17 by explicit
+            #    decision while KAN-KB-54 was still open (KAN-KB-58), and a
+            #    `::warning::` took its place. A warning stops nothing; it was an
+            #    honest label on an open hole, not a guard.
+            #
+            # ⚠️ PROD WITH A KEY BEFORE PHASE 6 IS ACCEPTED: A WARNING, NOT A GATE.
+            #
+            # History, so nobody reconstructs it from the log: a gate stood here
+            # (prod build with a key fails, naming KAN-KB-54); it was removed on
+            # 2026-09-17 by explicit decision while the task was open (KAN-KB-58)
+            # and a `::warning::` took its place; KAN-KB-54 then landed the
+            # markup. Code review (rounds 2–4) asked for the gate back until phase
+            # 6 — a walk through one real DEV recording — is recorded, and a
+            # version of this file did restore it as `exit 1`, keyed to
+            # `docs/openreplay-pii-acceptance.md`. Oleg's decision (2026-09-18):
+            # a prod build must NOT fail on this. So the same condition emits a
+            # warning instead. Recorded as a decision, not disguised as cleanup.
+            #
+            # What is therefore true, in one sentence a future reader must not
+            # have to reconstruct: the markup is in place and `npm run pii-audit
+            # -- --check` guards the SOURCE half of it in CI (names and addresses
+            # by dictionary, attributes, iframes, HTML sinks; NOT free text,
+            # which is advisory, and NOT any value the dictionary has no name
+            # for). Acceptance on a real recording is the control still missing,
+            # and setting `VITE_OPENREPLAY_PROJECT_KEY_PROD` before it is
+            # recorded is a choice this warning makes visible, not one it stops.
+            #
+            # Committing `docs/openreplay-pii-acceptance.md` (what was checked,
+            # on which recording, by whom, when — see
+            # docs/openreplay-pii-checklist.md) silences it. Nothing else should.
+            if [ "$ENVIRONMENT" = prod ] && [ ! -s docs/openreplay-pii-acceptance.md ]; then
+              echo "::warning::OpenReplay is ENABLED for PROD before phase 6 of KAN-KB-54 (acceptance on a real DEV recording) was recorded. The PII markup is in place and CI-guarded; the human pass over a recording is not. Perform it per docs/openreplay-pii-checklist.md and commit docs/openreplay-pii-acceptance.md."
+            fi
+            # The key is not secret, but there is no reason to print it either.
+            echo "OpenReplay for '${ENVIRONMENT}': ENABLED (ingest ${OR_INGEST})"
+          else
+            echo "OpenReplay for '${ENVIRONMENT}': NOT CONFIGURED - the tracker will not start."
+            echo "  key present: $([ -n "$OR_KEY" ] && echo yes || echo no);" \
+                 "ingest present: $([ -n "$OR_INGEST" ] && echo yes || echo no)"
+            OR_KEY=""; OR_INGEST=""
+          fi
+
+          # Passed through as-is: config.ts reads empty as "off", so normalising
+          # it here would put the same rule in two places.
+          echo "OpenReplay privateMode for '${ENVIRONMENT}': ${OR_PRIV:-<unset> -> OFF}"
+
+          { echo "project_key<<__EOF__"; printf '%s\n' "$OR_KEY";     echo "__EOF__"; } >> "$GITHUB_OUTPUT"
+          { echo "ingest<<__EOF__";      printf '%s\n' "$OR_INGEST";  echo "__EOF__"; } >> "$GITHUB_OUTPUT"
+          { echo "private_mode<<__EOF__"; printf '%s\n' "${OR_PRIV:-}"; echo "__EOF__"; } >> "$GITHUB_OUTPUT"
+
       - name: Compute tags from the checked-out commit
         id: tags
         # 🔴 `inputs.ref` reaches this script through `env:`, NEVER through
@@ -1190,6 +1298,9 @@ jobs:
             VITE_API_BASE_URL=${{ steps.app_urls.outputs.api_url }}
             VITE_WS_URL=${{ steps.app_urls.outputs.ws_url }}
             VITE_OPERATOR_PHONE_URL=${{ steps.phone.outputs.phone_url }}
+            VITE_OPENREPLAY_PROJECT_KEY=${{ steps.openreplay.outputs.project_key }}
+            VITE_OPENREPLAY_INGEST_URL=${{ steps.openreplay.outputs.ingest }}
+            VITE_OPENREPLAY_PRIVATE_MODE=${{ steps.openreplay.outputs.private_mode }}
 
           # 🔴 Story 3.5, decided by measurement rather than by argument.
           #

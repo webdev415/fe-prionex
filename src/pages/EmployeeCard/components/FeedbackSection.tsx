@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { useFeedback } from '@/features/quality/hooks/useFeedback'
 import type { Feedback } from '@/features/quality/types'
 import { QualitySection } from './QualitySection'
+import { piiProps } from '@/lib/openreplay/pii'
 
 export interface FeedbackSectionProps {
   /** Whose card this is. The employee is the operator the feedback was left for. */
@@ -52,7 +53,9 @@ export function FeedbackSection({ employeeId }: FeedbackSectionProps) {
                 {new Date(item.created_at).toLocaleDateString(i18n.language)}
               </span>
             </div>
-            <p className="text-foreground text-sm">{item.text}</p>
+            <p className="text-foreground text-sm" {...piiProps}>
+              {item.text}
+            </p>
           </li>
         ))}
       </ul>

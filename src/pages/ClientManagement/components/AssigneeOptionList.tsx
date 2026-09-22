@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next'
 
 import { HOTKEY_BLOCKING_ATTR } from '@/features/taHotkeys/hotkey'
 import { Icons } from '@/lib/icons'
+import { piiProps } from '@/lib/openreplay/pii'
 import { cn } from '@/lib/utils'
 
 export interface AssigneeOption {
@@ -167,7 +168,10 @@ export function AssigneeOptionList({
             disabled && 'cursor-wait opacity-60'
           )}
         >
-          <span className="min-w-0 flex-1">
+          {/* Operator names are personal data: masked in session recordings.
+              Marked here rather than on the panel because the inline popover
+              renders through a portal, which markup on an ancestor cannot reach. */}
+          <span className="min-w-0 flex-1" {...piiProps}>
             <span className="text-foreground block truncate text-xs">{operator.full_name}</span>
             {/* A dash, not a blank: most operators carry no department, and an
                 empty line reads as a render fault rather than as missing data. */}

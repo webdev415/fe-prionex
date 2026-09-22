@@ -53,6 +53,8 @@ import {
 } from '@/features/payments/utils/easypayLink'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
+import { useCallingWindow } from '@/features/calls/hooks/useCallingWindow'
+import { CallingWindowTooltip } from '@/features/calls/components/CallingWindowTooltip'
 import { useCallOrigination } from '@/features/calls/hooks/useCallOrigination'
 import {
   useClientPaymentHistory,
@@ -77,6 +79,7 @@ import type {
   PaymentMethod as BackendPaymentMethod,
   PaymentStatus as BackendPaymentStatus,
 } from '@/features/payments/api/types'
+import { piiProps } from '@/lib/openreplay/pii'
 
 // Types
 interface Payment {
@@ -301,6 +304,7 @@ export function PaymentHistoryPage() {
     handleCloseCallModal,
     handleCallEnd,
   } = useCallOrigination()
+  const callingWindow = useCallingWindow(id ? Number(id) : null)
 
   // Fetch client data from API (same as DebtSummaryPage)
   const clientId = id ? Number(id) : 0
@@ -1153,8 +1157,12 @@ export function PaymentHistoryPage() {
             <span className="sm:hidden">Back</span>
           </Button>
           <span className="text-foreground text-center text-lg leading-tight font-light tracking-[-0.48px] sm:text-2xl">
+            {/* Only the interpolated half. The screen's title has to stay
+                readable or a replay stops saying where the operator was. */}
             {t('pages.clients.paymentHistory.title')}:{' '}
-            <span className="font-medium">{paymentHistory.customerName}</span>
+            <span className="font-medium" {...piiProps}>
+              {paymentHistory.customerName}
+            </span>
           </span>
         </div>
         <PermissionGuard permission={PERMISSIONS.DATA.EXPORT}>
@@ -1180,7 +1188,10 @@ export function PaymentHistoryPage() {
                 <div className="bg-card flex items-center gap-2.5 rounded-full p-2">
                   <Icons.User size={20} className="text-foreground sm:size-[24px]" />
                 </div>
-                <span className="text-foreground text-base leading-[132%] font-medium tracking-[-0.4px] sm:text-xl">
+                <span
+                  className="text-foreground text-base leading-[132%] font-medium tracking-[-0.4px] sm:text-xl"
+                  {...piiProps}
+                >
                   {paymentHistory.customerName}
                 </span>
               </div>
@@ -1276,33 +1287,42 @@ export function PaymentHistoryPage() {
             {/* Action Buttons */}
             <div className="flex w-full flex-col items-start gap-3 sm:flex-row">
               <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
-                <Button
-                  variant="primary"
-                  leftIcon={<Icons.Headset size={18} className="sm:size-5" />}
-                  className="w-full rounded-full"
-                  disabled={!user?.is_agent || !user?.asterisk_extension}
-                  onClick={() => {
-                    const phoneNumber = client?.phones?.[0]?.number
-                    if (!phoneNumber) {
-                      toast.error(t('errors.clientHasNoPhone', 'Client has no phone number'))
-                      return
-                    }
-
-                    if (isCallActive()) {
-                      toast.warning(
-                        t('pages.clients.modals.callDialog.callInProgress') ||
-                          'Another call or recording is already in progress. Please finish or close it first.'
-                      )
-                      return
-                    }
-
-                    // Open modal in 'initial' state to let user select call type
-                    setOpenCallModal('call-dialog')
-                    setIsCallModalOpen(true)
-                  }}
+                <CallingWindowTooltip
+                  message={callingWindow.allowed ? null : callingWindow.message}
                 >
-                  {t('pages.clients.paymentHistory.call')}
-                </Button>
+                  <Button
+                    variant="primary"
+                    leftIcon={<Icons.Headset size={18} className="sm:size-5" />}
+                    className="w-full rounded-full"
+                    // Gated on the calling window like the client-card button:
+                    // every entry point has to agree, or one of them opens a
+                    // dialog that cannot dial.
+                    disabled={
+                      !user?.is_agent || !user?.asterisk_extension || !callingWindow.allowed
+                    }
+                    onClick={() => {
+                      const phoneNumber = client?.phones?.[0]?.number
+                      if (!phoneNumber) {
+                        toast.error(t('errors.clientHasNoPhone', 'Client has no phone number'))
+                        return
+                      }
+
+                      if (isCallActive()) {
+                        toast.warning(
+                          t('pages.clients.modals.callDialog.callInProgress') ||
+                            'Another call or recording is already in progress. Please finish or close it first.'
+                        )
+                        return
+                      }
+
+                      // Open modal in 'initial' state to let user select call type
+                      setOpenCallModal('call-dialog')
+                      setIsCallModalOpen(true)
+                    }}
+                  >
+                    {t('pages.clients.paymentHistory.call')}
+                  </Button>
+                </CallingWindowTooltip>
               </PermissionGuard>
               <Button
                 variant="secondary"

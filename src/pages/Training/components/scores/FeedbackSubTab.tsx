@@ -21,6 +21,7 @@ import {
   type FeedbackType,
 } from '@/features/quality'
 import { useScopedUserIds } from '../../lib/scope'
+import { piiProps } from '@/lib/openreplay/pii'
 
 const STATUSES: FeedbackStatus[] = ['unread', 'read', 'completed']
 const DEFAULT_PAGE_SIZE = 25
@@ -183,7 +184,9 @@ export function FeedbackSubTab() {
                       row.feedback_type.replace(/_/g, ' ')
                     )}
                   </td>
-                  <td className="max-w-[24rem] truncate px-3 py-2 text-gray-600">{row.text}</td>
+                  <td className="max-w-[24rem] truncate px-3 py-2 text-gray-600" {...piiProps}>
+                    {row.text}
+                  </td>
                   <td className="px-3 py-2">
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs font-medium ${

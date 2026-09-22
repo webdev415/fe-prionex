@@ -33,7 +33,13 @@ vi.mock('@/features/auth/components/ImpersonationBanner', () => ({
 }))
 vi.mock('@/features/scoring/hooks/useV3Scores', () => ({ useV3UiEnabled: () => false }))
 vi.mock('@/hooks', () => ({ usePermissionRefresh: () => undefined }))
-vi.mock('@/hooks/usePermissions', () => ({ useHasPermission: () => true }))
+vi.mock('@/hooks/usePermissions', () => ({
+  useHasPermission: () => true,
+  useHasAnyPermission: () => true,
+}))
+// Рубильник раздела кредита: этот файл про хром дока, а не про меню — но без
+// мока хук ушёл бы в модуль по сети из каждого теста.
+vi.mock('@/features/credit/hooks/useCredit', () => ({ useCreditSectionEnabled: () => true }))
 vi.mock('@/features/lawyerWorkplace', () => ({
   useLegalInboxSummary: () => ({ data: undefined }),
 }))

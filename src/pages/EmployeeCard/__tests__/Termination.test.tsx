@@ -69,6 +69,8 @@ function card(overrides: Partial<EmployeeCard> = {}): EmployeeCard {
       project_name: null,
       department: null,
       department_id: null,
+      group: null,
+      group_id: null,
       position: null,
       role_id: null,
       manager: null,

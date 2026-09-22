@@ -18,6 +18,7 @@ import {
   useInteractionTypes,
 } from '@/features/clients/hooks/useNoteInteraction'
 import { Icons } from '@/lib/icons'
+import { piiProps } from '@/lib/openreplay/pii'
 
 interface CallInteractionFormProps {
   clientId: number
@@ -109,7 +110,10 @@ export function CallInteractionForm({ clientId, clientName, phone }: CallInterac
         <label className="text-muted-foreground mb-1 block text-xs">
           {t('dialer.call.clientName', "Client's Name")}
         </label>
-        <div className="border-border bg-muted/40 text-foreground rounded-lg border px-3 py-2 text-sm">
+        <div
+          className="border-border bg-muted/40 text-foreground rounded-lg border px-3 py-2 text-sm"
+          {...piiProps}
+        >
           {clientName}
         </div>
         {summary?.tags && summary.tags.length > 0 && (

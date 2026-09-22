@@ -95,6 +95,8 @@ import {
   type ToolStep,
   type ToolStepStatus,
 } from './ReasoningActivityPanel'
+import { piiProps } from '@/lib/openreplay/pii'
+import { PiiTooltip } from '@/components/ui/PiiTooltip'
 
 const QUICK_ACTION_KEYS = ['quickClientData', 'quickDebt', 'quickReport', 'quickEmployee'] as const
 type QuickActionKey = (typeof QUICK_ACTION_KEYS)[number]
@@ -559,7 +561,8 @@ const MODE_OPTIONS: {
  * click and renders inline — matching the settings popover in this component.
  *
  * Под списком режимов — тумблер «Показывать раздумья»: раздумья приходят только
- * в режиме «Думает», поэтому настройка их видимости стоит там же, где режим.
+ * в режиме «Думает», поэтому настройка их видимости стоит там же, где режим — и
+ * показывается ровно в этом режиме (на fast и в экспертном ходе прятать нечего).
  */
 function ModeDropdown({
   value,
@@ -763,34 +766,35 @@ function ModeDropdown({
             </div>
           )}
 
-          <div
-            className="border-border/70 mt-1 flex items-start gap-2.5 border-t px-2.5 pt-2.5 pb-1.5"
-            data-testid="assistant-show-reasoning-row"
-          >
-            <Icons.AiBrain03
-              size={16}
-              strokeWidth={1.5}
-              className="text-muted-foreground mt-0.5 shrink-0"
-            />
-            <span className="min-w-0 flex-1">
-              <span className="text-foreground block text-sm font-medium">
-                {t('pages.aiAssistant.showReasoning')}
+          {/* Раздумья приходят только в режиме «Думаючий»: на fast их не бывает,
+              а экспертный ход уходит во внешний Claude. Прятать тумблер честнее,
+              чем показывать настройку, которой в текущем режиме нечего скрывать. */}
+          {isThinking && !isExpert && (
+            <div
+              className="border-border/70 mt-1 flex items-start gap-2.5 border-t px-2.5 pt-2.5 pb-1.5"
+              data-testid="assistant-show-reasoning-row"
+            >
+              <Icons.AiBrain03
+                size={16}
+                strokeWidth={1.5}
+                className="text-muted-foreground mt-0.5 shrink-0"
+              />
+              <span className="min-w-0 flex-1">
+                <span className="text-foreground block text-sm font-medium">
+                  {t('pages.aiAssistant.showReasoning')}
+                </span>
+                <span className="text-muted-foreground mt-0.5 block text-[11px] leading-snug font-light">
+                  {t('pages.aiAssistant.showReasoningHint')}
+                </span>
               </span>
-              <span className="text-muted-foreground mt-0.5 block text-[11px] leading-snug font-light">
-                {/* На fast раздумий не бывает — честно говорим об этом, но тумблер
-                    оставляем живым: оператор настраивает его заранее. */}
-                {isThinking
-                  ? t('pages.aiAssistant.showReasoningHint')
-                  : t('pages.aiAssistant.showReasoningFastHint')}
-              </span>
-            </span>
-            <ToggleSwitch
-              checked={showReasoning}
-              onChange={onShowReasoningChange}
-              ariaLabel={t('pages.aiAssistant.showReasoning')}
-              className="mt-0.5 shrink-0"
-            />
-          </div>
+              <ToggleSwitch
+                checked={showReasoning}
+                onChange={onShowReasoningChange}
+                ariaLabel={t('pages.aiAssistant.showReasoning')}
+                className="mt-0.5 shrink-0"
+              />
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -3074,6 +3078,14 @@ export function AiAssistantBetaPage() {
                             'whitespace-pre-wrap',
                           item.isError && 'border-error-200 bg-error-50/60 text-error-700'
                         )}
+                        // The conversation itself (KAN-KB-54): operators ask about
+                        // clients by name and the answers quote the data back. One
+                        // attribute on the bubble covers every TEXT NODE inside it —
+                        // the question, the answer, the citations, the attachment
+                        // names as displayed. It covers no attribute: those the
+                        // tracker sends verbatim, which is why the attachment card
+                        // below carries no `title` and uses <PiiTooltip> instead.
+                        {...piiProps}
                       >
                         {item.attachments && item.attachments.length > 0 && (
                           <div className={cn('flex flex-col gap-2', item.content && 'mb-2')}>
@@ -3099,12 +3111,17 @@ export function AiAssistantBetaPage() {
                                   >
                                     <AttachmentIcon mime={attachment.mime} />
                                     <div className="min-w-0">
-                                      <p
-                                        className="max-w-[14rem] truncate text-xs font-medium"
-                                        title={attachment.name}
-                                      >
-                                        {attachment.name}
-                                      </p>
+                                      {/* A file attached to a client's case is
+                                          named after the client more often than
+                                          not. The hover-reveal of the truncated
+                                          name goes through a tooltip, whose
+                                          content is a text node the markup
+                                          masks; a `title` would be sent as-is. */}
+                                      <PiiTooltip label={attachment.name}>
+                                        <p className="max-w-[14rem] truncate text-xs font-medium">
+                                          {attachment.name}
+                                        </p>
+                                      </PiiTooltip>
                                       {attachment.sizeBytes != null && (
                                         <p className="text-[11px] opacity-70">
                                           {formatAttachmentSize(attachment.sizeBytes)}
@@ -3294,21 +3311,27 @@ export function AiAssistantBetaPage() {
                     >
                       <AttachmentIcon mime={attachment.mime} />
                       <div className="min-w-0">
-                        <p
-                          className="text-foreground max-w-[11rem] truncate text-xs font-medium"
-                          title={attachment.name}
-                        >
-                          {attachment.name}
-                        </p>
+                        <PiiTooltip label={attachment.name}>
+                          <p
+                            className="text-foreground max-w-[11rem] truncate text-xs font-medium"
+                            {...piiProps}
+                          >
+                            {attachment.name}
+                          </p>
+                        </PiiTooltip>
                         <p className="text-muted-foreground text-[11px]">
                           {formatAttachmentSize(attachment.sizeBytes)}
                         </p>
                       </div>
                       <button
                         type="button"
-                        aria-label={t('pages.aiAssistant.attachmentRemove', {
-                          name: attachment.name,
-                        })}
+                        // The role, not the file name: an aria-label is sent to
+                        // the recording verbatim. The name is right beside the
+                        // button as (masked) text, so nothing is lost for a reader.
+                        aria-label={t(
+                          'pages.aiAssistant.attachmentRemoveShort',
+                          'Remove attachment'
+                        )}
                         onClick={() => removePendingAttachment(attachment.id)}
                         className="text-muted-foreground hover:text-foreground hover:bg-muted flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors"
                       >
@@ -3327,12 +3350,14 @@ export function AiAssistantBetaPage() {
                   >
                     <span className="border-primary-500 h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-t-transparent" />
                     <div className="min-w-0">
-                      <p
-                        className="text-foreground max-w-[11rem] truncate text-xs font-medium"
-                        title={item.name}
-                      >
-                        {item.name}
-                      </p>
+                      <PiiTooltip label={item.name}>
+                        <p
+                          className="text-foreground max-w-[11rem] truncate text-xs font-medium"
+                          {...piiProps}
+                        >
+                          {item.name}
+                        </p>
+                      </PiiTooltip>
                       <p className="text-muted-foreground text-[11px]">
                         {t('pages.aiAssistant.attachPreparing')}
                       </p>

@@ -19,6 +19,7 @@ import { useTranslation } from 'react-i18next'
 
 import { useOperatorPins, usePinOperator, useUnpinOperator } from '@/features/users'
 import { Icons } from '@/lib/icons'
+import { piiProps } from '@/lib/openreplay/pii'
 import { cn } from '@/lib/utils'
 import { AssigneeOptionList, type AssigneeOption } from './AssigneeOptionList'
 
@@ -102,7 +103,9 @@ export function AssigneeSelect({
           disabled && 'cursor-not-allowed opacity-60'
         )}
       >
-        <span className="min-w-0 flex-1">
+        {/* The chosen operator's name is masked in session recordings; the
+            placeholder is not personal data and stays readable. */}
+        <span className="min-w-0 flex-1" {...(selected ? piiProps : {})}>
           {selected ? (
             <>
               <span className="text-foreground block truncate text-sm">{selected.full_name}</span>

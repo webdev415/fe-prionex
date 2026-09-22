@@ -9,6 +9,7 @@ import type { KanbanColumnId, KanbanTask } from '../../kanban/kanbanData'
 import type { LetterDetail } from '../../types'
 import { formatDueDate, formatLegalDeadline } from '../../utils/formatters'
 import { useLegalProfileTimezone } from '@/features/lawyerWorkplace/hooks/useLegalProfileTimezone'
+import { Pii } from '@/lib/openreplay/pii'
 
 /** Slug → chip colour, mirrors the letter-type palette used on the parameters panel. */
 const TYPE_COLOURS: Record<string, string> = {
@@ -118,7 +119,7 @@ export function LetterContextPanel({ letter, task }: LetterContextPanelProps) {
           {hasClient ? (
             <>
               <Row label={t('pages.lawyerWorkplace.context.client.name', 'Full name')}>
-                {clientName ?? dash}
+                <Pii>{clientName ?? dash}</Pii>
               </Row>
               <Row label={t('pages.lawyerWorkplace.context.client.code', 'Client code')}>
                 {clientCode ?? dash}

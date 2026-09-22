@@ -9,6 +9,7 @@ import {
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import type { OperatorUser } from '@/features/users/api/usersApi'
+import { piiProps } from '@/lib/openreplay/pii'
 
 interface EmployeeFilterDropdownProps {
   operators: OperatorUser[]
@@ -171,7 +172,10 @@ export function EmployeeFilterDropdown({
                           checked={selectedIds.includes(op.id)}
                           onCheckedChange={() => toggleOne(op.id)}
                         />
-                        <span className={cn('text-sm', isInactive && 'text-muted-foreground')}>
+                        <span
+                          className={cn('text-sm', isInactive && 'text-muted-foreground')}
+                          {...piiProps}
+                        >
                           {op.full_name}
                           {isInactive && (
                             <span className="text-muted-foreground ml-1 text-xs">

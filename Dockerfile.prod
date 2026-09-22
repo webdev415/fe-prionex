@@ -43,10 +43,27 @@ ARG VITE_ASSISTANT_REPORT_TABLES_ENABLED
 # token nowhere. That is the correct state until a softphone is deployed whose
 # VITE_CRM_PARENT_ORIGIN matches the CRM being built here.
 ARG VITE_OPERATOR_PHONE_URL
+# OpenReplay session replay. The project key is public by nature — it ships
+# inside the bundle — so it travels as a repository VARIABLE, not a secret.
+#
+# Optional, and empty is a valid state rather than a mistake: environments are
+# switched on one at a time by adding their variable, and src/lib/openreplay
+# treats a missing key or ingest URL as "do not start". There is deliberately no
+# assertion below for these, unlike the phone URL: a build for an environment
+# that has not been switched on yet must stay green.
+#
+# VITE_OPENREPLAY_PRIVATE_MODE is the strict masking switch. Unset = off, the
+# same direction as everything else here; only a literal true/1 turns it on.
+ARG VITE_OPENREPLAY_PROJECT_KEY
+ARG VITE_OPENREPLAY_INGEST_URL
+ARG VITE_OPENREPLAY_PRIVATE_MODE
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 ENV VITE_WS_URL=$VITE_WS_URL
 ENV VITE_ASSISTANT_REPORT_TABLES_ENABLED=$VITE_ASSISTANT_REPORT_TABLES_ENABLED
 ENV VITE_OPERATOR_PHONE_URL=$VITE_OPERATOR_PHONE_URL
+ENV VITE_OPENREPLAY_PROJECT_KEY=$VITE_OPENREPLAY_PROJECT_KEY
+ENV VITE_OPENREPLAY_INGEST_URL=$VITE_OPENREPLAY_INGEST_URL
+ENV VITE_OPENREPLAY_PRIVATE_MODE=$VITE_OPENREPLAY_PRIVATE_MODE
 
 # Say so loudly, but do not fail: a bundle with no phone origin is a valid
 # deployment of everything else, and failing here blocks the whole release over

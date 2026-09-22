@@ -35,4 +35,25 @@ describe('QueueStatusBadge', () => {
     render(<QueueStatusBadge active={false} />)
     expect(screen.getByText('statusLabels.inactive')).toBeTruthy()
   })
+
+  it('shows a window hold rather than a healthy Active queue', () => {
+    // The supervisor's toggle still says on, so without its own pill this
+    // queue looks perfectly normal while deliberately placing no calls — and
+    // the supervisor goes hunting for a fault that is not there.
+    render(<QueueStatusBadge active pausedByWindow />)
+    expect(screen.getByText('dialer.queueList.pausedByWindow')).toBeInTheDocument()
+    expect(screen.queryByText('statusLabels.active')).toBeNull()
+  })
+
+  it('lets a missing campaign outrank the window hold', () => {
+    // Not synced is a fault needing action; a window hold is not. If both are
+    // true the actionable one has to win.
+    render(<QueueStatusBadge active synced={false} pausedByWindow />)
+    expect(screen.getByText('dialer.queueList.notSynced')).toBeInTheDocument()
+  })
+
+  it('is unaffected when the window is not holding the queue', () => {
+    render(<QueueStatusBadge active pausedByWindow={false} />)
+    expect(screen.getByText('statusLabels.active')).toBeInTheDocument()
+  })
 })

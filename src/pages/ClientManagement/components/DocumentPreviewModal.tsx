@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/Button'
 import { documentApi } from '@/features/clients/api/documentApi'
 import { useTranslation } from 'react-i18next'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
+import { piiProps } from '@/lib/openreplay/pii'
 
 interface DocumentPreviewModalProps {
   open: boolean
@@ -131,7 +132,9 @@ export function DocumentPreviewModal({
         <DialogPrimitive.Content className="fixed inset-0 z-50 flex flex-col">
           {/* Top bar: filename + controls */}
           <div className="flex shrink-0 items-center justify-between bg-black/60 px-4 py-2 text-white backdrop-blur-sm">
-            <span className="truncate text-sm font-medium">{filename}</span>
+            <span className="truncate text-sm font-medium" {...piiProps}>
+              {filename}
+            </span>
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
@@ -204,7 +207,11 @@ export function DocumentPreviewModal({
               >
                 <img
                   src={blobUrl}
-                  alt={filename}
+                  // The role, not the file name — same reason the iframe's title
+                  // below is a role. The image is a client's document; under the
+                  // attribute the tracker sends a placeholder instead of it.
+                  alt={t('pages.clients.documents.previewFrameTitle', 'Document preview')}
+                  {...piiProps}
                   className="object-contain select-none"
                   style={{
                     maxWidth: '100%',
@@ -220,7 +227,22 @@ export function DocumentPreviewModal({
 
             {/* PDF: fullscreen iframe */}
             {!loading && !error && isPdf && blobUrl && (
-              <iframe src={blobUrl} title={filename} className="h-full w-full border-0" />
+              <iframe
+                /* 🔴 The attribute goes on the <iframe> ITSELF, never on a wrapper:
+                   `TopObserver` captures a frame when
+                   `captureIFrames && !hasOpenreplayAttribute(node, 'obscured')`,
+                   reading the attribute off the node in its own callback, so
+                   inheritance plays no part. `captureIFrames` defaults to true and
+                   is not set in our options, which means the document inside is
+                   recorded today (a `blob:` URL inherits our origin). `hidden`
+                   would not do instead: attributes of a hidden node are still
+                   sent, so `title={filename}` leaked the file name — which is why
+                   the title below is a role rather than the name. */
+                src={blobUrl}
+                title={t('pages.clients.documents.previewFrameTitle', 'Document preview')}
+                className="h-full w-full border-0"
+                {...piiProps}
+              />
             )}
 
             {/* Non-previewable */}

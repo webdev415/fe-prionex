@@ -29,7 +29,6 @@ import { formatCreditMoney } from '@/features/credit/api/money'
 import type { CreditLoanStatus, CreditLoanSummary } from '@/features/credit/api/types'
 import { CreditStatusBadge } from './components/CreditStatusBadge'
 import { CreditMetricCards } from './components/CreditMetricCards'
-import { CreditStandBanner } from './components/CreditStandBanner'
 import { CreditModuleUnavailable } from './components/CreditModuleUnavailable'
 import { formatDate } from '@/lib/formatters'
 
@@ -142,6 +141,21 @@ export function CreditLoansPage() {
       render: (row) => row.client_email ?? '—',
     },
     {
+      // Дата выдачи в списке не показывалась вовсе, хотя сервис по ней
+      // сортирует (`LOAN_SORTABLE`): вопрос «какие кредиты выданы вчера» и
+      // «самый старый непогашенный» решался открыванием карточек подряд.
+      // Днями возраст здесь НЕ пишем: в списке нет среза `as_of`, от которого
+      // он считается в карточке, и два разных отсчёта на двух экранах — это
+      // разговор «у вас цифры не сходятся».
+      key: 'disbursed',
+      sortable: true,
+      sortKey: 'disbursed_at',
+      header: t('credit.columns.disbursed'),
+      render: (row) => (
+        <span className="text-muted-foreground text-xs">{formatDate(row.disbursed_at)}</span>
+      ),
+    },
+    {
       key: 'maturity',
       sortable: true,
       sortKey: 'maturity_date',
@@ -152,10 +166,22 @@ export function CreditLoansPage() {
     },
   ]
 
-  // Сводка не ответила — модуля на этом стенде нет: списки строить не из
-  // чего, а текст Kong («Request failed with status code 404») оператору
-  // ничего не объясняет.
-  if (overviewError) return <CreditModuleUnavailable error={overviewError} />
+  // Полноэкранная подмена — ТОЛЬКО когда показывать нечего. «Нечего» — это не
+  // «запрос отказал», а «данных на экране нет»: у списка стоит
+  // `placeholderData`, и прежний успешный ответ переживает упавший рефетч,
+  // поэтому состояние «строки есть И ошибка есть» штатное. Подменить экран в
+  // нём значило бы стереть видимые строки — ровно то, что правило запрещает.
+  //
+  // Сцена подмены: «модуля на стенде нет» (Kong 404), «пропуск не принят»
+  // (401), «прав не хватило» (403). Её разбирает CreditModuleUnavailable по
+  // статусу ошибки, и она сохраняется.
+  //
+  // Отказ ОДНОГО обзора страницу не трогает. Шапка при этом деградирует
+  // частично: счётчики ПО СТАТУСАМ из сводки не строятся (`metrics.ts` берёт
+  // их из `overview`, которого нет), а денежные карточки по загруженной
+  // странице остаются — они посчитаны по своим строкам и к обзору отношения
+  // не имеют. CreditMetricCards исчезает целиком только на пустом списке.
+  if (overviewError && error && !pageData) return <CreditModuleUnavailable error={overviewError} />
 
   return (
     <div className="p-6">
@@ -165,8 +191,6 @@ export function CreditLoansPage() {
           {t('credit.loans.total', { count: page_total ?? items.length })}
         </span>
       </div>
-
-      <CreditStandBanner overview={overview} />
 
       <div className="border-border bg-card mb-4 rounded-xl border p-4 shadow-sm">
         <form
