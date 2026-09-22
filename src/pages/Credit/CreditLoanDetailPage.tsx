@@ -31,6 +31,7 @@ import { formatCreditMoney } from '@/features/credit/api/money'
 import { normalizeDraft } from '@/features/credit/api/draft'
 import type {
   CreditBalances,
+  CreditBucket,
   CreditDisbursement,
   CreditDocumentMeta,
   CreditJournalEntry,
@@ -40,6 +41,7 @@ import type {
   CreditScheduleVersion,
 } from '@/features/credit/api/types'
 import {
+  CREDIT_BUCKETS,
   CREDIT_DISBURSEMENT_FAILURE_CODES,
   CREDIT_RAIL_REVIEW_REASONS,
 } from '@/features/credit/api/enums'
@@ -164,7 +166,14 @@ export function CreditLoanDetailPage() {
   const { data: loan, isLoading, error } = useCreditLoan(loanId)
   const stateQuery = useCreditLoanState(loanId)
   const scheduleQuery = useCreditLoanSchedule(loanId)
-  const journalQuery = useCreditLoanJournal(loanId)
+  // Корзина журнала: отбор делает СЕРВЕР, поэтому состояние живёт там же, где
+  // зовётся хук. «Все корзины» — пустая строка, при которой объект параметров
+  // не строится вовсе и запрос уходит без ключа `bucket`.
+  const [journalBucket, setJournalBucket] = useState<CreditBucket | ''>('')
+  const journalQuery = useCreditLoanJournal(
+    loanId,
+    journalBucket ? { bucket: journalBucket } : undefined
+  )
   const versionsQuery = useCreditLoanScheduleVersions(loanId)
   const documentsQuery = useCreditLoanDocuments(loanId)
   const [scheduleVersion, setScheduleVersion] = useState<number | null>(null)
@@ -368,6 +377,8 @@ export function CreditLoanDetailPage() {
         {tab === 'journal' && (
           <LoanJournal
             entries={journalQuery.data?.items ?? []}
+            bucket={journalBucket}
+            onBucketChange={setJournalBucket}
             isLoading={journalQuery.isLoading}
             error={journalQuery.error}
             onRetry={() => void journalQuery.refetch()}
@@ -1180,13 +1191,37 @@ function LoanDocuments({
   )
 }
 
+/**
+ * Журнал проводок с отбором по корзине.
+ *
+ * (а) Отбор делает СЕРВЕР — параметр `bucket` уходит в запрос, а массив
+ *     `entries` здесь не фильтруется. Клиентский `filter` обманул бы дважды:
+ *     `PAGE = 60` режет хвост ДО отбора («в корзине пусто» = «они на 61-й»),
+ *     и объявленный дверью параметр остался бы мёртвым.
+ * (б) Селектор и пометка живут НАД `AsyncPanel`: он при загрузке, ошибке и
+ *     пустоте рисует ВМЕСТО children, и фильтр исчезал бы ровно тогда, когда
+ *     его результат пуст, — снять его было бы нечем, кроме перезагрузки.
+ * (в) Пометка под активным фильтром говорит о свойстве ВЫБОРКИ: компенсирующая
+ *     запись могла остаться за фильтром, и незачёркнутая строка не означает
+ *     «деньги действующие». Она одна на панель, а не у каждой строки:
+ *     достоверного признака у экрана нет по построению, и шестьдесят повторов
+ *     одного предложения читать перестают.
+ * (г) Второй ключ сортировки — `posted_at`, а НЕ `seq`: модуль нумерует `seq`
+ *     ПОСЛЕ отбора, и под фильтром одна и та же проводка получает другой номер.
+ *     `seq` остаётся третьим ключом — только для ничьей по `posted_at` и только
+ *     как порядок внутри одного ответа, где он и есть порядок записи.
+ */
 function LoanJournal({
   entries,
+  bucket,
+  onBucketChange,
   isLoading,
   error,
   onRetry,
 }: {
   entries: CreditJournalEntry[]
+  bucket: CreditBucket | ''
+  onBucketChange: (bucket: CreditBucket | '') => void
   isLoading: boolean
   error: unknown
   onRetry: () => void
@@ -1195,83 +1230,122 @@ function LoanJournal({
   const [expanded, setExpanded] = useState(false)
   const PAGE = 60
   // Порядок задаём явно: полагаться на порядок ответа — значит молча
-  // перепутать проводки, когда сервис сменит сортировку.
+  // перепутать проводки, когда сервис сменит сортировку. Ничья по
+  // `posted_at` — обычный случай: проводки одной операции пишутся одной
+  // транзакцией и несут одно `now()`. Её разбирает `seq`: значение под фильтром
+  // другое, но относительный порядок внутри одного ответа — порядок записи.
   const ordered = [...entries].sort(
-    (a, b) => b.business_date.localeCompare(a.business_date) || b.seq - a.seq
+    (a, b) =>
+      b.business_date.localeCompare(a.business_date) ||
+      b.posted_at.localeCompare(a.posted_at) ||
+      b.seq - a.seq
   )
   const visible = expanded ? ordered : ordered.slice(0, PAGE)
   const reversed = new Set(ordered.map((e) => e.reversal_of_entry_id).filter(Boolean) as string[])
 
   return (
-    <AsyncPanel
-      title={t('credit.tabs.journal')}
-      isLoading={isLoading}
-      error={error}
-      isEmpty={entries.length === 0}
-      emptyText={t('credit.card.noJournal')}
-      onRetry={onRetry}
-      footer={
-        ordered.length > PAGE
-          ? t('credit.card.journalShown', { shown: visible.length, total: ordered.length })
-          : undefined
-      }
-    >
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-border text-muted-foreground border-b text-xs">
-            <th className="py-2 text-left font-medium">{t('credit.columns.date')}</th>
-            <th className="py-2 text-left font-medium">{t('credit.columns.entryType')}</th>
-            <th className="py-2 text-left font-medium">{t('credit.columns.bucket')}</th>
-            <th className="py-2 text-right font-medium">{t('credit.columns.installment')}</th>
-            <th className="py-2 text-right font-medium">{t('credit.columns.amount')}</th>
-            <th className="py-2 text-left font-medium">{t('credit.columns.rule')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {visible.map((entry) => {
-            const isReversed = reversed.has(entry.entry_id)
-            // Пометка «(сторно)» нужна там, где по типу это не видно:
-            // компенсирующей может быть и `cancellation`. У самого
-            // `reversal` она давала тавтологию «Сторнування (сторно)».
-            const isReversal =
-              Boolean(entry.reversal_of_entry_id) && entry.entry_type !== 'reversal'
-            return (
-              <tr
-                key={entry.entry_id}
-                className={`border-border border-b last:border-0 ${
-                  isReversed ? 'text-muted-foreground line-through' : ''
-                }`}
-              >
-                <td className="py-2">{formatDate(entry.business_date)}</td>
-                <td className="py-2">
-                  {t(`credit.entryType.${entry.entry_type}`, entry.entry_type)}
-                  {isReversal && (
-                    <span className="text-muted-foreground ml-1 text-xs">
-                      {t('credit.card.isReversal')}
-                    </span>
-                  )}
-                </td>
-                <td className="py-2">{t(`credit.bucket.${entry.bucket}`, entry.bucket)}</td>
-                <td className="text-muted-foreground py-2 text-right tabular-nums">
-                  {entry.installment_seq ?? '—'}
-                </td>
-                <td className="py-2 text-right tabular-nums">
-                  {money(entry.amount_minor, entry.currency)}
-                </td>
-                <td className="text-muted-foreground py-2 text-xs">{entry.rule_id ?? '—'}</td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-      {ordered.length > PAGE && !expanded && (
-        <div className="mt-3">
-          <Button size="sm" variant="white-secondary" onClick={() => setExpanded(true)}>
-            {t('credit.actions.showMore')}
-          </Button>
-        </div>
+    <div>
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        <label className="text-muted-foreground flex flex-col gap-1.5 text-xs">
+          {t('credit.columns.bucket')}
+          <select
+            className="border-input-border bg-card text-foreground h-10 rounded-md border px-3 text-sm"
+            value={bucket}
+            onChange={(event) => {
+              // Раскрытый срез прежней корзины не переносится: иначе `PAGE`
+              // отключался бы в каждой следующей. Сброс — в том же событии, а
+              // не `key` (пересоздал бы `<select>` и снял бы с него фокус) и не
+              // эффект (кадр между сменой и эффектом рисует весь список).
+              setExpanded(false)
+              onBucketChange(event.target.value as CreditBucket | '')
+            }}
+          >
+            <option value="">{t('credit.filters.anyBucket')}</option>
+            {/* Итерация по словарю кода, а не семь строк руками: дверь значение
+                со словарём не сверяет и на неизвестное отвечает 200 с пустым
+                `items` — опечатка дошла бы до оператора как «в корзине пусто». */}
+            {CREDIT_BUCKETS.map((name) => (
+              <option key={name} value={name}>
+                {t(`credit.bucket.${name}`, name)}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      {bucket !== '' && (
+        <CreditNotice>{t('credit.card.journalBucketReversalUnknown')}</CreditNotice>
       )}
-    </AsyncPanel>
+
+      <AsyncPanel
+        title={t('credit.tabs.journal')}
+        isLoading={isLoading}
+        error={error}
+        isEmpty={entries.length === 0}
+        emptyText={bucket ? t('credit.card.noJournalInBucket') : t('credit.card.noJournal')}
+        onRetry={onRetry}
+        footer={
+          ordered.length > PAGE
+            ? t('credit.card.journalShown', { shown: visible.length, total: ordered.length })
+            : undefined
+        }
+      >
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-border text-muted-foreground border-b text-xs">
+              <th className="py-2 text-left font-medium">{t('credit.columns.date')}</th>
+              <th className="py-2 text-left font-medium">{t('credit.columns.entryType')}</th>
+              <th className="py-2 text-left font-medium">{t('credit.columns.bucket')}</th>
+              <th className="py-2 text-right font-medium">{t('credit.columns.installment')}</th>
+              <th className="py-2 text-right font-medium">{t('credit.columns.amount')}</th>
+              <th className="py-2 text-left font-medium">{t('credit.columns.rule')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visible.map((entry) => {
+              const isReversed = reversed.has(entry.entry_id)
+              // Пометка «(сторно)» нужна там, где по типу это не видно:
+              // компенсирующей может быть и `cancellation`. У самого
+              // `reversal` она давала тавтологию «Сторнування (сторно)».
+              const isReversal =
+                Boolean(entry.reversal_of_entry_id) && entry.entry_type !== 'reversal'
+              return (
+                <tr
+                  key={entry.entry_id}
+                  className={`border-border border-b last:border-0 ${
+                    isReversed ? 'text-muted-foreground line-through' : ''
+                  }`}
+                >
+                  <td className="py-2">{formatDate(entry.business_date)}</td>
+                  <td className="py-2">
+                    {t(`credit.entryType.${entry.entry_type}`, entry.entry_type)}
+                    {isReversal && (
+                      <span className="text-muted-foreground ml-1 text-xs">
+                        {t('credit.card.isReversal')}
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-2">{t(`credit.bucket.${entry.bucket}`, entry.bucket)}</td>
+                  <td className="text-muted-foreground py-2 text-right tabular-nums">
+                    {entry.installment_seq ?? '—'}
+                  </td>
+                  <td className="py-2 text-right tabular-nums">
+                    {money(entry.amount_minor, entry.currency)}
+                  </td>
+                  <td className="text-muted-foreground py-2 text-xs">{entry.rule_id ?? '—'}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+        {ordered.length > PAGE && !expanded && (
+          <div className="mt-3">
+            <Button size="sm" variant="white-secondary" onClick={() => setExpanded(true)}>
+              {t('credit.actions.showMore')}
+            </Button>
+          </div>
+        )}
+      </AsyncPanel>
+    </div>
   )
 }
 

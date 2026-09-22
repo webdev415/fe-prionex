@@ -11955,6 +11955,8 @@
       "noDocuments": "No documents for this application.",
       "noSchedule": "No schedule yet.",
       "noJournal": "No ledger entries.",
+      "noJournalInBucket": "No entries in this bucket.",
+      "journalBucketReversalUnknown": "Under a bucket filter the compensating entry may be outside the selection.",
       "scheduleVersion": "Schedule, version {{version}}",
       "consents": "Consents",
       "granted": "granted",
@@ -12311,7 +12313,8 @@
     },
     "filters": {
       "dpdFrom": "Days past due",
-      "any": "Any"
+      "any": "Any",
+      "anyBucket": "Any bucket"
     },
     "unavailable": {
       "title": "The credit module is not deployed on this stand",
