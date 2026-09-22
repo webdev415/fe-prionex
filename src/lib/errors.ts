@@ -45,7 +45,9 @@ export function translateErrorCode(code: unknown, fallback: string, params?: unk
     defaultValue: '',
     replace: values,
   })
-  return typeof translated === 'string' && translated ? translated : fallback
+  return typeof translated === 'string' && translated && !translated.includes('{{')
+    ? translated
+    : fallback
 }
 
 export function localizeCodedDetail(error: unknown): void {
@@ -57,6 +59,14 @@ export function localizeCodedDetail(error: unknown): void {
   if (typeof detail !== 'string' || typeof code !== 'string') return
   Object.defineProperty(record, 'detail', {
     get: () => translateErrorCode(code, detail, params),
+    set: (value: unknown) => {
+      Object.defineProperty(record, 'detail', {
+        value,
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      })
+    },
     enumerable: true,
     configurable: true,
   })

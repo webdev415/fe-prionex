@@ -84,4 +84,36 @@ describe('project country', () => {
     await waitFor(() => expect(updateProject).toHaveBeenCalled())
     expect(updateProject.mock.calls[0][0].data).not.toHaveProperty('country')
   })
+
+  it('sends an edited Spanish tax code in capitals', async () => {
+    render(<EditProjectModal project={project} open onClose={vi.fn()} onSuccess={vi.fn()} />)
+    fireEvent.change(document.getElementById('edrpou_code') as HTMLInputElement, {
+      target: { value: 'x1234567l' },
+    })
+    fireEvent.submit(document.getElementById('edit-project-form') as HTMLFormElement)
+
+    await waitFor(() => expect(updateProject).toHaveBeenCalled())
+    expect(updateProject.mock.calls[0][0].data.edrpou_code).toBe('X1234567L')
+  })
+
+  it('does not resend a tax code that only changed case', async () => {
+    render(
+      <EditProjectModal
+        project={{ ...project, edrpou_code: 'B12345678' }}
+        open
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />
+    )
+    fireEvent.change(document.getElementById('edrpou_code') as HTMLInputElement, {
+      target: { value: 'b12345678' },
+    })
+    fireEvent.change(screen.getByDisplayValue('Cartera Madrid'), {
+      target: { value: 'Cartera Madrid Centro' },
+    })
+    fireEvent.submit(document.getElementById('edit-project-form') as HTMLFormElement)
+
+    await waitFor(() => expect(updateProject).toHaveBeenCalled())
+    expect(updateProject.mock.calls[0][0].data).not.toHaveProperty('edrpou_code')
+  })
 })

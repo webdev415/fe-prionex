@@ -138,6 +138,8 @@ export function mapBackendUserToUser(backendUser: CurrentUserResponse): User {
         roles: [{ id: String(p.id), name: p.role_name }],
       })) || [],
     active_project_id: backendUser.active_project ? String(backendUser.active_project.id) : null,
+    active_project_currency: backendUser.active_project?.currency,
+    active_project_country: backendUser.active_project?.country,
     active_role_id: backendUser.role ? String(backendUser.role.id) : null,
     active_role_name: backendUser.role?.name || null,
     active_department_id: backendUser.department_id ?? null,

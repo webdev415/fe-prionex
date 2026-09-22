@@ -96,7 +96,7 @@ export function serializeCompanyBankingFields(
   return {
     full_company_name: emptyToUndefined(values.full_company_name),
     address: emptyToUndefined(values.address),
-    edrpou_code: emptyToUndefined(values.edrpou_code),
+    edrpou_code: emptyToUndefined(values.edrpou_code)?.toUpperCase(),
     website: emptyToUndefined(values.website),
     email: emptyToUndefined(values.email),
     hotline_phone: emptyToUndefined(values.hotline_phone),

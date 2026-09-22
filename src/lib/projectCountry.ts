@@ -12,10 +12,14 @@ export function activeCountry(): Country {
 
 export function activeProjectCountry(
   user:
-    | { active_project_id?: string | null; projects?: Array<{ id: string; country?: string }> }
+    | {
+        active_project_id?: string | null
+        active_project_country?: string
+        projects?: Array<{ id: string; country?: string }>
+      }
     | null
     | undefined
 ): Country {
   const project = user?.projects?.find((p) => p.id === user.active_project_id)
-  return project?.country === 'ES' ? 'ES' : 'UA'
+  return (project?.country ?? user?.active_project_country) === 'ES' ? 'ES' : 'UA'
 }

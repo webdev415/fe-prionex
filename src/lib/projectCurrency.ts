@@ -20,10 +20,14 @@ export function currencySymbol(currency: string | null | undefined = active): st
 
 export function activeProjectCurrency(
   user:
-    | { active_project_id?: string | null; projects?: Array<{ id: string; currency?: string }> }
+    | {
+        active_project_id?: string | null
+        active_project_currency?: string
+        projects?: Array<{ id: string; currency?: string }>
+      }
     | null
     | undefined
 ): Currency {
   const project = user?.projects?.find((p) => p.id === user.active_project_id)
-  return project?.currency === 'EUR' ? 'EUR' : 'UAH'
+  return (project?.currency ?? user?.active_project_currency) === 'EUR' ? 'EUR' : 'UAH'
 }

@@ -82,12 +82,32 @@ async function resolveAuthUser(
       user = mergeUserFromProjectsResponse(user, projectsResponse.data)
     } catch {
       // Keep JWT-derived user (permissions, names from login payload)
+      user = withCachedProjectSettings(user)
     }
   }
   // KAN-757: per-tab access ceilings live only on the JWT (not /users/me), so
   // overlay them here regardless of which profile source won.
   user.tab_access_levels = extractTabAccessLevels(token)
   return user
+}
+
+function withCachedProjectSettings(user: User): User {
+  let cached: Record<string, { currency?: string; country?: string } | undefined>
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem('project_settings') ?? '{}')
+    if (!parsed || typeof parsed !== 'object') return user
+    cached = parsed as typeof cached
+  } catch {
+    return user
+  }
+  return {
+    ...user,
+    projects: user.projects?.map((p) => ({
+      ...p,
+      currency: p.currency ?? cached[p.id]?.currency,
+      country: p.country ?? cached[p.id]?.country,
+    })),
+  }
 }
 
 /** Read the `tab_access_levels` claim off the JWT (empty map when absent). */
@@ -675,7 +695,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           })
           return
         }
-        const user = buildUserFromJwtToken(token)
+        const user = withCachedProjectSettings(buildUserFromJwtToken(token))
         // The JWT carries no timezone and /me is unreachable, so restore it
         // from the localStorage cache (written by the subscription below),
         // falling back to the browser timezone.
@@ -827,6 +847,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           {
             id: String(active_project.project_id),
             name: active_project.project_name,
+            currency: active_project.currency,
+            country: active_project.country,
             roles: [{ id: String(active_project.role_id), name: active_project.role_name }],
           },
         ],
@@ -851,7 +873,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const meResponse = await authApi.me()
         userForApp = mapBackendUserToUser(meResponse.data)
       } catch {
-        userForApp = targetUserProfile
+        userForApp = withCachedProjectSettings(targetUserProfile)
       }
 
       set({
@@ -1016,6 +1038,15 @@ useAuthStore.subscribe((state) => {
 useAuthStore.subscribe((state) => {
   setActiveCurrency(activeProjectCurrency(state.user))
   setActiveCountry(activeProjectCountry(state.user))
+  const settings = Object.fromEntries(
+    (state.user?.projects ?? [])
+      .filter((p) => p.currency || p.country)
+      .map((p) => [p.id, { currency: p.currency, country: p.country }])
+  )
+  const serialized = JSON.stringify(settings)
+  if (serialized !== '{}' && serialized !== localStorage.getItem('project_settings')) {
+    localStorage.setItem('project_settings', serialized)
+  }
 })
 
 export default useAuthStore
