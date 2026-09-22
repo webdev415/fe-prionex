@@ -6688,6 +6688,8 @@
         "rrValidationPaymentDateRequired": "La fecha de pago {{num}} es obligatoria",
         "rrValidationPaymentAmountRequired": "El importe del pago {{num}} es obligatorio",
         "rrValidationSumMismatch": "La suma de los pagos ({{sum}}) debe ser igual al importe total ({{total}})",
+        "rrValidationAmountOutOfRange": "El importe total de la reestructuración ({{amount}}) debe estar entre {{lower}} y {{upper}}",
+        "rrValidationNothingToReturn": "Este crédito no tiene importe pendiente de devolución, por lo que no se puede reestructurar",
         "viewDetail": "Ver",
         "makePayment": "Registrar pago",
         "payments": "Pagos",
