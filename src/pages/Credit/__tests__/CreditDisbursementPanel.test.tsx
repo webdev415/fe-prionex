@@ -291,6 +291,20 @@ describe('CreditLoanDetailPage → блок «Хід видачі грошей»
     expect(screen.getByText('credit.providerTimeSource.observed')).toBeInTheDocument()
   })
 
+  it('D-1 при retry_allowed=false поле остаётся диагностикой, а не гейтом', () => {
+    // Флаг модуля `retry_allowed` не управляет ни кнопкой (её нет вовсе), ни
+    // уведомлением: уведомление говорит «модуль разрешает повтор, а команда
+    // откажет», и при `false` противоречия нет — говорить не о чем.
+    // Фикстура SETTLED — единственная в файле с `retry_allowed: false`; блок
+    // выдачи делается видимым той же подменой источника времени, что и выше.
+    openPassport({ ...SETTLED, provider_time_source: 'observed' }, { status: 'active' })
+    expect(screen.queryByText('credit.card.disbursementRetryContradiction')).not.toBeInTheDocument()
+    // Положительный контроль: «уведомления нет» сказано о НАРИСОВАННОЙ панели,
+    // а не о пустом экране, и поле-диагностика на месте.
+    expect(screen.getByText('credit.card.disbursement')).toBeInTheDocument()
+    expect(fieldValue('credit.fields.retry')).toBe('credit.disbursementRetry.settled')
+  })
+
   it('у застрявшего кредита без единой попытки говорит это словами', () => {
     openPassport(undefined, { status: 'pending_disbursement' })
     expect(screen.getByText('credit.card.disbursementNotSent')).toBeInTheDocument()

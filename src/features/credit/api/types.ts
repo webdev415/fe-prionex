@@ -797,6 +797,20 @@ export interface CreditLoansParams {
   cursor?: string
 }
 
+/**
+ * Отбор журнала проводок на стороне СЕРВЕРА (`getLoanJournal`).
+ *
+ * `limit`/`cursor` здесь нет намеренно: дверь их не объявляет, а `next_cursor`
+ * журнала всегда пуст — страниц у двери нет. Объявленный параметр, который
+ * сервер игнорирует, читается вызывающим как работающий.
+ */
+export interface CreditJournalParams {
+  /** Корзина отбора; значения — только из `CREDIT_BUCKETS` (см. `creditApi.loanJournal`). */
+  bucket?: CreditBucket
+  /** Срез на `business_date`; отбор накопительный — «по состоянию на», а не «за дату». */
+  as_of?: string
+}
+
 export interface ManualDecisionPayload {
   outcome: CreditDecisionOutcome
   rationale: string

@@ -22,6 +22,7 @@ import type {
   CreditDecision,
   CreditDocumentMeta,
   CreditJournalEntry,
+  CreditJournalParams,
   CreditLoanDetail,
   CreditLoanState,
   CreditLoanSummary,
@@ -181,6 +182,21 @@ export function newIdempotencyKey(prefix: string): string {
   return `${prefix}:${random}`
 }
 
+/**
+ * Query журнала: в объект попадают ТОЛЬКО заданные параметры.
+ *
+ * Ключ со значением `undefined` axios при сериализации отбросил бы, но тогда
+ * «параметр не отправлен» проверялось бы поведением сериализатора, а не
+ * содержимым запроса. Здесь это утверждение измеримо: нет значения — нет ключа.
+ */
+function journalQuery(params?: CreditJournalParams): Record<string, unknown> | undefined {
+  if (!params) return undefined
+  const query: Record<string, unknown> = {}
+  if (params.bucket) query.bucket = params.bucket
+  if (params.as_of) query.as_of = params.as_of
+  return query
+}
+
 export const creditApi = {
   /** Сводка стенда: счётчики по статусам и права текущей роли. */
   overview: () => get<CreditOverview>('/admin/overview'),
@@ -308,7 +324,22 @@ export const creditApi = {
   loanScheduleVersions: (loanId: string) =>
     get<CreditPage<CreditScheduleVersion>>(`/loans/${loanId}/schedule/versions`),
 
-  loanJournal: (loanId: string) => get<CreditPage<CreditJournalEntry>>(`/loans/${loanId}/journal`),
+  /**
+   * Журнал проводок. Отбор делает СЕРВЕР, и резать полученный массив нельзя:
+   * `PAGE = 60` в карточке отрезает хвост ДО отбора, то есть «в корзине
+   * проводок нет» означало бы «они за шестидесятой строкой».
+   *
+   * «Все корзины» = ключа `bucket` в запросе НЕТ. Ключ со значением
+   * `undefined` не кладём, хотя сериализатор его и отбросил бы: утверждение
+   * «параметр не отправлен» должно быть измеримо, а не держаться на поведении
+   * axios (в отличие от соседних `loanState`/`loanSchedule`).
+   *
+   * Значение корзины дверь со словарём `LedgerBucket` НЕ сверяет — неизвестное
+   * даёт 200 с пустым `items`, и опечатка выглядела бы как «в корзине пусто».
+   * Поэтому значения берутся только из `CREDIT_BUCKETS`, а не пишутся строками.
+   */
+  loanJournal: (loanId: string, params?: CreditJournalParams) =>
+    get<CreditPage<CreditJournalEntry>>(`/loans/${loanId}/journal`, journalQuery(params)),
 
   loanDocuments: (loanId: string) =>
     get<CreditPage<CreditDocumentMeta>>(`/loans/${loanId}/documents`),
