@@ -176,6 +176,9 @@ const TAB_LABEL_KEYS: Record<string, string> = {
   tasks: 'pages.clients.detail.tabs.tasks',
   documents: 'pages.clients.detail.tabs.docs',
   activity: 'pages.clients.detail.tabs.activity',
+  // Переключение вкладки пишется в ЭТУ ЖЕ ленту (`client_card_section_open`),
+  // поэтому незамапленное имя отрисовалось бы оператору сырым словом `credit`.
+  credit: 'pages.clients.detail.tabs.credit',
   // Personal-details sub-tabs
   personal: 'pages.clients.detail.tabs.personal',
   related: 'pages.clients.detail.tabs.relatedTags',

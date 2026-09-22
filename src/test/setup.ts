@@ -610,6 +610,11 @@ vi.mock('react-i18next', () => ({
           'The file is too large to open here — ask for a smaller export',
         'pages.aiAssistant.filePreview.errorBrainUnavailable':
           'The assistant is unavailable — try again in a moment',
+        // День расчёта кредитной строки приезжает ПЕРЕМЕННОЙ. Без шаблона здесь
+        // мок возвращает сам ключ, подставленная дата в DOM не попадает вовсе,
+        // и сцена «класс А целиком» не может утверждать «станом на» ни одним
+        // числом — проверяла бы наличие ключа.
+        'credit.card.asOf': 'As of {{date}}',
       }
       const template = translations[key] || key
       // Interpolate from `vars`, not `options`: in the `t(key, fallback, vars)`

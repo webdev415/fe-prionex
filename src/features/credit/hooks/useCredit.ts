@@ -30,6 +30,13 @@ export const creditKeys = {
   loanState: (id: string) => [...creditKeys.loans(), 'state', id] as const,
   loanSchedule: (id: string) => [...creditKeys.loans(), 'schedule', id] as const,
   loanJournal: (id: string) => [...creditKeys.loans(), 'journal', id] as const,
+  /**
+   * Кредиты одного клиента CRM. Корень — `credit`, а не `clients`: владелец
+   * данных модуль, а у клиентов ключ `loans` УЖЕ занят купленными долгами
+   * (`clientKeys.loans`), и две разные `queryFn` на одном ключе — это
+   * перезапись кэша, а не общий кэш.
+   */
+  clientLoans: (clientId: number) => [...creditKeys.loans(), 'byClient', clientId] as const,
   switches: () => [...creditKeys.all, 'switches'] as const,
 }
 
@@ -76,6 +83,33 @@ export function useCreditUnderwritingQueue(status?: CreditQueueStatus) {
   return useQuery({
     queryKey: creditKeys.queue(status),
     queryFn: () => creditApi.underwritingQueue(status),
+  })
+}
+
+/**
+ * Кредиты клиента для блока «Кредит (наш)» карточки CRM.
+ *
+ * 🔴 `retry: false` — не стиль. Глобальное правило (`main.tsx`) читает
+ * `error.response?.status` у `AxiosError`; наш клиент бросает `CreditApiError`,
+ * у которого `response` нет вовсе, значит статус читается как `undefined`,
+ * значит «повторять можно» — и на 403 и на 404 ушёл бы ВТОРОЙ запрос в шлюз, у
+ * которого маршрута нет.
+ *
+ * `enabled` приходит извне: карточка включает запрос только при открытой
+ * вкладке (KAN-610 — открытие карточки перестало стрелять двадцатью
+ * параллельными запросами, и седьмой хук без гейта вернул бы их).
+ *
+ * Поллинга нет: суммы двигаются закрытием дня, то есть раз в сутки, а свежесть
+ * выражена на экране пометкой «станом на», а не частотой опроса.
+ */
+export function useClientCreditLoans(clientId: number, enabled: boolean) {
+  return useQuery({
+    queryKey: creditKeys.clientLoans(clientId),
+    queryFn: () => creditApi.clientLoans(clientId),
+    enabled: enabled && clientId > 0,
+    retry: false,
+    staleTime: 5 * 60_000,
+    refetchOnMount: false,
   })
 }
 

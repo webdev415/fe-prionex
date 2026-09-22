@@ -4,7 +4,19 @@ import ukCommon from '@/../public/locales/uk/common.json'
 
 type Json = Record<string, unknown>
 
-const SUBTREES = ['pages.lawyerWorkplace.', 'pages.training.'] as const
+// `pages.clients.detail.tabs.` пришло сюда со вкладкой «Кредит (наш)» (WS-11,
+// story 14-7): её подпись читают и полоса вкладок карточки, и лента активности
+// клиента, а под страж раздела `credit.*` она не попадает — другой префикс.
+// Пропавший английский ключ показал бы англоязычному оператору машинное имя, и
+// до этого файла такое расхождение не краснило ничего.
+// `pages.aiAssistant.` — тумблер «Міркування 31B» (#149): строки переключателя
+// живут в обеих локалях, и расхождение ловится тем же стражем.
+const SUBTREES = [
+  'pages.lawyerWorkplace.',
+  'pages.training.',
+  'pages.clients.detail.tabs.',
+  'pages.aiAssistant.',
+] as const
 
 const PLURAL_SUFFIX = /_(zero|one|two|few|many|other)$/
 
