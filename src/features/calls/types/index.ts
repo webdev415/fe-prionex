@@ -242,3 +242,12 @@ export interface CallingWindowStatus {
   reason: CallingWindowReason | null
   detail: string | null
 }
+
+/** What the server did with a blocked-attempt report. */
+export interface BlockedCallAttemptResult {
+  /** False when the window had opened by the time it was re-checked. */
+  recorded: boolean
+  allowed: boolean
+  reason: CallingWindowReason | null
+  detail: string | null
+}

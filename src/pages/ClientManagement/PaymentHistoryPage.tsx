@@ -1296,6 +1296,7 @@ export function PaymentHistoryPage() {
               <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
                 <CallingWindowTooltip
                   message={callingWindow.allowed ? null : callingWindow.message}
+                  onBlockedAttempt={callingWindow.reportBlocked}
                 >
                   <Button
                     variant="primary"
