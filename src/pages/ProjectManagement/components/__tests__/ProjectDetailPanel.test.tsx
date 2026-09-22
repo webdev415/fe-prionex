@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import type { ApiProjectDetail } from '@/features/projects/types'
+import { setActiveCurrency } from '@/lib/projectCurrency'
 import { ProjectDetailPanel } from '../ProjectDetailPanel'
 
 vi.mock('@/components/auth', () => ({
@@ -69,5 +70,15 @@ describe('ProjectDetailPanel total debt', () => {
   it('shows the debt in hryvnia for a hryvnia project', () => {
     renderPanel({ ...project, currency: 'UAH' })
     expect(screen.getByText('₴ 1 000')).toBeInTheDocument()
+  })
+
+  it('shows hryvnia for a project without a currency, even to a euro-project viewer', () => {
+    setActiveCurrency('EUR')
+    try {
+      renderPanel({ ...project, currency: undefined })
+      expect(screen.getByText('₴ 1 000')).toBeInTheDocument()
+    } finally {
+      setActiveCurrency('UAH')
+    }
   })
 })

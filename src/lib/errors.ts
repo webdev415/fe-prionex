@@ -40,8 +40,12 @@ function httpMessage(key: string, defaultValue: string): string {
 export function translateErrorCode(code: unknown, fallback: string, params?: unknown): string {
   if (typeof code !== 'string' || !code) return fallback
   const values = params && typeof params === 'object' ? (params as Record<string, unknown>) : {}
-  const translated = i18n.t(`codes.${code}`, { ns: 'errors', defaultValue: '', ...values })
-  return translated || fallback
+  const translated: unknown = i18n.t(`codes.${code}`, {
+    ns: 'errors',
+    defaultValue: '',
+    replace: values,
+  })
+  return typeof translated === 'string' && translated ? translated : fallback
 }
 
 export function localizeCodedDetail(error: unknown): void {
@@ -49,9 +53,13 @@ export function localizeCodedDetail(error: unknown): void {
   const data = error.response?.data
   if (!data || typeof data !== 'object') return
   const record = data as Record<string, unknown>
-  if (typeof record.detail === 'string' && typeof record.code === 'string') {
-    record.detail = translateErrorCode(record.code, record.detail, record.params)
-  }
+  const { detail, code, params } = record
+  if (typeof detail !== 'string' || typeof code !== 'string') return
+  Object.defineProperty(record, 'detail', {
+    get: () => translateErrorCode(code, detail, params),
+    enumerable: true,
+    configurable: true,
+  })
 }
 
 /**

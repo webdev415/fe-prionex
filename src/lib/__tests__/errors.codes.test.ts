@@ -19,7 +19,8 @@ function speakSpanish() {
   vi.spyOn(i18n, 't').mockImplementation(((key: string, options?: Record<string, unknown>) => {
     const template = SPANISH[key]
     if (!template) return (options?.defaultValue as string) ?? key
-    return template.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(options?.[name]))
+    const values = (options?.replace ?? {}) as Record<string, unknown>
+    return template.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(values[name]))
   }) as unknown as typeof i18n.t)
 }
 
@@ -47,6 +48,33 @@ describe('error codes', () => {
     })
 
     expect(getErrorMessage(error)).toBe('El importe supera la deuda de 500')
+  })
+
+  it('never lets server values act as translation options', () => {
+    speakSpanish()
+    const params = { debt: '500', ns: 'other', defaultValue: 'X', returnObjects: true }
+    const error = makeHttpError(400, {
+      detail: 'Amount exceeds the debt of 500',
+      code: 'PAYMENT_AMOUNT_TOO_HIGH',
+      params,
+    })
+
+    expect(getErrorMessage(error)).toBe('El importe supera la deuda de 500')
+    expect(i18n.t).toHaveBeenCalledWith('codes.PAYMENT_AMOUNT_TOO_HIGH', {
+      ns: 'errors',
+      defaultValue: '',
+      replace: params,
+    })
+  })
+
+  it('falls back to the server text when the translation is not a string', () => {
+    vi.spyOn(i18n, 't').mockReturnValue({ nested: 'object' } as unknown as string)
+    const error = makeHttpError(400, {
+      detail: 'Amount exceeds the debt of 500',
+      code: 'PAYMENT_AMOUNT_TOO_HIGH',
+    })
+
+    expect(getErrorMessage(error)).toBe('Amount exceeds the debt of 500')
   })
 
   it('keeps the server text when the code has no translation', () => {
@@ -84,6 +112,37 @@ describe('error codes', () => {
       detail: 'El crédito ya está cerrado',
       code: 'LOAN_ALREADY_CLOSED',
     })
+  })
+
+  it('follows a language switch after the request failed', () => {
+    speakSpanish()
+    const error = makeHttpError(409, {
+      detail: 'Loan is already closed',
+      code: 'LOAN_ALREADY_CLOSED',
+    })
+    localizeCodedDetail(error)
+    const data = error.response.data as { detail: string }
+    expect(data.detail).toBe('El crédito ya está cerrado')
+
+    vi.restoreAllMocks()
+    vi.spyOn(i18n, 't').mockImplementation(((key: string, options?: Record<string, unknown>) =>
+      key === 'codes.LOAN_ALREADY_CLOSED'
+        ? 'Кредит уже закрито'
+        : ((options?.defaultValue as string) ?? key)) as unknown as typeof i18n.t)
+
+    expect(data.detail).toBe('Кредит уже закрито')
+  })
+
+  it('keeps the server text when the code has no translation', () => {
+    speakSpanish()
+    const error = makeHttpError(409, {
+      detail: 'Letter already confirmed',
+      code: 'letter_already_confirmed',
+    })
+
+    localizeCodedDetail(error)
+
+    expect((error.response.data as { detail: string }).detail).toBe('Letter already confirmed')
   })
 
   it('leaves an uncoded detail alone', () => {
