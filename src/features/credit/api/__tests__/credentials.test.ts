@@ -115,6 +115,10 @@ const CALLS: Array<{ name: string; invoke: () => Promise<unknown> }> = [
     invoke: () => creditApi.decide('a1', { outcome: 'approved', rationale: 'r' }),
   },
   { name: 'loans', invoke: () => creditApi.loans({}) },
+  // Дверь карточки клиента CRM (WS-11): её вызов уносит id клиента, и уже
+  // поэтому обязан быть в переборе — иначе первый же метод, добавленный мимо
+  // этого списка, уносил бы служебный ключ незамеченным.
+  { name: 'clientLoans', invoke: () => creditApi.clientLoans(42) },
   { name: 'loan', invoke: () => creditApi.loan('l1') },
   { name: 'products', invoke: () => creditApi.products() },
   { name: 'parameters', invoke: () => creditApi.parameters() },

@@ -30,7 +30,8 @@ export interface EnhancedSearchResult {
   last_name: string
   phones: string[]
   email_primary: string | null
-  tax_id: string
+  /** Ревизия 176 client-service: у клиента, опознанного по e-mail, ИНН нет. */
+  tax_id: string | null
   priority_score: number
   priority_level: PriorityLevel
   status: string

@@ -5897,7 +5897,8 @@
           "callSms": "Дзвінок / SMS",
           "taChains": "Ланцюжки ЦД",
           "searcherComments": "Коментарі пошуковика",
-          "activity": "Активність"
+          "activity": "Активність",
+          "credit": "Кредит (наш)"
         },
         "relatedTags": {
           "loading": "Завантаження пов'язаних тегів...",
@@ -11678,6 +11679,36 @@
     }
   },
   "credit": {
+    "clientBlock": {
+      "arrears": "Недоїмка",
+      "cancelled": "Відмова",
+      "closed": "Закриття",
+      "closedThrough": "Закрито по",
+      "defaultReported": "Дефолт передано",
+      "disbursed": "Зарахування",
+      "dpd": "ДПЗ",
+      "identifiedByEmail": "Опізнаний за e-mail (OTP кабінету)",
+      "issued": "Видано",
+      "jurisdiction": "Юрисдикція",
+      "linkNotFound": "Модуль не підтвердив кредити цього клієнта — показано проєкцію, зв'язок уточнюється",
+      "maturity": "Погашення",
+      "moduleUnavailable": "Кредитний модуль недоступний на цьому стенді",
+      "nextPayment": "Наступний платіж",
+      "noContact": "Немає контакту 28 днів",
+      "noLoans": "Кредитів немає",
+      "openInModule": "Відкрити в кредитному модулі",
+      "outstanding": "Залишок",
+      "overdue": "Прострочено",
+      "paid": "Сплачено",
+      "product": "Продукт",
+      "projectionAsOf": "Проєкція станом на",
+      "projectionOnly": "Повні дані — за правом credit.loans.read",
+      "returnPending": "Очікується повернення",
+      "status": "Статус",
+      "temporaryFailure": "Дані модуля зараз недоступні — спробуйте відкрити вкладку ще раз",
+      "tinOptional": "(не обов’язковий)",
+      "title": "Кредит (наш)"
+    },
     "status": {
       "in_progress": "Заповнюється",
       "scoring": "Скоринг",

@@ -77,7 +77,12 @@ interface DisplayClient {
   isFraudster?: boolean
   lawsuitFiled?: boolean
   fullName: string
-  taxIdNumber: string
+  /**
+   * `null` с ревизии 176 client-service: клиент, опознанный по подтверждённому
+   * e-mail кабинета, ИНН не имеет. Колонка рисует прочерк — как и все прочие
+   * читатели `tax_id` в дереве.
+   */
+  taxIdNumber: string | null
   tags: Array<{
     id: number
     name: string
@@ -1796,7 +1801,7 @@ export function ClientManagementPage() {
           to={`/dashboard/clients/${client.id}?from=list`}
           className="text-primary-700 hover:text-primary-600 cursor-pointer text-left hover:underline"
         >
-          {client.taxIdNumber}
+          {client.taxIdNumber ?? '—'}
         </Link>
       ),
     },

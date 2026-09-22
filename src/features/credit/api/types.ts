@@ -409,6 +409,94 @@ export interface CreditLoanSummary {
   application_id: string
 }
 
+/**
+ * Строка блока «Кредит (наш)» карточки клиента CRM — `ClientLoanCard`
+ * (`listClientLoans`, дверь CM-L3 / 14-18).
+ *
+ * КЛАСС А границы видимости и ничего сверх (решение CEO 21.09.2026,
+ * `docs/11-credit-vs-collection-boundary.md` §7 п. 2): договор и статус,
+ * деньги, просрочка, даты, ссылка в модуль. График, журнал проводок, бакеты
+ * балансов, детали выдачи, лента действий клиента — класс Б, они видны ПО
+ * ССЫЛКЕ в модуле; анкета, IBV, решение и доказательства подписи — класс В,
+ * в CRM не уезжают вовсе.
+ *
+ * Почему не `CreditLoanSummary` и не `CreditLoanDetail`. Первый — строка
+ * портфельного списка: балансов и просроченной части в ней нет, зато есть
+ * `client_email` и `application_id`, которым в карточке должника делать
+ * нечего. Второй несёт класс Б целиком.
+ *
+ * ⚠️ Ни одного `?`: контракт объявляет все двадцать четыре ключа в `required`,
+ * и отсутствие значения выражается `null`. Поле, приходящее только иногда,
+ * потребитель читает как «эта версия его не отдаёт» и пишет обход
+ * ([[field-that-appears-only-sometimes]]).
+ */
+export interface ClientLoanCard {
+  loan_id: string
+  contract_number: string
+  product_code: string
+  status: CreditLoanStatus
+  /** Валюта строки: суммы форматируются по ней, а не по умолчанию карточки. */
+  currency: string
+  jurisdiction: string
+  /** Выдано, минорные единицы. */
+  principal_minor: number
+  /** Остаток к оплате на `as_of`. */
+  balance_total_minor: number
+  /** Сумма всех разнесённых платежей. */
+  paid_minor: number
+  /** Просроченная часть долга на `as_of`. */
+  overdue_minor: number
+  /** DPD из ядра. */
+  delinquency_days: number
+  /** Недоимка: пропущено не менее двух платежей. */
+  arrears_flag: boolean
+  /** Двадцать восемь дней без контакта с клиентом. */
+  no_contact_flag: boolean
+  default_reported_at: string | null
+  /** Момент ФАКТИЧЕСКОГО зачисления, а не подписи договора. */
+  disbursed_at: string | null
+  maturity_date: string
+  /** Ближайший НЕОПЛАЧЕННЫЙ взнос, включая уже просроченный. */
+  next_payment: { due_date: string; amount_minor: number } | null
+  closed_at: string | null
+  close_reason: CreditLoanCloseReason | null
+  /** Момент, когда отказ от договора состоялся или был запрошен. */
+  cancelled_at: string | null
+  /**
+   * Деньги по состоявшемуся отказу ещё НЕ вернулись. Едет рядом с нулевым
+   * балансом намеренно: при отказе начисления сторнированы, и ноль значит
+   * «долга по договору нет», а не «человек ничего не должен».
+   */
+  return_pending: boolean
+  /** День, НА КОТОРЫЙ посчитана строка; один на весь ответ. */
+  as_of: string
+  /** День, ПО КОТОРЫЙ доведено закрытие дня по этому кредиту; `null` — прогонов не было. */
+  closed_through: string | null
+  /** ОТНОСИТЕЛЬНЫЙ путь внутри CRM: `/dashboard/credit/loans/{loan_id}`. */
+  module_url: string | null
+}
+
+/** Причины закрытия кредита — словарь `credit.closeReason.*`. */
+export type CreditLoanCloseReason = 'repaid' | 'early_settled' | 'cancelled' | 'sold'
+
+/**
+ * Обёртка ответа двери. `next_cursor` контракт объявляет, но он ВСЕГДА `null`:
+ * у одного человека кредитов единицы, пагинации у двери нет (Р-7 CM-L3).
+ */
+export interface ClientLoanCardPage {
+  items: ClientLoanCard[]
+  next_cursor: string | null
+}
+
+/**
+ * Отбор строк блока. `status` — ОДНО значение, а не массив: повторённый
+ * параметр дверь отвергает `422 multiple_values`, неизвестное — `422
+ * unknown_value`.
+ */
+export interface ClientLoanCardParams {
+  status?: CreditLoanStatus
+}
+
 /** Паспорт кредита (InternalLoan). */
 export interface CreditLoanDetail {
   loan_id: string
