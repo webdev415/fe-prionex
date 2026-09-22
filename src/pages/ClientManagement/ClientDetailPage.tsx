@@ -150,6 +150,7 @@ import {
   type PeriodicityType,
 } from '@/features/clients/utils/rrSchedule'
 import { buildContactPayload } from '@/features/clients/utils/contactPayload'
+import { checkRrAmount } from '@/features/clients/utils/rrAmountBounds'
 import type { RestructuringPaymentEntry } from '@/features/clients/api/types'
 import type { OverpaymentResponse, RRStatusHistoryEntry } from '@/features/clients/api/clientApi'
 import { useUpdateInteraction } from '@/features/clients/hooks/useNoteInteraction'
@@ -596,6 +597,29 @@ export function ClientDetailPage() {
         t(`${d}.rrValidationSumMismatch`, {
           sum: paymentsSum.toFixed(2),
           total: totalAmount.toFixed(2),
+        })
+      )
+      return
+    }
+
+    // KAN-1122: the total must sit inside this loan's [lower; upper] range.
+    // Advisory only — the API applies the same rule and is the authority
+    // (create_restructuring_agreement in clients.py). The bounds are the
+    // figures the loan card already shows, so an operator is judged against
+    // what they were shown. A loan whose bounds cannot be read yields
+    // 'unknown' and is left to the API rather than blocked here.
+    const selectedLoan = eligibleLoansForRr.find((loan) => String(loan.id) === connectRrForm.debtId)
+    const amountCheck = checkRrAmount(totalAmount, selectedLoan)
+    if (amountCheck.verdict === 'nothing-left') {
+      setConnectRrError(t(`${d}.rrValidationNothingToReturn`))
+      return
+    }
+    if (amountCheck.verdict === 'out-of-range') {
+      setConnectRrError(
+        t(`${d}.rrValidationAmountOutOfRange`, {
+          amount: totalAmount.toFixed(2),
+          lower: amountCheck.lower.toFixed(2),
+          upper: amountCheck.upper.toFixed(2),
         })
       )
       return

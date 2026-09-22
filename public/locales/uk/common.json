@@ -5661,6 +5661,8 @@
         "rrValidationPaymentDateRequired": "Дата платежу {{num}} обов'язкова",
         "rrValidationPaymentAmountRequired": "Сума платежу {{num}} обов'язкова",
         "rrValidationSumMismatch": "Сума платежів ({{sum}}) повинна дорівнювати загальній сумі ({{total}})",
+        "rrValidationAmountOutOfRange": "Загальна сума реструктуризації ({{amount}}) повинна бути в межах від {{lower}} до {{upper}}",
+        "rrValidationNothingToReturn": "За цим кредитом немає суми до повернення, тому його не можна реструктуризувати",
         "viewDetail": "Переглянути",
         "makePayment": "Зробити платіж",
         "payments": "Платежі",
