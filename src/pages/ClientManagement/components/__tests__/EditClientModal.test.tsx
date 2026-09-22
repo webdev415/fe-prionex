@@ -58,6 +58,7 @@ vi.mock('react-i18next', () => ({
         'actions.close': 'Close',
         'pages.clients.editModal.saveSuccess': 'Client updated successfully',
         'pages.clients.editModal.saveError': 'Failed to update client',
+        'pages.clients.editModal.taxIdInvalid': 'The tax number must be exactly 10 digits',
         'pages.clients.editModal.addressCreated': 'Address added successfully',
         'pages.clients.editModal.addressUpdated': 'Address updated successfully',
         'pages.clients.editModal.addressDeleted': 'Address removed successfully',
@@ -536,7 +537,7 @@ describe('EditClientModal', () => {
       fireEvent.click(screen.getByTestId('edit-client-save-all'))
 
       await waitFor(() => {
-        expect(screen.getByText('Failed to update client')).toBeInTheDocument()
+        expect(screen.getByText('The tax number must be exactly 10 digits')).toBeInTheDocument()
       })
       expect(mockUpdateClientAsync).not.toHaveBeenCalled()
       expect(mockUpdateEmploymentAsync).not.toHaveBeenCalled()

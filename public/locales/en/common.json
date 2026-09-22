@@ -6409,6 +6409,7 @@
         "taxId": "Tax ID",
         "saveSuccess": "Client updated successfully",
         "saveError": "Failed to update client",
+        "taxIdInvalid": "The tax number must be exactly 10 digits",
         "addressCreated": "Address added successfully",
         "addressUpdated": "Address updated successfully",
         "addressDeleted": "Address removed successfully",
