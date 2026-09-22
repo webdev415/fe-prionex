@@ -26,6 +26,7 @@ import { useCallDetails, useHangupCall, useRejectCall } from '@/features/calls/h
 import type { IncomingCallClient } from '@/features/calls/types'
 import { useCallStateUpdates } from '@/features/calls/hooks/useCallStateUpdates'
 import { useCallingWindow } from '@/features/calls/hooks/useCallingWindow'
+import { CallingWindowTooltip } from '@/features/calls/components/CallingWindowTooltip'
 import { useSetLastCallResultFromCall } from '@/features/contactTags/hooks/useContactTags'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { formatMoneyUAHTwoDecimals } from '@/lib/formatters'
@@ -1022,22 +1023,30 @@ export function CallDialogModal({
                   {t('pages.clients.modals.callDialog.markAsSpam')}
                 </Button>
               ) : (
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={handleCallNow}
-                  className="w-full rounded-md"
-                  leftIcon={
-                    isLoading ? undefined : <Icons.Headset size={18} className="sm:size-5" />
-                  }
-                  disabled={isLoading || isCallCooldown || !canPlaceCall}
+                // Wrapped only while the window is shut: the press lands on the
+                // wrapper, which shows the reason and records the attempt. A
+                // button disabled for any other reason is left as it was.
+                <CallingWindowTooltip
+                  message={callingWindow.allowed ? null : callingWindow.message}
+                  onBlockedAttempt={callingWindow.reportBlocked}
                 >
-                  {isLoading
-                    ? t('status.loading')
-                    : isCallCooldown
-                      ? `Try again in ${cooldownSecondsRemaining || 1}s`
-                      : t('pages.clients.modals.callDialog.callNow')}
-                </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={handleCallNow}
+                    className="w-full rounded-md"
+                    leftIcon={
+                      isLoading ? undefined : <Icons.Headset size={18} className="sm:size-5" />
+                    }
+                    disabled={isLoading || isCallCooldown || !canPlaceCall}
+                  >
+                    {isLoading
+                      ? t('status.loading')
+                      : isCallCooldown
+                        ? `Try again in ${cooldownSecondsRemaining || 1}s`
+                        : t('pages.clients.modals.callDialog.callNow')}
+                  </Button>
+                </CallingWindowTooltip>
               )}
               {/* Under the button, not in it: the refusal is a sentence, and a
                   sentence as a label wraps across a full-width button and

@@ -1037,7 +1037,7 @@ export function ClientDetailPage() {
     // remembered.
     const blocked = callDialogBlockedReason(callingWindow, spamOptionEnabled)
     if (blocked) {
-      toast.warning(blocked)
+      callingWindow.reportBlocked()
       return
     }
     setCallModalPreferences({ phone, initialCallType, spamOptionEnabled })
@@ -3176,6 +3176,7 @@ export function ClientDetailPage() {
             <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
               <CallingWindowTooltip
                 message={callingWindow.allowed ? null : callingWindow.message}
+                onBlockedAttempt={callingWindow.reportBlocked}
                 className="w-full flex-1 xl:w-auto xl:flex-none"
               >
                 <Button
