@@ -7,9 +7,9 @@
  * from the real useAuthStore, mirroring AiAssistantBetaPage.mode.test.tsx.
  */
 import { beforeEach, describe, expect, it } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClientProvider, QueryClient } from '@tanstack/react-query'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { AiAssistantHeaderButton } from '../DashboardLayout'
 import { useAuthStore } from '@/stores/authStore'
@@ -71,5 +71,34 @@ describe('AiAssistantHeaderButton', () => {
     mockGetAiAssistantSettings.mockReturnValue(new Promise(() => {}))
     renderButton()
     expect(screen.getByLabelText('pages.aiAssistant.headerButtonAria')).toBeInTheDocument()
+  })
+
+  // Вход из шапки — всегда чистый лист: без маркера при включённом «помнить
+  // контекст» кнопка вернула бы последний диалог вместо нового.
+  it('ведёт на страницу с маркером нового диалога', () => {
+    setUser([PERMISSIONS.AI_ASSISTANT.USE])
+    mockGetAiAssistantSettings.mockReturnValue(new Promise(() => {}))
+
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    function LocationProbe() {
+      const location = useLocation()
+      return <div data-testid="location">{`${location.pathname}${location.search}`}</div>
+    }
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/dashboard']}>
+          <AiAssistantHeaderButton />
+          <Routes>
+            <Route path="*" element={<LocationProbe />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    )
+
+    fireEvent.click(screen.getByLabelText('pages.aiAssistant.headerButtonAria'))
+
+    expect(screen.getByTestId('location')).toHaveTextContent(
+      '/dashboard/ai-assistant?conversation=new'
+    )
   })
 })
