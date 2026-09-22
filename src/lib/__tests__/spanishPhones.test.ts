@@ -1,6 +1,12 @@
-import { describe, expect, it } from 'vitest'
-import { formatUkrainePhoneForDisplay, isDialablePhone, isValidManualDialDigits } from '@/lib/phone'
-import { activeProjectCountry } from '@/lib/projectCountry'
+import { afterEach, describe, expect, it } from 'vitest'
+import {
+  formatUkrainePhoneForDisplay,
+  isDialablePhone,
+  isValidManualDialDigits,
+  normalizeUkrainePhoneToDb,
+} from '@/lib/phone'
+import { activeCountry, activeProjectCountry, setActiveCountry } from '@/lib/projectCountry'
+import { useAuthStore } from '@/stores/authStore'
 import { mapBackendUserToUser, mergeUserFromProjectsResponse } from '@/lib/mapBackendUser'
 import type { CurrentUserResponse, User } from '@/types/api'
 
@@ -114,5 +120,64 @@ describe('formatUkrainePhoneForDisplay', () => {
   it('leaves anything else as typed', () => {
     expect(formatUkrainePhoneForDisplay('34512345678')).toBe('34512345678')
     expect(formatUkrainePhoneForDisplay('')).toBe('-')
+  })
+})
+
+describe('bare nine-digit numbers follow the project country', () => {
+  afterEach(() => {
+    useAuthStore.setState({ user: null })
+    setActiveCountry('UA')
+  })
+
+  it.each([
+    ['612345678', '+34612345678'],
+    ['912345678', '+34912345678'],
+  ])('shows %s as a Spanish number in a Spanish project', (value, shown) => {
+    expect(formatUkrainePhoneForDisplay(value, '-', 'ES')).toBe(shown)
+  })
+
+  it.each(['512345678', '0612345678', '06 12 34 56 78'])(
+    'never adds a Ukrainian code to %s in a Spanish project',
+    (value) => {
+      expect(normalizeUkrainePhoneToDb(value, 'ES')).toBeNull()
+      expect(formatUkrainePhoneForDisplay(value, '-', 'ES')).toBe(value)
+    }
+  )
+
+  it.each(['612345678', '+34 612 345 678', '0034612345678'])(
+    'leaves %s for the note to store as typed in a Spanish project',
+    (value) => {
+      expect(normalizeUkrainePhoneToDb(value, 'ES')).toBeNull()
+    }
+  )
+
+  it('keeps explicit Ukrainian numbers in a Spanish project', () => {
+    expect(normalizeUkrainePhoneToDb('+380 97 123 45 67', 'ES')).toBe('380971234567')
+    expect(formatUkrainePhoneForDisplay('380971234567', '-', 'ES')).toBe('+380971234567')
+  })
+
+  it('keeps the Ukrainian reading in a Ukrainian project', () => {
+    expect(normalizeUkrainePhoneToDb('671234567', 'UA')).toBe('380671234567')
+    expect(normalizeUkrainePhoneToDb('0501234567', 'UA')).toBe('380501234567')
+    expect(formatUkrainePhoneForDisplay('671234567', '-', 'UA')).toBe('+380671234567')
+  })
+
+  it('reads the active project country by default', () => {
+    setActiveCountry('ES')
+    expect(formatUkrainePhoneForDisplay('612345678')).toBe('+34612345678')
+    setActiveCountry('UA')
+    expect(formatUkrainePhoneForDisplay('612345678')).toBe('+380612345678')
+  })
+
+  it('follows the project the user switches to', () => {
+    useAuthStore.setState({
+      user: {
+        id: '1',
+        projects: [{ id: '2', name: 'Madrid', country: 'ES', roles: [] }],
+        active_project_id: '2',
+      } as unknown as User,
+    })
+
+    expect(activeCountry()).toBe('ES')
   })
 })

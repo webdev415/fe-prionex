@@ -12,6 +12,7 @@ import {
 import i18n, { applyPersistedLanguageFromServer } from '@/lib/i18n'
 import { applyPersistedThemeFromServer } from '@/stores/themeStore'
 import { cancelSessionHeartbeat, scheduleSessionHeartbeat } from '@/lib/sessionHeartbeat'
+import { activeProjectCountry, setActiveCountry } from '@/lib/projectCountry'
 import { activeProjectCurrency, setActiveCurrency } from '@/lib/projectCurrency'
 import type { User, LoginRequest, AuthErrorState } from '@/types/api'
 import {
@@ -1014,6 +1015,7 @@ useAuthStore.subscribe((state) => {
 
 useAuthStore.subscribe((state) => {
   setActiveCurrency(activeProjectCurrency(state.user))
+  setActiveCountry(activeProjectCountry(state.user))
 })
 
 export default useAuthStore

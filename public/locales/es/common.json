@@ -4019,7 +4019,7 @@
           "firstName": "Introduzca el nombre",
           "lastName": "Introduzca los apellidos",
           "middleName": "Introduzca el segundo nombre (opcional)",
-          "phone": "+34 600 00 00 00 (opcional)",
+          "phone": "+34-600000000 (opcional)",
           "notSet": "No establecido"
         },
         "errors": {
@@ -4078,7 +4078,7 @@
         "passwordNumber": "La contraseña debe contener al menos un número",
         "passwordSpecial": "La contraseña debe contener al menos un carácter especial",
         "invalidEmail": "Dirección de correo electrónico no válida",
-        "phoneFormat": "El teléfono debe estar en formato E.164 (p. ej., +1-555-0101)",
+        "phoneFormat": "El teléfono debe estar en formato E.164 (p. ej., +34-600000000)",
         "usernameMin": "El nombre de usuario debe tener al menos 3 caracteres",
         "usernameMax": "El nombre de usuario debe tener como máximo 50 caracteres",
         "usernameChars": "El nombre de usuario solo puede contener letras, números, puntos, guiones bajos y guiones",
