@@ -44,6 +44,64 @@ async function readAll(): Promise<[string, string][]> {
   ) as Promise<[string, string][]>
 }
 
+/**
+ * 🔴 The sweep runs ONCE for the whole file, and the two tests below read its
+ * result. It used to run twice — each `it` called `readAll()` and then parsed
+ * every source again — which made this the slowest file in the suite by a wide
+ * margin and, on a loaded machine, slower than vitest's 20s default timeout.
+ *
+ * That is not hypothetical: it flaked `CI / Unit Tests` on 2026-09-21 (2 passes
+ * in 7 runs) and finally reproduced locally as
+ * `leaves no <iframe> capturing — Test timed out in 20000ms`, at 28982ms, while
+ * the machine was busy. The failure looked nothing like its cause from the
+ * outside — CI logs are unreadable on this instance, so it presented as an
+ * unexplained red job on branches that touch no source at all.
+ *
+ * Two independent things were wrong and both are fixed, because either alone
+ * would leave the trap armed:
+ *   1. the work was done twice for no reason — memoised here;
+ *   2. a whole-tree scan was left on the DEFAULT timeout, which is sized for an
+ *      ordinary unit test.
+ *
+ * 🔴 (2) is the load-bearing half, and the measurement says so: after the
+ * memoisation, ONE sweep of `src/` still takes ~24s on an unloaded laptop
+ * (`vitest run` of this file alone: 33s wall, 24.6s in tests). So each of the
+ * two tests was previously sitting at roughly the 20s limit on a good day —
+ * a coin flip, not bad luck, and it explains a CI pass rate of 2 in 7. Raising
+ * the timeout without the memoisation, or memoising without raising it, would
+ * each have left a file that fails again the next time `src/` grows.
+ *
+ * Do not "optimise" this back to the default by trimming the glob: the sweep
+ * has to see the whole of `src/` or it is not an acceptance test.
+ */
+const AUDIT_TIMEOUT_MS = 120_000
+
+let auditPromise: Promise<{
+  sources: [string, string][]
+  iframes: string[]
+  attributes: string[]
+}> | null = null
+
+function auditAll() {
+  auditPromise ??= (async () => {
+    const sources = await readAll()
+    const iframes: string[] = []
+    const attributes: string[] = []
+    for (const [path, text] of sources) {
+      const found = auditSource(path.replace(/^\//, ''), text) as {
+        iframes: Finding[]
+        attributes: Finding[]
+      }
+      for (const f of found.iframes) iframes.push(`${f.path}:${f.line}`)
+      for (const f of found.attributes) {
+        attributes.push(`${f.path}:${f.line} ${f.attribute} on ${f.host}`)
+      }
+    }
+    return { sources, iframes, attributes }
+  })()
+  return auditPromise
+}
+
 describe('iframe capture — the rule', () => {
   it('is not satisfied by a marked wrapper', () => {
     // 🔴 The single fact about iframes worth remembering. `TopObserver` captures
@@ -68,37 +126,35 @@ describe('iframe capture — the rule', () => {
 })
 
 describe('the whole of src/', () => {
-  it('leaves no <iframe> capturing', async () => {
-    const sources = await readAll()
-    const withIframe = sources.filter(([, text]) => text.includes('<iframe'))
-    // Guards the sweep itself: a glob that silently matched nothing would make
-    // the assertion below vacuously true.
-    expect(withIframe.length).toBeGreaterThanOrEqual(5)
+  it(
+    'leaves no <iframe> capturing',
+    async () => {
+      const { sources, iframes } = await auditAll()
+      const withIframe = sources.filter(([, text]) => text.includes('<iframe'))
+      // Guards the sweep itself: a glob that silently matched nothing would make
+      // the assertion below vacuously true.
+      expect(withIframe.length).toBeGreaterThanOrEqual(5)
 
-    const offenders = sources.flatMap(([path, text]) => {
-      const { iframes } = auditSource(path.replace(/^\//, ''), text) as { iframes: Finding[] }
-      return iframes.map((f) => `${f.path}:${f.line}`)
-    })
-    expect(
-      offenders,
-      'Put the attribute on the <iframe> ITSELF. A same-origin document — every ' +
-        'blob: URL included, since it inherits our origin — is otherwise written ' +
-        'into the recording in full.'
-    ).toEqual([])
-  })
+      expect(
+        iframes,
+        'Put the attribute on the <iframe> ITSELF. A same-origin document — every ' +
+          'blob: URL included, since it inherits our origin — is otherwise written ' +
+          'into the recording in full.'
+      ).toEqual([])
+    },
+    AUDIT_TIMEOUT_MS
+  )
 
-  it('leaves no personal data in an attribute the tracker sends verbatim', async () => {
-    const sources = await readAll()
-    const offenders = sources.flatMap(([path, text]) => {
-      const { attributes } = auditSource(path.replace(/^\//, ''), text) as {
-        attributes: Finding[]
-      }
-      return attributes.map((f) => `${f.path}:${f.line} ${f.attribute} on ${f.host}`)
-    })
-    expect(
-      offenders,
-      'Attributes are NOT masked outside privateMode. Use <PiiTooltip> for a ' +
-        'hover-reveal, or a role label for an icon or an avatar.'
-    ).toEqual([])
-  })
+  it(
+    'leaves no personal data in an attribute the tracker sends verbatim',
+    async () => {
+      const { attributes } = await auditAll()
+      expect(
+        attributes,
+        'Attributes are NOT masked outside privateMode. Use <PiiTooltip> for a ' +
+          'hover-reveal, or a role label for an icon or an avatar.'
+      ).toEqual([])
+    },
+    AUDIT_TIMEOUT_MS
+  )
 })
