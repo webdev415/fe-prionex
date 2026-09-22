@@ -944,6 +944,9 @@
       "expertUnavailable": "El servicio externo no está disponible en este momento; inténtelo más tarde.",
       "showReasoning": "Mostrar razonamiento",
       "showReasoningHint": "El razonamiento se muestra en el panel «Actividad»",
+      "thinkingUsedOn": "31B · con razonamiento",
+      "thinkingUsedOff": "31B · sin razonamiento",
+      "thinkingUsedMismatch": "El servidor respondió de forma distinta a la configuración",
       "voiceSilenceTimeout": "Tiempo de silencio (detención automática)",
       "voiceMaxDuration": "Duración máxima de grabación",
       "voiceSeconds": "{{count}} s",
@@ -6848,7 +6851,8 @@
           "callSms": "Llamada / SMS",
           "taChains": "Cadenas AO",
           "searcherComments": "Comentarios del localizador",
-          "activity": "Actividad"
+          "activity": "Actividad",
+          "credit": "Crédito (propio)"
         },
         "relatedTags": {
           "loading": "Cargando etiquetas relacionadas…",
@@ -12228,6 +12232,36 @@
     }
   },
   "credit": {
+    "clientBlock": {
+      "arrears": "Atrasos",
+      "cancelled": "Cancelado",
+      "closed": "Cerrado",
+      "closedThrough": "Cerrado mediante",
+      "defaultReported": "Impago comunicado",
+      "disbursed": "Desembolsado",
+      "dpd": "Días de mora",
+      "identifiedByEmail": "Identificado por correo electrónico (OTP del área personal)",
+      "issued": "Concedido",
+      "jurisdiction": "Jurisdicción",
+      "linkNotFound": "El módulo no ha confirmado los préstamos de este cliente: se muestra la proyección y el vínculo se está resolviendo",
+      "maturity": "Vencimiento",
+      "moduleUnavailable": "El módulo de crédito no está disponible en este entorno",
+      "nextPayment": "Próximo pago",
+      "noContact": "Sin contacto 28 días",
+      "noLoans": "Sin préstamos",
+      "openInModule": "Abrir en el módulo de crédito",
+      "outstanding": "Saldo pendiente",
+      "overdue": "Vencido",
+      "paid": "Pagado",
+      "product": "Producto",
+      "projectionAsOf": "Proyección a fecha de",
+      "projectionOnly": "Los datos completos requieren credit.loans.read",
+      "returnPending": "Devolución pendiente",
+      "status": "Estado",
+      "temporaryFailure": "Los datos del módulo no están disponibles ahora mismo: vuelva a abrir la pestaña",
+      "tinOptional": "(opcional)",
+      "title": "Crédito (propio)"
+    },
     "status": {
       "in_progress": "En curso",
       "scoring": "Scoring",

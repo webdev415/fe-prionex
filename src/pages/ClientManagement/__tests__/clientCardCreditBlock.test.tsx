@@ -125,6 +125,7 @@ const bulkSubmitToUbki = vi.hoisted(() => vi.fn())
 vi.mock('@/features/ubki', () => ({
   useSubmitDebtToUbki: () => ({ mutate: vi.fn(), isPending: false }),
   useBulkSubmitToUbki: () => ({ mutate: bulkSubmitToUbki, isPending: false }),
+  useUbkiAvailable: () => true,
   ubkiKeys: { all: ['ubki'] },
 }))
 
