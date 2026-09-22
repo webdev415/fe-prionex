@@ -762,4 +762,111 @@ describe('EditClientModal', () => {
       })
     })
   })
+
+  /**
+   * Клиент, опознанный по подтверждённому e-mail кабинета (ревизия 176
+   * client-service): ИНН у него нет вовсе.
+   *
+   * Пока валидация требовала десять цифр безусловно, такую карточку нельзя было
+   * отредактировать СОВСЕМ — ни телефон, ни дату рождения, ни e-mail: проверка
+   * обрывала и одиночное сохранение личных данных, и «Зберегти все» с тремя
+   * параллельными мутациями, а отказ показывался общим текстом без причины.
+   */
+  describe('P-3: клиент без ИНН редактируется, клиент с ИНН — как раньше', () => {
+    function mountWith(profileOverrides: Record<string, unknown>) {
+      vi.mocked(useClientsModule.useClientProfile).mockReturnValue({
+        data: { ...mockProfileData, ...profileOverrides },
+        isLoading: false,
+        isError: false,
+        error: null,
+        refetch: vi.fn(),
+      } as unknown as ReturnType<typeof useClientsModule.useClientProfile>)
+      return render(<EditClientModal {...defaultProps} />, { wrapper: createWrapper() })
+    }
+
+    it('identity_key=email, tax_id=null — сохранение проходит', async () => {
+      mountWith({ tax_id: null, identity_key: 'email' })
+
+      fireEvent.click(screen.getByTestId('edit-client-save-personal'))
+
+      await waitFor(() => expect(mockUpdateClientAsync).toHaveBeenCalled())
+      const [{ data }] = mockUpdateClientAsync.mock.calls[0]
+      // Ключ НЕ отправляется вовсе: client-service отвечает «TIN … cannot be
+      // removed» на попытку снять его, и пустая строка отклонила бы всю форму.
+      expect(data).not.toHaveProperty('tax_id')
+      expect(data.first_name).toBe('John')
+    })
+
+    it('кнопка сохранения у такого клиента не заблокирована', () => {
+      mountWith({ tax_id: null, identity_key: 'email' })
+      expect(screen.getByTestId('edit-client-save-personal')).not.toBeDisabled()
+    })
+
+    it('контрольная половина: факторинговый клиент без ИНН по-прежнему не сохраняется', async () => {
+      // Та же сцена с обратным исходом — значит проверка выше меряет условие по
+      // `identity_key`, а не снятие валидации вообще.
+      mountWith({ tax_id: null, identity_key: 'tin' })
+
+      expect(screen.getByTestId('edit-client-save-personal')).toBeDisabled()
+      fireEvent.click(screen.getByTestId('edit-client-save-personal'))
+      await new Promise((resolve) => setTimeout(resolve, 20))
+      expect(mockUpdateClientAsync).not.toHaveBeenCalled()
+    })
+
+    it('поле identity_key отсутствует (старый бэкенд) — поведение прежнее', async () => {
+      const profile: Record<string, unknown> = { ...mockProfileData, tax_id: null }
+      delete profile.identity_key
+      mountWith(profile)
+      expect(screen.getByTestId('edit-client-save-personal')).toBeDisabled()
+    })
+
+    it('🔴 введённый ИНН у e-mail-клиента УХОДИТ на сервер', async () => {
+      // «Не обязателен» не значит «выбрасывается»: ИНН у человека может
+      // появиться, и оператор его впишет. Молча потерянное значение даёт
+      // «сохранено» на правку, которая никуда не доехала.
+      mountWith({ tax_id: null, identity_key: 'email' })
+
+      fireEvent.change(screen.getByTestId('edit-client-tax-id'), {
+        target: { value: '9876543210' },
+      })
+      fireEvent.click(screen.getByTestId('edit-client-save-personal'))
+
+      await waitFor(() => expect(mockUpdateClientAsync).toHaveBeenCalled())
+      const [{ data }] = mockUpdateClientAsync.mock.calls[0]
+      expect(data.tax_id).toBe('9876543210')
+    })
+
+    it('контрольная половина: поле пустое — ключа в теле нет', async () => {
+      // Снятие TIN client-service отвергает, поэтому пустое поле означает «не
+      // трогаем», а не «очистить».
+      mountWith({ tax_id: null, identity_key: 'email' })
+
+      fireEvent.click(screen.getByTestId('edit-client-save-personal'))
+
+      await waitFor(() => expect(mockUpdateClientAsync).toHaveBeenCalled())
+      const [{ data }] = mockUpdateClientAsync.mock.calls[0]
+      expect(data).not.toHaveProperty('tax_id')
+    })
+
+    it('введённый у e-mail-клиента ИНН проверяется теми же десятью цифрами', async () => {
+      mountWith({ tax_id: null, identity_key: 'email' })
+
+      fireEvent.change(screen.getByTestId('edit-client-tax-id'), { target: { value: '12345' } })
+
+      expect(screen.getByTestId('edit-client-save-personal')).toBeDisabled()
+      fireEvent.click(screen.getByTestId('edit-client-save-personal'))
+      await new Promise((resolve) => setTimeout(resolve, 20))
+      expect(mockUpdateClientAsync).not.toHaveBeenCalled()
+    })
+
+    it('клиент с ИНН отправляет его как раньше', async () => {
+      mountWith({ tax_id: '1234567890', identity_key: 'tin' })
+
+      fireEvent.click(screen.getByTestId('edit-client-save-personal'))
+
+      await waitFor(() => expect(mockUpdateClientAsync).toHaveBeenCalled())
+      const [{ data }] = mockUpdateClientAsync.mock.calls[0]
+      expect(data.tax_id).toBe('1234567890')
+    })
+  })
 })

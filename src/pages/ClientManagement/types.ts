@@ -7,7 +7,8 @@ export type Priority = 'Critical' | 'High' | 'Medium' | 'Low'
 export interface Client {
   id: number
   fullName: string
-  taxIdNumber: string
+  /** `null` у клиента, опознанного по подтверждённому e-mail кабинета. */
+  taxIdNumber: string | null
   tags: string[]
   phoneNumber: string
   dateOfSale: string

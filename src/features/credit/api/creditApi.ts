@@ -14,6 +14,8 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios'
 import { getAccessToken } from '@/lib/api'
 import type {
+  ClientLoanCardPage,
+  ClientLoanCardParams,
   CreditApplicationDetail,
   CreditApplicationsParams,
   CreditApplicationSummary,
@@ -271,6 +273,23 @@ export const creditApi = {
       throw error
     }
   },
+
+  /**
+   * Кредиты клиента CRM — `listClientLoans` (дверь CM-L3, 14-18).
+   *
+   * Отдельная дверь, а не фильтр у `/loans`: портфельный список намеренно не
+   * считает балансы (это реплей ядра на каждый кредит), а карточке клиента
+   * деньги и просрочка нужны на каждой строке.
+   *
+   * 🔴 404 здесь — НЕ повод для отката на другой путь, в отличие от `loans`
+   * выше. Пока у шлюза нет группы `clients` (API-L2, 14-20), 404 приходит от
+   * ШЛЮЗА, и подменить его вторым запросом значит спрятать ровно тот факт,
+   * который блок карточки обязан показать словами.
+   *
+   * `status` — одно значение: повторённый параметр дверь отвергает `422`.
+   */
+  clientLoans: (clientId: number, params?: ClientLoanCardParams) =>
+    get<ClientLoanCardPage>(`/clients/${clientId}/loans`, { status: params?.status }),
 
   loan: (loanId: string) => get<CreditLoanDetail>(`/loans/${loanId}`),
 
