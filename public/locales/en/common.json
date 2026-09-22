@@ -6820,7 +6820,9 @@
           "entryCount_one": "{{count}} entry",
           "entryCount_other": "{{count}} entries",
           "pagingLimit": "Showing the {{count}} most recent entries. Set a date range to reach older activity."
-        }
+        },
+        "creditModuleTag": "own credit",
+        "creditModuleActionsHint": "Actions live in the credit module"
       },
       "debtSummary": {
         "title": "Debt Summary",

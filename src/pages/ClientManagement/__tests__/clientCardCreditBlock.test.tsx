@@ -1,22 +1,29 @@
 /**
- * Врезка блока «Кредит (наш)» в карточку клиента — сцены S-5, S-6, S-9, S-10,
- * S-14, S-15.
+ * Кредит модуля в карточке клиента — сцены S-5, S-6, S-9, S-10, S-14…S-21
+ * и страж P-24.
+ *
+ * 🔴 С 14-7b предмет ПЕРЕВЁРНУТ. Раньше здесь доказывали, что строка кредита
+ * из «Позики» УХОДИТ (её показывала отдельная вкладка). Теперь вкладки нет
+ * вовсе: кредит стоит строкой в том же списке, отличается пометкой и
+ * разворачивается чипом на месте. Что НЕ изменилось ни на букву — он
+ * по-прежнему не является предметом ни одного действия взыскания.
  *
  * Сцены идут ПО КАРТОЧКЕ ЦЕЛИКОМ, а не по копии правила рядом: предмет здесь —
- * «строки нет в «Позики» и она есть в блоке», а это утверждение об экране.
- * Правило, проверенное на собственной копии, чинит двойника, а не класс.
+ * утверждение об экране. Правило, проверенное на собственной копии, чинит
+ * двойника, а не класс.
  *
  * Мокаются ИСТОЧНИКИ ДАННЫХ карточки, а не её логика: профиль, долги и соседние
- * разделы приходят заглушками, а фильтр проекции, гейт вкладки и подпись в
- * ленте — настоящие.
+ * разделы приходят заглушками, а разделение по происхождению, гейт разворота и
+ * подпись в ленте — настоящие.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import type { DebtDetail } from '@/features/clients/api/types'
+import type { ClientLoanCard } from '@/features/credit/api/types'
 /**
  * 🔴 СТАТИЧЕСКИЙ импорт страницы — не стиль, а починка красного CI.
  *
@@ -217,12 +224,23 @@ vi.mock('@/hooks/usePermissions', () => ({
   useUserRole: vi.fn(() => 'admin'),
 }))
 
-/** Долг, который в CRM записал кредитный модуль. */
+/**
+ * Долг, который в CRM записал кредитный модуль.
+ *
+ * 🔴 Форма — ОТВЕТА client-service, а не рукописного типа фронта. Сумма
+ * выдачи едет в `principal_amount` (модуль кладёт туда начисленное тело), а
+ * `original_debt_amount` сервер не отдаёт вовсе: этого поля нет ни в
+ * `DebtDetail` ответа карточки, ни в словаре, который его наполняет
+ * (`services/client/app/schemas/client.py:27-60`, `routers/clients.py:307-345`
+ * на `d6f7c9af`). Прежняя фикстура несла поле, которого сервер не шлёт, и не
+ * несла того, что шлёт, — выдуманный вход проверял только себя, и строка на
+ * живом ответе печатала «Сума позики 0,00» незамеченной.
+ */
 const CREDIT_DEBT = {
   id: 9001,
   seller_company: '',
   contract_number: 'FB-000088',
-  original_debt_amount: '5000.00',
+  principal_amount: '5000.00',
   remaining_debt_amount: '6123.00',
   days_past_due: 41,
   status: 'active',
@@ -234,10 +252,89 @@ const CREDIT_DEBT = {
 } as unknown as DebtDetail
 
 /**
+ * Второй кредит того же клиента — живой `FB-000090` с DEV (400,00 / 456,00
+ * CAD, GATE-CL-05 п. 3). Та же форма ответа сервера, что у `CREDIT_DEBT`.
+ * `lifecycle_detail` — `null`: у активного кредита без нюанса модуль детали не
+ * шлёт (`crm_projection.py:73`, `"active": ("active", None)`).
+ */
+const SECOND_CREDIT_DEBT = {
+  id: 9004,
+  seller_company: '',
+  contract_number: 'FB-000090',
+  principal_amount: '400.00',
+  remaining_debt_amount: '456.00',
+  days_past_due: 0,
+  status: 'active',
+  origin: 'credit_module',
+  loan_id: '22222222-2222-4222-8222-222222222222',
+  currency: 'CAD',
+  lifecycle_detail: null,
+  lifecycle_updated_at: '2026-09-21T10:00:00Z',
+} as unknown as DebtDetail
+
+/**
+ * Карты класса А обоих кредитов — ответ двери модуля, все двадцать четыре
+ * ключа контракта (форма — `LOAN` в `pages/Credit/__tests__/ClientCreditBlock.test.tsx`).
+ * Продукт у них РАЗНЫЙ намеренно: продукта в строке нет, и по нему видно, чья
+ * карта развернулась под какой строкой.
+ */
+const CARD_FB_000088: ClientLoanCard = {
+  loan_id: '11111111-1111-4111-8111-111111111111',
+  contract_number: 'FB-000088',
+  product_code: 'PDL-UA-30',
+  status: 'delinquent',
+  currency: 'UAH',
+  jurisdiction: 'UA',
+  principal_minor: 500000,
+  balance_total_minor: 612300,
+  paid_minor: 120000,
+  overdue_minor: 98700,
+  delinquency_days: 41,
+  arrears_flag: true,
+  no_contact_flag: false,
+  default_reported_at: null,
+  disbursed_at: '2026-06-01T09:15:00Z',
+  maturity_date: '2026-07-01',
+  next_payment: null,
+  closed_at: null,
+  close_reason: null,
+  cancelled_at: null,
+  return_pending: false,
+  as_of: '2026-09-22',
+  closed_through: '2026-09-21',
+  module_url: '/dashboard/credit/loans/11111111-1111-4111-8111-111111111111',
+}
+
+const CARD_FB_000090: ClientLoanCard = {
+  ...CARD_FB_000088,
+  loan_id: '22222222-2222-4222-8222-222222222222',
+  contract_number: 'FB-000090',
+  product_code: 'CA_AB_PAYDAY',
+  status: 'active',
+  currency: 'CAD',
+  jurisdiction: 'CA-AB',
+  principal_minor: 40000,
+  balance_total_minor: 45600,
+  paid_minor: 0,
+  overdue_minor: 0,
+  delinquency_days: 0,
+  arrears_flag: false,
+  module_url: '/dashboard/credit/loans/22222222-2222-4222-8222-222222222222',
+}
+
+/**
  * Долг с НЕИЗВЕСТНЫМ источником — контроль правила «по значению, а не по
  * отрицанию». Правило, написанное как «всё, что не факторинг», утащило бы его
  * в блок кредита и убрало из взыскания, хотя про этот источник не известно
  * ничего.
+ *
+ * 🔴 С 14-7b у этой сцены ВТОРАЯ роль, и она главная. Прежняя контрольная
+ * половина P-24 («при выключенном блоке действия видят долг снова») снята
+ * вместе с параметром `creditBlockEnabled` у правила: принадлежность долга от
+ * переменной сборки не зависит, и норма требует исключения из действий
+ * ВСЕГДА. Роль «докажи, что сцены меряют правило, а не то, что строка вообще
+ * не доезжает до действий» перешла сюда: этот долг проходит то же правило и
+ * ОСТАЁТСЯ предметом взыскания — значит выборка различает по значению.
  */
 const UNKNOWN_ORIGIN_DEBT = {
   id: 9003,
@@ -334,6 +431,30 @@ async function renderCard(options: { rows?: DebtDetail[]; profile?: unknown } = 
   return { ...result, client }
 }
 
+/**
+ * Карточка строки «Позики» по номеру договора — корень `LoanCard`.
+ *
+ * Ищется по строке номера зоны 1 («№ FB-000090»), а не по голому номеру: у
+ * развёрнутой строки тот же номер печатает и карта класса А под ней, и голый
+ * поиск нашёл бы два узла ровно тогда, когда это важнее всего.
+ */
+function cardOf(contractNumber: string): HTMLElement {
+  const line = screen.getByText(`№ ${contractNumber}`)
+  const card = line.closest('div[role="button"]')
+  if (!card) throw new Error(`строка ${contractNumber} отрисована вне карточки списка`)
+  return card as HTMLElement
+}
+
+/**
+ * Значение денежной ячейки строки по её подписи («Сума позики», «Залишок
+ * боргу»): подпись и значение — соседние узлы `AmountCell`, и поиск по тексту
+ * всей карточки не сказал бы, ПОД КАКОЙ подписью стоит число.
+ */
+function amountOf(card: HTMLElement, label: string): string {
+  const labelNode = within(card).getByText(label, { selector: 'span' })
+  return labelNode.nextElementSibling?.textContent ?? ''
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
   creditFlag.mockReturnValue(true)
@@ -343,49 +464,140 @@ afterEach(() => {
   vi.unstubAllEnvs()
 })
 
-describe('S-5/S-6: строка проекции уходит из «Позики» ровно тогда, когда её показывает блок', () => {
-  it('флаг включён: кредитного долга в «Позики» нет, купленный остаётся', async () => {
+describe('S-5/S-6: кредит модуля стоит СТРОКОЙ в «Позики» и помечен', () => {
+  it('S-5′ флаг включён: кредитный долг в «Позики» есть и помечен чипом; купленный — без чипа', async () => {
     await renderCard({ rows: [CREDIT_DEBT, FACTORING_DEBT] })
 
     // положительный контроль: купленный долг на месте, то есть список
-    // отрисован и «строки нет» сказано о непустом экране
+    // отрисован и утверждения ниже сказаны о непустом экране
     await screen.findByText(/LEGACY-55/)
-    expect(screen.queryByText(/FB-000088/)).toBeNull()
+    // 🔴 Заглавная перемена 14-7b: строка БОЛЬШЕ НЕ уходит из списка — она в
+    // нём, и отличает её пометка, а не отсутствие.
+    expect(screen.queryByText(/FB-000088/), 'кредитной строки нет в списке «Позики»').not.toBeNull()
+    // Ровно одна пометка на два долга: вторая означала бы, что купленный долг
+    // подписан как наш кредит.
+    expect(screen.getAllByText('кредит (наш)')).toHaveLength(1)
   })
 
-  it('флаг выключен: вкладки нет, и кредитный долг остаётся в «Позики»', async () => {
+  it('S-6′ флаг выключен: чипа-ручки и разворота нет, строка и пометка на месте', async () => {
     creditFlag.mockReturnValue(false)
     const { container } = await renderCard({ rows: [CREDIT_DEBT, FACTORING_DEBT] })
 
     await screen.findByText(/LEGACY-55/)
     // Долг никуда не делся — иначе оператор потерял бы его с экрана целиком.
-    expect(screen.getByText(/FB-000088/)).toBeInTheDocument()
-    // Положительный контроль: полоса вкладок отрисована, то есть «вкладки
-    // «Кредит» нет» сказано о существующей полосе, а не о пустом экране.
-    expect(container.querySelector('[data-tab="loans"]')).toBeTruthy()
-    expect(container.querySelector('[data-tab="credit"]')).toBeNull()
+    expect(
+      screen.queryByText(/FB-000088/),
+      'при выключенном флаге строки кредита в «Позики» нет — долг пропал с экрана'
+    ).not.toBeNull()
+    // Пометка остаётся: принадлежность долга от переменной сборки не зависит.
+    const tag = screen.getByText('кредит (наш)')
+    expect(tag).toBeInTheDocument()
+    // А вот РУЧКИ нет: при выключенном флаге пометка печатается подписью, а не
+    // кнопкой, и разворачивать нечего.
+    expect(tag.tagName).toBe('SPAN')
     expect(clientLoansFn).not.toHaveBeenCalled()
+    // ⚠️ Про `data-tab="credit"` здесь НЕ утверждается ничего: кнопка вкладки
+    // и на прежней базе стояла под флагом, так что при выключенном флаге её
+    // нет и БЕЗ снятия вкладки. Отсутствие вкладки доказывает S-19 — при
+    // ВКЛЮЧЁННОМ флаге, то есть в том состоянии, где кнопка раньше была.
+    expect(container.querySelector('[data-tab="loans"]')).toBeTruthy()
   })
 })
 
-describe('S-10: запрос в модуль не уходит до открытия вкладки', () => {
-  it('на вкладке «Позики» — ноль вызовов, после клика по «Кредит (наш)» — один', async () => {
+describe('S-20: строка кредита печатает цифры ПРОЕКЦИИ — через маппер страницы', () => {
+  /**
+   * 🔴 Сцены L-* кормят карточку руками собранной строкой и маппер страницы
+   * не видят вовсе. Здесь строка рождается из ответа client-service тем же
+   * путём, что в бою (`mapCreditProjectionToRow`), — и только так видно,
+   * ИЗ КАКОГО ПОЛЯ взята сумма. Прежний маппер читал `original_debt_amount`,
+   * которого сервер не шлёт, и печатал «Сума позики 0,00» на каждом кредите.
+   *
+   * Утверждения идут от частного к общему: каждое отрицание называет свою
+   * подмену, иначе «не 400,00 CAD» не различило бы четыре разных ошибки.
+   */
+  it('🔴 «Сума позики» 400,00 CAD, «Залишок боргу» 456,00 CAD, стадия — словом словаря', async () => {
+    await renderCard({ rows: [CREDIT_DEBT, SECOND_CREDIT_DEBT, FACTORING_DEBT] })
+    await screen.findByText(/LEGACY-55/)
+
+    const second = cardOf('FB-000090')
+    const loanAmount = amountOf(second, 'Сума позики')
+    expect(
+      loanAmount,
+      'под строкой FB-000090 напечатано «Сума позики 0,00 CAD» вместо 400,00 CAD — сумма взята из поля, которого сервер не шлёт'
+    ).not.toMatch(/^0,00/)
+    expect(
+      loanAmount,
+      '«Сума позики» показывает остаток 456,00 вместо суммы выдачи 400,00'
+    ).not.toBe('456,00 CAD')
+    expect(loanAmount, 'кредит в CAD напечатан гривной — ложь о валюте').toMatch(/ CAD$/)
+    expect(loanAmount).toBe('400,00 CAD')
+    expect(amountOf(second, 'Залишок боргу')).toBe('456,00 CAD')
+
+    // Стадия приходит в `lifecycle_detail` и печатается словом словаря.
+    expect(
+      within(cardOf('FB-000088')).queryByText('Прострочення'),
+      'стадия «Прострочення» пропала из строки кредита FB-000088'
+    ).not.toBeNull()
+
+    // Ни одна кредитная строка не выдаёт отсутствие суммы за ноль.
+    for (const number of ['FB-000088', 'FB-000090']) {
+      const card = cardOf(number)
+      for (const label of ['Сума позики', 'Залишок боргу']) {
+        expect(amountOf(card, label), `${number}: «${label}» — ноль как факт`).not.toMatch(/^0,00/)
+      }
+    }
+
+    // Контроль: купленная строка в том же списке печатает свои суммы гривной —
+    // значит сетка сумм у неё прежняя, и «CAD» выше сказано о другой форме.
+    expect(amountOf(cardOf('LEGACY-55'), 'Залишок боргу')).toMatch(/^₴\s900\.00$/)
+  })
+})
+
+describe('S-19: вкладки «Кредит (наш)» нет при ВКЛЮЧЁННОМ флаге', () => {
+  it('🔴 полоса вкладок отрисована, кнопки «Кредит (наш)» в ней нет', async () => {
+    // Единственное доказательство снятия вкладки. Сцена с выключённым флагом
+    // его не даёт: там кнопки не было и до правки.
+    creditFlag.mockReturnValue(true)
+    const { container } = await renderCard({ rows: [CREDIT_DEBT, FACTORING_DEBT] })
+    await screen.findByText(/LEGACY-55/)
+
+    // Положительный контроль: полоса вкладок ЕСТЬ и в ней есть соседи, то
+    // есть «кнопки нет» сказано о существующей полосе, а не о пустом экране.
+    expect(container.querySelector('[data-tab="loans"]')).toBeTruthy()
+    expect(container.querySelector('[data-tab="activity"]')).toBeTruthy()
+    expect(
+      container.querySelector('[data-tab="credit"]'),
+      'вкладка «Кредит (наш)» вернулась в полосу при включённом флаге'
+    ).toBeNull()
+  })
+})
+
+describe('S-10: запрос в модуль не уходит до разворота строки', () => {
+  it('S-10′ на открытой «Позики» — ноль вызовов; после клика по чипу — один, и второй чип его не добавляет', async () => {
     const user = userEvent.setup()
-    const { container } = await renderCard({ rows: [CREDIT_DEBT] })
+    await renderCard({ rows: [CREDIT_DEBT, SECOND_CREDIT_DEBT] })
 
-    await screen.findByText('Кредит (наш)')
-    expect(clientLoansFn).not.toHaveBeenCalled()
+    // Обе строки на экране, вкладка «Позики» открыта — и запроса всё ещё нет:
+    // гейт ленивости это МОНТИРОВАНИЕ панели, а не её видимость.
+    await screen.findByText(/FB-000088/)
+    const chips = screen.getAllByText('кредит (наш)')
+    expect(chips, 'чипов должно быть два — по одному на кредит').toHaveLength(2)
+    expect(
+      clientLoansFn,
+      'запрос в модуль ушёл до разворота строки — гейт ленивости снят'
+    ).not.toHaveBeenCalled()
 
-    const tab = container.querySelector('[data-tab="credit"]') as HTMLElement
-    expect(tab, 'кнопки вкладки нет — кликать нечего').toBeTruthy()
-    await user.click(tab)
+    await user.click(chips[0])
 
     await waitFor(() => expect(clientLoansFn).toHaveBeenCalledTimes(1))
     expect(clientLoansFn).toHaveBeenCalledWith(42)
+
+    // Ключ кэша один на клиента: разворот второй строки берёт тот же ответ.
+    await user.click(screen.getAllByText('кредит (наш)')[1])
+    await waitFor(() => expect(clientLoansFn).toHaveBeenCalledTimes(1))
   })
 
-  it('🔴 проекция ПЕРЕНОСИТСЯ: её нет в «Позики», но она есть в блоке', async () => {
-    // Второй выход правила, без которого скрытие строки — просто её потеря.
+  it('S-10′ 🔴 403: строка в списке есть, а разворот объясняет причину БЕЗ повтора цифр', async () => {
     // Отказ подделывать НЕЛЬЗЯ: блок различает состояния по классу ошибки, и
     // объект с подменённым `name` не является `CreditApiError` — прежняя
     // редакция сцены так и мерила состояние «модуль недоступен», называя это
@@ -394,23 +606,48 @@ describe('S-10: запрос в модуль не уходит до открыт
     clientLoansFn.mockRejectedValue(new CreditApiError('forbidden', 403, 'forbidden'))
     const { container } = await renderCard({ rows: [CREDIT_DEBT, FACTORING_DEBT] })
 
-    // в «Позики» кредитного долга нет, купленный на месте
+    // Строка кредита стоит в списке рядом с купленным долгом.
     await screen.findByText(/LEGACY-55/)
-    expect(screen.queryByText(/FB-000088/)).toBeNull()
-
-    const tab = container.querySelector('[data-tab="credit"]') as HTMLElement
-    await user.click(tab)
-
-    // а в блоке он есть — с номером договора и пометкой проекции
     await screen.findByText(/FB-000088/)
+
+    await user.click(screen.getByText('кредит (наш)'))
+
     // Пометки читаются по тексту контейнера: подпись и значение — соседние
     // узлы, и поиск по целой строке через `getByText` их не склеивает.
+    await waitFor(() =>
+      expect(container.textContent ?? '').toContain('Немає прав на кредитний розділ')
+    )
     const text = container.textContent ?? ''
-    expect(text).toContain('Проєкція станом на')
+    // День среза — ЗНАЧЕНИЕМ, а не подписью: `2026-09-21T10:00:00Z` фикстуры
+    // `CREDIT_DEBT` в зоне Киева (+03) — 21-е, 13:00. Подпись без даты
+    // доказывала бы лишь, что ключ словаря на месте.
+    expect(text, 'день среза проекции не напечатан под строкой').toContain(
+      'Проєкція станом на 21-09-2026 13:00'
+    )
     expect(text).toContain('Повні дані')
     // Плашка называет причину — «прав нет», а не «модуля нет».
-    expect(text).toContain('Немає прав на кредитний розділ')
     expect(text).not.toContain('недоступний на цьому стенді')
+    // 🔴 Цифры строки НЕ печатаются под ней второй раз: они уже стоят в самой
+    // строке, и две одинаковые суммы в двух местах одного экрана читаются
+    // оператором как два разных факта. Меряется номером договора, а не суммой:
+    // пробел-разделитель разрядов в числе — неразрывный, и литерал с обычным
+    // пробелом не нашёл бы ничего, то есть сцена зеленела бы всегда.
+    expect(
+      screen.getAllByText(/FB-000088/),
+      'строки проекции напечатаны под карточкой — номер договора встретился дважды'
+    ).toHaveLength(1)
+    // Подписи повторяемых цифр строки под ней не появляются.
+    expect(text).not.toContain('Видано')
+    // 🔴 А ДПЗ — появляется (Р-FEL1B-12). Его в строке нет вовсе, то есть это
+    // пятая величина, а не повтор; и отказ двери получают ВСЕ роли взыскания
+    // (право не расширяется), так что без этой строки оператор взыскания не
+    // видел бы просрочку нашего кредита нигде.
+    const dpd = screen.queryByText('ДПЗ')
+    expect(
+      dpd,
+      'при отказе двери просрочка кредита не напечатана нигде — оператор взыскания её не видит'
+    ).not.toBeNull()
+    expect(dpd?.nextElementSibling?.textContent).toBe('41')
   })
 })
 
@@ -467,10 +704,23 @@ describe('P-24: кредит модуля не является предмето
   })
 
   it('цепочки ЦД получают список без кредита модуля', async () => {
-    // Исполнитель цепочек живёт в модалке и монтируется только открытым;
-    // список, который ему передаётся, проверяет страж исходника ниже.
+    // Исполнитель цепочек живёт в модалке и монтируется только ОТКРЫТЫМ.
+    // Прежняя редакция сцены его не открывала и утверждала `toEqual([])` —
+    // верно при ЛЮБОМ списке, то есть не мерила ничего. Теперь модалка
+    // открывается штатной кнопкой шапки «Журнал взаємодії», и регистратор
+    // видит ровно то, что получил исполнитель.
+    const user = userEvent.setup()
     await openCard()
-    expect(handedDebts.chainExecutor).toEqual([])
+    expect(handedDebts.chainExecutor, 'исполнитель смонтирован до открытия модалки').toEqual([])
+
+    await user.click(screen.getAllByRole('button', { name: /Журнал взаємодії/ })[0])
+
+    // Положительный контроль: исполнитель смонтирован и список получил —
+    // иначе утверждение ниже снова говорило бы о пустом множестве.
+    await waitFor(() => expect(handedDebts.chainExecutor.length).toBeGreaterThan(0))
+    expect(numbersOf(handedDebts.chainExecutor), 'цепочки ЦД получили кредит модуля').toEqual([
+      'LEGACY-55',
+    ])
   })
 
   it('правка взаимодействия предлагает договор без кредита модуля', async () => {
@@ -487,14 +737,19 @@ describe('P-24: кредит модуля не является предмето
   /**
    * 🔴 Класс, а не экземпляр.
    *
-   * Две модалки карточки — исполнитель цепочек и панель реструктуризации —
-   * монтируются только открытыми, и сценой их список не увидеть, не разобрав
-   * пол-карточки. Но предмет здесь не «как выглядит модалка», а «какой список
-   * ей отдали», и это читается в исходнике однозначно: ни один потребитель
-   * действия не берёт сырой `loans`. Проверка по тексту файла ловит возврат
-   * ЛЮБОГО из потребителей, включая те, которых сцена не монтирует, — а
-   * регистраторы выше доказывают, что у смонтированных список действительно
-   * очищен.
+   * Часть потребителей действий монтируется только открытой, и сценой их
+   * список не увидеть, не разобрав пол-карточки. Но предмет здесь не «как
+   * выглядит модалка», а «какой список ей отдали», и это читается в исходнике:
+   * проверка по тексту файла ловит возврат ЛЮБОГО потребителя, включая те,
+   * которых сцены не монтируют, а регистраторы этого блока (включая S-18 и
+   * сцену выключенного флага) доказывают, что у смонтированных список
+   * действительно очищен.
+   *
+   * ⚠️ Остаточная дыра названа, а не спрятана: ПСЕВДОНИМ через локальную
+   * переменную (`const rows = displayLoans` → `debts={rows}`) текстом не
+   * ловится. Смонтированных потребителей держат регистраторы; тех, кого ни одна
+   * сцена не монтирует (панель реструктуризации и её выбор договора), — только
+   * этот страж и пины производных `useMemo` ниже.
    */
   it('🔴 ни один потребитель действий не читает сырой список долгов', () => {
     const sources = import.meta.glob('../ClientDetailPage.tsx', {
@@ -509,7 +764,42 @@ describe('P-24: кредит модуля не является предмето
     // нет» сказано о живом файле, а не о пустом чтении.
     expect(source).toMatch(/debts=\{collectionDebts\}/)
     expect(source).toMatch(/loanOptions=\{collectionDebts/)
+    // 🔴 И второй положительный контроль — на НОВЫЙ источник: список показа
+    // действительно собран третьим выходом правила.
+    expect(source, 'список «Позики» собран не из третьего выхода правила').toMatch(
+      /loans=\{displayLoans\}/
+    )
 
+    /**
+     * 🔴 Источники ПОКАЗА охраняются по ЗНАЧЕНИЮ атрибута, а не по имени пропса.
+     *
+     * Прежняя форма стража перечисляла запрещённые написания
+     * (`debts={displayDebts}`, `loanOptions={displayLoans…}`) и пропускала всё,
+     * чего не перечислила: `debts={[...displayDebts]}`, `debts={displayLoans ??
+     * []}`, `.filter(…)` и — главное — второй `loans={displayLoans}` у чужого
+     * потребителя, у которого пропс называется так же, как у списка. Теперь
+     * собираются ВСЕ JSX-атрибуты, в значении которых упомянут любой из двух
+     * источников показа, и множество обязано быть ровно одним законным случаем.
+     */
+    // Значение атрибута может нести фигурные скобки внутри (`debts={displayDebts.filter((d) => { … })}`):
+    // ищем до первого вхождения имени, не требуя закрывающей скобки (дельта-ревью r2 N-2, куратор 23.09).
+    const displayAttrs = source.match(/\b\w+=\{[^}]*?\bdisplay(?:Loans|Debts)\b/g) ?? []
+    expect(
+      displayAttrs,
+      `список показа отдан не только «Позикам»: [${displayAttrs.join(', ')}]`
+    ).toEqual(['loans={displayLoans'])
+
+    // Документы привязываются к КУПЛЕННЫМ договорам и читают очищенный
+    // `client.loans` — ровно в двух местах (`DocumentsAccordion` и
+    // `DocumentUploadModal`). Третий читатель этого списка — новый потребитель,
+    // и решать о нём надо здесь, а не молча.
+    const documentReaders = source.match(/loans=\{client\.loans\}/g) ?? []
+    expect(
+      documentReaders,
+      `читателей client.loans стало ${documentReaders.length}, а не 2 (документы)`
+    ).toHaveLength(2)
+
+    // Сырой список долгов — тем же ходом, что и до 14-7b.
     for (const forbidden of [
       /debts=\{loans\}/,
       /debts=\{loans \?\? \[\]\}/,
@@ -539,16 +829,172 @@ describe('P-24: кредит модуля не является предмето
     expect(screen.getByText(/PARTNER-9/)).toBeInTheDocument()
   })
 
-  it('контрольная половина: при выключенном блоке действия видят долг снова', async () => {
-    // Та же проверка с обратным исходом — значит выше меряется правило, а не
-    // то, что строка вообще не доезжает до действий.
+  it('S-18 🔴 список ПОКАЗА не подменил список действий', async () => {
+    // Третий выход правила появился ради экрана, и молча подменить им первый
+    // было бы легче всего: экран выглядел бы так же, а в списание уехал бы
+    // чужой долг. Поэтому обе половины утверждаются В ОДНОЙ сцене: строка
+    // кредита ВИДНА оператору и при этом НЕ отдана ни одному действию.
+    creditFlag.mockReturnValue(true)
+    await openCard()
+
+    // видна
+    expect(screen.getByText(/FB-000088/)).toBeInTheDocument()
+    expect(screen.getByText('кредит (наш)')).toBeInTheDocument()
+    // и не отдана
+    for (const [name, rows] of [
+      ['УБКІ', handedDebts.ubki],
+      ['история ЦД', handedDebts.taHistory],
+      ['платёж', handedDebts.payment],
+      ['списание', handedDebts.writeoff],
+      ['выбор договора', handedDebts.interactionOptions],
+      ['SMS', handedDebts.sms],
+      ['сообщения', handedDebts.message],
+    ] as const) {
+      expect(numbersOf(rows), `${name} получил кредит модуля`).toEqual(['LEGACY-55'])
+    }
+  })
+
+  it('🔴 флаг ВЫКЛЮЧЕН — кредит по-прежнему вне всех действий (Р-FEL1B-1)', async () => {
+    // Прежняя «контрольная половина» P-24 утверждала обратное — при
+    // выключенном блоке долг возвращался во все действия, — и снята вместе с
+    // параметром правила. Пустое место на её месте означало бы, что новую
+    // норму никто не мерит: принадлежность долга от переменной сборки не
+    // зависит, и исключение из действий обязано держаться при любом флаге.
     creditFlag.mockReturnValue(false)
+    await openCard()
+
+    // Положительный контроль: строка кредита на экране и помечена ПОДПИСЬЮ
+    // (ручки нет — флаг выключен), то есть сцена идёт в том самом состоянии.
+    expect(screen.getByText(/FB-000088/)).toBeInTheDocument()
+    expect(screen.getByText('кредит (наш)').tagName).toBe('SPAN')
+    for (const [name, rows] of [
+      ['УБКІ', handedDebts.ubki],
+      ['история ЦД', handedDebts.taHistory],
+      ['платёж', handedDebts.payment],
+      ['списание', handedDebts.writeoff],
+      ['выбор договора', handedDebts.interactionOptions],
+      ['SMS', handedDebts.sms],
+      ['сообщения', handedDebts.message],
+    ] as const) {
+      expect(
+        numbersOf(rows),
+        `при выключенном флаге ${name} получил кредит модуля FB-000088 — исключение из действий стало зависеть от стенда (Р-FEL1B-1)`
+      ).toEqual(['LEGACY-55'])
+    }
+  })
+})
+
+describe('S-16: разворот не трогает фокус карточки', () => {
+  it('клик по чипу не притемняет соседние карточки', async () => {
+    const user = userEvent.setup()
+    const { container } = await renderCard({ rows: [CREDIT_DEBT, FACTORING_DEBT] })
+    await screen.findByText(/LEGACY-55/)
+
+    // Контроль: притемнение вообще умеет появляться — клик по ТЕЛУ карточки
+    // его включает. Без этой половины «не притемнилось» доказывало бы лишь то,
+    // что класс не ищется нигде.
+    await user.click(screen.getByText(/LEGACY-55/))
+    await waitFor(() => expect(container.querySelector('[class*="opacity-[0.42]"]')).toBeTruthy())
+
+    // Снимаем фокус тем же кликом и разворачиваем чипом — притемнения нет.
+    await user.click(screen.getByText(/LEGACY-55/))
+    await waitFor(() => expect(container.querySelector('[class*="opacity-[0.42]"]')).toBeNull())
+    await user.click(screen.getByText('кредит (наш)'))
+    expect(
+      container.querySelector('[class*="opacity-[0.42]"]'),
+      'клик по чипу переключил фокус карточки — соседние карточки притемнились'
+    ).toBeNull()
+  })
+
+  it('второй клик по тому же чипу сворачивает панель и снимает поворот шеврона', async () => {
+    // Мерится НАСТОЯЩЕЕ состояние страницы (`toggleCreditExpand`), а не
+    // пропс, поданный руками: разворот, который нельзя закрыть, в сценах
+    // карточки выглядел бы так же, как рабочий.
+    const user = userEvent.setup()
+    clientLoansFn.mockResolvedValue({ items: [CARD_FB_000088], next_cursor: null })
     await renderCard({ rows: [CREDIT_DEBT, FACTORING_DEBT] })
     await screen.findByText(/LEGACY-55/)
-    expect(numbersOf(handedDebts.ubki).sort()).toEqual(['FB-000088', 'LEGACY-55'])
-    expect(numbersOf(handedDebts.taHistory).sort()).toEqual(['FB-000088', 'LEGACY-55'])
-    expect(numbersOf(handedDebts.interactionOptions).sort()).toEqual(['FB-000088', 'LEGACY-55'])
-    expect(numbersOf(handedDebts.sms).sort()).toEqual(['FB-000088', 'LEGACY-55'])
+    const chip = () => within(cardOf('FB-000088')).getByText('кредит (наш)')
+    const chevronClass = () => chip().querySelector('svg')?.getAttribute('class') ?? ''
+
+    await user.click(chip())
+    // Положительный контроль: панель действительно развернулась — продукт
+    // печатает только карта класса А, в строке его нет.
+    expect(await within(cardOf('FB-000088')).findByText('PDL-UA-30')).toBeInTheDocument()
+    expect(chevronClass()).toContain('rotate-180')
+
+    await user.click(chip())
+    expect(
+      within(cardOf('FB-000088')).queryByText('PDL-UA-30'),
+      'второй клик по чипу не свернул панель — разворот необратим'
+    ).toBeNull()
+    expect(chevronClass()).not.toContain('rotate-180')
+  })
+})
+
+describe('S-21: успешный разворот — под строкой карта ИМЕННО её договора', () => {
+  it('клик по чипу FB-000088 — под ней её карта класса А, и ни следа FB-000090', async () => {
+    // Стык «страница → панель» (номер договора и проекции, переданные в
+    // `ClientCreditBlock`) не видит ни одна сцена панели: там пропсы подаются
+    // руками. Дверь здесь отвечает ОБОИМИ кредитами клиента — ровно как в бою.
+    const user = userEvent.setup()
+    clientLoansFn.mockResolvedValue({ items: [CARD_FB_000088, CARD_FB_000090], next_cursor: null })
+    await renderCard({ rows: [CREDIT_DEBT, SECOND_CREDIT_DEBT, FACTORING_DEBT] })
+    await screen.findByText(/LEGACY-55/)
+
+    await user.click(within(cardOf('FB-000088')).getByText('кредит (наш)'))
+
+    // Положительный контроль: под строкой FB-000088 развернулась карта класса А
+    // этого договора — продукт и ссылку в модуль строка не печатает.
+    const own = cardOf('FB-000088')
+    expect(await within(own).findByText('PDL-UA-30')).toBeInTheDocument()
+    // Чужая карта проверяется ДО ссылки: развернись под строкой обе, ссылок
+    // в модуль стало бы две, и сцена упала бы на «найдено несколько», не
+    // назвав предмета.
+    expect(
+      within(own).queryByText('CA_AB_PAYDAY'),
+      'под строкой FB-000088 развернулся и чужой кредит FB-000090'
+    ).toBeNull()
+    expect(within(own).getByText('Відкрити в кредитному модулі')).toBeInTheDocument()
+    expect(
+      within(cardOf('FB-000090')).queryByText('CA_AB_PAYDAY'),
+      'клик по одному чипу развернул панели под всеми кредитными строками'
+    ).toBeNull()
+    // Панель под второй строкой не смонтирована вовсе — не только без карты.
+    expect(within(cardOf('FB-000090')).queryByText('Продукт')).toBeNull()
+  })
+})
+
+describe('S-17: множество статусов проекции — предмет договора, а не догадки', () => {
+  /**
+   * 🔴 Правило секции (`LoansCardList`: `status === 'closed'` → «Закриті»,
+   * иначе «Відкриті») верно РОВНО для тех значений, которые проекция шлёт
+   * сегодня. Замер CM-L2 (`crm_projection.PROJECTED_STATUS`): в CRM едут
+   * только `active` и `closed` — `charged_off` приезжает как `active`, а
+   * `written_off`/`cancelled`/`withdrawn`/`disbursement_failed` как `closed`;
+   * нюанс стадии живёт в `lifecycle_detail`. Расширение множества на стороне
+   * модуля доехало бы сюда молча, и третий статус тихо лёг бы в «Відкриті».
+   */
+  const PROJECTED_STATUSES = ['active', 'closed'] as const
+
+  it('договор на два значения пинуется здесь', () => {
+    expect(
+      [...PROJECTED_STATUSES],
+      'проекция начала слать третий статус — решите ЗДЕСЬ, в какую секцию он идёт, ' +
+        'а не оставляйте правилу «всё, что не closed, — открытое»'
+    ).toEqual(['active', 'closed'])
+  })
+
+  it('значение вне множества читается как открытое — и сцена его называет', async () => {
+    const status = 'delinquent'
+    await renderCard({ rows: [{ ...CREDIT_DEBT, status } as unknown as DebtDetail] })
+
+    const open = (await screen.findByText('Відкриті позики')).closest('div') as HTMLElement
+    expect(
+      within(open).queryByText('1'),
+      `статус '${status}' вне договорного множества прочитан как ОТКРЫТЫЙ`
+    ).toBeInTheDocument()
+    expect(screen.getByText(/FB-000088/)).toBeInTheDocument()
   })
 })
 
