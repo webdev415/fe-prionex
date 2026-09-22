@@ -33,6 +33,14 @@ ARG VITE_WS_URL
 # given "true"/"1" — an unset ARG lands as an empty string, i.e. the feature
 # stays off. Vite inlines the value at build time, so it MUST arrive here.
 ARG VITE_ASSISTANT_REPORT_TABLES_ENABLED
+# Credit block in the CRM client card (WS-11, story 14-7). Same rule as the line
+# above and for the same reason: Vite inlines `import.meta.env.VITE_*` AT BUILD
+# TIME, so a runtime variable on the server does nothing for it — the image
+# serves an already-built `dist`. Left out of this contract the flag reads
+# `undefined` in every CI image, the tab never appears on any stand, and the
+# state is indistinguishable from "switched off on purpose".
+# Off unless the build is handed the literal "true".
+ARG VITE_CREDIT_MODULE_ENABLED
 # Origin serving the hidden WebRTC softphone the CRM embeds as a background
 # iframe. Vite inlines it at build time, so it has to arrive as a build-arg to
 # take effect at all — a runtime env var on the server does nothing.
@@ -60,6 +68,7 @@ ARG VITE_OPENREPLAY_PRIVATE_MODE
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 ENV VITE_WS_URL=$VITE_WS_URL
 ENV VITE_ASSISTANT_REPORT_TABLES_ENABLED=$VITE_ASSISTANT_REPORT_TABLES_ENABLED
+ENV VITE_CREDIT_MODULE_ENABLED=$VITE_CREDIT_MODULE_ENABLED
 ENV VITE_OPERATOR_PHONE_URL=$VITE_OPERATOR_PHONE_URL
 ENV VITE_OPENREPLAY_PROJECT_KEY=$VITE_OPENREPLAY_PROJECT_KEY
 ENV VITE_OPENREPLAY_INGEST_URL=$VITE_OPENREPLAY_INGEST_URL

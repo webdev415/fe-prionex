@@ -53,6 +53,16 @@ export interface AssistantChatRequest {
    */
   deep_research?: boolean
   /**
+   * Раздумья 31B: `true` — «думающий» ход рассуждает вслух, `false` — отвечает
+   * сразу, без хода рассуждения (быстрее). Поле уходит ТОЛЬКО у thinking-хода;
+   * fast и экспертный запросы остаются байт-в-байт прежними. Forward-compatible,
+   * как и `deep_research` выше: у ChatRequest `extra="ignore"` (не `forbid`),
+   * поэтому прокси, ещё не знающий поля, его МОЛЧА игнорирует и отвечает 200 — а
+   * не 422. «Сервер не применил мой флаг» видно по `done.thinking_used`, не по
+   * отказу; повтора запроса нет.
+   */
+  thinking?: boolean
+  /**
    * Images (screenshot paste), documents (pdf/xlsx/xls/csv) and/or one voice
    * note; at most {@link MAX_ATTACHMENTS} in total.
    */
@@ -233,7 +243,10 @@ export const ATTACHMENTS_TOTAL_TOO_LARGE = 'attachments_total_too_large'
  *   ({@link ATTACHMENTS_TOTAL_TOO_LARGE}). Its `message` is already written for
  *   the operator, so it is shown as it stands.
  */
-export function extractErrorDetail(body: unknown): { message?: string; code?: string } {
+export function extractErrorDetail(body: unknown): {
+  message?: string
+  code?: string
+} {
   if (!body || typeof body !== 'object') return {}
   const raw = (body as { detail?: unknown }).detail
   const detail = raw ?? (body as { message?: unknown }).message
@@ -251,7 +264,9 @@ export function extractErrorDetail(body: unknown): { message?: string; code?: st
 
   if (Array.isArray(detail)) {
     const parts = detail.map(readItem).filter((part): part is string => Boolean(part))
-    return { message: parts.length > 0 ? parts.join('; ') : undefined }
+    return {
+      message: parts.length > 0 ? parts.join('; ') : undefined,
+    }
   }
 
   return {

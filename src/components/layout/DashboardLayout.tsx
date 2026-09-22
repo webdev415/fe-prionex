@@ -24,6 +24,7 @@ import { useHasPermission, useHasAnyPermission } from '@/hooks/usePermissions'
 import { useCreditSectionEnabled } from '@/features/credit/hooks/useCredit'
 import { SearchResults, type SearchResult } from '@/components/ui/SearchResults'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { NEW_CONVERSATION_QUERY } from '@/pages/AiAssistant/conversationUrl'
 import {
   isOnexDockSoloSurface,
   shouldStripDashboardChrome,
@@ -78,6 +79,7 @@ export function AiAssistantHeaderButton() {
   const canUseAssistant = useHasPermission(PERMISSIONS.AI_ASSISTANT.USE)
   const assistantSpeaksTheProjectLanguage = useProjectCountry() === 'UA'
   const { data: aiSettings } = useAiAssistantSettings()
+  // Активность пункта — по pathname: маркер живёт в query и подсветку не трогает.
   const isActive = location.pathname === '/dashboard/ai-assistant'
 
   // Entitlement + kill-switch: hide for users without use_ai_assistant and
@@ -95,7 +97,10 @@ export function AiAssistantHeaderButton() {
     <button
       type="button"
       aria-label={t('pages.aiAssistant.headerButtonAria')}
-      onClick={() => navigate('/dashboard/ai-assistant')}
+      // Вход из шапки — всегда чистый лист (`?conversation=new`). Без маркера
+      // при включённом «помнить контекст» кнопка возвращала бы последний диалог,
+      // а не открывала новый — см. pages/AiAssistant/conversationUrl.ts.
+      onClick={() => navigate(`/dashboard/ai-assistant?${NEW_CONVERSATION_QUERY}`)}
       className={cn(
         'hover:bg-muted relative flex h-9 w-9 items-center justify-center rounded-full transition-colors focus:outline-none',
         isActive && 'bg-muted'

@@ -732,6 +732,52 @@ jobs:
           { echo "ingest<<__EOF__";      printf '%s\n' "$OR_INGEST";  echo "__EOF__"; } >> "$GITHUB_OUTPUT"
           { echo "private_mode<<__EOF__"; printf '%s\n' "${OR_PRIV:-}"; echo "__EOF__"; } >> "$GITHUB_OUTPUT"
 
+      # Credit block in the CRM client card (WS-11, story 14-7).
+      #
+      # Modelled on the two steps above, with one deliberate difference: this is
+      # a BOOLEAN feature flag, not an address. An address that is missing ships
+      # a build pointing at nothing, so the URL step fails; a missing flag means
+      # "the block is off", which is the correct state for every environment that
+      # has not switched it on. So an unset or empty variable defaults to `false`
+      # and the build goes on.
+      #
+      # What DOES fail the build is a value that is neither `true` nor `false`:
+      # `import.meta.env.VITE_CREDIT_MODULE_ENABLED === 'true'` silently reads
+      # `True`, `1` and `yes` as OFF, and an operator who set the variable would
+      # be left looking for a block that the build had quietly dropped.
+      - name: Select the credit-block flag for this environment
+        id: credit_flag
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+          CREDIT_DEV: ${{ vars.VITE_CREDIT_MODULE_ENABLED_DEV }}
+          CREDIT_PREPROD: ${{ vars.VITE_CREDIT_MODULE_ENABLED_PREPROD }}
+          CREDIT_PROD: ${{ vars.VITE_CREDIT_MODULE_ENABLED_PROD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$ENVIRONMENT" in
+            dev)     CREDIT="${CREDIT_DEV:-}" ;;
+            preprod) CREDIT="${CREDIT_PREPROD:-}" ;;
+            prod)    CREDIT="${CREDIT_PROD:-}" ;;
+            *) echo "FAIL: unknown environment '${ENVIRONMENT}'."; exit 1 ;;
+          esac
+
+          SUFFIX="$(printf '%s' "$ENVIRONMENT" | tr '[:lower:]' '[:upper:]')"
+          CREDIT="${CREDIT:-false}"
+
+          case "$CREDIT" in
+            true|false) ;;
+            *)
+              echo "FAIL: VITE_CREDIT_MODULE_ENABLED_${SUFFIX} is '${CREDIT}'."
+              echo "  Only 'true' or 'false' are accepted: the bundle compares the"
+              echo "  value to the literal string 'true', so anything else silently"
+              echo "  means OFF and hides the credit block with no signal."
+              exit 1 ;;
+          esac
+
+          echo "Credit block for '${ENVIRONMENT}': ${CREDIT} (repository variable VITE_CREDIT_MODULE_ENABLED_${SUFFIX})"
+          { echo "credit_enabled<<__EOF__"; printf '%s\n' "$CREDIT"; echo "__EOF__"; } >> "$GITHUB_OUTPUT"
+
       - name: Compute tags from the checked-out commit
         id: tags
         # 🔴 `inputs.ref` reaches this script through `env:`, NEVER through
@@ -1414,6 +1460,7 @@ jobs:
             VITE_API_BASE_URL=${{ steps.app_urls.outputs.api_url }}
             VITE_WS_URL=${{ steps.app_urls.outputs.ws_url }}
             VITE_OPERATOR_PHONE_URL=${{ steps.phone.outputs.phone_url }}
+            VITE_CREDIT_MODULE_ENABLED=${{ steps.credit_flag.outputs.credit_enabled }}
             VITE_OPENREPLAY_PROJECT_KEY=${{ steps.openreplay.outputs.project_key }}
             VITE_OPENREPLAY_INGEST_URL=${{ steps.openreplay.outputs.ingest }}
             VITE_OPENREPLAY_PRIVATE_MODE=${{ steps.openreplay.outputs.private_mode }}
