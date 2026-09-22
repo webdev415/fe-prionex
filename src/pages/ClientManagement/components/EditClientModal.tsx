@@ -284,7 +284,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
       return
     }
     if (tinInvalid(tid)) {
-      setPersonalError(t('pages.clients.editModal.saveError'))
+      setPersonalError(t('pages.clients.editModal.taxIdInvalid'))
       return
     }
 
@@ -403,8 +403,12 @@ function EditForm({ profile, clientId }: EditFormProps) {
     const fn = firstName.trim()
     const ln = lastName.trim()
     const tid = taxId.trim()
-    if (!fn || !ln || tinInvalid(tid)) {
+    if (!fn || !ln) {
       setPersonalError(t('pages.clients.editModal.saveError'))
+      return
+    }
+    if (tinInvalid(tid)) {
+      setPersonalError(t('pages.clients.editModal.taxIdInvalid'))
       return
     }
 
