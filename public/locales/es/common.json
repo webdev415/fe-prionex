@@ -12530,6 +12530,8 @@
       "noDocuments": "Sin documentos para esta solicitud.",
       "noSchedule": "Aún no hay calendario.",
       "noJournal": "Sin movimientos en el libro mayor.",
+      "noJournalInBucket": "Sin movimientos en esta categoría.",
+      "journalBucketReversalUnknown": "Con el filtro por categoría, el asiento de compensación puede quedar fuera de la selección.",
       "scheduleVersion": "Calendario, versión {{version}}",
       "consents": "Consentimientos",
       "granted": "concedido",
@@ -12886,7 +12888,8 @@
     },
     "filters": {
       "dpdFrom": "Días de mora",
-      "any": "Cualquiera"
+      "any": "Cualquiera",
+      "anyBucket": "Cualquier categoría"
     },
     "unavailable": {
       "title": "El módulo de crédito no está desplegado en este entorno",
