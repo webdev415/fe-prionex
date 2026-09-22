@@ -1,5 +1,6 @@
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ApiUser } from '@/features/users/types'
@@ -13,7 +14,8 @@ beforeAll(() => {
 
 const rows = vi.hoisted(() => ({ value: [] as unknown[] }))
 
-vi.mock('@/features/users/hooks/useUsers', () => ({
+vi.mock('@/features/users/hooks/useUsers', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/features/users/hooks/useUsers')>()),
   useUsers: () => ({
     data: {
       users: rows.value,
@@ -37,6 +39,17 @@ vi.mock('@/features/departments', () => ({
   useDepartments: () => ({ data: { departments: [] } }),
 }))
 vi.mock('@/features/groups', () => ({ useGroups: () => ({ data: { groups: [] } }) }))
+const cardPermission = vi.hoisted(() => ({ granted: true }))
+
+vi.mock('@/hooks/usePermissions', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/usePermissions')>()
+  return {
+    ...actual,
+    useHasPermission: (permission: string) =>
+      permission === 'view_employee_card' ? cardPermission.granted : true,
+  }
+})
+
 vi.mock('@/lib/avatarImage', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/avatarImage')>()
   return { ...actual, loadAvatarObjectUrl: vi.fn(() => new Promise(() => {})) }
@@ -51,7 +64,7 @@ function employee(overrides: Partial<ApiUser> = {}): ApiUser {
     email: 'olena@test.com',
     first_name: 'Olena',
     last_name: 'Kovalchuk',
-    full_name: 'Olena Kovalchuk',
+    full_name: 'Kovalchuk Olena',
     language: 'uk',
     timezone: 'Europe/Kyiv',
     status: 'active',
@@ -97,6 +110,33 @@ describe('the employees table', () => {
     const headers = screen.getAllByRole('columnheader').map((h) => h.textContent?.trim())
 
     expect(headers).toEqual([
+      'pages.users.tableHeaders.userId',
+      'pages.users.tableHeaders.fullName',
+      'pages.users.tableHeaders.department',
+      'pages.users.tableHeaders.position',
+      'pages.users.tableHeaders.status',
+      'pages.users.tableHeaders.workFormat',
+      'pages.users.tableHeaders.extension',
+      'pages.users.tableHeaders.actions',
+    ])
+  })
+
+  it('shows the id of each employee in the first cell', () => {
+    rows.value = [employee({ id: 4242 })]
+    renderPage()
+    const firstRow = screen.getAllByRole('row')[1]
+    const cells = within(firstRow).getAllByRole('cell')
+
+    expect(cells[0]).toHaveTextContent('4242')
+  })
+
+  it('leaves the name where it was, one place to the right', () => {
+    renderPage()
+    const headers = screen.getAllByRole('columnheader').map((h) => h.textContent?.trim())
+
+    expect(headers[0]).toBe('pages.users.tableHeaders.userId')
+    expect(headers[1]).toBe('pages.users.tableHeaders.fullName')
+    expect(headers.slice(1)).toEqual([
       'pages.users.tableHeaders.fullName',
       'pages.users.tableHeaders.department',
       'pages.users.tableHeaders.position',
@@ -168,5 +208,34 @@ describe('the employees table', () => {
     expect(
       within(row).queryByRole('button', { name: 'pages.users.actions.view' })
     ).not.toBeInTheDocument()
+  })
+})
+
+describe('a reader who cannot open the employee card', () => {
+  beforeEach(() => {
+    cardPermission.granted = false
+  })
+
+  afterEach(() => {
+    cardPermission.granted = true
+  })
+
+  it('still gets the details, in a modal rather than a dead name', async () => {
+    rows.value = [employee()]
+    renderPage()
+
+    await userEvent.click(screen.getByRole('button', { name: /Olena Kovalchuk/ }))
+
+    expect(await screen.findByRole('dialog')).toBeInTheDocument()
+  })
+
+  it('opens the user detail view, not the employee card', async () => {
+    rows.value = [employee()]
+    renderPage()
+
+    await userEvent.click(screen.getByRole('button', { name: /Olena Kovalchuk/ }))
+
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByText('pages.users.modals.view.title')).toBeInTheDocument()
   })
 })

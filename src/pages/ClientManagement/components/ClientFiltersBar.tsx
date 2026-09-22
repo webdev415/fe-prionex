@@ -751,6 +751,31 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
             <div className="hidden sm:flex sm:min-w-[220px] sm:flex-1" />
           </div>
 
+          {/* Between Tags and RR status. Carries a label column of its own,
+              like every other row in this panel: without one the checkbox
+              started where the neighbouring rows put their labels, and the
+              column the eye follows down the panel broke at this row. */}
+          <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:gap-10">
+            <div className="flex w-full flex-col gap-2 sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
+              <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[100px] sm:text-sm sm:tracking-[-0.28px]">
+                {t('pages.clients.filters.payments', 'Payments')}
+              </label>
+              <div className="flex w-full flex-1 flex-wrap items-start gap-2 sm:gap-3">
+                <label className="flex cursor-pointer items-center gap-1.5 sm:gap-2">
+                  <Checkbox
+                    checked={!!filters.hasVerifiedPayment}
+                    onCheckedChange={(checked) => {
+                      onFilterChange({ ...filters, hasVerifiedPayment: checked === true })
+                    }}
+                  />
+                  <span className="text-foreground text-xs sm:text-sm">
+                    {t('pages.clients.filters.hasVerifiedPayment', 'Has verified payment(s)')}
+                  </span>
+                </label>
+              </div>
+            </div>
+          </div>
+
           <div className="flex w-full flex-col gap-4 self-stretch lg:flex-row lg:items-center lg:gap-10">
             <div className="flex w-full flex-col gap-2 sm:min-w-[220px] sm:flex-1 sm:flex-row sm:items-center sm:gap-3">
               <label className="text-dark-500 w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[100px] sm:text-sm sm:tracking-[-0.28px]">
@@ -780,6 +805,20 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                     </label>
                   )
                 })}
+                {/* Opt-in ×, like the inputs and dropdowns above: shown only
+                    when there is a selection to clear. These are bare
+                    checkboxes with no control to host it, so the button sits
+                    after the last one rather than inside a trigger. */}
+                {selectedRrStatusIds.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => onFilterChange({ ...filters, rrStatusIds: [] })}
+                    aria-label={t('pages.clients.filters.clearRrStatus', 'Clear RR status')}
+                    className="text-muted-foreground hover:text-foreground flex items-center self-center"
+                  >
+                    <Icons.Cancel01 size={14} />
+                  </button>
+                )}
               </div>
             </div>
             <div className="hidden sm:flex sm:min-w-[220px] sm:flex-1" />

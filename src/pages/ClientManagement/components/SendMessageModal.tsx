@@ -31,6 +31,7 @@ import {
   resolveDestinationPhone,
   sendPermissionForChannel,
   useDestinationQuota,
+  useCanReadMessagingDrafts,
   useMessagingDrafts,
   useMessagingIntegrations,
   useSendMessage,
@@ -47,7 +48,12 @@ import {
 } from '@/features/messaging'
 import type { MessagingChannel, MessagingDraft } from '@/features/messaging'
 import { CHANNEL_SPECS } from '@/pages/MessagingDrafts/draftModalShared'
+import {
+  blockingVariables,
+  unresolvedVariables,
+} from '@/features/messaging/utils/unresolvedVariables'
 import { SendMessageModalSkeleton } from './SendMessageModalSkeleton'
+import { Pii, piiProps } from '@/lib/openreplay/pii'
 
 const formatClientNameInitials = (fullName: string): string => {
   const parts = fullName.trim().split(/\s+/)
@@ -108,7 +114,7 @@ export function SendMessageModal({
   onClose,
   clientId,
   clientName,
-  loans = [],
+  loans: loansProp,
   phones: phonesProp,
   phoneOptions: phoneOptionsProp,
   workPhone,
@@ -139,17 +145,20 @@ export function SendMessageModal({
   const lastFocusedRef = useRef<MessagingTemplateFocusField>('body')
 
   const { data: integrations = [], isLoading: integrationsLoading } = useMessagingIntegrations(open)
+  const canReadDrafts = useCanReadMessagingDrafts()
   const { data: channelDrafts = [], isLoading: draftsLoading } = useMessagingDrafts(
     open ? channel : undefined
   )
   const sendMessageMutation = useSendMessage()
-  const { data: clientData } = useClient(clientId, !!clientId && open)
+  const { data: clientData, isError: clientLoadFailed } = useClient(clientId, !!clientId && open)
   const { data: currentUserData } = useQuery({
     queryKey: ['current-user'],
     queryFn: () => authApi.me(),
     enabled: open,
     staleTime: 5 * 60 * 1000,
   })
+
+  const loans = useMemo(() => loansProp ?? [], [loansProp])
 
   const [selectedLoanId, setSelectedLoanId] = useState<number | null>(
     loans.length > 0 ? loans[0].id : null
@@ -223,14 +232,25 @@ export function SendMessageModal({
         clientData,
         currentUser,
         username: user?.username,
+        timezone: user?.timezone,
         selectedLoan: selectedLoan
           ? {
               loanNumber: selectedLoan.loanNumber,
               totalToRepay: selectedLoan.totalToRepay,
             }
           : null,
+        hasLoanContext: loansProp !== undefined,
       }),
-    [clientData, clientDisplayName, clientName, currentUser, selectedLoan, user?.username]
+    [
+      clientData,
+      clientDisplayName,
+      clientName,
+      currentUser,
+      selectedLoan,
+      loansProp,
+      user?.username,
+      user?.timezone,
+    ]
   )
 
   const previewBody = useMemo(
@@ -369,12 +389,25 @@ export function SendMessageModal({
     ((viberAddImage && viberPublicUrls(viberImages).length > 0) ||
       (viberAddButton && viberButtonName.trim() && viberButtonUrl.trim()))
 
+  const missingVariables = useMemo(
+    () => [
+      ...new Set([
+        ...unresolvedVariables(body, variableValues, 'double'),
+        ...(showSubject ? unresolvedVariables(subject, variableValues, 'double') : []),
+      ]),
+    ],
+    [body, showSubject, subject, variableValues]
+  )
+  const hasUnresolvedVariables = missingVariables.length > 0
+  const blocksSending = blockingVariables(missingVariables).length > 0
   const canSend =
     clientId > 0 &&
+    !!clientData &&
     !!service &&
     hasDestination &&
     (body.trim().length > 0 || hasViberRich) &&
     (!channelSpec.subjectRequired || subject.trim().length > 0) &&
+    !blocksSending &&
     !quotaExceeded &&
     !sendMessageMutation.isPending
 
@@ -436,10 +469,15 @@ export function SendMessageModal({
             <Icons.Message01 size={18} className="text-primary-foreground" strokeWidth={1.5} />
           </div>
         }
-        title={t('pages.clients.modals.sendMessage.title', {
-          clientName,
-          defaultValue: `Send message to ${clientName}`,
-        })}
+        title={
+          /* `ModalHeader.title` is a ReactNode rendered as a text node, so the
+             name CAN be masked here — but only if it is a node of its own. The
+             key now holds the static half, punctuation included. */
+          <>
+            {t('pages.clients.modals.sendMessage.titlePrefix', 'Send message to')}{' '}
+            <Pii>{clientName}</Pii>
+          </>
+        }
       />
       <ModalContent>
         {isFormLoading ? (
@@ -633,7 +671,7 @@ export function SendMessageModal({
               )}
             </div>
 
-            <div>
+            <div className={canReadDrafts ? undefined : 'hidden'}>
               <label className="text-foreground mb-1.5 block text-sm font-light">
                 {t('pages.clients.modals.sendMessage.draft', 'Draft')}
               </label>
@@ -660,28 +698,46 @@ export function SendMessageModal({
               </Select>
             </div>
 
-            {loans.length > 0 && (
-              <div>
-                <label className="text-foreground mb-1.5 block text-sm font-light">
-                  {t('pages.clients.modals.sendSMS.loanNumber', 'Loan number')}
-                </label>
-                <Select
-                  value={selectedLoanId?.toString() ?? ''}
-                  onValueChange={(value) => setSelectedLoanId(Number(value))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="—" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {loans.map((loan) => (
-                      <SelectItem key={loan.id} value={loan.id.toString()}>
-                        {loan.loanNumber} — {formatMoneyUAHTwoDecimals(loan.totalToRepay)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            <div>
+              <label className="text-foreground mb-1.5 block text-sm font-light">
+                {t('pages.clients.modals.sendSMS.loanNumber', 'Loan number')}
+              </label>
+              <Select
+                value={selectedLoanId?.toString() ?? ''}
+                onValueChange={(value) => setSelectedLoanId(Number(value))}
+                disabled={loans.length === 0}
+              >
+                <SelectTrigger>
+                  <SelectValue
+                    placeholder={
+                      loans.length === 0
+                        ? t('pages.clients.modals.sendSMS.noOpenLoans', 'No open credits')
+                        : '—'
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {loans.map((loan) => (
+                    <SelectItem key={loan.id} value={loan.id.toString()}>
+                      {loan.loanNumber} — {formatMoneyUAHTwoDecimals(loan.totalToRepay)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {hasUnresolvedVariables && (
+                <p className="text-error-500 mt-1.5 text-xs">
+                  {t('pages.clients.modals.sendSMS.unresolvedVariables', {
+                    names: missingVariables.join(', '),
+                    defaultValue: `These variables have no value yet: ${missingVariables.join(', ')}`,
+                  })}
+                </p>
+              )}
+              {clientLoadFailed && (
+                <p className="text-error-500 mt-1.5 text-xs">
+                  {t('pages.clients.modals.sendSMS.clientLoadFailed')}
+                </p>
+              )}
+            </div>
 
             {showSubject && (
               <Input
@@ -724,24 +780,6 @@ export function SendMessageModal({
               )}
             />
 
-            <MessagingVariablesPalette onInsert={handleInsertVariable} disabled={!hasDestination} />
-
-            {isMy2Viber && (
-              <ViberRichContentFields
-                addImage={viberAddImage}
-                onAddImageChange={setViberAddImage}
-                images={viberImages}
-                onImagesChange={setViberImages}
-                addButton={viberAddButton}
-                onAddButtonChange={setViberAddButton}
-                buttonName={viberButtonName}
-                onButtonNameChange={setViberButtonName}
-                buttonUrl={viberButtonUrl}
-                onButtonUrlChange={setViberButtonUrl}
-                disabled={!hasDestination}
-              />
-            )}
-
             <div className="border-border bg-muted rounded-xl border p-4">
               <div className="mb-3 flex flex-wrap items-center gap-2">
                 <span className="text-foreground text-sm font-medium">
@@ -765,19 +803,47 @@ export function SendMessageModal({
                     <span className="text-foreground font-medium">
                       {t('pages.clients.modals.sendMessage.previewSubject', 'Subject')}:
                     </span>{' '}
-                    <span className="text-muted-foreground">{previewSubject || '—'}</span>
+                    <span className="text-muted-foreground" {...piiProps}>
+                      {previewSubject || '—'}
+                    </span>
                   </div>
                 )}
                 <div>
                   <span className="text-foreground font-medium">
                     {t('pages.clients.modals.sendMessage.previewBody', 'Message')}:
                   </span>
-                  <pre className="text-foreground bg-card mt-1 overflow-auto rounded-lg p-3 text-xs whitespace-pre-wrap">
+                  {/* The RESOLVED template: variables are already substituted, so
+                      this text routinely opens with the client's full name. No
+                      field-name dictionary can see it — the identifier is
+                      `previewBody` — which is why rendered client-facing text is
+                      its own class in `docs/openreplay-pii-markup.md`. */}
+                  <pre
+                    className="text-foreground bg-card mt-1 overflow-auto rounded-lg p-3 text-xs whitespace-pre-wrap"
+                    {...piiProps}
+                  >
                     {previewBody.trim() || '—'}
                   </pre>
                 </div>
               </div>
             </div>
+
+            <MessagingVariablesPalette onInsert={handleInsertVariable} disabled={!hasDestination} />
+
+            {isMy2Viber && (
+              <ViberRichContentFields
+                addImage={viberAddImage}
+                onAddImageChange={setViberAddImage}
+                images={viberImages}
+                onImagesChange={setViberImages}
+                addButton={viberAddButton}
+                onAddButtonChange={setViberAddButton}
+                buttonName={viberButtonName}
+                onButtonNameChange={setViberButtonName}
+                buttonUrl={viberButtonUrl}
+                onButtonUrlChange={setViberButtonUrl}
+                disabled={!hasDestination}
+              />
+            )}
           </div>
         )}
       </ModalContent>

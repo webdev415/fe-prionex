@@ -54,11 +54,10 @@ import {
   type SegmentedTabItem,
 } from '@/components/ui/SegmentedTabs'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
-import { isTransientFailure } from '@/lib/api'
-import { isRealCalendarDate } from '@/lib/calendarDate'
+import { useDateWindowFilters, useFeedErrorMessage } from '@/hooks'
 import { formatPickerDateAsYMD, getDateStringInTimezone } from '@/lib/dateUtils'
-import { getErrorMessage, getErrorStatus, hasResponseDetail } from '@/lib/errors'
 import { Icons } from '@/lib/icons'
+import { isWindowTooLong } from '@/lib/reportWindow'
 import { REPORTS_URL_KEYS } from '@/lib/reportsUrlKeys'
 import { useAuthStore } from '@/stores/authStore'
 import { useOperatorPromisesReport } from '../hooks'
@@ -87,15 +86,17 @@ const {
 
 const TABS_ID_PREFIX = 'operator-promises'
 
-/**
- * Mirrors the backend's window cap `_MAX_RANGE_DAYS` in
- * api-prionex/services/client/app/routers/reports.py: the (end - start) day
- * difference may be at most 366, i.e. an inclusive window of 367 days is the
- * widest allowed — larger answers 400.
- */
-const MAX_RANGE_DAYS = 366
+/** This tab's wording for the two window complaints (see `useDateWindowFilters`). */
+const WINDOW_ERROR_KEYS = {
+  invalidDate: 'pages.reports.operatorPromises.invalidDate',
+  invertedRange: 'pages.reports.operatorPromises.invalidRange',
+} as const
 
-const MS_PER_DAY = 86_400_000
+/** The backend's 366-day DIFFERENCE cap, mirrored — predicate and sentence together. */
+const WINDOW_CAP = {
+  isTooLong: isWindowTooLong,
+  messageKey: 'pages.reports.operatorPromises.rangeTooLong',
+} as const
 
 export function OperatorPromisesTab() {
   const { t, i18n } = useTranslation('common')
@@ -114,34 +115,24 @@ export function OperatorPromisesTab() {
   // only which calendar day "now" is, and then travels to the backend, where it
   // cuts the PROMISED-date window (and nothing else).
   const today = getDateStringInTimezone(new Date(), userTimezone)
-  const rawFrom = searchParams.get(DATE_FROM_KEY)
-  const rawTo = searchParams.get(DATE_TO_KEY)
 
-  // A present-but-unusable bound is NOT silently replaced with today: the URL
-  // would then disagree with both the field and the request, and a shape-only
-  // check would let an impossible day like `?opf=2026-02-31` through to the API
-  // (every comparison against NaN is false, so a range guard would pass
-  // silently). It goes down the same path as an inverted window — inline hint,
-  // no request — tracked per bound so the hint sits on the offending field.
-  const isFromInvalid = !!rawFrom && !isRealCalendarDate(rawFrom)
-  const isToInvalid = !!rawTo && !isRealCalendarDate(rawTo)
+  // The shared window reader: both bounds, what is wrong with them, and the
+  // verdict that gates the request. An ABSENT key is the default (today); only
+  // an explicitly bad one stays undefined and blocks the request.
+  const { dateFrom, dateTo, isFromInvalid, isToInvalid, dateError, rangeError, hasWindowError } =
+    useDateWindowFilters({
+      searchParams,
+      fromKey: DATE_FROM_KEY,
+      toKey: DATE_TO_KEY,
+      fallbackFrom: today,
+      fallbackTo: today,
+      cap: WINDOW_CAP,
+      keys: WINDOW_ERROR_KEYS,
+    })
 
-  // An ABSENT key is the default (today); only an explicitly bad one is undefined.
-  const dateFrom = rawFrom ? (isFromInvalid ? undefined : rawFrom) : today
-  const dateTo = rawTo ? (isToInvalid ? undefined : rawTo) : today
-
-  // The only guard against an inverted or oversized window: the pickers
-  // deliberately do not bound each other (see the fields below), and manual
-  // input and hand-edited URLs would bypass such bounds anyway. ISO YYYY-MM-DD
-  // strings compare correctly as strings.
-  const isInverted = !!dateFrom && !!dateTo && dateFrom > dateTo
-  const isTooLong =
-    !!dateFrom &&
-    !!dateTo &&
-    !isInverted &&
-    (Date.parse(dateTo) - Date.parse(dateFrom)) / MS_PER_DAY > MAX_RANGE_DAYS
-
-  const hasFilterError = isFromInvalid || isToInvalid || isInverted || isTooLong
+  // The window is this tab's only filter — the department sub-tab filters an
+  // already-fetched response and cannot be wrong.
+  const hasFilterError = hasWindowError
 
   // Filter updates never create history entries (page-tab switches do). The
   // simple functional form is enough here: nothing in this tab emits two URL
@@ -176,13 +167,6 @@ export function OperatorPromisesTab() {
       // state this report has.
       if (value) setUrlParam(key, formatPickerDateAsYMD(value))
     }
-
-  const dateError = t('pages.reports.operatorPromises.invalidDate')
-  const rangeErrorKey = isInverted
-    ? 'pages.reports.operatorPromises.invalidRange'
-    : isTooLong
-      ? 'pages.reports.operatorPromises.rangeTooLong'
-      : null
 
   const query = useOperatorPromisesReport({
     projectId,
@@ -260,40 +244,18 @@ export function OperatorPromisesTab() {
   // background refetch of the SAME window shows current data and needs none.
   const isRefreshing = query.isPlaceholderData
 
-  const errorStatus = getErrorStatus(query.error)
-  const isForbidden = errorStatus === 403
-  const isUnavailable = isTransientFailure(query.error)
-  const errorMessage = isUnavailable
-    ? // Covers all three of the endpoint's own 503s — the payment-service being
-      // down, the auth-service directory being down, and the two lookups
-      // together blowing the fan-out deadline. The operator's move is the same
-      // in all three (wait and retry), and none may degrade to a partial
-      // report: without the directory rows cannot be named, grouped or sorted,
-      // and without the payment data a working operator reads as one who
-      // collected nothing.
-      t('pages.reports.operatorPromises.unavailable')
-    : isForbidden
-      ? t('pages.reports.operatorPromises.forbidden')
-      : // Backend date/timezone validation answers 400 with a human-readable
-        // detail (inverted window, > 367 days, a date outside
-        // 1900-01-01..9998-12-31, an unknown IANA zone). Passing it through
-        // verbatim is what makes the refusal actionable. Only when the answer
-        // HAS a detail, though: a 400 whose body never arrived would otherwise
-        // show axios' own untranslated "Request failed with status code 400"
-        // (see hasResponseDetail), so it joins every other unexplained failure
-        // under the localized generic title.
-        errorStatus === 400 && hasResponseDetail(query.error)
-        ? getErrorMessage(query.error)
-        : t('pages.reports.operatorPromises.error.title')
-
-  // The three 503s are worded distinctly by the backend on purpose — the
-  // remedies differ and monitoring must tell an outage from a timeout — so the
-  // server's own sentence is shown UNDER the localized one rather than instead
-  // of it: the operator reads their language, and whoever is asked "what does
-  // it say?" can tell which dependency failed. Absent for a transport-level
-  // failure (a 502/504 or a dropped connection carries no body).
-  const errorDetail =
-    isUnavailable && hasResponseDetail(query.error) ? getErrorMessage(query.error) : null
+  // The shared failure ladder (see the hook for the rungs and their order).
+  // What is this endpoint's own: three 503s — the payment-service down, the
+  // auth-service directory down, and the two lookups together blowing the
+  // fan-out deadline — none of which may degrade to a partial report, since
+  // without the directory rows cannot be named, grouped or sorted, and without
+  // the payment data a working operator reads as one who collected nothing.
+  // Its 400 detail names an inverted window, > 367 days, a date outside
+  // 1900-01-01..9998-12-31, or an unknown IANA zone.
+  const { errorMessage, errorDetail, isForbidden } = useFeedErrorMessage(
+    query.error,
+    'operatorPromises'
+  )
 
   return (
     <div className="flex w-full flex-col gap-4">
@@ -349,9 +311,9 @@ export function OperatorPromisesTab() {
         {/* Pair-level only: a bad single date rides its own field above.
             Neither bound is wrong on its own in an inverted or oversized
             window, so this one has no field to sit on. */}
-        {rangeErrorKey && (
+        {rangeError && (
           <p className="text-error-500 w-full text-xs font-medium" role="alert">
-            {t(rangeErrorKey)}
+            {rangeError}
           </p>
         )}
       </div>

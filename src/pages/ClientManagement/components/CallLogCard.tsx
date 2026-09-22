@@ -5,6 +5,7 @@ import { useCallStore } from '@/stores/callStore'
 import { TelephonyTypeBadge } from '@/components/ui/TelephonyTypeBadge'
 import { Icons } from '@/lib/icons'
 import { classifyCallOutcome, OUTCOME_PALETTE_CLASSES } from '@/lib/callOutcome'
+import { piiProps } from '@/lib/openreplay/pii'
 
 function cn(...parts: Array<string | undefined | false>) {
   return parts.filter(Boolean).join(' ')
@@ -62,8 +63,6 @@ type CallLogCardProps = {
   setIsViewSMSModalOpen?: (open: boolean) => void
   /** When set (and not a call card), click invokes this instead of the legacy SMS modal. */
   onSelect?: () => void
-  /** e.g. "Client" / "Referrer" — shown with phone on message cards. */
-  destinationOwnerLabel?: string
 }
 
 /**
@@ -104,7 +103,6 @@ export function CallLogCard({
   setSelectedSMSData,
   setIsViewSMSModalOpen,
   onSelect,
-  destinationOwnerLabel,
 }: CallLogCardProps) {
   const { t } = useTranslation('common')
   const { isCallActive, setOpenCallModal } = useCallStore()
@@ -249,7 +247,7 @@ export function CallLogCard({
             </>
           ) : (
             <>
-              <div className="flex min-w-0 shrink-0 items-center gap-2">
+              <div className="flex min-w-0 items-center gap-2">
                 <span
                   className={cn(
                     'flex h-3 w-3 shrink-0 items-center justify-center rounded-full',
@@ -261,23 +259,23 @@ export function CallLogCard({
                 <span className={cn('shrink-0 text-sm', palette.text)}>
                   {status ? translatedStatus : ''}
                 </span>
+                {phone && phone !== '-' && (
+                  <span className="text-muted-foreground min-w-0 truncate text-sm">{phone}</span>
+                )}
               </div>
 
               <div className="text-foreground truncate text-sm font-bold">
                 {template || t('pages.clients.modals.sendSMS.customMessage') || 'Custom Message'}
               </div>
 
-              <div className="text-muted-foreground line-clamp-2 overflow-hidden text-sm break-words">
+              {/* The sent message as the client received it — a rendered
+                  template, name and all. The template NAME above stays readable. */}
+              <div
+                className="text-muted-foreground line-clamp-2 overflow-hidden text-sm break-words"
+                {...piiProps}
+              >
                 {message}
               </div>
-              {phone && phone !== '-' && (
-                <div className="text-muted-foreground truncate text-sm">
-                  {phone}
-                  {destinationOwnerLabel ? (
-                    <span className="text-muted-foreground"> · {destinationOwnerLabel}</span>
-                  ) : null}
-                </div>
-              )}
             </>
           )}
         </div>

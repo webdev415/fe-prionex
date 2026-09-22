@@ -75,6 +75,12 @@
  * (`CONTACT_TAG_FEED_MAX_CANDIDATES`) is the other input-shaped 400 and rides
  * the same branch.
  *
+ * There is no 366-day window cap to mirror either, and that is the same fact
+ * said once more: this endpoint bounds its cost by the CANDIDATE population,
+ * not by the width of the window, so importing `@/lib/reportWindow` here would
+ * refuse windows the API serves happily. The four other uncapped feeds say so
+ * in their own docstrings; this one used to be the exception.
+ *
  * ## Sub-tabs
  *
  * «Всі» / «Контакт» / «Неконтакт» — a SERVER-side filter. The tab travels to
@@ -91,7 +97,7 @@
  * working across a tag rename.
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { DateSelect } from '@/components/ui/DateSelect'
@@ -103,11 +109,13 @@ import {
   type SegmentedTabItem,
 } from '@/components/ui/SegmentedTabs'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
-import { usePagedFeedPages, useUrlPagedFeedFilters } from '@/hooks'
-import { isTransientFailure } from '@/lib/api'
+import {
+  useFeedErrorMessage,
+  usePagedFeedPages,
+  useTodayInTimezone,
+  useUrlPagedFeedFilters,
+} from '@/hooks'
 import { formatCalendarDay } from '@/lib/calendarDay'
-import { getDateStringInTimezone } from '@/lib/dateUtils'
-import { getErrorMessage, getErrorStatus, hasResponseDetail } from '@/lib/errors'
 import { Icons } from '@/lib/icons'
 import { REPORTS_URL_KEYS } from '@/lib/reportsUrlKeys'
 import { isDatePairInverted, readUrlDateBound } from '@/lib/urlDateBound'
@@ -157,33 +165,12 @@ export function ContactTagFeedTab() {
   const projectId: number = Number(user?.active_project_id ?? user?.projects?.[0]?.id ?? 1)
   const userTimezone = user?.timezone
 
-  // The default view date: "today" resolved in the PROFILE timezone — "now" is
-  // a real moment, and near midnight the browser's day and the operator's day
-  // differ. The same timezone travels to the backend, which cuts the promise
-  // date and the assignment date in it, so the two ends of the request agree on
-  // what "today" means.
-  //
-  // Held in STATE, not read off the wall clock in render: seeded once at mount
-  // and re-resolved on window focus, so a tab left open across midnight picks
-  // up the new day the moment the operator comes back to it instead of keeping
-  // yesterday's reference day until an unrelated re-render. The functional
-  // update returns the previous value while the day is unchanged, so a same-day
-  // focus re-renders nothing. `today` only backs the DEFAULT — a user-picked
-  // URL date never moves when the day rolls over.
-  const [today, setToday] = useState(() => getDateStringInTimezone(new Date(), userTimezone))
-  useEffect(() => {
-    const refreshToday = () =>
-      setToday((prev) => {
-        const next = getDateStringInTimezone(new Date(), userTimezone)
-        return next === prev ? prev : next
-      })
-    // The profile timezone can change what "today" means without the clock
-    // moving (it loads or changes after mount) — re-resolve right away, not
-    // only on the next focus.
-    refreshToday()
-    window.addEventListener('focus', refreshToday)
-    return () => window.removeEventListener('focus', refreshToday)
-  }, [userTimezone])
+  // The PROFILE timezone is the one that travels to the backend, where it cuts
+  // both the promise date and the assignment date — so both ends of the
+  // request must agree on which day "today" is (the hook owns when that day is
+  // re-resolved). It backs the DEFAULT reference day and nothing else: a
+  // user-picked URL date never moves when the day rolls over.
+  const today = useTodayInTimezone(userTimezone)
 
   // The shared paged-feed URL shell: composed `replace` updates (the
   // same-tick-burst ref composition lives there), defensive page/page-size
@@ -365,44 +352,28 @@ export function ContactTagFeedTab() {
   // background refetch of the SAME page shows current data and needs none.
   const isRefreshing = query.isPlaceholderData
 
-  const errorStatus = getErrorStatus(query.error)
-  const isForbidden = errorStatus === 403
-  const isUnavailable = isTransientFailure(query.error)
-  const errorMessage = isUnavailable
-    ? // Covers all SIX of the endpoint's own 503s — the tag directory being
-      // down, it throttling us past the single bounded retry, its keyset walk
-      // blowing either its deadline or its page cap, and the auth-service
-      // directory being down or blowing the fan-out deadline. The operator's
-      // move is the same in all of them (wait and retry), and none may degrade
-      // to a partial feed: a silently missing tag or employee would drop
-      // clients out of a work list without a word.
-      t('pages.reports.contactTag.unavailable')
-    : isForbidden
-      ? t('pages.reports.contactTag.forbidden')
-      : // Backend date/timezone validation answers 400 with a human-readable
-        // detail — and so do the two refusals that matter most here: an
-        // inverted window whose upper bound is the DEFAULT (the detail names
-        // the applied date and the empty-value escape hatch, which is the one
-        // thing the local guard cannot know), and the candidate cap, whose
-        // detail asks for a narrower sell window. Passing them through verbatim
-        // is what makes those refusals actionable. Only when the answer HAS a
-        // detail, though: a 400 whose body never arrived would otherwise show
-        // axios' own untranslated "Request failed with status code 400" (see
-        // hasResponseDetail), so it joins every other unexplained failure under
-        // the localized generic title.
-        errorStatus === 400 && hasResponseDetail(query.error)
-        ? getErrorMessage(query.error)
-        : t('pages.reports.contactTag.error.title')
-
-  // Note what is NOT shown for a 503: the server's own sentence. The six
-  // flavours are worded distinctly on purpose, but they are worded for the
-  // people who run the services — they name internal dependencies and env
-  // knobs («raise CONTACT_TAG_FEED_TAG_MAX_PAGES», «auth-service») — and the
-  // operator's move is the same in all six, so the detail is an internals leak
-  // that buys the reader nothing. Monitoring tells the six apart from the
-  // backend's own logs, where they are already distinct. Same as the sibling
-  // gap feed's 503 branch; the 400 detail keeps riding `errorMessage` above,
+  // The shared failure ladder (see the hook for the rungs and their order).
+  // What is this endpoint's own: SIX distinct 503s — the tag directory down,
+  // it throttling us past the single bounded retry, its keyset walk blowing
+  // either its deadline or its page cap, and the auth-service directory down
+  // or blowing the fan-out deadline — none of which may degrade to a partial
+  // feed, since a silently missing tag or employee would drop clients out of a
+  // work list without a word. Its 400 detail matters most for two refusals: an
+  // inverted window whose upper bound is the DEFAULT (the detail names the
+  // applied date and the empty-value escape hatch, the one thing the local
+  // guard cannot know), and the candidate cap, which asks for a narrower sell
+  // window.
+  //
+  // `errorDetail` is DELIBERATELY NOT TAKEN. The hook offers the server's 503
+  // sentence, and this tab is one of the two that decline it: the six flavours
+  // are worded for the people who run the services — they name internal
+  // dependencies and env knobs («raise CONTACT_TAG_FEED_TAG_MAX_PAGES»,
+  // «auth-service») — and the operator's move is the same in all six, so it is
+  // an internals leak that buys the reader nothing. Monitoring tells them
+  // apart from the backend's own logs, where they are already distinct. Same
+  // as the sibling gap feed. The 400 detail still rides `errorMessage`,
   // because THAT one names a filter the operator can actually turn.
+  const { errorMessage, isForbidden } = useFeedErrorMessage(query.error, 'contactTag')
 
   return (
     <div className="flex w-full flex-col gap-4">

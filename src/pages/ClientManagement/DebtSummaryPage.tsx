@@ -13,8 +13,15 @@ import {
   formatMoneyUAHTwoDecimals,
 } from '@/lib/formatters'
 import { useAuthStore } from '@/stores/authStore'
+import { useTrackEvent } from '@/features/operatorAnalytics'
+import { useModalOpenTracking } from './hooks/useClientCardInteractionTracking'
 import { useParams, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
+import {
+  canOfferEasyPayLink,
+  copyToClipboard,
+  easypayLinkAction,
+} from '@/features/payments/utils/easypayLink'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
 import { LinkButton } from '@/components/ui/LinkButton'
@@ -28,6 +35,8 @@ import { ReassignPaymentEmployeeModal } from './components/ReassignPaymentEmploy
 import { useClient } from '@/features/clients/hooks/useClients'
 import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
 import { useCallStore } from '@/stores/callStore'
+import { useCallingWindow } from '@/features/calls/hooks/useCallingWindow'
+import { CallingWindowTooltip } from '@/features/calls/components/CallingWindowTooltip'
 import { useCallOrigination } from '@/features/calls/hooks/useCallOrigination'
 import {
   useClientPaymentHistory,
@@ -50,6 +59,7 @@ import type {
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
 import { useHasPermission } from '@/hooks/usePermissions'
+import { piiProps } from '@/lib/openreplay/pii'
 
 // Types
 interface Payment {
@@ -60,6 +70,8 @@ interface Payment {
   method: BackendPaymentMethod
   /** EasyPay rows only: which service the payer picked on the portal. */
   easypayMethod?: string | null
+  /** EasyPay rows only: the checkout URL, absent if the gateway call failed. */
+  easypayLink?: string | null
   status: BackendPaymentStatus
   receipt?: string
   reference?: string
@@ -182,6 +194,38 @@ export function DebtSummaryPage() {
     useReassignPaymentAssignedUser()
   const [isReassignModalOpen, setIsReassignModalOpen] = useState(false)
 
+  // The payment modals this page owns. Audit only hears about the ones that
+  // succeed -- a form opened and abandoned leaves no trace at all, and the
+  // details view leaves none either, though it is where an operator reads a
+  // client's whole debt breakdown. That gap is what this closes. Same event
+  // type the client card emits, so the activity feed renders them identically.
+  // No edit modal here: this page never gained one.
+  //
+  // ``record_payment`` uses the same key the client card emits. The modal is
+  // mounted on both, so keying them apart would split one action into two
+  // names in the feed for no reason an operator could see.
+  const trackEvent = useTrackEvent()
+  const paymentModalFlags = useMemo(
+    () => ({
+      payment_details: isPaymentDetailsModalOpen,
+      record_payment: isRecordPaymentModalOpen,
+      cancel_payment: isCancelModalOpen,
+      reassign_payment: isReassignModalOpen,
+      verify_payment: isVerificationModalOpen,
+    }),
+    [
+      isPaymentDetailsModalOpen,
+      isRecordPaymentModalOpen,
+      isCancelModalOpen,
+      isReassignModalOpen,
+      isVerificationModalOpen,
+    ]
+  )
+
+  // Same baseline-then-transition rule as the client card, from the same
+  // tested hook rather than a hand-kept copy of it.
+  useModalOpenTracking(id, paymentModalFlags, trackEvent)
+
   // Call functionality state
   const { isCallActive, setOpenCallModal } = useCallStore()
   const {
@@ -200,6 +244,7 @@ export function DebtSummaryPage() {
     handleCloseCallModal,
     handleCallEnd,
   } = useCallOrigination()
+  const callingWindow = useCallingWindow(id ? Number(id) : null)
 
   // Fetch client data from API (same as ClientDetailPage). ``clientId`` is
   // hoisted above (right after useParams) so earlier hooks can use it.
@@ -359,6 +404,7 @@ export function DebtSummaryPage() {
         contractNumber: p.debt_contract_number || undefined,
         method: p.payment_method,
         easypayMethod: p.easypay_method,
+        easypayLink: p.easypay_link,
         status: p.status,
         receipt: p.receipt_url ? 'PDF' : undefined,
         reference: p.bank_reference || p.payment_number,
@@ -578,6 +624,22 @@ export function DebtSummaryPage() {
         setIsCancelModalOpen(true)
       }
     }
+  }
+
+  // Same two decisions as the Payment History table: offer the link only while
+  // it can still be paid, and report a missing one rather than copying an empty
+  // string. A pending EasyPay row does not guarantee a stored link.
+  const handleCopyEasyPayLink = (payment: Payment) => {
+    const action = easypayLinkAction(payment)
+    if (action.kind === 'unavailable') {
+      toast.error(t('pages.clients.paymentHistory.easypayLink.unavailable'))
+      return
+    }
+    void copyToClipboard(action.url).then((copied) =>
+      copied
+        ? toast.success(t('pages.clients.paymentHistory.easypayLink.copied'))
+        : toast.error(t('pages.clients.paymentHistory.easypayLink.copyFailed'))
+    )
   }
 
   const handleViewDetails = (payment: Payment) => {
@@ -911,7 +973,10 @@ export function DebtSummaryPage() {
                 <div className="bg-card flex items-center gap-2.5 rounded-full p-2">
                   <Icons.User size={20} className="text-foreground sm:size-[24px]" />
                 </div>
-                <span className="text-foreground text-base leading-[132%] font-medium tracking-[-0.4px] sm:text-xl">
+                <span
+                  className="text-foreground text-base leading-[132%] font-medium tracking-[-0.4px] sm:text-xl"
+                  {...piiProps}
+                >
                   {debtSummary.customerName}
                 </span>
               </div>
@@ -1032,33 +1097,43 @@ export function DebtSummaryPage() {
             {/* Action Buttons */}
             <div className="flex w-full flex-col items-start gap-3 sm:flex-row">
               <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
-                <Button
-                  variant="primary"
-                  leftIcon={<Icons.Headset size={18} />}
-                  className="w-full rounded-full sm:w-auto sm:flex-1"
-                  disabled={!user?.is_agent || !user?.asterisk_extension}
-                  onClick={() => {
-                    const phoneNumber = client?.phones?.[0]?.number
-                    if (!phoneNumber) {
-                      toast.error(t('errors.clientHasNoPhone', 'Client has no phone number'))
-                      return
-                    }
-
-                    if (isCallActive()) {
-                      toast.warning(
-                        t('pages.clients.modals.callDialog.callInProgress') ||
-                          'Another call or recording is already in progress. Please finish or close it first.'
-                      )
-                      return
-                    }
-
-                    // Open modal in 'initial' state to let user select call type
-                    setOpenCallModal('call-dialog')
-                    setIsCallModalOpen(true)
-                  }}
+                <CallingWindowTooltip
+                  message={callingWindow.allowed ? null : callingWindow.message}
+                  className="w-full sm:w-auto sm:flex-1"
                 >
-                  {t('pages.clients.debtSummary.call')}
-                </Button>
+                  <Button
+                    variant="primary"
+                    leftIcon={<Icons.Headset size={18} />}
+                    className="w-full rounded-full sm:w-auto sm:flex-1"
+                    // Gated on the calling window like the client-card button:
+                    // every entry point has to agree, or one of them opens a
+                    // dialog that cannot dial.
+                    disabled={
+                      !user?.is_agent || !user?.asterisk_extension || !callingWindow.allowed
+                    }
+                    onClick={() => {
+                      const phoneNumber = client?.phones?.[0]?.number
+                      if (!phoneNumber) {
+                        toast.error(t('errors.clientHasNoPhone', 'Client has no phone number'))
+                        return
+                      }
+
+                      if (isCallActive()) {
+                        toast.warning(
+                          t('pages.clients.modals.callDialog.callInProgress') ||
+                            'Another call or recording is already in progress. Please finish or close it first.'
+                        )
+                        return
+                      }
+
+                      // Open modal in 'initial' state to let user select call type
+                      setOpenCallModal('call-dialog')
+                      setIsCallModalOpen(true)
+                    }}
+                  >
+                    {t('pages.clients.debtSummary.call')}
+                  </Button>
+                </CallingWindowTooltip>
               </PermissionGuard>
               <Button
                 variant="secondary"
@@ -1338,6 +1413,17 @@ export function DebtSummaryPage() {
                                       </LinkButton>
                                     </PermissionGuard>
                                   )}
+                                {canOfferEasyPayLink(payment) && (
+                                  <LinkButton
+                                    variant="regular-secondary"
+                                    size="xs"
+                                    leftIcon={<Icons.Link01 size={14} />}
+                                    onClick={() => handleCopyEasyPayLink(payment)}
+                                    className="text-xs"
+                                  >
+                                    <span>{t('pages.clients.paymentHistory.actions.link')}</span>
+                                  </LinkButton>
+                                )}
                                 {(payment.status === 'pending' ||
                                   payment.status === 'verified') && (
                                   <PermissionGuard permission={PERMISSIONS.CLIENTS.VERIFY_PAYMENT}>

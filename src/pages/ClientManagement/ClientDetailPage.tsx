@@ -3,7 +3,7 @@
  *
  * Full page view for displaying detailed client information.
  */
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQueries, useQueryClient } from '@tanstack/react-query'
@@ -36,6 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/Select'
+import { ClientActivityLogTab, type ActivityCallRef } from './components/ClientActivityLogTab'
 import { EditInteractionModal } from './components/EditInteractionModal'
 import { AddTaskModal } from './components/AddTaskModal'
 import { AssignClientModal } from './components/AssignClientModal'
@@ -127,6 +128,7 @@ import {
   pickDefaultActiveContactTypeId,
   pickDefaultActiveContactTypeIdForSection,
 } from '@/features/clients/utils/contactTypeLabel'
+import { isOpenLoan } from '@/features/clients/utils/loanStatus'
 import {
   requiresDigitsOnly,
   hasNonDigitChars,
@@ -155,9 +157,19 @@ import type { InteractionResponse } from '@/features/clients/api/types'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { ClientDetailPageSkeleton } from './components/ClientDetailPageSkeleton'
 import { useTrackEvent } from '@/features/operatorAnalytics'
+import { useClientCardOpenTracking } from './hooks/useClientCardOpenTracking'
+import { activityCallToRecordingModal } from './components/activityCallToRecordingModal'
+import {
+  useCardSelectionTracking,
+  useInteractionFormOpenTracking,
+  useModalOpenTracking,
+} from './hooks/useClientCardInteractionTracking'
 import { useCallStore } from '@/stores/callStore'
 import { useClientTags } from '@/features/tags/hooks/useTags'
 import { TagSelectorModal } from './components/TagSelectorModal'
+import { useCallingWindow } from '@/features/calls/hooks/useCallingWindow'
+import { callDialogBlockedReason } from './callDialogGate'
+import { CallingWindowTooltip } from '@/features/calls/components/CallingWindowTooltip'
 import { useCallOrigination } from '@/features/calls/hooks/useCallOrigination'
 import { useAuthStore } from '@/stores/authStore'
 import { backendToFrontendPaymentMethod } from '@/features/payments/utils'
@@ -189,6 +201,11 @@ import {
   useMessagingClientHistory,
 } from '@/features/messaging'
 import { useOperators } from '@/features/users/hooks/useUsers'
+import { ClientCreditBlock } from '@/pages/Credit/components/ClientCreditBlock'
+import { isCreditModuleEnabled } from '@/features/credit/api/creditModuleFlag'
+import { splitDebtsByOrigin } from '@/features/clients/api/creditProjection'
+import { piiProps } from '@/lib/openreplay/pii'
+import { PiiTooltip } from '@/components/ui/PiiTooltip'
 
 // Extended types for SMS and Call items with API-specific properties
 type ExtendedSMSItem = {
@@ -268,26 +285,7 @@ export function ClientDetailPage() {
   const navigate = useNavigate()
   const trackEvent = useTrackEvent()
 
-  useEffect(() => {
-    if (!id) return
-    const numericId = Number(id)
-    // Client IDs are PostgreSQL INTEGER (int32, max 2_147_483_647) across all
-    // services that consume this ID downstream. An out-of-range value (e.g.
-    // a 13-digit Date.now()-style value from a stale URL or a paste error)
-    // would 500 every backend call AND poison the analytics tracking_events
-    // pipeline (its client_id column is also int32). Guard at the boundary:
-    // bounce the operator back to the list with a toast instead of letting
-    // the bad value spread.
-    if (!Number.isFinite(numericId) || numericId < 1 || numericId > 2147483647) {
-      toast.error(`Invalid client ID: ${id}`)
-      navigate('/dashboard/clients', { replace: true })
-      return
-    }
-    trackEvent('client_card_open', {
-      clientId: numericId,
-      meta: { client_id: id },
-    })
-  }, [id, trackEvent, navigate])
+  useClientCardOpenTracking(id, trackEvent)
 
   // Returns true if the value looks like a Ukrainian phone number,
   // regardless of the contact type's isPhone flag
@@ -418,8 +416,17 @@ export function ClientDetailPage() {
     | 'call-sms-history'
     | 'tasks'
     | 'documents'
+    | 'activity'
+    | 'credit'
     | 'ta-chains'
   >('loans')
+  /**
+   * Блок «Кредит (наш)» на этом стенде. Читается ОДНОЙ функцией, потому что
+   * значение нужно трём местам сразу — полосе вкладок, гейту данных и фильтру
+   * списка «Позики»; разойдясь, они дают «вкладки нет, а долг из «Позики» уже
+   * убрали», то есть долг пропадает с экрана целиком.
+   */
+  const creditBlockEnabled = isCreditModuleEnabled()
   const [activeCallSmsTab, setActiveCallSmsTab] = useState<'all' | 'calls' | 'sms' | 'messaging'>(
     'all'
   )
@@ -470,6 +477,7 @@ export function ClientDetailPage() {
     handleCloseCallModal,
     handleCallEnd,
   } = useCallOrigination()
+  const callingWindow = useCallingWindow(id ? Number(id) : null)
 
   // Client detail: one profile + section endpoints
   const clientId = id ? Number(id) : 0
@@ -530,13 +538,45 @@ export function ClientDetailPage() {
     error: profileError,
   } = useClientProfile(clientId, isValidClientId)
   const { data: loans = [], isLoading: isLoansLoading } = useClientLoans(clientId, isValidClientId)
+  /**
+   * 🔴 Скрытие из «Позики» и показ в блоке «Кредит» — ОДНО правило с двумя
+   * выходами, и живут они на одной функции. Две копии разойдутся на первом же
+   * новом значении `origin`, и тогда оператор без права потеряет долг совсем:
+   * из «Позики» строку убрали, а блок её не показал.
+   *
+   * Отбор пуст при выключенном флаге — тогда строка остаётся в «Позики».
+   */
+  /**
+   * 🔴 ОДНО разделение на весь экран, а не выборка по месту.
+   *
+   * `collectionDebts` — то, что остаётся предметом взыскания: список «Позики»,
+   * реструктуризация, списание, платёж, УБКИ, сообщения, история ЦД. Кредит,
+   * который мы выдали сами, ни одним из этих действий не ведётся — CRM им не
+   * владеет, и строка, попавшая в такое действие, означала бы списание или
+   * отправку в бюро по чужой записи.
+   *
+   * `creditProjections` — то, что показывает блок «Кредит (наш)». Строка уходит
+   * из действий ровно тогда, когда её показывает блок: иначе долг исчезает с
+   * экрана целиком.
+   */
+  const { collectionDebts, creditProjections } = useMemo(
+    () => splitDebtsByOrigin(loans, creditBlockEnabled),
+    [creditBlockEnabled, loans]
+  )
   // Authoritative client detail (carries server-computed ``total_debt``) — same
   // hook + query key the Debt Summary page uses, so react-query dedupes the call.
   // Powers the RecordPaymentModal's ``currentDebt`` prop with the identical value.
   const { data: clientDetail } = useClient(clientId, isValidClientId)
-  const eligibleLoansForRr = useMemo(
-    () => (loans ?? []).filter((loan) => (loan.status ?? '').trim().toLowerCase() !== 'closed'),
-    [loans]
+  // Реструктуризация — действие взыскания: кредит модуля в неё не попадает.
+  const eligibleLoansForRr = useMemo(() => collectionDebts.filter(isOpenLoan), [collectionDebts])
+  const openLoanOptions = useMemo(
+    () =>
+      collectionDebts.filter(isOpenLoan).map((l) => ({
+        id: l.id,
+        loanNumber: l.contract_number,
+        totalToRepay: Number(l.remaining_debt_amount ?? 0),
+      })),
+    [collectionDebts]
   )
   const hasEligibleLoansForRr = eligibleLoansForRr.length > 0
   const { data: restructuringAgreements = [] } = useClientRestructuringAgreements(
@@ -771,6 +811,9 @@ export function ClientDetailPage() {
     [messagingOperators]
   )
   const canViewTasks = useHasPermission(PERMISSIONS.CLIENTS.VIEW_TASKS)
+  // Not implied by view_clients: seeing a client and seeing who else
+  // looked at them are separate grants.
+  const canViewActivityLog = useHasPermission(PERMISSIONS.CLIENTS.VIEW_ACTIVITY_LOG)
   const { data: tasks = [], isLoading: isTasksLoading } = useClientTasks(
     clientId,
     isValidClientId && canViewTasks && activeRightCardTab === 'tasks'
@@ -844,6 +887,15 @@ export function ClientDetailPage() {
       meta?.default_call_line === 'gray' ? 'gray-line' : 'white-line'
     const spamOptionEnabled =
       spamAllowedOverride !== undefined ? spamAllowedOverride : meta?.spam_allowed !== false
+
+    // Gated at the one door rather than on each button, so the per-phone
+    // buttons and the loans tab are covered without each new one having to be
+    // remembered.
+    const blocked = callDialogBlockedReason(callingWindow, spamOptionEnabled)
+    if (blocked) {
+      toast.warning(blocked)
+      return
+    }
     setCallModalPreferences({ phone, initialCallType, spamOptionEnabled })
     setOpenCallModal('call-dialog')
     setIsCallModalOpen(true)
@@ -907,20 +959,23 @@ export function ClientDetailPage() {
     [paymentsSection, reversedPaymentIds]
   )
   const hasEligibleLoanForWriteoff = useMemo(
-    () => (loans ?? []).some((d) => d.status === 'active'),
-    [loans]
+    () => collectionDebts.some((d) => d.status === 'active'),
+    [collectionDebts]
   )
   // Debt ids of the client's already-loaded loans, used for the
   // "Send all loans to UBKI" bulk action and the submission-history filter.
-  const ubkiLoanIds = useMemo(() => (loans ?? []).map((d) => d.id), [loans])
+  // Кредит модуля сюда не попадает: о нём модуль отчитывается в бюро сам
+  // (собственное поле `default_reported_at` его карточки), и вторая отправка
+  // была бы повторной передачей тех же данных под нашим именем.
+  const ubkiLoanIds = useMemo(() => collectionDebts.map((d) => d.id), [collectionDebts])
   // debt id + human loan number (contract_number) for the history panel display.
   const ubkiLoans = useMemo(
     () =>
-      (loans ?? []).map((d) => ({
+      collectionDebts.map((d) => ({
         id: d.id,
         loanNumber: d.contract_number ?? String(d.id),
       })),
-    [loans]
+    [collectionDebts]
   )
   const handleBulkSubmitToUbki = () => {
     if (ubkiLoanIds.length === 0) return
@@ -1207,7 +1262,9 @@ export function ClientDetailPage() {
       })),
       tags: clientTags ?? [],
       // Loans mapped from DebtDetail to UI shape
-      loans: (loans ?? []).map((d) => ({
+      // Строка кредитного модуля уходит отсюда ровно тогда, когда её
+      // показывает блок «Кредит (наш)» (см. `visibleDebts`).
+      loans: collectionDebts.map((d) => ({
         id: d.id,
         loanNumber: d.contract_number,
         issueDate: formatDate(d.credit_issued_date ?? undefined),
@@ -1423,6 +1480,7 @@ export function ClientDetailPage() {
   }, [
     profile,
     loans,
+    collectionDebts,
     paymentsSection,
     callSmsHistory,
     tasks,
@@ -1609,15 +1667,15 @@ export function ClientDetailPage() {
         className={cn('flex flex-wrap gap-1', align === 'end' ? 'justify-end' : 'justify-start')}
       >
         {linkedContacts.map((linkedContact) => (
-          <Link
-            key={linkedContact.id}
-            to={`/dashboard/clients/${linkedContact.id}`}
-            className="border-primary-200 bg-primary/10 text-primary-700 hover:border-primary-300 hover:bg-primary-100 inline-flex max-w-full items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] leading-3 font-medium"
-            title={linkedContact.fullName}
-          >
-            <span aria-hidden="true">🔗</span>
-            <span>{linkedContact.clientNumber}</span>
-          </Link>
+          <PiiTooltip key={linkedContact.id} label={linkedContact.fullName}>
+            <Link
+              to={`/dashboard/clients/${linkedContact.id}`}
+              className="border-primary-200 bg-primary/10 text-primary-700 hover:border-primary-300 hover:bg-primary-100 inline-flex max-w-full items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] leading-3 font-medium"
+            >
+              <span aria-hidden="true">🔗</span>
+              <span>{linkedContact.clientNumber}</span>
+            </Link>
+          </PiiTooltip>
         ))}
       </div>
     )
@@ -1650,6 +1708,32 @@ export function ClientDetailPage() {
     direction?: string | null
     telephony_type?: string | null
   } | null>(null)
+
+  /**
+   * Play a recording the activity feed offered.
+   *
+   * The feed is a merged list, not a call log, so it carries only what a row
+   * needs to describe itself. Everything the player actually reads it does
+   * have -- ``call_id`` fetches the audio, and the rest is labelling. The
+   * client's own name and phone come from the card, which knows them better
+   * than the feed does.
+   */
+  const handlePlayActivityRecording = useCallback(
+    (call: ActivityCallRef) => {
+      setSelectedCallData(
+        activityCallToRecordingModal(call, {
+          t,
+          locale: i18n.language,
+          timezone: userTimezone,
+          clientName: client?.fullName,
+          phone: client?.phones?.[0]?.number,
+        })
+      )
+      setOpenCallModal('call-recording')
+      setIsCallRecordingModalOpen(true)
+    },
+    [client, i18n.language, t, setOpenCallModal, userTimezone]
+  )
   const [isViewSMSModalOpen, setIsViewSMSModalOpen] = useState(false)
   const [selectedSMSData, setSelectedSMSData] = useState<{
     date: string
@@ -1945,14 +2029,59 @@ export function ClientDetailPage() {
     }
   }, [activeClientCardTab]) // Re-check when tab changes
 
-  useEffect(() => {
-    if (!id) return
-    const numericId = Number(id)
-    trackEvent('client_card_tab_switch', {
-      clientId: Number.isFinite(numericId) ? numericId : null,
-      meta: { tab: activeClientCardTab },
-    })
-  }, [activeClientCardTab, id, trackEvent])
+  // Card tabs and main sections: see useCardSelectionTracking for why a card
+  // load is recorded too, marked `initial`.
+  useCardSelectionTracking('client_card_tab_switch', 'tab', id, activeClientCardTab, trackEvent)
+  useCardSelectionTracking(
+    'client_card_section_open',
+    'section',
+    id,
+    activeRightCardTab,
+    trackEvent
+  )
+
+  // Every other modal in the card, by the name its open event carries. A modal
+  // added later needs one line here; see useModalOpenTracking for the rest.
+  const modalOpenFlags = useMemo(
+    () => ({
+      connect_rr: isConnectRrOpen,
+      writeoff: isWriteoffOpen,
+      reversal: isReversalOpen,
+      assign_client: isAssignClientOpen,
+      record_payment: isRecordPaymentModalOpen,
+      task: isTaskModalOpen,
+      call_recording: isCallRecordingModalOpen,
+      tag: isTagModalOpen,
+      edit_client: isEditModalOpen,
+      edit_interaction: isEditInteractionModalOpen,
+      view_sms: isViewSMSModalOpen,
+      send_sms: isSendSMSModalOpen,
+      send_message: isSendMessageModalOpen,
+      upload_document: isUploadDocModalOpen,
+      view_message: isViewMessageModalOpen,
+    }),
+    [
+      isConnectRrOpen,
+      isWriteoffOpen,
+      isReversalOpen,
+      isAssignClientOpen,
+      isRecordPaymentModalOpen,
+      isTaskModalOpen,
+      isCallRecordingModalOpen,
+      isTagModalOpen,
+      isEditModalOpen,
+      isEditInteractionModalOpen,
+      isViewSMSModalOpen,
+      isSendSMSModalOpen,
+      isSendMessageModalOpen,
+      isUploadDocModalOpen,
+      isViewMessageModalOpen,
+    ]
+  )
+  useModalOpenTracking(id, modalOpenFlags, trackEvent)
+
+  // Interaction form = the chain executor.
+  useInteractionFormOpenTracking(id, isChainExecutorOpen, trackEvent)
 
   // Scroll active tab into view when it changes
   useEffect(() => {
@@ -2840,7 +2969,10 @@ export function ClientDetailPage() {
                 <Icons.ArrowLeft02 size={24} className="text-primary-700" strokeWidth={1.5} />
               </button>
               <div className="flex min-w-0 items-center gap-2">
-                <h1 className="text-foreground truncate text-xl leading-[150%] font-light md:text-2xl">
+                <h1
+                  className="text-foreground truncate text-xl leading-[150%] font-light md:text-2xl"
+                  {...piiProps}
+                >
                   {client.fullName}
                 </h1>
                 <button
@@ -2920,23 +3052,32 @@ export function ClientDetailPage() {
             </PermissionGuard>
             {/* Header "Add Task" button removed — entry moved to the Tasks tab "+" hover button. */}
             <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
-              <Button
-                size="md"
-                leftIcon={<Icons.Headset size={20} />}
-                className="w-full flex-1 rounded-full xl:w-auto xl:flex-none"
-                disabled={!user?.is_agent || !user?.asterisk_extension}
-                onClick={() => {
-                  const phoneNumber = client.phones?.[0]?.number
-                  if (!phoneNumber) {
-                    toast.error(t('errors.clientHasNoPhone', 'Client has no phone number'))
-                    return
-                  }
-
-                  openOutboundCall(phoneNumber, client.phones?.[0]?.contactTypeId ?? null)
-                }}
+              <CallingWindowTooltip
+                message={callingWindow.allowed ? null : callingWindow.message}
+                className="w-full flex-1 xl:w-auto xl:flex-none"
               >
-                {t('pages.clients.activity.call')}
-              </Button>
+                <Button
+                  size="md"
+                  leftIcon={<Icons.Headset size={20} />}
+                  className="w-full flex-1 rounded-full xl:w-auto xl:flex-none"
+                  // The calling window disables the entry point too, not just
+                  // the dial button inside the dialog: letting an operator open
+                  // a call dialog that cannot place a call reads as a broken
+                  // dialog rather than a closed window.
+                  disabled={!user?.is_agent || !user?.asterisk_extension || !callingWindow.allowed}
+                  onClick={() => {
+                    const phoneNumber = client.phones?.[0]?.number
+                    if (!phoneNumber) {
+                      toast.error(t('errors.clientHasNoPhone', 'Client has no phone number'))
+                      return
+                    }
+
+                    openOutboundCall(phoneNumber, client.phones?.[0]?.contactTypeId ?? null)
+                  }}
+                >
+                  {t('pages.clients.activity.call')}
+                </Button>
+              </CallingWindowTooltip>
             </PermissionGuard>
             <Button
               size="md"
@@ -3103,7 +3244,17 @@ export function ClientDetailPage() {
                     {t('pages.clients.detail.tin')}
                   </label>
                   <p className="text-foreground ml-2 flex-1 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                    {client.personalDetails.tin}
+                    {/* У клиента, которого кредитный модуль опознал по
+                        подтверждённому в кабинете e-mail, ИНН нет вовсе
+                        (ревизия 176 client-service). Пустая строка на этом
+                        месте читается как дефект загрузки, поэтому здесь стоит
+                        ОБЪЯСНЕНИЕ — текст, а не сам e-mail: карточка не
+                        разглашает больше, чем разглашала. */}
+                    {client.personalDetails.tin
+                      ? client.personalDetails.tin
+                      : profile?.identity_key === 'email'
+                        ? t('credit.clientBlock.identifiedByEmail')
+                        : '—'}
                   </p>
                 </div>
                 <div className="flex min-h-8 items-center self-stretch p-0">
@@ -3125,7 +3276,10 @@ export function ClientDetailPage() {
                     <label className="text-foreground w-[110px] shrink-0 text-xs leading-[140%] font-light tracking-[-0.24px]">
                       {t('pages.clients.detail.personalAddress')}
                     </label>
-                    <p className="text-foreground ml-2 min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
+                    <p
+                      className="text-foreground ml-2 min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words"
+                      {...piiProps}
+                    >
                       {address?.fullAddress || '-'}
                     </p>
                   </div>
@@ -3138,7 +3292,10 @@ export function ClientDetailPage() {
                     <label className="text-foreground w-[110px] shrink-0 text-xs leading-[140%] font-light tracking-[-0.24px]">
                       {t('pages.clients.detail.registrationAddress')}
                     </label>
-                    <p className="text-foreground ml-2 min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words">
+                    <p
+                      className="text-foreground ml-2 min-w-0 flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px] break-words"
+                      {...piiProps}
+                    >
                       {address?.fullAddress || '-'}
                     </p>
                   </div>
@@ -3557,7 +3714,10 @@ export function ClientDetailPage() {
                           {t('pages.clients.detail.managerFullName')}
                         </label>
                       </div>
-                      <p className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
+                      <p
+                        className="text-foreground flex-1 text-right text-xs leading-[140%] font-medium tracking-[-0.24px]"
+                        {...piiProps}
+                      >
                         {client.work?.managerFullName || '-'}
                       </p>
                     </div>
@@ -3887,7 +4047,15 @@ export function ClientDetailPage() {
                     <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
                       <span
                         role="button"
-                        aria-label={t('pages.clients.modals.assignClient.title', 'Assign client')}
+                        /* Was `…assignClient.title`, which since KAN-KB-54 holds only
+                           the heading's static half. `…assignClient.assignClient` is the
+                           plain action label and always was the right key here: the old
+                           one carried an unresolved `{{fullName}}` into the accessible
+                           name, because no values were ever passed to it. */
+                        aria-label={t(
+                          'pages.clients.modals.assignClient.assignClient',
+                          'Assign client'
+                        )}
                         tabIndex={-1}
                         onPointerDown={(e) => e.stopPropagation()}
                         onClick={(e) => {
@@ -4008,6 +4176,49 @@ export function ClientDetailPage() {
                       +
                     </span>
                   </button>
+                  {/* Tab 7: Activity */}
+                  {canViewActivityLog && (
+                    <button
+                      type="button"
+                      data-tab="activity"
+                      onClick={() => setActiveRightCardTab('activity')}
+                      className={cn(
+                        'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
+                        activeRightCardTab === 'activity'
+                          ? 'border-primary-300 text-primary-700 bg-primary-300/10'
+                          : 'hover:text-primary-700 text-muted-foreground border-transparent'
+                      )}
+                    >
+                      <Icons.Activity01 size={20} className="shrink-0 text-current" />
+                      <span className="text-xs font-medium whitespace-nowrap md:text-sm">
+                        {t('pages.clients.detail.tabs.activity')}
+                      </span>
+                    </button>
+                  )}
+                  {/* Tab 8: Credit (own) — кредит, выданный нами. Подпись с
+                      уточнением намеренно: голое «Кредит» в этой же карточке
+                      уже означает КУПЛЕННЫЙ долг (пять ключей словаря той же
+                      страницы), и две одинаковые подписи о разных деньгах на
+                      одном экране — ровно то, от чего блок должен защитить.
+                      Иконка — `Icons.Folder`: кредитной в наборе нет вовсе. */}
+                  {creditBlockEnabled && (
+                    <button
+                      type="button"
+                      data-tab="credit"
+                      onClick={() => setActiveRightCardTab('credit')}
+                      className={cn(
+                        'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
+                        activeRightCardTab === 'credit'
+                          ? 'border-primary-300 text-primary-700 bg-primary-300/10'
+                          : 'hover:text-primary-700 text-muted-foreground border-transparent'
+                      )}
+                    >
+                      <Icons.Folder size={20} className="shrink-0 text-current" />
+                      <span className="text-xs font-medium whitespace-nowrap md:text-sm">
+                        {t('pages.clients.detail.tabs.credit')}
+                      </span>
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -4791,7 +5002,6 @@ export function ClientDetailPage() {
                                                 ? destDisplay.destination
                                                 : undefined
                                             }
-                                            destinationOwnerLabel={destDisplay.ownerSuffix}
                                             sent_at={msg.sent_at ?? undefined}
                                             delivered_at={msg.delivered_at ?? undefined}
                                             icon={
@@ -5273,7 +5483,6 @@ export function ClientDetailPage() {
                                                     ? destDisplay.destination
                                                     : undefined
                                                 }
-                                                destinationOwnerLabel={destDisplay.ownerSuffix}
                                                 sent_at={item.sent_at ?? undefined}
                                                 delivered_at={item.delivered_at ?? undefined}
                                                 icon={
@@ -5344,6 +5553,33 @@ export function ClientDetailPage() {
                         clientId={clientId}
                       />
                     )}
+                  </div>
+                )}
+
+                {/* Tab 7: Activity */}
+                {canViewActivityLog && activeRightCardTab === 'activity' && (
+                  <div className="flex w-full flex-col gap-0">
+                    <ClientActivityLogTab
+                      clientId={isValidClientId ? clientId : null}
+                      isActive={activeRightCardTab === 'activity'}
+                      onPlayRecording={handlePlayActivityRecording}
+                    />
+                  </div>
+                )}
+
+                {/* Tab 8: Credit (own).
+
+                    Гейт данных — сам условный рендер: пока вкладка закрыта,
+                    блок не смонтирован, и его запрос не уходит вовсе (KAN-610 —
+                    открытие карточки перестало стрелять двумя десятками
+                    параллельных запросов, и восьмой без гейта вернул бы их). */}
+                {creditBlockEnabled && activeRightCardTab === 'credit' && (
+                  <div className="flex w-full flex-col gap-0">
+                    <ClientCreditBlock
+                      clientId={clientId}
+                      projections={creditProjections}
+                      enabled={isValidClientId}
+                    />
                   </div>
                 )}
               </div>
@@ -5427,7 +5663,7 @@ export function ClientDetailPage() {
           {/* Content based on active tab */}
           {activeCommentTab === 'ta-chains' && (
             <div className="flex w-full flex-col gap-4">
-              <TAInteractionHistory clientId={clientId} debts={loans} />
+              <TAInteractionHistory clientId={clientId} debts={collectionDebts} />
             </div>
           )}
 
@@ -5476,7 +5712,7 @@ export function ClientDetailPage() {
                 clientId={clientId}
                 clientName={client?.fullName ?? `Client #${clientId}`}
                 responsibleEmployeeId={profile?.responsible_employee_id ?? null}
-                debts={loans}
+                debts={collectionDebts}
                 contactSource={chainExecutorContactSource}
                 prefilledPhone={chainExecutorPrefilledPhone}
                 prefilledPhoneSource={chainExecutorPrefilledPhoneSource}
@@ -5594,7 +5830,7 @@ export function ClientDetailPage() {
             setEditingInteraction(null)
           }}
           interaction={editingInteraction}
-          loanOptions={loans
+          loanOptions={collectionDebts
             // Edit modal always lists every loan, including closed ones,
             // so a historical interaction's saved credit value is never
             // orphaned when its debt has since been closed. The new
@@ -5649,7 +5885,11 @@ export function ClientDetailPage() {
           onClose={() => setIsRecordPaymentModalOpen(false)}
           customerName={client.fullName}
           currentDebt={Number(clientDetail?.total_debt ?? 0)}
-          debts={loans}
+          // ⚠️ `currentDebt` выше — серверная сумма `total_debt`, и кредит
+          // модуля в неё ВХОДИТ: чинится на стороне client-service отдельной
+          // единицей-эрратой API-L1 (В-3 API-L4). Список долгов здесь уже
+          // очищен, сумма — ещё нет.
+          debts={collectionDebts}
           canVerify={canVerifyPayment}
           clientId={client.id}
           onSave={handleRecordPayment}
@@ -5751,11 +5991,7 @@ export function ClientDetailPage() {
           clientId={clientId}
           clientName={client.fullName}
           phoneNumber={selectedPhoneForSMS || client.phones?.[0]?.number || ''}
-          loans={client.loans?.map((l) => ({
-            id: l.id,
-            loanNumber: l.loanNumber,
-            totalToRepay: l.remainingDebtAmount,
-          }))}
+          loans={openLoanOptions}
           onSent={() => {
             // SMS sent successfully - history will refresh automatically via query invalidation
           }}
@@ -5783,11 +6019,7 @@ export function ClientDetailPage() {
           }
           email={profile?.email ?? null}
           initialPhone={selectedPhoneForMessage || undefined}
-          loans={client.loans?.map((l) => ({
-            id: l.id,
-            loanNumber: l.loanNumber,
-            totalToRepay: l.remainingDebtAmount,
-          }))}
+          loans={openLoanOptions}
           onSent={() => {
             // Messaging history refreshes via react-query invalidation in the mutation hook.
           }}
@@ -6842,7 +7074,7 @@ export function ClientDetailPage() {
             setIsWriteoffOpen(false)
             setWriteoffInitialDebtId(null)
           }}
-          debts={loans ?? []}
+          debts={collectionDebts}
           initialDebtId={writeoffInitialDebtId}
         />
 

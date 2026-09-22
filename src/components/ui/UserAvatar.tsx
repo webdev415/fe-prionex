@@ -24,6 +24,7 @@
  */
 
 import { useEffect, useState, useSyncExternalStore } from 'react'
+import { useTranslation } from 'react-i18next'
 import { monogramInitials } from '@/lib/avatarMonogram'
 import {
   avatarSource,
@@ -52,6 +53,7 @@ export function UserAvatar({
   size = 32,
   className,
 }: UserAvatarProps) {
+  const { t } = useTranslation('common')
   // Held with the source it belongs to rather than reset when the source
   // changes: clearing it from the effect would be a synchronous set during
   // render, and a stale photo would flash under the new name until the fetch
@@ -106,7 +108,27 @@ export function UserAvatar({
   const displaySrc = candidate && candidate !== brokenSrc ? candidate : null
 
   const initials = monogramInitials(firstName, lastName, fullName)
-  const label = fullName || [firstName, lastName].filter(Boolean).join(' ') || undefined
+
+  /**
+   * 🔴 The accessible name is a ROLE, not the person (KAN-KB-54).
+   *
+   * This used to be the person's full name, in `alt`, `title` and `aria-label`
+   * at once. Outside `privateMode` OpenReplay does not mask attributes at all —
+   * `sendNodeAttribute` sends them verbatim — so every avatar put a name into
+   * every recording, on every screen that lists people. Being a shared
+   * component made it the single widest leak in the application: closing it in
+   * one file closes it everywhere.
+   *
+   * A tooltip (as in `PiiTooltip`) is not the answer here either, because the
+   * value is also `alt` on the photo branch, and an `alt` cannot be a node.
+   *
+   * ⚠️ The accessibility cost is real and is accepted knowingly: a screen reader
+   * now hears "user avatar" instead of the name. It is not a regression to zero
+   * — every place that renders an avatar renders the name beside it (the users
+   * table, the employee card, the thread header), so the name is still
+   * announced, once, from the text rather than twice from the image.
+   */
+  const label = t('common.userAvatar', 'User avatar')
   const dimensions = { width: size, height: size }
   const container = 'border-border bg-muted inline-flex shrink-0 rounded-full border'
 
@@ -114,7 +136,7 @@ export function UserAvatar({
     return (
       <img
         src={displaySrc}
-        alt={label ?? ''}
+        alt={label}
         style={dimensions}
         className={cn(container, 'object-cover', className)}
         onError={() => {

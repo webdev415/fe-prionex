@@ -276,6 +276,22 @@ export function formatPickerDateAsYMD(date: Date): string {
 }
 
 /**
+ * The other direction: a stored ``YYYY-MM-DD`` back into the Date a picker
+ * shows.
+ *
+ * Built from the parts rather than handed to ``new Date(string)``, which reads
+ * a bare date as UTC midnight and then displays it in local time - west of
+ * Greenwich that renders as the day before, so a date of birth drifts back one
+ * day every time somebody opens the dialog and saves it again.
+ */
+export function parsePickerYMD(value: string | null | undefined): Date | null {
+  if (!value) return null
+  const [year, month, day] = value.split('-').map(Number)
+  if (!year || !month || !day) return null
+  return new Date(year, month - 1, day)
+}
+
+/**
  * Format a UTC Date object as a "YYYY-MM-DDTHH:mm" string in the given IANA timezone.
  * Used for datetime fields (Promise date, Callback date) that include time component.
  */
@@ -422,6 +438,41 @@ export function wallTimeAsTimezoneToUtcIso(naive: string, timezone: string): str
   } catch {
     return new Date(naive).toISOString()
   }
+}
+
+/**
+ * The instant a picked calendar day starts, in the user's profile timezone.
+ *
+ * A day picker hands back browser-local midnight of the chosen day. When the
+ * profile timezone differs from the browser's, that is not when the day the
+ * user meant begins, and a filter built from it returns the wrong rows around
+ * both ends of the day. Falls back to browser-local without a timezone.
+ */
+export function pickerDayStartUtcIso(day: Date, timezone?: string | null): string {
+  if (!timezone) {
+    const d = new Date(day)
+    d.setHours(0, 0, 0, 0)
+    return d.toISOString()
+  }
+  return wallTimeAsTimezoneToUtcIso(`${formatPickerDateAsYMD(day)}T00:00`, timezone)
+}
+
+/**
+ * The last millisecond of a picked calendar day, in the user's profile
+ * timezone.
+ *
+ * Taken as the next day's start minus one millisecond rather than as the
+ * start plus 24 hours, so a day that DST makes 23 or 25 hours long still ends
+ * where it should.
+ */
+export function pickerDayEndUtcIso(day: Date, timezone?: string | null): string {
+  if (!timezone) {
+    const d = new Date(day)
+    d.setHours(23, 59, 59, 999)
+    return d.toISOString()
+  }
+  const next = new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1)
+  return new Date(Date.parse(pickerDayStartUtcIso(next, timezone)) - 1).toISOString()
 }
 
 // ---------------------------------------------------------------------------

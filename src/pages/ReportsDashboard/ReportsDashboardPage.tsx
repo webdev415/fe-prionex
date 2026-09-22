@@ -1,7 +1,7 @@
 /**
  * ReportsDashboardPage Component
  *
- * Main page for viewing reports. Hosts ten tabs (active tab in the URL via
+ * Main page for viewing reports. Hosts fourteen tabs (active tab in the URL via
  * `?tab=…`): the reports dashboard with KPIs and agent performance metrics
  * (default), the "Відпрацювання за ЦД" client processing report, the
  * "Верифікація 3-х осіб" third-party verification report, the
@@ -10,8 +10,11 @@
  * follow-up work list (its semantic twin — same source column shape, hence
  * its neighbour in the strip), the "Контакт/Неконтакт" tagged-client work
  * list, the "Великий розрив" communication-gap work list, the
- * "Обіцянки по операторах" operator promises report and the
- * "Вихідні дзвінки" outbound calls report.
+ * "Обіцянки по операторах" operator promises report, the
+ * "Вихідні дзвінки" outbound calls report, the
+ * "Обіцянки до кінця місяця" daily promises report, the
+ * "Обіцянки" promises feed, the "Перезвони" callbacks feed and the
+ * "Зливи" drains feed.
  */
 
 import { useState, useMemo, useEffect, useCallback } from 'react'
@@ -55,6 +58,10 @@ import { ContactTagFeedTab } from '@/features/contactTag'
 import { CommunicationGapFeedTab } from '@/features/communicationGap'
 import { OperatorPromisesTab } from '@/features/operatorPromises'
 import { OutboundCallsTab } from '@/features/outboundCalls'
+import { PromisesDailyTab } from '@/features/promisesDaily'
+import { PromisesFeedTab } from '@/features/promisesFeed'
+import { CallbacksFeedTab } from '@/features/callbacksFeed'
+import { DrainsFeedTab } from '@/features/drainsFeed'
 import { SegmentedTabs, segmentedTabId, segmentedTabPanelId } from '@/components/ui/SegmentedTabs'
 
 // ============================================================================
@@ -464,6 +471,20 @@ const REPORT_TABS = [
   'communication-gap',
   'operator-promises',
   'outbound-calls',
+  'promises-daily',
+  // Right after the daily promises matrix on purpose: the two migrate the
+  // same promise universe (Cards 103/119) — the matrix answers "how much per
+  // day", this feed answers "who exactly", and operators hop between them.
+  'promises-feed',
+  // Last, next to the promises feed it is built from: the two share Card
+  // 119's frame, but this one answers «whom do I RING, and at what time» —
+  // the operators who work the promise list work the call plan right after.
+  'callbacks',
+  // Closes the factoring family (Cards 119/120/121): the promise list, the
+  // call plan, and now the clients who promised and did NOT pay. Last because
+  // it is the only one of the three whose row is a CLIENT rather than an
+  // interaction, and the only one whose window can be switched off entirely.
+  'drains',
 ] as const
 type ReportsTab = (typeof REPORT_TABS)[number]
 
@@ -585,6 +606,14 @@ export function ReportsDashboardPage() {
           <OperatorPromisesTab />
         ) : activeTab === 'outbound-calls' ? (
           <OutboundCallsTab />
+        ) : activeTab === 'promises-daily' ? (
+          <PromisesDailyTab />
+        ) : activeTab === 'promises-feed' ? (
+          <PromisesFeedTab />
+        ) : activeTab === 'callbacks' ? (
+          <CallbacksFeedTab />
+        ) : activeTab === 'drains' ? (
+          <DrainsFeedTab />
         ) : (
           <DashboardTab />
         )}

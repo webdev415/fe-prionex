@@ -21,6 +21,7 @@ import {
   type MarkerType,
 } from '@/features/quality'
 import { useScopedUserIds } from '../../lib/scope'
+import { piiProps } from '@/lib/openreplay/pii'
 
 const STATUSES: MarkerStatus[] = ['draft', 'sent']
 const DEFAULT_PAGE_SIZE = 25
@@ -189,7 +190,8 @@ export function MarkersSubTab() {
                   <td className="px-3 py-2 font-mono text-xs">
                     {formatTimestamp(row.timestamp_ms)}
                   </td>
-                  <td className="max-w-[24rem] truncate px-3 py-2 text-gray-600">
+                  {/* Free text an operator typed about the call. */}
+                  <td className="max-w-[24rem] truncate px-3 py-2 text-gray-600" {...piiProps}>
                     {row.comment ?? '—'}
                   </td>
                   <td className="px-3 py-2">

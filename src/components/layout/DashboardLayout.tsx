@@ -16,9 +16,10 @@ import { MinimizedCallBubble } from './MinimizedCallBubble'
 import { MinimizedChainExecutorBubble } from './MinimizedChainExecutorBubble'
 import { NotificationBell } from './NotificationBell'
 import { ThemeModeToggle } from './ThemeModeToggle'
-import { PERMISSIONS } from '@/constants/permissions'
+import { DRAFT_PAGE_PERMISSIONS, PERMISSIONS } from '@/constants/permissions'
 import type { Permission } from '@/constants/permissions'
-import { useHasPermission } from '@/hooks/usePermissions'
+import { useHasPermission, useHasAnyPermission } from '@/hooks/usePermissions'
+import { useCreditSectionEnabled } from '@/features/credit/hooks/useCredit'
 import { SearchResults, type SearchResult } from '@/components/ui/SearchResults'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
@@ -53,6 +54,7 @@ import { RouteChangeTracker, TrackingProvider } from '@/features/operatorAnalyti
 import { LawyerWorkplaceHeaderNav } from '@/pages/LawyerWorkplace/components/LawyerWorkplaceHeaderNav'
 import { useLegalInboxSummary } from '@/features/lawyerWorkplace'
 import { useAiAssistantSettings } from '@/features/aiSettings/hooks/useAiAssistantSettings'
+import { piiProps } from '@/lib/openreplay/pii'
 
 // Minimum digit count required to fire a phone-type search. Mirrors the
 // backend guard at services/client/app/routers/search.py (PHONE_MIN_DIGITS).
@@ -239,7 +241,10 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
               <Icons.Headset size={20} className="text-white" strokeWidth={1.5} />
             </div>
             <div className="flex min-w-0 flex-1 flex-col">
-              <div className="text-foreground truncate text-sm font-semibold">
+              {/* The phone below stays readable — it is digits, which the
+                  tracker masks on its own, and it is what keeps the bubble
+                  identifiable in a replay. */}
+              <div className="text-foreground truncate text-sm font-semibold" {...piiProps}>
                 {minimizedCall.clientName}
               </div>
               <div className="text-muted-foreground text-xs">
@@ -288,7 +293,7 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
               <Icons.Voice size={20} className="text-white" strokeWidth={1.5} />
             </div>
             <div className="flex min-w-0 flex-1 flex-col">
-              <div className="text-foreground truncate text-sm font-semibold">
+              <div className="text-foreground truncate text-sm font-semibold" {...piiProps}>
                 {minimizedCall.callData?.clientName || minimizedCall.clientName}
               </div>
               <div className="text-muted-foreground text-xs">
@@ -360,7 +365,12 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuItem disabled className="text-foreground text-sm">
             <Icons.User02 size={16} className="mr-2" />
-            <span className="truncate">{displayName}</span>
+            {/* The operator's own name, and a PORTAL: Radix renders the menu
+                under document.body, so inheritance from anything in the header
+                would not reach it. The attribute goes inside the content. */}
+            <span className="truncate" {...piiProps}>
+              {displayName}
+            </span>
           </DropdownMenuItem>
 
           {minimizedCall && (
@@ -476,6 +486,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const { logout, isImpersonating, impersonatedUser, exitImpersonation } = useAuth()
+
+  // Рубильник раздела кредита. Модуль его ХРАНИТ И ОТДАЁТ, но сам ничего по
+  // нему не запрещает — намеренно: раздел это витрина оператора, а оператор
+  // обслуживает уже выданные кредиты, и закрывать ему API нельзя. Прячет
+  // раздел та сторона, которой он принадлежит, то есть CRM. Вот она.
+  // Спрашиваем только у тех, кто раздел и так видит по правам.
+  const canSeeCreditSection = useHasAnyPermission([
+    PERMISSIONS.CREDIT.APPLICATIONS_VIEW,
+    PERMISSIONS.CREDIT.LOANS_VIEW,
+    PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+  ])
+  const creditSectionEnabled = useCreditSectionEnabled(canSeeCreditSection)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [isExitingImpersonation, setIsExitingImpersonation] = useState(false)
@@ -701,7 +723,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const handleResultClick = (result: SearchResult) => {
     // Navigate to client detail page
-    navigate(`/dashboard/clients/${result.id}`)
+    navigate(`/dashboard/clients/${result.id}?from=search`)
     setLocalSearchQuery('')
     setSearchResults([])
     setShowSearchDropdown(false)
@@ -884,6 +906,19 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             mode: 'any' as const,
           },
           {
+            // Рядом с «Заявками» и сразу после них: это подмножество тех же
+            // заявок, отобранное по решению «ручной разбор», и оператор ищет
+            // его там же, где список.
+            path: '/dashboard/credit/underwriting',
+            label: t('navigation.creditUnderwriting', 'Manual review queue'),
+            icon: 'work',
+            requiredPermissions: [
+              PERMISSIONS.CREDIT.APPLICATIONS_VIEW,
+              PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+            ],
+            mode: 'any' as const,
+          },
+          {
             path: '/dashboard/credit/loans',
             label: t('navigation.creditLoans', 'Loans'),
             icon: 'transaction-history',
@@ -970,7 +1005,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             path: '/dashboard/system-settings/messaging-drafts',
             label: t('navigation.messagingDrafts', 'Message Drafts'),
             icon: 'bubble-chat-edit',
-            requiredPermission: PERMISSIONS.MESSAGING.MANAGE_DRAFTS,
+            requiredPermissions: DRAFT_PAGE_PERMISSIONS,
+            mode: 'any',
           },
         ],
       },
@@ -1147,6 +1183,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       .filter((item) => {
         if (item.disabled) return true
 
+        // Раздел выключен риск-менеджером — пункта в меню нет. Проверка стоит
+        // ДО прав: выключенный раздел скрыт и от того, у кого права есть.
+        if (item.path === '/dashboard/credit' && !creditSectionEnabled) return false
+
         // If item has sub-items, show parent when at least one sub-item is visible
         if (item.subItems) {
           return item.subItems.length > 0
@@ -1168,7 +1208,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     return { navItems: regularItems, bottomNavItems: bottomItems }
     // i18n.language is needed to recalculate navigation items when language changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.permissions, t, i18n.language, legalUnprocessedCount, v3UiEnabled])
+  }, [
+    user?.permissions,
+    t,
+    i18n.language,
+    legalUnprocessedCount,
+    v3UiEnabled,
+    creditSectionEnabled,
+  ])
 
   const { navItems, bottomNavItems } = navItemsResult
   const { toggleSidebar } = useSidebarStore()

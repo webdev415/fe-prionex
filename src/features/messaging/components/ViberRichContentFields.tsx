@@ -12,6 +12,7 @@ import {
   type MessagingViberImageAttachment,
   revokeViberImagePreviews,
 } from '../utils/viberContent'
+import { piiProps } from '@/lib/openreplay/pii'
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024 // 5 MB
 const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
@@ -291,8 +292,12 @@ export function ViberRichContentFields({
                 >
                   <img
                     src={attachment.previewUrl}
-                    alt={attachment.fileName}
+                    // The role, not the file name: `alt` is sent to the recording
+                    // verbatim (KAN-KB-54), and the image itself is replaced by a
+                    // placeholder under the attribute.
+                    alt={t('pages.messaging.attachmentPreview', 'Attachment preview')}
                     className="aspect-square w-full object-cover"
+                    {...piiProps}
                   />
                   {attachment.uploading && (
                     <div className="bg-dark-500/40 absolute inset-0 flex items-center justify-center">

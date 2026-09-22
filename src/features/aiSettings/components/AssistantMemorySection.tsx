@@ -49,6 +49,7 @@ import {
   useDeleteAssistantMemoryRecord,
 } from '../hooks/useAssistantMemoryAdmin'
 import { useUserDirectory } from '../hooks/useUserDirectory'
+import { piiProps } from '@/lib/openreplay/pii'
 
 function SectionSkeleton() {
   return (
@@ -82,7 +83,11 @@ function MemoryRecord({ item, scope }: { item: AssistantMemoryItem; scope: strin
       className="flex items-start justify-between gap-3 py-2"
     >
       <div className="min-w-0">
-        <p className="text-foreground text-sm break-words">{item.content}</p>
+        {/* What the assistant remembers is distilled from conversations that
+            name clients — free prose, and marked as such. */}
+        <p className="text-foreground text-sm break-words" {...piiProps}>
+          {item.content}
+        </p>
         <div className="mt-1 flex flex-wrap items-center gap-2">
           <span
             className={cn(

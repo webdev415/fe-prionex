@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
 import { getMessagingServiceLabel, messagingStatusForCallLogCard } from '@/features/messaging'
 import { formatDateTime } from '@/lib/formatters'
+import { Pii, piiProps } from '@/lib/openreplay/pii'
 
 export interface ViewMessageModalProps {
   open: boolean
@@ -172,7 +173,7 @@ export function ViewMessageModal({ open, onClose, messageData }: ViewMessageModa
                 </DetailRow>
                 {messageData.channel === 'email' && (
                   <DetailRow label={t('pages.clients.modals.viewMessage.subject', 'Subject')}>
-                    {messageData.subject?.trim() ? messageData.subject : '—'}
+                    <Pii>{messageData.subject?.trim() ? messageData.subject : '—'}</Pii>
                   </DetailRow>
                 )}
               </section>
@@ -211,6 +212,7 @@ export function ViewMessageModal({ open, onClose, messageData }: ViewMessageModa
                 <div
                   className="text-foreground border-border bg-card ring-border rounded-2xl border px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap shadow-inner ring-1 ring-inset sm:px-5 sm:py-4"
                   role="article"
+                  {...piiProps}
                 >
                   {messageData.body?.trim() ? messageData.body : '—'}
                 </div>
@@ -242,8 +244,14 @@ export function ViewMessageModal({ open, onClose, messageData }: ViewMessageModa
           ) : null}
         </ModalContent>
 
-        <ModalFooter className="bg-muted mt-auto shrink-0 flex-col">
-          <Button type="button" variant="cancel" onClick={onClose} className="w-full">
+        <ModalFooter className="mt-auto shrink-0 flex-col gap-2 sm:flex-row sm:gap-3">
+          <Button
+            type="button"
+            variant="cancel"
+            size="sm"
+            onClick={onClose}
+            className="w-full rounded-md"
+          >
             {t('actions.close', 'Close')}
           </Button>
         </ModalFooter>

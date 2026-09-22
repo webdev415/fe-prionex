@@ -80,7 +80,11 @@ export function EmployeeSearchList({
 
   const rows = useMemo(() => {
     const excluded = excludeIds && excludeIds.length > 0 ? new Set(excludeIds) : null
-    const q = query.trim().toLowerCase()
+    // Every typed word must appear somewhere in the name, in any order. The
+    // roster holds the same person as both "Surname Name" and "Name Surname"
+    // (and with doubled inner spaces), so matching the query as one string
+    // finds nothing the moment a trainer types two words the other way round.
+    const terms = query.toLowerCase().split(/\s+/).filter(Boolean)
     return operators
       .map((op, i) => {
         const name = op.full_name ?? `#${op.id}`
@@ -92,7 +96,11 @@ export function EmployeeSearchList({
         }
       })
       .filter((row) => !excluded?.has(row.id))
-      .filter((row) => !q || row.name.toLowerCase().includes(q))
+      .filter((row) => {
+        if (terms.length === 0) return true
+        const name = row.name.toLowerCase()
+        return terms.every((term) => name.includes(term))
+      })
   }, [operators, excludeIds, query])
 
   return (
@@ -123,11 +131,17 @@ export function EmployeeSearchList({
               <li key={row.id}>
                 <button
                   type="button"
+                  // Multi-select rows replaced real checkbox inputs, so the tick
+                  // has to be announced rather than only drawn. Single-pick rows
+                  // really are buttons and stay that way.
+                  role={selectedIds ? 'checkbox' : undefined}
+                  aria-checked={selectedIds ? checked : undefined}
                   onClick={() => onSelect(row.id)}
                   className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-[#F7F7F7]"
                 >
                   {selectedIds ? (
                     <span
+                      aria-hidden="true"
                       className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border ${
                         checked
                           ? 'border-[#204E4D] bg-[#204E4D] text-white'
@@ -138,6 +152,7 @@ export function EmployeeSearchList({
                     </span>
                   ) : null}
                   <div
+                    aria-hidden="true"
                     className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-[9px] font-semibold text-[#05040D]"
                     style={{ backgroundColor: row.avatarColor }}
                   >

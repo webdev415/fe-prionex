@@ -189,6 +189,14 @@ export function isApiError(error: unknown): error is AxiosError {
  * `detail` would trade that for a second definition of "has a detail" to keep
  * in step with `getErrorMessage`'s order of reads — the very drift this
  * predicate exists to prevent.
+ *
+ * SECOND ASYMMETRY OF THE SAME KIND: this predicate reads only the TOP-LEVEL
+ * shapes, while `getErrorMessage` also understands the messaging
+ * microservice's nested envelope `{ error: { message, details } }` — so a 400
+ * in that form reads as "no detail" here and reaches the operator as the tab's
+ * generic localized title rather than as the server's sentence. No endpoint
+ * behind the report tabs answers in that shape today (FastAPI and our services
+ * write `detail`), which is why it is recorded rather than fixed.
  */
 export function hasResponseDetail(error: unknown): boolean {
   if (!isApiError(error)) return false

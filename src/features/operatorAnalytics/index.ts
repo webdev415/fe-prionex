@@ -10,6 +10,7 @@ export {
   operatorAnalyticsService,
 } from './api/operatorAnalyticsService'
 export { TrackingProvider } from './providers/TrackingProvider'
+export { toTrackableClientId, MAX_TRACKABLE_CLIENT_ID } from './lib/trackableClientId'
 export { RouteChangeTracker } from './components/RouteChangeTracker'
 export { useTracker } from './hooks/useTracker'
 export { useTrackEvent } from './hooks/useTrackEvent'

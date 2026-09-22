@@ -28,6 +28,7 @@ import {
 } from '../analytics/analyticsTableStyles'
 import { AnalyticsMockTable } from '../analytics/AnalyticsMockTable'
 import { formatDateTime as formatDateTimeLocale } from '@/lib/localeFormat'
+import { piiProps } from '@/lib/openreplay/pii'
 
 type TelephonyFilter = '' | TelephonyType
 type CategoryFilter = '' | ScorecardCategory
@@ -663,7 +664,7 @@ function DialogsTable({
               <td className={ANALYTICS_TABLE_TD}>
                 {op ? (trainerByOperator.get(op.id) ?? '—') : '—'}
               </td>
-              <td className={ANALYTICS_TABLE_TD}>
+              <td className={ANALYTICS_TABLE_TD} {...piiProps}>
                 {clientName ?? (call.client_id != null ? `#${call.client_id}` : '—')}
               </td>
               <td className={ANALYTICS_TABLE_TD} data-testid="loan-cell">

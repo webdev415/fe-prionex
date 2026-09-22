@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
 import { useHasPermission } from '@/hooks'
 import { useAuthStore } from '@/stores/authStore'
@@ -13,8 +14,17 @@ import {
   useEnrollCourse,
   useUpdateCourse,
 } from '@/features/training/hooks/useCourses'
-import type { CourseCardData, CourseLevel, MaterialType } from '@/features/training/types/courses'
+import type { CourseCardData, CourseLevel } from '@/features/training/types/courses'
+import { safeHttpUrl } from '@/lib/safeUrl'
+import {
+  useAttachMaterial,
+  useDetachMaterial,
+  useMaterialsForTarget,
+} from '@/features/training/hooks/useMaterials'
+import { CourseMaterialSelect } from './CourseMaterialSelect'
+import { EmployeeSearchList } from '../dialogue/EmployeeMultiSelect'
 import { TrainingPrimaryButton, TrainingSearchBar } from './TrainingToolbar'
+import { Pii, piiProps } from '@/lib/openreplay/pii'
 
 const CATEGORY_OPTIONS = [
   'Scripts',
@@ -51,7 +61,6 @@ const LEVEL_STARS: Record<CourseLevel, number> = {
   intermediate: 2,
   advanced: 3,
 }
-const MATERIAL_TYPES: MaterialType[] = ['pdf', 'docx', 'video', 'audio', 'link']
 
 function formatDuration(t: TFn, minutes?: number | null): string {
   if (!minutes) return '—'
@@ -231,7 +240,9 @@ function CourseCard({
           <div className="flex items-center gap-2">
             <p className="text-xs text-[#4B5563]">
               {t('pages.training.training.courses.author', 'Author')}:{' '}
-              {course.author_name ?? t('pages.training.training.courses.noAuthor', 'No author')}
+              <Pii>
+                {course.author_name ?? t('pages.training.training.courses.noAuthor', 'No author')}
+              </Pii>
             </p>
             {course.category ? (
               <span className="rounded-full bg-[#F3F4F6] px-2 py-0.5 text-[10px] font-medium text-[#374151]">
@@ -300,14 +311,10 @@ function CourseCard({
 interface ModuleDraft {
   title: string
 }
-interface MaterialDraft {
-  type: MaterialType
-  name: string
-}
-
 function CreateCoursePanel({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation('common')
   const createCourse = useCreateCourse()
+  const attachMaterial = useAttachMaterial()
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
   const projectIdNum = activeProjectId ? Number(activeProjectId) : null
   const { data: operators = [] } = useOperators(projectIdNum)
@@ -319,10 +326,15 @@ function CreateCoursePanel({ onClose }: { onClose: () => void }) {
   const [duration, setDuration] = useState('')
   const [description, setDescription] = useState('')
   const [modules, setModules] = useState<ModuleDraft[]>([])
-  const [materials, setMaterials] = useState<MaterialDraft[]>([])
+  const [materialIds, setMaterialIds] = useState<number[]>([])
+  // createCourse.isPending goes false the moment the course exists — the attach
+  // round-trips are still in flight after that, and a second click there makes a
+  // duplicate course. This covers the whole submission, not just the mutation.
+  const [submitting, setSubmitting] = useState(false)
 
   const submit = () => {
-    if (!title.trim()) return
+    if (!title.trim() || submitting) return
+    setSubmitting(true)
     createCourse.mutate(
       {
         title: title.trim(),
@@ -335,11 +347,43 @@ function CreateCoursePanel({ onClose }: { onClose: () => void }) {
         lessons: modules
           .filter((m) => m.title.trim())
           .map((m, i) => ({ ordinal: i, title: m.title.trim(), content_type: 'text' as const })),
-        materials: materials
-          .filter((m) => m.name.trim())
-          .map((m) => ({ type: m.type, name: m.name.trim() })),
       },
-      { onSuccess: onClose }
+      {
+        onSuccess: async (created) => {
+          // The course has no id until it exists, so the picked materials are
+          // attached here rather than sent with the payload. allSettled, not a
+          // loop that throws: one failure must not skip the materials after it.
+          const results = await Promise.allSettled(
+            materialIds.map((materialId) =>
+              attachMaterial.mutateAsync({
+                materialId,
+                targetType: 'course',
+                targetId: created.id,
+              })
+            )
+          )
+          const failed = results.filter((r) => r.status === 'rejected').length
+          if (failed > 0) {
+            // Says how many, because the rest did attach and the trainer can
+            // add the missing ones from the course itself.
+            toast.error(
+              t('pages.training.training.courses.attachFailed', {
+                defaultValue:
+                  '{{count}} material(s) could not be attached. Add them from the course.',
+                count: failed,
+              })
+            )
+          }
+          setSubmitting(false)
+          onClose()
+        },
+        onError: () => {
+          setSubmitting(false)
+          toast.error(
+            t('pages.training.training.courses.createFailed', 'Could not create the course.')
+          )
+        },
+      }
     )
   }
 
@@ -422,7 +466,7 @@ function CreateCoursePanel({ onClose }: { onClose: () => void }) {
               <select value={author} onChange={(e) => setAuthor(e.target.value)} className={field}>
                 <option value="">{t('common.none', '—')}</option>
                 {operators.map((op) => (
-                  <option key={op.id} value={op.full_name}>
+                  <option key={op.id} value={op.full_name} {...piiProps}>
                     {op.full_name}
                   </option>
                 ))}
@@ -497,62 +541,14 @@ function CreateCoursePanel({ onClose }: { onClose: () => void }) {
             ))}
           </div>
 
-          {/* Materials */}
+          {/* Materials — picked from the library (KAN-1049). Typing a name in
+              place is gone: that list belonged to one course and could be reused
+              nowhere, which is what the library replaces. */}
           <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-[#05040D]">
-                {t('pages.training.training.courses.materials', 'Materials')}
-              </span>
-              <button
-                type="button"
-                onClick={() => setMaterials((m) => [...m, { type: 'pdf', name: '' }])}
-                className="inline-flex items-center gap-1 rounded-md bg-[#204E4D] px-2.5 py-1 text-[11px] font-medium text-white"
-              >
-                <Icons.Add size={12} className="text-white" />
-                {t('common.add', 'Add')}
-              </button>
-            </div>
-            {materials.map((m, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <select
-                  value={m.type}
-                  onChange={(e) =>
-                    setMaterials((arr) =>
-                      arr.map((x, j) =>
-                        j === i ? { ...x, type: e.target.value as MaterialType } : x
-                      )
-                    )
-                  }
-                  className={`w-24 ${field} uppercase`}
-                >
-                  {MATERIAL_TYPES.map((mt) => (
-                    <option key={mt} value={mt}>
-                      {mt.toUpperCase()}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  value={m.name}
-                  onChange={(e) =>
-                    setMaterials((arr) =>
-                      arr.map((x, j) => (j === i ? { ...x, name: e.target.value } : x))
-                    )
-                  }
-                  placeholder={t('pages.training.training.courses.materialName', 'Material name')}
-                  className={`flex-1 ${field}`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setMaterials((arr) => arr.filter((_, j) => j !== i))}
-                  aria-label={t(
-                    'pages.training.training.courses.removeMaterial',
-                    'Remove material'
-                  )}
-                >
-                  <Icons.Close size={14} className="text-[#9CA3AF]" />
-                </button>
-              </div>
-            ))}
+            <span className="text-sm font-semibold text-[#05040D]">
+              {t('pages.training.training.courses.materials', 'Materials')}
+            </span>
+            <CourseMaterialSelect selectedIds={materialIds} onChange={setMaterialIds} />
           </div>
         </div>
 
@@ -567,7 +563,7 @@ function CreateCoursePanel({ onClose }: { onClose: () => void }) {
           <button
             type="button"
             onClick={submit}
-            disabled={!title.trim() || createCourse.isPending}
+            disabled={!title.trim() || submitting}
             className="rounded-md bg-[#BBFB5B] px-4 py-2 text-xs font-semibold text-[#05040D] hover:bg-[#a9e94f] disabled:opacity-50"
           >
             {t('pages.training.training.courses.createCta', 'Create a course')}
@@ -578,7 +574,7 @@ function CreateCoursePanel({ onClose }: { onClose: () => void }) {
   )
 }
 
-function CourseDetailsDialog({
+export function CourseDetailsDialog({
   course,
   canManage,
   onClose,
@@ -590,10 +586,29 @@ function CourseDetailsDialog({
   const { t } = useTranslation('common')
   const { data: full } = useCourse(course.id)
   const updateCourse = useUpdateCourse()
+  const attachMaterial = useAttachMaterial()
+  const detachMaterial = useDetachMaterial()
+  const [addingMaterials, setAddingMaterials] = useState(false)
   const archiveCourse = useArchiveCourse()
   const detail = full ?? course
   const lessons = detail.lessons ?? []
-  const materials = detail.materials ?? []
+  // Attachments, not `detail.materials`: the course's own list is legacy and
+  // migration 047 moved its contents into the library. It is still populated so
+  // that migration stays reversible, so reading it here would show each
+  // material twice once a trainer attaches anything new.
+  //
+  // DEPLOY ORDER: this needs api 047 applied first. Until it is, a course
+  // created before the change shows no materials here.
+  //
+  // Falling back to `detail.materials` when this list is empty looks like the
+  // fix and is not: on a migrated course whose materials a trainer has since
+  // detached, the list is legitimately empty and the fallback would resurrect
+  // every one of them, with no way to remove them again.
+  const { data: attached, isFetching: attachedFetching } = useMaterialsForTarget(
+    'course',
+    course.id
+  )
+  const materials = attached?.data ?? []
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
@@ -602,9 +617,11 @@ function CourseDetailsDialog({
           <div className="flex flex-col gap-1">
             <h3 className="text-lg font-semibold text-[#05040D]">{detail.title}</h3>
             <p className="text-xs text-[#4B5563]">
-              {detail.author_name
-                ? `${t('pages.training.training.courses.author', 'Author')}: ${detail.author_name}`
-                : ''}
+              {detail.author_name ? (
+                <Pii>{`${t('pages.training.training.courses.author', 'Author')}: ${detail.author_name}`}</Pii>
+              ) : (
+                ''
+              )}
               {detail.author_name && detail.category ? ' · ' : ''}
               {detail.category ?? ''}
             </p>
@@ -659,19 +676,99 @@ function CourseDetailsDialog({
             </div>
           ) : null}
 
-          {materials.length > 0 ? (
+          {materials.length > 0 || canManage ? (
             <div className="flex flex-col gap-2">
-              <span className="text-sm font-semibold text-[#05040D]">
-                {t('pages.training.training.courses.materials', 'Materials')}
-              </span>
-              {materials.map((m, i) => (
-                <div key={i} className="flex items-center gap-2 rounded-lg bg-[#F7F7F7] px-3 py-2">
-                  <span className="rounded bg-white px-1.5 py-0.5 text-[9px] font-semibold text-[#204E4D] uppercase">
-                    {m.type}
-                  </span>
-                  <span className="flex-1 truncate text-xs text-[#05040D]">{m.name}</span>
-                </div>
-              ))}
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-[#05040D]">
+                  {t('pages.training.training.courses.materials', 'Materials')}
+                </span>
+                {canManage ? (
+                  <button
+                    type="button"
+                    onClick={() => setAddingMaterials((v) => !v)}
+                    className="rounded-md border border-[#EDEDED] bg-white px-2.5 py-1 text-[11px] font-medium text-[#05040D] hover:bg-[#F7F7F7]"
+                  >
+                    {addingMaterials
+                      ? t('pages.training.training.courses.doneAdding', 'Done')
+                      : t('pages.training.training.courses.addMaterials', 'Add materials')}
+                  </button>
+                ) : null}
+              </div>
+              {/* Without this the only repair for a half-attached course is to
+                  delete and recreate it: creation attaches, and nothing else did. */}
+              {addingMaterials ? (
+                <CourseMaterialSelect
+                  selectedIds={materials.map((m) => m.id)}
+                  // `selectedIds` comes from the server list, so a click is
+                  // refused until that list is authoritative again — which is
+                  // after the refetch, not after the mutation: isPending clears
+                  // the moment the server answers, and in that window the box
+                  // still looks unchecked and a second click repeats the attach.
+                  disabled={
+                    attachMaterial.isPending || detachMaterial.isPending || attachedFetching
+                  }
+                  onChange={(ids) => {
+                    const current = new Set(materials.map((m) => m.id))
+                    const next = new Set(ids)
+                    // Failures are reported, not swallowed. Without this the
+                    // checkbox just springs back and the trainer is told
+                    // nothing — the silent shape this control was added to fix.
+                    const onError = (key: 'attach' | 'detach') => () =>
+                      toast.error(
+                        key === 'attach'
+                          ? t(
+                              'pages.training.training.materials.errors.attach',
+                              'Could not attach the material.'
+                            )
+                          : t(
+                              'pages.training.training.materials.errors.detach',
+                              'Could not detach the material.'
+                            )
+                      )
+                    for (const id of next) {
+                      if (!current.has(id)) {
+                        attachMaterial.mutate(
+                          { materialId: id, targetType: 'course', targetId: course.id },
+                          { onError: onError('attach') }
+                        )
+                      }
+                    }
+                    for (const id of current) {
+                      if (!next.has(id)) {
+                        detachMaterial.mutate(
+                          { materialId: id, targetType: 'course', targetId: course.id },
+                          { onError: onError('detach') }
+                        )
+                      }
+                    }
+                  }}
+                />
+              ) : null}
+              {materials.map((m) => {
+                const href = m.kind === 'link' ? safeHttpUrl(m.url) : undefined
+                return (
+                  <div
+                    key={m.id}
+                    className="flex items-center gap-2 rounded-lg bg-[#F7F7F7] px-3 py-2"
+                  >
+                    <span className="rounded bg-white px-1.5 py-0.5 text-[9px] font-semibold text-[#204E4D] uppercase">
+                      {m.type}
+                    </span>
+                    {href ? (
+                      <a
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 truncate text-xs font-medium text-[#204E4D] hover:underline"
+                      >
+                        {m.title}
+                      </a>
+                    ) : (
+                      <span className="flex-1 truncate text-xs text-[#05040D]">{m.title}</span>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           ) : null}
         </div>
@@ -735,20 +832,13 @@ function AssignCourseDialog({ course, onClose }: { course: CourseCardData; onClo
         <p className="mb-3 text-[11px] text-[#676767]">
           {t('pages.training.training.courses.assignHint', 'Select operators to enroll.')}
         </p>
-        <div className="flex-1 overflow-y-auto rounded-lg border border-[#EBECE8]">
-          {operators.map((op) => (
-            <label
-              key={op.id}
-              className="flex cursor-pointer items-center gap-2 border-b border-[#F3F4F6] px-3 py-2 text-xs last:border-b-0 hover:bg-[#FAFAFA]"
-            >
-              <input
-                type="checkbox"
-                checked={selected.includes(op.id)}
-                onChange={() => toggle(op.id)}
-              />
-              <span className="text-[#05040D]">{op.full_name}</span>
-            </label>
-          ))}
+        <div className="min-h-0 flex-1 rounded-lg border border-[#EBECE8]">
+          <EmployeeSearchList
+            operators={operators}
+            selectedIds={selected}
+            onSelect={toggle}
+            listClassName="max-h-[45vh]"
+          />
         </div>
         <div className="mt-4 flex justify-end gap-2">
           <button

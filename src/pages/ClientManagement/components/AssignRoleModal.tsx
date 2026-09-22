@@ -159,6 +159,7 @@ export function AssignRoleModal({
               {t(labelKey)}
             </Label>
             <SearchableSelect
+              obscured
               id="assign-role-user"
               options={userOptions}
               value={userId}

@@ -18,5 +18,9 @@
     "",
     "Example, for shape only -- this run id is a pre-epoch rehearsal and will never be a row:",
     "  \"705\": { \"waiver\": \"none\", \"note\": \"free text, one line, no pipe\" }"
-  ]
+  ],
+  "932": {
+    "waiver": "none",
+    "note": "Release of preprod-branch head e8d8fc15c067 (merge PR #115 main->preprod). PROD image sha-e8d8fc15c067-prod digest sha256:c99d87fd395356c17da35ded38bd4c1710762151902a584e025b742d76540c30; prod-current now resolves to the same digest. Run 932 green end to end (derive, guard, build, deploy, smoke, record). Public https://crm.prod.crm-prionex.online returns 200, the served bundle carries VITE_API_BASE_URL_PROD and a missing asset returns 404. RVC-v1.1 was NOT executed for this candidate: no pass/fail verdict exists, only the technical preprod-e8d8fc15c067 marker, and no waiver was issued; dispatched on Oleg's direct instruction. Rollback target: sha-14ebdecb6d88-prod digest sha256:5d705a9fdb713466bc56125444f6417d183b29ba4aa6b2a2c5a696d1b790433f from run 766."
+  }
 }

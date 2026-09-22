@@ -26,6 +26,7 @@ import {
 import { TagBadge } from '@/components/ui/TagBadge'
 import { TooltipProvider } from '@/components/ui/Tooltip'
 import { ClientFiltersBar } from './components/ClientFiltersBar'
+import { countAppliedFilters } from './utils/appliedFiltersCount'
 import { AssignClientModal } from './components/AssignClientModal'
 import { BulkAssignClientModal } from './components/BulkAssignClientModal'
 import { formatClientFullName, formatDate, formatDateTime } from '@/lib/formatters'
@@ -76,7 +77,12 @@ interface DisplayClient {
   isFraudster?: boolean
   lawsuitFiled?: boolean
   fullName: string
-  taxIdNumber: string
+  /**
+   * `null` с ревизии 176 client-service: клиент, опознанный по подтверждённому
+   * e-mail кабинета, ИНН не имеет. Колонка рисует прочерк — как и все прочие
+   * читатели `tax_id` в дереве.
+   */
+  taxIdNumber: string | null
   tags: Array<{
     id: number
     name: string
@@ -220,6 +226,11 @@ export interface ClientFilters {
 
   rrStatusIds?: number[]
 
+  // "Has verified payment(s)". Existence only: a client matches on
+  // ONE verified, non-deleted, non-pre-acquisition payment, whatever its date
+  // or amount. Undefined/false applies no filter, which is also the reset state.
+  hasVerifiedPayment?: boolean
+
   // Chain filter — TA Chain IDs (KAN-821: multi-select). Narrows to clients
   // with at least one ta_interaction in ANY of these chains. Pairs with
   // ``chainStepIds`` (steps belonging to the picked chains) and ``stepValues``
@@ -329,6 +340,10 @@ export function ClientManagementPage() {
     ''
   )
   const [unassignedOnlyFilter, setUnassignedOnlyFilter] = useURLState<boolean>('unassigned', false)
+  const [hasVerifiedPaymentFilter, setHasVerifiedPaymentFilter] = useURLState<boolean>(
+    'hasVerifiedPayment',
+    false
+  )
   const [dateOfSaleFromFilter, setDateOfSaleFromFilter] = useURLState<string>('dateFrom', '')
   const [dateOfSaleToFilter, setDateOfSaleToFilter] = useURLState<string>('dateTo', '')
   const [debtRangeFromFilter, setDebtRangeFromFilter] = useURLState<number>('debtMin', 0)
@@ -389,6 +404,7 @@ export function ClientManagementPage() {
       portfolio: portfolioFilter,
       tagIds: tagIdsFilter,
       rrStatusIds: rrStatusFilter,
+      hasVerifiedPayment: hasVerifiedPaymentFilter,
       excludeTagIds: excludeTagIdsFilter,
       segmentId: segmentIdFilter || undefined,
       responsibleEmployee: responsibleEmployeeFilter || undefined,
@@ -425,6 +441,7 @@ export function ClientManagementPage() {
       responsibleEmployeeIdsFilter,
       responsibleSearcherFilter,
       unassignedOnlyFilter,
+      hasVerifiedPaymentFilter,
       dateOfSaleFromFilter,
       dateOfSaleToFilter,
       debtRangeFromFilter,
@@ -528,6 +545,7 @@ export function ClientManagementPage() {
       responsibleEmployeeIdsFilter,
       responsibleSearcherFilter,
       unassignedOnlyFilter,
+      hasVerifiedPaymentFilter,
       dateOfSaleFromFilter,
       dateOfSaleToFilter,
       debtRangeFromFilter,
@@ -563,6 +581,7 @@ export function ClientManagementPage() {
       excludeTagIdsFilter.length > 0 ||
       segmentIdFilter > 0 ||
       unassignedOnlyFilter ||
+      hasVerifiedPaymentFilter ||
       dateOfSaleFromFilter !== '' ||
       dateOfSaleToFilter !== '' ||
       taDateFromFilter !== '' ||
@@ -605,6 +624,7 @@ export function ClientManagementPage() {
     responsibleEmployeeIdsFilter,
     responsibleSearcherFilter,
     unassignedOnlyFilter,
+    hasVerifiedPaymentFilter,
     dateOfSaleFromFilter,
     dateOfSaleToFilter,
     debtRangeFromFilter,
@@ -643,6 +663,7 @@ export function ClientManagementPage() {
       excludeTagIdsFilter.length > 0 ||
       segmentIdFilter > 0 ||
       unassignedOnlyFilter ||
+      hasVerifiedPaymentFilter ||
       dateOfSaleFromFilter !== '' ||
       dateOfSaleToFilter !== '' ||
       taDateFromFilter !== '' ||
@@ -692,6 +713,8 @@ export function ClientManagementPage() {
             if (parsed.responsibleSearcherFilter)
               setResponsibleSearcherFilter(parsed.responsibleSearcherFilter)
             if (parsed.unassignedOnlyFilter) setUnassignedOnlyFilter(parsed.unassignedOnlyFilter)
+            if (parsed.hasVerifiedPaymentFilter)
+              setHasVerifiedPaymentFilter(parsed.hasVerifiedPaymentFilter)
             if (parsed.dateOfSaleFromFilter) setDateOfSaleFromFilter(parsed.dateOfSaleFromFilter)
             if (parsed.dateOfSaleToFilter) setDateOfSaleToFilter(parsed.dateOfSaleToFilter)
             if (parsed.debtRangeFromFilter) setDebtRangeFromFilter(parsed.debtRangeFromFilter)
@@ -933,6 +956,12 @@ export function ClientManagementPage() {
       params.rr_status_in = filters.rrStatusIds.join(',')
     }
 
+    // Sent only when ticked: the backend defaults it to false, and an explicit
+    // `false` would still register as a set filter in its audit snapshot.
+    if (filters.hasVerifiedPayment) {
+      params.has_verified_payment = true
+    }
+
     // FILTER 10: Priority
     if (selectedPriorities.length > 0) {
       // Map priority labels to lowercase for API
@@ -1146,34 +1175,10 @@ export function ClientManagementPage() {
   }, [apiClients, thresholds, userNameMap, showHiddenTags, operatorAllowedTags])
 
   // Count applied filters
-  const appliedFiltersCount = useMemo(() => {
-    let count = 0
-    if (filters.debtRangeFrom || filters.debtRangeTo) count++
-    if (filters.principalRangeFrom || filters.principalRangeTo) count++
-    // DPD Range not yet implemented (days past due not calculated)
-    // if (filters.dpdRangeFrom || filters.dpdRangeTo) count++
-    if (filters.dateOfSaleFrom || filters.dateOfSaleTo) count++
-    if (filters.taDateFrom || filters.taDateTo) count++
-    if (filters.interactionUserIds && filters.interactionUserIds.length > 0) count++
-    if (filters.interactionDateFrom || filters.interactionDateTo) count++
-    if (filters.assignmentDateFrom || filters.assignmentDateTo) count++
-    if (filters.portfolio && filters.portfolio.length > 0) count++
-    if (
-      (filters.tagIds && filters.tagIds.length > 0) ||
-      (filters.excludeTagIds && filters.excludeTagIds.length > 0) ||
-      filters.segmentId
-    )
-      count++
-    if (filters.responsibleEmployeeIds && filters.responsibleEmployeeIds.length > 0) count++
-    if (filters.responsibleSearcher) count++
-    if (filters.unassignedOnly) count++
-    if (filters.chainIds && filters.chainIds.length > 0) count++
-    if (filters.chainStepIds && filters.chainStepIds.length > 0) count++
-    if (filters.stepValues && Object.keys(filters.stepValues).length > 0) count++
-    if (selectedPriorities.length > 0) count++
-    if (selectedV3Buckets.length > 0) count++
-    return count
-  }, [filters, selectedPriorities, selectedV3Buckets])
+  const appliedFiltersCount = useMemo(
+    () => countAppliedFilters(filters, selectedPriorities, selectedV3Buckets),
+    [filters, selectedPriorities, selectedV3Buckets]
+  )
 
   // All filtering (including search) is now handled server-side
   const filteredClients = displayClients
@@ -1593,6 +1598,9 @@ export function ClientManagementPage() {
     if (newFilters.unassignedOnly !== unassignedOnlyFilter) {
       setUnassignedOnlyFilter(newFilters.unassignedOnly || false)
     }
+    if (newFilters.hasVerifiedPayment !== hasVerifiedPaymentFilter) {
+      setHasVerifiedPaymentFilter(newFilters.hasVerifiedPayment || false)
+    }
     if (newFilters.dateOfSaleFrom !== dateOfSaleFromFilter) {
       setDateOfSaleFromFilter(newFilters.dateOfSaleFrom || '')
     }
@@ -1694,6 +1702,7 @@ export function ClientManagementPage() {
     setResponsibleEmployeeIdsFilter([])
     setResponsibleSearcherFilter('')
     setUnassignedOnlyFilter(false)
+    setHasVerifiedPaymentFilter(false)
     setDateOfSaleFromFilter('')
     setDateOfSaleToFilter('')
     setDebtRangeFromFilter(0)
@@ -1766,10 +1775,16 @@ export function ClientManagementPage() {
       align: 'left',
       sortable: true,
       sortKey: 'fullName',
+      obscured: true,
       render: (client) => (
         <Link
-          to={`/dashboard/clients/${client.id}`}
+          to={`/dashboard/clients/${client.id}?from=list`}
           className="text-primary-700 hover:text-primary-600 cursor-pointer text-left hover:underline"
+          // The cell's text is asterisks in a replay, so the click label must
+          // not be built from it. The tracker falls back to a class selector
+          // before the text, which would work here by accident; the explicit
+          // label says what the click WAS rather than what it looked like.
+          data-openreplay-label="client-name-link"
         >
           {client.fullName}
         </Link>
@@ -1783,10 +1798,10 @@ export function ClientManagementPage() {
       sortKey: 'taxIdNumber',
       render: (client) => (
         <Link
-          to={`/dashboard/clients/${client.id}`}
+          to={`/dashboard/clients/${client.id}?from=list`}
           className="text-primary-700 hover:text-primary-600 cursor-pointer text-left hover:underline"
         >
-          {client.taxIdNumber}
+          {client.taxIdNumber ?? '—'}
         </Link>
       ),
     },
@@ -1895,11 +1910,17 @@ export function ClientManagementPage() {
       key: 'employeeName',
       header: t('pages.clients.tableHeaders.employee'),
       align: 'left',
+      // An employee's full name is a person's name like any other. These two
+      // columns have no `render`, so DataTable prints the raw field — which is
+      // also why the static audit cannot see them and why they are marked here
+      // by reading the list rather than by following its output.
+      obscured: true,
     },
     {
       key: 'searcherName',
       header: t('pages.clients.tableHeaders.searcher'),
       align: 'left',
+      obscured: true,
     },
     {
       key: 'assignmentDate',

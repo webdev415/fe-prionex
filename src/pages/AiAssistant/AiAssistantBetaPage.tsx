@@ -95,6 +95,8 @@ import {
   type ToolStep,
   type ToolStepStatus,
 } from './ReasoningActivityPanel'
+import { piiProps } from '@/lib/openreplay/pii'
+import { PiiTooltip } from '@/components/ui/PiiTooltip'
 
 const QUICK_ACTION_KEYS = ['quickClientData', 'quickDebt', 'quickReport', 'quickEmployee'] as const
 type QuickActionKey = (typeof QUICK_ACTION_KEYS)[number]
@@ -2619,8 +2621,21 @@ export function AiAssistantBetaPage() {
     startServerDictation,
   ])
 
+  /**
+   * Оценка ответа оператором.
+   *
+   * `messageId === null` — серверный id хода неизвестен (прокси не прислал кадр
+   * `persisted`, либо персист не состоялся). Раньше кнопки в этом случае просто не
+   * рисовались: оператор не видел ни оценки, ни причины, а на проде это означало
+   * НОЛЬ жалоб за 23 дня при живых ходах. Теперь кнопка есть всегда и вслух
+   * говорит, почему не вышло, — молчаливого провала здесь больше нет.
+   */
   const handleFeedback = useCallback(
-    (messageId: number, patch: Partial<MessageFeedback>) => {
+    (messageId: number | null, patch: Partial<MessageFeedback>) => {
+      if (messageId == null) {
+        toast.error(t('pages.aiAssistant.feedbackUnavailable'))
+        return
+      }
       const previous = feedbackByMessage[messageId]
       const merged: MessageFeedback = { ...previous, ...patch }
       setFeedbackByMessage((current) => ({ ...current, [messageId]: merged }))
@@ -2628,7 +2643,9 @@ export function AiAssistantBetaPage() {
         { message_id: messageId, ...merged },
         {
           onError: () => {
-            toast.error(t('pages.aiAssistant.apiError'))
+            // Свой текст, а не общий apiError: «оценка не сохранилась» и
+            // «ассистент недоступен» — разные события для оператора.
+            toast.error(t('pages.aiAssistant.feedbackFailed'))
             setFeedbackByMessage((current) => ({ ...current, [messageId]: previous ?? {} }))
           },
         }
@@ -2804,8 +2821,10 @@ export function AiAssistantBetaPage() {
     )
   }
 
-  const renderFeedbackControls = (serverMessageId: number) => {
-    const feedback = feedbackByMessage[serverMessageId] ?? {}
+  const renderFeedbackControls = (serverMessageId: number | null) => {
+    // Без серверного id хранить нечего — состояние пустое, а клик уходит в
+    // honest-путь handleFeedback (тост, не тишина).
+    const feedback = serverMessageId == null ? {} : (feedbackByMessage[serverMessageId] ?? {})
     const ratingLocked = feedback.rating != null
     const comprehensionLocked = feedback.comprehension != null
 
@@ -2913,12 +2932,10 @@ export function AiAssistantBetaPage() {
       {renderTtsButton(item)}
       {renderThinkingFact(item)}
       {item.expert && renderExpertCost(item.expert)}
-      {item.serverMessageId != null && (
-        <>
-          <span className="bg-border mx-0.5 h-4 w-px" aria-hidden />
-          {renderFeedbackControls(item.serverMessageId)}
-        </>
-      )}
+      {/* Оценка есть у ЛЮБОГО дописанного ответа. Прятать её при неизвестном
+          серверном id значило прятать и сам факт, что оценить нельзя. */}
+      <span className="bg-border mx-0.5 h-4 w-px" aria-hidden />
+      {renderFeedbackControls(item.serverMessageId ?? null)}
     </div>
   )
 
@@ -3143,6 +3160,14 @@ export function AiAssistantBetaPage() {
                             'whitespace-pre-wrap',
                           item.isError && 'border-error-200 bg-error-50/60 text-error-700'
                         )}
+                        // The conversation itself (KAN-KB-54): operators ask about
+                        // clients by name and the answers quote the data back. One
+                        // attribute on the bubble covers every TEXT NODE inside it —
+                        // the question, the answer, the citations, the attachment
+                        // names as displayed. It covers no attribute: those the
+                        // tracker sends verbatim, which is why the attachment card
+                        // below carries no `title` and uses <PiiTooltip> instead.
+                        {...piiProps}
                       >
                         {item.attachments && item.attachments.length > 0 && (
                           <div className={cn('flex flex-col gap-2', item.content && 'mb-2')}>
@@ -3168,12 +3193,17 @@ export function AiAssistantBetaPage() {
                                   >
                                     <AttachmentIcon mime={attachment.mime} />
                                     <div className="min-w-0">
-                                      <p
-                                        className="max-w-[14rem] truncate text-xs font-medium"
-                                        title={attachment.name}
-                                      >
-                                        {attachment.name}
-                                      </p>
+                                      {/* A file attached to a client's case is
+                                          named after the client more often than
+                                          not. The hover-reveal of the truncated
+                                          name goes through a tooltip, whose
+                                          content is a text node the markup
+                                          masks; a `title` would be sent as-is. */}
+                                      <PiiTooltip label={attachment.name}>
+                                        <p className="max-w-[14rem] truncate text-xs font-medium">
+                                          {attachment.name}
+                                        </p>
+                                      </PiiTooltip>
                                       {attachment.sizeBytes != null && (
                                         <p className="text-[11px] opacity-70">
                                           {formatAttachmentSize(attachment.sizeBytes)}
@@ -3363,21 +3393,27 @@ export function AiAssistantBetaPage() {
                     >
                       <AttachmentIcon mime={attachment.mime} />
                       <div className="min-w-0">
-                        <p
-                          className="text-foreground max-w-[11rem] truncate text-xs font-medium"
-                          title={attachment.name}
-                        >
-                          {attachment.name}
-                        </p>
+                        <PiiTooltip label={attachment.name}>
+                          <p
+                            className="text-foreground max-w-[11rem] truncate text-xs font-medium"
+                            {...piiProps}
+                          >
+                            {attachment.name}
+                          </p>
+                        </PiiTooltip>
                         <p className="text-muted-foreground text-[11px]">
                           {formatAttachmentSize(attachment.sizeBytes)}
                         </p>
                       </div>
                       <button
                         type="button"
-                        aria-label={t('pages.aiAssistant.attachmentRemove', {
-                          name: attachment.name,
-                        })}
+                        // The role, not the file name: an aria-label is sent to
+                        // the recording verbatim. The name is right beside the
+                        // button as (masked) text, so nothing is lost for a reader.
+                        aria-label={t(
+                          'pages.aiAssistant.attachmentRemoveShort',
+                          'Remove attachment'
+                        )}
                         onClick={() => removePendingAttachment(attachment.id)}
                         className="text-muted-foreground hover:text-foreground hover:bg-muted flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors"
                       >
@@ -3396,12 +3432,14 @@ export function AiAssistantBetaPage() {
                   >
                     <span className="border-primary-500 h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-t-transparent" />
                     <div className="min-w-0">
-                      <p
-                        className="text-foreground max-w-[11rem] truncate text-xs font-medium"
-                        title={item.name}
-                      >
-                        {item.name}
-                      </p>
+                      <PiiTooltip label={item.name}>
+                        <p
+                          className="text-foreground max-w-[11rem] truncate text-xs font-medium"
+                          {...piiProps}
+                        >
+                          {item.name}
+                        </p>
+                      </PiiTooltip>
                       <p className="text-muted-foreground text-[11px]">
                         {t('pages.aiAssistant.attachPreparing')}
                       </p>

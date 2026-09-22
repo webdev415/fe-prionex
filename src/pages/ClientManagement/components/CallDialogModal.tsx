@@ -25,6 +25,7 @@ import type { IncomingModalLoan } from '@/stores/callStore'
 import { useCallDetails, useHangupCall, useRejectCall } from '@/features/calls/hooks/useCall'
 import type { IncomingCallClient } from '@/features/calls/types'
 import { useCallStateUpdates } from '@/features/calls/hooks/useCallStateUpdates'
+import { useCallingWindow } from '@/features/calls/hooks/useCallingWindow'
 import { useSetLastCallResultFromCall } from '@/features/contactTags/hooks/useContactTags'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { formatMoneyUAHTwoDecimals } from '@/lib/formatters'
@@ -32,6 +33,7 @@ import {
   CALL_MODAL_AUTO_CLOSE_SECONDS,
   CALL_MODAL_AUTO_CLOSE_MAX_WAIT_MS,
 } from '@/features/calls/constants/callModal'
+import { piiProps } from '@/lib/openreplay/pii'
 
 export type CallState = 'initial' | 'dialing' | 'connected' | 'ended' | 'failed' | 'incoming'
 export type CallType = 'white-line' | 'gray-line' | 'spam-calls'
@@ -288,9 +290,16 @@ export function CallDialogModal({
     }
   }, [open])
 
-  const canPlaceCall = !manualPhoneEnabled
+  // The project's calling window (KAN-1107). Server-decided; the button only
+  // reflects it. Origination is refused server-side either way — this stops
+  // the operator making a call they will be told off for, rather than being
+  // the control itself.
+  const callingWindow = useCallingWindow(clientId)
+
+  const hasDialTarget = !manualPhoneEnabled
     ? String(phoneNumber).trim().length > 0
     : isValidManualDialPhone(manualPhoneDigits)
+  const canPlaceCall = hasDialTarget && callingWindow.allowed
 
   const handleManualPhoneChange = (raw: string) => {
     setManualPhoneDigits(raw.replace(/\D/g, '').slice(0, 12))
@@ -983,7 +992,7 @@ export function CallDialogModal({
                 </div>
               </div>
             </ModalContent>
-            <ModalFooter className="flex-col gap-2 sm:flex-row sm:gap-3">
+            <ModalFooter className="flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
               <Button
                 variant="cancel"
                 size="sm"
@@ -1030,6 +1039,15 @@ export function CallDialogModal({
                       : t('pages.clients.modals.callDialog.callNow')}
                 </Button>
               )}
+              {/* Under the button, not in it: the refusal is a sentence, and a
+                  sentence as a label wraps across a full-width button and
+                  costs it its identity. The cooldown case beside it keeps a
+                  short label for the same reason. */}
+              {callType !== 'spam-calls' && !callingWindow.allowed && callingWindow.message && (
+                <p className="text-muted-foreground mt-2 w-full basis-full text-center text-xs leading-[140%]">
+                  {callingWindow.message}
+                </p>
+              )}
             </ModalFooter>
           </>
         )}
@@ -1044,7 +1062,10 @@ export function CallDialogModal({
               <div className="border-border bg-muted flex h-16 w-16 items-center justify-center rounded-full border-2 sm:h-20 sm:w-20">
                 <Icons.Headset size={32} className="text-foreground sm:size-10" strokeWidth={1.5} />
               </div>
-              <div className="text-foreground text-center text-xl font-semibold sm:text-2xl">
+              <div
+                className="text-foreground text-center text-xl font-semibold sm:text-2xl"
+                {...piiProps}
+              >
                 {clientName}
               </div>
               <div
@@ -1280,7 +1301,7 @@ function IncomingClientPicker({
                 value={String(candidate.client_id)}
                 id={`incoming-client-${candidate.client_id}`}
               />
-              <span className="text-foreground text-xs font-medium sm:text-sm">
+              <span className="text-foreground text-xs font-medium sm:text-sm" {...piiProps}>
                 {candidate.client_name}
               </span>
             </label>
@@ -1349,7 +1370,9 @@ function IncomingCallContext({
   return (
     <div className="border-border flex flex-col gap-3 rounded-lg border p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="text-foreground text-sm font-semibold">{context.client_name}</span>
+        <span className="text-foreground text-sm font-semibold" {...piiProps}>
+          {context.client_name}
+        </span>
         {targetClientId ? (
           <a
             href={`/dashboard/clients/${targetClientId}`}
@@ -1461,7 +1484,9 @@ function LoanCard({ loan }: { loan: IncomingModalLoan }) {
             {loan.score}
           </div>
           <div className="flex flex-col">
-            <div className="text-foreground text-xs font-medium sm:text-sm">
+            {/* Name and loan number arrive as one line; the number is digits,
+                which the tracker masks anyway. */}
+            <div className="text-foreground text-xs font-medium sm:text-sm" {...piiProps}>
               {loan.clientName} - {t('pages.clients.detail.tableHeaders.loanNumber')} #
               {loan.loanNumber}
             </div>

@@ -6,6 +6,7 @@ export function renderMessagingTemplate(
   if (!templateText) return ''
 
   return templateText.replace(/\{\{\s*([a-zA-Z_][a-zA-Z0-9_.]*)\s*\}\}/g, (match, varName) => {
+    if (!Object.prototype.hasOwnProperty.call(variables, varName)) return match
     const value = variables[varName]
     return value !== undefined && value !== '' ? value : match
   })

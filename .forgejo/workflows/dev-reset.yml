@@ -1,5 +1,38 @@
 name: Weekly DEV Reset
 
+# 🔴 ── 2026-09-21: this file now RESETS THE BRANCH, not only the stand ───────────────────
+# Everything below this block was written when the job's whole destructive surface was a sweep of
+# untagged images. It no longer is: the `Reset the dev branch` step now WRITES TO `refs/heads/dev`.
+#
+# 🔴 Corrected 2026-09-21, second review: it does NOT force-update and it does NOT destroy
+# commits — it cannot. This instance (Forgejo 15.0.5+gitea-1.22.0) refuses every non-fast-forward
+# push to a protected branch in `preReceiveBranch`, BEFORE it looks at who is pushing, and this
+# release line has no force-push allowlist at all. The original design — deploy key + force-update
+# — was impossible here and the "phase 2 accepted" that seemed to confirm it was a false positive
+# (what was tested was `git ls-remote` and a TAG push; tags are not covered by branch protection).
+# The step now fast-forwards `dev` onto a CATCH-UP COMMIT whose tree is main's tree: every file
+# becomes identical to `main`, while the superseded commits stay reachable from `dev` forever.
+# Read `docs/dev-weekly-reset-plan.md` §4.2 before changing anything in that step — in particular:
+#
+#   • The "no volumes, no data, worst case is DEV serves main" argument below is about THE STAND
+#     and does NOT extend to the branch. The manual run of this procedure on 2026-09-21 discarded
+#     65 commits; that was a deliberate act under supervision. A schedule does it unwatched. The
+#     three things that make it survivable are all in that step and none is decoration: an
+#     ANNOTATED archive tag pushed BEFORE the branch moves (so the discarded work is recoverable
+#     and the run leaves a permanent record where nothing else on this instance can — job logs
+#     404 and no `$GITHUB_STEP_SUMMARY` row has ever been found in this repository's data), a
+#     preflight count with a REFUSAL ceiling, and `--force-with-lease` against the exact SHA the
+#     count was taken on.
+#   • `MAX_DISCARDED` is a blast-radius ceiling in the same sense as `MAX_CANDIDATES` in the sweep,
+#     not a tuning knob. Its value is measured (weekly unique-commit volume on the old `dev`,
+#     W23–W38 2026: 41–99 normal, 279 peak; a month of the schedule silently not running is
+#     ≈260). Raising it is a decision about how much unwatched destruction is acceptable.
+#   • The push credential is a REPOSITORY DEPLOY KEY (`dev-weekly-reset`), not a user token, and
+#     that choice is the exit plan: a deploy key is deleted by a repository admin in one step,
+#     whereas a user token on this instance cannot be revoked by anyone but its owner. Plan §3.2.
+#
+# ── the original header follows, still accurate for the sweep and the dispatch ────────────
+#
 # Story 4.6. A TRIGGER, almost nothing else (Dev Notes §1). The deploy already exists and is
 # live-proven (`deploy-dev.yml`, runs 929/938/950/962/965/968/973); the image this file asks for is
 # published on every merge to `main` by `build-main.yml`, written for exactly this reason
@@ -109,6 +142,15 @@ name: Weekly DEV Reset
 # to produce on a schedule. That difference is why this file may arm a schedule where theirs could
 # not.
 #
+# 🔴 AMENDED 2026-09-21, and the amendment is the important half: the paragraph above is now only
+# HALF of what this job does. It argues that resetting THE STAND unattended is safe because the
+# stand holds nothing. That argument is sound and unchanged. It does NOT carry over to resetting
+# THE BRANCH, which this job now also does: a branch holds work, the worst outcome there is not
+# "DEV serves main" but "somebody's commits are gone", and the sibling project's "protection by
+# coincidence" near-miss is therefore live again for the new half. The compensating controls are
+# named in the block at the very top of this file and implemented in the reset step itself; they
+# are what makes the branch half survivable, not this paragraph.
+#
 # 🔴 ── Disarm procedure, pre-agreed (DN3(iii)) ─────────────────────────────────────────────────
 # To pull this schedule out of production: comment out the ENTIRE `schedule:` block below — never
 # leave the key present with zero items (Task 2.7 — an empty `schedule:` key may be rejected
@@ -130,7 +172,60 @@ name: Weekly DEV Reset
 # (destructive command's own stderr discarded); both fixed below, in the same idiom, not a new one.
 
 on:
-  schedule:
+  # 🔴 ── DISARMED ON MERGE, DELIBERATELY (code review Medium, 2026-09-21) ────────────────────
+  # The whole `schedule:` block below is commented out, in this file's own pre-agreed disarm
+  # shape (see the disarm note in the header: comment the ENTIRE block, never leave the key with
+  # zero items — an empty `schedule:` may be rejected outright, and a rejected file surfaces as a
+  # run with one job and no log, indistinguishable from success).
+  #
+  # Why it ships disarmed rather than armed. A push to `main` re-registers this repository's
+  # schedules, so merging an armed block would arm `1 0 * * 1` **immediately** — and the branch
+  # half of this job has never executed live. As of this commit the reset step has been exercised
+  # only against local fixture repositories; the SSH path, the deploy key, the branch-protection
+  # interaction and the leased push have never run end to end from the `deploy-dev-preprod`
+  # runner. The plan's own phase 4 requires a manual `workflow_dispatch` as the proof BEFORE any
+  # scheduled run, and with Story 4.5 still open there is no failure notification — so an armed
+  # merge late in the week would make the first-ever execution of this code both unattended and
+  # unwatched. Commit loss is well guarded (the archive tag is written and read back before the
+  # branch moves), so the realistic worst case is a red run or a reset without its deploy; that
+  # is still not a thing to discover on a Monday at 00:01 UTC.
+  #
+  # 🔴 THE PRICE OF SHIPPING DISARMED, named because it is easy to miss (code review Low): a
+  # push to `main` WIPES and re-registers this repository's schedules, so merging this does not
+  # merely fail to arm the new cron — it REMOVES the `0 2 * * 0` row that is registered and live
+  # today, and with it the Sunday stand-only reset that has been running since runs 1019-1041.
+  # Between this merge and phase 4 the DEV stand is not brought to `main` on any schedule at all,
+  # and nothing announces that. Accepted deliberately: the stand reset is recoverable by a manual
+  # `workflow_dispatch` of this same file, whereas an armed-but-unproven destructive schedule is
+  # not recoverable by anything. Do not let phase 4 slip quietly.
+  #
+  # ✅ TO ARM: uncomment the two lines below — the `schedule:` key and its single `- cron:` item —
+  # and push to `main`. The push itself is the registration; no separate action is needed. Do it
+  # only after a manual `workflow_dispatch` of this workflow has driven the branch reset for real
+  # (plan §6, phase 4). One line of diff, and it is the whole of phase 4's arming step.
+  #
+  # schedule:
+    # 🔴 2026-09-21, Oleg's decision (`docs/dev-weekly-reset-plan.md` §5): `1 0 * * 1`, replacing
+    # `0 2 * * 0`. Literal 00:01 UTC on MONDAY — 02:01 CEST in summer, 01:01 CET in winter. The
+    # move from Sunday to Monday is the point: this job now resets the BRANCH, and the week's work
+    # should start from a branch that was reset at the start of the week, not two-thirds of the way
+    # through the weekend.
+    #
+    # Why a Monday-UTC expression and not a Monday-LOCAL one: no UTC cron can be "00:01 local
+    # Monday" all year, and the two candidates that hit it in one half of the year miss in the
+    # other — `1 23 * * 0` is 00:01 CET Monday in winter but 01:01 CEST in summer, and `1 22 * * 0`
+    # is 00:01 CEST Monday in summer but 23:01 CET on SUNDAY in winter. This expression is instead
+    # read in exactly the scale the instance evaluates it in, and a UTC expression has no DST
+    # transition at all: the local hour drifts by one twice a year, but the firing instant never
+    # shifts and can neither be skipped nor fired twice, which is the failure mode that actually
+    # matters for a destructive job. The night window holds in both halves of the year.
+    #
+    # Validated against a 5-field-exact parser before this line was pushed — see the load-bearing
+    # note in the header: a spec this instance cannot parse AT TICK TIME persistently DISABLES the
+    # workflow, a pushed fix does not revive it, and codeberg #12566 reports it can take the whole
+    # repository's push triggers down with it.
+    #
+    # ── the original note on the superseded Sunday value, kept for its measurements ─────────
     # Every Sunday, 02:00 UTC — 04:00 CEST (summer) / 03:00 CET (winter). Task 2.6: this instance's
     # schedule spec carries no time_zone, which Forgejo evaluates as UTC; the value here IS the UTC
     # instant, not a local one converted at read time. Validated locally against a 5-field-exact
@@ -143,7 +238,7 @@ on:
     # own — not `PRIONEX_HUB`'s 1s, recorded as this repository's own measurement rather than
     # assumed to generalise. Post-PR-B state re-verified by query: exactly one `action_schedule_spec`
     # row survives (`spec='0 2 * * 0'`), the probe spec is gone.
-    - cron: '0 2 * * 0'
+    # - cron: '1 0 * * 1'
   workflow_dispatch: {}
     # Zero inputs, deliberately (AC1). The epic's own text only asks for "can also be dispatched
     # manually" — this is stronger, and the strength is the point: with no ref/tag/environment a
@@ -162,12 +257,19 @@ env:
 
 jobs:
   reset:
-    name: "Weekly reset — sweep, then dispatch deploy-dev.yml(ref=main)"
+    name: "Weekly reset — sweep, catch dev up to main, then dispatch deploy-dev.yml"
     runs-on: deploy-dev-preprod
     # Task 3.4: small on purpose. This job dispatches and sweeps; it does not deploy, and it must
     # not be able to sit inside the shared concurrency group for long (see the self-deadlock note
-    # above) — 5 minutes is generous for a job whose own steps are a handful of docker/curl calls.
-    timeout-minutes: 5
+    # above) — 5 minutes was generous for a job whose own steps were a handful of docker/curl
+    # calls.
+    # 🔴 Raised to 8 on 2026-09-21, with the reason rather than the habit: the branch reset adds a
+    # clone (28 MiB packed, seconds on this host's own network) and two pushes, so the headroom
+    # shrank while the number of ways to be slow grew. 3 extra minutes of group hold is cheap; a
+    # timeout that fires in the middle of the reset step is not — the step is ordered so that a
+    # kill at any point leaves a harmless state (the archive tag can exist without the branch
+    # having moved; the reverse cannot happen), but that ordering is a safety net, not a plan.
+    timeout-minutes: 8
     steps:
       - name: Sweep stale images and lock-holder debris (Task 5, AC4)
         id: sweep
@@ -471,11 +573,670 @@ jobs:
         run: |
           set -euo pipefail
           echo "⚠️ SWEEP STEP FAILED — hygiene was skipped this cycle. This is NOT fatal to the"\
-               "reset (the dispatch below still runs unconditionally), but it means stale"\
-               "images/holders were NOT cleaned this time. See the sweep step's own output above"\
-               "for where it broke."
+               "reset: BOTH the branch reset and the dispatch below carry 'if: always()' and run"\
+               "regardless. It means only that stale images/holders were NOT cleaned this time."\
+               "See the sweep step's own output above for where it broke."
+          # 🔴 Code review Medium, 2026-09-21: this message used to say "the dispatch below still
+          # runs unconditionally" and name only the dispatch. That was true of the dispatch and
+          # FALSE of the branch reset, which had no `if:` at all and was therefore skipped by the
+          # implicit `success()` exactly when this notice was printing that nothing was wrong.
+          # Both now carry `always()`; the sentence names both so it cannot drift back.
 
-      - name: Dispatch deploy-dev.yml with ref=main (Task 4, AC3, AC6)
+      # ═══════════════════════════════════════════════════════════════════════════════════════
+      # THE DESTRUCTIVE STEP. Everything above this point either reads or removes debris; this
+      # step writes to a shared branch. It no longer throws commits away — see the catch-up note
+      # in section 5 — but it does change what every developer on `dev` sees next time they pull. `docs/dev-weekly-reset-plan.md`
+      # §4.2 is its specification and the block at the top of this file is its warning label.
+      #
+      # ── Order of operations, and why this exact order ──────────────────────────────────────
+      #   1. read both SHAs and PIN them          — everything after this uses the pinned values,
+      #                                             so a push landing on `main` mid-run cannot make
+      #                                             the count describe one commit and the reset
+      #                                             another
+      #   2. count what would be superseded       — `git cherry`, the same measure §2 of the plan
+      #                                             took by hand (commits already in `main` in
+      #                                             another shape are NOT counted as losses)
+      #   3. refuse if over MAX_DISCARDED         — before anything is written, so a refusal costs
+      #                                             nothing and changes nothing
+      #   4. write the ANNOTATED archive tag      — BEFORE the branch moves. If the job dies here,
+      #                                             the state is a harmless extra tag.
+      #   5. fast-forward `dev` under a LEASE     — against the SHA step 1 pinned, so if `dev`
+      #                                             moved after the count the server refuses,
+      #                                             rather than the job silently superseding the
+      #                                             commits that arrived in between
+      #   6. read the branch back                 — an exit code is not evidence on this instance
+      #                                             (Story 1.10)
+      # The order is what makes a kill at any point safe: a tag can exist without the branch having
+      # moved, and the reverse cannot happen.
+      #
+      # ── Why the record lives in the TAG's message ──────────────────────────────────────────
+      # Not in the log, and not in `$GITHUB_STEP_SUMMARY`. Job logs are not retrievable through
+      # this instance's API at all (404 on every endpoint, and there is no per-job endpoint
+      # either — re-measured 2026-09-21), and no `$GITHUB_STEP_SUMMARY` content has ever been
+      # found in this repository's Forgejo data for any past run. An annotated tag's message is
+      # the only place a weekly, unattended, destructive job on this instance can write something
+      # a human will still be able to read a month later. It costs one ref, it lives outside every
+      # branch, it survives the next reset, and writing it needs no permission on `main` — so it
+      # does not widen the deploy key's blast radius by one byte.
+      #
+      # ── Credential: a repository DEPLOY KEY, over SSH ──────────────────────────────────────
+      # `DEV_RESET_SSH_KEY` is the private half of the `dev-weekly-reset` deploy key on this
+      # repository (plan §3.4 A1). Chosen over a bot account's token because the EXIT PLAN is the
+      # deciding property, not convenience: a deploy key is removed by a repository admin in one
+      # step, immediately and completely, whereas a user token on this instance is issued
+      # permanently, cannot have its scope widened after minting, and cannot be revoked by anyone
+      # but its owner — not even by an instance administrator (plan §3.2). Reaching the instance
+      # over SSH on port 2222 was not assumed: it was probed on THIS runner label before this step
+      # was written (plan §6 phase 2.0 — `git`, `ssh`/`ssh-keyscan` and outbound TCP 2222 all
+      # confirmed present/open, 2026-09-21, by three throwaway dispatches whose run status WAS the
+      # answer, since no other channel here is machine-readable). The
+      # `https://x-access-token:<token>@…` form used by `mirror-github.yml` is deliberately NOT
+      # copied here: that remote is GitHub, and the form is GitHub's.
+      #
+      # 🔴 The host key is PINNED to a literal fingerprint, not trusted on first use. An unattended
+      # job that runs `ssh-keyscan` and then trusts whatever came back has no host authentication
+      # at all — it would hand the deploy key to whatever answers on port 2222. The literal below
+      # is this instance's ED25519 host key as the operator's own workstation already holds it in
+      # `known_hosts` (verified by use, not merely by a scan taken at the same moment). If the
+      # instance's host key is ever rotated this step goes red saying exactly that; update the
+      # literal, deliberately, rather than removing the check.
+      - name: "Reset the dev branch to main (plan §4.2 — archive, count, refuse, update)"
+        # 🔴 Code review Medium, 2026-09-21. Without this the step carries the IMPLICIT
+        # `success()` and is therefore skipped whenever the sweep above it fails — which silently
+        # reverses this file's own H4 decision. The failure mode is quiet and compounding: image
+        # hygiene breaking on the runner would stop the BRANCH being reset week after week, the
+        # unique-commit count would climb past MAX_DISCARDED, and from then on the job would
+        # refuse on the ceiling instead — a second wrong reason stacked on the first. The sweep is
+        # a chore attached to this job; it was never a gate on it, and the notice step above says
+        # so in as many words.
+        #
+        # `always()` and not `!cancelled()`, deliberately: `always()` is proven live on this
+        # runner (this file's own notice and dispatch steps), whereas `cancelled()` appears
+        # nowhere in this repository and has never been exercised on this instance. This file does
+        # not put an unmeasured platform function in a destructive path — that is the same rule
+        # that got `continue-on-error` removed from the sweep.
+        # ⚠️ The cost of that choice, named rather than hidden: `always()` also fires while a run
+        # is being CANCELLED, so cancelling this job mid-flight can still let the reset execute.
+        # The step is safe to interrupt at any point (the ordering note above), and a cancel
+        # during the ~10s between the tag and the push is the only window where it matters.
+        # Revisit if `cancelled()` is ever measured on this instance.
+        if: ${{ always() }}
+        id: reset
+        env:
+          # 🔴 Repository secret, NOT an org secret. `secrets: inherit` hands a callee every secret
+          # the repository holds; an org-level private key would therefore reach every callee of
+          # every workflow in the org. Plan §3.4 A1.2.
+          DEV_RESET_SSH_KEY: ${{ secrets.DEV_RESET_SSH_KEY }}
+          SSH_HOST: git.crm-prionex.com
+          SSH_PORT: "2222"
+          # The same ED25519 fingerprint the operator's workstation already trusts for this host.
+          HOST_KEY_FINGERPRINT: "SHA256:QAfK8OXxclqteczzPHnOn6CsMH9r9d0jBPctTE99FD0"
+          REPO_PATH: CRM/fe-prionex
+          # 🔴 NOT a blast-radius ceiling any more — see the note at the check itself. A catch-up
+          # commit destroys nothing, so there is no damage to bound; what survives is a "this
+          # schedule has not been running" sanity guard. The value is still measured, not chosen: Measured, not assigned: weekly unique-commit volume on
+          # the old `dev` was 41–99 in an ordinary week (W23–W38 2026) with peaks to 279, and a
+          # month of the schedule silently not running is ≈260. 150 passes every ordinary week and
+          # refuses exactly where a large count means the schedule has NOT been working — which is
+          # the case where acting quietly at scale is worst.
+          MAX_DISCARDED: "150"
+          # 🔴 LOAD-BEARING LITERAL, not a label. It is written as the first token of every
+          # catch-up commit's message AND it is the pattern the next run greps for to find where
+          # to start counting from (step 2). Change it and the counter silently falls back to
+          # counting the whole branch, which inflates every report until the ceiling refuses for
+          # a reason that does not exist. If it ever must change, the old value has to stay
+          # greppable too, or one cycle's count will be wrong.
+          RESET_MARKER: "dev-weekly-reset:"
+          RUN_NUMBER: ${{ github.run_number }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+
+          KEY_VAL="${DEV_RESET_SSH_KEY:-}"
+          # `[ -z ]` alone is false for a whitespace-only value, which would write a key file that
+          # ssh rejects with a format error and send the reader after the wrong cause — the same
+          # shape already fixed on the dispatch step's token check below.
+          if [ -z "$(printf '%s' "$KEY_VAL" | tr -d '[:space:]')" ]; then
+            echo "FAIL: the DEV_RESET_SSH_KEY repository secret is empty, whitespace-only, or not"\
+                 "set on this repository. This is the deploy key the weekly reset writes with"\
+                 "(plan §3.4 A1) — without it the branch cannot be touched at all. NOTHING HAS"\
+                 "BEEN CHANGED: no tag was written and dev was not moved. Fix: re-create the"\
+                 "'dev-weekly-reset' deploy key and store its private half as the repository"\
+                 "secret DEV_RESET_SSH_KEY."
+            exit 1
+          fi
+
+          WORKDIR="$(mktemp -d)" || { echo "FAIL: mktemp -d failed. Nothing has been changed."; exit 1; }
+          # Installed BEFORE the key is written, so the key file cannot outlive this step even if
+          # the very next command dies — the private half never persists on this shared,
+          # multi-tenant runner beyond the step that needs it.
+          trap 'rm -rf "$WORKDIR"' EXIT
+          KEY_FILE="${WORKDIR}/id_ed25519"
+          KNOWN_HOSTS="${WORKDIR}/known_hosts"
+          REPO_DIR="${WORKDIR}/repo"
+
+          # umask first: the file must never exist, even for an instant, with a mode ssh refuses.
+          umask 077
+          printf '%s\n' "$KEY_VAL" > "$KEY_FILE"
+          chmod 600 "$KEY_FILE"
+
+          echo "--- pinning the host key for ${SSH_HOST}:${SSH_PORT} ---"
+          # 🔴 Code review Medium, 2026-09-21 — `-t ed25519` is load-bearing, not tidiness.
+          # Without it `ssh-keyscan` writes EVERY key type the host offers (rsa, ecdsa, ed25519)
+          # into this known_hosts, and the check below only asserts that the pinned ED25519
+          # fingerprint appears SOMEWHERE in that list. The whole file is then handed to ssh. So
+          # an active MITM on this port could answer the scan with the genuine ED25519 key (it is
+          # public) alongside its own RSA key, pass the fingerprint check, then advertise only RSA
+          # during negotiation — ssh would find the attacker's RSA key in the very known_hosts the
+          # scan had just produced, and the deploy key would be offered to the attacker. The
+          # comment below was right that the comparison, not the scan, is the authentication; it
+          # was wrong that the comparison was load-bearing for the connection that followed.
+          # Scanning one algorithm and negotiating that same one is what makes it load-bearing:
+          # the only key ssh can accept is now the only key this check covers. The matching
+          # `-o HostKeyAlgorithms=ssh-ed25519` is on GIT_SSH_COMMAND below — the two belong
+          # together and neither works alone.
+          if ! ssh-keyscan -t ed25519 -T 10 -p "$SSH_PORT" "$SSH_HOST" > "$KNOWN_HOSTS" 2>/dev/null; then
+            echo "FAIL: ssh-keyscan could not reach ${SSH_HOST}:${SSH_PORT}. This is a network or"\
+                 "instance problem, not a credential one. Nothing has been changed."
+            exit 1
+          fi
+          # 🔴 The scan is NOT the authentication — this comparison is. A scan alone is
+          # trust-on-first-use performed fresh on every run, which for an unattended job means no
+          # host authentication whatsoever.
+          # 🔴 Code review Low, 2026-09-21: `|| true` and the emptiness test below are not
+          # belt-and-braces. `ssh-keyscan` exits 0 having written NOTHING when the host answers
+          # but offers no key of the requested type — and then, under `set -euo pipefail`, a bare
+          # `SCANNED_FPS="$(ssh-keygen -lf … | awk …)"` dies at the assignment with no output at
+          # all (reproduced: exit 255, silent). The step would go red on a host-key rotation with
+          # nothing said, and the "update the pinned literal deliberately" guidance below — the
+          # entire reason that message exists — would never print.
+          if [ ! -s "$KNOWN_HOSTS" ]; then
+            echo "FAIL: ${SSH_HOST}:${SSH_PORT} answered but offered no ED25519 host key, so there"\
+                 "is nothing to compare against the pinned fingerprint. If the instance's host key"\
+                 "was rotated to another type deliberately, update the pinned literal AND the"\
+                 "`-t`/`HostKeyAlgorithms` pair in this step together. Nothing has been changed."
+            exit 1
+          fi
+          SCANNED_FPS="$(ssh-keygen -lf "$KNOWN_HOSTS" 2>/dev/null | awk '{print $2}' || true)"
+          # With `-t ed25519` above, this file holds exactly one key, so "appears among the
+          # scanned fingerprints" and "is the key ssh will use" are now the same statement.
+          if ! printf '%s\n' "$SCANNED_FPS" | grep -qxF "$HOST_KEY_FINGERPRINT"; then
+            echo "FAIL: the ED25519 host key offered by ${SSH_HOST}:${SSH_PORT} does not match the"\
+                 "pinned fingerprint. Refusing to offer the deploy key to a host this step cannot"\
+                 "identify. Nothing has been changed."
+            echo "  pinned:  ${HOST_KEY_FINGERPRINT}"
+            echo "  offered: ${SCANNED_FPS}"
+            echo "  If the instance's SSH host key was rotated deliberately, update the pinned"\
+                 "literal in this step — do not delete the check."
+            exit 1
+          fi
+          echo "OK: host key matches the pinned fingerprint."
+
+          # BatchMode=yes so nothing can ever block on a prompt in an unattended job;
+          # IdentitiesOnly/IdentityAgent so a stray agent key on this shared runner can never be
+          # offered in place of the one this job is supposed to act as.
+          # 🔴 `HostKeyAlgorithms=ssh-ed25519` is the other half of the pin above (code review
+          # Medium, 2026-09-21): it forbids ssh from negotiating any host key type other than the
+          # one that was scanned and fingerprint-checked. Without it the check can be satisfied by
+          # one key while the connection is secured by another.
+          export GIT_SSH_COMMAND="ssh -i ${KEY_FILE} -o IdentitiesOnly=yes -o IdentityAgent=none -o UserKnownHostsFile=${KNOWN_HOSTS} -o StrictHostKeyChecking=yes -o HostKeyAlgorithms=ssh-ed25519 -o BatchMode=yes -p ${SSH_PORT}"
+          REMOTE_URL="ssh://git@${SSH_HOST}:${SSH_PORT}/${REPO_PATH}.git"
+
+          echo "--- cloning (history only, no working tree) ---"
+          if ! git clone --quiet --no-checkout "$REMOTE_URL" "$REPO_DIR" 2>&1; then
+            echo "FAIL: could not clone ${REMOTE_URL} with the deploy key. Either the key is not"\
+                 "installed on this repository, or it was removed — which is the documented exit"\
+                 "plan (§3.4 A1.4), so this is what a deliberate shutdown looks like from here."\
+                 "Nothing has been changed."
+            exit 1
+          fi
+          cd "$REPO_DIR"
+
+          # ── 1. PIN both SHAs. Everything after this uses these values and never re-reads. ───
+          MAIN_SHA="$(git rev-parse refs/remotes/origin/main)"
+          DEV_SHA="$(git rev-parse refs/remotes/origin/dev)"
+          for SHA_CHECK in "$MAIN_SHA" "$DEV_SHA"; do
+            if ! printf '%s' "$SHA_CHECK" | grep -q '^[0-9a-f]\{40\}$'; then
+              echo "FAIL: '${SHA_CHECK}' is not a 40-hex commit id. Refusing to act on a ref this"\
+                   "step could not resolve. Nothing has been changed."
+              exit 1
+            fi
+          done
+          echo "pinned main = ${MAIN_SHA}"
+          echo "pinned dev  = ${DEV_SHA}"
+          # 🔴 Code review Medium, 2026-09-21: `main_sha` is deliberately NOT written here.
+          # A value already appended to $GITHUB_OUTPUT survives the step exiting non-zero, so
+          # emitting it at this point made it a valid 40-hex string on EVERY later failure —
+          # the ceiling refusal, a failed tag write, a read-back mismatch, a rejected lease. The
+          # dispatch step below then took its "pinned" branch and announced a deploy of a commit
+          # this run never put on `dev`, while the report step two steps earlier said the reset
+          # had failed: the run's own record contradicting itself, on an instance where that
+          # record is the only thing anybody can read. `main_sha` is now written at exactly the
+          # two points where it is TRUE that `dev` carries it — the confirmed no-op below, and
+          # after the post-push read-back succeeds.
+          echo "old_dev_sha=${DEV_SHA}" >> "$GITHUB_OUTPUT"
+
+          # 🔴 The no-op test is TREES, not SHAs. Under the catch-up design (step header)
+          # `dev` never equals `main` by commit id again after the first cycle — it carries a
+          # catch-up commit on top — so `MAIN_SHA = DEV_SHA` would be false forever and this job
+          # would manufacture a pointless commit every single week. What the stand and the
+          # developers care about is CONTENT, and that is exactly what `git diff --quiet` answers.
+          if git diff --quiet "$MAIN_SHA" "$DEV_SHA"; then
+            echo "OK: dev already has main's tree (dev=${DEV_SHA}, main=${MAIN_SHA}) — the two"\
+                 "differ in history but not in a single file, so there is nothing to catch up."\
+                 "No commit is created and no tag is written. The deploy below still runs, so"\
+                 "the stand is brought to this content regardless."
+            echo "discarded=0" >> "$GITHUB_OUTPUT"
+            echo "reset_performed=false" >> "$GITHUB_OUTPUT"
+            # Safe to pin: the deploy resolves an IMAGE, and main's image is built from exactly
+            # the tree dev is already carrying.
+            echo "main_sha=${MAIN_SHA}" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # ── 2. COUNT what would be lost. ────────────────────────────────────────────────────
+          # `git cherry <upstream> <head>` marks '-' for commits that already have an equivalent
+          # in upstream and '+' for those that do not. Only the '+' lines are real losses — the
+          # 2026-09-21 manual run measured 65 of those against 9 that were already in `main` in
+          # another shape, and counting those 9 as losses would inflate every future report and
+          # push the ceiling towards firing on a week that lost nothing.
+          # 🔴 THE THIRD ARGUMENT IS LOAD-BEARING. Under the catch-up design every previous
+          # week's commits stay reachable from `dev` forever, so a bare `git cherry main dev`
+          # keeps reporting them for the rest of the branch's life: measured on a fixture, week 2
+          # answered "3" when the true answer was 0, and the figure only grows. Left uncorrected
+          # it would inflate every report and eventually trip MAX_DISCARDED on a week that
+          # changed nothing. 🔴 And the opposite mistake is the dangerous one: a limit picked
+          # WRONGLY (a quoting commit, a changed marker) makes the count too LOW and the guard
+          # silently useless — which is why the candidate test below is structural, and why a
+          # rev-list failure above is a hard stop rather than an empty result.
+          # `git cherry <upstream> <head> <limit>` counts only commits in `head` not reachable
+          # from `limit`, and `limit` is the previous catch-up commit, found by the marker its
+          # own message carries.
+          #
+          # No marker found — the very first run, or a `dev` whose history was rewritten by hand
+          # — falls back to the whole branch. That is deliberately the PESSIMISTIC direction: an
+          # over-count can only make the ceiling refuse and report, never act at a scale nobody
+          # authorised.
+          # 🔴 The marker alone is NOT enough to identify a catch-up commit, and trusting it
+          # would fail in the OPTIMISTIC direction — the one direction this file is not allowed
+          # to fail in. `--grep` matches any LINE of the message body, so a developer commit that
+          # merely quotes a catch-up message (a workflow fix pasting an example is the obvious
+          # way) would be picked as the limit and the week's count would come back too LOW.
+          # Measured on a fixture: such a commit made the count report 0 where the truth was 2.
+          # So each candidate is checked STRUCTURALLY, by what a catch-up commit provably is: a
+          # merge (it has a second parent) whose tree equals that second parent's tree (it
+          # carries main's tree). A quoting commit has no second parent and is skipped.
+          # 🔴 Review round 4: `2>/dev/null || true` used to swallow a rev-list FAILURE and
+          # present it as "no previous catch-up" — which now SKIPS the ceiling (see below). That
+          # is the optimistic direction, the one this file may not fail in, and it would have
+          # been invisible. A failure to enumerate and an empty enumeration are separated here.
+          if ! CANDIDATES="$(git rev-list --format='%H %s' --no-commit-header "$DEV_SHA" 2>&1)"; then
+            echo "FAIL: could not enumerate dev's history to find the previous catch-up commit."\
+                 "That is the baseline the whole count depends on, and guessing it would either"\
+                 "inflate the report or skip the ceiling. git said:"
+            printf '%s\n' "$CANDIDATES"
+            echo "Nothing has been changed."
+            exit 1
+          fi
+          # 🔴 Anchored on the SUBJECT, not anywhere in the body. `--grep` matches any line of
+          # the message, so an ordinary PR merge whose body merely quotes a catch-up message
+          # would qualify — and a PR merge has a second parent and, when it branched off dev's
+          # tip, the same tree as that parent, so it passes the structural test too. Reproduced
+          # on a fixture: such a merge was chosen as the limit and the count came back 0 where
+          # the truth was 2. Forgejo's own merge subjects always start with "Merge pull request",
+          # so requiring the marker at the START OF THE SUBJECT leaves only deliberate spoofing.
+          LAST_CATCHUP=""
+          while IFS=' ' read -r CAND_SHA CAND_SUBJECT; do
+            [ -n "$CAND_SHA" ] || continue
+            case "$CAND_SUBJECT" in
+              "${RESET_MARKER}"*) ;;
+              *) continue ;;
+            esac
+            # Structural confirmation on top of the subject: a catch-up commit is a merge whose
+            # tree is its second parent's tree. Both must hold.
+            CAND_P2="$(git rev-parse -q --verify "${CAND_SHA}^2" 2>/dev/null || true)"
+            [ -n "$CAND_P2" ] || continue
+            [ "$(git rev-parse "${CAND_SHA}^{tree}")" = "$(git rev-parse "${CAND_P2}^{tree}")" ] || continue
+            LAST_CATCHUP="$CAND_SHA"
+            break
+          done <<< "$CANDIDATES"
+          if [ -n "$LAST_CATCHUP" ]; then
+            echo "previous catch-up commit: ${LAST_CATCHUP} — counting only what landed after it."
+            set -- "refs/remotes/origin/main" "refs/remotes/origin/dev" "$LAST_CATCHUP"
+          else
+            echo "no previous catch-up commit on dev — counting the WHOLE branch. The number"\
+                 "below is therefore a cumulative total, not this week's work, and the ceiling"\
+                 "does not apply to it (see the ceiling note)."
+            set -- "refs/remotes/origin/main" "refs/remotes/origin/dev"
+          fi
+          CHERRY_OUT="$(git cherry "$@" 2>&1)" || {
+            echo "FAIL: 'git cherry' itself failed — this is the count the refusal ceiling is"\
+                 "based on, so there is no safe way to continue without it. Its own output:"
+            printf '%s\n' "$CHERRY_OUT"
+            echo "Nothing has been changed."
+            exit 1
+          }
+          DISCARDED="$(printf '%s\n' "$CHERRY_OUT" | grep -c '^+' || true)"
+          EQUIVALENT="$(printf '%s\n' "$CHERRY_OUT" | grep -c '^-' || true)"
+          BEHIND="$(git rev-list --count "refs/remotes/origin/dev..refs/remotes/origin/main")"
+          echo "dev carries ${DISCARDED} commit(s) with no equivalent in main (${EQUIVALENT} more"\
+               "are already in main in another shape); main carries ${BEHIND} commit(s) dev lacks."
+          echo "discarded=${DISCARDED}" >> "$GITHUB_OUTPUT"
+
+          # ── 3. REFUSE if over the ceiling — before anything is written. ─────────────────────
+          # 🔴 WHAT THIS CEILING IS NOW, after the catch-up redesign (§12). It is NOT a
+          # blast-radius ceiling any more: a catch-up commit destroys nothing, every superseded
+          # commit stays reachable from `dev`, so there is no damage for a ceiling to bound. It
+          # survives as one thing only — a "this schedule has not been running" sanity guard, on
+          # the reasoning that an unexpectedly large week is worth a human's eye before the job
+          # quietly rewrites what everyone on `dev` sees next pull.
+          #
+          # And it must NOT apply to the no-marker case, which is the trap this replaced. Without
+          # a previous catch-up the count is cumulative over the whole branch — 40 on the day
+          # this was written and climbing at the plan's own 41–99/week — so it would cross 150
+          # within two or three weeks and then refuse FOREVER, each week counting higher. Worse,
+          # the old refusal text sent the reader to §2's manual `git push --force-with-lease`,
+          # which §12 establishes this instance refuses from everyone. A guard whose only advice
+          # is an impossible act, and which can never clear itself, is not a guard.
+          if [ -z "$LAST_CATCHUP" ]; then
+            echo "NOTE: no previous catch-up commit, so ${DISCARDED} is a cumulative count over"\
+                 "the whole branch rather than this week's work. The ceiling is NOT applied to"\
+                 "it — the first run has nothing to compare against, and refusing here would"\
+                 "block the very commit that gives every later run its baseline."
+          elif [ "$DISCARDED" -gt "$MAX_DISCARDED" ]; then
+            echo "FAIL: ${DISCARDED} commit(s) have landed on dev since the last catch-up"\
+                 "(${LAST_CATCHUP}), over the ${MAX_DISCARDED} this job expects in a week."\
+                 "REFUSING AND REPORTING rather than quietly rewriting what everyone on dev"\
+                 "sees. NOTHING HAS BEEN CHANGED: no tag was written and dev was not touched."
+            echo "  🔴 To be clear about the stakes: NO COMMIT WOULD BE LOST if this ran. A"\
+                 "catch-up commit supersedes content, it does not discard history. The refusal"\
+                 "is about surprise, not damage — a week this size usually means the schedule"\
+                 "has not been running (41–99 is ordinary, a month of silence is about 260)."
+            echo "  🔴 Re-dispatching this workflow will NOT clear this: it has no inputs, so a"\
+                 "manual run repeats the identical job over identical state and refuses again."\
+                 "There are exactly two real exits, and both are deliberate acts: land the"\
+                 "superseded work on main (which drops the count to what is genuinely unmerged),"\
+                 "or raise MAX_DISCARDED in a PR whose message records why this week was"\
+                 "legitimately that size. Do NOT follow §2's manual force-push — this instance"\
+                 "refuses it from every actor (§12)."
+            exit 1
+          fi
+
+          # ── 4. Decide the archive tag NAME (nothing is written yet). ────────────────────
+          TAG_DATE="$(date -u +%Y-%m-%d)"
+          TAG_NAME="archive/dev-${TAG_DATE}"
+          # Collision: a second run on the same UTC day. If the existing tag already points at the
+          # dev commit this run is about to discard, the archive it would write already exists and
+          # re-writing it is a no-op worth skipping. If it points somewhere else, that is a
+          # DIFFERENT archive and overwriting it would destroy the only record of the earlier
+          # reset — so this run takes a distinct name and says so, instead of overwriting the tag.
+          EXISTING_PEELED="$(git ls-remote --tags origin "refs/tags/${TAG_NAME}^{}" 2>/dev/null | awk '{print $1}' | head -n1)"
+          EXISTING_ANY="$(git ls-remote --tags origin "refs/tags/${TAG_NAME}" 2>/dev/null | awk '{print $1}' | head -n1)"
+          SKIP_TAG_WRITE=0
+          # 🔴 Code review Medium, 2026-09-21. The "no tag for a reset that discards nothing"
+          # rule stated above only covered `dev == main`, which is the RARE case. The common
+          # quiet week is `dev` strictly BEHIND `main`: everything that was on `dev` got merged,
+          # nobody pushed since, so DISCARDED is 0 while the two SHAs still differ. That wrote a
+          # permanent annotated tag every such week whose own message read "discarded commits: 0"
+          # and "The 0 discarded commit(s) are reachable from this tag and from nowhere else" —
+          # the second half flatly false, since they are on `main`. One ref per quiet week, in a
+          # namespace whose entire value is that an entry means something happened. The branch
+          # still moves and is still read back; not archiving an ancestor loses nothing.
+          if [ "$DISCARDED" -eq 0 ]; then
+            echo "NOTE: nothing is being discarded (dev is behind main, not diverged) — no"\
+                 "archive tag is written. The branch move below is unaffected."
+            SKIP_TAG_WRITE=1
+            TAG_NAME=""
+          elif [ -n "$EXISTING_ANY" ]; then
+            if [ "$EXISTING_PEELED" = "$DEV_SHA" ]; then
+              echo "NOTE: ${TAG_NAME} already exists and already points at ${DEV_SHA} — this run"\
+                   "is redoing an archive that is already on the server. Keeping it as it is."
+              SKIP_TAG_WRITE=1
+            else
+              TAG_NAME="archive/dev-${TAG_DATE}-run${RUN_NUMBER}"
+              echo "NOTE: archive/dev-${TAG_DATE} already exists and points at a DIFFERENT commit"\
+                   "(${EXISTING_PEELED:-unpeelable}). Not overwriting an earlier archive — this"\
+                   "run writes ${TAG_NAME} instead."
+            fi
+          fi
+          echo "archive_tag=${TAG_NAME}" >> "$GITHUB_OUTPUT"
+
+          # ── 5. CATCH dev UP to main with a FAST-FORWARD commit. ────────────────────
+          # 🔴 THIS IS NOT A FORCE-PUSH, AND IT CANNOT BE ONE. Forgejo 15.0.5+gitea-1.22.0
+          # refuses every non-fast-forward update of a protected branch, and it refuses it in
+          # `preReceiveBranch` BEFORE `push_whitelist_deploy_keys` is ever consulted — the
+          # force-push check is first, the deploy-key permission is later, and this release line
+          # has no force-push allowlist of any kind (verified three ways on 2026-09-21: the live
+          # rule carries no `force` field at all, the instance reports that version, and the
+          # upstream source shows the two checks in that order). So the original design — give a
+          # deploy key push rights and force-update `dev` — could never have worked here, no
+          # matter how the rule was configured. The earlier "phase 2 accepted" was a false
+          # positive: what was tested was `git ls-remote` and a TAG push, and tags are not
+          # covered by branch protection, so the branch code path was never exercised.
+          #
+          # What happens instead: one commit whose TREE is main's tree and whose parents are
+          # [dev, main]. That commit is a descendant of `dev`, so pushing it is an ordinary
+          # fast-forward that the protection rule permits and the deploy key is allowed to make;
+          # and it carries main's tree, so every file on `dev` becomes byte-identical to `main`,
+          # which is the whole point of the reset. Nothing is destroyed at all any more — the
+          # superseded commits stay reachable from `dev` forever — so the archive tag above is
+          # now a RECORD of where the branch stood, not a recovery mechanism.
+          #
+          # The commit message is the other durable record, and it is the one a human actually
+          # reaches for: `git log dev` shows it, unlike a tag nobody thinks to list. Its first
+          # line carries RESET_MARKER, which is also how the NEXT run finds this commit to count
+          # from (see step 2) — changing that literal silently breaks the counter, so it lives in
+          # the step `env:` beside MAX_DISCARDED rather than inline here.
+          CATCHUP_MESSAGE_FILE="${WORKDIR}/catchupmsg"
+          cat > "$CATCHUP_MESSAGE_FILE" <<CATCHUPMSG
+          ${RESET_MARKER} dev caught up to main (${TAG_DATE})
+          
+          Every file on dev is now identical to main. Nothing was discarded: the commits
+          below stay reachable from dev through this commit's first parent.
+          
+          superseded commits : ${DISCARDED} (no equivalent in main)
+          also superseded    : ${EQUIVALENT} already present in main in another shape
+          main was ahead by  : ${BEHIND} commit(s)
+          dev before         : ${DEV_SHA}
+          main               : ${MAIN_SHA}
+          archive tag        : ${TAG_NAME:-none - nothing was superseded}
+          forgejo run id     : ${RUN_ID} (run number ${RUN_NUMBER})
+          caught up at       : $(date -u +%Y-%m-%dT%H:%M:%SZ)
+          
+          To put superseded work back on dev, a plain merge WILL NOT WORK: the old branch is now
+          an ancestor of dev, so git answers "Already up to date" and changes nothing. Rebase the
+          branch onto origin/dev, or revert this commit with "git revert -m 1 <this sha>" and
+          open a PR.
+
+          Why a catch-up commit and not a reset: this instance refuses any non-fast-forward
+          push to a protected branch before it checks who is pushing. Procedure and
+          rationale: docs/dev-weekly-reset-plan.md
+          CATCHUPMSG
+
+          CATCHUP_SHA="$(git -c user.name="Weekly DEV Reset" -c user.email="dev-weekly-reset@crm-prionex.com" \
+              commit-tree "${MAIN_SHA}^{tree}" -p "$DEV_SHA" -p "$MAIN_SHA" -F "$CATCHUP_MESSAGE_FILE")"
+          if ! printf '%s' "$CATCHUP_SHA" | grep -q '^[0-9a-f]\{40\}$'; then
+            echo "FAIL: git commit-tree did not return a commit id ('${CATCHUP_SHA}'). Nothing"\
+                 "has been changed on the server."
+            exit 1
+          fi
+          # 🔴 These assert PARENT ORDER, and that is deliberate — the two checks that were
+          # here before (tree == main's tree, and descendant-of-dev) were TAUTOLOGIES: the tree
+          # is the one just handed to `commit-tree` and `DEV_SHA` is its first parent, so both
+          # were true by construction and could not fail. A check that cannot fail proves
+          # nothing; this file says so about other people's code in three places, so it does not
+          # get to keep two of its own.
+          #
+          # Parent order is the thing that actually varies (swap the two `-p` flags and
+          # `commit-tree` accepts it happily) and the thing two durable records depend on: the
+          # commit message promises the superseded commits are "reachable through this commit's
+          # first parent", and `git log --first-parent dev` — how anyone reads this branch's
+          # history — follows dev's line only if dev is parent 1.
+          CATCHUP_P1="$(git rev-parse "${CATCHUP_SHA}^1")"
+          CATCHUP_P2="$(git rev-parse "${CATCHUP_SHA}^2")"
+          if [ "$CATCHUP_P1" != "$DEV_SHA" ] || [ "$CATCHUP_P2" != "$MAIN_SHA" ]; then
+            echo "FAIL: the catch-up commit's parents are [${CATCHUP_P1}, ${CATCHUP_P2}], not"\
+                 "[dev ${DEV_SHA}, main ${MAIN_SHA}]. First parent MUST be dev: the commit"\
+                 "message and every --first-parent read of this branch depend on it. Nothing has"\
+                 "been changed on the server."
+            exit 1
+          fi
+
+          if [ "$SKIP_TAG_WRITE" -eq 0 ]; then
+            # 🔴 ANNOTATED (-a with -F), not lightweight. A lightweight tag carries no message, and
+            # the message is the entire point: it is this run's permanent, readable record on an
+            # instance where the log is not retrievable. `git tag -a` needs an identity, supplied
+            # per-command so nothing is written into a config that outlives this step.
+            #
+            # 🔴 The heredoc body below is written FLUSH LEFT in this file, deliberately, and
+            # that is not a formatting slip. A `run: |` block scalar is de-indented by YAML before
+            # the shell ever sees it, so these lines arrive at column 0 — which is exactly what
+            # the terminator needs and exactly how the message should read in `git show`. The
+            # obvious-looking alternatives are both worse: `<<-TAGMSG` strips TABS only and this
+            # file is space-indented throughout, and an indented body "fixed up" afterwards with
+            # `sed -i` adds a portability dependency (BSD `sed -i` requires an argument; BusyBox's
+            # does not) in exchange for nothing at all.
+            TAG_MESSAGE_FILE="${WORKDIR}/tagmsg"
+            cat > "$TAG_MESSAGE_FILE" <<TAGMSG
+          Weekly DEV reset — where dev stood before it was caught up to main.
+
+          superseded commits : ${DISCARDED} (no equivalent in main)
+          also superseded    : ${EQUIVALENT} already present in main in another shape
+          main was ahead by  : ${BEHIND} commit(s)
+          dev before         : ${DEV_SHA}
+          dev after          : ${CATCHUP_SHA}
+          tree carried       : ${MAIN_SHA} (main)
+          forgejo run id     : ${RUN_ID} (run number ${RUN_NUMBER})
+          archived at        : $(date -u +%Y-%m-%dT%H:%M:%SZ)
+
+          The ${DISCARDED} superseded commit(s) are reachable from this tag, and — once the
+          catch-up commit above lands — from dev itself through its first parent. This tag is a
+          record of where the branch stood, not the only way back.
+
+          To put superseded work back on dev, a plain merge WILL NOT WORK: the old branch is an
+          ancestor of the new dev, so git answers "Already up to date" and changes nothing.
+          Rebase it onto origin/dev, or revert the catch-up commit with
+          "git revert -m 1 ${CATCHUP_SHA}" and open a PR.
+          To read them: git fetch origin ${TAG_NAME} && git log ${TAG_NAME}
+          Procedure and rationale: docs/dev-weekly-reset-plan.md
+          TAGMSG
+
+            git -c user.name="Weekly DEV Reset" -c user.email="dev-weekly-reset@crm-prionex.com" \
+                tag -a "$TAG_NAME" "$DEV_SHA" -F "$TAG_MESSAGE_FILE"
+
+            if ! git push origin "refs/tags/${TAG_NAME}" 2>&1; then
+              echo "FAIL: could not write the archive tag ${TAG_NAME} to the server. REFUSING TO"\
+                   "TOUCH THE BRANCH — the archive is what makes this operation reversible, and a"\
+                   "reset without it would discard ${DISCARDED} commit(s) with no way back. dev is"\
+                   "UNCHANGED."
+              exit 1
+            fi
+            # An exit code is not evidence on this instance (Story 1.10) — read it back.
+            WRITTEN_PEELED="$(git ls-remote --tags origin "refs/tags/${TAG_NAME}^{}" 2>/dev/null | awk '{print $1}' | head -n1)"
+            if [ "$WRITTEN_PEELED" != "$DEV_SHA" ]; then
+              echo "FAIL: wrote ${TAG_NAME}, but reading it back from the server peels to"\
+                   "'${WRITTEN_PEELED:-nothing}', not the archived '${DEV_SHA}'. The archive is"\
+                   "not confirmed, so the reset does not happen. dev is UNCHANGED."
+              exit 1
+            fi
+            echo "OK: ${TAG_NAME} -> ${DEV_SHA} (annotated, verified by read-back)."
+          fi
+
+          echo "--- fast-forwarding refs/heads/dev: ${DEV_SHA} -> ${CATCHUP_SHA} (tree = main) ---"
+          # The lease stays, and it is still the real concurrency guard: `--force-with-lease`
+          # with an EXPLICIT expected value refuses if anything landed on `dev` between the count
+          # and now. The bare form would lease against this clone's own tracking ref, fetched
+          # seconds ago, and therefore always match — a check in appearance only. Note the lease
+          # does not make this a force push: the server decides that by reachability, and this
+          # update is a fast-forward.
+          if ! git push origin "${CATCHUP_SHA}:refs/heads/dev" --force-with-lease="refs/heads/dev:${DEV_SHA}" 2>&1; then
+            echo "FAIL: the server refused the catch-up push. Causes worth separating:"
+            echo "  (a) the LEASE failed — something landed on dev after this run counted"\
+                 "(${DEV_SHA}); nothing was lost, and the next run counts and catches up again."\
+                 "This is the guard doing its job."
+            echo "  (b) the deploy key cannot write dev — the protection rule is not admitting"\
+                 "deploy keys (push_whitelist_deploy_keys), or the key was removed (the"\
+                 "documented exit plan, §3.4 A1.4)."
+            echo "  Archive: ${TAG_NAME:-none written — this run superseded nothing}."
+            exit 1
+          fi
+          NEW_DEV="$(git ls-remote origin refs/heads/dev 2>/dev/null | awk '{print $1}' | head -n1)"
+          if [ "$NEW_DEV" != "$CATCHUP_SHA" ]; then
+            echo "FAIL: the push was accepted, but dev reads back as '${NEW_DEV:-nothing}', not"\
+                 "'${CATCHUP_SHA}'. Refusing to report a catch-up the server does not show."\
+                 "Archive: ${TAG_NAME:-none written — this run superseded nothing}."
+            exit 1
+          fi
+
+          echo "catchup_sha=${CATCHUP_SHA}" >> "$GITHUB_OUTPUT"
+          # 🔴 `main_sha`, not `catchup_sha`, is what the deploy below pins — deliberately.
+          # The deploy resolves an IMAGE by commit, and `sha-<12>-dev` exists for main's commit
+          # (build-main.yml published it) while the catch-up commit was created seconds ago and
+          # has no image at all. The two carry the IDENTICAL tree, so the stand gets exactly the
+          # content that is now on `dev`. The push above also triggers dev-branch-autodeploy,
+          # which will build the catch-up commit properly; this dispatch is the path that does
+          # not depend on that build finishing first.
+          echo "main_sha=${MAIN_SHA}" >> "$GITHUB_OUTPUT"
+          echo "reset_performed=true" >> "$GITHUB_OUTPUT"
+          if [ "$DISCARDED" -eq 0 ]; then
+            echo "OK: dev now carries main's tree (dev=${CATCHUP_SHA}, tree of ${MAIN_SHA},"\
+                 "verified by read-back). Nothing was superseded — dev was behind main, not"\
+                 "diverged — so no archive tag was written."
+          else
+            echo "OK: dev now carries main's tree (dev=${CATCHUP_SHA}, tree of ${MAIN_SHA},"\
+                 "verified by read-back). ${DISCARDED} commit(s) superseded, recorded at"\
+                 "${TAG_NAME}. Nothing was destroyed: they remain reachable from dev."
+          fi
+
+      - name: "Report what this run did to dev (plan §4.2.3 — silence is not success)"
+        if: ${{ always() }}
+        env:
+          RESET_OUTCOME: ${{ steps.reset.outcome }}
+          DISCARDED: ${{ steps.reset.outputs.discarded }}
+          ARCHIVE_TAG: ${{ steps.reset.outputs.archive_tag }}
+          OLD_DEV: ${{ steps.reset.outputs.old_dev_sha }}
+          NEW_DEV: ${{ steps.reset.outputs.main_sha }}
+          # 🔴 The commit dev actually points at after a catch-up. Without it this report —
+          # the only record anyone can read on this instance — named main's SHA as "where dev
+          # was moved to", which is a commit dev has never pointed at: the Monday reader would
+          # run `git rev-parse origin/dev`, get a third value, and conclude either that someone
+          # pushed afterwards or that the read-back lied.
+          CATCHUP: ${{ steps.reset.outputs.catchup_sha }}
+          PERFORMED: ${{ steps.reset.outputs.reset_performed }}
+        run: |
+          set -euo pipefail
+          # 🔴 This step cannot fail the run, deliberately: it reports, it does not judge. Its
+          # value is that the run's own record names what was destroyed, in one place, instead of
+          # leaving it to be reconstructed from the step above. The DURABLE copy is the annotated
+          # tag's message — this is the convenience copy.
+          #
+          # Plan §4.2.3: until Story 4.5 restores failure notifications, the compensating control
+          # for this whole job is a human reading it on Monday. The tag makes that cheap — it is
+          # enough to check that a tag for the right date exists and to read its message.
+          # **Removal trigger: when Story 4.5 lands, its failure notification closes this gap and
+          # the Monday read stands down.**
+          echo "=== weekly DEV reset — what happened to the BRANCH ==="
+          case "${RESET_OUTCOME:-}" in
+            success)
+              if [ "${PERFORMED:-}" = "true" ]; then
+                echo "dev caught up:        ${OLD_DEV} -> ${CATCHUP:-unknown}"
+                echo "  (that commit carries main's tree, main = ${NEW_DEV:-unknown})"
+                echo "commits superseded:   ${DISCARDED:-unknown}"
+                echo "  nothing was destroyed — they stay reachable from dev"
+                echo "recorded at:          ${ARCHIVE_TAG:-<none — nothing was superseded>}"
+              else
+                echo "dev already carried main's tree (main = ${NEW_DEV:-unknown}) — no commit"
+                echo "created, nothing superseded, no tag written."
+              fi
+              ;;
+            *)
+              echo "the branch reset did NOT succeed (outcome: ${RESET_OUTCOME:-unknown})."
+              echo "Read the reset step's own output above for which of its guards refused —"
+              echo "every one of them states whether anything was changed before it stopped."
+              ;;
+          esac
+
+      - name: Dispatch deploy-dev.yml with the image commit this run pinned (Task 4, AC3, AC6)
         if: always()
         # Code review H4/Task 5.6: unconditional — this step must run whether the sweep above
         # succeeded, failed, or was itself skipped for any reason. The reset's whole purpose is the
@@ -485,6 +1246,12 @@ jobs:
           FJ_TOKEN: ${{ github.token }}
           SERVER_URL: ${{ github.server_url }}
           REPO_SLUG: ${{ github.repository }}
+          # 🔴 main's commit — the one whose IMAGE the deploy resolves. It is NOT the commit
+          # `dev` now points at (that is the catch-up commit, which has no image); the two carry
+          # the identical tree, which is what makes pinning this one correct. Empty when the
+          # reset step refused, failed or was skipped — this step runs `if: always()`, so it must
+          # cope with that, and the body below says how.
+          PINNED_SHA: ${{ steps.reset.outputs.main_sha }}
         run: |
           set -euo pipefail
           # PR A's own probe-window disarm mechanism (Task 6.2) lived here while the temporary
@@ -554,8 +1321,66 @@ jobs:
           # Task 4.1: outer "ref" (in the JSON body) is the branch dev-reset.yml itself reads its
           # own workflow list from (main, always, since this file only ever lives there once
           # merged); the "inputs.ref" is deploy-dev.yml's own REQUIRED input — its own fail-closed
-          # guard rejects an empty one, so this can never silently deploy nothing.
-          REQUEST_BODY='{"ref":"main","inputs":{"ref":"main"}}'
+          # guard rejects an empty one, so this can never silently deploy nothing. That guard is
+          # also why the fallback below names a ref rather than sending an empty one: an empty
+          # inputs.ref returns HTTP 400 and consumes no run row, which would be reported here as
+          # a dispatch failure nobody could explain.
+          #
+          # 🔴 2026-09-21 (plan §6 phase 3.4). The OUTER "ref" is unchanged and stays the literal
+          # `main` — that is the branch Forgejo reads the deploy-dev.yml FILE from, and this file
+          # only ever lives on main once merged. What changed is the INNER `inputs.ref`: the exact
+          # commit this run pinned and just put on `dev`, instead of the literal `main`.
+          #
+          # Why the SHA and not the branch name `main`: the deploy resolves its ref later,
+          # in its own run, which cannot start until this job leaves the shared concurrency group.
+          # A merge to `main` inside that window would make `ref=main` deploy a commit this run
+          # never reset to, never counted, and never archived against. The SHA closes that window,
+          # and it is what the 2026-09-21 manual procedure used for the same reason.
+          #
+          # It also lands on a better tag: `deploy-stand.yml` maps a bare 40-hex ref straight to
+          # `sha-<12>-dev`, the per-commit tag build-main.yml published, rather than through the
+          # generic sanitizer to the mutable `main-dev`.
+          #
+          # ⚠️ Expected, and not a defect: from the moment the reset step moves `dev`, a WEEKLY RUN
+          # PRODUCES TWO DEPLOYS. The branch push triggers `dev-branch-autodeploy.yml`, and this
+          # step dispatches `deploy-dev.yml` as it always has. Both carry the shared concurrency
+          # group `deploy-dev-fe-prionex-dev`, which this job holds, so neither can start until
+          # this job exits.
+          #
+          # 🔴 Corrected 2026-09-21 (review round 3). They do NOT put the same image on the
+          # stand, and autodeploy does NOT reuse a published one. The catch-up commit was created
+          # seconds earlier, so `sha-<12>-dev` cannot exist for it, build.yml's decision step
+          # resolves `reuse=false`, and autodeploy performs a FULL BUILD of that commit every
+          # week. The Monday window is therefore: this job, then a build plus its deploy, plus
+          # this dispatch's deploy of main's image — two different digests of the IDENTICAL tree,
+          # so the stand holds the same content whichever lands last, and both pass
+          # deploy-stand's revision-label check. Budget for a build, not for two pulls.
+          # (Phase 1's reuse path is not wasted; its remaining case is a fast-forward merge of a
+          # branch CI already built. It is simply not this one.)
+          #
+          # The dispatch is deliberately NOT dropped in favour of the push trigger: this file's
+          # own read-back is the only confirmation any of this happened, and it can only confirm
+          # a run it asked for.
+          # 🚨 And this job still must not WAIT for either of them — it holds the group they need.
+          # See the self-deadlock warning in this file's header.
+          DEPLOY_REF="${PINNED_SHA:-}"
+          if printf '%s' "$DEPLOY_REF" | grep -q '^[0-9a-f]\{40\}$'; then
+            echo "Deploy target: the pinned commit ${DEPLOY_REF}."
+          else
+            # The reset step refused or failed, so there is no pinned SHA. Falling back to the
+            # literal `main` is NOT a workaround — it is exactly what this file did before the
+            # branch half existed, so the stand still gets main's image and the reset's own
+            # failure is reported by its own red step rather than by also skipping the deploy.
+            # The branch and the stand are independently useful; one failing does not make the
+            # other worthless.
+            DEPLOY_REF="main"
+            echo "NOTE: no pinned SHA available from the reset step (it refused, failed, or was"\
+                 "skipped) — falling back to ref=main, which is what this file dispatched before"\
+                 "the branch reset existed. The stand will be brought to main; the BRANCH may not"\
+                 "have been reset. See the reset step's own output for which."
+          fi
+          # Only ever a validated 40-hex string or the literal `main` reaches this interpolation.
+          REQUEST_BODY="{\"ref\":\"main\",\"inputs\":{\"ref\":\"${DEPLOY_REF}\"}}"
 
           # Code review M3: `--retry`/`--max-time`, the same shape `deploy-dev.yml:711-714`/`:897-
           # 900` already carry, with the same reason written beside them there — a transient
