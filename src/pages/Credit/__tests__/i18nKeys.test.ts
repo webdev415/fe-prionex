@@ -96,3 +96,43 @@ describe('словари раздела «Кредитный модуль»', ()
     expect([...inUk].filter((key) => !inEn.has(key))).toEqual([])
   })
 })
+
+describe('этап заявки: значения ключей, а не только их наличие', () => {
+  // Проверки живут здесь, а не в доменном тесте правила: этот файл уже читает
+  // оба словаря, а `applicationStages.test.ts` иначе тянул бы два файла по
+  // двенадцать тысяч строк и краснел на правках i18n, к правилу этапа
+  // отношения не имеющих.
+  const dictionaries = [
+    ['uk', uk],
+    ['en', en],
+  ] as const
+
+  it.each(dictionaries)('%s: прежнего ключа credit.stage.bank нет', (_lang, dictionary) => {
+    // Страж симметрии проходит, пока ключ лежит в ОБОИХ языках, а страж
+    // динамических ключей — пока в словаре есть всё, что в перечне. Оба
+    // промолчали бы о забытом `bank`, оставленном рядом с `income_check`.
+    expect(lookup(dictionary, 'credit.stage.bank')).toBeUndefined()
+  })
+
+  it.each(dictionaries)('%s: credit.stage.income_check — непустая строка', (_lang, dictionary) => {
+    // Положительный контроль ТОГО ЖЕ поиска: иначе «не найдено» выше означало
+    // бы «искать не умеем». Непустая, а не просто строка: `""` прошло бы
+    // typeof-проверку и уехало на экран пустой подписью этапа.
+    const value = lookup(dictionary, 'credit.stage.income_check')
+    expect(typeof value).toBe('string')
+    expect(String(value).trim()).not.toBe('')
+  })
+
+  it.each(dictionaries)(
+    '%s: подпись шага несёт ОБА плейсхолдера, а не только текст',
+    (_lang, dictionary) => {
+      // Компонентный тест видит подпись через мок `t` и настоящий шаблон из
+      // JSON не рендерит никогда. Потеря `{{index}}` при переводе оставалась бы
+      // зелёной, а оператор прочёл бы «крок з 5».
+      const value = lookup(dictionary, 'credit.card.stageOfTotal')
+      expect(typeof value).toBe('string')
+      expect(String(value)).toContain('{{index}}')
+      expect(String(value)).toContain('{{total}}')
+    }
+  )
+})

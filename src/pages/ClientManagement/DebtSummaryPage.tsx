@@ -35,6 +35,8 @@ import { ReassignPaymentEmployeeModal } from './components/ReassignPaymentEmploy
 import { useClient } from '@/features/clients/hooks/useClients'
 import { CallDialogModal, type CallType, type CallStatus } from './components/CallDialogModal'
 import { useCallStore } from '@/stores/callStore'
+import { useCallingWindow } from '@/features/calls/hooks/useCallingWindow'
+import { CallingWindowTooltip } from '@/features/calls/components/CallingWindowTooltip'
 import { useCallOrigination } from '@/features/calls/hooks/useCallOrigination'
 import {
   useClientPaymentHistory,
@@ -242,6 +244,7 @@ export function DebtSummaryPage() {
     handleCloseCallModal,
     handleCallEnd,
   } = useCallOrigination()
+  const callingWindow = useCallingWindow(id ? Number(id) : null)
 
   // Fetch client data from API (same as ClientDetailPage). ``clientId`` is
   // hoisted above (right after useParams) so earlier hooks can use it.
@@ -1094,33 +1097,43 @@ export function DebtSummaryPage() {
             {/* Action Buttons */}
             <div className="flex w-full flex-col items-start gap-3 sm:flex-row">
               <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
-                <Button
-                  variant="primary"
-                  leftIcon={<Icons.Headset size={18} />}
-                  className="w-full rounded-full sm:w-auto sm:flex-1"
-                  disabled={!user?.is_agent || !user?.asterisk_extension}
-                  onClick={() => {
-                    const phoneNumber = client?.phones?.[0]?.number
-                    if (!phoneNumber) {
-                      toast.error(t('errors.clientHasNoPhone', 'Client has no phone number'))
-                      return
-                    }
-
-                    if (isCallActive()) {
-                      toast.warning(
-                        t('pages.clients.modals.callDialog.callInProgress') ||
-                          'Another call or recording is already in progress. Please finish or close it first.'
-                      )
-                      return
-                    }
-
-                    // Open modal in 'initial' state to let user select call type
-                    setOpenCallModal('call-dialog')
-                    setIsCallModalOpen(true)
-                  }}
+                <CallingWindowTooltip
+                  message={callingWindow.allowed ? null : callingWindow.message}
+                  className="w-full sm:w-auto sm:flex-1"
                 >
-                  {t('pages.clients.debtSummary.call')}
-                </Button>
+                  <Button
+                    variant="primary"
+                    leftIcon={<Icons.Headset size={18} />}
+                    className="w-full rounded-full sm:w-auto sm:flex-1"
+                    // Gated on the calling window like the client-card button:
+                    // every entry point has to agree, or one of them opens a
+                    // dialog that cannot dial.
+                    disabled={
+                      !user?.is_agent || !user?.asterisk_extension || !callingWindow.allowed
+                    }
+                    onClick={() => {
+                      const phoneNumber = client?.phones?.[0]?.number
+                      if (!phoneNumber) {
+                        toast.error(t('errors.clientHasNoPhone', 'Client has no phone number'))
+                        return
+                      }
+
+                      if (isCallActive()) {
+                        toast.warning(
+                          t('pages.clients.modals.callDialog.callInProgress') ||
+                            'Another call or recording is already in progress. Please finish or close it first.'
+                        )
+                        return
+                      }
+
+                      // Open modal in 'initial' state to let user select call type
+                      setOpenCallModal('call-dialog')
+                      setIsCallModalOpen(true)
+                    }}
+                  >
+                    {t('pages.clients.debtSummary.call')}
+                  </Button>
+                </CallingWindowTooltip>
               </PermissionGuard>
               <Button
                 variant="secondary"

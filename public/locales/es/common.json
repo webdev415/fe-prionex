@@ -73,7 +73,8 @@
     "toggleMenu": "Mostrar u ocultar menú",
     "scoringV3Monitoring": "Informe de ejecución en sombra v3",
     "scoringV3Settings": "Configuración de puntuación v3",
-    "operatorWorkList": "Lista de trabajo prioritaria"
+    "operatorWorkList": "Lista de trabajo prioritaria",
+    "creditUnderwriting": "Cola de revisión manual"
   },
   "dialer": {
     "phone": {
@@ -169,7 +170,8 @@
       "active": "Activa",
       "paused": "Pausa",
       "empty": "La cola está vacía",
-      "inactive": "Inactiva"
+      "inactive": "Inactiva",
+      "pausedCallingWindow": "Fuera del horario de llamadas"
     },
     "queueList": {
       "found": "Encontradas: {{count}} colas",
@@ -193,7 +195,9 @@
       "deleteMessage": "Esta acción es irreversible. La cola se eliminará junto con toda su configuración.",
       "deleted": "Cola eliminada",
       "notSynced": "No sincronizada",
-      "notSyncedHint": "Esta cola no tiene ninguna campaña en el marcador y no puede realizar llamadas. Vuelva a guardarla para reintentarlo."
+      "notSyncedHint": "Esta cola no tiene ninguna campaña en el marcador y no puede realizar llamadas. Vuelva a guardarla para reintentarlo.",
+      "pausedByWindow": "Fuera del horario de llamadas",
+      "pausedByWindowHint": "Fuera del horario de llamadas permitido de este proyecto. La marcación se reanuda automáticamente en el siguiente horario permitido."
     },
     "queueForm": {
       "createTitle": "Añadir nueva cola",
@@ -317,6 +321,14 @@
     "telephonyType": {
       "white": "Blanco",
       "grey": "Gris"
+    },
+    "callingWindow": {
+      "closedTitle": "Fuera del horario de llamadas",
+      "resumes": "La marcación se reanuda {{when}}.",
+      "resumesUnknown": "No se puede indicar cuándo se reanuda: revise el calendario de festivos del proyecto.",
+      "allowed": "Permitido: {{hours}}, {{days}} ({{timezone}})",
+      "open": "Horario de llamadas {{hours}} · {{days}} · abierto ahora",
+      "everyDay": "todos los días"
     }
   },
   "search": {
@@ -915,7 +927,7 @@
       "modeFastShort": "Rápido",
       "modeThinkingShort": "Razonamiento",
       "modeFastHint": "Responde al instante",
-      "modeThinkingHint": "Analiza con más profundidad, pero más despacio",
+      "modeThinkingHint": "Analiza con más profundidad y muestra su razonamiento (31B)",
       "modeChangeHint": "Se ajusta junto al campo de entrada",
       "expertTitle": "Experto (Claude)",
       "expertTrigger": "Experto · {{model}}",
@@ -932,7 +944,6 @@
       "expertUnavailable": "El servicio externo no está disponible en este momento; inténtelo más tarde.",
       "showReasoning": "Mostrar razonamiento",
       "showReasoningHint": "El razonamiento se muestra en el panel «Actividad»",
-      "showReasoningFastHint": "El modo rápido no genera razonamiento",
       "voiceSilenceTimeout": "Tiempo de silencio (detención automática)",
       "voiceMaxDuration": "Duración máxima de grabación",
       "voiceSeconds": "{{count}} s",
@@ -4449,6 +4460,73 @@
           "UA": "Ucrania",
           "ES": "España"
         }
+      },
+      "callingWindow": {
+        "country": "Calendario de festivos",
+        "countryPlaceholder": "Seleccione un país",
+        "days": {
+          "1": "Lun",
+          "2": "Mar",
+          "3": "Mié",
+          "4": "Jue",
+          "5": "Vie",
+          "6": "Sáb",
+          "7": "Dom"
+        },
+        "enable": "Aplicar un horario de llamadas",
+        "enableHint": "El sistema rechaza las llamadas fuera del horario. Los operadores no pueden saltárselo.",
+        "end": "Cierre",
+        "endHint": "No incluido: fíjelo antes del límite legal para que ninguna llamada siga en curso a la hora de corte.",
+        "errors": {
+          "start": "El inicio debe tener el formato HH:MM",
+          "end": "El final debe tener el formato HH:MM",
+          "same": "El inicio y el final no pueden coincidir",
+          "timezone": "Se requiere una zona horaria de respaldo"
+        },
+        "noCountry": "Sin calendario de festivos: en este proyecto no se tienen en cuenta los días festivos. El horario y los días permitidos siguen aplicándose.",
+        "saveFailed": "No se ha podido guardar el horario de llamadas",
+        "saved": "Horario de llamadas guardado",
+        "start": "Apertura",
+        "subdivision": "Región (opcional)",
+        "subdivisionPlaceholder": "Solo nacional",
+        "tabHolidays": "Festivos",
+        "tabWindow": "Horario",
+        "timezone": "Zona horaria de respaldo",
+        "timezoneHint": "Se usa cuando no se puede determinar la zona horaria del deudor.",
+        "title": "Horario de llamadas",
+        "weekdays": "Días permitidos",
+        "weekdaysHint": "No seleccione ninguno para permitir todos los días.",
+        "loadFailed": "No se ha podido cargar el horario de llamadas.",
+        "refreshFailed": "No se ha podido actualizar el horario de llamadas. Se muestran los últimos valores cargados.",
+        "countryNone": "Sin calendario de festivos"
+      },
+      "holidayCalendar": {
+        "year": "Año",
+        "noCountry": "No hay ningún país configurado, así que no se tienen en cuenta los días festivos. Elija uno en la pestaña Horario para aplicarlos.",
+        "loadFailed": "No se ha podido cargar el calendario. Vuelva a intentarlo antes de generarlo, para no sobrescribir uno existente.",
+        "notGenerated": "No existe ningún calendario para este año. Mientras no exista, se rechazarán todas las llamadas de ese año.",
+        "generate": "Generar {{year}}",
+        "generateFailed": "No se ha podido generar el calendario",
+        "computedEmpty": "Este país no tiene días festivos registrados para ese año. Compruébelo antes de darlo por bueno.",
+        "emptyCalendar": "Este calendario no tiene fechas. Para algunos países es correcto, pero confirme que lo es: se permitirán llamadas todos los días laborables del año.",
+        "reviewed": "Revisado",
+        "unreviewed": "Sin revisar",
+        "added": "añadida",
+        "addDate": "Añadir una fecha",
+        "addName": "Nombre (opcional)",
+        "addFailed": "No se ha podido añadir esa fecha",
+        "removeFailed": "No se ha podido quitar esa fecha",
+        "regenerate": "Volver a calcular desde el calendario",
+        "regenerateHint": "Al volver a calcular se conservan las fechas añadidas a mano y se quita la marca de revisado.",
+        "confirm": "Marcar como revisado",
+        "confirmed": "Calendario marcado como revisado",
+        "confirmFailed": "No se ha podido marcar el calendario como revisado",
+        "badDate": "Introduzca la fecha con el formato AAAA-MM-DD",
+        "wrongYear": "Esa fecha no es de {{year}}",
+        "alreadyAdded": "Esa fecha ya está en el calendario",
+        "regenerateTitle": "¿Volver a calcular {{year}}?",
+        "regenerateConfirm": "Las fechas calculadas se vuelven a obtener del calendario del país, las fechas añadidas a mano se conservan y se quita la marca de revisado.",
+        "countryUnsaved": "Guarde primero el horario. El calendario se calcula a partir del país guardado, así que generarlo ahora usaría el anterior."
       }
     },
     "roles": {
@@ -12015,6 +12093,16 @@
         "loadingPriorityWorkList": "Cargando lista de trabajo prioritaria…"
       }
     },
+    "calls": {
+      "callingWindow": {
+        "blocked": "Ahora no se permiten llamadas",
+        "holiday": "Hoy es festivo",
+        "outsideHours": "Fuera del horario de llamadas permitido",
+        "unavailable": "Ahora no se puede comprobar el horario de llamadas",
+        "weekend": "Hoy no se permiten llamadas",
+        "noCalendar": "Las llamadas están bloqueadas hasta que se configure el calendario de festivos de este año"
+      }
+    },
     "messaging": {
       "attachmentPreview": "Vista previa del archivo adjunto"
     }
@@ -12222,7 +12310,16 @@
       "allocation": "Asignación",
       "totalRow": "Total",
       "interest": "Intereses",
-      "fee": "Comisión"
+      "fee": "Comisión",
+      "lastActivity": "Última actividad",
+      "step": "Paso",
+      "onStep": "En el paso",
+      "application": "Solicitud",
+      "reasons": "Motivo de revisión",
+      "referred": "Derivada",
+      "waiting": "En cola",
+      "assigned": "Asignada",
+      "disbursed": "Desembolsado"
     },
     "fields": {
       "name": "Nombre",
@@ -12309,7 +12406,23 @@
       "signedAt": "Firmado el",
       "signHash": "SHA-256 del documento",
       "signSession": "Sesión / IP",
-      "templateVersion": "Versión de la plantilla"
+      "templateVersion": "Versión de la plantilla",
+      "disbursementAmount": "Importe del desembolso",
+      "disbursementMethod": "Método",
+      "settledAt": "Liquidado el",
+      "failedAt": "Falló el",
+      "failureCode": "Motivo",
+      "timeSource": "Origen de la hora",
+      "provider": "Proveedor",
+      "providerTxId": "ID de la operación del proveedor",
+      "providerStatus": "Estado en el proveedor",
+      "clientTransactionId": "Nuestra clave de operación",
+      "retry": "Reintento",
+      "applicationId": "ID de la solicitud",
+      "externalApplicationId": "ID externo de la solicitud",
+      "decisionId": "ID de la decisión",
+      "loanId": "ID del préstamo",
+      "loanAgeDays": "Días desde el desembolso"
     },
     "tabs": {
       "form": "Formulario de solicitud",
@@ -12433,11 +12546,24 @@
       "scheduleVersionEmpty": "La versión {{version}} ({{reason}}) no tiene cuotas — están en la versión {{previous}}.",
       "openPreviousVersion": "Abrir",
       "paymentReversedOn": "Revertido el {{date}}",
-      "paymentsReversedHint": "De los pagos mostrados, {{count}} se revirtieron por {{amount}} — ese importe no se contabiliza en la deuda, el dinero volvió al banco."
-    },
-    "stand": {
-      "notice": "Etapa 1: el módulo funciona fuera de Kong y aún no conoce los roles del CRM — el rol de abajo es una simulación del entorno de pruebas (WS-20 lo sustituirá por JWT).",
-      "role": "Rol del entorno de pruebas"
+      "paymentsReversedHint": "De los pagos mostrados, {{count}} se revirtieron por {{amount}} — ese importe no se contabiliza en la deuda, el dinero volvió al banco.",
+      "idleFor": "última actividad: hace {{duration}}",
+      "outstandingLoans": "Préstamos pendientes",
+      "cooldownUntil": "Periodo de espera tras el rechazo hasta el {{date}}",
+      "disbursement": "Estado de la transferencia",
+      "disbursementNotSent": "El desembolso nunca se ha enviado: no ha habido ni un solo intento de transferencia.",
+      "disbursementUpdated": "actualizado {{when}}",
+      "disbursementReview": "Pendiente de revisión: {{reason}}, desde {{since}}",
+      "disbursementReviewNoDate": "Pendiente de revisión: {{reason}}",
+      "disbursementUnknownCode": "Código «{{code}}»: es el texto del propio proveedor, aún no lo hemos traducido",
+      "disbursementObservedTime": "El proveedor no nos indicó la hora de liquidación; la hemos deducido del momento en que nos enteramos. El plazo de cancelación de dos días (CA s.124.4) se cuenta desde esta fecha: el plazo del cliente es una estimación, no un dato conocido.",
+      "disbursementNoRetryButton": "Aquí no hay botón de reintento a propósito: la orden de reanudación solo acepta el estado «fallido» con la revisión cerrada, no pide motivo del reintento, no acepta clave de idempotencia y no registra quién la pulsó. Por ahora, un desarrollador del módulo hace el reintento a petición.",
+      "disbursementRetryContradiction": "El módulo marca el reintento como permitido, pero la orden de reanudación lo rechazará: el indicador del módulo es más amplio que la condición de la orden. Alinearlos corresponde al módulo.",
+      "disbursementUnknown": "El estado del desembolso es desconocido: el núcleo no ha respondido. Esto NO significa que no se haya hecho ninguna transferencia: puede haber salido y fallado. Actualice o vuelva más tarde.",
+      "stagesTitle": "Recorrido del cliente",
+      "stagesHint": "los mismos cinco pasos que el cliente ve en su área personal",
+      "stageOfTotal": "paso {{index}} de {{total}}",
+      "identifiers": "Identificadores"
     },
     "settings": {
       "title": "Configuración del módulo de crédito",
@@ -12445,7 +12571,8 @@
       "tabs": {
         "products": "Productos de crédito",
         "parameters": "Configuración del módulo",
-        "integrations": "Integraciones"
+        "integrations": "Integraciones",
+        "switches": "Interruptores de emergencia"
       },
       "needRiskManager": "Esta sección está disponible para el gestor de riesgos: contiene los umbrales y la configuración de los productos.",
       "mutationDisabled": "La edición requiere un segundo aprobador (UW-04) — disponible cuando lleguen los roles del CRM (WS-20).",
@@ -12728,17 +12855,136 @@
     },
     "unavailable": {
       "title": "El módulo de crédito no está desplegado en este entorno",
-      "hint": "La sección está lista, pero el servicio de crédito aún no está enrutado aquí: en la etapa 1 funciona fuera de Kong. En local se sirve en localhost:8020; en el servidor de desarrollo la ruta /api/v1/credit aparecerá junto con el despliegue del módulo."
+      "hint": "La sección está lista, pero el servicio de crédito no responde en este entorno. No es un problema de sus permisos: póngase en contacto con un administrador o con el equipo de soporte; el motivo técnico se muestra abajo."
     },
-    "standKey": {
-      "title": "Clave de servicio del entorno de pruebas",
-      "where": "Solicite a DevOps la INTERNAL_API_KEY del módulo de crédito en este entorno (deploy/.env en el servidor) y péguela aquí.",
-      "lifetime": "La clave se mantiene hasta que se cierre esta pestaña — que se vuelva a pedir al reabrirla es normal, no un fallo.",
-      "placeholder": "X-Internal-Api-Key",
-      "save": "Guardar clave",
-      "clear": "Borrar",
-      "present": "Hay una clave guardada para esta pestaña.",
-      "absent": "No hay clave guardada: el módulo responde 401."
+    "idle": {
+      "underHour": "menos de una hora",
+      "hoursShort": "{{value}} h",
+      "daysShort": "{{value}} d",
+      "sinceCreated": "desde la creación"
+    },
+    "switches": {
+      "rule": "Desactivar un interruptor solo detiene lo NUEVO. La gestión de los préstamos ya concedidos nunca se detiene: se aceptan pagos, se sirven el calendario y los documentos, y se mantiene el derecho de desistimiento de dos días.",
+      "on": "Activado",
+      "off": "Desactivado",
+      "names": {
+        "applications_intake": "Recepción de solicitudes desde la web",
+        "client_cabinet": "Área personal del cliente",
+        "crm_section": "Sección del módulo en el CRM"
+      },
+      "effects": {
+        "applications_intake": "Desactivado: no se crea ninguna solicitud nueva ni se firma ningún contrato. Los préstamos concedidos se gestionan con normalidad.",
+        "client_cabinet": "Interruptor de emergencia del área personal. El cliente no puede iniciar sesión, pero sí puede pagar: los pagos, la domiciliación y los devengos siguen funcionando.",
+        "crm_section": "El módulo guarda este interruptor, pero no aplica nada: es el CRM quien oculta la sección. El operador pierde la interfaz, la API sigue funcionando."
+      },
+      "confirm": {
+        "applications_intake": "Se detienen las solicitudes nuevas y la firma de contratos. Los préstamos concedidos no se ven afectados.",
+        "client_cabinet": "Los clientes no podrán iniciar sesión. Seguirán pudiendo pagar.",
+        "crm_section": "La sección desaparece del menú del operador en el CRM. El módulo y el área personal del cliente siguen funcionando."
+      },
+      "reasonPlaceholder": "Por qué lo desactivamos: quedará en el historial",
+      "reasonRequired": "Sin un motivo, nadie podrá explicar la parada dentro de una semana",
+      "turnOff": "Desactivar",
+      "readOnly": "Solo el gestor de riesgos puede cambiar los interruptores",
+      "saveFailed": "No se ha podido cambiar: el estado no ha cambiado",
+      "loadFailed": "No se ha podido leer el estado de los interruptores. No dé por hecho que todo está activado.",
+      "historyTitle": "Historial de cambios",
+      "historyEmpty": "Todavía no hay cambios",
+      "sectionOff": "El gestor de riesgos ha desactivado la sección. La gestión de los préstamos concedidos no se ha detenido: póngase en contacto con el gestor de riesgos.",
+      "sectionOffHere": "La sección está desactivada por el interruptor «Sección del módulo en el CRM». Esta página sigue abierta a propósito; de lo contrario no habría forma de volver a activar la sección. La gestión de los préstamos concedidos no se ha detenido."
+    },
+    "disbursementState": {
+      "pending": "El dinero está en camino",
+      "settled": "Liquidado",
+      "failed": "No enviado",
+      "reversed": "El dinero ha vuelto al remitente",
+      "cancelled": "Operación retirada",
+      "unknown": "Se desconoce dónde está el dinero"
+    },
+    "disbursementMethod": {
+      "interac": "Interac e-Transfer",
+      "eft": "EFT: transferencia a cuenta"
+    },
+    "disbursementFailure": {
+      "payout_refused_pending_review": "Detuvimos nosotros el desembolso hasta la revisión",
+      "provider_never_created": "El proveedor nunca creó la operación",
+      "NSF": "El banco lo rechazó: fondos insuficientes"
+    },
+    "disbursementRetry": {
+      "available": "Posible: analista de crédito o gestor de riesgos",
+      "reviewOpen": "Primero la revisión, después el reintento",
+      "notFailed": "No es posible: la reanudación solo acepta el estado «no enviado»",
+      "settled": "No hace falta: el dinero ya se ha liquidado",
+      "inFlight": "Demasiado pronto: el dinero todavía está en camino",
+      "unknownState": "Prohibido: no sabemos dónde está el dinero"
+    },
+    "providerTimeSource": {
+      "provider": "Hora indicada por el proveedor",
+      "observed": "Estimada a partir del momento en que nos enteramos"
+    },
+    "queue": {
+      "title": "Cola de revisión manual",
+      "total": "{{count}} en total",
+      "empty": "La cola está vacía",
+      "noNumberHint": "El endpoint de la cola solo devuelve el ID de la solicitud: no incluye el número de solicitud ni el correo del cliente. Abra la ficha haciendo clic en una fila para verlos.",
+      "noAssignmentHint": "La asignación a un analista de crédito todavía no existe: el mecanismo llega con WS-20, así que la columna «Asignada» está vacía en todas las filas.",
+      "noSortingHint": "El módulo devuelve toda la cola como una sola lista en orden de derivación: no hay ordenación por columnas ni paginación, porque el servidor no admite ninguna de las dos."
+    },
+    "railReviewReason": {
+      "payout_account_not_pinned": "La decisión no fijó una cuenta de desembolso",
+      "payout_details_changed_after_approval": "Los datos de la cuenta cambiaron después de la aprobación",
+      "effective_time_corrected": "La hora de liquidación se corrigió después de observarla",
+      "provider_amount_mismatch": "El importe del proveedor no coincide con el nuestro",
+      "provider_amount_unconfirmed": "El proveedor no confirmó el importe",
+      "provider_contradiction": "El proveedor se contradice",
+      "provider_dishonour_unknown": "El proveedor comunicó una devolución sin motivo",
+      "provider_foreign_operation": "El proveedor devolvió una operación ajena",
+      "provider_impossible_time": "La hora de la operación del proveedor es imposible",
+      "provider_recipient_mismatch": "El destinatario del proveedor no es el que indicamos",
+      "provider_unidentified_success": "Un éxito en el proveedor que no pudimos asociar a nuestra operación",
+      "provider_unknown_status": "El proveedor devolvió un estado que no conocemos"
+    },
+    "referralReason": {
+      "income_not_verified": "Ingresos no verificados por el banco",
+      "income_mismatch": "Los ingresos declarados no coinciden con los datos del banco",
+      "income_frequency_unverified": "Frecuencia de ingresos no verificada",
+      "income_not_plausible": "El banco mostró un importe, pero sin un patrón de nómina detrás",
+      "login_attribution_unverified": "El proveedor no confirmó que el acceso bancario pertenezca a esta solicitud",
+      "schedule_infeasible": "No se puede crear un calendario para las fechas solicitadas",
+      "manual": "Un operador derivó la solicitud a revisión",
+      "RC-04": "Ya existe un préstamo activo",
+      "RC-08": "Periodo de espera tras un rechazo",
+      "RC-11": "Capacidad de pago insuficiente / ingresos por debajo del mínimo",
+      "client_not_identifiable": "No se pudo identificar al cliente"
+    },
+    "stage": {
+      "registration": "Registro",
+      "questionnaire": "Formulario de solicitud",
+      "income_check": "Verificación de ingresos",
+      "decision": "Decisión",
+      "signing": "Firma"
+    },
+    "stageState": {
+      "done": "completado",
+      "current": "paso actual",
+      "todo": "pendiente",
+      "failed": "no superado"
+    },
+    "clientLink": {
+      "byPhone": "encontrado por teléfono",
+      "ambiguous": "{{count}} fichas coinciden con este teléfono: elija una manualmente",
+      "notFound": "no encontrado en el CRM por teléfono",
+      "notSearched": {
+        "no_phone": "sin buscar: no hay teléfono",
+        "loading": "buscando…",
+        "failed": "sin buscar: el CRM no respondió"
+      }
+    },
+    "access": {
+      "notAuthenticated": "El módulo no ha aceptado su inicio de sesión",
+      "notAuthenticatedHint": "Puede que su sesión haya caducado. Vuelva a iniciar sesión en el CRM; si no funciona, póngase en contacto con un administrador: el módulo verifica el inicio de sesión con el CRM.",
+      "noRights": "Sin acceso a la sección de crédito",
+      "noRightsHint": "Su acceso al CRM no incluye permisos para la sección de crédito. Los concede un administrador del CRM: solicite que le asignen el rol correspondiente."
     }
   },
   "toasts": {

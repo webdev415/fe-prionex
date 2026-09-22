@@ -68,6 +68,41 @@ on:
         description: 'Target environment: dev, preprod or prod. Validated by the OpenBao step, not by this declaration.'
         required: true
         type: string
+      reuse_published_image:
+        description: >-
+          `'true'` asks this run NOT to rebuild a commit whose
+          `sha-<12>-<environment>` image is ALREADY in the registry: the
+          `predigest` step below (which runs on every path anyway) becomes the
+          decision, the build and the AC2 attach are skipped, and the mutable
+          branch tag is re-pointed registry-side at the image that already
+          exists. Anything else — including the default — keeps the historical
+          behaviour byte for byte.
+
+          Why this exists: `dev-branch-autodeploy.yml`. 🔴 The original reason
+          — the weekly reset force-updating `dev` onto an already-published
+          `main` commit — turned out to be impossible on this instance (plan
+          §12), and the reset now lands a fresh catch-up commit that has no
+          image. The case that remains, and the one this input is for, is a
+          fast-forward-only merge into `dev` of a branch CI has already built:
+          autodeploy then rebuilds a commit that is already published; `vite.config.ts:8` bakes a fresh `Date.now()` into
+          every cache-missing build, the digests differ, and the AC2 guard
+          below correctly refuses to repoint the protected tag — a red run that
+          means nothing, every week, on a stand that is in fact correct. The fix
+          is not to weaken the guard (Prohibition 3) but to stop asking it to
+          approve a rebuild nobody wants. See
+          `docs/dev-weekly-reset-plan.md` §4.1.
+
+          🔴 STRING, not boolean, and compared against the literal `'true'`:
+          the same reason `environment` above is a string — this file does not
+          spend a pre-execution parse failure (which takes the dispatch half
+          down with it) to find out which scalar types this instance's
+          `workflow_call` parser accepts. The dispatch half deliberately does
+          NOT declare this input: an unset input reads as empty, which is not
+          `'true'`, so the manual path keeps the old behaviour with no
+          declaration at all.
+        required: false
+        default: 'false'
+        type: string
 
 # Workflow-level concurrency, per Story 3.1 AC5. Story 1.3 proved queueing works
 # at workflow level and is silently ignored at job level
@@ -1207,6 +1242,79 @@ jobs:
             esac
           fi
 
+      # ──────────────────────────────────────────────────────────────────────
+      # ONE decision, computed ONCE, read by every step that changes behaviour
+      # because of it (the build, the AC2 attach, the re-point, the final
+      # assertion). Deliberately not four copies of the same `if:` expression
+      # over `inputs.reuse_published_image` and `steps.predigest.outputs.
+      # pre_digest`: four copies is how three of them stay right and the fourth
+      # drifts, and on this instance the drift would show up as a green run that
+      # published nothing.
+      #
+      # Note the ordering this depends on and does not re-establish: `predigest`
+      # above is the only reader of the registry that is GUARANTEED to have run
+      # before this build touched it (that is its own Story 3.6 AC2 reason for
+      # existing). So "already published" here can never mean "published by this
+      # very run" — the reuse path cannot be self-confirming.
+      #
+      # 🔴 The reuse path is NOT a weaker AC2. It is the absence of the event
+      # AC2 judges: no second image of this commit is produced at all, so there
+      # is nothing to repoint `sha-<12>-<env>` to and the protected tag is never
+      # touched by this run. The guard below still stands, unchanged, on every
+      # path that does build.
+      - name: "Decide: rebuild, or reuse the image already published for this commit"
+        id: reuse
+        env:
+          REUSE_IN: ${{ inputs.reuse_published_image }}
+          PRE_DIGEST: ${{ steps.predigest.outputs.pre_digest }}
+          SHA_TAG: ${{ steps.tags.outputs.sha_tag }}
+          PUSH_TAGS: ${{ steps.tags.outputs.push_tags }}
+        run: |
+          set -euo pipefail
+          # `REUSE_IN` is unset on the dispatch path (the input is declared on
+          # the `workflow_call` half only) and `set -u` would abort on it, so it
+          # is defaulted here rather than assumed — the same shape the tags step
+          # needs for its own per-step `env:`.
+          REUSE_REQUESTED="${REUSE_IN:-}"
+          PRE="${PRE_DIGEST:-}"
+
+          # Exact match against the literal, not a truthiness test: `false`,
+          # `0`, `no` and an empty string must all mean "build", and so must any
+          # value nobody anticipated. Only the one spelling opts in.
+          if [ "$REUSE_REQUESTED" != "true" ]; then
+            echo "reuse=false" >> "$GITHUB_OUTPUT"
+            echo "Caller did not request reuse (reuse_published_image='${REUSE_REQUESTED}') — building normally."
+            exit 0
+          fi
+
+          if [ -z "$PRE" ]; then
+            echo "reuse=false" >> "$GITHUB_OUTPUT"
+            echo "Reuse requested, but ${SHA_TAG} does not exist yet — there is nothing to"\
+                 "reuse, so this run builds it. This is the ordinary first-build case, not a"\
+                 "failure."
+            exit 0
+          fi
+
+          # `predigest` already rejected anything that is not `sha256:` + 64 hex
+          # before writing this value, and did so fail-closed. Re-asserting the
+          # shape here is not that check repeated for its own sake: this value
+          # is about to be the ONLY digest the final assertion compares against,
+          # taking the place of the build step's own, and a check that becomes
+          # load-bearing in a new place is re-established in that place.
+          if [ "${#PRE}" -ne 71 ] || ! printf '%s' "${PRE#sha256:}" | grep -q '^[0-9a-f]\{64\}$'; then
+            echo "FAIL: reuse was requested and ${SHA_TAG} resolved, but '${PRE}' is not sha256:"\
+                 "plus 64 hex — refusing to skip a build on the strength of a digest this step"\
+                 "cannot read."
+            exit 1
+          fi
+
+          echo "reuse=true" >> "$GITHUB_OUTPUT"
+          echo "REUSE: ${SHA_TAG} is already published at ${PRE}. This run will NOT rebuild"
+          echo "  (a rebuild of this same commit cannot be byte-identical — vite.config.ts:8"
+          echo "   bakes Date.now() — so it could only produce a second image the AC2 guard is"
+          echo "   right to refuse). ${SHA_TAG} is left exactly as it is; only the mutable"
+          echo "   branch tag ${PUSH_TAGS} is re-pointed at ${PRE}, registry-side."
+
       # ⚠️ SUPERSEDED by Story 3.5. This used to read "No cache-from/cache-to
       # … `driver: docker` cannot export a registry cache at all". Both clauses
       # are now false: the driver is `docker-container` and the cache keys are
@@ -1280,6 +1388,14 @@ jobs:
       #      report.
       - name: Build and push image
         id: build
+        # The reuse path skips THIS step and the AC2 attach below, and nothing
+        # else — every guard before this point (the tag permanence guard, the
+        # netns isolation assertion, the OpenBao reads, `predigest` itself) has
+        # already run, and the fail-closed assertion at the end of the job still
+        # runs and still has to pass. A skipped step's outputs read as empty,
+        # which is why the assertion takes its digest from the decision above
+        # rather than from `steps.build.outputs.digest` unconditionally.
+        if: ${{ steps.reuse.outputs.reuse != 'true' }}
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -1399,6 +1515,13 @@ jobs:
       # `Date.now()` bug AC2 exists to catch. So no override is needed, and
       # adding one would only give that bug a bypass.
       - name: Enforce AC2 — attach or refuse sha-<12>-<env>
+        # Skipped only on the reuse path, where this step has nothing to decide:
+        # no image was built, so there is no new digest to attach and no repoint
+        # to refuse. It is NOT skipped on any path that builds — including a
+        # reuse-requesting run whose tag turned out to be absent, which the
+        # decision step above resolves to `reuse=false` precisely so that this
+        # guard keeps covering the build it just authorised.
+        if: ${{ steps.reuse.outputs.reuse != 'true' }}
         env:
           PRE_DIGEST: ${{ steps.predigest.outputs.pre_digest }}
           NEW_DIGEST: ${{ steps.build.outputs.digest }}
@@ -1478,6 +1601,60 @@ jobs:
           fi
           echo "OK: ${SHA_TAG} -> ${NEW_DIGEST} (verified by read-back)"
 
+      # ──────────────────────────────────────────────────────────────────────
+      # The reuse path's ONLY write. It is the mirror image of the attach above
+      # — same command, same `--prefer-index=false` for the same measured reason
+      # (run 716: `create` defaults to wrapping a single source in an OCI index,
+      # and every reader downstream reads `.Manifest.Digest`, which for an index
+      # is the index's own digest and can never equal the manifest's) — but it
+      # moves the MUTABLE branch tag, never the protected one.
+      #
+      # 🔴 Why this step is required and not a tidiness: the deploy that follows
+      # this build resolves the stand's image from the BRANCH tag
+      # (`deploy-stand.yml`, ref-derived: `dev` -> `dev-dev`). Skipping the
+      # build without this step would leave `dev-dev` pointing at whatever was
+      # last built from the OLD `dev` HEAD — so the weekly reset would report
+      # success and deploy the branch it had just discarded. Silent, and exactly
+      # the wrong image. The registry-side retag costs one API call and no
+      # upload: the manifest it names is already there.
+      - name: Re-point the mutable branch tag at the reused image (reuse path only)
+        if: ${{ steps.reuse.outputs.reuse == 'true' }}
+        env:
+          PRE_DIGEST: ${{ steps.predigest.outputs.pre_digest }}
+          PUSH_TAGS: ${{ steps.tags.outputs.push_tags }}
+          SHA_TAG: ${{ steps.tags.outputs.sha_tag }}
+        run: |
+          set -euo pipefail
+          # The tags step guarantees exactly two tags and that they are not the
+          # same string (it refuses the branch name that would collide), so
+          # `PUSH_TAGS` is one tag here, not a list — asserted rather than
+          # assumed, because this command would happily accept a comma as part
+          # of a tag name and produce a tag nobody can resolve.
+          case "$PUSH_TAGS" in
+            *,*) echo "FAIL: push_tags ('${PUSH_TAGS}') carries more than one tag. This step"\
+                      "retags exactly one. Refusing rather than inventing a split."; exit 1 ;;
+          esac
+          if [ "$PUSH_TAGS" = "$SHA_TAG" ]; then
+            echo "FAIL: the branch tag and the protected tag are the same string"\
+                 "('${PUSH_TAGS}'). The tags step is supposed to make this impossible;"\
+                 "refusing to retag the protected tag by accident."; exit 1
+          fi
+
+          IMAGE="${SHA_TAG%%:*}"
+          echo "Re-pointing ${PUSH_TAGS} at ${PRE_DIGEST} (registry-side retag, no upload)..."
+          docker buildx imagetools create --prefer-index=false --tag "${PUSH_TAGS}" "${IMAGE}@${PRE_DIGEST}"
+
+          # Read back, for the same reason the attach above reads back: run 716
+          # proved that this command can "succeed" and leave the tag pointing at
+          # something else entirely, and a claim is not a check.
+          RESOLVED="$(docker buildx imagetools inspect --format '{{.Manifest.Digest}}' "${PUSH_TAGS}")"
+          if [ "$RESOLVED" != "${PRE_DIGEST}" ]; then
+            echo "FAIL: re-pointed ${PUSH_TAGS} but reading it back gives '${RESOLVED}', not"\
+                 "'${PRE_DIGEST}'. The retag did not do what it claimed — refusing to report"\
+                 "success on an image the deploy would then pull."; exit 1
+          fi
+          echo "OK: ${PUSH_TAGS} -> ${RESOLVED} (verified by read-back). ${SHA_TAG} untouched."
+
       # Fail-closed assertion. Job logs are not retrievable on this instance
       # (404 on every logs endpoint), so a green job status must itself be the
       # evidence — a client exit code alone was rejected as sufficient in
@@ -1529,18 +1706,40 @@ jobs:
         # uniform and greppable: **no `${{ }}` appears inside any `run:` body in
         # this file**, which is a gate you can actually run, unlike "be careful".
         env:
-          DIGEST: ${{ steps.build.outputs.digest }}
+          BUILT_DIGEST: ${{ steps.build.outputs.digest }}
+          REUSED_DIGEST: ${{ steps.predigest.outputs.pre_digest }}
+          REUSE: ${{ steps.reuse.outputs.reuse }}
           TAGS_RAW: ${{ steps.tags.outputs.tags }}
         run: |
           set -euo pipefail
-          echo "Build reported digest: '${DIGEST}'"
+          # 🔴 This assertion stays EXACTLY as strong on the reuse path: every
+          # expected tag must still resolve, in the registry, to one digest —
+          # only WHICH digest is authoritative changes, from "the one this run
+          # built" to "the one this run deliberately did not rebuild". That is
+          # the whole difference, and it is one assignment.
+          #
+          # Crucially the branch below does NOT relax anything when the build
+          # was skipped: it substitutes a digest that `predigest` shape-checked
+          # and the decision step re-checked, and it still requires BOTH tags to
+          # resolve to it — which is what actually proves the re-point step did
+          # its job. If that step had silently not run, `dev-dev` would still
+          # point at the old image and this assertion would go red here.
+          if [ "${REUSE:-}" = "true" ]; then
+            DIGEST="${REUSED_DIGEST:-}"
+            echo "Reuse path — asserting against the already-published digest: '${DIGEST}'"
+          else
+            DIGEST="${BUILT_DIGEST:-}"
+            echo "Build reported digest: '${DIGEST}'"
+          fi
           # Shape-checked before use: comparing two empty strings succeeds, and
           # that is precisely the vacuous check being replaced. The hex class is
           # tested here, not just the length — the first version's message
           # claimed "64 hex" while the check only counted characters.
           case "${DIGEST}" in
             sha256:[0-9a-f]*) ;;
-            *) echo "FAIL: build step reported no usable digest ('${DIGEST}')." \
+            *) echo "FAIL: no usable digest to assert against ('${DIGEST}')." \
+                    "On a building run that means the build step reported none; on a reuse" \
+                    "run it means the decision step let an unusable pre-digest through." \
                     "Refusing to compare — an empty digest would make this check vacuous."; exit 1 ;;
           esac
           if [ "${#DIGEST}" -ne 71 ] || printf '%s' "${DIGEST#sha256:}" | grep -qv '^[0-9a-f]\{64\}$'; then

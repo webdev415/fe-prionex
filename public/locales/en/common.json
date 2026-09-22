@@ -73,7 +73,8 @@
     "toggleMenu": "Toggle menu",
     "scoringV3Monitoring": "v3 Shadow-Run Report",
     "scoringV3Settings": "v3 Scoring Settings",
-    "operatorWorkList": "Priority Work List"
+    "operatorWorkList": "Priority Work List",
+    "creditUnderwriting": "Manual review queue"
   },
   "dialer": {
     "phone": {
@@ -169,7 +170,8 @@
       "active": "Active",
       "paused": "Pause",
       "empty": "Queue is empty",
-      "inactive": "Inactive"
+      "inactive": "Inactive",
+      "pausedCallingWindow": "Outside calling hours"
     },
     "queueList": {
       "found": "Found: {{count}} queues",
@@ -193,7 +195,9 @@
       "deleteMessage": "This action is irreversible. The queue will be deleted along with all settings.",
       "deleted": "Queue deleted",
       "notSynced": "Not synced",
-      "notSyncedHint": "This queue has no campaign on the dialer and cannot place calls. Re-save it to retry."
+      "notSyncedHint": "This queue has no campaign on the dialer and cannot place calls. Re-save it to retry.",
+      "pausedByWindow": "Outside calling hours",
+      "pausedByWindowHint": "Outside this project’s allowed calling hours. Dialling resumes automatically at the next allowed time."
     },
     "queueForm": {
       "createTitle": "Add a new queue",
@@ -317,6 +321,14 @@
     "telephonyType": {
       "white": "White",
       "grey": "Grey"
+    },
+    "callingWindow": {
+      "closedTitle": "Outside calling hours",
+      "resumes": "Dialling resumes {{when}}.",
+      "resumesUnknown": "No reopening time can be given — check the project’s holiday calendar.",
+      "allowed": "Allowed: {{hours}}, {{days}} ({{timezone}})",
+      "open": "Calling hours {{hours}} · {{days}} · open now",
+      "everyDay": "every day"
     }
   },
   "search": {
@@ -910,7 +922,7 @@
       "modeFastShort": "Fast",
       "modeThinkingShort": "Thinking",
       "modeFastHint": "Answers instantly",
-      "modeThinkingHint": "Analyzes more thoroughly, but slower",
+      "modeThinkingHint": "Analyzes more thoroughly, shows its train of thought (31B)",
       "modeChangeHint": "Set next to the input",
       "expertTitle": "Expert (Claude)",
       "expertTrigger": "Expert · {{model}}",
@@ -927,7 +939,6 @@
       "expertUnavailable": "The external service is unavailable right now, try again later.",
       "showReasoning": "Show reasoning",
       "showReasoningHint": "The train of thought is shown in the «Activity» panel",
-      "showReasoningFastHint": "Fast mode produces no reasoning",
       "voiceSilenceTimeout": "Silence timeout (auto-stop)",
       "voiceMaxDuration": "Max recording length",
       "voiceSeconds": "{{count}}s",
@@ -4441,6 +4452,73 @@
           "UA": "Ukraine",
           "ES": "Spain"
         }
+      },
+      "callingWindow": {
+        "country": "Holiday calendar",
+        "countryPlaceholder": "Select a country",
+        "days": {
+          "1": "Mon",
+          "2": "Tue",
+          "3": "Wed",
+          "4": "Thu",
+          "5": "Fri",
+          "6": "Sat",
+          "7": "Sun"
+        },
+        "enable": "Enforce a calling window",
+        "enableHint": "Calls outside the window are refused by the system. Operators cannot override it.",
+        "end": "Closes",
+        "endHint": "Exclusive — set it short of the legal limit so no call is still running at the cut-off.",
+        "errors": {
+          "start": "Start must be HH:MM",
+          "end": "End must be HH:MM",
+          "same": "Start and end cannot be equal",
+          "timezone": "A fallback timezone is required"
+        },
+        "noCountry": "No holiday calendar: public holidays are not observed for this project. Hours and allowed days still apply.",
+        "saveFailed": "Could not save the calling window",
+        "saved": "Calling window saved",
+        "start": "Opens",
+        "subdivision": "Region (optional)",
+        "subdivisionPlaceholder": "National only",
+        "tabHolidays": "Holidays",
+        "tabWindow": "Window",
+        "timezone": "Fallback timezone",
+        "timezoneHint": "Used when the debtor's own timezone cannot be determined.",
+        "title": "Calling window",
+        "weekdays": "Allowed days",
+        "weekdaysHint": "Select none to allow every day.",
+        "loadFailed": "Could not load the calling window.",
+        "refreshFailed": "Could not refresh the calling window. You are seeing the last loaded values.",
+        "countryNone": "No holiday calendar"
+      },
+      "holidayCalendar": {
+        "year": "Year",
+        "noCountry": "No country is set, so public holidays are not observed. Choose one on the Window tab to enforce them.",
+        "loadFailed": "Could not load the calendar. Try again before generating, so an existing one is not overwritten.",
+        "notGenerated": "No calendar exists for this year. Until one does, every call in that year is refused.",
+        "generate": "Generate {{year}}",
+        "generateFailed": "Could not generate the calendar",
+        "computedEmpty": "This country has no public holidays recorded for that year. Check before relying on it.",
+        "emptyCalendar": "This calendar has no dates. That is a valid answer for some countries, but confirm it is right — calls will be allowed on every working day of the year.",
+        "reviewed": "Reviewed",
+        "unreviewed": "Not yet reviewed",
+        "added": "added",
+        "addDate": "Add a date",
+        "addName": "Name (optional)",
+        "addFailed": "Could not add that date",
+        "removeFailed": "Could not remove that date",
+        "regenerate": "Recompute from the calendar",
+        "regenerateHint": "Recomputing keeps dates you added and clears the reviewed mark.",
+        "confirm": "Mark as reviewed",
+        "confirmed": "Calendar marked as reviewed",
+        "confirmFailed": "Could not mark the calendar as reviewed",
+        "badDate": "Enter the date as YYYY-MM-DD",
+        "wrongYear": "That date is not in {{year}}",
+        "alreadyAdded": "That date is already on the calendar",
+        "regenerateTitle": "Recompute {{year}}?",
+        "regenerateConfirm": "Computed dates are re-derived from the country calendar, dates you added by hand are kept, and the reviewed mark is cleared.",
+        "countryUnsaved": "Save the window first. The calendar is computed from the saved country, so generating now would use the previous one."
       }
     },
     "roles": {
@@ -11972,6 +12050,16 @@
         "loadingPriorityWorkList": "Loading priority work list…"
       }
     },
+    "calls": {
+      "callingWindow": {
+        "blocked": "Calling is not allowed right now",
+        "holiday": "Today is a public holiday",
+        "outsideHours": "Outside the allowed calling hours",
+        "unavailable": "Calling hours cannot be checked right now",
+        "weekend": "Calls are not allowed today",
+        "noCalendar": "Calling is blocked until this year’s holiday calendar is set up"
+      }
+    },
     "messaging": {
       "attachmentPreview": "Attachment preview"
     }
@@ -12178,7 +12266,16 @@
       "allocation": "Allocation",
       "totalRow": "Total",
       "interest": "Interest",
-      "fee": "Fee"
+      "fee": "Fee",
+      "lastActivity": "Last activity",
+      "step": "Step",
+      "onStep": "On step",
+      "application": "Application",
+      "reasons": "Review reason",
+      "referred": "Referred",
+      "waiting": "In queue",
+      "assigned": "Assigned",
+      "disbursed": "Disbursed"
     },
     "fields": {
       "name": "Name",
@@ -12265,7 +12362,23 @@
       "signedAt": "Signed at",
       "signHash": "Document SHA-256",
       "signSession": "Session / IP",
-      "templateVersion": "Template version"
+      "templateVersion": "Template version",
+      "disbursementAmount": "Payout amount",
+      "disbursementMethod": "Method",
+      "settledAt": "Settled at",
+      "failedAt": "Failed at",
+      "failureCode": "Reason",
+      "timeSource": "Timestamp source",
+      "provider": "Provider",
+      "providerTxId": "Provider transaction ID",
+      "providerStatus": "Provider status",
+      "clientTransactionId": "Our operation key",
+      "retry": "Retry",
+      "applicationId": "Application ID",
+      "externalApplicationId": "External application ID",
+      "decisionId": "Decision ID",
+      "loanId": "Loan ID",
+      "loanAgeDays": "Days since disbursement"
     },
     "tabs": {
       "form": "Application form",
@@ -12389,11 +12502,24 @@
       "scheduleVersionEmpty": "Version {{version}} ({{reason}}) has no instalments — they are in version {{previous}}.",
       "openPreviousVersion": "Open it",
       "paymentReversedOn": "Reversed on {{date}}",
-      "paymentsReversedHint": "Of the payments listed, {{count}} were reversed for {{amount}} — that amount is not counted towards the debt, the money went back to the bank."
-    },
-    "stand": {
-      "notice": "Stage 1: the module runs outside Kong and does not know CRM roles yet — the role below is a stand mock (WS-20 replaces it with JWT).",
-      "role": "Stand role"
+      "paymentsReversedHint": "Of the payments listed, {{count}} were reversed for {{amount}} — that amount is not counted towards the debt, the money went back to the bank.",
+      "idleFor": "last activity: {{duration}} ago",
+      "outstandingLoans": "Outstanding loans",
+      "cooldownUntil": "Cooldown after decline until {{date}}",
+      "disbursement": "Money transfer progress",
+      "disbursementNotSent": "The payout has never been sent — not a single transfer attempt.",
+      "disbursementUpdated": "updated {{when}}",
+      "disbursementReview": "Awaiting review: {{reason}} — since {{since}}",
+      "disbursementReviewNoDate": "Awaiting review: {{reason}}",
+      "disbursementUnknownCode": "Code «{{code}}» — the provider’s own wording, we have not translated it yet",
+      "disbursementObservedTime": "The provider did not tell us the settlement time — we derived it from the moment we found out. The two-day cancellation window (CA s.124.4) is counted from this date: the client’s deadline is estimated, not known.",
+      "disbursementNoRetryButton": "There is deliberately no retry button here: the resume command accepts only the «failed» state with a closed review, requires no retry reason, accepts no idempotency key and does not record who pressed it. For now a module developer performs the retry on request.",
+      "disbursementRetryContradiction": "The module marks the retry as allowed, but the resume command will refuse it: the module’s flag is wider than the command’s condition. Aligning them is on the module side.",
+      "disbursementUnknown": "Disbursement state is unknown — the core did not answer. This does NOT mean no transfer was made: it may have gone out and failed. Refresh or come back later.",
+      "stagesTitle": "Client path",
+      "stagesHint": "the same five steps the client sees in their cabinet",
+      "stageOfTotal": "step {{index}} of {{total}}",
+      "identifiers": "Identifiers"
     },
     "settings": {
       "title": "Credit module settings",
@@ -12401,7 +12527,8 @@
       "tabs": {
         "products": "Credit products",
         "parameters": "Module settings",
-        "integrations": "Integrations"
+        "integrations": "Integrations",
+        "switches": "Kill switches"
       },
       "needRiskManager": "This section is available to the risk manager: it holds the thresholds and the product configuration.",
       "mutationDisabled": "Editing requires a second approver (UW-04) — available once CRM roles land (WS-20).",
@@ -12684,17 +12811,136 @@
     },
     "unavailable": {
       "title": "The credit module is not deployed on this stand",
-      "hint": "The section is in place, but the credit service is not routed here yet: on stage 1 it runs outside Kong. Locally it is served on localhost:8020; on the dev server the route /api/v1/credit will appear together with the module deployment."
+      "hint": "The section is in place, but the credit service does not answer on this stand. This is not a problem with your access: contact an administrator or the support team — the technical reason is shown below."
     },
-    "standKey": {
-      "title": "Stand service key",
-      "where": "Ask DevOps for INTERNAL_API_KEY of the credit module on this stand (deploy/.env on the server), and paste it here.",
-      "lifetime": "The key lives until this tab is closed — being asked again after reopening the tab is normal, not a fault.",
-      "placeholder": "X-Internal-Api-Key",
-      "save": "Save key",
-      "clear": "Clear",
-      "present": "A key is saved for this tab.",
-      "absent": "No key saved: the module answers 401."
+    "idle": {
+      "underHour": "under an hour",
+      "hoursShort": "{{value}} h",
+      "daysShort": "{{value}} d",
+      "sinceCreated": "since creation"
+    },
+    "switches": {
+      "rule": "Turning a switch off stops only what is NEW. Servicing of issued loans never stops: payments are accepted, schedule and documents are served, the two-day right of rescission stands.",
+      "on": "On",
+      "off": "Off",
+      "names": {
+        "applications_intake": "Application intake from the site",
+        "client_cabinet": "Client cabinet",
+        "crm_section": "Module section in CRM"
+      },
+      "effects": {
+        "applications_intake": "Off — no new application is created and no contract is signed. Issued loans are serviced as usual.",
+        "client_cabinet": "Emergency cabinet switch. The client cannot sign in but can still pay: payments, autodebit and accruals keep running.",
+        "crm_section": "The module stores this switch but enforces nothing: CRM hides the section. The operator loses the UI, the API keeps working."
+      },
+      "confirm": {
+        "applications_intake": "New applications and contract signing stop. Issued loans are unaffected.",
+        "client_cabinet": "Clients will not be able to sign in. Paying stays possible.",
+        "crm_section": "The section disappears from the operator menu in CRM. The module and the client cabinet keep working."
+      },
+      "reasonPlaceholder": "Why we are switching off — goes into the history",
+      "reasonRequired": "Without a reason nobody will explain the stop a week later",
+      "turnOff": "Switch off",
+      "readOnly": "Only the risk manager can switch",
+      "saveFailed": "Switching failed — state unchanged",
+      "loadFailed": "Could not read the switch state. Do not assume everything is on.",
+      "historyTitle": "Switching history",
+      "historyEmpty": "No switching yet",
+      "sectionOff": "The section was switched off by the risk manager. Servicing of issued loans is not stopped — contact the risk manager.",
+      "sectionOffHere": "The section is switched off by the “Module section in CRM” switch. This page stays open deliberately — otherwise there would be no way to switch the section back on. Servicing of issued loans is not stopped."
+    },
+    "disbursementState": {
+      "pending": "Money is on its way",
+      "settled": "Settled",
+      "failed": "Not sent",
+      "reversed": "Money came back to the sender",
+      "cancelled": "Operation withdrawn",
+      "unknown": "Unknown where the money is"
+    },
+    "disbursementMethod": {
+      "interac": "Interac e-Transfer",
+      "eft": "EFT — transfer to account"
+    },
+    "disbursementFailure": {
+      "payout_refused_pending_review": "We stopped the payout ourselves pending review",
+      "provider_never_created": "The provider never created the operation",
+      "NSF": "Bank declined: insufficient funds"
+    },
+    "disbursementRetry": {
+      "available": "Possible — underwriter or risk manager",
+      "reviewOpen": "Review first, retry after",
+      "notFailed": "Not possible: resume accepts only the «not sent» state",
+      "settled": "Not needed — the money has been settled",
+      "inFlight": "Too early — the money is still on its way",
+      "unknownState": "Forbidden: we do not know where the money is"
+    },
+    "providerTimeSource": {
+      "provider": "Provider’s own timestamp",
+      "observed": "Estimated from the moment we found out"
+    },
+    "queue": {
+      "title": "Manual review queue",
+      "total": "{{count}} total",
+      "empty": "The queue is empty",
+      "noNumberHint": "The queue endpoint returns only the application id — it carries no application number and no client email. Open the card by clicking a row to see them.",
+      "noAssignmentHint": "Assignment to an underwriter does not exist yet: the mechanism arrives with WS-20, so the “Assigned” column is empty for every row.",
+      "noSortingHint": "The module returns the whole queue as one list in referral order: there is no column sorting and no paging, because the server supports neither."
+    },
+    "railReviewReason": {
+      "payout_account_not_pinned": "The decision did not pin a payout account",
+      "payout_details_changed_after_approval": "Account details changed after approval",
+      "effective_time_corrected": "The settlement time was corrected after observation",
+      "provider_amount_mismatch": "The provider’s amount does not match ours",
+      "provider_amount_unconfirmed": "The provider did not confirm the amount",
+      "provider_contradiction": "The provider contradicts itself",
+      "provider_dishonour_unknown": "The provider reported a reversal without a reason",
+      "provider_foreign_operation": "The provider returned someone else’s operation",
+      "provider_impossible_time": "The provider’s operation time is impossible",
+      "provider_recipient_mismatch": "The provider’s recipient is not the one we named",
+      "provider_unidentified_success": "A success at the provider we could not match to our operation",
+      "provider_unknown_status": "The provider returned a status we do not know"
+    },
+    "referralReason": {
+      "income_not_verified": "Income not verified by the bank",
+      "income_mismatch": "Declared income differs from the bank data",
+      "income_frequency_unverified": "Income frequency not verified",
+      "income_not_plausible": "The bank showed an amount, but no payroll pattern behind it",
+      "login_attribution_unverified": "The provider did not confirm the bank login belongs to this application",
+      "schedule_infeasible": "No schedule can be built for the requested calendar",
+      "manual": "An operator referred the application for review",
+      "RC-04": "An active loan already exists",
+      "RC-08": "Cool-down period after a decline",
+      "RC-11": "Insufficient affordability / income below minimum",
+      "client_not_identifiable": "Client could not be identified"
+    },
+    "stage": {
+      "registration": "Registration",
+      "questionnaire": "Application form",
+      "income_check": "Income check",
+      "decision": "Decision",
+      "signing": "Signing"
+    },
+    "stageState": {
+      "done": "done",
+      "current": "current step",
+      "todo": "ahead",
+      "failed": "not passed"
+    },
+    "clientLink": {
+      "byPhone": "matched by phone",
+      "ambiguous": "{{count}} cards matched this phone — pick one manually",
+      "notFound": "not found in CRM by phone",
+      "notSearched": {
+        "no_phone": "not searched: no phone",
+        "loading": "searching…",
+        "failed": "not searched: CRM did not answer"
+      }
+    },
+    "access": {
+      "notAuthenticated": "The module did not accept your sign-in",
+      "notAuthenticatedHint": "Your session may have expired. Sign in to CRM again; if that does not help, contact an administrator — the module verifies sign-in with CRM.",
+      "noRights": "No access to the credit section",
+      "noRightsHint": "Your CRM pass carries no credit-section permissions. A CRM administrator grants them — ask to be assigned the matching role."
     }
   },
   "toasts": {
