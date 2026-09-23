@@ -139,6 +139,22 @@ export interface OperatorPerformanceUI {
   summary: OperatorSummaryUI
   dailyBreakdown: DailyBreakdownUI[]
   comparisonToAverage?: Record<string, number>
+  /**
+   * report-service `ranking_eligible` (board #1332 AC#2): `false` = never
+   * crowned in dashboard rankings, `null` = unresolved, `undefined` = an older
+   * backend that does not send it.
+   */
+  rankingEligible?: boolean | null
+}
+
+/**
+ * «Top collector» picked by report-service (board #1332 AC#2)
+ */
+export interface TopCollectorUI {
+  operatorId: number
+  operatorName: string
+  paymentsCollected: number
+  paymentsCount: number
 }
 
 /**
@@ -164,6 +180,12 @@ export interface OperatorPerformanceResponseUI {
   }
   operators: OperatorPerformanceUI[]
   teamAverage?: TeamAverageUI
+  /**
+   * report-service `top_collector`. `null` = the backend says nobody may be
+   * shown (the tile is hidden); `undefined` = an older backend that does not
+   * send the key (the dashboard falls back to its own pick over the rows).
+   */
+  topCollector?: TopCollectorUI | null
   generatedAt: string
 }
 
@@ -318,4 +340,6 @@ export interface AgentPerformanceRow {
   sms: number
   messages: number
   payments: number
+  /** Operator `rankingEligible` — `false` keeps the row out of «top collector». */
+  rankingEligible?: boolean | null
 }

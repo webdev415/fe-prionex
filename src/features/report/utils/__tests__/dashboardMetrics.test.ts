@@ -1,5 +1,5 @@
 /**
- * Dashboard metric helpers — board #1326 (D3), #1332 (D8), #1334 (D10).
+ * Dashboard metric helpers — board #1326 (D3), #1332 (D8, AC#2), #1334 (D10).
  */
 
 import { describe, it, expect } from 'vitest'
@@ -9,9 +9,10 @@ import {
   parseDurationToSeconds,
   pickContactRatePerformers,
   pickTopCollector,
+  resolveTopCollector,
   type AgentTotalsInputRow,
 } from '../dashboardMetrics'
-import type { OperatorPerformanceUI } from '../../types'
+import type { OperatorPerformanceUI, TopCollectorUI } from '../../types'
 
 function operator(
   operatorId: number,
@@ -130,6 +131,64 @@ describe('pickTopCollector (D8 #1332)', () => {
         { operator: 'Second', payments: 500 },
       ])
     ).toEqual({ name: 'First', amount: 500 })
+  })
+
+  it('never crowns a row report-service ruled out, however large (AC#2)', () => {
+    // The production symptom of 23.09: an analyst and «Administrator System»
+    // held the largest attributed sums and were shown as the best collector.
+    const top = pickTopCollector([
+      { operator: 'Analyst', payments: 180_574.52, rankingEligible: false },
+      { operator: 'Administrator System', payments: 84_947.75, rankingEligible: false },
+      { operator: 'Collector', payments: 22_600, rankingEligible: true },
+    ])
+
+    expect(top).toEqual({ name: 'Collector', amount: 22_600 })
+  })
+
+  it('still ranks rows without the mark (older backend or unresolved)', () => {
+    expect(
+      pickTopCollector([
+        { operator: 'Older backend', payments: 500 },
+        { operator: 'Unresolved', payments: 700, rankingEligible: null },
+      ])
+    ).toEqual({ name: 'Unresolved', amount: 700 })
+  })
+
+  it('returns null when only ruled-out rows collected anything', () => {
+    expect(
+      pickTopCollector([
+        { operator: 'Administrator System', payments: 84_947.75, rankingEligible: false },
+        { operator: 'Collector', payments: 0, rankingEligible: true },
+      ])
+    ).toBeNull()
+  })
+})
+
+describe('resolveTopCollector (D8 #1332 AC#2)', () => {
+  const rows = [
+    { operator: 'Administrator System', payments: 180_574.52, rankingEligible: false },
+    { operator: 'Collector', payments: 22_600, rankingEligible: true },
+    { operator: 'Other', payments: 9_000, rankingEligible: true },
+  ]
+  const server: TopCollectorUI = {
+    operatorId: 7234,
+    operatorName: 'Server pick',
+    paymentsCollected: 22_600,
+    paymentsCount: 3,
+  }
+
+  it("shows report-service's top collector as is when it sends one", () => {
+    expect(resolveTopCollector(server, rows)).toEqual({ name: 'Server pick', amount: 22_600 })
+  })
+
+  it('hides the tile when report-service says nobody may be crowned (null)', () => {
+    // No local fallback: the rows still have a positive eligible amount.
+    expect(resolveTopCollector(null, rows)).toBeNull()
+  })
+
+  it('falls back to the local pick over the eligible rows on an older backend (undefined)', () => {
+    expect(resolveTopCollector(undefined, rows)).toEqual({ name: 'Collector', amount: 22_600 })
+    expect(resolveTopCollector(undefined, [])).toBeNull()
   })
 })
 

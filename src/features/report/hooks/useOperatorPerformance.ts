@@ -100,6 +100,11 @@ export function useAgentPerformanceTable(params: UseOperatorPerformanceParams) {
   return {
     ...query,
     data: query.data ? transformToAgentPerformanceRows(query.data.operators) : undefined,
+    /**
+     * report-service `top_collector` of this query (board #1332 AC#2): `null` =
+     * nobody may be shown; `undefined` = no data yet or an older backend.
+     */
+    topCollector: query.data?.topCollector,
   }
 }
 
