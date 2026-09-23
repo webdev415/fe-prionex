@@ -12460,7 +12460,9 @@
       "externalApplicationId": "ID externo de la solicitud",
       "decisionId": "ID de la decisión",
       "loanId": "ID del préstamo",
-      "loanAgeDays": "Días desde el desembolso"
+      "loanAgeDays": "Días desde el desembolso",
+      "advanceRefundExcess": "Excedente de devolución tras la cancelación",
+      "supersedesDecision": "Sustituye la decisión anterior"
     },
     "tabs": {
       "form": "Formulario de solicitud",
@@ -12603,7 +12605,10 @@
       "stagesTitle": "Recorrido del cliente",
       "stagesHint": "los mismos cinco pasos que el cliente ve en su área personal",
       "stageOfTotal": "paso {{index}} de {{total}}",
-      "identifiers": "Identificadores"
+      "identifiers": "Identificadores",
+      "owedToClient": "Adeudado al cliente",
+      "owedToClientHint": "Tras cancelar, el cliente devolvió más de lo que recibió. El módulo debe devolverle esta cantidad: no es una deuda del cliente ni un sobrepago.",
+      "owedToClientUnknown": "El módulo no indicó si le debemos algo al cliente: el campo falta en la respuesta. Esto no significa que no haya excedente."
     },
     "settings": {
       "title": "Configuración del módulo de crédito",

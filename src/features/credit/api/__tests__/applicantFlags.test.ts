@@ -72,6 +72,7 @@ function cleanApplication(): CreditApplicationDetail {
       underwriter_id: null,
       rationale: null,
       overrides_decision_id: null,
+      supersedes_decision_id: null,
       decided_at: '2026-08-29T19:04:55Z',
       input_snapshot: {
         requested_amount_minor: 30000,
