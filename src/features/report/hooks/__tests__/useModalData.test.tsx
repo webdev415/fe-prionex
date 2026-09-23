@@ -1,5 +1,6 @@
 /**
- * Modal data hooks — board #1326 (D3), #1333 (D9, FE part), #1327 (D4, FE part).
+ * Modal data hooks — board #1326 (D3), #1333 (D9, FE part), #1327 (D4, FE part),
+ * and the «Інше» outcome row (calls_other) of the Контактність modal.
  *
  * The three source hooks are mocked, so these tests pin what the modal hooks
  * DERIVE from them, not the network.
@@ -13,6 +14,7 @@ import type {
   OperatorPerformanceResponseUI,
   OperatorPerformanceUI,
 } from '../../types'
+import type { BackendCallStatistics } from '../../api/types'
 import { transformCommunicationStatistics } from '../../utils/transformers'
 
 const sources = vi.hoisted(() => ({
@@ -101,7 +103,10 @@ function operatorResponse(operators: OperatorPerformanceUI[]): OperatorPerforman
 }
 
 /** Built through the real transformer from a report-service-shaped payload. */
-function communication(hourly: { hour: number; calls: number }[]): CommunicationStatisticsUI {
+function communication(
+  hourly: { hour: number; calls: number }[],
+  callStatistics: Partial<BackendCallStatistics> = {}
+): CommunicationStatisticsUI {
   return transformCommunicationStatistics({
     project_id: 1,
     date_range: { from_date: '2026-09-21', to_date: '2026-09-21' },
@@ -114,6 +119,7 @@ function communication(hourly: { hour: number; calls: number }[]): Communication
       contact_rate: 0,
       total_talk_time: 0,
       avg_call_duration: 0,
+      ...callStatistics,
     },
     sms_statistics: { total_sent: 0, delivered: 0, failed: 0, delivery_rate: 0 },
     hourly_breakdown: hourly.map((h) => ({ ...h, calls_answered: 0, sms_sent: 0 })),
@@ -213,5 +219,58 @@ describe('useContactRateModal ranking (D3 #1326)', () => {
 
     expect(result.current.data?.bestPerformer).toBeNull()
     expect(result.current.data?.needsImprovement).toBeNull()
+  })
+})
+
+describe('useContactRateModal «Результати дзвінків» add up to the total', () => {
+  const buckets = {
+    total_calls: 100,
+    calls_answered: 20,
+    calls_no_answer: 50,
+    calls_busy: 5,
+    calls_failed: 5,
+  }
+
+  function outcomesFor(callStatistics: Partial<BackendCallStatistics>) {
+    sources.dashboard = dashboard(100, 20)
+    sources.operators = operatorResponse([])
+    sources.communication = communication([], callStatistics)
+
+    const { result } = renderHook(() =>
+      useContactRateModal({ projectId: 1, period: 'today', userTimezone: 'UTC' })
+    )
+    return result.current.data?.outcomes ?? []
+  }
+
+  it('adds an «Інше» row fed by report-service calls_other', () => {
+    const outcomes = outcomesFor({ ...buckets, calls_other: 20 })
+
+    expect(outcomes.map((o) => o.key)).toEqual(['answered', 'noAnswer', 'busy', 'failed', 'other'])
+    expect(outcomes.at(-1)).toEqual({ key: 'other', count: 20, percentage: 20 })
+    expect(outcomes.reduce((sum, o) => sum + o.count, 0)).toBe(100)
+  })
+
+  it('derives «Інше» when an older backend does not send calls_other', () => {
+    const outcomes = outcomesFor(buckets)
+
+    expect(outcomes.find((o) => o.key === 'other')).toEqual({
+      key: 'other',
+      count: 20,
+      percentage: 20,
+    })
+    expect(outcomes.reduce((sum, o) => sum + o.count, 0)).toBe(100)
+  })
+
+  it('has no «Інше» row when the four buckets already add up', () => {
+    const outcomes = outcomesFor({ ...buckets, calls_no_answer: 70, calls_other: 0 })
+
+    expect(outcomes.map((o) => o.key)).toEqual(['answered', 'noAnswer', 'busy', 'failed'])
+  })
+
+  it('still treats calls that are only «Інше» as call statistics', () => {
+    // total_calls 0 on a lagging aggregate, but the other bucket has calls.
+    const outcomes = outcomesFor({ total_calls: 0, calls_other: 4 })
+
+    expect(outcomes.find((o) => o.key === 'other')?.count).toBe(4)
   })
 })

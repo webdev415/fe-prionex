@@ -42,7 +42,8 @@ export interface ContactRatePerformers {
  * Pick the best and the worst operator by contact rate among the operators
  * who made at least `minCalls` calls (and never one with 0 calls).
  *
- * Nobody qualifies → both are null (the modal hides the block). Exactly one
+ * Nobody qualifies → both are null (the modal says there are not enough calls
+ * to compare operators instead of ranking anyone). Exactly one
  * qualifies → only `bestPerformer` is set: one operator cannot be both.
  */
 export function pickContactRatePerformers(

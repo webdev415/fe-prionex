@@ -10,6 +10,7 @@ import {
   trendToChangeType,
   formatDuration,
   parseNumber,
+  callsOther,
   transformCommunicationStatistics,
   transformHourlyBreakdown,
   transformToAgentPerformanceRows,
@@ -115,6 +116,33 @@ describe('transformHourlyBreakdown (D9 #1333)', () => {
     ).toEqual({ label: '09:00-10:00', calls: 42, callsAnswered: 7 })
   })
 
+  it('prefers `calls` when a payload carries both names', () => {
+    expect(
+      transformHourlyBreakdown({
+        hour: 9,
+        calls: 42,
+        calls_made: 5,
+        calls_answered: 7,
+        sms_sent: 3,
+      }).calls
+    ).toBe(42)
+  })
+
+  it('still reads the legacy `calls_made` when `calls` is absent', () => {
+    const entry = {
+      hour: 10,
+      calls_made: 17,
+      calls_answered: 4,
+      sms_sent: 0,
+    } as unknown as Parameters<typeof transformHourlyBreakdown>[0]
+
+    expect(transformHourlyBreakdown(entry)).toEqual({
+      label: '10:00-11:00',
+      calls: 17,
+      callsAnswered: 4,
+    })
+  })
+
   it('never produces NaN for a payload that lacks the count', () => {
     const entry = { hour: 23 } as unknown as Parameters<typeof transformHourlyBreakdown>[0]
 
@@ -153,6 +181,58 @@ describe('transformHourlyBreakdown (D9 #1333)', () => {
 
     expect(hourly.map((h) => h.calls)).toEqual([10, 20, 0])
     expect(hourly.filter((h) => h.calls > 0)).toHaveLength(2)
+  })
+})
+
+describe('call outcomes add up to the total — «Інше» (calls_other)', () => {
+  const baseStats: BackendCommunicationStatisticsResponse['call_statistics'] = {
+    total_calls: 100,
+    calls_answered: 20,
+    calls_no_answer: 50,
+    calls_busy: 5,
+    calls_failed: 5,
+    contact_rate: 20,
+    total_talk_time: 0,
+    avg_call_duration: 0,
+  }
+
+  function payload(
+    callStatistics: BackendCommunicationStatisticsResponse['call_statistics']
+  ): BackendCommunicationStatisticsResponse {
+    return {
+      project_id: 1,
+      date_range: { from_date: '2026-09-21', to_date: '2026-09-21' },
+      call_statistics: callStatistics,
+      sms_statistics: { total_sent: 0, delivered: 0, failed: 0, delivery_rate: 0 },
+      generated_at: '2026-09-21T10:00:00Z',
+    }
+  }
+
+  it('takes report-service `calls_other` when it is sent', () => {
+    expect(callsOther({ ...baseStats, calls_other: 7 })).toBe(7)
+  })
+
+  it('derives total − (answered + no answer + busy + failed) for an older backend', () => {
+    expect(callsOther(baseStats)).toBe(20)
+  })
+
+  it('never goes below zero when the buckets exceed the total', () => {
+    expect(callsOther({ ...baseStats, total_calls: 70 })).toBe(0)
+  })
+
+  it('falls back to the derivation for a non-numeric `calls_other`', () => {
+    const stats = { ...baseStats, calls_other: null } as unknown as typeof baseStats
+    expect(callsOther(stats)).toBe(20)
+  })
+
+  it('carries `other` through transformCommunicationStatistics', () => {
+    const withField = transformCommunicationStatistics(payload({ ...baseStats, calls_other: 20 }))
+    const derived = transformCommunicationStatistics(payload(baseStats))
+
+    for (const { callStatistics: c } of [withField, derived]) {
+      expect(c.other).toBe(20)
+      expect(c.answered + c.noAnswer + c.busy + c.failed + c.other).toBe(c.totalCalls)
+    }
   })
 })
 

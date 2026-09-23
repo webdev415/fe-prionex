@@ -677,12 +677,35 @@ function transformCallStatistics(
     noAnswer: stats.calls_no_answer,
     busy: stats.calls_busy,
     failed: stats.calls_failed,
+    other: callsOther(stats),
     contactRate: stats.contact_rate,
     totalTalkTime: stats.total_talk_time,
     totalTalkTimeFormatted: formatDuration(stats.total_talk_time),
     avgCallDuration: stats.avg_call_duration,
     avgCallDurationFormatted: formatDuration(stats.avg_call_duration),
   }
+}
+
+/**
+ * Calls outside answered / no answer / busy / failed, so the «Результати
+ * дзвінків» rows add up to the total. Taken from report-service `calls_other`
+ * (the call-service /statistics name); an older backend that does not send it
+ * gets max(0, total − (answered + no answer + busy + failed)): 100 calls with
+ * 20 / 50 / 5 / 5 in the four buckets → 20 other.
+ */
+export function callsOther(
+  stats: BackendCommunicationStatisticsResponse['call_statistics']
+): number {
+  const reported = stats.calls_other
+  if (typeof reported === 'number' && Number.isFinite(reported) && reported >= 0) {
+    return reported
+  }
+  const bucketed =
+    (stats.calls_answered || 0) +
+    (stats.calls_no_answer || 0) +
+    (stats.calls_busy || 0) +
+    (stats.calls_failed || 0)
+  return Math.max(0, (stats.total_calls || 0) - bucketed)
 }
 
 /**
@@ -806,16 +829,17 @@ function transformDailyTrend(
  * in the hook using the user's timezone.
  *
  * The count is read from `calls` — the report-service `HourlyBreakdown` field
- * (contract C2). Reading call-service's internal `calls_made` here gave
+ * (contract C2). Reading ONLY call-service's internal `calls_made` gave
  * `undefined` → NaN, the modal's `calls > 0` filter dropped every hour, and
- * «По годинах» never rendered (board #1333).
+ * «По годинах» never rendered (board #1333). `calls_made` stays as a fallback
+ * for a payload that still carries the legacy name.
  */
 export function transformHourlyBreakdown(entry: BackendHourlyBreakdown): HourlyBreakdownUI {
   const h = entry.hour
   const label = `${String(h).padStart(2, '0')}:00-${String(h + 1).padStart(2, '0')}:00`
   return {
     label,
-    calls: entry.calls ?? 0,
+    calls: entry.calls ?? entry.calls_made ?? 0,
     callsAnswered: entry.calls_answered ?? 0,
   }
 }

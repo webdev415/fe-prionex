@@ -239,6 +239,12 @@ export interface BackendCallStatistics {
   calls_no_answer: number
   calls_busy: number
   calls_failed: number
+  /**
+   * Calls in none of the four buckets above (call-service /statistics
+   * `calls_other`), so the five add up to `total_calls`. Optional: an older
+   * report-service does not send it and the transformer derives it.
+   */
+  calls_other?: number
   contact_rate: number
   total_talk_time: number
   avg_call_duration: number
@@ -318,6 +324,8 @@ export interface BackendHourlyBreakdown {
   /** UTC hour (0-23) */
   hour: number
   calls: number
+  /** Legacy name of `calls` (call-service's internal field); read only when `calls` is absent. */
+  calls_made?: number
   calls_answered: number
   sms_sent: number
 }
@@ -352,7 +360,10 @@ export interface ExportParams {
   start_date?: string
   /** Dashboard export window end, YYYY-MM-DD in the user's profile time zone. */
   end_date?: string
-  /** IANA time zone the dashboard export window is expressed in (contract C4). */
+  /**
+   * IANA time zone the dashboard export window is expressed in (contract C4).
+   * `timezone` on purpose: the report-service export router's param, unlike `user_timezone` elsewhere.
+   */
   timezone?: string
   from_date?: string
   to_date?: string

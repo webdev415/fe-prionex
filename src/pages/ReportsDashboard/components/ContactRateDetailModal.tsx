@@ -38,7 +38,7 @@ export interface ContactRateRecord {
   duration: number
 }
 
-export type OutcomeType = 'answered' | 'noAnswer' | 'busy' | 'failed'
+export type OutcomeType = 'answered' | 'noAnswer' | 'busy' | 'failed' | 'other'
 
 export interface ContactRateDetailModalProps {
   open: boolean
@@ -57,6 +57,7 @@ const outcomeIcons: Record<
   noAnswer: Icons.Cancel01,
   busy: Icons.HeadphoneMute,
   failed: Icons.Warning,
+  other: Icons.Info,
 }
 
 export function ContactRateDetailModal({
@@ -222,8 +223,10 @@ export function ContactRateDetailModal({
               </div>
             )}
 
-            {/* Best Performer & Needs Improvement */}
-            {(data.bestPerformer || data.needsImprovement) && (
+            {/* Best Performer & Needs Improvement — ranked only among operators
+                with enough calls (MIN_CALLS_FOR_RANKING); when nobody has
+                that many, say so instead of silently dropping the block. */}
+            {data.bestPerformer || data.needsImprovement ? (
               <div className="mb-4 flex flex-col items-start gap-2 self-stretch">
                 <div className="flex w-full flex-col gap-2 self-stretch sm:flex-row sm:flex-wrap sm:gap-4">
                   {data.bestPerformer && (
@@ -245,6 +248,10 @@ export function ContactRateDetailModal({
                     )}
                 </div>
               </div>
+            ) : (
+              <p className="text-muted-foreground mb-4 self-stretch text-sm leading-[150%] tracking-[-0.28px]">
+                {t('pages.reports.contactRateModal.notEnoughCallsToRank')}
+              </p>
             )}
           </>
         )}

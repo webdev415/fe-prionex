@@ -9572,7 +9572,9 @@
         "answered": "Answered",
         "noAnswer": "No Answer",
         "busy": "Busy",
-        "failed": "Failed"
+        "failed": "Failed",
+        "other": "Other",
+        "notEnoughCallsToRank": "Not enough calls to compare operators"
       },
       "smsModal": {
         "title": "SMS Sent",
