@@ -11,6 +11,7 @@ import type { ConfigItem } from '@/stores/tagConfigStore'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Icons } from '@/lib/icons'
+import { SUPPORTED_LANGUAGES } from '@/lib/i18n'
 
 interface ConfigListEditorProps {
   title: string
@@ -24,7 +25,9 @@ interface ConfigListEditorProps {
   i18nPrefix?: string
 }
 
-const LANGS = ['en', 'uk'] as const
+const LANGS = SUPPORTED_LANGUAGES
+
+const emptyLangs = (): Record<string, string> => ({ en: '', uk: '', es: '' })
 
 /** Build nested object from dot-path key, e.g. "a.b.c" + "val" → { a: { b: { c: "val" } } } */
 function buildNestedObj(dotPath: string, value: string): Record<string, unknown> {
@@ -55,7 +58,7 @@ export function ConfigListEditor({
   // Pre-load all languages so we can read/write translations for en/uk
   useEffect(() => {
     if (i18nPrefix && !langsLoaded) {
-      i18n.loadLanguages(['en', 'uk']).then(() => setLangsLoaded(true))
+      i18n.loadLanguages([...LANGS]).then(() => setLangsLoaded(true))
     }
   }, [i18n, i18nPrefix, langsLoaded])
 
@@ -66,8 +69,8 @@ export function ConfigListEditor({
   const [editLabel, setEditLabel] = useState('')
 
   // Multi-lang state for add/edit when i18nPrefix is used
-  const [newLangs, setNewLangs] = useState<Record<string, string>>({ en: '', uk: '' })
-  const [editLangs, setEditLangs] = useState<Record<string, string>>({ en: '', uk: '' })
+  const [newLangs, setNewLangs] = useState<Record<string, string>>(emptyLangs)
+  const [editLangs, setEditLangs] = useState<Record<string, string>>(emptyLangs)
 
   const getDisplayLabel = (item: ConfigItem) => {
     if (i18nPrefix) {
@@ -97,7 +100,7 @@ export function ConfigListEditor({
       })
       onAdd({ value, label })
       setNewValue('')
-      setNewLangs({ en: '', uk: '' })
+      setNewLangs(emptyLangs())
     } else {
       onAdd({ value, label: showLabel ? newLabel.trim() || value : value })
       setNewValue('')
@@ -167,7 +170,7 @@ export function ConfigListEditor({
           <Input
             value={newValue}
             onChange={(e) => setNewValue(e.target.value)}
-            placeholder="value (API code)"
+            placeholder={t('pages.tags.settings.valuePlaceholder', 'value (API code)')}
             className="h-8 flex-1 text-xs"
             onKeyDown={(e) => handleKeyDown(e, handleAdd)}
           />
@@ -175,7 +178,7 @@ export function ConfigListEditor({
             <Input
               value={newLabel}
               onChange={(e) => setNewLabel(e.target.value)}
-              placeholder="label"
+              placeholder={t('pages.tags.settings.labelPlaceholder', 'label')}
               className="h-8 flex-1 text-xs"
               onKeyDown={(e) => handleKeyDown(e, handleAdd)}
             />

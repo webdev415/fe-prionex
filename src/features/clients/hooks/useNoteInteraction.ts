@@ -8,6 +8,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import i18n from '@/lib/i18n'
 import type { AxiosError } from 'axios'
 import { interactionApi } from '../api/interactionApi'
 import { clientKeys } from './useClients'
@@ -174,7 +175,9 @@ export function useUpdateInteraction() {
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ['clients', variables.clientId, 'tags'] })
       }, 5000)
-      toast.success('Interaction updated successfully')
+      toast.success(
+        i18n.t('toasts.interactions.updated', { defaultValue: 'Interaction updated successfully' })
+      )
     },
     onError: (error: AxiosError<{ detail?: string | Array<{ msg: string }> }>) => {
       const detail = error?.response?.data?.detail

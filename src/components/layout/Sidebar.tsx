@@ -10,6 +10,7 @@
  */
 
 import { NavLink, useLocation } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { useSidebarStore } from '@/stores/sidebarStore'
@@ -113,6 +114,7 @@ const iconMap: Record<
  * Sidebar Component
  */
 export function Sidebar({ items = [], bottomItems = [], actions = [], className }: SidebarProps) {
+  const { t } = useTranslation('common')
   const location = useLocation()
   const { isOpenSideBar, isHoverOpen, toggleSidebar, setHoverOpen } = useSidebarStore()
   const [openSubmenuIndex, setOpenSubmenuIndex] = useState<number | null>(null)
@@ -330,7 +332,7 @@ export function Sidebar({ items = [], bottomItems = [], actions = [], className 
               isSidebarVisible ? 'px-3' : 'justify-start px-3',
               'hover:bg-nav-hover'
             )}
-            aria-label="Menu"
+            aria-label={t('navigation.menu', 'Menu')}
           >
             <Icons.Menu11 size={20} className="text-nav-foreground shrink-0" strokeWidth={1.5} />
             {isSidebarVisible && (

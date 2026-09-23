@@ -71,6 +71,7 @@ import { decideHotkeyAutoStart } from '@/features/taHotkeys/decideHotkeyAutoStar
 import { getErrorMessage } from '@/lib/errors'
 import { useChainExecutorStore } from '@/stores/chainExecutorStore'
 import { formatMoneyKopeckTight } from '@/lib/formatters'
+import { currencySymbol } from '@/lib/projectCurrency'
 import { useClientEmails } from '@/features/clients/hooks/useClientEmails'
 import { useClientPhones } from '@/features/clients/hooks/useClientPhones'
 import { pickSingleContactCandidate } from './taChainAutoSelect'
@@ -2216,7 +2217,7 @@ export function ChainExecutor({
                               min={0}
                               step="0.01"
                               className="h-8 text-xs"
-                              leftIcon={<span className="text-foreground">₴</span>}
+                              leftIcon={<span className="text-foreground">{currencySymbol()}</span>}
                               value={editingStep.value}
                               onChange={(e) =>
                                 setEditingStep((prev) =>
@@ -2275,7 +2276,9 @@ export function ChainExecutor({
                                   min={0}
                                   step="0.01"
                                   className="h-8 text-xs"
-                                  leftIcon={<span className="text-foreground">₴</span>}
+                                  leftIcon={
+                                    <span className="text-foreground">{currencySymbol()}</span>
+                                  }
                                   value={editingStep.promiseAmount}
                                   onChange={(e) =>
                                     setEditingStep((prev) =>
@@ -2428,7 +2431,7 @@ export function ChainExecutor({
                           min={0}
                           step="0.01"
                           placeholder="0.00"
-                          leftIcon={<span className="text-foreground">₴</span>}
+                          leftIcon={<span className="text-foreground">{currencySymbol()}</span>}
                           value={stepValue}
                           onChange={(e) => setStepValue(e.target.value)}
                         />
@@ -2552,7 +2555,7 @@ export function ChainExecutor({
                 {selectedDropdownValue?.require_promise_amount && (
                   <div className="flex flex-col gap-1">
                     <Label className="text-foreground text-sm">
-                      {t('pages.clientChains.promiseAmountUAH')}{' '}
+                      {t('pages.clientChains.promiseAmountUAH', { currency: currencySymbol() })}{' '}
                       <span className="text-red-500">*</span>
                     </Label>
                     <Input
@@ -2560,7 +2563,7 @@ export function ChainExecutor({
                       min={0}
                       step="0.01"
                       placeholder="0.00"
-                      leftIcon={<span className="text-foreground">₴</span>}
+                      leftIcon={<span className="text-foreground">{currencySymbol()}</span>}
                       value={promiseAmount}
                       onChange={(e) => setPromiseAmount(e.target.value)}
                     />
@@ -3093,7 +3096,7 @@ export function InstantStepCard({
           min={0}
           step="0.01"
           placeholder="0.00"
-          leftIcon={<span className="text-foreground">₴</span>}
+          leftIcon={<span className="text-foreground">{currencySymbol()}</span>}
           value={value.value}
           onChange={(e) => onChange({ value: e.target.value })}
         />
@@ -3202,14 +3205,15 @@ export function InstantStepCard({
       {dv?.require_promise_amount && (
         <div className="mt-1 flex flex-col gap-1">
           <Label className="text-muted-foreground text-xs">
-            {t('pages.clientChains.promiseAmountUAH')} <span className="text-red-500">*</span>
+            {t('pages.clientChains.promiseAmountUAH', { currency: currencySymbol() })}{' '}
+            <span className="text-red-500">*</span>
           </Label>
           <Input
             type="number"
             min={0}
             step="0.01"
             placeholder="0.00"
-            leftIcon={<span className="text-foreground">₴</span>}
+            leftIcon={<span className="text-foreground">{currencySymbol()}</span>}
             value={value.promiseAmount}
             onChange={(e) => onChange({ promiseAmount: e.target.value })}
           />

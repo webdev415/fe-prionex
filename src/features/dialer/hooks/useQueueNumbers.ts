@@ -9,6 +9,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import i18n from '@/lib/i18n'
 
 import { dialerService } from '../api/dialerService'
 import { dialerQueuesKeys } from './useDialerQueues'
@@ -48,7 +49,11 @@ export function useConfirmQueueUpload() {
       queryClient.invalidateQueries({ queryKey: queueNumbersKeys.status(queueId) })
       queryClient.invalidateQueries({ queryKey: dialerQueuesKeys.all })
     },
-    onError: (error) => toast.error(error.message || 'Failed to upload numbers'),
+    onError: (error) =>
+      toast.error(
+        error.message ||
+          i18n.t('toasts.dialer.numbersUploadFailed', { defaultValue: 'Failed to upload numbers' })
+      ),
   })
 }
 
@@ -65,6 +70,12 @@ export function useAddClientsToQueue() {
       queryClient.invalidateQueries({ queryKey: queueNumbersKeys.status(queueId) })
       queryClient.invalidateQueries({ queryKey: dialerQueuesKeys.all })
     },
-    onError: (error) => toast.error(error.message || 'Failed to add clients to queue'),
+    onError: (error) =>
+      toast.error(
+        error.message ||
+          i18n.t('toasts.dialer.addClientsFailed', {
+            defaultValue: 'Failed to add clients to queue',
+          })
+      ),
   })
 }

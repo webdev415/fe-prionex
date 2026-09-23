@@ -161,7 +161,7 @@ export function MutexGroupFormModal({ open, tags, onClose, onSuccess }: MutexGro
               <Input
                 id="description"
                 {...register('description')}
-                placeholder="e.g. Tип договоренности с клиентом"
+                placeholder={t('pages.tags.groups.descriptionExample')}
                 error={errors.description?.message}
               />
             </div>

@@ -468,9 +468,9 @@ export function SearchFiltersBar({
                 selectedItems={localFilters.actions || []}
                 onItemChange={handleActionChange}
                 disabled={isLoading}
-                allItemsLabel="All Actions"
-                searchPlaceholder="Search actions"
-                noItemsFoundLabel="No actions found"
+                allItemsLabel={t('pages.auditLogs.searchFilters.allActions')}
+                searchPlaceholder={t('pages.auditLogs.searchFilters.searchActions')}
+                noItemsFoundLabel={t('pages.auditLogs.searchFilters.noActionsFound')}
                 trigger={
                   <button
                     type="button"
@@ -480,11 +480,13 @@ export function SearchFiltersBar({
                     <span className="truncate text-left">
                       {localFilters.actions && localFilters.actions.length > 0
                         ? localFilters.actions.length === actions.length
-                          ? 'All Actions'
+                          ? t('pages.auditLogs.searchFilters.allActions')
                           : localFilters.actions.length === 1
                             ? localFilters.actions[0]
-                            : `${localFilters.actions.length} actions selected`
-                        : 'All Actions'}
+                            : t('pages.auditLogs.searchFilters.actionsSelected', {
+                                count: localFilters.actions.length,
+                              })
+                        : t('pages.auditLogs.searchFilters.allActions')}
                     </span>
                     <Icons.ArrowDown size={16} className="text-muted-foreground shrink-0" />
                   </button>
@@ -501,9 +503,9 @@ export function SearchFiltersBar({
                 selectedItems={localFilters.entity_types || []}
                 onItemChange={handleEntityTypeChange}
                 disabled={isLoading}
-                allItemsLabel="All Types"
-                searchPlaceholder="Search entity types"
-                noItemsFoundLabel="No entity types found"
+                allItemsLabel={t('pages.auditLogs.searchFilters.allTypes')}
+                searchPlaceholder={t('pages.auditLogs.searchFilters.searchEntityTypes')}
+                noItemsFoundLabel={t('pages.auditLogs.searchFilters.noEntityTypesFound')}
                 trigger={
                   <button
                     type="button"
@@ -513,11 +515,13 @@ export function SearchFiltersBar({
                     <span className="truncate text-left">
                       {localFilters.entity_types && localFilters.entity_types.length > 0
                         ? localFilters.entity_types.length === entityTypes.length
-                          ? 'All Types'
+                          ? t('pages.auditLogs.searchFilters.allTypes')
                           : localFilters.entity_types.length === 1
                             ? localFilters.entity_types[0]
-                            : `${localFilters.entity_types.length} types selected`
-                        : 'All Types'}
+                            : t('pages.auditLogs.searchFilters.typesSelected', {
+                                count: localFilters.entity_types.length,
+                              })
+                        : t('pages.auditLogs.searchFilters.allTypes')}
                     </span>
                     <Icons.ArrowDown size={16} className="text-muted-foreground shrink-0" />
                   </button>
@@ -546,7 +550,7 @@ export function SearchFiltersBar({
                   <SelectValue placeholder={t('pages.auditLogs.searchFilters.selectRole')} />
                 </SelectTrigger>
                 <SelectContent className="bg-card">
-                  <SelectItem value="all">All Roles</SelectItem>
+                  <SelectItem value="all">{t('pages.auditLogs.searchFilters.allRoles')}</SelectItem>
                   {roles.map((role) => (
                     <SelectItem key={role} value={role}>
                       {role}

@@ -1,4 +1,5 @@
 import { forwardRef, useState, useId } from 'react'
+import { useTranslation } from 'react-i18next'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 import { Icons } from '@/lib/icons'
@@ -60,6 +61,7 @@ const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
     const errorId = `${inputId}-error`
     const helperId = `${inputId}-helper`
 
+    const { t } = useTranslation('common')
     const effectiveVariant = error ? 'error' : variant
 
     const togglePasswordVisibility = () => {
@@ -109,7 +111,11 @@ const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
               type="button"
               onClick={togglePasswordVisibility}
               className="text-muted-foreground hover:text-foreground absolute inset-y-0 right-0 z-10 flex cursor-pointer items-center px-3 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              aria-label={
+                showPassword
+                  ? t('components.passwordInput.hide', 'Hide password')
+                  : t('components.passwordInput.show', 'Show password')
+              }
               disabled={disabled}
               tabIndex={-1}
             >

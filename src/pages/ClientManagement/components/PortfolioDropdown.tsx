@@ -102,7 +102,7 @@ export function PortfolioDropdown({
           <button
             type="button"
             onClick={onClear}
-            aria-label="Clear"
+            aria-label={t('pages.clients.modals.portfolioDropdown.clear')}
             className="text-muted-foreground hover:text-foreground flex shrink-0 items-center"
           >
             <Icons.Cancel01 size={14} />

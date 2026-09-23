@@ -130,11 +130,11 @@ export function PaymentDetailsModal({
       if (onDownloadReceipt) {
         onDownloadReceipt()
       } else {
-        toast.info('Receipt download is not configured for this view yet.')
+        toast.info(t('pages.clients.modals.paymentDetails.receiptNotConfigured'))
       }
     } catch (error) {
       console.error('Error downloading receipt:', error)
-      toast.error('Failed to download receipt. Please try again.')
+      toast.error(t('pages.clients.modals.paymentDetails.receiptDownloadFailed'))
     }
   }
 

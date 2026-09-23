@@ -6,6 +6,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import i18n from '@/lib/i18n'
 import { tagsApi } from '../api/tagsApi'
 import { useAuthStore } from '@/stores/authStore'
 import { filterTagsForRole } from '../utils/visibility'
@@ -68,10 +69,13 @@ export function useCreateTag() {
     mutationFn: (data: TagCreate) => tagsApi.createTag(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: tagsKeys.lists() })
-      toast.success('Tag created successfully')
+      toast.success(i18n.t('toasts.tags.created', { defaultValue: 'Tag created successfully' }))
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to create tag')
+      toast.error(
+        error.message ||
+          i18n.t('toasts.tags.createFailed', { defaultValue: 'Failed to create tag' })
+      )
     },
   })
 }
@@ -87,10 +91,13 @@ export function useUpdateTag() {
       tagsApi.updateTag(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: tagsKeys.lists() })
-      toast.success('Tag updated successfully')
+      toast.success(i18n.t('toasts.tags.updated', { defaultValue: 'Tag updated successfully' }))
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to update tag')
+      toast.error(
+        error.message ||
+          i18n.t('toasts.tags.updateFailed', { defaultValue: 'Failed to update tag' })
+      )
     },
   })
 }
@@ -106,10 +113,13 @@ export function useDeleteTag() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: tagsKeys.lists() })
       queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
-      toast.success('Tag deleted successfully')
+      toast.success(i18n.t('toasts.tags.deleted', { defaultValue: 'Tag deleted successfully' }))
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to delete tag')
+      toast.error(
+        error.message ||
+          i18n.t('toasts.tags.deleteFailed', { defaultValue: 'Failed to delete tag' })
+      )
     },
   })
 }
@@ -153,7 +163,10 @@ export function useAssignClientTag() {
       queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to assign tag')
+      toast.error(
+        error.message ||
+          i18n.t('toasts.tags.assignFailed', { defaultValue: 'Failed to assign tag' })
+      )
     },
   })
 }
@@ -172,7 +185,10 @@ export function useRemoveClientTag() {
       queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to remove tag')
+      toast.error(
+        error.message ||
+          i18n.t('toasts.tags.removeFailed', { defaultValue: 'Failed to remove tag' })
+      )
     },
   })
 }
@@ -194,7 +210,10 @@ export function useBulkTagClients() {
       )
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to update tags')
+      toast.error(
+        error.message ||
+          i18n.t('toasts.tags.bulkUpdateFailed', { defaultValue: 'Failed to update tags' })
+      )
     },
   })
 }
@@ -213,10 +232,13 @@ export function useCreateTagExtended() {
     mutationFn: (data: TagDefinitionCreate) => tagsApi.createTagExtended(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: tagsKeys.lists() })
-      toast.success('Tag created successfully')
+      toast.success(i18n.t('toasts.tags.created', { defaultValue: 'Tag created successfully' }))
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to create tag')
+      toast.error(
+        error.message ||
+          i18n.t('toasts.tags.createFailed', { defaultValue: 'Failed to create tag' })
+      )
     },
   })
 }
@@ -268,10 +290,15 @@ export function useCreateRule() {
     mutationFn: (data: TagRuleCreate) => tagsApi.createRule(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: tagsKeys.rules() })
-      toast.success('Rule created successfully')
+      toast.success(
+        i18n.t('toasts.tags.ruleCreated', { defaultValue: 'Rule created successfully' })
+      )
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to create rule')
+      toast.error(
+        error.message ||
+          i18n.t('toasts.tags.ruleCreateFailed', { defaultValue: 'Failed to create rule' })
+      )
     },
   })
 }
@@ -283,10 +310,15 @@ export function useUpdateRule() {
     mutationFn: ({ id, data }: { id: number; data: TagRuleUpdate }) => tagsApi.updateRule(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: tagsKeys.rules() })
-      toast.success('Rule updated successfully')
+      toast.success(
+        i18n.t('toasts.tags.ruleUpdated', { defaultValue: 'Rule updated successfully' })
+      )
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to update rule')
+      toast.error(
+        error.message ||
+          i18n.t('toasts.tags.ruleUpdateFailed', { defaultValue: 'Failed to update rule' })
+      )
     },
   })
 }
@@ -298,10 +330,15 @@ export function useDeleteRule() {
     mutationFn: (id: number) => tagsApi.deleteRule(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: tagsKeys.rules() })
-      toast.success('Rule deleted successfully')
+      toast.success(
+        i18n.t('toasts.tags.ruleDeleted', { defaultValue: 'Rule deleted successfully' })
+      )
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to delete rule')
+      toast.error(
+        error.message ||
+          i18n.t('toasts.tags.ruleDeleteFailed', { defaultValue: 'Failed to delete rule' })
+      )
     },
   })
 }
@@ -325,10 +362,15 @@ export function useCreateSegment() {
     mutationFn: (data: SegmentCreate) => tagsApi.createSegment(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: tagsKeys.segments() })
-      toast.success('Segment created successfully')
+      toast.success(
+        i18n.t('toasts.tags.segmentCreated', { defaultValue: 'Segment created successfully' })
+      )
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to create segment')
+      toast.error(
+        error.message ||
+          i18n.t('toasts.tags.segmentCreateFailed', { defaultValue: 'Failed to create segment' })
+      )
     },
   })
 }
@@ -341,10 +383,15 @@ export function useUpdateSegment() {
       tagsApi.updateSegment(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: tagsKeys.segments() })
-      toast.success('Segment updated successfully')
+      toast.success(
+        i18n.t('toasts.tags.segmentUpdated', { defaultValue: 'Segment updated successfully' })
+      )
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to update segment')
+      toast.error(
+        error.message ||
+          i18n.t('toasts.tags.segmentUpdateFailed', { defaultValue: 'Failed to update segment' })
+      )
     },
   })
 }
@@ -356,10 +403,15 @@ export function useDeleteSegment() {
     mutationFn: (id: number) => tagsApi.deleteSegment(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: tagsKeys.segments() })
-      toast.success('Segment deleted successfully')
+      toast.success(
+        i18n.t('toasts.tags.segmentDeleted', { defaultValue: 'Segment deleted successfully' })
+      )
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to delete segment')
+      toast.error(
+        error.message ||
+          i18n.t('toasts.tags.segmentDeleteFailed', { defaultValue: 'Failed to delete segment' })
+      )
     },
   })
 }
@@ -378,10 +430,13 @@ export function useRefreshSegment() {
     mutationFn: (id: number) => tagsApi.refreshSegment(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: tagsKeys.segments() })
-      toast.success('Segment refreshed')
+      toast.success(i18n.t('toasts.tags.segmentRefreshed', { defaultValue: 'Segment refreshed' }))
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to refresh segment')
+      toast.error(
+        error.message ||
+          i18n.t('toasts.tags.segmentRefreshFailed', { defaultValue: 'Failed to refresh segment' })
+      )
     },
   })
 }
@@ -422,10 +477,17 @@ export function useRequestTagRemoval() {
     }) => tagsApi.requestTagRemoval(clientId, tagId, reason),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: tagsKeys.removalRequests() })
-      toast.success('Removal request submitted')
+      toast.success(
+        i18n.t('toasts.tags.removalRequested', { defaultValue: 'Removal request submitted' })
+      )
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to submit removal request')
+      toast.error(
+        error.message ||
+          i18n.t('toasts.tags.removalRequestFailed', {
+            defaultValue: 'Failed to submit removal request',
+          })
+      )
     },
   })
 }
@@ -439,10 +501,13 @@ export function useApproveRemoval() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: tagsKeys.removalRequests() })
       queryClient.invalidateQueries({ queryKey: tagsKeys.all })
-      toast.success('Tag removal approved')
+      toast.success(i18n.t('toasts.tags.removalApproved', { defaultValue: 'Tag removal approved' }))
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to approve removal')
+      toast.error(
+        error.message ||
+          i18n.t('toasts.tags.removalApproveFailed', { defaultValue: 'Failed to approve removal' })
+      )
     },
   })
 }
@@ -455,10 +520,13 @@ export function useRejectRemoval() {
       tagsApi.rejectRemovalRequest(requestId, reason),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: tagsKeys.removalRequests() })
-      toast.success('Tag removal rejected')
+      toast.success(i18n.t('toasts.tags.removalRejected', { defaultValue: 'Tag removal rejected' }))
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to reject removal')
+      toast.error(
+        error.message ||
+          i18n.t('toasts.tags.removalRejectFailed', { defaultValue: 'Failed to reject removal' })
+      )
     },
   })
 }

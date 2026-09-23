@@ -16,6 +16,7 @@
 
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { spanishLocaleOr } from '@/lib/i18n'
 import { useQueries } from '@tanstack/react-query'
 
 import { Button } from '@/components/ui/Button'
@@ -124,7 +125,7 @@ export function ClientWriteoffsTable<TLegacyRow extends { id: number | string }>
     return out
   }, [loans, queries])
 
-  const dateLocale = i18n.language === 'uk' ? 'uk-UA' : 'en-US'
+  const dateLocale = i18n.language === 'uk' ? 'uk-UA' : spanishLocaleOr(i18n.language, 'en-US')
 
   // Columns mirror the legacy ``writeOffColumns`` layout (loan / seller /
   // sale date / write-off date / amount / method / employee) plus an

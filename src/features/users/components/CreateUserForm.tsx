@@ -231,7 +231,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
               className="mt-1"
             />
             {errors.username && (
-              <p className="mt-1 text-sm text-red-500">{errors.username.message}</p>
+              <p className="mt-1 text-sm text-red-500">{t(errors.username.message ?? '')}</p>
             )}
           </div>
 
@@ -248,7 +248,9 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
               variant={errors.email ? 'error' : 'default'}
               className="mt-1"
             />
-            {errors.email && <p className="mt-1 text-sm text-red-500">{errors.email.message}</p>}
+            {errors.email && (
+              <p className="mt-1 text-sm text-red-500">{t(errors.email.message ?? '')}</p>
+            )}
           </div>
         </div>
 
@@ -260,7 +262,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
             {...register('password')}
             aria-invalid={!!errors.password}
             variant={errors.password ? 'error' : 'default'}
-            error={errors.password?.message}
+            error={errors.password?.message && t(errors.password.message)}
             required
           />
 
@@ -314,7 +316,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
               className="mt-1"
             />
             {errors.first_name && (
-              <p className="mt-1 text-sm text-red-500">{errors.first_name.message}</p>
+              <p className="mt-1 text-sm text-red-500">{t(errors.first_name.message ?? '')}</p>
             )}
           </div>
 
@@ -331,7 +333,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
               className="mt-1"
             />
             {errors.last_name && (
-              <p className="mt-1 text-sm text-red-500">{errors.last_name.message}</p>
+              <p className="mt-1 text-sm text-red-500">{t(errors.last_name.message ?? '')}</p>
             )}
           </div>
         </div>
@@ -348,7 +350,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
               className="mt-1"
             />
             {errors.middle_name && (
-              <p className="mt-1 text-sm text-red-500">{errors.middle_name.message}</p>
+              <p className="mt-1 text-sm text-red-500">{t(errors.middle_name.message ?? '')}</p>
             )}
           </div>
 
@@ -363,7 +365,9 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
               variant={errors.phone ? 'error' : 'default'}
               className="mt-1"
             />
-            {errors.phone && <p className="mt-1 text-sm text-red-500">{errors.phone.message}</p>}
+            {errors.phone && (
+              <p className="mt-1 text-sm text-red-500">{t(errors.phone.message ?? '')}</p>
+            )}
           </div>
         </div>
       </div>
@@ -386,12 +390,13 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
                   <SelectContent>
                     <SelectItem value="uk">{t('language.uk')}</SelectItem>
                     <SelectItem value="en">{t('language.en')}</SelectItem>
+                    <SelectItem value="es">{t('language.es')}</SelectItem>
                   </SelectContent>
                 </Select>
               )}
             />
             {errors.language && (
-              <p className="mt-1 text-sm text-red-500">{errors.language.message}</p>
+              <p className="mt-1 text-sm text-red-500">{t(errors.language.message ?? '')}</p>
             )}
           </div>
 
@@ -425,7 +430,7 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
               )}
             />
             {errors.timezone && (
-              <p className="mt-1 text-sm text-red-500">{errors.timezone.message}</p>
+              <p className="mt-1 text-sm text-red-500">{t(errors.timezone.message ?? '')}</p>
             )}
           </div>
         </div>
@@ -446,7 +451,9 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
               className="mt-1"
             />
             {errors.asterisk_extension && (
-              <p className="mt-1 text-sm text-red-500">{errors.asterisk_extension.message}</p>
+              <p className="mt-1 text-sm text-red-500">
+                {t(errors.asterisk_extension.message ?? '')}
+              </p>
             )}
             <p className="text-muted-foreground mt-1 text-xs">
               {t('pages.users.forms.helpers.asteriskExtension')}
@@ -465,7 +472,9 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
               className="mt-1"
             />
             {errors.dialer_extension && (
-              <p className="mt-1 text-sm text-red-500">{errors.dialer_extension.message}</p>
+              <p className="mt-1 text-sm text-red-500">
+                {t(errors.dialer_extension.message ?? '')}
+              </p>
             )}
             <p className="text-muted-foreground mt-1 text-xs">
               {t('pages.users.forms.helpers.dialerExtension')}

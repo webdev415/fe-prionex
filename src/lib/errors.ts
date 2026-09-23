@@ -6,6 +6,7 @@
 
 import axios from 'axios'
 import type { AxiosError } from 'axios'
+import i18n from 'i18next'
 
 const CSV_SKIP_REASON_LABELS: Record<string, string> = {
   missing_client_id: 'missing client_id',
@@ -30,6 +31,45 @@ function formatMessagingErrorDetails(details: unknown): string | null {
       return `${count}× ${label}`
     })
   return parts.length > 0 ? `(${parts.join('; ')})` : null
+}
+
+function httpMessage(key: string, defaultValue: string): string {
+  return i18n.t(`http.${key}`, { ns: 'errors', defaultValue })
+}
+
+export function translateErrorCode(code: unknown, fallback: string, params?: unknown): string {
+  if (typeof code !== 'string' || !code) return fallback
+  const values = params && typeof params === 'object' ? (params as Record<string, unknown>) : {}
+  const translated: unknown = i18n.t(`codes.${code}`, {
+    ns: 'errors',
+    defaultValue: '',
+    replace: values,
+  })
+  return typeof translated === 'string' && translated && !translated.includes('{{')
+    ? translated
+    : fallback
+}
+
+export function localizeCodedDetail(error: unknown): void {
+  if (!axios.isAxiosError(error)) return
+  const data = error.response?.data
+  if (!data || typeof data !== 'object') return
+  const record = data as Record<string, unknown>
+  const { detail, code, params } = record
+  if (typeof detail !== 'string' || typeof code !== 'string') return
+  Object.defineProperty(record, 'detail', {
+    get: () => translateErrorCode(code, detail, params),
+    set: (value: unknown) => {
+      Object.defineProperty(record, 'detail', {
+        value,
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      })
+    },
+    enumerable: true,
+    configurable: true,
+  })
 }
 
 /**
@@ -61,7 +101,10 @@ export function getErrorMessage(error: unknown): string {
         'message' in nestedError &&
         typeof (nestedError as { message?: unknown }).message === 'string'
       ) {
-        const message = (nestedError as { message: string }).message
+        const message = translateErrorCode(
+          (nestedError as { code?: unknown }).code,
+          (nestedError as { message: string }).message
+        )
         const details = (nestedError as { details?: unknown }).details
         const detailSuffix = formatMessagingErrorDetails(details)
         // Backend CSV errors often embed skip reasons in message; avoid duplicating.
@@ -74,7 +117,7 @@ export function getErrorMessage(error: unknown): string {
       // Handle detail field - can be string, array of strings, or array of validation objects
       if (data.detail) {
         if (typeof data.detail === 'string') {
-          return data.detail
+          return translateErrorCode(data.code, data.detail, data.params)
         }
         if (Array.isArray(data.detail)) {
           // FastAPI validation errors: array of objects with {type, loc, msg, input, ctx}
@@ -103,7 +146,9 @@ export function getErrorMessage(error: unknown): string {
             })
             .filter((msg): msg is string => msg !== null && msg.trim().length > 0)
 
-          return messages.length > 0 ? messages.join('. ') : 'Validation error occurred'
+          return messages.length > 0
+            ? messages.join('. ')
+            : httpMessage('validationOccurred', 'Validation error occurred')
         }
       }
 
@@ -112,30 +157,36 @@ export function getErrorMessage(error: unknown): string {
 
     // Network errors
     if (axiosError.code === 'ECONNABORTED') {
-      return 'Request timeout. Please try again.'
+      return httpMessage('timeout', 'Request timeout. Please try again.')
     }
     if (axiosError.code === 'ERR_NETWORK') {
-      return 'Network error. Please check your connection.'
+      return httpMessage('network', 'Network error. Please check your connection.')
     }
 
     // HTTP status errors
     if (axiosError.response?.status === 401) {
-      return 'Unauthorized. Please log in again.'
+      return httpMessage('unauthorized', 'Unauthorized. Please log in again.')
     }
     if (axiosError.response?.status === 403) {
-      return 'Access denied. You do not have permission to perform this action.'
+      return httpMessage(
+        'forbidden',
+        'Access denied. You do not have permission to perform this action.'
+      )
     }
     if (axiosError.response?.status === 404) {
-      return 'Resource not found.'
+      return httpMessage('notFound', 'Resource not found.')
     }
     if (axiosError.response?.status === 422) {
-      return 'Validation error. Please check your input and try again.'
+      return httpMessage('validation', 'Validation error. Please check your input and try again.')
     }
     if (axiosError.response?.status === 500) {
-      return 'Server error. Please try again later.'
+      return httpMessage('server', 'Server error. Please try again later.')
     }
 
-    return axiosError.message || 'An error occurred while processing your request.'
+    return (
+      axiosError.message ||
+      httpMessage('generic', 'An error occurred while processing your request.')
+    )
   }
 
   if (error instanceof Error) {
@@ -146,7 +197,7 @@ export function getErrorMessage(error: unknown): string {
     return error
   }
 
-  return 'An unexpected error occurred'
+  return httpMessage('unexpected', 'An unexpected error occurred')
 }
 
 /**
