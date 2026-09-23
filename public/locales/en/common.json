@@ -10166,7 +10166,8 @@
         "omnicell": "OmniCell",
         "vodafone_obm": "Vodafone OBM",
         "my2_viber": "My2 Viber",
-        "intel_tele": "Intel-Tele.com"
+        "intel_tele": "Intel-Tele.com",
+        "zadarma": "Zadarma"
       },
       "credentials": {
         "turbosms": {
@@ -10236,6 +10237,18 @@
           },
           "reply_to_name": {
             "label": "Reply-to name"
+          }
+        },
+        "zadarma": {
+          "user_key": {
+            "label": "User key"
+          },
+          "secret": {
+            "label": "Secret"
+          },
+          "sender": {
+            "label": "Sender (Alpha name)",
+            "placeholder": "Approved alpha name, leave empty to use the account default"
           }
         }
       },
