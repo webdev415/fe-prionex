@@ -6410,6 +6410,7 @@
         "saveSuccess": "Client updated successfully",
         "saveError": "Failed to update client",
         "taxIdInvalid": "The tax number must be exactly 10 digits",
+        "taxIdInvalidEs": "The tax number must be a valid Spanish DNI, NIE or CIF (9 characters, e.g. 12345678Z, X1234567L, B12345678)",
         "addressCreated": "Address added successfully",
         "addressUpdated": "Address updated successfully",
         "addressDeleted": "Address removed successfully",

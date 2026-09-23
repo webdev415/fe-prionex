@@ -6418,6 +6418,7 @@
         "saveSuccess": "Cliente actualizado correctamente",
         "saveError": "No se ha podido actualizar el cliente",
         "taxIdInvalid": "El número fiscal debe tener exactamente 10 dígitos",
+        "taxIdInvalidEs": "El número fiscal debe ser un DNI, NIE o CIF válido (9 caracteres, p. ej. 12345678Z, X1234567L, B12345678)",
         "addressCreated": "Dirección añadida correctamente",
         "addressUpdated": "Dirección actualizada correctamente",
         "addressDeleted": "Dirección eliminada correctamente",

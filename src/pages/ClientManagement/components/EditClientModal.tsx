@@ -19,6 +19,8 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useHasPermission } from '@/hooks'
 import { PERMISSIONS } from '@/constants/permissions'
 import { useUbkiAvailable } from '@/features/ubki'
+import { useProjectCountry } from '@/hooks/useProjectCountry'
+import { taxIdMatches, taxIdErrorKey } from './clientTaxId'
 import { piiProps } from '@/lib/openreplay/pii'
 import {
   useClientProfile,
@@ -147,6 +149,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
   const [doNotSendToUbki, setDoNotSendToUbki] = useState(profile.do_not_send_to_ubki ?? false)
   const { mutate: updateUbkiOptOut, isPending: isSavingUbkiOptOut } = useUpdateClient()
   const ubkiAvailable = useUbkiAvailable()
+  const projectCountry = useProjectCountry()
 
   const handleToggleUbkiOptOut = (checked: boolean) => {
     const previous = doNotSendToUbki
@@ -211,7 +214,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
   const tinInvalid = (value: string) => {
     const trimmed = value.trim()
     if (!tinRequired && !tinProvided(trimmed)) return false
-    return !/^\d{10}$/.test(trimmed)
+    return !taxIdMatches(trimmed, projectCountry)
   }
 
   // Passport/document info
@@ -284,7 +287,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
       return
     }
     if (tinInvalid(tid)) {
-      setPersonalError(t('pages.clients.editModal.taxIdInvalid'))
+      setPersonalError(t(taxIdErrorKey(projectCountry)))
       return
     }
 
@@ -309,7 +312,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
       // бы «сохранено» на правку, которой никуда не доехала. Расширение
       // объекта, а не `undefined`: ключ со значением `undefined` невидим по
       // проводу, но виден читателю кода как «поле отправляется».
-      ...(tinRequired || tinProvided(tid) ? { tax_id: tid } : {}),
+      ...(tinRequired || tinProvided(tid) ? { tax_id: tid.toUpperCase() } : {}),
     }
 
     try {
@@ -408,7 +411,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
       return
     }
     if (tinInvalid(tid)) {
-      setPersonalError(t('pages.clients.editModal.taxIdInvalid'))
+      setPersonalError(t(taxIdErrorKey(projectCountry)))
       return
     }
 
@@ -433,7 +436,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
       // бы «сохранено» на правку, которой никуда не доехала. Расширение
       // объекта, а не `undefined`: ключ со значением `undefined` невидим по
       // проводу, но виден читателю кода как «поле отправляется».
-      ...(tinRequired || tinProvided(tid) ? { tax_id: tid } : {}),
+      ...(tinRequired || tinProvided(tid) ? { tax_id: tid.toUpperCase() } : {}),
     }
 
     setIsSavingAll(true)
