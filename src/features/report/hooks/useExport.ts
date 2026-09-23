@@ -73,8 +73,12 @@ export function buildDashboardExportParams({
     format,
     period: mapPeriodToBackend(period),
   }
+  // report-service uses explicit start_date/end_date regardless of the named
+  // period (dashboard_service._get_date_range); the named period drives only
+  // the trend comparison, so a named period + window is not a conflict.
   if (startDate) params.start_date = startDate
   if (endDate) params.end_date = endDate
+  // `timezone` on purpose (report-service export router), unlike `user_timezone` elsewhere.
   if (timezone) params.timezone = timezone
   return params
 }

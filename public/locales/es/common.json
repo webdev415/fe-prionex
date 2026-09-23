@@ -9612,7 +9612,9 @@
         "answered": "Contestadas",
         "noAnswer": "Sin respuesta",
         "busy": "Ocupado",
-        "failed": "Fallidas"
+        "failed": "Fallidas",
+        "other": "Otras",
+        "notEnoughCallsToRank": "No hay suficientes llamadas para comparar operadores"
       },
       "smsModal": {
         "title": "SMS enviados",

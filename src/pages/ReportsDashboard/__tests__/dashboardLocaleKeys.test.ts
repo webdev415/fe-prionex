@@ -1,7 +1,7 @@
 /**
- * Every string the operator table and the calls modal ask for must exist in
- * all three bundles, and the keys removed with the dead filters (#1337) must
- * be gone from all three.
+ * Every string the operator table, the calls modal and the contact-rate modal
+ * ask for must exist in all three bundles, and the keys removed with the dead
+ * filters (#1337) must be gone from all three.
  *
  * The components render KEYS in tests (react-i18next is mocked), so a key
  * missing from one locale would pass every other test. The keys are read out
@@ -14,8 +14,25 @@ import esCommon from '@/../public/locales/es/common.json'
 // Read as text, not imported as modules: this inspects what the source asks for.
 import tableSource from '../components/AgentPerformanceTable.tsx?raw'
 import callsModalSource from '../components/CallsMadeDetailModal.tsx?raw'
+import contactRateModalSource from '../components/ContactRateDetailModal.tsx?raw'
+import type { ContactRateOutcome } from '@/features/report'
 
-const SOURCES = [tableSource, callsModalSource]
+const SOURCES = [tableSource, callsModalSource, contactRateModalSource]
+
+/**
+ * The contact-rate modal builds the outcome label with a template literal
+ * (`contactRateModal.${key}`), which `usedKeys` cannot see — listed here. The
+ * `Record` makes a new outcome key a type error until it is added.
+ */
+const OUTCOME_KEYS = Object.keys({
+  answered: true,
+  noAnswer: true,
+  busy: true,
+  failed: true,
+  other: true,
+} satisfies Record<ContactRateOutcome['key'], true>).map(
+  (key) => `pages.reports.contactRateModal.${key}`
+)
 const BUNDLES = [
   ['en', enCommon],
   ['uk', ukCommon],
@@ -48,11 +65,21 @@ describe('reports dashboard strings', () => {
     expect(keys.length).toBeGreaterThan(20)
     expect(keys).toContain('pages.reports.filters.period')
     expect(keys).toContain('pages.reports.callsMadeModal.operatorsSum')
+    expect(keys).toContain('pages.reports.contactRateModal.notEnoughCallsToRank')
   })
 
   it.each(BUNDLES)('every key used exists as a string in %s', (_lang, bundle) => {
-    const missing = usedKeys().filter((key) => typeof lookup(bundle, key) !== 'string')
+    const missing = [...usedKeys(), ...OUTCOME_KEYS].filter(
+      (key) => typeof lookup(bundle, key) !== 'string'
+    )
     expect(missing).toEqual([])
+  })
+
+  it('uses the agreed Ukrainian wording for the new contact-rate strings', () => {
+    expect(lookup(ukCommon, 'pages.reports.contactRateModal.other')).toBe('Інше')
+    expect(lookup(ukCommon, 'pages.reports.contactRateModal.notEnoughCallsToRank')).toBe(
+      'Недостатньо дзвінків для порівняння операторів'
+    )
   })
 
   it.each(BUNDLES)('the removed filter keys are gone from %s', (_lang, bundle) => {

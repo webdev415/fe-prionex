@@ -1,6 +1,7 @@
 /**
  * Dashboard tab wiring — board #1332 (D8: top collector), #1338 (D14: export
- * window, FE part) and the read-only «Період» of #1337 (D13).
+ * window, FE part), the read-only «Період» of #1337 (D13) and the project-wide
+ * KPI fallbacks (same unfiltered rows as the top collector).
  *
  * The data hooks and the presentational components are stubbed; the stubs
  * capture the props the tab hands them, which is exactly what is under test.
@@ -15,6 +16,8 @@ import type { ReactNode } from 'react'
 interface StubRow {
   id: string
   operator: string
+  calls: number
+  contactRate: number
   payments: number
 }
 
@@ -29,10 +32,16 @@ const captured = vi.hoisted(() => ({
   tableProps: undefined as unknown,
   agentRows: [] as StubRow[],
   tableQueries: [] as StubTableParams[],
+  /** Overrides of the dashboard KPIs for one test (e.g. a lagging 0). */
+  kpiOverrides: {} as Record<string, unknown>,
 }))
 
 vi.mock('@/features/report', () => ({
-  useDashboard: () => ({ data: dashboardFixture, isLoading: false, error: null }),
+  useDashboard: () => ({
+    data: { ...dashboardFixture, kpis: { ...dashboardFixture.kpis, ...captured.kpiOverrides } },
+    isLoading: false,
+    error: null,
+  }),
   // Behaves like the endpoint: `operatorId` narrows the rows to that operator;
   // a disabled query has no data.
   useAgentPerformanceTable: (params: StubTableParams) => {
@@ -55,10 +64,21 @@ vi.mock('@/features/report', () => ({
 }))
 
 vi.mock('../components', () => ({
-  KPICard: ({ title, onViewDetails }: { title: string; onViewDetails?: () => void }) => (
-    <button type="button" onClick={onViewDetails}>
-      {title}
-    </button>
+  KPICard: ({
+    title,
+    value,
+    onViewDetails,
+  }: {
+    title: string
+    value: string
+    onViewDetails?: () => void
+  }) => (
+    <div>
+      <button type="button" onClick={onViewDetails}>
+        {title}
+      </button>
+      <span data-testid={`kpi-value-${title}`}>{value}</span>
+    </div>
   ),
   PeriodTabs: () => <div data-testid="period-tabs" />,
   AgentPerformanceTable: (props: unknown) => {
@@ -136,12 +156,12 @@ const dashboardFixture = {
   topOperators: [{ operatorId: 1, operatorName: 'Most calls', callsMade: 900, contactRate: 20 }],
 }
 
-function row(id: string, operator: string, payments: number) {
+function row(id: string, operator: string, payments: number, calls = 10, contactRate = 20) {
   return {
     id,
     operator,
-    calls: 10,
-    contactRate: 20,
+    calls,
+    contactRate,
     avgDuration: '0:30',
     sms: 0,
     messages: 0,
@@ -163,6 +183,7 @@ beforeEach(() => {
   captured.tableProps = undefined
   captured.agentRows = []
   captured.tableQueries = []
+  captured.kpiOverrides = {}
   // 21.09 21:30 UTC is already 22.09 00:30 in Kyiv: the profile time zone,
   // not the UTC date, decides which "today" the screen and the export use.
   vi.useFakeTimers({ toFake: ['Date'] })
@@ -215,8 +236,8 @@ describe('dashboard tab — top collector (D8 #1332)', () => {
     })
   })
 
-  it('reads the unfiltered list only while a filter is on and the modal is open', () => {
-    captured.agentRows = [row('2', 'Top collector', 58_000)]
+  it('warms the unfiltered list as soon as a filter is on, before the modal opens', () => {
+    captured.agentRows = [row('1', 'Other', 1_000), row('2', 'Top collector', 58_000)]
     renderPage()
 
     const unfilteredExtra = () =>
@@ -224,12 +245,22 @@ describe('dashboard tab — top collector (D8 #1332)', () => {
     // No filter: the table query already is the unfiltered list.
     expect(unfilteredExtra().every((q) => q.enabled === false)).toBe(true)
 
-    fireEvent.click(screen.getByText('pages.reports.kpi.paymentsCollected'))
-    expect(unfilteredExtra().every((q) => q.enabled === false)).toBe(true)
-
     const table = captured.tableProps as { onOperatorChange: (id: number | null) => void }
-    act(() => table.onOperatorChange(2))
+    act(() => table.onOperatorChange(1))
+    // Filter on, modal still closed: the project-wide list is already requested …
+    expect(screen.queryByTestId('payments-modal')).not.toBeInTheDocument()
     expect(unfilteredExtra().at(-1)?.enabled).toBe(true)
+
+    // … so the modal opens with the top collector in place.
+    fireEvent.click(screen.getByText('pages.reports.kpi.paymentsCollected'))
+    expect(captured.paymentsModalData).toMatchObject({
+      topCollectorName: 'Top collector',
+      topCollectorAmount: 58_000,
+    })
+
+    // Filter cleared: back to the table's own (unfiltered) query only.
+    act(() => table.onOperatorChange(null))
+    expect(unfilteredExtra().at(-1)?.enabled).toBe(false)
   })
 
   it('hides the top collector when nobody collected anything', () => {
@@ -241,6 +272,45 @@ describe('dashboard tab — top collector (D8 #1332)', () => {
     const data = captured.paymentsModalData as Record<string, unknown>
     expect(data.topCollectorName).toBeUndefined()
     expect(data.topCollectorAmount).toBeUndefined()
+  })
+})
+
+describe('dashboard tab — project-wide KPI fallbacks', () => {
+  const kpiValue = (key: string) => screen.getByTestId(`kpi-value-pages.reports.kpi.${key}`)
+
+  beforeEach(() => {
+    // Lagging dashboard KPIs: the cards fall back to the operator rows.
+    captured.kpiOverrides = { callsMade: 0, contactRate: 0 }
+    captured.agentRows = [row('1', 'Olena', 0, 100, 30), row('2', 'Petro', 0, 50, 10)]
+  })
+
+  it('derives calls and a weighted contact rate over all operators', () => {
+    renderPage()
+
+    expect(kpiValue('callsMade')).toHaveTextContent(/^150$/)
+    // (30 + 5) answered / 150 calls — weighted, not the mean of 30 % and 10 %.
+    expect(kpiValue('contactRate')).toHaveTextContent(/^23\.3%$/)
+  })
+
+  it('keeps the project-wide numbers while the table is filtered to one operator', () => {
+    renderPage()
+
+    const table = captured.tableProps as { onOperatorChange: (id: number | null) => void }
+    act(() => table.onOperatorChange(2))
+    expect((captured.tableProps as { data: StubRow[] }).data.map((r) => r.operator)).toEqual([
+      'Petro',
+    ])
+
+    expect(kpiValue('callsMade')).toHaveTextContent(/^150$/)
+    expect(kpiValue('contactRate')).toHaveTextContent(/^23\.3%$/)
+  })
+
+  it('prefers the dashboard KPIs when they are present', () => {
+    captured.kpiOverrides = {}
+    renderPage()
+
+    expect(kpiValue('callsMade')).toHaveTextContent(/^10$/)
+    expect(kpiValue('contactRate')).toHaveTextContent(/^25\.0%$/)
   })
 })
 

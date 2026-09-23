@@ -171,7 +171,11 @@ export function useCallsMadeModal({
 // ============================================================================
 
 export interface ContactRateOutcome {
-  key: 'answered' | 'noAnswer' | 'busy' | 'failed'
+  /**
+   * `other` = calls in none of the four named buckets; present only when
+   * non-zero, so the rows add up to the total without a «0 (0%)» line.
+   */
+  key: 'answered' | 'noAnswer' | 'busy' | 'failed' | 'other'
   count: number
   percentage: number
 }
@@ -268,7 +272,8 @@ export function useContactRateModal({
         callStats.answered > 0 ||
         callStats.noAnswer > 0 ||
         callStats.busy > 0 ||
-        callStats.failed > 0)
+        callStats.failed > 0 ||
+        callStats.other > 0)
 
     let outcomes: ContactRateOutcome[]
     if (hasCallStats && callStats) {
@@ -295,6 +300,15 @@ export function useContactRateModal({
           percentage: total > 0 ? Math.round((callStats.failed / total) * 100) : 0,
         },
       ]
+      // «Інше»: the calls none of the four rows count, so the block adds up
+      // to the total (call-service review). Shown only when there are any.
+      if (callStats.other > 0) {
+        outcomes.push({
+          key: 'other' as const,
+          count: callStats.other,
+          percentage: total > 0 ? Math.round((callStats.other / total) * 100) : 0,
+        })
+      }
     } else {
       // Fallback: if we have real answered counts from operators, use them; otherwise estimate
       const answered = operatorTotals.answered || contacted

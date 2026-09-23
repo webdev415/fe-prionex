@@ -208,6 +208,12 @@ export interface CallStatisticsUI {
   noAnswer: number
   busy: number
   failed: number
+  /**
+   * Calls in none of the four buckets above, so answered + noAnswer + busy +
+   * failed + other = totalCalls (report-service `calls_other`, derived when
+   * an older backend omits it).
+   */
+  other: number
   contactRate: number
   totalTalkTime: number
   totalTalkTimeFormatted: string
