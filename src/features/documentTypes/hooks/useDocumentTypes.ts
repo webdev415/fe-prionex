@@ -9,6 +9,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import i18n from '@/lib/i18n'
 import { documentTypesApi } from '../api/documentTypesApi'
 import type {
   DocumentType,
@@ -44,7 +45,12 @@ export function useCreateDocumentType() {
       queryClient.invalidateQueries({ queryKey: documentTypesKeys.lists() })
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to create document type')
+      toast.error(
+        error.message ||
+          i18n.t('toasts.documentTypes.createFailed', {
+            defaultValue: 'Failed to create document type',
+          })
+      )
     },
   })
 }
@@ -58,7 +64,12 @@ export function useUpdateDocumentType() {
       queryClient.invalidateQueries({ queryKey: documentTypesKeys.lists() })
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to update document type')
+      toast.error(
+        error.message ||
+          i18n.t('toasts.documentTypes.updateFailed', {
+            defaultValue: 'Failed to update document type',
+          })
+      )
     },
   })
 }
@@ -72,7 +83,12 @@ export function useUpdateDocumentTypeVisibility() {
       queryClient.invalidateQueries({ queryKey: documentTypesKeys.lists() })
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to update visibility')
+      toast.error(
+        error.message ||
+          i18n.t('toasts.documentTypes.visibilityUpdateFailed', {
+            defaultValue: 'Failed to update visibility',
+          })
+      )
     },
   })
 }
@@ -85,7 +101,12 @@ export function useDeleteDocumentType() {
       queryClient.invalidateQueries({ queryKey: documentTypesKeys.lists() })
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to delete document type')
+      toast.error(
+        error.message ||
+          i18n.t('toasts.documentTypes.deleteFailed', {
+            defaultValue: 'Failed to delete document type',
+          })
+      )
     },
   })
 }

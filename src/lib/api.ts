@@ -1,5 +1,6 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios'
 import { buildLoginUrlWithReturn } from '@/features/auth/utils/safeReturnUrl'
+import { localizeCodedDetail } from '@/lib/errors'
 
 export const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL !== undefined
@@ -279,6 +280,7 @@ api.interceptors.response.use(
     return response
   },
   async (error: AxiosError) => {
+    localizeCodedDetail(error)
     const originalRequest = error.config as RetryableRequestConfig | undefined
     const isAuthEndpoint = originalRequest?.url?.includes('/auth/')
 

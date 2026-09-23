@@ -6,6 +6,7 @@
 
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import i18n, { spanishLocaleOr } from '@/lib/i18n'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import {
@@ -26,12 +27,13 @@ import { useHasAnyPermission } from '@/hooks'
 import { PERMISSIONS } from '@/constants/permissions'
 import { piiProps } from '@/lib/openreplay/pii'
 import { toast } from 'sonner'
+import { withCurrency } from '@/lib/formatters'
 
 // Format currency for Ukrainian Hryvnia
 const formatUAH = (amount: string | number) => {
   const num = typeof amount === 'string' ? parseFloat(amount) : amount
   if (isNaN(num)) return '0'
-  return new Intl.NumberFormat('uk-UA', {
+  return new Intl.NumberFormat(spanishLocaleOr(i18n.language, 'uk-UA'), {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
     useGrouping: true,
@@ -211,7 +213,7 @@ export function BulkAssignClientModal({
                       <PriorityBadge priority={client.priority} variant="compact" />
                     </div>
                     <span className="text-foreground w-full text-xs leading-[150%] font-medium tracking-[-0.24px] sm:w-[25%] sm:text-sm sm:tracking-[-0.28px]">
-                      {formatUAH(client.debt)} ₴
+                      {withCurrency(formatUAH(client.debt), 'suffix')}
                     </span>
                   </div>
                 ))}
@@ -232,7 +234,9 @@ export function BulkAssignClientModal({
                 <div>
                   <span className="text-foreground text-xs leading-[150%] font-light tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px]">
                     {t('pages.clients.modals.bulkAssignClient.totalDebt')}{' '}
-                    <span className="font-medium">{formatUAH(summary.totalDebt)} ₴</span>
+                    <span className="font-medium">
+                      {withCurrency(formatUAH(summary.totalDebt), 'suffix')}
+                    </span>
                   </span>
                 </div>
                 <div>

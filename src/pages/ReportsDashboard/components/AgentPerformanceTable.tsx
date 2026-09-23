@@ -21,6 +21,7 @@ import { LinkButton } from '@/components/ui/LinkButton'
 import { Icons } from '@/lib/icons'
 import { getDateStringInTimezone } from '@/lib/dateUtils'
 import type { Period } from '../types'
+import { withCurrency } from '@/lib/formatters'
 
 // ============================================================================
 // Utility Functions
@@ -245,7 +246,7 @@ export function AgentPerformanceTable({
       align: 'right',
       render: (item) => (
         <span className="text-foreground text-xs font-medium">
-          {formatCurrency(item.payments)} {t('pages.reports.currencySymbol')}
+          {withCurrency(formatCurrency(item.payments), 'suffix')}
         </span>
       ),
     },
@@ -518,7 +519,7 @@ export function AgentPerformanceTable({
                       {totals.messages}
                     </td>
                     <td className="text-foreground h-[49px] px-3 text-right text-xs font-semibold sm:px-6">
-                      {formatCurrency(totals.payments)} {t('pages.reports.currencySymbol')}
+                      {withCurrency(formatCurrency(totals.payments), 'suffix')}
                     </td>
                   </tr>
                 </>

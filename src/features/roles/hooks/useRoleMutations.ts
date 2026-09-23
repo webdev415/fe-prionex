@@ -6,6 +6,7 @@
 
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import i18n from '@/lib/i18n'
 import { rolesApi } from '../api/rolesApi'
 import { rolesKeys } from './useRoles'
 import { getErrorMessage } from '@/lib/errors'
@@ -30,7 +31,7 @@ export function useCreateRole() {
   return useMutation({
     mutationFn: (data: CreateRoleInput) => rolesApi.createRole(data),
     onSuccess: () => {
-      toast.success('Role created successfully')
+      toast.success(i18n.t('toasts.roles.created', { defaultValue: 'Role created successfully' }))
       queryClient.invalidateQueries({ queryKey: rolesKeys.lists() })
       // Invalidate departments cache to update assigned_roles_count
       queryClient.invalidateQueries({ queryKey: ['departments'] })
@@ -51,7 +52,7 @@ export function useUpdateRole() {
     mutationFn: ({ roleId, data }: { roleId: number; data: UpdateRoleInput }) =>
       rolesApi.updateRole(roleId, data),
     onSuccess: (_, variables) => {
-      toast.success('Role updated successfully')
+      toast.success(i18n.t('toasts.roles.updated', { defaultValue: 'Role updated successfully' }))
       queryClient.invalidateQueries({ queryKey: rolesKeys.detail(variables.roleId) })
       queryClient.invalidateQueries({ queryKey: rolesKeys.lists() })
       // Invalidate departments cache to update assigned_roles_count
@@ -72,7 +73,7 @@ export function useDeleteRole() {
   return useMutation({
     mutationFn: ({ roleId }: { roleId: number }) => rolesApi.deleteRole(roleId),
     onSuccess: () => {
-      toast.success('Role deleted successfully')
+      toast.success(i18n.t('toasts.roles.deleted', { defaultValue: 'Role deleted successfully' }))
       queryClient.invalidateQueries({ queryKey: rolesKeys.lists() })
       // Invalidate departments cache to update assigned_roles_count
       queryClient.invalidateQueries({ queryKey: ['departments'] })
@@ -109,7 +110,7 @@ export function useArchiveRole() {
       data: { reassign_to_role_id?: number; use_default_role?: boolean }
     }) => rolesApi.archiveRole(roleId, data),
     onSuccess: (_, variables) => {
-      toast.success('Role archived successfully')
+      toast.success(i18n.t('toasts.roles.archived', { defaultValue: 'Role archived successfully' }))
       queryClient.invalidateQueries({ queryKey: rolesKeys.detail(variables.roleId) })
       queryClient.invalidateQueries({ queryKey: rolesKeys.lists() })
       // Invalidate departments cache to update assigned_roles_count

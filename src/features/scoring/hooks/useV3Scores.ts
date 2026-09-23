@@ -4,6 +4,7 @@
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import i18n from '@/lib/i18n'
 import { useAuthStore } from '@/stores/authStore'
 import { scoringApi } from '../api/scoringApi'
 import type { GetV3ScoreParams, V3Settings } from '../api/types'
@@ -104,11 +105,21 @@ export function useSetV3UiEnabled() {
       qc.invalidateQueries({ queryKey: scoringKeys.all })
       toast.success(
         data.enabled
-          ? 'v3 is now live for operators on this brand.'
-          : 'v3 hidden from operators again. Scoring keeps running in the background.'
+          ? i18n.t('toasts.scoring.liveEnabled', {
+              defaultValue: 'v3 is now live for operators on this brand.',
+            })
+          : i18n.t('toasts.scoring.hiddenAgain', {
+              defaultValue:
+                'v3 hidden from operators again. Scoring keeps running in the background.',
+            })
       )
     },
-    onError: () => toast.error('Could not change the setting. Do you have permission?'),
+    onError: () =>
+      toast.error(
+        i18n.t('toasts.scoring.settingChangeFailed', {
+          defaultValue: 'Could not change the setting. Do you have permission?',
+        })
+      ),
   })
 }
 
@@ -199,13 +210,20 @@ export function useTriggerV3Scoring() {
     mutationFn: (vars: { projectId: number; asOf?: string }) =>
       scoringApi.triggerV3Scoring(vars.projectId, vars.asOf),
     onSuccess: () => {
-      toast.success('Scoring started — refresh in a moment to see updates.')
+      toast.success(
+        i18n.t('toasts.scoring.started', {
+          defaultValue: 'Scoring started — refresh in a moment to see updates.',
+        })
+      )
       // Invalidate the whole v3 namespace, not just the lists: a run also changes
       // the available months, the monitoring summary and the drift comparison,
       // which the shadow-run report reads.
       setTimeout(() => qc.invalidateQueries({ queryKey: scoringKeys.all }), 4000)
     },
-    onError: () => toast.error('Could not start scoring.'),
+    onError: () =>
+      toast.error(
+        i18n.t('toasts.scoring.startFailed', { defaultValue: 'Could not start scoring.' })
+      ),
   })
 }
 
@@ -235,12 +253,20 @@ export function useUpdateV3Settings() {
       scoringApi.updateV3Settings(vars.projectId, vars.settings, vars.reason),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: scoringKeys.all })
-      toast.success('Saved. The next scoring run will use these values.')
+      toast.success(
+        i18n.t('toasts.scoring.settingsSaved', {
+          defaultValue: 'Saved. The next scoring run will use these values.',
+        })
+      )
     },
     onError: (err: unknown) => {
       const detail = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail
       toast.error(
-        typeof detail === 'string' ? detail : 'Could not save. Check the values and try again.'
+        typeof detail === 'string'
+          ? detail
+          : i18n.t('toasts.scoring.settingsSaveFailed', {
+              defaultValue: 'Could not save. Check the values and try again.',
+            })
       )
     },
   })

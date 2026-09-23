@@ -240,7 +240,7 @@ export function DocumentsAccordion({ documents, loans, clientId }: DocumentsAcco
           </svg>
           <span className="text-sm">{title}</span>
           <span className="text-muted-foreground ml-auto text-sm font-normal">
-            {docs.length} {docs.length === 1 ? 'док.' : 'док.'}
+            {t('pages.clients.detail.documentsCount', { count: docs.length })}
           </span>
         </button>
         {isOpen && <div className="border-border border-t">{renderDocTable(docs)}</div>}

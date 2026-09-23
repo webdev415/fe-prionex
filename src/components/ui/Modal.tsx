@@ -7,6 +7,7 @@
  */
 
 import { type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { Icon, Cancel01Icon } from '@/lib/icons'
 import { cn } from '@/lib/utils'
@@ -51,6 +52,7 @@ export function Modal({
   noBackdropBlur = false,
   nonModal = false,
 }: ModalProps) {
+  const { t } = useTranslation('common')
   return (
     <DialogPrimitive.Root open={open} onOpenChange={(open) => !open && onClose()} modal={!nonModal}>
       <DialogPrimitive.Portal>
@@ -110,7 +112,7 @@ export function Modal({
               <DialogPrimitive.Close asChild>
                 <button
                   className="text-muted-foreground hover:bg-muted hover:text-foreground absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-md transition-colors sm:top-4 sm:right-4"
-                  aria-label="Close modal"
+                  aria-label={t('components.modal.close', 'Close modal')}
                 >
                   <Icon icon={Cancel01Icon} size={18} className="text-current" strokeWidth={2} />
                 </button>
@@ -148,7 +150,7 @@ export function Modal({
                 <DialogPrimitive.Close asChild>
                   <button
                     className="text-muted-foreground hover:bg-muted hover:text-foreground absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-md transition-colors sm:top-4 sm:right-4"
-                    aria-label="Close modal"
+                    aria-label={t('components.modal.close', 'Close modal')}
                   >
                     <Icon icon={Cancel01Icon} size={18} className="text-current" strokeWidth={2} />
                   </button>

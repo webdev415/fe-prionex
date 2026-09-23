@@ -30,6 +30,8 @@ import { CallingWindowTooltip } from '@/features/calls/components/CallingWindowT
 import { useSetLastCallResultFromCall } from '@/features/contactTags/hooks/useContactTags'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { formatMoneyUAHTwoDecimals } from '@/lib/formatters'
+import { isValidManualDialDigits } from '@/lib/phone'
+import { activeProjectCountry } from '@/lib/projectCountry'
 import {
   CALL_MODAL_AUTO_CLOSE_SECONDS,
   CALL_MODAL_AUTO_CLOSE_MAX_WAIT_MS,
@@ -82,11 +84,6 @@ export interface CallDialogModalProps {
   answerEnabled?: boolean
 }
 
-/** Manual entry: only digits, length 12, prefix 380 (Ukraine). */
-function isValidManualDialPhone(digits: string): boolean {
-  return digits.length === 12 && /^\d{12}$/.test(digits) && digits.startsWith('380')
-}
-
 export function CallDialogModal({
   open,
   onClose,
@@ -125,6 +122,7 @@ export function CallDialogModal({
   const queryClient = useQueryClient()
   const { setMinimizedCall, setOpenCallModal, minimizedCall } = useCallStore()
   const { user: authUser } = useAuth()
+  const manualPhoneFormat = activeProjectCountry(authUser) === 'ES' ? 'Spain' : ''
 
   // Fetch call details with polling if callId is provided
   const { data: callDetails } = useCallDetails(callId || null)
@@ -299,7 +297,7 @@ export function CallDialogModal({
 
   const hasDialTarget = !manualPhoneEnabled
     ? String(phoneNumber).trim().length > 0
-    : isValidManualDialPhone(manualPhoneDigits)
+    : isValidManualDialDigits(manualPhoneDigits)
   const canPlaceCall = hasDialTarget && callingWindow.allowed
 
   const handleManualPhoneChange = (raw: string) => {
@@ -662,7 +660,7 @@ export function CallDialogModal({
         <button
           onClick={() => handleMinimize()}
           className="hover:bg-muted absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-md transition-colors sm:top-4 sm:right-12"
-          aria-label="Minimize modal"
+          aria-label={t('components.modal.minimize', 'Minimize modal')}
         >
           <Icons.Remove02 size={20} className="text-foreground" strokeWidth={1.5} />
         </button>
@@ -675,7 +673,7 @@ export function CallDialogModal({
                 role="alert"
                 className="border-warning-500/40 bg-warning-50 text-warning-500 rounded-lg border px-3 py-2 text-sm font-medium"
               >
-                Telephony is temporarily unavailable
+                {t('pages.clients.modals.callDialog.telephonyUnavailable')}
               </div>
             )}
 
@@ -835,7 +833,7 @@ export function CallDialogModal({
       <button
         onClick={() => handleMinimize()}
         className="hover:bg-muted absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-md transition-colors sm:top-4 sm:right-12"
-        aria-label="Minimize modal"
+        aria-label={t('components.modal.minimize', 'Minimize modal')}
       >
         <Icons.Remove02 size={20} className="text-foreground" strokeWidth={1.5} />
       </button>
@@ -845,7 +843,7 @@ export function CallDialogModal({
             role="alert"
             className="border-warning-500/40 bg-warning-50 text-warning-500 rounded-lg border px-3 py-2 text-sm font-medium"
           >
-            Telephony is temporarily unavailable
+            {t('pages.clients.modals.callDialog.telephonyUnavailable')}
           </div>
         )}
 
@@ -900,13 +898,15 @@ export function CallDialogModal({
                     }
                     placeholder={
                       manualPhoneEnabled
-                        ? t('pages.clients.modals.callDialog.manualPhonePlaceholder')
+                        ? t(
+                            `pages.clients.modals.callDialog.manualPhonePlaceholder${manualPhoneFormat}`
+                          )
                         : undefined
                     }
                     aria-invalid={
                       manualPhoneEnabled &&
                       manualPhoneDigits.length > 0 &&
-                      !isValidManualDialPhone(manualPhoneDigits)
+                      !isValidManualDialDigits(manualPhoneDigits)
                     }
                     className={cn(
                       'text-foreground focus:border-primary focus:ring-primary/20 border-border bg-card w-full rounded-lg border px-3 py-2 text-sm font-light focus:ring-2 focus:outline-none',
@@ -933,7 +933,7 @@ export function CallDialogModal({
                   </label>
                   {manualPhoneEnabled && (
                     <p className="text-muted-foreground text-xs">
-                      {t('pages.clients.modals.callDialog.manualPhoneHint')}
+                      {t(`pages.clients.modals.callDialog.manualPhoneHint${manualPhoneFormat}`)}
                     </p>
                   )}
                 </div>
@@ -1008,14 +1008,14 @@ export function CallDialogModal({
                   size="sm"
                   onClick={() => {
                     const target = manualPhoneEnabled ? manualPhoneDigits : phoneNumber
-                    if (manualPhoneEnabled && !isValidManualDialPhone(manualPhoneDigits)) return
+                    if (manualPhoneEnabled && !isValidManualDialDigits(manualPhoneDigits)) return
                     if (onSpamCall) onSpamCall(target)
                     handleClose()
                   }}
                   className="w-full rounded-md"
                   disabled={
                     manualPhoneEnabled
-                      ? !isValidManualDialPhone(manualPhoneDigits)
+                      ? !isValidManualDialDigits(manualPhoneDigits)
                       : !String(phoneNumber).trim()
                   }
                   leftIcon={<Icons.Cancel01 size={18} className="sm:size-5" />}

@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import type { ApiProjectDetail } from '@/features/projects/types'
+import { setActiveCurrency } from '@/lib/projectCurrency'
 import { ProjectDetailPanel } from '../ProjectDetailPanel'
 
 vi.mock('@/components/auth', () => ({
@@ -40,10 +41,10 @@ const project: ApiProjectDetail = {
   assigned_users_count: 5,
 }
 
-function renderPanel() {
+function renderPanel(shown: ApiProjectDetail = project) {
   return render(
     <MemoryRouter>
-      <ProjectDetailPanel project={project} hasProjects onEdit={vi.fn()} />
+      <ProjectDetailPanel project={shown} hasProjects onEdit={vi.fn()} />
     </MemoryRouter>
   )
 }
@@ -57,5 +58,27 @@ describe('ProjectDetailPanel actions', () => {
   it('does not render a Delete action', () => {
     renderPanel()
     expect(screen.queryByText('pages.projects.detailPanel.delete')).not.toBeInTheDocument()
+  })
+})
+
+describe('ProjectDetailPanel total debt', () => {
+  it('shows the debt in euros for a euro project', () => {
+    renderPanel({ ...project, currency: 'EUR' })
+    expect(screen.getByText('€1,000')).toBeInTheDocument()
+  })
+
+  it('shows the debt in hryvnia for a hryvnia project', () => {
+    renderPanel({ ...project, currency: 'UAH' })
+    expect(screen.getByText('₴ 1 000')).toBeInTheDocument()
+  })
+
+  it('shows hryvnia for a project without a currency, even to a euro-project viewer', () => {
+    setActiveCurrency('EUR')
+    try {
+      renderPanel({ ...project, currency: undefined })
+      expect(screen.getByText('₴ 1 000')).toBeInTheDocument()
+    } finally {
+      setActiveCurrency('UAH')
+    }
   })
 })

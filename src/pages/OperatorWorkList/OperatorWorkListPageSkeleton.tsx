@@ -3,6 +3,7 @@
  * (debt view: 5 columns, client view: 3) so chrome stays interactive while data loads.
  */
 
+import { useTranslation } from 'react-i18next'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 
 export function OperatorWorkListTableSkeleton({
@@ -12,15 +13,17 @@ export function OperatorWorkListTableSkeleton({
   columns?: number
   rows?: number
 }) {
+  const { t } = useTranslation('common')
   return (
     <div className="w-full min-w-0" aria-busy="true" aria-live="polite" role="status">
-      <span className="sr-only">Loading work list…</span>
+      <span className="sr-only">{t('pages.scoringV3.workList.loadingWorkList')}</span>
       <TableSkeleton columns={columns} rows={rows} className="w-full" />
     </div>
   )
 }
 
 export function OperatorWorkListPageSkeleton() {
+  const { t } = useTranslation('common')
   return (
     <div
       className="flex w-full min-w-0 flex-col gap-4 p-4 md:p-6"
@@ -28,7 +31,7 @@ export function OperatorWorkListPageSkeleton() {
       aria-live="polite"
       role="status"
     >
-      <span className="sr-only">Loading priority work list…</span>
+      <span className="sr-only">{t('pages.scoringV3.workList.loadingPriorityWorkList')}</span>
 
       <div className="flex w-full animate-pulse flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 flex-col gap-2">

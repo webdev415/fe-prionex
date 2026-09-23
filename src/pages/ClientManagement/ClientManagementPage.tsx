@@ -6,6 +6,7 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
+import i18n, { spanishLocaleOr } from '@/lib/i18n'
 import { DataTable, type Column, type SortConfig } from '@/components/ui/DataTable'
 import { Pagination } from '@/components/ui/Pagination'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
@@ -29,7 +30,7 @@ import { ClientFiltersBar } from './components/ClientFiltersBar'
 import { countAppliedFilters } from './utils/appliedFiltersCount'
 import { AssignClientModal } from './components/AssignClientModal'
 import { BulkAssignClientModal } from './components/BulkAssignClientModal'
-import { formatClientFullName, formatDate, formatDateTime } from '@/lib/formatters'
+import { formatClientFullName, formatDate, formatDateTime, withCurrency } from '@/lib/formatters'
 import { TagSelectorModal } from './components/TagSelectorModal'
 import { BulkTagModal } from './components/BulkTagModal'
 import { BulkSendMessageModal } from './components/BulkSendMessageModal'
@@ -56,6 +57,7 @@ import { mapScoreToPriority } from '@/features/clients/api/configApi'
 import type { Client as APIClient } from '@/features/clients/api/types'
 import type { PriorityThresholds } from '@/features/clients/api/configApi'
 import { useURLState } from '@/hooks/useURLState'
+import { useClampPage } from '@/hooks/useClampPage'
 import { useOperatorFilterOptions, coversAllOptions } from './hooks/useOperatorFilterOptions'
 import { NO_INTERACTIONS_ID, NO_RESPONSIBLE_ID } from './components/OperatorMultiSelectDropdown'
 import type { StepValueEntry } from './components/ClientStepValueRow'
@@ -64,7 +66,7 @@ import { cycleTagTriState } from '@/features/tags/utils/tagFilterState'
 import { PermissionGuard } from '@/components/auth'
 import { PERMISSIONS } from '@/constants/permissions'
 import { ALL_MESSAGING_LAUNCH_PERMISSIONS } from '@/features/messaging'
-import { useBulkOptOutUbki, useBulkSubmitByClients } from '@/features/ubki'
+import { useBulkOptOutUbki, useBulkSubmitByClients, useUbkiAvailable } from '@/features/ubki'
 import { useTags } from '@/features/tags/hooks/useTags'
 import { isAdminRole, isHiddenVisibility } from '@/features/tags/utils/visibility'
 import { toast } from 'sonner'
@@ -1108,6 +1110,7 @@ export function ClientManagementPage() {
   const totalCount = clientsResponse?.total || 0
   const totalPages = clientsResponse?.total_pages || 1
   const prioritySummaryData = clientsResponse?.priority_summary
+  useClampPage(currentPage, totalPages, Boolean(clientsResponse) && !isFetching, setCurrentPage)
 
   // Fetch priority thresholds configuration
   const { data: thresholds = DEFAULT_THRESHOLDS } = usePriorityThresholds()
@@ -1165,6 +1168,7 @@ export function ClientManagementPage() {
   const assignClientMutation = useAssignClient()
   const bulkAssignClientsMutation = useBulkAssignClients()
   const bulkOptOutUbkiMutation = useBulkOptOutUbki()
+  const ubkiAvailable = useUbkiAvailable()
   const bulkSubmitByClientsMutation = useBulkSubmitByClients()
 
   // Map API clients to display format
@@ -1747,7 +1751,7 @@ export function ClientManagementPage() {
   const formatCurrency = (amount: string | number) => {
     const num = typeof amount === 'string' ? parseFloat(amount) : amount
     if (isNaN(num)) return '0'
-    return new Intl.NumberFormat('uk-UA', {
+    return new Intl.NumberFormat(spanishLocaleOr(i18n.language, 'uk-UA'), {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
       useGrouping: true,
@@ -1864,7 +1868,7 @@ export function ClientManagementPage() {
       align: 'right',
       sortable: true,
       sortKey: 'debt',
-      render: (client) => `${formatCurrency(client.debt)} ₴`,
+      render: (client) => withCurrency(formatCurrency(client.debt), 'suffix'),
     },
     {
       key: 'priority',
@@ -2057,7 +2061,9 @@ export function ClientManagementPage() {
   // time, so re-enabling one is a one-line change here. The bulk-selection
   // checkbox is rendered by DataTable itself and is intentionally kept.
   const HIDDEN_COLUMN_KEYS = new Set(['creditor', 'actions'])
-  const visibleColumns = columns.filter((c) => !HIDDEN_COLUMN_KEYS.has(c.key))
+  const visibleColumns = columns.filter(
+    (c) => !HIDDEN_COLUMN_KEYS.has(c.key) && (ubkiAvailable || c.key !== 'ubki')
+  )
 
   // Show initial loading state (only when no data exists yet). The clients query
   // is intentionally disabled while operator options load (see useClients
@@ -2197,8 +2203,10 @@ export function ClientManagementPage() {
                         className="text-primary-foreground sm:h-[18px] sm:w-[18px]"
                         strokeWidth={1.5}
                       />
-                      <span className="hidden font-medium sm:inline">Bulk Actions</span>
-                      <span className="font-medium sm:hidden">Actions</span>
+                      <span className="hidden font-medium sm:inline">
+                        {t('pages.clients.bulkActions.title')}
+                      </span>
+                      <span className="font-medium sm:hidden">{t('common.actions')}</span>
                       <Icons.ArrowDown
                         size={14}
                         className="text-primary-foreground sm:h-4 sm:w-4"
@@ -2264,7 +2272,7 @@ export function ClientManagementPage() {
                     </PermissionGuard>
                     {/* Bulk "Send to UBKI" disabled for the release via
                         ENABLE_BULK_UBKI_SUBMISSION (see the flag definition above). */}
-                    {ENABLE_BULK_UBKI_SUBMISSION && (
+                    {ENABLE_BULK_UBKI_SUBMISSION && ubkiAvailable && (
                       <PermissionGuard permission={PERMISSIONS.UBKI.SUBMIT}>
                         <DropdownMenuItem
                           onClick={handleBulkUbkiSubmit}
@@ -2284,28 +2292,32 @@ export function ClientManagementPage() {
                         </DropdownMenuItem>
                       </PermissionGuard>
                     )}
-                    <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
-                      <DropdownMenuItem
-                        onClick={() => handleBulkUbkiOptOut(true)}
-                        className="text-foreground hover:bg-muted focus:bg-muted flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors"
-                      >
-                        <Icons.Cancel01 size={18} className="text-foreground" strokeWidth={1.5} />
-                        <span className="text-foreground text-sm font-medium">
-                          {t('pages.clients.bulkActions.optOutUbki', 'Do not send to UBKI')}
-                        </span>
-                      </DropdownMenuItem>
-                    </PermissionGuard>
-                    <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
-                      <DropdownMenuItem
-                        onClick={() => handleBulkUbkiOptOut(false)}
-                        className="text-foreground hover:bg-muted focus:bg-muted flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors"
-                      >
-                        <Icons.Reload size={18} className="text-foreground" strokeWidth={1.5} />
-                        <span className="text-foreground text-sm font-medium">
-                          {t('pages.clients.bulkActions.optInUbki', 'Re-enable UBKI sending')}
-                        </span>
-                      </DropdownMenuItem>
-                    </PermissionGuard>
+                    {ubkiAvailable && (
+                      <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
+                        <DropdownMenuItem
+                          onClick={() => handleBulkUbkiOptOut(true)}
+                          className="text-foreground hover:bg-muted focus:bg-muted flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors"
+                        >
+                          <Icons.Cancel01 size={18} className="text-foreground" strokeWidth={1.5} />
+                          <span className="text-foreground text-sm font-medium">
+                            {t('pages.clients.bulkActions.optOutUbki', 'Do not send to UBKI')}
+                          </span>
+                        </DropdownMenuItem>
+                      </PermissionGuard>
+                    )}
+                    {ubkiAvailable && (
+                      <PermissionGuard permission={PERMISSIONS.CLIENTS.EDIT}>
+                        <DropdownMenuItem
+                          onClick={() => handleBulkUbkiOptOut(false)}
+                          className="text-foreground hover:bg-muted focus:bg-muted flex cursor-pointer items-center gap-3 rounded-md px-3 py-2.5 transition-colors"
+                        >
+                          <Icons.Reload size={18} className="text-foreground" strokeWidth={1.5} />
+                          <span className="text-foreground text-sm font-medium">
+                            {t('pages.clients.bulkActions.optInUbki', 'Re-enable UBKI sending')}
+                          </span>
+                        </DropdownMenuItem>
+                      </PermissionGuard>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               }

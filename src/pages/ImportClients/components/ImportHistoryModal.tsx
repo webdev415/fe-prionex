@@ -92,7 +92,7 @@ export function ImportHistoryModal({ open, onClose, data }: ImportHistoryModalPr
                 {t('pages.imports.modal.uploadedBy')}{' '}
               </span>
               <span className="text-foreground flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] break-words sm:text-base">
-                {data.uploadedBy} at {data.uploadedAt}
+                {t('pages.imports.uploadedByAt', { user: data.uploadedBy, time: data.uploadedAt })}
               </span>
             </div>
 
