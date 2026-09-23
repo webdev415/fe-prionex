@@ -312,6 +312,11 @@ export interface SseErrorPayload {
   /** HTTP-equivalent status when the gateway tunnels an error in-band. */
   status?: number
   code?: string
+  /**
+   * Поля тела, на которые ругается схема (FastAPI `detail[].loc`) — по ним
+   * видно, что 422 именно про незнакомое серверу поле, а не про вложение.
+   */
+  fields?: string[]
   [key: string]: unknown
 }
 

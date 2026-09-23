@@ -54,12 +54,9 @@ export interface AssistantChatRequest {
   deep_research?: boolean
   /**
    * Раздумья 31B: `true` — «думающий» ход рассуждает вслух, `false` — отвечает
-   * сразу, без хода рассуждения (быстрее). Поле уходит ТОЛЬКО у thinking-хода;
-   * fast и экспертный запросы остаются байт-в-байт прежними. Forward-compatible,
-   * как и `deep_research` выше: у ChatRequest `extra="ignore"` (не `forbid`),
-   * поэтому прокси, ещё не знающий поля, его МОЛЧА игнорирует и отвечает 200 — а
-   * не 422. «Сервер не применил мой флаг» видно по `done.thinking_used`, не по
-   * отказу; повтора запроса нет.
+   * сразу, без хода рассуждения (быстрее). Поле уходит ТОЛЬКО у thinking-хода:
+   * прокси, ещё не знающий его, отвечает 422, и обычный (fast) и экспертный
+   * запросы обязаны остаться байт-в-байт прежними.
    */
   thinking?: boolean
   /**
@@ -218,6 +215,13 @@ export class AssistantChatStreamError extends Error {
    * так».
    */
   readonly serverDetail?: string
+  /**
+   * Поля тела, названные схемой в отказе 422 (`detail[].loc`). Без них 422 «не
+   * знаю поле `thinking`» неотличим от 422 «этот файл не подходит»: текст у
+   * FastAPI один и тот же («Extra inputs are not permitted»), а имя поля живёт
+   * только в `loc`.
+   */
+  readonly fields?: string[]
 
   constructor(payload: SseErrorPayload) {
     super(payload.message ?? 'Assistant stream error')
@@ -225,11 +229,28 @@ export class AssistantChatStreamError extends Error {
     this.status = payload.status
     this.code = payload.code
     this.serverDetail = payload.message?.trim() || undefined
+    this.fields = payload.fields && payload.fields.length > 0 ? payload.fields : undefined
   }
 }
 
 /** The chat refuses a turn whose attachments are too large *in total* with this code. */
 export const ATTACHMENTS_TOTAL_TOO_LARGE = 'attachments_total_too_large'
+
+/**
+ * Имена полей из `detail[].loc` отказа по схеме: `["body", "thinking"]` → `thinking`.
+ * Технический префикс `body` отбрасывается, индексы (числа) — тоже.
+ */
+function readFields(detail: unknown[]): string[] | undefined {
+  const fields: string[] = []
+  for (const item of detail) {
+    const loc = (item as { loc?: unknown } | null)?.loc
+    if (!Array.isArray(loc)) continue
+    for (const part of loc) {
+      if (typeof part === 'string' && part && part !== 'body') fields.push(part)
+    }
+  }
+  return fields.length > 0 ? fields : undefined
+}
 
 /**
  * The readable text and the machine code inside an error body. Three shapes
@@ -246,6 +267,7 @@ export const ATTACHMENTS_TOTAL_TOO_LARGE = 'attachments_total_too_large'
 export function extractErrorDetail(body: unknown): {
   message?: string
   code?: string
+  fields?: string[]
 } {
   if (!body || typeof body !== 'object') return {}
   const raw = (body as { detail?: unknown }).detail
@@ -264,8 +286,11 @@ export function extractErrorDetail(body: unknown): {
 
   if (Array.isArray(detail)) {
     const parts = detail.map(readItem).filter((part): part is string => Boolean(part))
+    // `loc` — единственное место, где FastAPI называет ПОЛЕ: сам `msg` у отказа
+    // по схеме одинаков для любого поля («Extra inputs are not permitted»).
     return {
       message: parts.length > 0 ? parts.join('; ') : undefined,
+      fields: readFields(detail),
     }
   }
 
@@ -311,12 +336,13 @@ export async function sendChatMessage(
   if (!response.ok) {
     let message: string | undefined
     let code: string | undefined
+    let fields: string[] | undefined
     try {
-      ;({ message, code } = extractErrorDetail(await response.json()))
+      ;({ message, code, fields } = extractErrorDetail(await response.json()))
     } catch {
       /* non-JSON error body — the caller falls back to a status-based text */
     }
-    throw new AssistantChatStreamError({ status: response.status, message, code })
+    throw new AssistantChatStreamError({ status: response.status, message, code, fields })
   }
 
   if (!response.body) {

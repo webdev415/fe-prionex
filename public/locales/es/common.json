@@ -158,7 +158,10 @@
       "pending": "Pendiente",
       "phoneNumber": "Número de teléfono",
       "incomingCall": "Llamada entrante",
-      "acceptCall": "Aceptar llamada"
+      "acceptCall": "Aceptar llamada",
+      "noClientInteraction": "Este número se marcó sin datos del cliente, por lo que no se puede registrar una interacción asociada a una ficha de cliente.",
+      "noClientChain": "Una cadena de acciones necesita una ficha de cliente. Este número no tiene ninguna asociada.",
+      "unknownClient": "Contacto desconocido"
     },
     "accessGroup": {
       "all_groups": "Todos los grupos",
@@ -235,7 +238,9 @@
         "atLeastOneAttempt": "Al menos 1 intento",
         "enterSeconds": "Introduzca un número de segundos",
         "notNegative": "No puede ser negativo"
-      }
+      },
+      "answerMode": "Modo de respuesta",
+      "answerModeHint": "El modo manual da al operador un margen para aceptar antes de conectar al cliente."
     },
     "numbers": {
       "inQueue": "En cola",
@@ -329,6 +334,10 @@
       "allowed": "Permitido: {{hours}}, {{days}} ({{timezone}})",
       "open": "Horario de llamadas {{hours}} · {{days}} · abierto ahora",
       "everyDay": "todos los días"
+    },
+    "answerMode": {
+      "auto": "Automático",
+      "manual": "Manual (acepta el operador)"
     }
   },
   "search": {
@@ -943,7 +952,7 @@
       "expertLimitReached": "Se ha agotado el límite diario del modo experto.",
       "expertUnavailable": "El servicio externo no está disponible en este momento; inténtelo más tarde.",
       "showReasoning": "Razonamiento 31B",
-      "showReasoningHint": "Activado — el modelo razona y el hilo de razonamiento va al panel «Actividad». Desactivado — 31B responde directamente, más rápido.",
+      "showReasoningHint": "Activado — el modelo razona y el hilo de razonamiento va al panel «Actividad». Desactivado — 31B responde directamente, más rápido. Servidor — según la configuración del servidor.",
       "thinkingUsedOn": "31B · con razonamiento",
       "thinkingUsedOff": "31B · sin razonamiento",
       "thinkingUsedMismatch": "El servidor respondió de forma distinta a la configuración",
@@ -979,7 +988,14 @@
       "answerInProgress": "La respuesta aún se está preparando — aparecerá aquí cuando esté lista",
       "attachmentFrameTitle": "Vista previa del archivo adjunto",
       "attachmentRemoveShort": "Quitar archivo adjunto",
-      "reasoningSteps_many": "{{count}} pasos"
+      "reasoningSteps_many": "{{count}} pasos",
+      "thinkingChoiceServer": "Servidor",
+      "thinkingChoiceOn": "Activado",
+      "thinkingChoiceOff": "Desactivado",
+      "thinkingChoiceServerHint": "El servidor decide el modo de razonamiento",
+      "thinkingChoiceFactOn": "Decide el servidor · el último turno fue con razonamiento",
+      "thinkingChoiceFactOff": "Decide el servidor · el último turno fue sin razonamiento",
+      "thinkingFlagUnsupported": "El servidor todavía no permite desactivar el razonamiento"
     },
     "lawyerWorkplace": {
       "navAria": "Navegación del área jurídica",
