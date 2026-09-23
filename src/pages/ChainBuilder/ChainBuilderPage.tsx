@@ -50,7 +50,7 @@ import type { TAChainStep } from '@/features/taChains/api/types'
 import { useTags } from '@/features/tags/hooks/useTags'
 import { useTargetActions } from '@/features/targetActions/hooks/useTargetActions'
 import type { TargetAction } from '@/features/targetActions/api/types'
-import { useSMSTemplates } from '@/features/sms'
+import { useSMSTemplates, useSmsServiceAvailable } from '@/features/sms'
 import {
   useCanReadMessagingDrafts,
   useMessagingDrafts,
@@ -340,6 +340,11 @@ export function ChainBuilderPage() {
   const [newTriggerConfig, setNewTriggerConfig] = useState<Record<string, string>>({})
   const [newBlockerType, setNewBlockerType] = useState(BLOCKER_TYPES[0])
   const [newBlockerConfig, setNewBlockerConfig] = useState<Record<string, string>>({})
+  const smsServiceAvailable = useSmsServiceAvailable()
+  const effectTypes = useMemo(
+    () => EFFECT_TYPES.filter((effectType) => effectType !== 'send_sms' || smsServiceAvailable),
+    [smsServiceAvailable]
+  )
   const [newEffectType, setNewEffectType] = useState(EFFECT_TYPES[0])
   const [newEffectConditions, setNewEffectConditions] = useState<Set<number>>(new Set())
   const [effectCondDropdownOpen, setEffectCondDropdownOpen] = useState(false)
@@ -988,7 +993,7 @@ export function ChainBuilderPage() {
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                {EFFECT_TYPES.map((effectType) => (
+                                {effectTypes.map((effectType) => (
                                   <SelectItem key={effectType} value={effectType}>
                                     {typeLabel('effect', effectType)}
                                   </SelectItem>

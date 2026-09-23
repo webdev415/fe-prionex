@@ -52,6 +52,7 @@ import {
 import { formatDate } from '@/lib/formatters'
 import { piiProps } from '@/lib/openreplay/pii'
 import { useHasAnyPermission, useHasPermission } from '@/hooks/usePermissions'
+import { useSmsServiceAvailable } from '@/features/sms'
 import { PiiTooltip } from '@/components/ui/PiiTooltip'
 
 export type RecommenderContactTag = {
@@ -442,7 +443,7 @@ function MessageActionsButton({
   onSendMessage: (phone: string) => void
 }) {
   const { t } = useTranslation('common')
-  const canSms = useHasPermission(PERMISSIONS.COMMUNICATION.SEND_SMS)
+  const canSms = useHasPermission(PERMISSIONS.COMMUNICATION.SEND_SMS) && useSmsServiceAvailable()
   const canMessage = useHasAnyPermission(ALL_MESSAGING_SEND_PERMISSIONS)
   const blockedTitle = blockReason || t('pages.contactTags.smsBlocked', 'SMS blocked')
   const messageTitle = t('pages.clients.detail.sendMessageSmsViber', 'Message (SMS / Viber)')
