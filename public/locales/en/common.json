@@ -6684,6 +6684,8 @@
         "rrValidationPaymentDateRequired": "Payment date {{num}} is required",
         "rrValidationPaymentAmountRequired": "Payment amount {{num}} is required",
         "rrValidationSumMismatch": "Sum of payments ({{sum}}) must equal total amount ({{total}})",
+        "rrValidationAmountOutOfRange": "Total restructuring amount ({{amount}}) must be between {{lower}} and {{upper}}",
+        "rrValidationNothingToReturn": "This loan has nothing left to return, so it cannot be restructured",
         "viewDetail": "View",
         "makePayment": "Make Payment",
         "payments": "Payments",
