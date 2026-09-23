@@ -5643,7 +5643,6 @@
           "notes": "Notes (Optional)",
           "selectEmployee": "Select employee...",
           "selectSearcher": "Select searcher...",
-          "noUsersAvailable": "No users available",
           "enterAdditionalNotes": "Enter additional notes...",
           "warningMessage": "Note: At least one assignment (Employee or Searcher) must be selected.",
           "assignClient": "Assign Client",
@@ -7182,6 +7181,17 @@
         "cancelled": "Cancelled",
         "completed": "Completed",
         "completedEarly": "Completed early"
+      },
+      "assignee": {
+        "searchPlaceholder": "Search employee",
+        "allEmployees": "All employees",
+        "noMatches": "No matches",
+        "unassign": "Unassign",
+        "pinned": "Pinned",
+        "pin": "Pin",
+        "unpin": "Unpin",
+        "pinFailed": "Could not pin this employee",
+        "unpinFailed": "Could not unpin this employee"
       },
       "documents": {
         "previewFrameTitle": "Document preview"
