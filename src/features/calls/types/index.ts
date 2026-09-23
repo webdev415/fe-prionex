@@ -92,6 +92,32 @@ export interface AMIHealthResponse {
   ami_connected: boolean
 }
 
+/**
+ * One call, as the last-call lookups return it.
+ *
+ * `outcome` is the RAW `call_records.outcome` (`answered` / `no_answer` /
+ * `busy` / `cancel` / `congestion`, or null when the agent never set one).
+ * The API leaves it unlocalised on purpose — `classifyCallOutcome` in
+ * src/lib/callOutcome.ts owns the wording, so every surface names an outcome
+ * the same way.
+ */
+export interface LastCallInfo {
+  /** ISO-8601, always UTC. */
+  initiated_at: string
+  outcome: string | null
+}
+
+/**
+ * GET /api/v1/calls/last-by-phone.
+ *
+ * `last_call` is null when nobody has ever called the number — an ordinary
+ * answer about a real number, not a 404, so the caller renders it as "Never"
+ * rather than treating it as an error.
+ */
+export interface LastCallByPhoneResponse {
+  last_call: LastCallInfo | null
+}
+
 // WebSocket event interfaces
 
 // Underscore, unlike the dotted "call.state.changed" RabbitMQ domain event that
