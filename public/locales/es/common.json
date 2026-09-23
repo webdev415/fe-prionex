@@ -7219,6 +7219,17 @@
         "completed": "Completado",
         "completedEarly": "Completado anticipadamente"
       },
+      "assignee": {
+        "searchPlaceholder": "Buscar empleado",
+        "allEmployees": "Todos los empleados",
+        "noMatches": "Sin coincidencias",
+        "unassign": "Quitar asignación",
+        "pinned": "Fijados",
+        "pin": "Fijar",
+        "unpin": "Dejar de fijar",
+        "pinFailed": "No se pudo fijar a este empleado",
+        "unpinFailed": "No se pudo dejar de fijar a este empleado"
+      },
       "documents": {
         "previewFrameTitle": "Vista previa del documento"
       }
