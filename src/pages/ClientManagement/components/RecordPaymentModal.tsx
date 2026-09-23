@@ -55,7 +55,17 @@ const EASYPAY_MAX_AMOUNT_UAH = 29999
 
 const RR_STATUS_CONNECTED = 1
 const RR_STATUS_VIOLATED = 2
-const RR_STATUSES_ELIGIBLE_FOR_RR_PAYMENT = new Set([RR_STATUS_CONNECTED, RR_STATUS_VIOLATED])
+const RR_STATUS_DRAFT = 6
+// A Draft plan takes payments too (KAN-1120). Leaving it out meant the payment
+// that activates the plan could not be earmarked for it: the operator picked
+// another type, the RR auto-activated on the amount anyway, and the first
+// installment it was meant to cover stayed unpaid because nothing linked the
+// two. Activation itself is unchanged -- see rr_activation_service.
+const RR_STATUSES_ELIGIBLE_FOR_RR_PAYMENT = new Set([
+  RR_STATUS_CONNECTED,
+  RR_STATUS_VIOLATED,
+  RR_STATUS_DRAFT,
+])
 function isRrEligibleForRrPayment(ra: RestructuringAgreementSummary): boolean {
   return ra.status_id != null && RR_STATUSES_ELIGIBLE_FOR_RR_PAYMENT.has(ra.status_id)
 }
