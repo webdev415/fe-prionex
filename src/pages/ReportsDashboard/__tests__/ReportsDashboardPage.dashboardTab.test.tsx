@@ -1,5 +1,5 @@
 /**
- * Dashboard tab wiring — board #1332 (D8: top collector), #1338 (D14: export
+ * Dashboard tab wiring — board #1332 (D8 / AC#2: top collector), #1338 (D14: export
  * window, FE part), the read-only «Період» of #1337 (D13) and the project-wide
  * KPI fallbacks (same unfiltered rows as the top collector).
  *
@@ -19,6 +19,15 @@ interface StubRow {
   calls: number
   contactRate: number
   payments: number
+  rankingEligible?: boolean | null
+}
+
+/** report-service `top_collector` as the transformer hands it over. */
+interface StubTopCollector {
+  operatorId: number
+  operatorName: string
+  paymentsCollected: number
+  paymentsCount: number
 }
 
 interface StubTableParams {
@@ -32,6 +41,11 @@ const captured = vi.hoisted(() => ({
   tableProps: undefined as unknown,
   agentRows: [] as StubRow[],
   tableQueries: [] as StubTableParams[],
+  /**
+   * `top_collector` of the unfiltered response; `undefined` = an older backend
+   * that does not send the key.
+   */
+  serverTopCollector: undefined as StubTopCollector | null | undefined,
   /** Overrides of the dashboard KPIs for one test (e.g. a lagging 0). */
   kpiOverrides: {} as Record<string, unknown>,
 }))
@@ -42,16 +56,20 @@ vi.mock('@/features/report', () => ({
     isLoading: false,
     error: null,
   }),
-  // Behaves like the endpoint: `operatorId` narrows the rows to that operator;
-  // a disabled query has no data.
+  // Behaves like the endpoint: `operatorId` narrows the rows to that operator
+  // and makes a backend that knows `top_collector` answer null for it; a
+  // disabled query has no data.
   useAgentPerformanceTable: (params: StubTableParams) => {
     captured.tableQueries.push(params)
-    const rows =
-      params.operatorId === undefined
-        ? captured.agentRows
-        : captured.agentRows.filter((r) => r.id === String(params.operatorId))
+    const filtered = params.operatorId !== undefined
+    const rows = filtered
+      ? captured.agentRows.filter((r) => r.id === String(params.operatorId))
+      : captured.agentRows
+    const topCollector =
+      filtered && captured.serverTopCollector !== undefined ? null : captured.serverTopCollector
     return {
       data: params.enabled === false ? undefined : rows,
+      topCollector: params.enabled === false ? undefined : topCollector,
       isLoading: false,
       isFetching: false,
     }
@@ -156,7 +174,14 @@ const dashboardFixture = {
   topOperators: [{ operatorId: 1, operatorName: 'Most calls', callsMade: 900, contactRate: 20 }],
 }
 
-function row(id: string, operator: string, payments: number, calls = 10, contactRate = 20) {
+function row(
+  id: string,
+  operator: string,
+  payments: number,
+  calls = 10,
+  contactRate = 20,
+  rankingEligible?: boolean | null
+) {
   return {
     id,
     operator,
@@ -166,6 +191,7 @@ function row(id: string, operator: string, payments: number, calls = 10, contact
     sms: 0,
     messages: 0,
     payments,
+    rankingEligible,
   }
 }
 
@@ -183,6 +209,7 @@ beforeEach(() => {
   captured.tableProps = undefined
   captured.agentRows = []
   captured.tableQueries = []
+  captured.serverTopCollector = undefined
   captured.kpiOverrides = {}
   // 21.09 21:30 UTC is already 22.09 00:30 in Kyiv: the profile time zone,
   // not the UTC date, decides which "today" the screen and the export use.
@@ -272,6 +299,93 @@ describe('dashboard tab — top collector (D8 #1332)', () => {
     const data = captured.paymentsModalData as Record<string, unknown>
     expect(data.topCollectorName).toBeUndefined()
     expect(data.topCollectorAmount).toBeUndefined()
+  })
+})
+
+describe('dashboard tab — top collector picked by report-service (#1332 AC#2)', () => {
+  // The production picture of 23.09: an analyst and «Administrator System»
+  // hold the largest attributed sums; report-service rules both out.
+  const productionRows = () => [
+    row('7499', 'Analyst', 180_574.52, 0, 0, false),
+    row('1', 'Administrator System', 84_947.75, 0, 0, false),
+    row('7234', 'Collector', 22_600, 120, 25, true),
+  ]
+  // The page must show report-service's pick as is, so the stub names an
+  // operator and an amount the rows cannot produce: the local fallback over
+  // productionRows() would give 'Collector' / 22 600 and cannot pass for it.
+  const serverPick: StubTopCollector = {
+    operatorId: 7301,
+    operatorName: 'Server pick',
+    paymentsCollected: 31_250.5,
+    paymentsCount: 4,
+  }
+
+  const openPaymentsModal = () =>
+    fireEvent.click(screen.getByText('pages.reports.kpi.paymentsCollected'))
+
+  it("shows report-service's top collector, not a larger ruled-out row", () => {
+    captured.agentRows = productionRows()
+    captured.serverTopCollector = serverPick
+    renderPage()
+
+    openPaymentsModal()
+
+    expect(captured.paymentsModalData).toMatchObject({
+      topCollectorName: 'Server pick',
+      topCollectorAmount: 31_250.5,
+    })
+  })
+
+  it('hides the tile when report-service names nobody (top_collector null)', () => {
+    // Eligibility unresolved: the rows carry no verdict and a positive amount,
+    // yet the dashboard must not crown anyone on its own.
+    captured.agentRows = [
+      row('1', 'Administrator System', 84_947.75, 0, 0, null),
+      row('7234', 'Collector', 22_600, 120, 25, null),
+    ]
+    captured.serverTopCollector = null
+    renderPage()
+
+    openPaymentsModal()
+
+    const data = captured.paymentsModalData as Record<string, unknown>
+    expect(data.topCollectorName).toBeUndefined()
+    expect(data.topCollectorAmount).toBeUndefined()
+  })
+
+  it('falls back to its own pick on an older backend, never crowning a ruled-out row', () => {
+    captured.agentRows = productionRows()
+    captured.serverTopCollector = undefined
+    renderPage()
+
+    openPaymentsModal()
+
+    expect(captured.paymentsModalData).toMatchObject({
+      topCollectorName: 'Collector',
+      topCollectorAmount: 22_600,
+    })
+  })
+
+  it('keeps the project-wide top collector while the table is filtered to one operator', () => {
+    captured.agentRows = productionRows()
+    captured.serverTopCollector = serverPick
+    renderPage()
+
+    // The filtered request names no top collector (null) …
+    const table = captured.tableProps as { onOperatorChange: (id: number | null) => void }
+    act(() => table.onOperatorChange(1))
+    expect((captured.tableProps as { data: StubRow[] }).data.map((r) => r.operator)).toEqual([
+      'Administrator System',
+    ])
+
+    openPaymentsModal()
+
+    // … so the modal reads the unfiltered response's one, not a local pick
+    // over either the filtered or the unfiltered rows.
+    expect(captured.paymentsModalData).toMatchObject({
+      topCollectorName: 'Server pick',
+      topCollectorAmount: 31_250.5,
+    })
   })
 })
 

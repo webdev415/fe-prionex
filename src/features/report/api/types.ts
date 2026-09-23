@@ -153,6 +153,25 @@ export interface BackendOperatorPerformance {
   summary: BackendOperatorSummary
   daily_breakdown: BackendDailyBreakdown[]
   comparison_to_average?: Record<string, number>
+  /**
+   * Whether report-service lets this row be crowned in dashboard rankings
+   * (board #1332 AC#2): `false` for a non-collection department, no project
+   * membership or a listed technical account; `null` when it could not be
+   * resolved (and always on an operator-filtered request). Absent on an older
+   * report-service.
+   */
+  ranking_eligible?: boolean | null
+}
+
+/**
+ * «Top collector» picked by report-service over the eligible rows only
+ * (`ranking_eligible === true`, amount above 0).
+ */
+export interface BackendTopCollector {
+  operator_id: number
+  operator_name: string
+  payments_collected: number | string
+  payments_count: number
 }
 
 /**
@@ -175,6 +194,13 @@ export interface BackendOperatorPerformanceResponse {
   date_range: DateRange
   operators: BackendOperatorPerformance[]
   team_average?: BackendTeamAverage
+  /**
+   * Board #1332 AC#2. A report-service that knows the field always sends the
+   * key: `null` = nobody eligible collected anything, eligibility could not be
+   * resolved, or the request is filtered to one operator. The key is absent
+   * only on an older report-service.
+   */
+  top_collector?: BackendTopCollector | null
   generated_at: string
 }
 

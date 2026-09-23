@@ -8,6 +8,7 @@
 import type {
   BackendDashboardResponse,
   BackendOperatorPerformanceResponse,
+  BackendTopCollector,
   BackendClientStatisticsResponse,
   BackendCommunicationStatisticsResponse,
   BackendHourlyBreakdown,
@@ -23,6 +24,7 @@ import type {
   TopOperatorUI,
   OperatorPerformanceResponseUI,
   OperatorPerformanceUI,
+  TopCollectorUI,
   DailyBreakdownUI,
   TeamAverageUI,
   ClientStatisticsUI,
@@ -322,7 +324,30 @@ export function transformOperatorPerformance(
     },
     operators: data.operators.map(transformOperator),
     teamAverage: data.team_average ? transformTeamAverage(data.team_average) : undefined,
+    // Absent key (older backend) stays undefined so the dashboard can fall
+    // back to its own pick; an explicit null (nobody may be shown) stays null.
+    topCollector:
+      'top_collector' in data
+        ? data.top_collector
+          ? transformTopCollector(data.top_collector)
+          : null
+        : undefined,
     generatedAt: data.generated_at,
+  }
+}
+
+/**
+ * Transform the report-service «top collector» (board #1332 AC#2)
+ *
+ * @param top - Backend top collector (amount may be a numeric string)
+ * @returns UI-formatted top collector
+ */
+function transformTopCollector(top: BackendTopCollector): TopCollectorUI {
+  return {
+    operatorId: top.operator_id,
+    operatorName: top.operator_name,
+    paymentsCollected: parseNumber(top.payments_collected),
+    paymentsCount: top.payments_count,
   }
 }
 
@@ -373,6 +398,7 @@ function transformOperator(
     },
     dailyBreakdown: op.daily_breakdown.map(transformDailyBreakdown),
     comparisonToAverage: op.comparison_to_average,
+    rankingEligible: op.ranking_eligible,
   }
 }
 
@@ -503,6 +529,7 @@ export function transformToAgentPerformanceRows(
     sms: op.summary.smsSent,
     messages: op.summary.messagesSent,
     payments: op.summary.paymentsCollected,
+    rankingEligible: op.rankingEligible,
   }))
 }
 
