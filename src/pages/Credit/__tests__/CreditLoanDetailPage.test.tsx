@@ -18,6 +18,11 @@ import * as hooks from '@/features/credit/hooks/useCredit'
 // повторил бы опечатку кода и зеленел бы вместе с ней (сцена J-1).
 import { CREDIT_BUCKETS } from '@/features/credit/api/enums'
 import type { CreditLoanDetail, CreditLoanState, CreditPayment } from '@/features/credit/api/types'
+// Словари — статическим импортом, как в i18nKeys.test.ts: сцена «занятые
+// слова» сверяет новые подписи с теми, что уже значат другое, по живым
+// значениям словаря, а не по переписанным литералам.
+import en from '../../../../public/locales/en/common.json'
+import uk from '../../../../public/locales/uk/common.json'
 
 // Мокаем хуки, а не HTTP: живой QueryClient оставляет таймеры notifyManager,
 // которые срабатывают после teardown jsdom и падают в чужом файле.
@@ -63,6 +68,7 @@ const LOAN: CreditLoanDetail = {
   jurisdiction: 'CA-AB',
   schedule_version: 1,
   delinquency_days: 3,
+  advance_refund_excess_minor: 0,
   paid_minor: 7_000,
   disbursed_at: '2026-08-29T09:00:00Z',
   maturity_date: '2026-10-19',
@@ -655,5 +661,263 @@ describe('CreditLoanDetailPage → паспорт', () => {
     expect(row?.textContent).not.toMatch(/510[,.\s]*00/)
     // И положительная половина: без состояния показываем прочерк, а не число.
     expect(row?.textContent).toContain('—')
+  })
+})
+
+/**
+ * Излишек возврата — деньги, которые МОДУЛЬ должен клиенту (T-FE-6-03).
+ *
+ * Два поля живут в двух ответах: излишек `advance_refund_excess_minor` — в
+ * паспорте (`useCreditLoan`), переплата `overpayment_minor` — в состоянии
+ * ядра (`useCreditLoanState`). Числа разные и в STATE не встречаются: излишек
+ * 12 345 (123,45), переплата 6 789 (67,89) — иначе сцена не различила бы, из
+ * какого ответа взята сумма. Синтетика «оба > 0» контрактом у одного кредита
+ * невозможна, поэтому рядом реальная форма модуля (`funding_exception`,
+ * переплата 0) и обратная (излишек 0, переплата есть).
+ */
+describe('CreditLoanDetailPage → излишек возврата (обязательство перед клиентом)', () => {
+  // Два семейства якорей: «показано деньгами» требует десятичный разделитель и
+  // валюту ответа, а «встречается где-либо» свободен, потому что строгий якорь
+  // в `not.toMatch` ослеп бы к утечке сырых minor «12345». Литерал выведен из
+  // числа фикстуры и `LOAN.currency`, не из форматтера.
+  const shown = (major: string) =>
+    new RegExp(`(?<![\\d,.])${major.replace('.', '[,.]')} ${LOAN.currency}`)
+  const EXCESS_SHOWN = shown('123.45')
+  const OVERPAYMENT_SHOWN = shown('67.89')
+  const BALANCE_SHOWN = shown('273.30')
+  const EXCESS = /123[,.\s]*45/
+  const OVERPAYMENT = /67[,.\s]*89/
+  const notMoney = (where: string) =>
+    `${where} does not show 123,45 ${LOAN.currency} from the passport: another amount, raw minor units or no currency`
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  function open(loan: CreditLoanDetail, overpayment = 0, withState = true) {
+    mockHooks(PAYMENTS)
+    vi.mocked(hooks.useCreditLoan).mockReturnValue({
+      ...idle,
+      data: loan,
+    } as unknown as ReturnType<typeof hooks.useCreditLoan>)
+    const state = withState
+      ? ({
+          ...STATE,
+          balances: { ...STATE.balances, overpayment_minor: overpayment },
+        } as unknown as CreditLoanState)
+      : undefined
+    vi.mocked(hooks.useCreditLoanState).mockReturnValue({
+      ...idle,
+      data: state,
+    } as unknown as ReturnType<typeof hooks.useCreditLoanState>)
+    return render(
+      <MemoryRouter>
+        <CreditLoanDetailPage />
+      </MemoryRouter>
+    )
+  }
+
+  const openBalances = () =>
+    fireEvent.click(screen.getByRole('tab', { name: 'credit.tabs.balances' }))
+  const section = (key: string) => screen.getByText(key).closest('section')
+
+  it('X-1: строка излишка берёт сумму из паспорта, а переплата остаётся в «Складові боргу»', () => {
+    open({ ...LOAN, advance_refund_excess_minor: 12_345 }, 6_789)
+
+    const row = screen.getByText('credit.fields.advanceRefundExcess').parentElement
+    expect(row?.textContent, notMoney('the owed-to-client row')).toMatch(EXCESS_SHOWN)
+    expect(row?.textContent).not.toMatch(OVERPAYMENT)
+
+    openBalances()
+    const balances = section('credit.card.balances')
+    expect(balances?.textContent).toMatch(OVERPAYMENT_SHOWN)
+    expect(balances?.textContent).not.toMatch(EXCESS)
+    expect(balances?.textContent).not.toContain('credit.fields.advanceRefundExcess')
+  })
+
+  it('X-2: реальная форма модуля — своя панель, пояснение, без тона тревоги и без «Переплати»', () => {
+    open({ ...LOAN, status: 'funding_exception', advance_refund_excess_minor: 12_345 }, 0)
+
+    const panel = section('credit.card.owedToClient')
+    expect(panel).not.toBeNull()
+    expect(panel?.textContent, notMoney('the owed-to-client panel')).toMatch(EXCESS_SHOWN)
+    expect(panel?.textContent).toContain('credit.card.owedToClientHint')
+    expect(panel?.textContent).not.toContain('credit.bucket.overpayment')
+    // Токены тревоги раздела и базовые красные/жёлтые семейства.
+    const alarm = ['error', 'danger', 'warning', 'red-', 'destructive', 'amber', 'yellow']
+      .map((family) => `[class*="${family}"]`)
+      .join(', ')
+    expect(panel?.querySelector(alarm), 'alarm tone inside the owed-to-client panel').toBeNull()
+    // Цвет наследуется: класс на самой секции или на обёртке красит сумму не
+    // хуже класса на ней самой — поэтому секция и все предки до <html>.
+    for (let el: Element | null = panel; el; el = el.parentElement) {
+      expect(
+        el.matches(alarm),
+        `alarm tone on <${el.tagName.toLowerCase()} class="${el.className}"> — the owed-to-client panel or its ancestor paints the sum as the client's debt`
+      ).toBe(false)
+    }
+    // Контроль селектора: на той же странице тревожный узел есть (плитка
+    // просрочки) — пустота выше значит «в панели нет», а не «селектор слеп».
+    expect(document.querySelector(alarm)).not.toBeNull()
+
+    openBalances()
+    const balances = section('credit.card.balances')
+    expect(balances?.textContent).toContain('credit.fields.totalDue')
+    expect(balances?.textContent).not.toMatch(EXCESS)
+    expect(balances?.textContent).not.toContain('credit.bucket.overpayment')
+  })
+
+  it('X-3: излишка нет, переплата есть — панели нет, переплата на своём месте', () => {
+    open({ ...LOAN, advance_refund_excess_minor: 0 }, 6_789)
+
+    expect(screen.queryByText('credit.card.owedToClient')).toBeNull()
+    // У панели два заголовка (Р-610b-6), а имя величины есть в обеих формах —
+    // подписью поля и заголовком «не знаем»: без него форма «не знаем» невидима.
+    expect(
+      screen.queryAllByText('credit.fields.advanceRefundExcess'),
+      'a loan without excess shows the owed-to-client panel under the name of the quantity — its unknown form or a zero sum'
+    ).toHaveLength(0)
+    expect(screen.getByText('credit.card.passport')).toBeInTheDocument()
+
+    openBalances()
+    const balances = section('credit.card.balances')
+    expect(balances?.textContent).toMatch(OVERPAYMENT_SHOWN)
+    expect(balances?.textContent).toContain('credit.bucket.overpayment')
+  })
+
+  it('X-4: отстающий модуль без ключа — панель говорит «не знаем», а не «излишка нет»', () => {
+    const lagging: Partial<CreditLoanDetail> = { ...LOAN }
+    delete lagging.advance_refund_excess_minor
+    expect('advance_refund_excess_minor' in LOAN).toBe(true)
+    expect('advance_refund_excess_minor' in lagging).toBe(false)
+
+    open(lagging as CreditLoanDetail)
+
+    // Заголовок — имя величины: «Винні клієнту» утверждал бы обязательство,
+    // о котором тело панели говорит «не знаем».
+    expect(
+      screen.queryByText('credit.card.owedToClient'),
+      'the unknown-state panel is titled «owed to the client» — the title asserts an obligation the body says we do not know'
+    ).toBeNull()
+    expect(
+      screen.queryByText('credit.fields.advanceRefundExcess'),
+      'no panel without the key — the screen says «no excess» where it does not know'
+    ).not.toBeNull()
+    const panel = section('credit.fields.advanceRefundExcess')
+    expect(panel?.textContent).toContain('credit.card.owedToClientUnknown')
+    // Суммы нет вовсе: прочерк-сумма читалась бы как «пусто».
+    expect(panel?.textContent).not.toContain('—')
+    expect(panel?.textContent).not.toMatch(/\d/)
+  })
+
+  it('X-5: без состояния ядра панель излишка на месте — она читает только паспорт', () => {
+    open({ ...LOAN, advance_refund_excess_minor: 12_345 }, 0, false)
+
+    // Контроль: состояния действительно нет — плитка баланса пуста.
+    expect(screen.getByText('credit.fields.balance').parentElement?.textContent).toContain('—')
+    const panel = section('credit.card.owedToClient')
+    expect(panel?.textContent, notMoney('the owed-to-client panel without /state')).toMatch(
+      EXCESS_SHOWN
+    )
+  })
+
+  it('X-6: излишек не попадает в плитки шапки и не живёт нигде, кроме своей панели', () => {
+    open({ ...LOAN, advance_refund_excess_minor: 12_345 }, 6_789)
+
+    const tile = (key: string) => screen.getByText(key).parentElement?.textContent
+    for (const key of [
+      'credit.fields.balance',
+      'credit.fields.paid',
+      'credit.fields.nextPayment',
+      'credit.fields.overdue',
+    ]) {
+      expect(tile(key), key).not.toMatch(EXCESS)
+    }
+    // Контроль: баланс — это total_due_minor состояния, 27 330 → 273,30.
+    expect(tile('credit.fields.balance')).toMatch(BALANCE_SHOWN)
+
+    const panel = section('credit.card.owedToClient')
+    const hits = screen.getAllByText(EXCESS)
+    expect(hits.length).toBeGreaterThan(0)
+    for (const hit of hits) expect(hit.closest('section')).toBe(panel)
+  })
+
+  it('X-7: на вкладке «Складові боргу» панели излишка нет и суммы его нет', () => {
+    open({ ...LOAN, status: 'funding_exception', advance_refund_excess_minor: 12_345 }, 0)
+    openBalances()
+
+    expect(screen.getByText('credit.card.balances')).toBeInTheDocument()
+    expect(screen.queryByText('credit.card.owedToClient')).toBeNull()
+    expect(document.body.textContent).not.toMatch(EXCESS)
+  })
+
+  it('X-8: новые подписи не повторяют слов, которые в разделе уже значат другое', () => {
+    // Структура, а не `typeof uk`: так компилятор требует каждый ключ в ОБОИХ
+    // словарях, не сверяя остальные тысячи строк между собой.
+    type Words = {
+      credit: {
+        card: { owedToClient: string; owedToClientHint: string; owedToClientUnknown: string }
+        fields: { advanceRefundExcess: string; supersedesDecision: string }
+        columns: { payable: string }
+        metrics: { payable: string }
+        entryType: { refund: string }
+        bucket: { overpayment: string }
+      }
+    }
+    const fresh = (d: Words) => [
+      d.credit.card.owedToClient,
+      d.credit.card.owedToClientHint,
+      d.credit.card.owedToClientUnknown,
+      d.credit.fields.advanceRefundExcess,
+      d.credit.fields.supersedesDecision,
+    ]
+    // «До повернення» — долг заёмщика; «Повернення клієнту» — совершённый
+    // возврат журнала; en «Refund due» — соседнее поле модуля
+    // refund_due_to_borrower_minor. Читаются из словаря, не литералом.
+    const taken = (d: Words) => [
+      d.credit.columns.payable,
+      d.credit.metrics.payable,
+      d.credit.entryType.refund,
+    ]
+    const cases: Array<[string, Words, string[]]> = [
+      ['uk', uk, taken(uk)],
+      ['en', en, [...taken(en), 'Refund due']],
+    ]
+    // Контроль: занятые фразы в словаре есть и те самые.
+    expect(uk.credit.columns.payable).toContain('До повернення')
+    expect(uk.credit.entryType.refund).toContain('Повернення клієнту')
+    expect(uk.credit.bucket.overpayment).toContain('Переплата')
+    expect(en.credit.bucket.overpayment).toContain('Overpayment')
+    // «Переплата» — составляющая долга из `/state`. Подписи (то, что оператор
+    // читает как имя суммы) её не повторяют. Законный случай — подсказка: она
+    // называет переплату, чтобы её отрицать (AC-7), поэтому сверяется отдельно.
+    const labels = (d: Words) => [
+      d.credit.card.owedToClient,
+      d.credit.fields.advanceRefundExcess,
+      d.credit.fields.supersedesDecision,
+    ]
+    expect(uk.credit.card.owedToClientHint.toLowerCase()).toContain('не переплата')
+    expect(en.credit.card.owedToClientHint.toLowerCase()).toContain('not an overpayment')
+
+    for (const [lang, dict, busy] of cases) {
+      const overpayment = dict.credit.bucket.overpayment
+      for (const label of labels(dict)) {
+        expect(
+          label.toLowerCase(),
+          `${lang}: «${label}» ⊃ «${overpayment}» — the label calls the module's obligation an overpayment`
+        ).not.toContain(overpayment.toLowerCase())
+      }
+      const values = fresh(dict)
+      expect(values, lang).toHaveLength(5)
+      for (const phrase of busy) expect(phrase, `${lang}: занятая фраза`).toBeTruthy()
+      for (const value of values) {
+        expect(value, `${lang}: пустая подпись`).toBeTruthy()
+        for (const phrase of busy) {
+          expect(value.toLowerCase(), `${lang}: «${value}» ⊃ «${phrase}»`).not.toContain(
+            phrase.toLowerCase()
+          )
+        }
+      }
+    }
   })
 })

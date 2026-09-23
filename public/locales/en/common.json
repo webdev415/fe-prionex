@@ -12416,7 +12416,9 @@
       "externalApplicationId": "External application ID",
       "decisionId": "Decision ID",
       "loanId": "Loan ID",
-      "loanAgeDays": "Days since disbursement"
+      "loanAgeDays": "Days since disbursement",
+      "advanceRefundExcess": "Refund excess after cancellation",
+      "supersedesDecision": "Supersedes the previous decision"
     },
     "tabs": {
       "form": "Application form",
@@ -12559,7 +12561,10 @@
       "stagesTitle": "Client path",
       "stagesHint": "the same five steps the client sees in their cabinet",
       "stageOfTotal": "step {{index}} of {{total}}",
-      "identifiers": "Identifiers"
+      "identifiers": "Identifiers",
+      "owedToClient": "Owed to the client",
+      "owedToClientHint": "After cancelling, the client returned more than they received. The module owes this amount back to the client — it is not the client's debt and not an overpayment.",
+      "owedToClientUnknown": "The module did not say whether we owe the client: the field is missing from the response. This does not mean there is no excess."
     },
     "settings": {
       "title": "Credit module settings",

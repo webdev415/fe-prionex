@@ -110,6 +110,19 @@ export interface CreditDecision {
   underwriter_id: number | null
   rationale: string | null
   overrides_decision_id: string | null
+  /**
+   * Решение, которое это ЗАМЕНИЛО: модуль пересмотрел своё автоматическое
+   * решение после смены реквизитов выплаты. `null` — ничего не заменяло. Не
+   * путать с `overrides_decision_id` — там переопределил человек.
+   *
+   * В контракте поле не required; здесь required, чтобы каждая фикстура
+   * назвала значение: модуль кладёт ключ всегда (строка или `null`). Ключа нет
+   * только у модуля старше B-3 (17.09): ключ и сам пересмотр пришли одной
+   * правкой, такой модуль решений не заменяет — поэтому экран показывает
+   * отсутствие ключа как `null`, и это правда, а не незнание. У излишка иначе:
+   * события пишутся с 31.08, ключ — с 17.09.
+   */
+  supersedes_decision_id: string | null
   decided_at: string
 }
 
@@ -525,6 +538,15 @@ export interface CreditLoanDetail {
   jurisdiction: string
   schedule_version: number
   delinquency_days: number
+  /**
+   * Сколько модуль ДОЛЖЕН ВЕРНУТЬ клиенту сверх выданного: кредит снят в
+   * карантине выдачи, клиент вернул больше тела. Значение последнего события
+   * `AdvanceRefundExcess`; `0` — излишка нет или события не было, ключ в
+   * контракте есть всегда. Обязательство перед клиентом, а не его долг: не
+   * складывать с `CreditBalances.overpayment_minor` и не показывать в
+   * разбивке долга.
+   */
+  advance_refund_excess_minor: number
   regulatory_package_version?: string
   prepayment_mode?: string
   close_reason?: string

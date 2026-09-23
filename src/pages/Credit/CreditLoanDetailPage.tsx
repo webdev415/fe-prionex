@@ -1,9 +1,11 @@
 /**
  * Карточка кредита: паспорт, балансы, график, платежи, журнал проводок.
  *
- * Все цифры берутся из состояния ядра (`/loans/{id}/state`) — того же среза,
- * что видит клиент в личном кабинете. Фронт ничего не пересчитывает: любая
- * «своя» арифметика здесь означала бы вторую версию правды.
+ * Долг и его составляющие берутся из состояния ядра (`/loans/{id}/state`) —
+ * того же среза, что видит клиент в личном кабинете.
+ * Обязательство модуля вернуть клиенту излишек — из паспорта (`/loans/{id}`):
+ * в состоянии ядра его нет, и к долгу оно не относится. Фронт ничего не
+ * пересчитывает: любая «своя» арифметика здесь означала бы вторую версию правды.
  *
  * Три состояния на каждой вкладке — загрузка / ошибка / действительно пусто.
  * Раньше упавший запрос показывался как «Графіка ще немає», и оператор говорил
@@ -626,6 +628,50 @@ function LoanDisbursement({
   )
 }
 
+/**
+ * Деньги, которые МОДУЛЬ должен клиенту, — не долг клиента. Излишек бывает у
+ * кредита, снятого в карантине выдачи, когда клиент вернул больше тела.
+ *
+ * (а) Не в «Складові боргу»: всё, что там стоит, оператор читает как
+ *     составляющую долга, а там уже живёт переплата из `/state`. Поле приходит
+ *     в паспорте, поэтому и панель — на вкладке паспорта, без `/state`.
+ * (б) `Number.isFinite`, а не `> 0`: у отстающего модуля ключа нет, и `> 0`
+ *     молча убрал бы панель — экран сказал бы «излишка нет», не зная этого.
+ *     Нет ключа — своя фраза и никакой суммы: прочерк читался бы как «пусто».
+ *     И заголовок — имя величины, а не «Винні клієнту»: заголовок не
+ *     утверждает того, чего не знает тело.
+ * (в) Без тона тревоги: красное и жёлтое в разделе значат «клиент в минусе»,
+ *     а это нейтральный факт, который оператор сообщает клиенту.
+ * (г) Ни с чем не складывается: сумма печатается как пришла, ни в баланс, ни
+ *     в «Сплачено» не входит.
+ */
+function LoanOwedToClient({ loan }: { loan: LoanDetail }) {
+  const { t } = useTranslation('common')
+  const excess = loan.advance_refund_excess_minor
+  if (Number.isFinite(excess) && excess <= 0) return null
+
+  return (
+    <Panel
+      title={
+        Number.isFinite(excess)
+          ? t('credit.card.owedToClient')
+          : t('credit.fields.advanceRefundExcess')
+      }
+    >
+      {Number.isFinite(excess) ? (
+        <>
+          <Field label={t('credit.fields.advanceRefundExcess')}>
+            <span className="tabular-nums">{money(excess, loan.currency)}</span>
+          </Field>
+          <p className="text-muted-foreground mt-1 text-xs">{t('credit.card.owedToClientHint')}</p>
+        </>
+      ) : (
+        <p className="text-muted-foreground text-sm">{t('credit.card.owedToClientUnknown')}</p>
+      )}
+    </Panel>
+  )
+}
+
 function LoanPassport({
   loan,
   state,
@@ -688,6 +734,8 @@ function LoanPassport({
           </Field>
         )}
       </Panel>
+
+      <LoanOwedToClient loan={loan} />
 
       <LoanDisbursement loan={loan} state={state} isLoading={stateLoading} error={stateError} />
 
