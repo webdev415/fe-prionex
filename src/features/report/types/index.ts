@@ -208,6 +208,12 @@ export interface CallStatisticsUI {
   noAnswer: number
   busy: number
   failed: number
+  /**
+   * Calls in none of the four buckets above, so answered + noAnswer + busy +
+   * failed + other = totalCalls (report-service `calls_other`, derived when
+   * an older backend omits it).
+   */
+  other: number
   contactRate: number
   totalTalkTime: number
   totalTalkTimeFormatted: string
@@ -305,6 +311,10 @@ export interface AgentPerformanceRow {
   calls: number
   contactRate: number
   avgDuration: string
+  /** Answered calls (operator summary `calls_answered`) — weights the totals row. */
+  callsAnswered?: number
+  /** Talk time in seconds (operator summary `total_talk_time`) — weights the totals row. */
+  totalTalkTime?: number
   sms: number
   messages: number
   payments: number
