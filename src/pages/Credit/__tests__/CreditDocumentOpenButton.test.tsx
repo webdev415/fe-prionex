@@ -12,6 +12,9 @@
  *     файлом, и это называется словами;
  *  5) имя скачивания очищено от символов, подменяющих видимое имя, — всем
  *     перечнем, не представителями;
+ *  5а) во вкладку уходят только инертные типы: HTML, SVG и прочее при `inline`
+ *     скачиваются — blob-адрес живёт в origin CRM, рядом с пропуском оператора;
+ *  5б) отзыв blob-адреса не переживает кнопку: после размонтирования таймеров нет;
  *  6) демо-ручка вне контракта не возвращается в исходники раздела.
  *
  * Запросы ловятся подменой адаптера `creditHttp` (приём `credentials.test.ts`):
@@ -29,7 +32,7 @@ import {
   type Mock,
   type MockInstance,
 } from 'vitest'
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within, cleanup } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios'
@@ -255,10 +258,11 @@ function recordDownload(this: HTMLAnchorElement) {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  // Отзыв blob-адреса отложен на 60 с. Под настоящими часами этот таймер
-  // переживал бы тест; под поддельными его видно и его снимает `afterEach`.
-  // Время всё равно идёт (`shouldAdvanceTime`): иначе встал бы собственный
-  // таймаут `waitFor`, и упавшая сцена молчала бы до таймаута теста.
+  // Отзыв blob-адреса отложен на 60 с. Под поддельными часами этот таймер видно
+  // и его можно промотать; снимает его сама кнопка при размонтировании
+  // (`afterEach` проверяет, что снят). Время всё равно идёт (`shouldAdvanceTime`):
+  // иначе встал бы собственный таймаут `waitFor`, и упавшая сцена молчала бы до
+  // таймаута теста.
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'], shouldAdvanceTime: true })
   events = []
   created = []
@@ -285,10 +289,14 @@ beforeEach(() => {
 })
 
 afterEach(() => {
-  // Настоящие часы возвращаются ЗДЕСЬ: after-хуки идут стеком, этот — раньше
+  // Размонтирование — ЗДЕСЬ, пока подмены окна ещё стоят: при уходе кнопка
+  // снимает свои таймеры и отзывает адреса. После него не должно остаться ни
+  // одного таймера — иначе отзыв пережил бы кнопку и стрелял в разобранный jsdom.
+  cleanup()
+  expect(vi.getTimerCount(), 'таймер пережил размонтирование кнопки').toBe(0)
+  // Настоящие часы возвращаются тоже здесь: after-хуки идут стеком, этот — раньше
   // общего из `src/test/setup.ts`, и общий застаёт уже настоящие часы, а значит
   // делает свой такт после размонтирования, а не пропускает его.
-  vi.clearAllTimers()
   vi.useRealTimers()
   openSpy.mockRestore()
   clickSpy.mockRestore()
@@ -379,8 +387,15 @@ describe('CreditDocumentOpenButton → дверь по владельцу спи
     try {
       const { button } = renderButton({ ...DOC, content_available: false }, APPLICATION_OWNER)
       expect(button).toBeDisabled()
-      expect(button).toHaveAttribute('title', 'credit.documentOpen.unavailableHint')
       expect(screen.getByText('credit.documentOpen.unavailable')).toBeInTheDocument()
+      // Подсказка — на обёртке: неактивная кнопка не ловит указатель
+      // (`disabled:pointer-events-none`), и её собственный `title` не показался бы.
+      expect(button.className).toContain('disabled:pointer-events-none')
+      const carrier = screen.getByTitle('credit.documentOpen.unavailableHint')
+      expect(carrier.tagName, 'подсказка висит на неактивной кнопке — её не увидят').toBe('SPAN')
+      expect(carrier).toContainElement(button)
+      expect(carrier.className).not.toContain('pointer-events-none')
+      expect(button).not.toHaveAttribute('title')
       fireEvent.click(button)
 
       // Положительный контроль ТОГО ЖЕ счёта: та же фикстура с `true` отправляет
@@ -561,6 +576,48 @@ describe('CreditDocumentOpenButton → вкладка в самом нажати
       restore()
     }
   })
+
+  it('T-19: уход с карточки снимает таймер отзыва и отзывает адрес сразу', async () => {
+    const { restore } = withAdapter(inlinePdf())
+    try {
+      const { button, unmount } = renderButton(DOC, LOAN_OWNER)
+      fireEvent.click(button)
+      await waitFor(() => expect(lastTab().location.href).toBe(BLOB_URL))
+      // Контроль: таймер отзыва действительно поставлен, иначе ноль ниже ничего не доказывал бы.
+      expect(vi.getTimerCount()).toBe(1)
+      expect(revokeSpy).not.toHaveBeenCalled()
+      unmount()
+      expect(vi.getTimerCount(), 'таймер отзыва пережил кнопку').toBe(0)
+      expect(revokeSpy).toHaveBeenCalledWith(BLOB_URL)
+    } finally {
+      restore()
+    }
+  })
+
+  it('T-19b: ушли с карточки до ответа — документ всё равно открыт, а таймера нет', async () => {
+    let release: () => void = () => {}
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const pdfReply = inlinePdf()
+    const { restore } = withAdapter(async (config) => {
+      await gate
+      return pdfReply(config)
+    })
+    try {
+      const { button, unmount } = renderButton(DOC, LOAN_OWNER)
+      fireEvent.click(button)
+      await waitFor(() => expect(events).toContain('request'))
+      unmount()
+      release()
+      await waitFor(() => expect(lastTab().location.href).toBe(BLOB_URL))
+      // Кнопки уже нет, снимать минутный таймер было бы некому: адрес отозван сразу.
+      expect(revokeSpy).toHaveBeenCalledWith(BLOB_URL)
+      expect(vi.getTimerCount(), 'таймер отзыва поставлен после размонтирования').toBe(0)
+    } finally {
+      restore()
+    }
+  })
 })
 
 describe('CreditDocumentOpenButton → показ по решению сервера', () => {
@@ -652,6 +709,56 @@ describe('CreditDocumentOpenButton → показ по решению серве
     expect(clickSpy).not.toHaveBeenCalled()
     expect(lastTab().close).not.toHaveBeenCalled()
   })
+
+  // Сервер сказал `inline`, но во вкладку уходят только инертные типы: blob-адрес
+  // живёт в origin CRM, и загруженный клиентом HTML или SVG исполнил бы скрипт с
+  // пропуском оператора. Прочее скачивается молча, как `attachment`.
+  it.each([
+    ['text/html', 'text/html'],
+    ['image/svg+xml', 'image/svg+xml'],
+    ['application/xhtml+xml', 'application/xhtml+xml'],
+    ['text/html с параметром', 'text/html; charset=utf-8'],
+    ['неизвестный тип', 'application/x-unknown'],
+    ['тип не назван', ''],
+  ])('T-18: inline «%s» — не во вкладку, а скачиванием', async (_label, type) => {
+    const served = new Blob(['<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)"/>'], {
+      type,
+    })
+    const { restore } = withAdapter(ok(served, 'inline; filename="x.html"'))
+    try {
+      const { onError, button } = renderButton(DOC, LOAN_OWNER)
+      fireEvent.click(button)
+      await waitFor(() => expect(created).toHaveLength(1))
+      expect(lastTab().location.href, `blob-адрес ушёл во вкладку при типе «${type}»`).toBe('')
+      expect(lastTab().close).toHaveBeenCalledTimes(1)
+      expect(downloads).toEqual(['x.html'])
+      expect(created[0]).toBe(served)
+      expect(lastRefusal(onError)).toBeUndefined()
+    } finally {
+      restore()
+    }
+  })
+
+  it.each([
+    ['application/pdf'],
+    ['application/pdf; name=x'],
+    ['text/plain; charset=utf-8'],
+    ['image/png'],
+    ['image/jpeg'],
+    ['image/gif'],
+    ['image/webp'],
+  ])('T-18b: inline «%s» — во вкладку (тип без параметров)', async (type) => {
+    const { restore } = withAdapter(ok(new Blob(['x'], { type }), 'inline; filename="s"'))
+    try {
+      const { button } = renderButton(DOC, LOAN_OWNER)
+      fireEvent.click(button)
+      await waitFor(() => expect(created).toHaveLength(1))
+      expect(lastTab().location.href, `инертный тип «${type}» не показан`).toBe(BLOB_URL)
+      expect(clickSpy).not.toHaveBeenCalled()
+    } finally {
+      restore()
+    }
+  })
 })
 
 describe('CreditDocumentOpenButton → имя скачивания очищено', () => {
@@ -717,6 +824,22 @@ describe('CreditDocumentOpenButton → имя скачивания очищен�
     expect(await downloadedAs(attachmentNamed('  рахунок.pdf  '))).toBe('рахунок.pdf')
     downloads = []
     expect(await downloadedAs(attachmentNamed('   ', ''))).toBe('other.pdf')
+  })
+
+  it("T-10j: расширенная форма с языком — `UTF-8'uk'…`", async () => {
+    const disposition =
+      "attachment; filename*=UTF-8'uk'%D0%B2%D0%B8%D0%BF%D0%B8%D1%81%D0%BA%D0%B0.pdf"
+    expect(await downloadedAs(disposition)).toBe('виписка.pdf')
+  })
+
+  it('T-10k: простая форма без кавычек — токен до «;» или пробела', async () => {
+    expect(await downloadedAs('attachment; filename=report.pdf')).toBe('report.pdf')
+    downloads = []
+    expect(await downloadedAs('attachment; filename=report.pdf; size=10')).toBe('report.pdf')
+  })
+
+  it('T-10l: имя без кавычек тоже очищается', async () => {
+    expect(await downloadedAs('attachment; filename=a\u202eb.pdf; size=10')).toBe('ab.pdf')
   })
 })
 
@@ -950,8 +1073,12 @@ function renderApplicationCard() {
   mockApplicationHooks()
   render(
     <MemoryRouter>
+      {/* `gcTime: Infinity` — без пятиминутного таймера сборки кэша запросов: он
+          пережил бы тест и спутал счёт таймеров кнопки в `afterEach`. */}
       <QueryClientProvider
-        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } })
+        }
       >
         <CreditApplicationDetailPage />
       </QueryClientProvider>
