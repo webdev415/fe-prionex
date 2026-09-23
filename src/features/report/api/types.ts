@@ -309,12 +309,15 @@ export interface BackendCommunicationStatisticsResponse {
 }
 
 /**
- * Hourly breakdown entry from call service
+ * Hourly breakdown entry (report-service `HourlyBreakdown` schema).
+ *
+ * The field is `calls`, not call-service's internal `calls_made`: report-service
+ * maps it and keeps `calls` as its public name (contract C2).
  */
 export interface BackendHourlyBreakdown {
   /** UTC hour (0-23) */
   hour: number
-  calls_made: number
+  calls: number
   calls_answered: number
   sms_sent: number
 }
@@ -345,6 +348,12 @@ export interface ExportParams {
   project_id: number
   format: ExportFormat
   period?: string
+  /** Dashboard export window start, YYYY-MM-DD in the user's profile time zone. */
+  start_date?: string
+  /** Dashboard export window end, YYYY-MM-DD in the user's profile time zone. */
+  end_date?: string
+  /** IANA time zone the dashboard export window is expressed in (contract C4). */
+  timezone?: string
   from_date?: string
   to_date?: string
   group_by?: string

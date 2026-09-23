@@ -9587,11 +9587,9 @@
       },
       "filters": {
         "responsibleOperator": "Operador responsable:",
-        "clientPhone": "Teléfono del cliente:",
         "selectEmployee": "Seleccionar empleado",
-        "typePhoneNumber": "Escriba el número de teléfono",
-        "dateOfSale": "Fecha de venta:",
-        "allOperators": "Todos los operadores"
+        "allOperators": "Todos los operadores",
+        "period": "Período:"
       },
       "exportCsv": "Exportar CSV",
       "estimated": "Estimado",
@@ -9599,6 +9597,7 @@
         "title": "Llamadas realizadas",
         "noData": "No hay datos disponibles",
         "total": "Total",
+        "operatorsSum": "por operadores",
         "byHour": "Por hora",
         "calls": "llamadas",
         "byOperator": "Por operador"

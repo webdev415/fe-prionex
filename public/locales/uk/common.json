@@ -8893,11 +8893,9 @@
       },
       "filters": {
         "responsibleOperator": "Відповідальний оператор:",
-        "clientPhone": "Телефон клієнта:",
         "selectEmployee": "Виберіть співробітника",
-        "typePhoneNumber": "Введіть номер телефону",
-        "dateOfSale": "Дата продажу:",
-        "allOperators": "Усі оператори"
+        "allOperators": "Усі оператори",
+        "period": "Період:"
       },
       "exportCsv": "Експортувати CSV",
       "estimated": "Приблизно",
@@ -8905,6 +8903,7 @@
         "title": "Зроблено дзвінків",
         "noData": "Дані недоступні",
         "total": "Всього",
+        "operatorsSum": "за операторами",
         "byHour": "По годинах",
         "calls": "дзвінків",
         "byOperator": "За операторами"
