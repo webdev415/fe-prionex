@@ -12998,6 +12998,17 @@
       "notAuthenticatedHint": "Your session may have expired. Sign in to CRM again; if that does not help, contact an administrator — the module verifies sign-in with CRM.",
       "noRights": "No access to the credit section",
       "noRightsHint": "Your CRM pass carries no credit-section permissions. A CRM administrator grants them — ask to be assigned the matching role."
+    },
+    "documentOpen": {
+      "unavailable": "File unavailable",
+      "unavailableHint": "According to the module's records, this document's content cannot be served: the file was not stored, or the revision was replaced without keeping its content.",
+      "errorNotFound": "The module did not find this document in this card. Refresh the page; if that does not help, contact the administrator.",
+      "errorGone": "This revision cannot be reproduced: its content was not stored. Open the current version.",
+      "errorMissing": "The document file is temporarily unavailable. Try again later.",
+      "errorDiverged": "The module did not serve the document: its content does not match the signed fingerprint. Report this to the administrator.",
+      "errorForbidden": "You do not have permission to view credit section documents.",
+      "errorGeneric": "Could not open the document (code {{status}}).",
+      "tabBlocked": "The new tab did not open, so the document was handed over as a file download."
     }
   },
   "toasts": {

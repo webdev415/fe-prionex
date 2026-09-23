@@ -26,6 +26,7 @@ import type {
   CreditApplicationDetail,
   CreditApplicationStatus,
   CreditDecision,
+  CreditDocumentMeta,
   CreditJournalEntry,
   CreditLoanDetail,
   CreditLoanStatus,
@@ -136,4 +137,16 @@ export type _decision_supersedes_required = Assert<
 >
 export type _decision_supersedes_nullable = Assert<
   null extends CreditDecision['supersedes_decision_id'] ? true : false
+>
+
+/* ─── Признак «содержимое откроется» у документа ───────────────────────
+   Кнопка документа читает его ДО нажатия: `false` — по записям модуля
+   выдавать нечего, и кнопка говорит это вместо запроса. Что сломается, если
+   поле станет необязательным или пропадёт: кнопка перестанет заранее говорить
+   «не откроется», а фикстуры забудут значение молча — компилятор промолчит.
+   Стережёт ЛОКАЛЬНЫЙ тип, не контракт (см. шапку про `Has` у этапа заявки):
+   в контракте поле не required, здесь required намеренно — модуль кладёт
+   ключ всегда. */
+export type _document_content_available_required = Assert<
+  IsRequired<CreditDocumentMeta, 'content_available'>
 >

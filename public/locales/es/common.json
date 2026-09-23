@@ -13032,6 +13032,17 @@
       "notAuthenticatedHint": "Puede que su sesión haya caducado. Vuelva a iniciar sesión en el CRM; si no funciona, póngase en contacto con un administrador: el módulo verifica el inicio de sesión con el CRM.",
       "noRights": "Sin acceso a la sección de crédito",
       "noRightsHint": "Su acceso al CRM no incluye permisos para la sección de crédito. Los concede un administrador del CRM: solicite que le asignen el rol correspondiente."
+    },
+    "documentOpen": {
+      "unavailable": "Archivo no disponible",
+      "unavailableHint": "Según los registros del módulo, el contenido de este documento no se puede entregar: el archivo no se guardó o la versión se reemplazó sin conservar su contenido.",
+      "errorNotFound": "El módulo no encontró este documento en esta ficha. Actualice la página; si no ayuda, contacte al administrador.",
+      "errorGone": "Esta versión del documento no se puede reproducir: su contenido no se guardó. Abra la versión vigente.",
+      "errorMissing": "El archivo del documento no está disponible temporalmente. Inténtelo más tarde.",
+      "errorDiverged": "El módulo no entregó el documento: su contenido no coincide con la huella firmada. Informe al administrador.",
+      "errorForbidden": "No tiene permiso para ver los documentos de la sección de crédito.",
+      "errorGeneric": "No se pudo abrir el documento (código {{status}}).",
+      "tabBlocked": "La pestaña nueva no se abrió, así que el documento se entregó como descarga de archivo."
     }
   },
   "toasts": {
