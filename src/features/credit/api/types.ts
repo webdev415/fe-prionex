@@ -147,6 +147,14 @@ export interface CreditDocumentMeta {
   client_id: number | null
   debt_id: number | null
   client_document_id: string | null
+  /**
+   * Отдаст ли модуль содержимое документа по своим записям (одноимённое поле
+   * `DocumentMeta` контракта). Там оно необязательно, здесь обязательно: модуль
+   * кладёт его всегда, а необязательное фикстуры забывали бы молча. `false` —
+   * выдавать нечего, кнопка говорит это до нажатия; `true` не обещает, что файл
+   * на месте (503 `document_file_missing`).
+   */
+  content_available: boolean
   kind: string
   title?: string
   content_type?: string | null

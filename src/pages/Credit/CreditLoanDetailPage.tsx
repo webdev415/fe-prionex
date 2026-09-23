@@ -370,6 +370,7 @@ export function CreditLoanDetailPage() {
         )}
         {tab === 'documents' && (
           <LoanDocuments
+            loanId={loan.loan_id}
             documents={documentsQuery.data?.items ?? []}
             isLoading={documentsQuery.isLoading}
             error={documentsQuery.error}
@@ -1184,17 +1185,20 @@ function LoanPayments({
 }
 
 function LoanDocuments({
+  loanId,
   documents,
   isLoading,
   error,
   onRetry,
 }: {
+  loanId: string
   documents: CreditDocumentMeta[]
   isLoading: boolean
   error: unknown
   onRetry: () => void
 }) {
   const { t } = useTranslation('common')
+  const [failure, setFailure] = useState<string | null>(null)
   return (
     <AsyncPanel
       title={t('credit.tabs.documents')}
@@ -1205,6 +1209,11 @@ function LoanDocuments({
       onRetry={onRetry}
       footer={t('credit.card.documentsCurrentOnly')}
     >
+      {failure && (
+        <Alert variant="error" className="mb-3">
+          {failure}
+        </Alert>
+      )}
       <table className="w-full text-sm">
         <thead>
           <tr className="border-border text-muted-foreground border-b text-xs">
@@ -1229,7 +1238,11 @@ function LoanDocuments({
                 {formatDateTime(doc.generated_at)}
               </td>
               <td className="py-2 text-right">
-                <CreditDocumentOpenButton document={doc} />
+                <CreditDocumentOpenButton
+                  document={doc}
+                  owner={{ kind: 'loan', id: loanId }}
+                  onError={setFailure}
+                />
               </td>
             </tr>
           ))}

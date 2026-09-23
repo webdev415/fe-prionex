@@ -477,7 +477,11 @@ function ApplicationDocuments({ application }: { application: CreditApplicationD
                   {formatDateTime(doc.generated_at)}
                 </td>
                 <td className="py-2 text-right">
-                  <CreditDocumentOpenButton document={doc} onError={setFailure} />
+                  <CreditDocumentOpenButton
+                    document={doc}
+                    owner={{ kind: 'application', id: application.application_id }}
+                    onError={setFailure}
+                  />
                 </td>
               </tr>
             ))}
