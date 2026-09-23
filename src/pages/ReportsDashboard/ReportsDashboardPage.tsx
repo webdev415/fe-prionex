@@ -39,7 +39,7 @@ import { SESSION } from '@/constants'
 import { getDateRangeForPeriod } from '@/lib/dateUtils'
 import {
   computeAgentPerformanceTotals,
-  pickTopCollector,
+  resolveTopCollector,
 } from '@/features/report/utils/dashboardMetrics'
 import {
   useDashboard,
@@ -139,6 +139,7 @@ function DashboardTab() {
   // Fetch operator performance data for table with date range and filters
   const {
     data: agentPerformance,
+    topCollector: tableTopCollector,
     isLoading: isOperatorLoading,
     isFetching: isOperatorFetching,
   } = useAgentPerformanceTable({
@@ -190,14 +191,19 @@ function DashboardTab() {
   // table, so usually straight from cache) as soon as the filter is applied —
   // warm by the time the payments modal opens, and the KPI fallbacks need it
   // anyway.
-  const { data: allOperatorsPerformance } = useAgentPerformanceTable({
-    projectId,
-    fromDate: dateRange.from,
-    toDate: dateRange.to,
-    timezone: userTimezone,
-    enabled: selectedOperator !== null,
-  })
+  const { data: allOperatorsPerformance, topCollector: allOperatorsTopCollector } =
+    useAgentPerformanceTable({
+      projectId,
+      fromDate: dateRange.from,
+      toDate: dateRange.to,
+      timezone: userTimezone,
+      enabled: selectedOperator !== null,
+    })
   const projectWideRows = selectedOperator === null ? agentPerformance : allOperatorsPerformance
+  // report-service names no top collector on a filtered request, so the
+  // project-wide one is read from the unfiltered query, like the rows.
+  const projectWideTopCollector =
+    selectedOperator === null ? tableTopCollector : allOperatorsTopCollector
 
   // Fallback KPIs derived from operator performance (useful when dashboard
   // KPIs are zero/lagging): Σcalls and Σanswered / Σcalls — the same weighted
@@ -210,8 +216,13 @@ function DashboardTab() {
   const contactRateFromOperators = projectWideTotals.contactRate
 
   // «Top collector» in the payments modal: name AND amount from the same
-  // operator — the one with the largest collected amount.
-  const topCollector = useMemo(() => pickTopCollector(projectWideRows ?? []), [projectWideRows])
+  // operator. report-service picks it among the collectors only (#1332 AC#2);
+  // an older backend without that field → the largest collected amount among
+  // the rows.
+  const topCollector = useMemo(
+    () => resolveTopCollector(projectWideTopCollector, projectWideRows ?? []),
+    [projectWideTopCollector, projectWideRows]
+  )
 
   // Handle export — the same period, window and time zone the screen is
   // querying with, so the file matches what the user sees.

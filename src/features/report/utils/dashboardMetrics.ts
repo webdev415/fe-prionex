@@ -11,11 +11,12 @@
  * - an average duration over operators is Σtalk time / Σanswered, never the mean
  *   of the row averages;
  * - «best / needs improvement» must not crown or shame an operator on 0 calls;
- * - «top collector» name and amount must come from the SAME operator.
+ * - «top collector» name and amount must come from the SAME operator, and only
+ *   a collector may be crowned — report-service decides who is one (#1332 AC#2).
  */
 
 import { formatDuration } from './transformers'
-import type { AgentPerformanceRow, OperatorPerformanceUI } from '../types'
+import type { AgentPerformanceRow, OperatorPerformanceUI, TopCollectorUI } from '../types'
 
 // ============================================================================
 // Contact-rate ranking (best performer / needs improvement)
@@ -81,22 +82,53 @@ export interface TopCollector {
   amount: number
 }
 
+/** The row fields the local «top collector» pick reads. */
+export type TopCollectorInputRow = Pick<
+  AgentPerformanceRow,
+  'operator' | 'payments' | 'rankingEligible'
+>
+
 /**
  * The operator with the largest collected amount, name AND amount taken from
  * that one row. No row with a positive amount → null (the modal hides it).
+ * A row report-service ruled out (`rankingEligible === false`: a technical
+ * account such as «Administrator System», a non-collection department) is
+ * never crowned; a row without the mark (`undefined`, `null`) still counts.
  * Ties keep the first row in the given order.
+ *
+ * This is the fallback for a report-service that does not send
+ * `top_collector` yet (`resolveTopCollector`); the eligibility skip is a guard
+ * for a mixed deployment, not a second ranking. report-service's own pick
+ * breaks ties differently (more payments, then the lower operator id), which
+ * is why its value always wins once it is sent.
  */
-export function pickTopCollector(
-  rows: ReadonlyArray<Pick<AgentPerformanceRow, 'operator' | 'payments'>>
-): TopCollector | null {
+export function pickTopCollector(rows: ReadonlyArray<TopCollectorInputRow>): TopCollector | null {
   let top: TopCollector | null = null
   for (const row of rows) {
+    if (row.rankingEligible === false) continue
     const amount = Number(row.payments) || 0
     if (amount > 0 && (top === null || amount > top.amount)) {
       top = { name: row.operator, amount }
     }
   }
   return top
+}
+
+/**
+ * The «top collector» the payments modal shows (board #1332 AC#2).
+ *
+ * report-service decides who may be crowned: once it sends `top_collector`,
+ * its value is shown as is and `null` hides the tile. Only an older backend
+ * that does not send the key (`undefined`) falls back to `pickTopCollector`
+ * over the rows.
+ */
+export function resolveTopCollector(
+  serverTopCollector: TopCollectorUI | null | undefined,
+  rows: ReadonlyArray<TopCollectorInputRow>
+): TopCollector | null {
+  if (serverTopCollector === undefined) return pickTopCollector(rows)
+  if (serverTopCollector === null) return null
+  return { name: serverTopCollector.operatorName, amount: serverTopCollector.paymentsCollected }
 }
 
 // ============================================================================

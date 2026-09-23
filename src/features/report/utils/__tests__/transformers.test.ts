@@ -13,9 +13,14 @@ import {
   callsOther,
   transformCommunicationStatistics,
   transformHourlyBreakdown,
+  transformOperatorPerformance,
   transformToAgentPerformanceRows,
 } from '../transformers'
-import type { BackendCommunicationStatisticsResponse } from '../../api/types'
+import type {
+  BackendCommunicationStatisticsResponse,
+  BackendOperatorPerformance,
+  BackendOperatorPerformanceResponse,
+} from '../../api/types'
 import type { OperatorPerformanceUI } from '../../types'
 
 describe('mapPeriodToBackend', () => {
@@ -272,6 +277,103 @@ describe('transformToAgentPerformanceRows (D10 #1334)', () => {
         messages: 1,
         payments: 1500,
       },
+    ])
+  })
+})
+
+describe('operator performance — ranking eligibility and top collector (D8 #1332 AC#2)', () => {
+  function backendOperator(
+    operatorId: number,
+    operatorName: string,
+    paymentsCollected: number | string,
+    rankingEligible?: boolean | null
+  ): BackendOperatorPerformance {
+    return {
+      operator_id: operatorId,
+      operator_name: operatorName,
+      summary: {
+        total_calls: 0,
+        calls_answered: 0,
+        contact_rate: 0,
+        total_talk_time: 0,
+        avg_call_duration: 0,
+        sms_sent: 0,
+        payments_collected: paymentsCollected,
+        payments_count: 1,
+      },
+      daily_breakdown: [],
+      ...(rankingEligible === undefined ? {} : { ranking_eligible: rankingEligible }),
+    }
+  }
+
+  function response(
+    extra: Partial<BackendOperatorPerformanceResponse> = {}
+  ): BackendOperatorPerformanceResponse {
+    return {
+      project_id: 1,
+      date_range: { from_date: '2026-09-23', to_date: '2026-09-23' },
+      operators: [
+        backendOperator(7499, 'Analyst', '180574.52', false),
+        backendOperator(1, 'Administrator System', '84947.75', false),
+        backendOperator(7234, 'Collector', '22600.00', true),
+        backendOperator(9, 'Unresolved', 100, null),
+      ],
+      generated_at: '2026-09-23T10:00:00Z',
+      ...extra,
+    }
+  }
+
+  it('keeps an absent top_collector (older backend) apart from null', () => {
+    // An older report-service sends neither top_collector nor ranking_eligible.
+    const olderPayload = response({
+      operators: [
+        backendOperator(7499, 'Analyst', '180574.52'),
+        backendOperator(7234, 'Collector', '22600.00'),
+      ],
+    })
+    const olderBackend = transformOperatorPerformance(olderPayload)
+
+    expect('top_collector' in olderPayload).toBe(false)
+    expect(olderBackend.topCollector).toBeUndefined()
+    expect(olderBackend.operators.map((op) => op.rankingEligible)).toEqual([undefined, undefined])
+
+    expect(transformOperatorPerformance(response({ top_collector: null })).topCollector).toBeNull()
+  })
+
+  it('maps the top collector and parses a string amount', () => {
+    const ui = transformOperatorPerformance(
+      response({
+        top_collector: {
+          operator_id: 7234,
+          operator_name: 'Collector',
+          payments_collected: '22600.50',
+          payments_count: 3,
+        },
+      })
+    )
+
+    expect(ui.topCollector).toEqual({
+      operatorId: 7234,
+      operatorName: 'Collector',
+      paymentsCollected: 22_600.5,
+      paymentsCount: 3,
+    })
+  })
+
+  it('carries ranking_eligible through to the operators and the table rows', () => {
+    const ui = transformOperatorPerformance(response({ top_collector: null }))
+
+    expect(ui.operators.map((op) => op.rankingEligible)).toEqual([false, false, true, null])
+    expect(
+      transformToAgentPerformanceRows(ui.operators).map((row) => [
+        row.operator,
+        row.rankingEligible,
+      ])
+    ).toEqual([
+      ['Analyst', false],
+      ['Administrator System', false],
+      ['Collector', true],
+      ['Unresolved', null],
     ])
   })
 })
