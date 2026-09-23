@@ -9547,11 +9547,9 @@
       },
       "filters": {
         "responsibleOperator": "Responsible Operator:",
-        "clientPhone": "Client Phone:",
         "selectEmployee": "Select employee",
-        "typePhoneNumber": "Type phone number",
-        "dateOfSale": "Date of sale:",
-        "allOperators": "All Operators"
+        "allOperators": "All Operators",
+        "period": "Period:"
       },
       "exportCsv": "Export CSV",
       "estimated": "Estimated",
@@ -9559,6 +9557,7 @@
         "title": "Calls Made",
         "noData": "No data available",
         "total": "Total",
+        "operatorsSum": "by operators",
         "byHour": "By Hour",
         "calls": "calls",
         "byOperator": "By Operator"

@@ -305,6 +305,10 @@ export interface AgentPerformanceRow {
   calls: number
   contactRate: number
   avgDuration: string
+  /** Answered calls (operator summary `calls_answered`) — weights the totals row. */
+  callsAnswered?: number
+  /** Talk time in seconds (operator summary `total_talk_time`) — weights the totals row. */
+  totalTalkTime?: number
   sms: number
   messages: number
   payments: number

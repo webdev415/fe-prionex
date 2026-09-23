@@ -37,6 +37,7 @@ import { REPORTS_URL_KEYS } from '@/lib/reportsUrlKeys'
 import { useAuthStore } from '@/stores/authStore'
 import { SESSION } from '@/constants'
 import { getDateRangeForPeriod } from '@/lib/dateUtils'
+import { pickTopCollector } from '@/features/report/utils/dashboardMetrics'
 import {
   useDashboard,
   useAgentPerformanceTable,
@@ -216,12 +217,33 @@ function DashboardTab() {
     return Math.round((weighted / totalCalls) * 10) / 10
   }, [agentPerformance])
 
-  // Handle export
+  // «Top collector» in the payments modal: name AND amount from the same
+  // operator — the one with the largest collected amount. The modal is
+  // project-wide (KPI total, count, verified/pending), so the pick is made over
+  // ALL operators, not over the table narrowed by «Відповідальний оператор».
+  // With no filter the table rows are that list already; with a filter the
+  // unfiltered list is read separately (same query key as the unfiltered
+  // table, so usually straight from cache), and only while the modal is open.
+  const { data: allOperatorsPerformance } = useAgentPerformanceTable({
+    projectId,
+    fromDate: actualDateRange.from,
+    toDate: actualDateRange.to,
+    timezone: userTimezone,
+    enabled: showPaymentsModal && selectedOperator !== null,
+  })
+  const topCollectorRows = selectedOperator === null ? agentPerformance : allOperatorsPerformance
+  const topCollector = useMemo(() => pickTopCollector(topCollectorRows ?? []), [topCollectorRows])
+
+  // Handle export — the same period, window and time zone the screen is
+  // querying with, so the file matches what the user sees.
   const handleExport = () => {
     exportDashboard({
       projectId,
       format: 'csv',
-      period: selectedPeriod,
+      period: customFromDate || customToDate ? 'custom' : selectedPeriod,
+      startDate: actualDateRange.from,
+      endDate: actualDateRange.to,
+      timezone: userTimezone,
     })
   }
 
@@ -367,11 +389,8 @@ function DashboardTab() {
             selectedPeriod={selectedPeriod}
             selectedOperator={selectedOperator}
             onOperatorChange={setSelectedOperator}
-            customFromDate={customFromDate}
-            customToDate={customToDate}
-            onFromDateChange={setCustomFromDate}
-            onToDateChange={setCustomToDate}
-            userTimezone={userTimezone}
+            fromDate={actualDateRange.from}
+            toDate={actualDateRange.to}
           />
         </div>
       </div>
@@ -442,8 +461,8 @@ function DashboardTab() {
               change: dashboardData.kpis.paymentsTrend.change,
               direction: dashboardData.kpis.paymentsTrend.changeType === 'increase' ? 'up' : 'down',
             },
-            topCollectorName: dashboardData.topOperators[0]?.operatorName,
-            topCollectorAmount: agentPerformance?.[0]?.payments,
+            topCollectorName: topCollector?.name,
+            topCollectorAmount: topCollector?.amount,
           }}
         />
       )}

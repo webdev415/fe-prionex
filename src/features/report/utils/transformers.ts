@@ -482,6 +482,8 @@ function transformTeamAverage(
  * //   calls: 200,
  * //   contactRate: 72.5,
  * //   avgDuration: '02:30',
+ * //   callsAnswered: 145,
+ * //   totalTalkTime: 21750,
  * //   sms: 50,
  * //   payments: 1500
  * // }]
@@ -496,6 +498,8 @@ export function transformToAgentPerformanceRows(
     calls: op.summary.totalCalls,
     contactRate: op.summary.contactRate,
     avgDuration: op.summary.avgCallDurationFormatted,
+    callsAnswered: op.summary.callsAnswered,
+    totalTalkTime: op.summary.totalTalkTime,
     sms: op.summary.smsSent,
     messages: op.summary.messagesSent,
     payments: op.summary.paymentsCollected,
@@ -800,13 +804,18 @@ function transformDailyTrend(
  * Transform a single hourly breakdown entry.
  * The backend stores UTC hours; conversion to local time is handled
  * in the hook using the user's timezone.
+ *
+ * The count is read from `calls` — the report-service `HourlyBreakdown` field
+ * (contract C2). Reading call-service's internal `calls_made` here gave
+ * `undefined` → NaN, the modal's `calls > 0` filter dropped every hour, and
+ * «По годинах» never rendered (board #1333).
  */
-function transformHourlyBreakdown(entry: BackendHourlyBreakdown): HourlyBreakdownUI {
+export function transformHourlyBreakdown(entry: BackendHourlyBreakdown): HourlyBreakdownUI {
   const h = entry.hour
   const label = `${String(h).padStart(2, '0')}:00-${String(h + 1).padStart(2, '0')}:00`
   return {
     label,
-    calls: entry.calls_made,
-    callsAnswered: entry.calls_answered,
+    calls: entry.calls ?? 0,
+    callsAnswered: entry.calls_answered ?? 0,
   }
 }

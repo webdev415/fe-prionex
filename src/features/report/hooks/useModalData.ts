@@ -10,6 +10,7 @@ import { useDashboard } from './useDashboard'
 import { useOperatorPerformance } from './useOperatorPerformance'
 import { useCommunicationStatistics } from './useCommunicationStatistics'
 import { getDateRangeForPeriod } from '@/lib/dateUtils'
+import { pickContactRatePerformers } from '../utils/dashboardMetrics'
 import type { Period, ChangeType, HourlyBreakdownUI } from '../types'
 
 // ============================================================================
@@ -58,12 +59,20 @@ function convertHourlyToLocalTime(
 // ============================================================================
 
 export interface CallsMadeModalData {
+  /** Header «Всього»: the dashboard KPI (falls back to the operator sum when the KPI is 0). */
   total: number
   change: number
   changeType: ChangeType
   previousTotal: number
   byHour: { label: string; calls: number }[]
   byOperator: { name: string; calls: number }[]
+  /**
+   * Σ calls over `byOperator`. It comes from a different source than `total`
+   * (operator performance vs the dashboard KPI) and the two can differ; the
+   * modal states the difference instead of letting the list silently disagree
+   * with the header (board #1327).
+   */
+  operatorsTotal: number
 }
 
 export interface UseCallsMadeModalParams {
@@ -141,6 +150,7 @@ export function useCallsMadeModal({
           calls: op.summary.totalCalls,
         }))
         .sort((a, b) => b.calls - a.calls),
+      operatorsTotal: totalCallsFromOperators,
     }
   }, [dashboardQuery.data, operatorQuery.data, communicationQuery.data, userTimezone])
 
@@ -317,22 +327,9 @@ export function useContactRateModal({
       ]
     }
 
-    // Find best and worst performers
-    let bestPerformer: { name: string; rate: number } | null = null
-    let needsImprovement: { name: string; rate: number } | null = null
-
-    if (operators.length > 0) {
-      const sortedByRate = [...operators].sort(
-        (a, b) => b.summary.contactRate - a.summary.contactRate
-      )
-      const best = sortedByRate[0]
-      const worst = sortedByRate[sortedByRate.length - 1]
-
-      bestPerformer = { name: best.operatorName, rate: Math.round(best.summary.contactRate) }
-      if (worst.operatorId !== best.operatorId) {
-        needsImprovement = { name: worst.operatorName, rate: Math.round(worst.summary.contactRate) }
-      }
-    }
+    // Best and worst performers — only among operators with enough calls to
+    // have a meaningful rate (never a 0-call row as «Потрібне покращення (0 %)»).
+    const { bestPerformer, needsImprovement } = pickContactRatePerformers(operators)
 
     return {
       rate: contactRate,

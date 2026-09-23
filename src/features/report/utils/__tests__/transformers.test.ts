@@ -5,7 +5,17 @@
  */
 
 import { describe, it, expect } from 'vitest'
-import { mapPeriodToBackend, trendToChangeType, formatDuration, parseNumber } from '../transformers'
+import {
+  mapPeriodToBackend,
+  trendToChangeType,
+  formatDuration,
+  parseNumber,
+  transformCommunicationStatistics,
+  transformHourlyBreakdown,
+  transformToAgentPerformanceRows,
+} from '../transformers'
+import type { BackendCommunicationStatisticsResponse } from '../../api/types'
+import type { OperatorPerformanceUI } from '../../types'
 
 describe('mapPeriodToBackend', () => {
   it('should map "today" to "today"', () => {
@@ -95,5 +105,93 @@ describe('parseNumber', () => {
   it('should handle negative numbers', () => {
     expect(parseNumber(-123)).toBe(-123)
     expect(parseNumber('-456')).toBe(-456)
+  })
+})
+
+describe('transformHourlyBreakdown (D9 #1333)', () => {
+  it('reads the report-service field `calls` (contract C2), not `calls_made`', () => {
+    expect(
+      transformHourlyBreakdown({ hour: 9, calls: 42, calls_answered: 7, sms_sent: 3 })
+    ).toEqual({ label: '09:00-10:00', calls: 42, callsAnswered: 7 })
+  })
+
+  it('never produces NaN for a payload that lacks the count', () => {
+    const entry = { hour: 23 } as unknown as Parameters<typeof transformHourlyBreakdown>[0]
+
+    const result = transformHourlyBreakdown(entry)
+
+    expect(result.calls).toBe(0)
+    expect(result.callsAnswered).toBe(0)
+    expect(result.label).toBe('23:00-24:00')
+  })
+
+  it('keeps every non-empty hour of a real report-service payload', () => {
+    // Shape exactly as report-service serialises HourlyBreakdown.
+    const payload: BackendCommunicationStatisticsResponse = {
+      project_id: 1,
+      date_range: { from_date: '2026-09-21', to_date: '2026-09-21' },
+      call_statistics: {
+        total_calls: 30,
+        calls_answered: 6,
+        calls_no_answer: 20,
+        calls_busy: 2,
+        calls_failed: 2,
+        contact_rate: 20,
+        total_talk_time: 300,
+        avg_call_duration: 50,
+      },
+      sms_statistics: { total_sent: 0, delivered: 0, failed: 0, delivery_rate: 0 },
+      hourly_breakdown: [
+        { hour: 6, calls: 10, calls_answered: 2, sms_sent: 0 },
+        { hour: 7, calls: 20, calls_answered: 4, sms_sent: 0 },
+        { hour: 8, calls: 0, calls_answered: 0, sms_sent: 0 },
+      ],
+      generated_at: '2026-09-21T10:00:00Z',
+    }
+
+    const hourly = transformCommunicationStatistics(payload).hourlyBreakdown
+
+    expect(hourly.map((h) => h.calls)).toEqual([10, 20, 0])
+    expect(hourly.filter((h) => h.calls > 0)).toHaveLength(2)
+  })
+})
+
+describe('transformToAgentPerformanceRows (D10 #1334)', () => {
+  it('carries answered calls and talk time so the totals row can be weighted', () => {
+    const operators: OperatorPerformanceUI[] = [
+      {
+        operatorId: 5,
+        operatorName: 'Olena',
+        summary: {
+          totalCalls: 200,
+          callsAnswered: 40,
+          contactRate: 20,
+          totalTalkTime: 2040,
+          totalTalkTimeFormatted: '34:00',
+          avgCallDuration: 51,
+          avgCallDurationFormatted: '0:51',
+          smsSent: 3,
+          messagesSent: 1,
+          paymentsCollected: 1500,
+          paymentsCount: 2,
+        },
+        dailyBreakdown: [],
+      },
+    ]
+
+    expect(transformToAgentPerformanceRows(operators)).toEqual([
+      {
+        id: '5',
+        operator: 'Olena',
+        calls: 200,
+        contactRate: 20,
+        avgDuration: '0:51',
+        callsAnswered: 40,
+        totalTalkTime: 2040,
+        sms: 3,
+        messages: 1,
+        payments: 1500,
+      },
+    ])
   })
 })
