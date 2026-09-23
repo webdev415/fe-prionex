@@ -6113,7 +6113,9 @@
           "entryCount_few": "{{count}} записи",
           "entryCount_many": "{{count}} записів",
           "pagingLimit": "Показано {{count}} останніх записів. Вкажіть діапазон дат, щоб побачити давнішу активність."
-        }
+        },
+        "creditModuleTag": "кредит (наш)",
+        "creditModuleActionsHint": "Дії — у кредитному модулі"
       },
       "modals": {
         "addNote": {
