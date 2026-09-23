@@ -7037,7 +7037,9 @@
         "noTransitionPermission": "Your role doesn't allow this transition.",
         "rrDraftAlreadyExists": "This credit already has a draft restructuring agreement.",
         "documentsCount_one": "{{count}} doc.",
-        "documentsCount_other": "{{count}} docs."
+        "documentsCount_other": "{{count}} docs.",
+        "creditModuleTag": "own credit",
+        "creditModuleActionsHint": "Actions live in the credit module"
       },
       "debtSummary": {
         "title": "Debt Summary",

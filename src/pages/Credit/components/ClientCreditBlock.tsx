@@ -65,8 +65,23 @@ type Props = {
   clientId: number
   /** Строки `debts` с `origin='credit_module'` — их показывает фолбэк. */
   projections: DebtDetail[]
-  /** Запрос разрешён: id валиден (вкладку и флаг проверяет карточка). */
+  /** Запрос разрешён: id валиден (разворот и флаг проверяет карточка). */
   enabled: boolean
+  /**
+   * WS-11 (14-7b) — режим «под строкой списка «Позики»».
+   *
+   * `block` (умолчание) — прежнее поведение целиком: собственный заголовок,
+   * все кредиты клиента разом, плашка отказа вместе со строками проекции.
+   *
+   * `row` — карта развёрнутой строки: заголовка нет (его роль играет сама
+   * строка), рисуется РОВНО ОДИН кредит (`contractNumber`), а при любом
+   * не-200 цифры проекции НЕ печатаются второй раз — они уже стоят в строке
+   * над панелью, и две одинаковые цифры в двух местах читаются как два разных
+   * факта.
+   */
+  variant?: 'block' | 'row'
+  /** Номер договора развёрнутой строки — по нему выбирается её кредит. */
+  contractNumber?: string
 }
 
 /** Значение без времени — календарная дата: `2026-08-14`. */
@@ -162,6 +177,41 @@ function NoticeWithProjections({ noticeKey, rows }: { noticeKey: string; rows: D
     <div className="flex w-full flex-col gap-3">
       <Notice>{t(noticeKey)}</Notice>
       {rows.length > 0 && <ProjectionRows rows={rows} />}
+    </div>
+  )
+}
+
+/**
+ * То же под строкой списка — но БЕЗ повтора цифр.
+ *
+ * Номер договора, «Видано», «Залишок» и статус уже стоят в самой строке, над
+ * этой панелью. Напечатать их здесь ещё раз значит показать одному оператору
+ * две одинаковые цифры в двух местах экрана, а это читается как два разных
+ * факта. Остаётся то, чего в строке НЕТ: причина отказа, ДПЗ, день среза
+ * проекции и то, каким правом открывается полная карта.
+ *
+ * 🔴 ДПЗ — не повтор, а ПЯТАЯ величина: в строке её нет вовсе. Отказ двери
+ * получают все роли взыскания (право `credit.loans.read` им не расширяется), и
+ * без этого поля оператор взыскания не видел бы просрочку нашего кредита ни на
+ * одной поверхности карточки (Р-FEL1B-12). Модуль шлёт ДПЗ всегда; не пришло —
+ * поля нет, а не «0»: ноль был бы фактом «просрочки нет».
+ */
+function RowNotice({ noticeKey, row }: { noticeKey: string; row?: DebtDetail }) {
+  const { t } = useTranslation('common')
+  return (
+    <div className="flex w-full flex-col gap-2">
+      <Notice>{t(noticeKey)}</Notice>
+      {row?.days_past_due != null && (
+        <Field label={t('credit.clientBlock.dpd')}>{row.days_past_due}</Field>
+      )}
+      <div className="text-muted-foreground text-xs">
+        <em>
+          {t('credit.clientBlock.projectionAsOf')} {formatMoment(row?.lifecycle_updated_at)}
+        </em>
+      </div>
+      <div className="text-muted-foreground text-xs">
+        <em>{t('credit.clientBlock.projectionOnly')}</em>
+      </div>
     </div>
   )
 }
@@ -263,8 +313,19 @@ function LoanCardA({ loan, canOpenModule }: { loan: ClientLoanCard; canOpenModul
   )
 }
 
-export function ClientCreditBlock({ clientId, projections, enabled }: Props) {
+export function ClientCreditBlock({
+  clientId,
+  projections,
+  enabled,
+  variant = 'block',
+  contractNumber,
+}: Props) {
   const { t } = useTranslation('common')
+  const isRow = variant === 'row'
+  // Проекция ИМЕННО этой строки — источник дня среза для панели отказа.
+  const ownProjection = contractNumber
+    ? projections.find((p) => p.contract_number === contractNumber)
+    : undefined
   // Локальное право решает РОВНО ОДНО: рисовать ли ссылку в модуль. Состав
   // блока выбирается по ОТВЕТУ двери: права в пропуске CRM и права, которые
   // модуль прочитает у CRM, — два разных замера, и расходиться они могут.
@@ -276,7 +337,12 @@ export function ClientCreditBlock({ clientId, projections, enabled }: Props) {
   const body = (() => {
     // Любой отказ: объясняем причину и показываем то, что известно из CRM.
     if (error) {
-      return <NoticeWithProjections noticeKey={noticeKeyForStatus(status)} rows={projections} />
+      const noticeKey = noticeKeyForStatus(status)
+      return isRow ? (
+        <RowNotice noticeKey={noticeKey} row={ownProjection} />
+      ) : (
+        <NoticeWithProjections noticeKey={noticeKey} rows={projections} />
+      )
     }
 
     // 🔴 ЗАПРОС ПРИОСТАНОВЛЕН — это не «кредитов нет».
@@ -288,7 +354,9 @@ export function ClientCreditBlock({ clientId, projections, enabled }: Props) {
     // пустым списком» и уверенно сообщал, что кредитов нет. Для оператора за
     // туннелем обрыв связи — обычное дело, а не экзотика.
     if (isPaused) {
-      return (
+      return isRow ? (
+        <RowNotice noticeKey="credit.clientBlock.temporaryFailure" row={ownProjection} />
+      ) : (
         <NoticeWithProjections noticeKey="credit.clientBlock.temporaryFailure" rows={projections} />
       )
     }
@@ -305,11 +373,24 @@ export function ClientCreditBlock({ clientId, projections, enabled }: Props) {
       )
     }
 
-    const items = data?.items ?? []
+    const all = data?.items ?? []
+    // Под строкой показывается РОВНО ОДИН кредит — её собственный. Дверь
+    // отдаёт все кредиты клиента разом, и без отбора вторая строка развернула
+    // бы чужой договор под своим номером.
+    const items =
+      isRow && contractNumber ? all.filter((l) => l.contract_number === contractNumber) : all
     if (items.length === 0) {
-      // Дверь ответила «кредитов нет», а проекция в CRM есть — это расхождение
-      // связи, а не отсутствие кредита. Сказать здесь «кредитів немає» значило
-      // бы уверенно отрицать долг, который CRM сама же и хранит.
+      // Дверь ответила, но нужного кредита в ответе нет, а проекция в CRM
+      // есть — это расхождение связи, а не отсутствие кредита. Сказать здесь
+      // «кредитів немає» значило бы уверенно отрицать долг, который CRM сама
+      // же и хранит.
+      if (isRow) {
+        return ownProjection ? (
+          <RowNotice noticeKey="credit.clientBlock.linkNotFound" row={ownProjection} />
+        ) : (
+          <Notice>{t('credit.clientBlock.noLoans')}</Notice>
+        )
+      }
       if (projections.length > 0) {
         return (
           <NoticeWithProjections noticeKey="credit.clientBlock.linkNotFound" rows={projections} />
@@ -329,8 +410,13 @@ export function ClientCreditBlock({ clientId, projections, enabled }: Props) {
   })()
 
   return (
-    <div className="flex w-full flex-col gap-3 p-3 md:p-4">
-      <h3 className="text-foreground text-sm font-semibold">{t('credit.clientBlock.title')}</h3>
+    <div className={isRow ? 'flex w-full flex-col gap-3' : 'flex w-full flex-col gap-3 p-3 md:p-4'}>
+      {/* Под строкой собственного заголовка нет: его роль играет сама строка
+          с пометкой «кредит (наш)», и второй «Кредит (наш)» под ней был бы
+          третьей подписью об одних и тех же деньгах. */}
+      {!isRow && (
+        <h3 className="text-foreground text-sm font-semibold">{t('credit.clientBlock.title')}</h3>
+      )}
       {body}
     </div>
   )

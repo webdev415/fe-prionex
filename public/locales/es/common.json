@@ -7073,7 +7073,9 @@
         "rrDraftAlreadyExists": "Este crédito ya tiene un borrador de acuerdo de reestructuración.",
         "documentsCount_one": "{{count}} doc.",
         "documentsCount_many": "{{count}} docs.",
-        "documentsCount_other": "{{count}} docs."
+        "documentsCount_other": "{{count}} docs.",
+        "creditModuleTag": "crédito (propio)",
+        "creditModuleActionsHint": "Las acciones están en el módulo de crédito"
       },
       "debtSummary": {
         "title": "Resumen de la deuda",

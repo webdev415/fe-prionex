@@ -6312,7 +6312,9 @@
         "documentsCount_one": "{{count}} док.",
         "documentsCount_few": "{{count}} док.",
         "documentsCount_many": "{{count}} док.",
-        "documentsCount_other": "{{count}} док."
+        "documentsCount_other": "{{count}} док.",
+        "creditModuleTag": "кредит (наш)",
+        "creditModuleActionsHint": "Дії — у кредитному модулі"
       },
       "modals": {
         "addNote": {
