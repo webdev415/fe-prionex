@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import type { RoutedCall } from '@/features/dialer'
 import { Icons } from '@/lib/icons'
+import { piiProps } from '@/lib/openreplay/pii'
 
 import { ToggleChip } from './ToggleChip'
 
@@ -66,7 +67,7 @@ export function IncomingCallPrompt({
           <div className="bg-primary/15 text-foreground flex h-16 w-16 items-center justify-center rounded-full">
             <Icons.Phone size={30} strokeWidth={1.5} />
           </div>
-          <p className="text-foreground text-lg font-semibold">
+          <p className="text-foreground text-lg font-semibold" {...piiProps}>
             {routedCall.client_name || t('dialer.call.unknownClient', 'Unknown contact')}
           </p>
           <p className="text-muted-foreground text-sm">{routedCall.phone}</p>
