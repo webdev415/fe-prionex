@@ -390,7 +390,7 @@ describe('CreditApplicationDetailPage → решение заменяет пре
     it.each([
       [103, '103'],
       [null, '—'],
-    ])('D-3: автор решения %s показан строкой «Андеррайтер»', (underwriter, shown) => {
+    ] as const)('D-3: автор решения %s показан строкой «Андеррайтер»', (underwriter, shown) => {
       renderManual({}, { ...DECISION, underwriter_id: underwriter })
 
       const label = screen.queryByText('credit.fields.underwriter')
@@ -418,7 +418,7 @@ describe('CreditApplicationDetailPage → решение заменяет пре
       ['422 validation_failed', new CreditApiError(DETAIL, 422, 'validation_failed'), DETAIL],
       ['403 шлюза без кода', new CreditApiError('Forbidden', 403), 'Forbidden'],
       ['не ошибка модуля', new Error('Network Error'), 'Network Error'],
-    ])('D-5: %s — прежний текст дословно', (_scene, error, shown) => {
+    ] as const)('D-5: %s — прежний текст дословно', (_scene, error, shown) => {
       const panel = renderManual({ isError: true, error })
 
       // Тот же поиск, что в D-4, находит тот же detail — пустота там значит
@@ -441,6 +441,22 @@ describe('CreditApplicationDetailPage → решение заменяет пре
       expect(alerts[0].textContent, 'the refusal plate holds something other than its text').toBe(
         key
       )
+    })
+
+    it.each([
+      ['Error с пустым сообщением', new Error('')],
+      ['Error с одними пробелами', new Error('   ')],
+      ['брошена строка', 'Синтетический отказ строкой'],
+      ['брошен объект с message', { message: DETAIL }],
+    ] as const)('D-7: %s — общий текст отказа, плашка не пуста', (_scene, error) => {
+      const panel = renderManual({ isError: true, error })
+
+      const alerts = panel.getAllByRole('alert')
+      expect(alerts, 'the manual decision refusal is drawn as more than one plate').toHaveLength(1)
+      expect(
+        alerts[0].textContent,
+        'a refusal without an Error message left the plate without the generic refusal text'
+      ).toBe('credit.decisionError.generic')
     })
   })
 })
