@@ -2,8 +2,9 @@
  * Two-phase bulk-document upload:
  *  - uploadFile(file): chunked upload + stage the ZIP (runs on file select),
  *    tracking progress 0-100.
- *  - startImport(uploadId, agreementId, documentTypeId): bind the agreement +
- *    document type and start processing (runs on the Start Import button).
+ *  - startImport(uploadId, agreementId): bind the agreement and start
+ *    processing (runs on the Start Import button). No document type: the
+ *    project's bulk-upload rules type each file on their own.
  */
 
 import { useCallback, useRef, useState } from 'react'
@@ -42,20 +43,17 @@ export function useUploadDocumentArchive() {
     abortRef.current?.abort()
   }, [])
 
-  const startImport = useCallback(
-    async (uploadId: string, agreementId: number, documentTypeId: number) => {
-      setStarting(true)
-      try {
-        return await startImportApi(uploadId, agreementId, documentTypeId)
-      } catch (error) {
-        toast.error(getErrorMessage(error))
-        throw error
-      } finally {
-        setStarting(false)
-      }
-    },
-    []
-  )
+  const startImport = useCallback(async (uploadId: string, agreementId: number) => {
+    setStarting(true)
+    try {
+      return await startImportApi(uploadId, agreementId)
+    } catch (error) {
+      toast.error(getErrorMessage(error))
+      throw error
+    } finally {
+      setStarting(false)
+    }
+  }, [])
 
   return { uploadFile, cancelUpload, startImport, uploading, starting, progress }
 }

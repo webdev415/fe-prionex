@@ -131,18 +131,20 @@ export async function uploadArchiveInChunks(
 }
 
 /**
- * Start processing a staged upload: binds the agreement + document type,
- * creates the import job and dispatches the worker. This is the explicit
- * "assign" step — nothing is attached until it's called.
+ * Start processing a staged upload: binds the agreement, creates the import
+ * job and dispatches the worker. This is the explicit "assign" step — nothing
+ * is attached until it is called.
+ *
+ * No document type: each file is typed by the project's bulk-upload rules,
+ * configured once under Settings → Document Generation. The call is refused
+ * with 409 while either folder still lacks a default type.
  */
 export async function startImport(
   uploadId: string,
-  agreementId: number,
-  documentTypeId: number
+  agreementId: number
 ): Promise<StartImportResponse> {
   const response = await api.post<StartImportResponse>(`${BASE}/upload/${uploadId}/start`, {
     agreement_id: agreementId,
-    document_type_id: documentTypeId,
   })
   return response.data
 }

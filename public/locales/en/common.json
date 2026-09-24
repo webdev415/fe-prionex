@@ -4605,7 +4605,8 @@
           "errorDetails": "Error details",
           "startNewImport": "Start new import"
         },
-        "sectionTitle": "Upload Document Archive"
+        "sectionTitle": "Upload Document Archive",
+        "rulesNotReady": "Bulk upload is unavailable until a default document type is set for {{folders}} under Settings → Document Generation → Bulk Upload Rules."
       },
       "title": "Import Clients",
       "viewHistory": "View History",
@@ -7314,7 +7315,8 @@
       "tabs": {
         "journal": "Document Journal",
         "templates": "Document Templates",
-        "types": "Document Types"
+        "types": "Document Types",
+        "bulkRules": "Bulk Upload Rules"
       },
       "types": {
         "title": "Document Types",
@@ -7345,7 +7347,8 @@
           "deleted": "Document type deleted",
           "hidden": "Type hidden",
           "shown": "Type shown"
-        }
+        },
+        "deleteBlockedByRules": "This type is used by {{count}} bulk-upload rule(s). Change those rules first, or hide the type instead."
       },
       "actions": {
         "uploaded": "Uploaded",
@@ -7524,7 +7527,39 @@
         }
       },
       "tabsScrollLeft": "Scroll tabs left",
-      "tabsScrollRight": "Scroll tabs right"
+      "tabsScrollRight": "Scroll tabs right",
+      "bulkRules": {
+        "title": "Bulk upload rules",
+        "subtitle": "A file gets the type of the first rule whose keyword occurs in its name; the lowest Order wins. Matching ignores case and reads the whole file name, extension included.",
+        "creditsTitle": "credits/ folder",
+        "usersTitle": "users/ folder",
+        "addRule": "Add rule",
+        "empty": "No rules yet — every file takes the default type below.",
+        "notSet": "Not set",
+        "unknownType": "Unknown type",
+        "defaultLabel": "Default document type",
+        "defaultHint": "Applied to files that match no keyword. A bulk upload cannot start until both folders have one.",
+        "blockedBanner": "Bulk document upload is blocked until a default document type is set for {{folders}}.",
+        "loadError": "Could not load the bulk-upload rules",
+        "confirmDeleteTitle": "Delete rule '{{keyword}}'?",
+        "confirmDelete": "Files matching this keyword will take the default type of this folder instead.",
+        "editRule": "Edit rule {{keyword}}",
+        "deleteRule": "Delete rule {{keyword}}",
+        "columns": {
+          "order": "Order",
+          "keyword": "Keyword",
+          "type": "Document type",
+          "actions": "Actions"
+        },
+        "errors": {
+          "keywordRequired": "Enter a keyword",
+          "typeRequired": "Choose a document type",
+          "positionInvalid": "Order must be a whole number of 1 or more",
+          "saveFailed": "Could not save the rule",
+          "deleteFailed": "Could not delete the rule",
+          "defaultFailed": "Could not set the default type"
+        }
+      }
     },
     "interactionLog": {
       "title": "Interaction Log",
