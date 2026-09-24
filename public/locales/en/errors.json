@@ -129,6 +129,14 @@
     "EMAIL_ALREADY_EXISTS": "A user with the email {{email}} already exists",
     "PROJECT_ASSIGNMENT_DUPLICATE": "The same project is assigned more than once",
     "CURRENT_PASSWORD_REQUIRED": "Current password is required",
-    "NEW_PASSWORD_SAME_AS_CURRENT": "New password must be different from current password"
+    "NEW_PASSWORD_SAME_AS_CURRENT": "New password must be different from current password",
+    "HUB_ROLE_DISABLED": "Choosing the HUB chat role is switched off right now — save the role without it.",
+    "HUB_ROLE_UNKNOWN": "This HUB chat role is not in the catalogue. Reload the page and pick a value from the list.",
+    "HUB_ROLE_ADMIN_REQUIRES_HUB_ADMIN": "Only a HUB administrator of this project can grant or remove the «HUB administrator» chat role.",
+    "HUB_ADMIN_ALIAS_REQUIRES_HUB_ADMIN": "A role named «admin» or «administrator» gets HUB administrator rights — only a HUB administrator of this project can give a role that name.",
+    "HUB_ADMIN_ASSIGNMENT_REQUIRES_HUB_ADMIN": "This role gives HUB administrator rights — only a HUB administrator of this project can assign people to it.",
+    "HUB_ROLE_DEFAULT_LOCKED": "The HUB chat role of a default role cannot be changed.",
+    "HUB_ROLE_FORBIDDEN_WHILE_IMPERSONATING": "While acting as another user you cannot change HUB chat roles or assign people to HUB administrator roles.",
+    "PROJECT_SCOPE_DENIED": "You do not have the right to do this in this project."
   }
 }
