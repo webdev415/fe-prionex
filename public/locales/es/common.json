@@ -12542,7 +12542,8 @@
       "title": "Solicitudes de crédito",
       "total": "{{count}} en total",
       "searchPlaceholder": "Número de solicitud o correo electrónico",
-      "empty": "Ninguna solicitud coincide con el filtro"
+      "empty": "Ninguna solicitud coincide con el filtro",
+      "statusCountsHint": "Los contadores de estado abarcan toda la sección y no tienen en cuenta la búsqueda ni las fechas."
     },
     "loans": {
       "title": "Créditos",
@@ -12937,7 +12938,13 @@
     "filters": {
       "dpdFrom": "Días de mora",
       "any": "Cualquiera",
-      "anyBucket": "Cualquier categoría"
+      "anyBucket": "Cualquier categoría",
+      "createdFrom": "Creado desde",
+      "createdTo": "Creado hasta",
+      "updatedFrom": "Última actividad desde",
+      "updatedTo": "Última actividad hasta",
+      "calendarHint": "Los límites del día siguen el calendario de la provincia de la solicitud (Alberta: hora de Edmonton), no su hora local. Las columnas Creado y Última actividad muestran su hora local.",
+      "rangeInverted": "La fecha inicial es posterior a la final: este rango no se aplica."
     },
     "unavailable": {
       "title": "El módulo de crédito no está desplegado en este entorno",
