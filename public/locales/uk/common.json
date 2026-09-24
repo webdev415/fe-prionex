@@ -9984,7 +9984,9 @@
         "delivered": "доставлено",
         "resultsLine": "{{delivered}}/{{total}} доставлено",
         "filteredCampaigns": "{{count}} кампаній відповідають фільтрам",
-        "totalCost": "Загальна вартість"
+        "totalCost": "Загальна вартість",
+        "resultsLineSent": "{{sent}}/{{total}} відправлено",
+        "noDeliveryReports": "Звіти про доставку відсутні"
       },
       "cost": {
         "actual": "Фактично",
@@ -10008,7 +10010,9 @@
         "destination": "Отримувач",
         "sentAt": "Надіслано",
         "deliveredAt": "Доставлено",
-        "error": "Помилка"
+        "error": "Помилка",
+        "deliveryNotReported": "Не повідомляється",
+        "deliveryNotReportedHint": "Цей провайдер не надсилає звіти про доставку. Перевірте статус доставки в кабінеті провайдера."
       },
       "actions": {
         "viewDetails": "Переглянути деталі",
@@ -10112,6 +10116,15 @@
         "defaultName": "CSV кампанія {{channel}}",
         "templateFailed": "Не вдалося завантажити шаблон",
         "parseFailed": "Не вдалося розібрати CSV"
+      },
+      "recipientStatus": {
+        "pending": "Очікується",
+        "queued": "У черзі",
+        "sent": "Відправлено",
+        "delivered": "Доставлено",
+        "failed": "Не вдалося",
+        "bounced": "Відхилено",
+        "skipped": "Пропущено"
       }
     },
     "messagingDrafts": {
