@@ -6,16 +6,26 @@
  * highlighter walks text nodes and the dropdown renders; both ask this module
  * what a number IS.
  *
- * Two rules settled with the ticket author:
+ * Two rules decide what this module answers. Their provenance differs, and a
+ * reviewer needs to know which is which:
  *
- *  - Only `380` + 9 digits is a number. `+380…` still matches (the `+` is not
- *    a digit, so it is simply not part of the match); spaced and local `0XX…`
- *    forms are deliberately NOT matched.
- *  - A number is KNOWN only when it matches a PHONE-typed contact. Contacts
- *    in the Recommenders tab's "Others" section — «Рекомендувач» and
- *    «Верифікована 3-я особа» are typed that way — have no Call button on
- *    their own card, so treating them as callable here would be inconsistent
- *    with the rest of the page.
+ *  - Only `380` + 9 digits is a number — SETTLED WITH THE TICKET AUTHOR.
+ *    `+380…` still matches (the `+` is not a digit, so it is simply not part
+ *    of the match); spaced and local `0XX…` forms are deliberately NOT
+ *    matched.
+ *  - A number is KNOWN when it matches ANY contact of the client, whatever the
+ *    contact's type — A DEVELOPER DECISION, NOT YET CONFIRMED WITH THE TICKET
+ *    AUTHOR, who originally settled the opposite. Treat it as open in review.
+ *
+ *    It counted PHONE-typed contacts only at first, on the grounds that the
+ *    "Others" section («Рекомендувач», «Верифікована 3-я особа») has no Call
+ *    button. That contradicted the add-contact form, whose duplicate check
+ *    spans EVERY contact type: a number saved as «Рекомендувач» highlighted
+ *    orange, offered "Add contact", and was then refused with "This value
+ *    already exists for this client" — the colour promising something the form
+ *    would not accept. Matching the form is also what the AC asks for in so
+ *    many words ("present among the Recommenders tab contacts"), with no
+ *    phone-type qualifier.
  */
 
 /** `380` + 9 digits. Boundaries are applied by {@link findPhoneMatches}, not
@@ -71,19 +81,28 @@ export function findPhoneMatches(text: string): PhoneMatch[] {
 
 /** The contact fields this module needs — a structural subset of
  *  `RecommenderContact`, so callers pass their existing contacts unchanged
- *  and tests need not build a whole one. */
+ *  and tests need not build a whole one.
+ *
+ *  `isPhone` is deliberately absent: classification no longer depends on the
+ *  contact's type, so requiring the field would invite callers to believe it
+ *  still matters. */
 export interface PhoneLookupContact {
   contactValue: string
-  isPhone: boolean
 }
 
-/** Digits of every PHONE-typed contact, for matching comment numbers against. */
+/**
+ * Digits of EVERY contact the client holds, for matching comment numbers
+ * against.
+ *
+ * Every type, not just phones: the add-contact form refuses a duplicate across
+ * all contact sources, so narrowing here would colour a number orange that the
+ * form then refuses to add. See the second rule in the module docstring.
+ */
 export function buildKnownPhoneSet(
   contacts: readonly PhoneLookupContact[] | null | undefined
 ): Set<string> {
   const known = new Set<string>()
   for (const contact of contacts ?? []) {
-    if (!contact.isPhone) continue
     const digits = toDigits(contact.contactValue)
     if (digits) known.add(digits)
   }

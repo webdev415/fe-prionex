@@ -11090,6 +11090,7 @@
       },
       "commentPhones": {
         "copied": "Phone number copied",
+        "copyFailed": "Could not copy the number",
         "copyPhone": "Copy phone",
         "lastCall": "Last call",
         "never": "Never",

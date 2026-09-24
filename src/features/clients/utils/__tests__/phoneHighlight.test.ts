@@ -19,14 +19,7 @@ import {
  * Both are easy to "simplify" later into something that looks equivalent and
  * is not, so each has a test that fails loudly if it is.
  */
-const phone = (contactValue: string): PhoneLookupContact => ({
-  contactValue,
-  isPhone: true,
-})
-const notPhone = (contactValue: string): PhoneLookupContact => ({
-  contactValue,
-  isPhone: false,
-})
+const phone = (contactValue: string): PhoneLookupContact => ({ contactValue })
 
 describe('toDigits', () => {
   it('keeps digits and drops everything else', () => {
@@ -115,12 +108,12 @@ describe('buildKnownPhoneSet', () => {
     expect(known.has('380671234567')).toBe(true)
   })
 
-  it('excludes contacts that are not phone-typed', () => {
-    // «Рекомендувач» and «Верифікована 3-я особа» live in the Recommenders
-    // tab's "Others" section and have no Call button on their own card, so
-    // treating them as callable here would contradict the rest of the page.
-    const known = buildKnownPhoneSet([notPhone('380671234567')])
-    expect(known.size).toBe(0)
+  it('includes contacts of every type, not just phones', () => {
+    // The add-contact form refuses a duplicate across ALL contact sources, so
+    // a number saved as «Рекомендувач» must read as known here too -- colouring
+    // it orange would offer an "Add contact" the form then refuses.
+    const known = buildKnownPhoneSet([phone('380671234567')])
+    expect(known.has('380671234567')).toBe(true)
   })
 
   it('skips a phone contact carrying no digits', () => {
@@ -176,9 +169,11 @@ describe('findAndClassifyPhones', () => {
     expect(result.map((m) => m.state)).toEqual(['new'])
   })
 
-  it('calls a number new when it only matches a non-phone contact', () => {
-    const result = findAndClassifyPhones('380671234567', [notPhone('380671234567')])
-    expect(result.map((m) => m.state)).toEqual(['new'])
+  it('calls a number known when any contact type holds it', () => {
+    // The rule the add-contact form enforces: a value that already exists on
+    // the client, under any contact source, is not addable -- so not "new".
+    const result = findAndClassifyPhones('380671234567', [phone('380671234567')])
+    expect(result.map((m) => m.state)).toEqual(['known'])
   })
 
   it('returns nothing for a comment with no numbers', () => {

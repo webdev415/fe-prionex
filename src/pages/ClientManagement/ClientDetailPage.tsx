@@ -16,6 +16,7 @@ import { LoanCard, type LoanCardAction } from './components/LoanCard'
 import { LoansCardList } from './components/LoansCardList'
 import { UbkiSubmissionHistory } from './components/UbkiSubmissionHistory'
 import { SaleNotesSection } from './components/SaleNotesSection'
+import { toDigits, type PhoneHighlightState } from '@/features/clients/utils/phoneHighlight'
 import {
   formatClientFullName,
   formatDate,
@@ -895,7 +896,12 @@ export function ClientDetailPage() {
   const openOutboundCall = (
     rawPhone: string | null | undefined,
     contactTypeId?: number | null,
-    spamAllowedOverride?: boolean
+    spamAllowedOverride?: boolean,
+    // KAN-1212: the number came out of the creditor's comment and is not a
+    // contact. One flag rather than two, because for such a number the two
+    // halves of the rule are never independent — manual entry and Gray Line
+    // always travel together.
+    manualEntry?: boolean
   ) => {
     const phone = (rawPhone ?? '').trim()
     if (!phone) return
@@ -908,7 +914,7 @@ export function ClientDetailPage() {
     }
     const meta = contactTypeId != null ? contactTypesById.get(contactTypeId) : undefined
     const initialCallType: CallType =
-      meta?.default_call_line === 'gray' ? 'gray-line' : 'white-line'
+      manualEntry || meta?.default_call_line === 'gray' ? 'gray-line' : 'white-line'
     const spamOptionEnabled =
       spamAllowedOverride !== undefined ? spamAllowedOverride : meta?.spam_allowed !== false
 
@@ -920,7 +926,14 @@ export function ClientDetailPage() {
       toast.warning(blocked)
       return
     }
-    setCallModalPreferences({ phone, initialCallType, spamOptionEnabled })
+    setCallModalPreferences({
+      phone,
+      initialCallType,
+      spamOptionEnabled,
+      // Only stamped for the comment path; every other caller leaves the
+      // modal's own defaults alone.
+      ...(manualEntry ? { manualPhoneEnabled: true, manualPhoneDigits: phone } : {}),
+    })
     setOpenCallModal('call-dialog')
     setIsCallModalOpen(true)
   }
@@ -1786,6 +1799,11 @@ export function ClientDetailPage() {
     phone: string
     initialCallType: CallType
     spamOptionEnabled: boolean
+    // KAN-1212: a number read out of the creditor's comment is not a contact,
+    // so the modal opens in manual-entry mode with the digits already typed in.
+    // Absent for every other caller, which keeps the modal's own defaults.
+    manualPhoneEnabled?: boolean
+    manualPhoneDigits?: string
   } | null>(null)
   const [contactEditorMode, setContactEditorMode] = useState<'add' | 'edit' | null>(null)
   const [contactEditorIsPhone, setContactEditorIsPhone] = useState<boolean | null>(null)
@@ -1871,7 +1889,10 @@ export function ClientDetailPage() {
     })
   }
 
-  const handleStartAddContact = async (isPhone: boolean) => {
+  // ``prefillValue`` seeds the contact_value field; empty for the section's own
+  // "+" button, which is why it is optional rather than required — that call
+  // site passes one argument and stays unchanged (KAN-1212).
+  const handleStartAddContact = async (isPhone: boolean, prefillValue = '') => {
     setContactError(null)
     setEditingContactId(null)
     setContactEditorMode('add')
@@ -1879,10 +1900,60 @@ export function ClientDetailPage() {
     const { data: freshTypes } = await refetchContactTypes()
     const types = freshTypes ?? contactTypes
     setContactFormData({
-      contact_value: '',
+      contact_value: prefillValue,
       contact_type_id: pickDefaultActiveContactTypeIdForSection(types, isPhone),
       comment: '',
     })
+  }
+
+  // KAN-1212 — the Recommenders tab has to be showing before the Phones
+  // subsection can be scrolled to, and it is not mounted on the same tick the
+  // tab is switched. Set here, acted on by the effect below.
+  const [pendingPhonesScroll, setPendingPhonesScroll] = useState(false)
+
+  useEffect(() => {
+    if (!pendingPhonesScroll || activeRightCardTab !== 'recommenders') return
+    document
+      .querySelector('[data-testid="recommenders-phones-section"]')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    setPendingPhonesScroll(false)
+  }, [pendingPhonesScroll, activeRightCardTab])
+
+  /**
+   * Dial a number clicked in the primary creditor's comment.
+   *
+   * Routed through ``openOutboundCall`` rather than setting the modal state
+   * directly, so the call-in-progress and calling-window guards still apply —
+   * a number read out of a comment is no more exempt from them than one on a
+   * contact card.
+   */
+  const handleCommentPhoneCall = (phone: string, state: PhoneHighlightState) => {
+    if (state === 'new') {
+      // Not a contact: manual entry, Gray Line, digits pre-filled (AC25).
+      openOutboundCall(phone, null, undefined, true)
+      return
+    }
+    // Known: the call type is the CONTACT's default, so the contact has to be
+    // found again. Digits on both sides — contacts are stored bare, with a
+    // leading +, and with punctuation, while the comment side is always bare.
+    const digits = toDigits(phone)
+    const contact = client?.recommenders?.find(
+      (candidate) => candidate.isPhone && toDigits(candidate.contactValue) === digits
+    )
+    openOutboundCall(phone, contact?.contactTypeId ?? null)
+  }
+
+  /**
+   * Add a comment number as a contact (AC 28-30).
+   *
+   * ``activeCommentTab`` and ``activeRightCardTab`` are independent tab groups,
+   * so switching to Recommenders leaves the comment tab open — which is exactly
+   * what the AC asks for, and why no "was it open?" check is needed first.
+   */
+  const handleCommentPhoneAddContact = (phone: string) => {
+    setActiveRightCardTab('recommenders')
+    void handleStartAddContact(true, phone)
+    setPendingPhonesScroll(true)
   }
 
   const handleStartEditContact = (contact: {
@@ -5804,7 +5875,17 @@ export function ClientDetailPage() {
               </div>
             ))}
 
-          {activeCommentTab === 'primary' && <SaleNotesSection clientId={clientId} />}
+          {activeCommentTab === 'primary' && (
+            <SaleNotesSection
+              clientId={clientId}
+              // The same source the Recommenders tab renders from, so the
+              // comment's green/orange cannot disagree with the tab about
+              // whether a number is already a contact.
+              phoneContacts={client.recommenders}
+              onPhoneCall={handleCommentPhoneCall}
+              onPhoneAddContact={handleCommentPhoneAddContact}
+            />
+          )}
 
           {activeCommentTab === 'searcher' &&
             (isActivitiesLoading ? (
@@ -5932,6 +6013,8 @@ export function ClientDetailPage() {
           callId={currentCallId}
           initialCallType={callModalPreferences?.initialCallType ?? 'white-line'}
           spamOptionEnabled={callModalPreferences?.spamOptionEnabled ?? true}
+          initialManualPhoneEnabled={callModalPreferences?.manualPhoneEnabled ?? false}
+          initialManualPhoneDigits={callModalPreferences?.manualPhoneDigits ?? ''}
           initialState="initial"
           error={callError}
           isLoading={isOriginatingCall}

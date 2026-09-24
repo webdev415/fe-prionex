@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { format, parseISO } from 'date-fns'
 import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
@@ -19,7 +20,7 @@ function formatAddedBy(note: SaleNote, migratedLabel: string): string {
   return note.added_by_name || `user #${note.added_by_user_id}`
 }
 
-export function SaleNoteCard({ note, isLatest, canDelete, onDelete }: Props) {
+function SaleNoteCardImpl({ note, isLatest, canDelete, onDelete }: Props) {
   const { t } = useTranslation('common')
 
   // Q1: DD-MM-YYYY (dashes). Null sale_date → em-dash.
@@ -68,6 +69,12 @@ export function SaleNoteCard({ note, isLatest, canDelete, onDelete }: Props) {
       </div>
       <div className="bg-card p-4">
         <div
+          // The anchor the phone highlighter looks for (KAN-1212). It is ours,
+          // not the creditor's: no imported comment carries this attribute, so
+          // the walk needs somewhere of its own to start. Kept on the element
+          // that owns the injected HTML, because that is exactly the subtree
+          // whose text nodes may be rewritten.
+          data-cc="comment-body"
           className="text-foreground text-sm leading-relaxed"
           dangerouslySetInnerHTML={{ __html: note.content }}
           {...piiProps}
@@ -76,3 +83,20 @@ export function SaleNoteCard({ note, isLatest, canDelete, onDelete }: Props) {
     </div>
   )
 }
+
+/**
+ * Memoised deliberately, and it is load-bearing rather than an optimisation.
+ *
+ * The comment body is injected with `dangerouslySetInnerHTML`, and the phone
+ * highlighter (KAN-1212) wraps numbers inside it by rewriting text nodes. React
+ * owns that subtree: every re-render of this card rewrites the element's
+ * innerHTML and destroys those spans, even though `note.content` never changed
+ * and the card is never re-mounted (measured: 1 mount, 0 unmounts, 3 renders,
+ * 0 surviving spans). Opening the phone panel sets state on the SECTION, so
+ * without this memo the click that opens the panel is also the thing that
+ * deletes the element the panel is anchored to.
+ *
+ * `onDelete` must stay referentially stable for this to hold — see the
+ * useCallback in SaleNotesSection.
+ */
+export const SaleNoteCard = memo(SaleNoteCardImpl)

@@ -74,6 +74,15 @@ export function PhoneActionsDropdown({
     const panel = panelRef.current
     if (!panel) return
 
+    // A detached anchor measures as all zeros, and the clamp below turns that
+    // into top:4 left:8 — the panel silently parks in the top-left corner,
+    // pointing at a number that is no longer on the page. Close instead: there
+    // is nothing left to anchor to.
+    if (!anchor.isConnected) {
+      onClose()
+      return
+    }
+
     const rect = anchor.getBoundingClientRect()
     const { offsetHeight: height, offsetWidth: width } = panel
 
@@ -89,7 +98,7 @@ export function PhoneActionsDropdown({
     )
 
     setPosition({ top, left })
-  }, [anchor])
+  }, [anchor, onClose])
 
   useEffect(() => {
     // Outside click, resize and scroll all close it. Scroll is listened for in
