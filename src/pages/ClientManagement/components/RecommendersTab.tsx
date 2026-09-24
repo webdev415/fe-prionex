@@ -443,7 +443,9 @@ function MessageActionsButton({
   onSendMessage: (phone: string) => void
 }) {
   const { t } = useTranslation('common')
-  const canSms = useHasPermission(PERMISSIONS.COMMUNICATION.SEND_SMS) && useSmsServiceAvailable()
+  const hasSmsPermission = useHasPermission(PERMISSIONS.COMMUNICATION.SEND_SMS)
+  const smsServiceAvailable = useSmsServiceAvailable()
+  const canSms = hasSmsPermission && smsServiceAvailable
   const canMessage = useHasAnyPermission(ALL_MESSAGING_SEND_PERMISSIONS)
   const blockedTitle = blockReason || t('pages.contactTags.smsBlocked', 'SMS blocked')
   const messageTitle = t('pages.clients.detail.sendMessageSmsViber', 'Message (SMS / Viber)')
