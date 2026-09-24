@@ -812,6 +812,11 @@ export interface CreditApplicationsParams {
   sort?: string
   limit?: number
   cursor?: string
+  /** День `YYYY-MM-DD`; границы суток — по календарю юрисдикции заявки, включительно; считает модуль (`listInternalApplications`). */
+  created_from?: string
+  created_to?: string
+  updated_from?: string
+  updated_to?: string
 }
 
 export interface CreditLoansParams {
