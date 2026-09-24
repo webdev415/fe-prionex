@@ -49,6 +49,7 @@ import {
   useContactRateModal,
   useSMSSentModal,
   useMessagesSentModal,
+  type KPITrendUI,
   type Period,
 } from '@/features/report'
 import { PermissionGuard } from '@/components/auth'
@@ -87,6 +88,20 @@ function ErrorState({ message }: { message: string }) {
       </Button>
     </div>
   )
+}
+
+// ============================================================================
+// KPI trend → KPICard props
+// ============================================================================
+
+/**
+ * A KPI without a trend (report-service sent null, board #1448) renders its
+ * value only: no arrow and no «0 %» badge.
+ */
+function kpiTrendProps(trend: KPITrendUI | null) {
+  return trend
+    ? { change: trend.change, changeType: trend.changeType }
+    : { change: 0, changeType: 'increase' as const, hideTrend: true }
 }
 
 // ============================================================================
@@ -324,8 +339,7 @@ function DashboardTab() {
           <KPICard
             title={t('pages.reports.kpi.callsMade')}
             value={(dashboardData.kpis.callsMade || callsFromOperators || 0).toString()}
-            change={dashboardData.kpis.callsTrend.change}
-            changeType={dashboardData.kpis.callsTrend.changeType}
+            {...kpiTrendProps(dashboardData.kpis.callsTrend)}
             icon="phone"
             period={selectedPeriod}
             onViewDetails={() => setShowCallsModal(true)}
@@ -333,8 +347,7 @@ function DashboardTab() {
           <KPICard
             title={t('pages.reports.kpi.contactRate')}
             value={`${(dashboardData.kpis.contactRate || contactRateFromOperators).toFixed(1)}%`}
-            change={dashboardData.kpis.contactRateTrend.change}
-            changeType={dashboardData.kpis.contactRateTrend.changeType}
+            {...kpiTrendProps(dashboardData.kpis.contactRateTrend)}
             icon="chart"
             isPercentage
             percentage={dashboardData.kpis.contactRate || contactRateFromOperators}
@@ -344,8 +357,7 @@ function DashboardTab() {
           <KPICard
             title={t('pages.reports.kpi.smsSent')}
             value={dashboardData.kpis.smsSent.toString()}
-            change={dashboardData.kpis.smsTrend.change}
-            changeType={dashboardData.kpis.smsTrend.changeType}
+            {...kpiTrendProps(dashboardData.kpis.smsTrend)}
             icon="mail"
             period={selectedPeriod}
             onViewDetails={() => setShowSMSModal(true)}
@@ -353,8 +365,7 @@ function DashboardTab() {
           <KPICard
             title={t('pages.reports.kpi.messagesSent')}
             value={dashboardData.kpis.messagesSent.toString()}
-            change={dashboardData.kpis.messagesTrend.change}
-            changeType={dashboardData.kpis.messagesTrend.changeType}
+            {...kpiTrendProps(dashboardData.kpis.messagesTrend)}
             icon="message"
             period={selectedPeriod}
             onViewDetails={() => setShowMessagesModal(true)}
@@ -363,8 +374,7 @@ function DashboardTab() {
             className="sm:col-span-2 lg:col-span-1"
             title={t('pages.reports.kpi.paymentsCollected')}
             value={dashboardData.kpis.paymentsCollected.toString()}
-            change={dashboardData.kpis.paymentsTrend.change}
-            changeType={dashboardData.kpis.paymentsTrend.changeType}
+            {...kpiTrendProps(dashboardData.kpis.paymentsTrend)}
             icon="payments"
             period={selectedPeriod}
             onViewDetails={() => setShowPaymentsModal(true)}
@@ -447,10 +457,13 @@ function DashboardTab() {
             verifiedAmount: dashboardData.kpis.paymentsVerified,
             pendingAmount: dashboardData.kpis.paymentsPending,
             paymentMethods: dashboardData.paymentMethods,
-            trend: {
-              change: dashboardData.kpis.paymentsTrend.change,
-              direction: dashboardData.kpis.paymentsTrend.changeType === 'increase' ? 'up' : 'down',
-            },
+            trend: dashboardData.kpis.paymentsTrend
+              ? {
+                  change: dashboardData.kpis.paymentsTrend.change,
+                  direction:
+                    dashboardData.kpis.paymentsTrend.changeType === 'increase' ? 'up' : 'down',
+                }
+              : undefined,
             topCollectorName: topCollector?.name,
             topCollectorAmount: topCollector?.amount,
           }}

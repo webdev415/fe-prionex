@@ -28,7 +28,8 @@ export interface PaymentData {
     amount: number
     percentage: number
   }>
-  trend: {
+  /** Absent when report-service sends no trend for the KPI (board #1448). */
+  trend?: {
     change: number
     direction: 'up' | 'down'
   }
@@ -175,20 +176,22 @@ export function PaymentsCollectedModal({
                   {totalPayments}{' '}
                   <span className="font-light">{t('pages.reports.paymentsModal.payments')}</span>
                 </span>
-                <span className="flex items-center justify-center gap-2">
-                  {data.trend.direction === 'up' ? (
-                    <Icons.ArrowUp02 size={20} className="text-success-500" />
-                  ) : (
-                    <Icons.ArrowDown02 size={20} className="text-error-500" />
-                  )}
-                  <span className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                    {data.trend.change}%
+                {data.trend && (
+                  <span className="flex items-center justify-center gap-2">
+                    {data.trend.direction === 'up' ? (
+                      <Icons.ArrowUp02 size={20} className="text-success-500" />
+                    ) : (
+                      <Icons.ArrowDown02 size={20} className="text-error-500" />
+                    )}
+                    <span className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                      {data.trend.change}%
+                    </span>
+                    <span className="text-foreground text-sm leading-[150%] font-light tracking-[-0.28px]">
+                      {t('pages.reports.kpi.vs')}{' '}
+                      <span className="font-medium">{getComparisonText()}</span>
+                    </span>
                   </span>
-                  <span className="text-foreground text-sm leading-[150%] font-light tracking-[-0.28px]">
-                    {t('pages.reports.kpi.vs')}{' '}
-                    <span className="font-medium">{getComparisonText()}</span>
-                  </span>
-                </span>
+                )}
               </div>
             </div>
 

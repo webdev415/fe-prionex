@@ -1,5 +1,6 @@
 /**
- * CallsMadeDetailModal — board #1327 (D4, FE part) and #1333 (D9, FE part).
+ * CallsMadeDetailModal — board #1327 (D4, FE part), #1333 (D9, FE part) and
+ * #1448 (a KPI without a trend).
  *
  * react-i18next is mocked globally in src/test/setup.ts — t() returns the key.
  */
@@ -87,5 +88,22 @@ describe('CallsMadeDetailModal «По годинах» (D9 #1333)', () => {
     expect(screen.getByText('pages.reports.callsMadeModal.byHour:')).toBeInTheDocument()
     expect(screen.getByText('09:00-10:00')).toBeInTheDocument()
     expect(screen.getByText('10:00-11:00')).toBeInTheDocument()
+  })
+})
+
+describe('CallsMadeDetailModal without a KPI trend (#1448)', () => {
+  it('shows the trend row when the KPI has a trend', () => {
+    renderModal(modalData())
+
+    expect(screen.getByText('3%')).toBeInTheDocument()
+    expect(screen.getByText('pages.reports.kpi.vs')).toBeInTheDocument()
+  })
+
+  it('shows the total without an arrow, a bare «%» or a comparison when the trend is null', () => {
+    renderModal(modalData({ change: null, changeType: null, previousTotal: null }))
+
+    expect(screen.getByText('pages.reports.callsMadeModal.total: 8365')).toBeInTheDocument()
+    expect(screen.queryByText('pages.reports.kpi.vs')).not.toBeInTheDocument()
+    expect(screen.queryByText('%')).not.toBeInTheDocument()
   })
 })

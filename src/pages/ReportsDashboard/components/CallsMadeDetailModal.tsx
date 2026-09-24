@@ -175,23 +175,26 @@ export function CallsMadeDetailModal({
                   {t('pages.reports.callsMadeModal.operatorsSum')}: {data.operatorsTotal}
                 </div>
               )}
-              <div className="flex items-center justify-center gap-4">
-                <span className="flex items-center justify-center gap-2">
-                  {data.changeType === 'increase' ? (
-                    <Icons.ArrowUp02 size={20} className="text-success-500" />
-                  ) : (
-                    <Icons.ArrowDown02 size={20} className="text-error-500" />
-                  )}
-                  <span className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                    {data.change}%
+              {/* KPI without a trend (null from report-service): no arrow, no «0 %» (#1448) */}
+              {data.change !== null && (
+                <div className="flex items-center justify-center gap-4">
+                  <span className="flex items-center justify-center gap-2">
+                    {data.changeType === 'increase' ? (
+                      <Icons.ArrowUp02 size={20} className="text-success-500" />
+                    ) : (
+                      <Icons.ArrowDown02 size={20} className="text-error-500" />
+                    )}
+                    <span className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                      {data.change}%
+                    </span>
                   </span>
-                </span>
-                <span className="text-foreground text-sm leading-[150%] tracking-[-0.28px]">
-                  <span className="font-light">{t('pages.reports.kpi.vs')} </span>
-                  <span className="font-medium">{getComparisonText()}</span>
-                  <span className="font-light"> ({data.previousTotal})</span>
-                </span>
-              </div>
+                  <span className="text-foreground text-sm leading-[150%] tracking-[-0.28px]">
+                    <span className="font-light">{t('pages.reports.kpi.vs')} </span>
+                    <span className="font-medium">{getComparisonText()}</span>
+                    <span className="font-light"> ({data.previousTotal})</span>
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* By Hour */}

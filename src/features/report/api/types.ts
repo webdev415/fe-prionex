@@ -10,7 +10,12 @@
 // ============================================================================
 
 /**
- * Trend information for KPI comparison
+ * Trend information for KPI comparison.
+ *
+ * Every KPI carries it as `KPITrend | null`: report-service answers null when
+ * it has no comparison value for the period (e.g. `payments_collected` with
+ * `DASHBOARD_TREND_PAYMENTS_AS_OF_STRICT=true` and no payment-service as-of
+ * answer, board #1448).
  */
 export interface KPITrend {
   direction: 'up' | 'down' | 'stable'
@@ -23,7 +28,7 @@ export interface KPITrend {
  */
 export interface KPIValue {
   value: number
-  trend: KPITrend
+  trend: KPITrend | null
 }
 
 /**
@@ -36,7 +41,7 @@ export interface PaymentKPIValue {
   largest_amount?: number | string
   verified_amount?: number | string
   pending_amount?: number | string
-  trend: KPITrend
+  trend: KPITrend | null
 }
 
 /**
@@ -69,7 +74,7 @@ export interface BackendTopOperator {
 export interface MessagingSentKPIValue {
   value: number
   delivery_rate: number
-  trend: KPITrend
+  trend: KPITrend | null
   delivered?: number
   failed?: number
 }

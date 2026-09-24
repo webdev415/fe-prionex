@@ -8,6 +8,8 @@ import { describe, it, expect } from 'vitest'
 import {
   mapPeriodToBackend,
   trendToChangeType,
+  transformTrend,
+  transformDashboard,
   formatDuration,
   parseNumber,
   callsOther,
@@ -18,6 +20,7 @@ import {
 } from '../transformers'
 import type {
   BackendCommunicationStatisticsResponse,
+  BackendDashboardResponse,
   BackendOperatorPerformance,
   BackendOperatorPerformanceResponse,
 } from '../../api/types'
@@ -49,6 +52,83 @@ describe('trendToChangeType', () => {
   it('should return "increase" for "stable"', () => {
     // Stable trends are treated as increase (no decrease indicator)
     expect(trendToChangeType('stable')).toBe('increase')
+  })
+})
+
+describe('KPI without a trend — report-service sends `trend: null` (#1448)', () => {
+  const up = { direction: 'up' as const, change: 12.5, previous_value: 80 }
+
+  /** Report-service dashboard payload; every KPI carries a trend unless overridden. */
+  function dashboardPayload(
+    kpis: Partial<BackendDashboardResponse['kpis']> = {}
+  ): BackendDashboardResponse {
+    return {
+      project_id: 1,
+      period: 'today',
+      generated_at: '2026-09-24T10:00:00Z',
+      kpis: {
+        calls_made: { value: 120, trend: up },
+        contact_rate: { value: 25, trend: up },
+        sms_sent: { value: 30, delivery_rate: 90, trend: up },
+        messages_sent: { value: 10, delivery_rate: 80, trend: up },
+        payments_collected: { total_amount: '1500.00', payment_count: 3, trend: up },
+        ...kpis,
+      },
+      top_operators: [],
+    }
+  }
+
+  it('transformTrend gives null for a null or absent trend', () => {
+    expect(transformTrend(null)).toBeNull()
+    expect(transformTrend(undefined)).toBeNull()
+  })
+
+  it('transformTrend still maps a present trend', () => {
+    expect(transformTrend({ direction: 'down', change: -4, previous_value: 50 })).toEqual({
+      change: 4,
+      changeType: 'decrease',
+      previousValue: 50,
+    })
+  })
+
+  it('transformDashboard keeps the payments KPI and drops only its trend', () => {
+    const ui = transformDashboard(
+      dashboardPayload({
+        // The case of DASHBOARD_TREND_PAYMENTS_AS_OF_STRICT=true with no
+        // payment-service as-of answer.
+        payments_collected: { total_amount: '1500.00', payment_count: 3, trend: null },
+      })
+    )
+
+    expect(ui.kpis.paymentsCollected).toBe(1500)
+    expect(ui.kpis.paymentsCount).toBe(3)
+    expect(ui.kpis.paymentsTrend).toBeNull()
+    expect(ui.kpis.callsTrend).toEqual({ change: 12.5, changeType: 'increase', previousValue: 80 })
+  })
+
+  it('transformDashboard does not throw when every KPI trend is null', () => {
+    const ui = transformDashboard(
+      dashboardPayload({
+        calls_made: { value: 120, trend: null },
+        contact_rate: { value: 25, trend: null },
+        sms_sent: { value: 30, delivery_rate: 90, trend: null },
+        messages_sent: { value: 10, delivery_rate: 80, trend: null },
+        payments_collected: { total_amount: '1500.00', trend: null },
+      })
+    )
+
+    expect(ui.kpis).toMatchObject({
+      callsMade: 120,
+      contactRate: 25,
+      smsSent: 30,
+      messagesSent: 10,
+      paymentsCollected: 1500,
+      callsTrend: null,
+      contactRateTrend: null,
+      smsTrend: null,
+      messagesTrend: null,
+      paymentsTrend: null,
+    })
   })
 })
 
