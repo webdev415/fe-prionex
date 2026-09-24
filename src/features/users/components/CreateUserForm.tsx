@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/Select'
 import { createUserSchema, requireAgentExtension } from '../schemas/userSchemas'
 import { ProjectRoleGroupRow } from './ProjectRoleGroupRow'
+import { getErrorMessage } from '@/lib/errors'
 
 interface Project {
   id: number
@@ -203,13 +204,17 @@ export function CreateUserForm({ projects, onSuccess }: CreateUserFormProps) {
 
   return (
     <form id="create-user-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      {/* API Error Alert */}
+      {/* API Error Alert - the server's refusal in the words of errors.json
+          (a coded refusal such as HUB_ADMIN_ASSIGNMENT_REQUIRES_HUB_ADMIN or
+          PROJECT_SCOPE_DENIED, KAN-1476), not axios' "Request failed with
+          status code 403" */}
       {isError && (
         <Alert variant="error">
           <div>
             <h3 className="font-semibold">{t('pages.users.forms.errorCreating')}</h3>
             <p className="mt-1 text-sm">
-              {error?.message || t('pages.users.forms.errors.failedToCreate')}
+              {(error ? getErrorMessage(error) : '') ||
+                t('pages.users.forms.errors.failedToCreate')}
             </p>
           </div>
         </Alert>

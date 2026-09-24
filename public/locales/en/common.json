@@ -4602,13 +4602,32 @@
         "type": "Type",
         "systemDefault": "System Default",
         "customRole": "Custom Role",
-        "notAvailableForDefault": "Not available for default roles"
+        "notAvailableForDefault": "Not available for default roles",
+        "hubRole": "HUB chat role",
+        "hubRoleNotSet": "Not set — by role name",
+        "hubRoleHint": "Not set: HUB decides the rights by the role name; if HUB does not know the name — minimal rights (employee). Changes take effect in HUB within ~6 min without signing in again",
+        "hubRoleUnavailableOption": "{{code}} (not available for selection)",
+        "hubRoleCatalogUnavailable": "HUB catalogue unavailable",
+        "hubRoleLockedDefault": "Default role: the chat role is set by the system and cannot be changed here.",
+        "hubRoleLockedNotAssignable": "This value is not available for you to choose right now, so it cannot be changed here."
       },
       "accessLevel": {
         "my": "Only mine",
         "group": "My group",
         "department": "My department",
         "all": "Entire project"
+      },
+      "hubRole": {
+        "options": {
+          "none": "No HUB access",
+          "employee": "Employee (minimal rights)",
+          "training_workspace": "Trainer (training workspace)",
+          "quality_workspace": "Quality control (QA workspace)",
+          "lawyer": "Lawyer",
+          "operator": "Operator",
+          "supervisor": "Supervisor",
+          "admin": "HUB administrator"
+        }
       },
       "validation": {
         "nameRequired": "Role name is required",
@@ -12349,7 +12368,6 @@
       "finalAmount": "Final amount",
       "declineCodes": "Decline codes",
       "underwriter": "Underwriter",
-      "underwriterId": "Underwriter id",
       "rationale": "Rationale",
       "rules": "Ruleset / model",
       "decidedAt": "Decided at",
@@ -12433,6 +12451,12 @@
       "loanAgeDays": "Days since disbursement",
       "advanceRefundExcess": "Refund excess after cancellation",
       "supersedesDecision": "Supersedes the previous decision"
+    },
+    "decisionError": {
+      "operatorIdNotNumeric": "The decision was not saved: the user number in your CRM pass is not a whole number, so the decision's author cannot be recorded. Contact the administrator — this is a sign-in setting, not your mistake.",
+      "operatorIdAmbiguous": "The decision was not saved: your CRM pass names two different user numbers, so the decision's author cannot be determined. Contact the administrator.",
+      "underwriterNotTheCaller": "The decision was not saved: the author of a manual decision is the owner of the CRM pass, and the page sent a different number. Refresh the page and try again.",
+      "generic": "The decision was not saved. Try again; if it happens again, contact the administrator."
     },
     "tabs": {
       "form": "Application form",

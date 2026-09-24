@@ -4610,13 +4610,32 @@
         "type": "Tipo",
         "systemDefault": "Predeterminado del sistema",
         "customRole": "Rol personalizado",
-        "notAvailableForDefault": "No disponible para roles predeterminados"
+        "notAvailableForDefault": "No disponible para roles predeterminados",
+        "hubRole": "Rol en el chat (HUB)",
+        "hubRoleNotSet": "Sin definir — según el nombre del rol",
+        "hubRoleHint": "Sin definir: HUB determina los permisos por el nombre del rol; si HUB no conoce el nombre — permisos mínimos (empleado). Los cambios se aplican en HUB en ~6 min sin volver a iniciar sesión",
+        "hubRoleUnavailableOption": "{{code}} (no disponible para seleccionar)",
+        "hubRoleCatalogUnavailable": "catálogo de HUB no disponible",
+        "hubRoleLockedDefault": "Rol predeterminado: el rol en el chat lo fija el sistema y no se puede cambiar aquí.",
+        "hubRoleLockedNotAssignable": "Este valor no está disponible para que lo elija ahora, así que no se puede cambiar aquí."
       },
       "accessLevel": {
         "my": "Solo los míos",
         "group": "Mi grupo",
         "department": "Mi departamento",
         "all": "Todo el proyecto"
+      },
+      "hubRole": {
+        "options": {
+          "none": "Sin acceso a HUB",
+          "employee": "Empleado (permisos mínimos)",
+          "training_workspace": "Formador (espacio de formación)",
+          "quality_workspace": "Control de calidad (espacio QA)",
+          "lawyer": "Abogado",
+          "operator": "Operador",
+          "supervisor": "Supervisor",
+          "admin": "Administrador de HUB"
+        }
       },
       "validation": {
         "nameRequired": "El nombre del rol es obligatorio",
@@ -12394,7 +12413,6 @@
       "finalAmount": "Importe final",
       "declineCodes": "Códigos de rechazo",
       "underwriter": "Analista de crédito",
-      "underwriterId": "ID del analista",
       "rationale": "Justificación",
       "rules": "Conjunto de reglas / modelo",
       "decidedAt": "Decidido el",
@@ -12478,6 +12496,12 @@
       "loanAgeDays": "Días desde el desembolso",
       "advanceRefundExcess": "Excedente de devolución tras la cancelación",
       "supersedesDecision": "Sustituye la decisión anterior"
+    },
+    "decisionError": {
+      "operatorIdNotNumeric": "La decisión no se guardó: el número de usuario de su pase de CRM no es un número entero, por lo que no se puede registrar al autor de la decisión. Contacte al administrador: es un ajuste del inicio de sesión, no un error suyo.",
+      "operatorIdAmbiguous": "La decisión no se guardó: su pase de CRM indica dos números de usuario distintos, por lo que no se puede determinar al autor de la decisión. Contacte al administrador.",
+      "underwriterNotTheCaller": "La decisión no se guardó: el autor de una decisión manual es el titular del pase de CRM, y la página envió otro número. Actualice la página e inténtelo de nuevo.",
+      "generic": "La decisión no se guardó. Inténtelo de nuevo; si vuelve a ocurrir, contacte al administrador."
     },
     "tabs": {
       "form": "Formulario de solicitud",

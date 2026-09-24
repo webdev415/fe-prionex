@@ -31,6 +31,7 @@ import type { UserDetailResponse } from '../types'
 import { useProjects } from '@/features/projects'
 import { ProjectRoleGroupRow } from './ProjectRoleGroupRow'
 import type { ApiProject } from '@/features/projects/types'
+import { getErrorMessage } from '@/lib/errors'
 import { Checkbox } from '@/components/ui/Checkbox'
 
 interface EditUserFormProps {
@@ -250,12 +251,15 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
 
   return (
     <form id="edit-user-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {/* The server's refusal in the words of errors.json (a coded refusal such
+          as HUB_ADMIN_ASSIGNMENT_REQUIRES_HUB_ADMIN or PROJECT_SCOPE_DENIED,
+          KAN-1476), not axios' "Request failed with status code 403" */}
       {isError && (
         <Alert variant="error">
           <div>
             <h3 className="font-semibold">{t('pages.users.forms.edit.errorUpdating')}</h3>
             <p className="mt-1 text-sm">
-              {error?.message || t('pages.users.forms.edit.failedToUpdate')}
+              {(error ? getErrorMessage(error) : '') || t('pages.users.forms.edit.failedToUpdate')}
             </p>
           </div>
         </Alert>
