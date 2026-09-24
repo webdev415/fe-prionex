@@ -197,6 +197,13 @@ describe('emptyToUndefined', () => {
 })
 
 describe('serializeCompanyBankingFields', () => {
+  it('sends a Spanish tax code in capitals and a Ukrainian one unchanged', () => {
+    expect(serializeCompanyBankingFields({ edrpou_code: 'b12345678' }).edrpou_code).toBe(
+      'B12345678'
+    )
+    expect(serializeCompanyBankingFields({ edrpou_code: '12345678' }).edrpou_code).toBe('12345678')
+  })
+
   it('drops empty fields to undefined so the API stores NULL, not ""', () => {
     const out = serializeCompanyBankingFields({
       full_company_name: 'Acme LLC',

@@ -931,6 +931,7 @@ function LetterParametersPanelContent({
             </div>
           ) : (
             <SearchableSelect
+              obscured
               options={clientOptions}
               value={effectiveClientId}
               onValueChange={handleClientSelect}

@@ -18,6 +18,8 @@ import {
   useInteractionTypes,
 } from '@/features/clients/hooks/useNoteInteraction'
 import { Icons } from '@/lib/icons'
+import { uiLocale, withCurrency } from '@/lib/formatters'
+import { piiProps } from '@/lib/openreplay/pii'
 
 interface CallInteractionFormProps {
   clientId: number
@@ -34,10 +36,15 @@ function LoanFactRow({ label, value }: { label: string; value: string }) {
   )
 }
 
-function LoanCard({ loan, currency }: { loan: CallSummaryLoan; currency: string }) {
+function LoanCard({ loan }: { loan: CallSummaryLoan }) {
   const { t } = useTranslation('common')
-  const money = (n: number) =>
-    `${currency}${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  const money = (n: number) => {
+    const text = n.toLocaleString(uiLocale(), {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
+    return withCurrency(text, 'tight')
+  }
   return (
     <div className="border-border bg-muted/30 rounded-lg border p-4">
       <LoanFactRow label={t('dialer.call.loanNumber', 'Number')} value={loan.number} />
@@ -82,7 +89,7 @@ export function CallInteractionForm({ clientId, clientName, phone }: CallInterac
 
   const handleSubmit = async () => {
     if (!resolvedTypeId) {
-      toast.error(t('dialer.call.selectType', 'Please select an interaction type'))
+      toast.error(t('dialer.call.selectTypeRequired', 'Please select an interaction type'))
       return
     }
     try {
@@ -101,15 +108,16 @@ export function CallInteractionForm({ clientId, clientName, phone }: CallInterac
     }
   }
 
-  const currency = summary?.currency ?? '₴'
-
   return (
     <div className="flex flex-col gap-4">
       <div>
         <label className="text-muted-foreground mb-1 block text-xs">
           {t('dialer.call.clientName', "Client's Name")}
         </label>
-        <div className="border-border bg-muted/40 text-foreground rounded-lg border px-3 py-2 text-sm">
+        <div
+          className="border-border bg-muted/40 text-foreground rounded-lg border px-3 py-2 text-sm"
+          {...piiProps}
+        >
           {clientName}
         </div>
         {summary?.tags && summary.tags.length > 0 && (
@@ -149,7 +157,7 @@ export function CallInteractionForm({ clientId, clientName, phone }: CallInterac
           <SelectTrigger
             className="w-full"
             id="dialer-interaction-type"
-            aria-label="Interaction Type"
+            aria-label={t('dialer.call.interactionType', 'Interaction Type')}
           >
             <SelectValue placeholder={t('dialer.call.selectType', 'Select type')} />
           </SelectTrigger>
@@ -179,7 +187,7 @@ export function CallInteractionForm({ clientId, clientName, phone }: CallInterac
         />
       </div>
 
-      {summary?.loan && <LoanCard loan={summary.loan} currency={currency} />}
+      {summary?.loan && <LoanCard loan={summary.loan} />}
 
       <Button
         variant="primary"

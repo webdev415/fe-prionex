@@ -10,7 +10,7 @@ import {
   formatTemplateDate,
   extractIncomingRef,
   extractCaseNo,
-  LEGAL_COMPANY_INFO,
+  projectCompanyInfo,
   type LegalTemplateFillContext,
   downloadLegalAttachment,
   useLegalComposerReplyTemplates,
@@ -21,6 +21,9 @@ import {
   loadReplyDraftForMessage,
 } from '@/features/lawyerWorkplace'
 import { getErrorMessage } from '@/lib/errors'
+import { activeProjectCountry } from '@/lib/projectCountry'
+import { useProjectDetail } from '@/features/projects/hooks/useProjects'
+import { useAuthStore } from '@/stores/authStore'
 import { getFilenameExtensionLabel } from '@/features/lawyerWorkplace/utils/attachmentExtension'
 import { documentApi, type ClientDocument } from '@/features/clients/api/documentApi'
 import { useClientLoans } from '@/features/clients/hooks/useClients'
@@ -31,6 +34,7 @@ import type { LetterDetail, ThreadAttachment } from '../../types'
 import { AttachClientDocumentModal } from './AttachClientDocumentModal'
 import { ReplyComposer } from './ReplyComposer'
 import { EmailMessageBody } from './EmailMessageBody'
+import { piiProps } from '@/lib/openreplay/pii'
 
 function formatReferenceId(referenceId: string): string {
   return referenceId.replace(/-/g, ' · ')
@@ -93,7 +97,9 @@ function AttachmentPill({
         </span>
       </span>
       <div className="min-w-0 flex-1">
-        <p className="text-foreground truncate text-[11px] font-medium">{attachment.filename}</p>
+        <p className="text-foreground truncate text-[11px] font-medium" {...piiProps}>
+          {attachment.filename}
+        </p>
         <p className="text-muted-foreground text-[10px]">{attachment.sizeLabel}</p>
       </div>
       <button
@@ -124,13 +130,20 @@ function MessageCard({
   return (
     <div className="bg-card overflow-hidden rounded-[12px] shadow-sm">
       <div className="flex items-start gap-3 px-4 pt-3.5 pb-2.5">
-        <div className="bg-secondary-100 text-secondary-800 mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-sans text-[14px] font-medium">
+        <div
+          className="bg-secondary-100 text-secondary-800 mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-sans text-[14px] font-medium"
+          {...piiProps}
+        >
           {initials(message.senderName)}
         </div>
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0">
-            <span className="text-foreground text-[13px] font-semibold">{message.senderName}</span>
+            <span className="text-foreground text-[13px] font-semibold" {...piiProps}>
+              {message.senderName}
+            </span>
+            {/* The address is already masked by `obscureTextEmails` in the
+                tracker options, so it needs nothing here. */}
             <span className="text-muted-foreground text-[11px]">{message.senderEmail}</span>
           </div>
           {message.toMailbox && (
@@ -216,6 +229,12 @@ export function EmailThreadPanel({
     enabled: Boolean(letter),
   })
   const replyMutation = useReplyToLegalThread()
+  const projectCountry = useAuthStore((s) => activeProjectCountry(s.user))
+  const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
+  const letterProjectId =
+    letter?.parameters.clientProjectId ?? (activeProjectId ? Number(activeProjectId) : null)
+  const { data: letterProject } = useProjectDetail(letter ? letterProjectId : null)
+  const company = projectCompanyInfo(letterProject?.country ?? projectCountry, letterProject)
   const letterId = letter?.id ?? ''
   const [mailboxOverride, setMailboxOverride] = useState<{
     letterId: string
@@ -250,8 +269,8 @@ export function EmailThreadPanel({
       caseNo: extractCaseNo(letter.subject),
       date: formatTemplateDate(new Date().toISOString(), language),
       lawyerName: lawyerMe?.display_name ?? null,
-      companyName: LEGAL_COMPANY_INFO.name,
-      companyPhone: LEGAL_COMPANY_INFO.phone,
+      companyName: company.name,
+      companyPhone: company.phone,
     }
     const filled = fillTemplateVariables(body, context)
     onReplyDraftChange(replyDraft.trim() ? `${replyDraft.trim()}\n\n${filled}` : filled)
@@ -546,7 +565,12 @@ export function EmailThreadPanel({
             <span className="bg-muted text-muted-foreground border-border w-fit shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] font-medium tracking-wide uppercase">
               {formatReferenceId(letter.referenceId)}
             </span>
-            <h3 className="text-foreground min-w-0 text-[15px] leading-snug font-medium sm:truncate sm:text-[18px]">
+            {/* The subject, not the reference id beside it: the id is what keeps
+                the thread identifiable in a replay. */}
+            <h3
+              className="text-foreground min-w-0 text-[15px] leading-snug font-medium sm:truncate sm:text-[18px]"
+              {...piiProps}
+            >
               {letter.subject}
             </h3>
           </div>
@@ -557,7 +581,10 @@ export function EmailThreadPanel({
               title={t('pages.lawyerWorkplace.openClientCard', 'Open client card')}
             >
               <Icons.User size={12} strokeWidth={1.5} />
-              <span className="max-w-[160px] truncate">
+              {/* The name and the client code arrive as one string, so the
+                  whole span goes. The code is digits, which the tracker masks
+                  anyway. */}
+              <span className="max-w-[160px] truncate" {...piiProps}>
                 {letter.clientName
                   ? `${letter.clientName} · ${letter.clientCode}`
                   : letter.clientCode}

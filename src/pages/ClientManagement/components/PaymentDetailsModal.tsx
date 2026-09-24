@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils'
 import { convertUTCToUserTimezone, formatMoneyUAHTwoDecimals } from '@/lib/formatters'
 import { useAuthStore } from '@/stores/authStore'
 import { PaymentDebtBreakdown } from './PaymentDebtBreakdown'
+import { piiProps } from '@/lib/openreplay/pii'
 // TODO: When backend API is ready, import: import api from '@/lib/api'
 
 export interface PaymentDetails {
@@ -129,11 +130,11 @@ export function PaymentDetailsModal({
       if (onDownloadReceipt) {
         onDownloadReceipt()
       } else {
-        toast.info('Receipt download is not configured for this view yet.')
+        toast.info(t('pages.clients.modals.paymentDetails.receiptNotConfigured'))
       }
     } catch (error) {
       console.error('Error downloading receipt:', error)
-      toast.error('Failed to download receipt. Please try again.')
+      toast.error(t('pages.clients.modals.paymentDetails.receiptDownloadFailed'))
     }
   }
 
@@ -317,7 +318,10 @@ export function PaymentDetailsModal({
                   <span className="text-foreground w-full text-xs leading-[150%] font-light tracking-[-0.28px] sm:w-[120px] sm:text-sm">
                     {t('pages.clients.modals.paymentDetails.name')}
                   </span>
-                  <span className="text-foreground flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm">
+                  <span
+                    className="text-foreground flex-1 text-xs leading-[150%] font-medium tracking-[-0.28px] sm:text-sm"
+                    {...piiProps}
+                  >
                     {payment.clientName}
                   </span>
                 </div>

@@ -7,6 +7,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import i18n from '@/lib/i18n'
 import { projectsApi } from '../api/projectsApi'
 import { projectsKeys } from './useProjects'
 import { getErrorMessage } from '@/lib/errors'
@@ -22,7 +23,9 @@ export function useCreateProject() {
   return useMutation({
     mutationFn: (data: CreateProjectInput) => projectsApi.createProject(data),
     onSuccess: async () => {
-      toast.success('Project created successfully')
+      toast.success(
+        i18n.t('toasts.projects.created', { defaultValue: 'Project created successfully' })
+      )
       queryClient.invalidateQueries({ queryKey: projectsKeys.lists() })
       // Profile Settings project selector is sourced from authStore.user.projects.
       // Refresh user profile so newly-created own projects appear immediately.
@@ -44,7 +47,9 @@ export function useUpdateProject() {
     mutationFn: ({ id, data }: { id: number; data: UpdateProjectInput }) =>
       projectsApi.updateProject(id, data),
     onSuccess: (_, variables) => {
-      toast.success('Project updated successfully')
+      toast.success(
+        i18n.t('toasts.projects.updated', { defaultValue: 'Project updated successfully' })
+      )
       queryClient.invalidateQueries({ queryKey: projectsKeys.detail(variables.id) })
       queryClient.invalidateQueries({ queryKey: projectsKeys.lists() })
     },
@@ -70,7 +75,9 @@ export function useProjectExport() {
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
-      toast.success('Projects exported successfully')
+      toast.success(
+        i18n.t('toasts.projects.exported', { defaultValue: 'Projects exported successfully' })
+      )
     },
     onError: (error) => {
       toast.error(getErrorMessage(error))
@@ -87,7 +94,9 @@ export function useArchiveProject() {
   return useMutation({
     mutationFn: ({ projectId }: { projectId: number }) => projectsApi.archiveProject(projectId),
     onSuccess: (_, variables) => {
-      toast.success('Project archived successfully')
+      toast.success(
+        i18n.t('toasts.projects.archived', { defaultValue: 'Project archived successfully' })
+      )
       queryClient.invalidateQueries({ queryKey: projectsKeys.detail(variables.projectId) })
       queryClient.invalidateQueries({ queryKey: projectsKeys.lists() })
     },
@@ -106,7 +115,9 @@ export function useRestoreProject() {
   return useMutation({
     mutationFn: ({ projectId }: { projectId: number }) => projectsApi.restoreProject(projectId),
     onSuccess: (_, variables) => {
-      toast.success('Project restored successfully')
+      toast.success(
+        i18n.t('toasts.projects.restored', { defaultValue: 'Project restored successfully' })
+      )
       queryClient.invalidateQueries({ queryKey: projectsKeys.detail(variables.projectId) })
       queryClient.invalidateQueries({ queryKey: projectsKeys.lists() })
     },

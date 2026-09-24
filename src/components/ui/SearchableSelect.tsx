@@ -8,8 +8,10 @@
  */
 
 import { useState, useRef, useEffect, useLayoutEffect, useId, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { Icons } from '@/lib/icons'
+import { piiProps } from '@/lib/openreplay/pii'
 
 export interface SearchableSelectOption {
   id: string
@@ -42,6 +44,15 @@ interface SearchableSelectProps {
   emptySearchHint?: string
   disabled?: boolean
   className?: string
+  /**
+   * The options name PEOPLE — record their names as asterisks (KAN-KB-54).
+   *
+   * Opt-in per call site rather than always-on, because the same component
+   * picks portfolios, departments, statuses and tags, none of which are
+   * personal data and all of which have to stay readable in a replay. The
+   * component cannot tell which it is showing; its caller always can.
+   */
+  obscured?: boolean
 }
 
 export function SearchableSelect({
@@ -57,10 +68,12 @@ export function SearchableSelect({
   emptySearchHint = 'Type to search…',
   disabled = false,
   className,
+  obscured = false,
 }: SearchableSelectProps) {
   const generatedId = useId()
   const triggerId = id || generatedId
 
+  const { t } = useTranslation('common')
   const [isOpen, setIsOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [displayName, setDisplayName] = useState(
@@ -172,6 +185,7 @@ export function SearchableSelect({
             'flex-1 truncate text-left',
             displayName ? 'text-foreground' : 'text-muted-foreground'
           )}
+          {...(obscured ? piiProps : {})}
         >
           {displayName || placeholder}
         </span>
@@ -240,7 +254,7 @@ export function SearchableSelect({
               </li>
             ) : filtered.length === 0 ? (
               <li className="text-muted-foreground px-3 py-6 text-center text-xs">
-                No results found
+                {t('components.searchableSelect.noResults', 'No results found')}
               </li>
             ) : (
               filtered.map((option) => (
@@ -266,7 +280,7 @@ export function SearchableSelect({
                     option.id === value && !option.disabled && 'bg-muted font-medium'
                   )}
                 >
-                  <span className="flex min-w-0 flex-col">
+                  <span className="flex min-w-0 flex-col" {...(obscured ? piiProps : {})}>
                     <span className="truncate">{option.name}</span>
                     {option.description ? (
                       <span className="text-muted-foreground text-[11px] font-normal">

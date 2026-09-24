@@ -176,6 +176,7 @@ export function TaHistoryTable({ data, chains, tasById, userTimezone }: Props) {
     {
       key: 'createdBy',
       header: t('pages.actionAnalysis.columns.createdBy', 'Created by'),
+      obscured: true,
       render: (r) => (
         <span className="text-foreground text-sm">
           {r.recorded_by_full_name ?? r.recorded_by_name ?? '—'}
@@ -185,6 +186,7 @@ export function TaHistoryTable({ data, chains, tasById, userTimezone }: Props) {
     {
       key: 'responsibleAtCreation',
       header: t('pages.actionAnalysis.columns.responsibleAtCreation', 'Responsible at creation'),
+      obscured: true,
       render: (r) => (
         <span className="text-foreground text-sm">{r.assigned_operator_name ?? '—'}</span>
       ),

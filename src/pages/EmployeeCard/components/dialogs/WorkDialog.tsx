@@ -297,6 +297,7 @@ export function WorkDialog({ card, projectId, open, onClose }: WorkDialogProps) 
             rather than as an empty field.
           */}
           <SearchableSelect
+            obscured
             id={MANAGER_FIELD}
             options={managers}
             value={managerId}

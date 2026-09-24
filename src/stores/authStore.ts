@@ -9,9 +9,11 @@ import {
   setAccessToken,
   triggerAuthExpired,
 } from '@/lib/api'
-import { applyPersistedLanguageFromServer } from '@/lib/i18n'
+import i18n, { applyPersistedLanguageFromServer } from '@/lib/i18n'
 import { applyPersistedThemeFromServer } from '@/stores/themeStore'
 import { cancelSessionHeartbeat, scheduleSessionHeartbeat } from '@/lib/sessionHeartbeat'
+import { activeProjectCountry, setActiveCountry } from '@/lib/projectCountry'
+import { activeProjectCurrency, setActiveCurrency } from '@/lib/projectCurrency'
 import type { User, LoginRequest, AuthErrorState } from '@/types/api'
 import {
   buildUserFromJwtToken,
@@ -80,12 +82,32 @@ async function resolveAuthUser(
       user = mergeUserFromProjectsResponse(user, projectsResponse.data)
     } catch {
       // Keep JWT-derived user (permissions, names from login payload)
+      user = withCachedProjectSettings(user)
     }
   }
   // KAN-757: per-tab access ceilings live only on the JWT (not /users/me), so
   // overlay them here regardless of which profile source won.
   user.tab_access_levels = extractTabAccessLevels(token)
   return user
+}
+
+function withCachedProjectSettings(user: User): User {
+  let cached: Record<string, { currency?: string; country?: string } | undefined>
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem('project_settings') ?? '{}')
+    if (!parsed || typeof parsed !== 'object') return user
+    cached = parsed as typeof cached
+  } catch {
+    return user
+  }
+  return {
+    ...user,
+    projects: user.projects?.map((p) => ({
+      ...p,
+      currency: p.currency ?? cached[p.id]?.currency,
+      country: p.country ?? cached[p.id]?.country,
+    })),
+  }
 }
 
 /** Read the `tab_access_levels` claim off the JWT (empty map when absent). */
@@ -673,7 +695,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           })
           return
         }
-        const user = buildUserFromJwtToken(token)
+        const user = withCachedProjectSettings(buildUserFromJwtToken(token))
         // The JWT carries no timezone and /me is unreachable, so restore it
         // from the localStorage cache (written by the subscription below),
         // falling back to the browser timezone.
@@ -682,10 +704,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
         // Show a sticky "reconnecting" toast, dismissed once auth-service is
         // reachable again (see the interceptor in api.ts).
-        toast.warning('Connection problem — reconnecting…', {
-          id: 'auth-offline',
-          duration: Infinity,
-        })
+        toast.warning(
+          i18n.t('components.connection.reconnecting', {
+            defaultValue: 'Connection problem — reconnecting…',
+          }),
+          {
+            id: 'auth-offline',
+            duration: Infinity,
+          }
+        )
         runOnceOnNextAuthSuccess(() => {
           toast.dismiss('auth-offline')
         })
@@ -820,6 +847,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           {
             id: String(active_project.project_id),
             name: active_project.project_name,
+            currency: active_project.currency,
+            country: active_project.country,
             roles: [{ id: String(active_project.role_id), name: active_project.role_name }],
           },
         ],
@@ -844,7 +873,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const meResponse = await authApi.me()
         userForApp = mapBackendUserToUser(meResponse.data)
       } catch {
-        userForApp = targetUserProfile
+        userForApp = withCachedProjectSettings(targetUserProfile)
       }
 
       set({
@@ -1003,6 +1032,20 @@ useAuthStore.subscribe((state) => {
   if (tz && tz !== lastPersistedTimezone) {
     lastPersistedTimezone = tz
     localStorage.setItem('user_timezone', tz)
+  }
+})
+
+useAuthStore.subscribe((state) => {
+  setActiveCurrency(activeProjectCurrency(state.user))
+  setActiveCountry(activeProjectCountry(state.user))
+  const settings = Object.fromEntries(
+    (state.user?.projects ?? [])
+      .filter((p) => p.currency || p.country)
+      .map((p) => [p.id, { currency: p.currency, country: p.country }])
+  )
+  const serialized = JSON.stringify(settings)
+  if (serialized !== '{}' && serialized !== localStorage.getItem('project_settings')) {
+    localStorage.setItem('project_settings', serialized)
   }
 })
 

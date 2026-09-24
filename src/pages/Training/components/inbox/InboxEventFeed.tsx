@@ -5,6 +5,7 @@ import type { TeamEvent, TeamEventSeverity, TeamEventType } from '@/features/qua
 import { useOperators } from '@/features/users/hooks'
 import { useAuthStore } from '@/stores/authStore'
 import { formatTimeShort } from '@/lib/localeFormat'
+import { piiProps } from '@/lib/openreplay/pii'
 
 /**
  * Team event feed inside the operator detail panel (KAN-413 Figma
@@ -140,7 +141,9 @@ export function InboxEventFeed({ userIds, hours = 24, limit = 20 }: InboxEventFe
             </div>
 
             <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <p className="text-xs font-semibold text-[#05040D]">{operatorName}</p>
+              <p className="text-xs font-semibold text-[#05040D]" {...piiProps}>
+                {operatorName}
+              </p>
               <p className="text-[11px] leading-[15px] font-medium text-[#05040D]">{event.title}</p>
               {event.description ? (
                 <p className="text-[11px] leading-[15px] text-[#676767]">{event.description}</p>

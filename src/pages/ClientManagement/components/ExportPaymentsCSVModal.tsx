@@ -7,7 +7,7 @@
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { intlLocaleForUiLanguage } from '@/lib/i18n'
-import { convertUTCToUserTimezone } from '@/lib/formatters'
+import { convertUTCToUserTimezone, withCurrency } from '@/lib/formatters'
 import { useAuthStore } from '@/stores/authStore'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
@@ -68,12 +68,14 @@ export function ExportPaymentsCSVModal({
 
   const formatCurrency = (amount: string | number) => {
     const num = typeof amount === 'string' ? parseFloat(amount) : amount
-    if (isNaN(num)) return '₴ 0.00'
+    if (isNaN(num)) return withCurrency('0.00')
     const locale = intlLocaleForUiLanguage(i18n.language)
-    return `₴ ${num.toLocaleString(locale, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`
+    return withCurrency(
+      num.toLocaleString(locale, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })
+    )
   }
   // Default to no date filter so all payments are exported unless user chooses a range
   const [startDate, setStartDate] = useState<Date | null>(null)

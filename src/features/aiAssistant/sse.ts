@@ -319,6 +319,16 @@ export interface SseDonePayload {
   session_id?: number | string
   /** Token usage / accounting block (opaque to the UI). */
   usage?: Record<string, unknown>
+  /**
+   * Факт хода 31B: что клиент ПОПРОСИЛ (`thinking` в теле запроса) и что модель
+   * реально сделала. Два поля, а не одно: сервер вправе ответить иначе, чем его
+   * просили (раздумья принудительно включены/выключены на его стороне), и
+   * оператор должен видеть расхождение, а не свою настройку.
+   *
+   * Необязательны: старый шлюз их не шлёт — чип факта просто не появляется.
+   */
+  thinking_requested?: boolean
+  thinking_used?: boolean
   [key: string]: unknown
 }
 

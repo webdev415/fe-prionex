@@ -11,6 +11,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { CallDialogModal } from '../CallDialogModal'
 import * as useCallHook from '@/features/calls/hooks/useCall'
 import * as callStoreModule from '@/stores/callStore'
+import { useAuthStore } from '@/stores/authStore'
 import { CALL_MODAL_AUTO_CLOSE_SECONDS } from '@/features/calls/constants/callModal'
 
 // Mock dependencies
@@ -191,10 +192,48 @@ describe('CallDialogModal', () => {
       expect(mockOnCallStart).toHaveBeenCalledWith('white-line', '380971234567')
     })
 
+    it('passes an 11-digit Spanish number when manual entry is valid', () => {
+      render(<CallDialogModal {...defaultProps} />, { wrapper: createWrapper() })
+
+      fireEvent.click(screen.getByRole('checkbox'))
+      const phoneInput = screen.getAllByRole('textbox')[1]
+      fireEvent.change(phoneInput, { target: { value: '+34 612 345 678' } })
+      fireEvent.click(screen.getByRole('button', { name: 'Call Now' }))
+
+      expect(mockOnCallStart).toHaveBeenCalledWith('white-line', '34612345678')
+    })
+
+    it('shows the Spanish number format in a Spanish project', () => {
+      useAuthStore.setState({
+        user: {
+          id: '1',
+          username: 'operator',
+          projects: [{ id: '2', name: 'Madrid', country: 'ES', roles: [] }],
+          active_project_id: '2',
+          active_role_id: null,
+          active_role_name: null,
+          active_department_id: null,
+          is_agent: false,
+          agent_status: 'offline',
+        },
+      })
+      render(<CallDialogModal {...defaultProps} />, { wrapper: createWrapper() })
+
+      fireEvent.click(screen.getByRole('checkbox'))
+
+      expect(
+        screen.getByPlaceholderText('pages.clients.modals.callDialog.manualPhonePlaceholderSpain')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText('pages.clients.modals.callDialog.manualPhoneHintSpain')
+      ).toBeInTheDocument()
+      useAuthStore.setState({ user: null })
+    })
+
     it('should call minimize handler when minimize button is clicked', () => {
       render(<CallDialogModal {...defaultProps} />, { wrapper: createWrapper() })
 
-      const minimizeButton = screen.getByLabelText('Minimize modal')
+      const minimizeButton = screen.getByLabelText('components.modal.minimize')
       fireEvent.click(minimizeButton)
 
       expect(mockSetMinimizedCall).toHaveBeenCalled()

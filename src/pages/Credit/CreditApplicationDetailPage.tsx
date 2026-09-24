@@ -20,17 +20,23 @@ import {
 } from '@/features/credit/hooks/useCredit'
 import type { CreditApiError } from '@/features/credit/api/creditApi'
 import { normalizeDraft } from '@/features/credit/api/draft'
+import { CREDIT_DOCUMENT_META_KINDS } from '@/features/credit/api/enums'
 import type { CreditApplicationDetail, CreditDecisionOutcome } from '@/features/credit/api/types'
 import { CreditStatusBadge } from './components/CreditStatusBadge'
 import { CreditDocumentOpenButton } from './components/CreditDocumentOpenButton'
 import { CreditDraftBlocks } from './components/CreditDraftBlocks'
 import { CreditFlagList } from './components/CreditFlagList'
+import { CreditStageProgress } from './components/CreditStageProgress'
+import { CreditClientLink } from './components/CreditClientLink'
 import { collectApplicationFlags } from '@/features/credit/api/applicantFlags'
+import { formatIdle, idleMinutes } from '@/features/credit/api/idle'
+import { useNowTick } from '@/features/credit/hooks/useNowTick'
 import {
   CreditCardHeader,
   CreditNotice,
   type CreditHeaderMetric,
 } from './components/CreditCardHeader'
+import { CreditIdentifierRows } from './components/CreditIdentifiers'
 import { CreditIbvTab } from './components/CreditIbvTab'
 import { CreditDecisionBasis } from './components/CreditDecisionBasis'
 import {
@@ -38,6 +44,7 @@ import {
   formatCreditPercent,
   formatCreditRate,
 } from '@/features/credit/api/money'
+import { Pii } from '@/lib/openreplay/pii'
 
 const DECLINE_CODES = ['RC-04', 'RC-08', 'RC-11']
 const DECIDABLE_STATUSES = ['scoring', 'referred']
@@ -74,6 +81,9 @@ export function CreditApplicationDetailPage() {
   const { data: overview } = useCreditOverview()
   const { data: application, isLoading, error } = useCreditApplication(applicationId)
   const [tab, setTab] = useState('form')
+  // Своим тиком, а не по приходу данных: карточку держат открытой часами,
+  // а запрос может не повториться ни разу — «5 хвилин тому» замёрзло бы.
+  const now = useNowTick()
 
   const canDecide = Boolean(overview?.permissions.includes('credit.decisions.decide'))
 
@@ -138,6 +148,13 @@ export function CreditApplicationDetailPage() {
   const stuck =
     UNFINISHED_STATUSES.includes(application.status) &&
     (application.resume_step || (application.missing_fields ?? []).length > 0)
+  // Сколько заявка стоит без движения. Модуль не пишет время входа в каждый
+  // шаг анкеты, поэтому «сколько он там стоит» строим от `updated_at` —
+  // единственной метки, которая уже есть (см. `api/idle.ts`).
+  const idle = idleMinutes(application.updated_at, now)
+  const standing = application.client_standing
+  const cooldownActive =
+    !!standing?.cooldown_until && new Date(standing.cooldown_until).getTime() > now.getTime()
   // «Что-то не так» — требование CEO. Два вида признаков держим раздельно:
   // противоречия и нехватка требуют от оператора разных действий.
   const flags = collectApplicationFlags(application)
@@ -185,6 +202,44 @@ export function CreditApplicationDetailPage() {
                     {(application.missing_fields ?? [])
                       .map((field) => t(`credit.blocks.${field}`, field))
                       .join(', ')}
+                  </>
+                )}
+                {idle !== null && (
+                  <>
+                    {' · '}
+                    {t('credit.card.idleFor', { duration: formatIdle(idle, t) })}
+                  </>
+                )}
+              </CreditNotice>
+            )}
+            {/* Весь путь клиента по этапам: этап, его номер и длину пути
+                присылает МОДУЛЬ — тот же ответ, по которому клиент видит свой
+                шаг в кабинете. Стоит рядом с «застряв на кроці» намеренно: та
+                строка отвечает «где встал», эта — «сколько позади и сколько
+                осталось». */}
+            <CreditStageProgress application={application} />
+            {/* Основания, на которых машина откажет: непогашенный заём и
+                остывание после прошлого отказа. Оператор решает здесь же —
+                значит и предъявлять их надо здесь. */}
+            {(cooldownActive || (standing?.outstanding_loans ?? []).length > 0) && (
+              <CreditNotice>
+                {(standing?.outstanding_loans ?? []).length > 0 && (
+                  <>
+                    {t('credit.card.outstandingLoans')}:{' '}
+                    {(standing?.outstanding_loans ?? [])
+                      .map(
+                        (loan) =>
+                          `${loan.contract_number} (${t(`credit.loanStatus.${loan.status}`, loan.status)})`
+                      )
+                      .join(', ')}
+                  </>
+                )}
+                {cooldownActive && (standing?.outstanding_loans ?? []).length > 0 && ' · '}
+                {cooldownActive && (
+                  <>
+                    {t('credit.card.cooldownUntil', {
+                      date: formatDate(standing?.cooldown_until ?? ''),
+                    })}
                   </>
                 )}
               </CreditNotice>
@@ -239,11 +294,17 @@ function ApplicationForm({ application }: { application: CreditApplicationDetail
         </Alert>
       )}
       <Panel title={t('credit.card.applicant')}>
-        <Field label={t('credit.fields.name')}>{applicant.fullName || '—'}</Field>
+        {/* `Field` takes {label, children} and forwards nothing, so the
+            attribute cannot be spread onto it — the wrapper goes inside. */}
+        <Field label={t('credit.fields.name')}>
+          <Pii>{applicant.fullName || '—'}</Pii>
+        </Field>
         <Field label={t('credit.fields.email')}>{applicant.email ?? '—'}</Field>
         <Field label={t('credit.fields.phone')}>{applicant.phone ?? '—'}</Field>
         <Field label={t('credit.fields.birthDate')}>{applicant.birthDate ?? '—'}</Field>
-        <Field label={t('credit.fields.address')}>{applicant.address ?? '—'}</Field>
+        <Field label={t('credit.fields.address')}>
+          <Pii>{applicant.address ?? '—'}</Pii>
+        </Field>
         {identityMatch !== undefined && (
           <Field label={t('credit.fields.identityMatch')}>
             <span className={identityMatch >= 0.9 ? 'text-success-700' : 'text-warning-800'}>
@@ -326,8 +387,13 @@ function ApplicationForm({ application }: { application: CreditApplicationDetail
 
       <Panel title={t('credit.card.links')}>
         <Field label={t('credit.fields.clientId')}>
+          {/* Раньше здесь стояло «клієнта ще не створено», и это обещало, что
+              запись появится сама. Не появится: CRM требует при создании
+              десятизначный налоговый номер, у канадского заёмщика такого нет.
+              Теперь ищем по телефону сами и говорим, что именно узнали —
+              включая «не искали», которое не равно «не найдено». */}
           {application.client_id === null ? (
-            <span className="text-muted-foreground text-xs">{t('credit.card.clientPending')}</span>
+            <CreditClientLink clientId={null} phone={application.client_phone} />
           ) : (
             <Link
               to={`/dashboard/clients/${application.client_id}`}
@@ -350,6 +416,31 @@ function ApplicationForm({ application }: { application: CreditApplicationDetail
           )}
         </Field>
       </Panel>
+
+      {/* Ссылка «Відкрити кредит» отвечает на «куда нажать», но не на «что
+          продиктовать»: сами идентификаторы в ней не видны. */}
+      <Panel title={t('credit.card.identifiers')}>
+        <CreditIdentifierRows
+          items={[
+            {
+              key: 'application',
+              label: t('credit.fields.applicationId'),
+              value: application.application_id,
+            },
+            {
+              key: 'external',
+              label: t('credit.fields.externalApplicationId'),
+              value: application.external_application_id,
+            },
+            {
+              key: 'decision',
+              label: t('credit.fields.decisionId'),
+              value: application.decision_id,
+            },
+            { key: 'loan', label: t('credit.fields.loanId'), value: application.loan_id },
+          ]}
+        />
+      </Panel>
     </>
   )
 }
@@ -357,7 +448,18 @@ function ApplicationForm({ application }: { application: CreditApplicationDetail
 function ApplicationDocuments({ application }: { application: CreditApplicationDetail }) {
   const { t } = useTranslation('common')
   const [failure, setFailure] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
   const documents = application.documents ?? []
+  // Плашка над таблицей одна: отказ и уведомление вытесняют друг друга, иначе
+  // запоздавший ответ одного документа лёг бы рядом с итогом другого.
+  const showFailure = (message: string | null) => {
+    setFailure(message)
+    if (message !== null) setNotice(null)
+  }
+  const showNotice = (message: string | null) => {
+    setNotice(message)
+    if (message !== null) setFailure(null)
+  }
 
   return (
     <Panel title={t('credit.tabs.documents')}>
@@ -366,6 +468,15 @@ function ApplicationDocuments({ application }: { application: CreditApplicationD
           {failure}
         </Alert>
       )}
+      {/* Живая область стоит в DOM всегда: вставленную вместе с текстом часть
+          дикторов не объявляет, а у самой плашки роли нет. */}
+      <div role="status" aria-live="polite">
+        {notice && (
+          <CreditNotice tone="info" className="mb-3">
+            {notice}
+          </CreditNotice>
+        )}
+      </div>
       {documents.length === 0 ? (
         <p className="text-muted-foreground text-sm">{t('credit.card.noDocuments')}</p>
       ) : (
@@ -381,13 +492,22 @@ function ApplicationDocuments({ application }: { application: CreditApplicationD
           <tbody>
             {documents.map((doc) => (
               <tr key={doc.document_id} className="border-border border-b last:border-0">
-                <td className="py-2">{t(`credit.documentKind.${doc.kind}`, doc.kind)}</td>
+                <td className="py-2">
+                  {CREDIT_DOCUMENT_META_KINDS.includes(doc.kind)
+                    ? t(`credit.documentKind.${doc.kind}`)
+                    : t('credit.documentKind.unknown', { code: doc.kind })}
+                </td>
                 <td className="py-2 font-mono text-xs">{doc.title ?? doc.document_id}</td>
                 <td className="text-muted-foreground py-2 text-xs">
                   {formatDateTime(doc.generated_at)}
                 </td>
                 <td className="py-2 text-right">
-                  <CreditDocumentOpenButton document={doc} onError={setFailure} />
+                  <CreditDocumentOpenButton
+                    document={doc}
+                    owner={{ kind: 'application', id: application.application_id }}
+                    onError={showFailure}
+                    onNotice={showNotice}
+                  />
                 </td>
               </tr>
             ))}
@@ -468,6 +588,24 @@ function ApplicationDecision({
             {decision.ruleset_version} / {decision.model_version}
           </Field>
           <Field label={t('credit.fields.decidedAt')}>{formatDateTime(decision.decided_at)}</Field>
+          {/* Указатель, а не ссылка: двери «решение по id» в модуле нет
+              (replayDecision отвечает 501), заявка несёт только действующее
+              решение, и ссылка вела бы на эту же карточку или в никуда. Id с
+              копированием — то, что оператор передаст разработчику.
+              `null` — «ничего не заменяло», поэтому строки нет вовсе, а не
+              прочерк, как у прочих идентификаторов. Ключа нет (модуль старше
+              B-3) — строки тоже нет: такой модуль решений не пересматривает. */}
+          {decision.supersedes_decision_id && (
+            <CreditIdentifierRows
+              items={[
+                {
+                  key: 'supersedes',
+                  label: t('credit.fields.supersedesDecision'),
+                  value: decision.supersedes_decision_id,
+                },
+              ]}
+            />
+          )}
         </Panel>
       )}
 

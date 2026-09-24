@@ -27,10 +27,10 @@ interface CreateRoleFormProps {
 }
 
 const createRoleSchema = z.object({
-  name: z.string().min(1, 'Role name is required'),
+  name: z.string().min(1, 'pages.roles.validation.nameRequired'),
   description: z.string().optional(),
   department_id: z.number().nullable().optional(),
-  permission_ids: z.array(z.number()).min(1, 'Please select at least one permission'),
+  permission_ids: z.array(z.number()).min(1, 'pages.roles.validation.permissionsRequired'),
 })
 
 type CreateRoleFormData = z.infer<typeof createRoleSchema>
@@ -137,7 +137,9 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
           placeholder={t('pages.roles.forms.placeholders.roleName')}
           disabled={createMutation.isPending}
         />
-        {errors.name && <p className="text-error-500 mt-1 text-sm">{errors.name.message}</p>}
+        {errors.name && (
+          <p className="text-error-500 mt-1 text-sm">{t(errors.name.message ?? '')}</p>
+        )}
       </div>
 
       {/* Description */}
@@ -161,7 +163,9 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
       <div>
         <Label htmlFor="department_id">
           {t('pages.roles.forms.department')}
-          <span className="text-muted-foreground ml-1 text-sm font-light">(Optional)</span>
+          <span className="text-muted-foreground ml-1 text-sm font-light">
+            {t('pages.roles.forms.optional')}
+          </span>
         </Label>
         <select
           id="department_id"
@@ -191,7 +195,10 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
         <Label>
           {t('pages.roles.forms.permissions')}
           <span className="text-muted-foreground ml-2 text-sm font-light">
-            (Selected: {selectedPermissions.length} of {permissions.length} permissions)
+            {t('pages.roles.forms.selectedPermissions', {
+              selected: selectedPermissions.length,
+              total: permissions.length,
+            })}
           </span>
         </Label>
 
@@ -263,7 +270,7 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
           )}
         </div>
         {errors.permission_ids && (
-          <p className="text-error-500 mt-1 text-sm">{errors.permission_ids.message}</p>
+          <p className="text-error-500 mt-1 text-sm">{t(errors.permission_ids.message ?? '')}</p>
         )}
       </div>
 

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { useOperatorCoachingDetail } from '../hooks'
 import type { CoachingPeriod, ScoreBand } from '../types'
+import { piiProps } from '@/lib/openreplay/pii'
 
 /**
  * Right-side operator detail panel (KAN-413 §3.5, §1.8). Shared by:
@@ -421,7 +422,9 @@ export function OperatorDetailPanel({
               </div>
 
               <div className="min-w-0 flex-1 pt-0.5">
-                <h2 className="text-foreground text-sm font-semibold">{displayName}</h2>
+                <h2 className="text-foreground text-sm font-semibold" {...piiProps}>
+                  {displayName}
+                </h2>
                 <p className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[11px] leading-4">
                   {[department, segment, effectiveGroupName]
                     .filter((v): v is string => Boolean(v))

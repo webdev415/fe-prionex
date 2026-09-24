@@ -1,6 +1,7 @@
 import { cn } from '@/lib/utils'
 import { sanitizeEmailHtmlForDisplay } from '@/features/lawyerWorkplace/utils/emailHtml'
 import type { ThreadMessageBodyFormat } from '../../types'
+import { piiProps } from '@/lib/openreplay/pii'
 
 export interface EmailMessageBodyProps {
   body: string
@@ -23,6 +24,12 @@ export function EmailMessageBody({ body, bodyFormat, className }: EmailMessageBo
         )}
         // Backend bleaches HTML on ingest; sanitize again before rendering.
         dangerouslySetInnerHTML={{ __html: safeHtml }}
+        // 🔴 The whole letter, from or to a client. `dangerouslySetInnerHTML` is
+        // a sink the static audit treats as unmaskable by default: nothing it
+        // renders has an identifier, so the ONLY way to cover it is an attribute
+        // on the sink itself or an ancestor. Inheritance then covers every text
+        // node the HTML produces.
+        {...piiProps}
       />
     )
   }
@@ -33,6 +40,7 @@ export function EmailMessageBody({ body, bodyFormat, className }: EmailMessageBo
         'text-foreground overflow-wrap-anywhere text-[13px] leading-relaxed break-words whitespace-pre-wrap',
         className
       )}
+      {...piiProps}
     >
       {trimmed}
     </p>

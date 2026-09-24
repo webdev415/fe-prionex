@@ -1,9 +1,57 @@
 import i18n, { intlLocaleForUiLanguage } from './i18n'
 import { isRealCalendarDate } from './calendarDate'
+import { activeCurrency, isEuroCurrency } from './projectCurrency'
 
 /**
  * Formatting utilities for display
  */
+
+function isSpanishUi(): boolean {
+  return (i18n.language ?? '').split('-')[0].toLowerCase() === 'es'
+}
+
+export function dateSeparator(): string {
+  return isSpanishUi() ? '/' : '-'
+}
+
+export function uiLocale(): string | undefined {
+  return isSpanishUi() ? 'es-ES' : undefined
+}
+
+export function uiDecimal(text: string): string {
+  return isSpanishUi() ? text.replace('.', ',') : text
+}
+
+function amountOrZero(amount: string | number | null | undefined): number {
+  const num = typeof amount === 'string' ? parseFloat(amount) : Number(amount ?? 0)
+  return Number.isNaN(num) ? 0 : num
+}
+
+function formatEuro(num: number, fractionDigits: number, useGrouping = true): string {
+  return new Intl.NumberFormat(intlLocaleForUiLanguage(i18n.language), {
+    style: 'currency',
+    currency: 'EUR',
+    currencyDisplay: 'narrowSymbol',
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+    useGrouping,
+  }).format(num)
+}
+
+export function withCurrency(
+  amountText: string,
+  uahStyle: 'prefix' | 'suffix' | 'tight' = 'prefix',
+  currency: string | null | undefined = activeCurrency()
+): string {
+  if (isEuroCurrency(currency)) {
+    if (intlLocaleForUiLanguage(i18n.language) !== 'en-US') return `${amountText} €`
+    const sign = amountText.startsWith('-') ? '-' : ''
+    return `${sign}€${amountText.slice(sign.length).trim()}`
+  }
+  if (uahStyle === 'suffix') return `${amountText} ₴`
+  if (uahStyle === 'tight') return `₴${amountText}`
+  return `₴ ${amountText}`
+}
 
 /**
  * Helper: format a Date object to DD-MM-YYYY
@@ -12,7 +60,8 @@ function toDMY(d: Date): string {
   const day = String(d.getDate()).padStart(2, '0')
   const month = String(d.getMonth() + 1).padStart(2, '0')
   const year = d.getFullYear()
-  return `${day}-${month}-${year}`
+  const sep = dateSeparator()
+  return `${day}${sep}${month}${sep}${year}`
 }
 
 /** DD.MM.YYYY (e.g. SMS template {due_date}) */
@@ -34,7 +83,9 @@ export function formatPeriod(startDate?: string, endDate?: string): string {
   if (startDate && endDate) {
     return `${fmt(startDate)} - ${fmt(endDate)}`
   }
-  return startDate ? `From ${fmt(startDate)}` : `Until ${fmt(endDate!)}`
+  return startDate
+    ? `${i18n.t('components.period.from', { defaultValue: 'From' })} ${fmt(startDate)}`
+    : `${i18n.t('components.period.until', { defaultValue: 'Until' })} ${fmt(endDate!)}`
 }
 
 /**
@@ -53,11 +104,13 @@ export function parseAmount(value: string | number | null | undefined): number {
  * Accepts both string and number inputs (backend sends financial fields as strings).
  * Example: "₴ 10 080" or "₴ 1,234" (depending on locale)
  */
-export function formatCurrency(amount?: string | number | null): string {
+export function formatCurrency(amount?: string | number | null, currency?: string | null): string {
   if (amount === undefined || amount === null) return '—'
 
   const num = typeof amount === 'string' ? parseFloat(amount) : amount
   if (isNaN(num)) return '—'
+
+  if (isEuroCurrency(currency ?? activeCurrency())) return formatEuro(num, 0)
 
   const locale = intlLocaleForUiLanguage(i18n.language)
 
@@ -78,6 +131,7 @@ export function formatCurrency(amount?: string | number | null): string {
  * spec is `₴5000.00` exactly.
  */
 export function formatMoneyKopeckTight(amount: string | number | null | undefined): string {
+  if (isEuroCurrency()) return formatEuro(amountOrZero(amount), 2, false)
   if (amount === undefined || amount === null || amount === '') return '₴0.00'
   const num = typeof amount === 'string' ? parseFloat(amount) : Number(amount)
   if (Number.isNaN(num)) return '₴0.00'
@@ -86,7 +140,7 @@ export function formatMoneyKopeckTight(amount: string | number | null | undefine
   const cents = Math.round(abs * 100 + Number.EPSILON)
   const intPart = Math.floor(cents / 100)
   const frac = cents % 100
-  const body = `${intPart}.${String(frac).padStart(2, '0')}`
+  const body = `${intPart}${isSpanishUi() ? ',' : '.'}${String(frac).padStart(2, '0')}`
   return negative ? `₴-${body}` : `₴${body}`
 }
 
@@ -96,6 +150,7 @@ export function formatMoneyKopeckTight(amount: string | number | null | undefine
  * Examples: 50 → "₴ 50.00", 50.5 → "₴ 50.50", 50.559 → "₴ 50.56"
  */
 export function formatMoneyUAHTwoDecimals(amount: string | number | null | undefined): string {
+  if (isEuroCurrency()) return formatEuro(amountOrZero(amount), 2)
   if (amount === undefined || amount === null || amount === '') {
     return '₴ 0.00'
   }
@@ -108,9 +163,10 @@ export function formatMoneyUAHTwoDecimals(amount: string | number | null | undef
   const cents = Math.round(abs * 100 + Number.EPSILON)
   const intPart = Math.floor(cents / 100)
   const frac = cents % 100
-  const grouped = String(intPart).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+  const spanish = isSpanishUi()
+  const grouped = String(intPart).replace(/\B(?=(\d{3})+(?!\d))/g, spanish ? '.' : ' ')
   const fracStr = String(frac).padStart(2, '0')
-  const body = `${grouped}.${fracStr}`
+  const body = `${grouped}${spanish ? ',' : '.'}${fracStr}`
   return negative ? `₴ -${body}` : `₴ ${body}`
 }
 
@@ -119,7 +175,7 @@ export function formatMoneyUAHTwoDecimals(amount: string | number | null | undef
  */
 export function formatNumber(num?: number): string {
   if (num === undefined || num === null) return '—'
-  return new Intl.NumberFormat('en-US').format(num)
+  return new Intl.NumberFormat(isSpanishUi() ? 'es-ES' : 'en-US').format(num)
 }
 
 /**
@@ -136,7 +192,8 @@ export function formatIsoDate(dateStr?: string | null): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(datePart)
   if (!match) return '—'
   const [, year, month, day] = match
-  return `${day}-${month}-${year}`
+  const sep = dateSeparator()
+  return `${day}${sep}${month}${sep}${year}`
 }
 
 /** A bare calendar date — no time, no zone: "2026-10-02". */
@@ -208,7 +265,8 @@ export function formatDateTime(dateStr?: string, timezone?: string | null): stri
         hour12: false,
       }).formatToParts(d)
       const get = (t: string) => parts.find((p) => p.type === t)?.value ?? '00'
-      return `${get('day')}-${get('month')}-${get('year')} ${get('hour')}:${get('minute')}`
+      const sep = dateSeparator()
+      return `${get('day')}${sep}${get('month')}${sep}${get('year')} ${get('hour')}:${get('minute')}`
     } catch {
       // fall through to browser-local
     }
@@ -266,7 +324,8 @@ export function formatTaskDueDateForDisplay(
       timeZone: targetTz,
     }).formatToParts(d)
     const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '00'
-    return `${get('day')}-${get('month')}-${get('year')} ${get('hour')}:${get('minute')}`
+    const sep = dateSeparator()
+    return `${get('day')}${sep}${get('month')}${sep}${get('year')} ${get('hour')}:${get('minute')}`
   } catch {
     return '—'
   }
@@ -303,7 +362,8 @@ export function formatAuditLogTimestamp(timestamp: string, timezone?: string): s
       options.timeZone = timezone
     }
 
-    const formatter = new Intl.DateTimeFormat('en-US', options)
+    const spanish = isSpanishUi()
+    const formatter = new Intl.DateTimeFormat(spanish ? 'es-ES' : 'en-US', options)
     const parts = formatter.formatToParts(date)
 
     const month = parts.find((p) => p.type === 'month')?.value || ''
@@ -312,7 +372,8 @@ export function formatAuditLogTimestamp(timestamp: string, timezone?: string): s
     const minute = parts.find((p) => p.type === 'minute')?.value || ''
     const second = parts.find((p) => p.type === 'second')?.value || ''
 
-    return `${month} ${day}\n${hour}:${minute}:${second}`
+    const monthDay = spanish ? `${day} ${month}` : `${month} ${day}`
+    return `${monthDay}\n${hour}:${minute}:${second}`
   } catch {
     // Fallback to original format if timezone conversion fails
     const date = new Date(timestamp)
@@ -445,7 +506,8 @@ export function convertUTCToUserTimezone(utcDateTimeStr: string, timezone?: stri
     }).formatToParts(date)
 
     const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '00'
-    return `${get('day')}-${get('month')}-${get('year')} ${get('hour')}:${get('minute')}:${get('second')}`
+    const sep = dateSeparator()
+    return `${get('day')}${sep}${get('month')}${sep}${get('year')} ${get('hour')}:${get('minute')}:${get('second')}`
   } catch {
     return '—'
   }

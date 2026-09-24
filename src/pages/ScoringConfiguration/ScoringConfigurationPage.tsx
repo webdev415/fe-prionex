@@ -770,9 +770,11 @@ export function ScoringConfigurationPage() {
                             {t('pages.scoringConfiguration.current', 'Current')}:
                           </span>
                           <span className="text-foreground ml-2">
-                            Critical ≥ {originalConfig?.priority_thresholds.critical || 0}, High ≥{' '}
-                            {originalConfig?.priority_thresholds.high || 0}, Medium ≥{' '}
-                            {originalConfig?.priority_thresholds.medium || 0}
+                            {t('pages.scoringConfiguration.thresholdsSummary', {
+                              critical: originalConfig?.priority_thresholds.critical || 0,
+                              high: originalConfig?.priority_thresholds.high || 0,
+                              medium: originalConfig?.priority_thresholds.medium || 0,
+                            })}
                           </span>
                         </div>
                         <div>
@@ -780,8 +782,11 @@ export function ScoringConfigurationPage() {
                             {t('pages.scoringConfiguration.new', 'New')}:
                           </span>
                           <span className="text-foreground ml-2">
-                            Critical ≥ {priorityThresholds.critical}, High ≥{' '}
-                            {priorityThresholds.high}, Medium ≥ {priorityThresholds.medium}
+                            {t('pages.scoringConfiguration.thresholdsSummary', {
+                              critical: priorityThresholds.critical,
+                              high: priorityThresholds.high,
+                              medium: priorityThresholds.medium,
+                            })}
                           </span>
                         </div>
                       </div>

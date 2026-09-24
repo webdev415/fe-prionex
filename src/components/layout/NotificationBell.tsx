@@ -18,7 +18,8 @@ import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
 import { safeHttpUrl } from '@/lib/safeUrl'
 import { useAuthStore } from '@/stores/authStore'
-import { formatTaskDueDateForDisplay } from '@/lib/formatters'
+import { formatTaskDueDateForDisplay, uiLocale, withCurrency } from '@/lib/formatters'
+import { spanishLocaleOr } from '@/lib/i18n'
 import { cn } from '@/lib/utils'
 
 import {
@@ -34,11 +35,12 @@ import {
 import { useNotificationSocket } from '@/features/notifications/hooks/useNotificationSocket'
 import { NotificationType } from '@/features/notifications/types'
 import type { NotificationItem } from '@/features/notifications/types'
+import { piiProps } from '@/lib/openreplay/pii'
 
 function getIntlLocale(language: string): string {
   const base = language.split('-')[0] ?? 'en'
   if (base === 'uk') return 'uk-UA'
-  return 'en-GB'
+  return spanishLocaleOr(language, 'en-GB')
 }
 
 function translatePaymentMethod(method: string | undefined, t: TFunction): string {
@@ -67,7 +69,8 @@ function formatDateTime(isoDate: string, timezone: string | undefined, language:
       timeZone: tz,
     }).formatToParts(new Date(dateStr))
     const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '00'
-    return `${get('day')}-${get('month')}-${get('year')} ${get('hour')}:${get('minute')}`
+    const sep = intlLocale === 'es-ES' ? '/' : '-'
+    return `${get('day')}${sep}${get('month')}${sep}${get('year')} ${get('hour')}:${get('minute')}`
   } catch {
     return isoDate
   }
@@ -849,7 +852,7 @@ function PaymentNotificationItem({
     <>
       <div className="flex flex-wrap items-center gap-1.5">
         {!n.read && <span className="bg-primary-500 h-2 w-2 shrink-0 rounded-full" />}
-        <p className="text-foreground line-clamp-1 text-xs font-semibold">
+        <p className="text-foreground line-clamp-1 text-xs font-semibold" {...piiProps}>
           {meta.client_name ?? t('notificationBell.clientNumber', { id: meta.client_id })}
           <span className="text-foreground ml-1 font-normal">
             ({t('notificationBell.idLabel', { id: meta.client_id })})
@@ -864,7 +867,7 @@ function PaymentNotificationItem({
         </span>
       </div>
       <p className="text-foreground w-full min-w-0 truncate text-xs">
-        ₴ {Number(meta.amount).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+        {withCurrency(Number(meta.amount).toLocaleString(uiLocale(), { minimumFractionDigits: 2 }))}
         <span className="ml-2">{translatePaymentMethod(meta.payment_method, t)}</span>
       </p>
       <div className="text-foreground flex items-center gap-1">
@@ -927,7 +930,7 @@ function TaskNotificationItem({
       <div className="flex flex-wrap items-center gap-1.5 pr-5">
         {!n.read && <span className="bg-primary-500 h-2 w-2 shrink-0 rounded-full" />}
         {hasClient ? (
-          <p className="text-foreground line-clamp-1 text-xs font-semibold">
+          <p className="text-foreground line-clamp-1 text-xs font-semibold" {...piiProps}>
             {meta.client_name ?? t('notificationBell.clientNumber', { id: meta.client_id })}
             {meta.client_id && (
               <span className="text-foreground ml-1 font-normal">
@@ -941,7 +944,9 @@ function TaskNotificationItem({
             )}
           </p>
         ) : (
-          <p className="text-foreground line-clamp-1 text-xs font-semibold">{n.title}</p>
+          <p className="text-foreground line-clamp-1 text-xs font-semibold" {...piiProps}>
+            {n.title}
+          </p>
         )}
         {meta.priority && (
           <span
@@ -975,13 +980,19 @@ function TaskNotificationItem({
           </span>
         )}
         {meta.subject_name && !meta.status && (
-          <span className="bg-information-100 text-information-600 rounded px-1.5 py-0.5 text-[10px] font-medium">
+          <span
+            className="bg-information-100 text-information-600 rounded px-1.5 py-0.5 text-[10px] font-medium"
+            {...piiProps}
+          >
             {meta.subject_name}
           </span>
         )}
       </div>
+      {/* The body is server-rendered prose about a client — it carries the name
+          the line above masks, and whatever else the backend put in. Bodies are
+          marked in every notification variant below for the same reason. */}
       {(meta.description || n.body) && (
-        <p className="text-foreground w-full min-w-0 truncate text-xs">
+        <p className="text-foreground w-full min-w-0 truncate text-xs" {...piiProps}>
           {meta.description || n.body}
         </p>
       )}
@@ -1089,9 +1100,17 @@ function CallNotificationItem({
       <div className="flex items-center gap-2">
         {!n.read && <span className="bg-primary-500 h-2 w-2 shrink-0 rounded-full" />}
         <Icons.Phone size={14} strokeWidth={1.5} className="text-success-500" />
-        <p className="text-foreground text-xs font-semibold">{n.title}</p>
+        {/* The title comes from the same server payload as the body — «Пропущенный
+            звонок от …» names the client as readily as the body does. Marked in
+            every variant for the same reason; the icon, the status pills and the
+            timestamp are what say which notification this was. */}
+        <p className="text-foreground text-xs font-semibold" {...piiProps}>
+          {n.title}
+        </p>
       </div>
-      <p className="text-foreground text-xs">{n.body}</p>
+      <p className="text-foreground text-xs" {...piiProps}>
+        {n.body}
+      </p>
       <span className="text-muted-foreground text-[11px]">
         {n.created_at ? formatRelativeTime(n.created_at, t) : ''}
       </span>
@@ -1148,10 +1167,14 @@ function UbkiNotificationItem({
       >
         <div className="flex flex-wrap items-center gap-1.5 pr-5">
           {!n.read && <span className="bg-primary-500 h-2 w-2 shrink-0 rounded-full" />}
-          <p className="text-foreground line-clamp-1 text-xs font-semibold">{n.title}</p>
+          <p className="text-foreground line-clamp-1 text-xs font-semibold" {...piiProps}>
+            {n.title}
+          </p>
         </div>
         {n.body && (
-          <p className="text-foreground w-full min-w-0 text-xs whitespace-normal">{n.body}</p>
+          <p className="text-foreground w-full min-w-0 text-xs whitespace-normal" {...piiProps}>
+            {n.body}
+          </p>
         )}
         <div className="text-foreground flex items-center gap-1">
           <Icons.Clock01 size={11} strokeWidth={1.5} />
@@ -1187,16 +1210,22 @@ function RRPaymentNotificationItem({
     <>
       <div className="flex flex-wrap items-center gap-1.5 pr-5">
         {!n.read && <span className="bg-primary-500 h-2 w-2 shrink-0 rounded-full" />}
-        <p className="text-foreground line-clamp-1 text-xs font-semibold">
+        {/* Usually the i18n headline; the fallback is the server's own title,
+            which can name the client. Marked because the fallback can. */}
+        <p className="text-foreground line-clamp-1 text-xs font-semibold" {...piiProps}>
           {t('notificationBell.rrPayment.title', { defaultValue: n.title })}
         </p>
         {meta.amount && (
           <span className="bg-information-100 text-information-600 rounded px-1.5 py-0.5 text-[10px] font-medium">
-            ₴ {meta.amount}
+            {withCurrency(String(meta.amount))}
           </span>
         )}
       </div>
-      {n.body && <p className="text-foreground line-clamp-3 w-full min-w-0 text-xs">{n.body}</p>}
+      {n.body && (
+        <p className="text-foreground line-clamp-3 w-full min-w-0 text-xs" {...piiProps}>
+          {n.body}
+        </p>
+      )}
       <div className="text-foreground flex items-center gap-1">
         <Icons.Clock01 size={11} strokeWidth={1.5} />
         <span className="text-[11px]">
@@ -1291,7 +1320,9 @@ function TrainingNotificationItem({
       >
         <div className="flex flex-wrap items-center gap-1.5 pr-5">
           {!n.read && <span className="bg-primary-500 h-2 w-2 shrink-0 rounded-full" />}
-          <p className="text-foreground line-clamp-1 text-xs font-semibold">{n.title}</p>
+          <p className="text-foreground line-clamp-1 text-xs font-semibold" {...piiProps}>
+            {n.title}
+          </p>
           {typeLabel && (
             <span className="bg-information-100 text-information-600 rounded px-1.5 py-0.5 text-[10px] font-medium">
               {typeLabel}
@@ -1299,7 +1330,7 @@ function TrainingNotificationItem({
           )}
         </div>
         {isOneOnOne && trainerName && (
-          <p className="text-foreground line-clamp-1 w-full min-w-0 text-xs">
+          <p className="text-foreground line-clamp-1 w-full min-w-0 text-xs" {...piiProps}>
             {t('notificationBell.training.withTrainer', { name: trainerName })}
           </p>
         )}
@@ -1320,7 +1351,11 @@ function TrainingNotificationItem({
           </div>
         ) : (
           n.body && (
-            <p className="text-foreground w-full min-w-0 text-xs whitespace-normal">{n.body}</p>
+            // The 1-on-1 fallback: the backend renders this with the trainer's
+            // name — the very name the branch above masks.
+            <p className="text-foreground w-full min-w-0 text-xs whitespace-normal" {...piiProps}>
+              {n.body}
+            </p>
           )
         )}
         <span className="text-muted-foreground text-[11px]">
@@ -1373,10 +1408,15 @@ function GenericNotificationItem({
     <>
       <div className="flex flex-wrap items-center gap-1.5 pr-5">
         {!n.read && <span className="bg-primary-500 h-2 w-2 shrink-0 rounded-full" />}
-        <p className="text-foreground line-clamp-1 text-xs font-semibold">{n.title || n.type}</p>
+        <p className="text-foreground line-clamp-1 text-xs font-semibold" {...piiProps}>
+          {n.title || n.type}
+        </p>
       </div>
       {n.body && (
-        <p className="text-foreground line-clamp-3 w-full min-w-0 text-xs whitespace-normal">
+        <p
+          className="text-foreground line-clamp-3 w-full min-w-0 text-xs whitespace-normal"
+          {...piiProps}
+        >
           {n.body}
         </p>
       )}

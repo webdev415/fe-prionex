@@ -23,6 +23,41 @@ name: DEV branch autodeploy
 # resolve empty here — see build.yml's workflow_call `ref` note), so build and
 # deploy each re-derive `dev` HEAD; `cancel-in-progress: false` plus the stand
 # file-lock bound the race to the same window build-main.yml already accepts.
+#
+# 🔴 ── `reuse_published_image: "true"` ───────────────────────────────────────
+# Not an optimisation. This is the ONE caller of build.yml whose pushes are routinely
+# pushes of a commit that is ALREADY BUILT.
+#
+# 🔴 Corrected 2026-09-21 (review round 3) — the original reason given here is no longer
+# true and is not quietly repaired. It said the weekly reset force-updates `dev` onto an
+# already-built `main` commit. That design turned out to be impossible on this instance,
+# which refuses every non-fast-forward push to a protected branch before it even looks at
+# who is pushing (see `dev-reset.yml` §5 and plan §12). The weekly job now lands a freshly
+# created catch-up commit, which has no image at all — so on reset weeks this input does
+# nothing and autodeploy builds, as it should.
+#
+# The input stays because the case it actually covers is the ordinary one: a
+# fast-forward-only merge into `dev` of a feature branch whose head commit `ci.yml` has
+# already published as `sha-<12>-dev`. Without the input that push rebuilds the very same
+# commit, `vite.config.ts:8` bakes a fresh `Date.now()` into the bundle on the cache miss,
+# the digest differs from the published one, and `build.yml`'s Story 3.6 AC2 guard REFUSES
+# to repoint the protected tag — correctly. Measured, not predicted: run 1397 (2026-09-21,
+# the manual reset) failed at exactly that step, with the stand nevertheless correct.
+#
+# A weekly red run that means nothing is read for about a month and then not at
+# all, so it is fixed here rather than tolerated: with this input, a push of an
+# already-published commit resolves `sha-<12>-dev` BEFORE building (build.yml's
+# `predigest` step, which already ran on every path — no new resolver), skips
+# the build and the attach, re-points only the mutable `dev-dev` tag at the
+# image that exists, and goes green. The protected tag is never touched; the
+# guard is not weakened, it is simply not asked a question nobody wants answered
+# (`docs/dev-weekly-reset-plan.md` §4.1).
+#
+# It is equally correct for the ordinary case this file was written for: an
+# ordinary push to `dev` is a NEW commit, `sha-<12>-dev` does not exist, and
+# build.yml's decision step resolves to `reuse=false` — the historical path,
+# unchanged. The only behaviour that changes is the re-push of a commit already
+# built, which today can only fail.
 
 on:
   push:
@@ -40,6 +75,10 @@ jobs:
     with:
       ref: dev
       environment: dev
+      # Quoted string, matching the input's own declared type — build.yml
+      # compares it against the literal `'true'`. See the block above the `on:`
+      # key for why this caller, and only this caller, sets it.
+      reuse_published_image: "true"
     secrets: inherit
 
   deploy:

@@ -212,7 +212,7 @@ export function OperatorMultiSelectDropdown({
             e.preventDefault()
             onClear?.()
           }}
-          aria-label="Clear"
+          aria-label={t('components.select.clear', 'Clear')}
           className="text-muted-foreground hover:text-foreground shrink-0 p-1"
         >
           <Icons.Cancel01 size={14} />

@@ -1,9 +1,11 @@
 /**
  * Карточка кредита: паспорт, балансы, график, платежи, журнал проводок.
  *
- * Все цифры берутся из состояния ядра (`/loans/{id}/state`) — того же среза,
- * что видит клиент в личном кабинете. Фронт ничего не пересчитывает: любая
- * «своя» арифметика здесь означала бы вторую версию правды.
+ * Долг и его составляющие берутся из состояния ядра (`/loans/{id}/state`) —
+ * того же среза, что видит клиент в личном кабинете.
+ * Обязательство модуля вернуть клиенту излишек — из паспорта (`/loans/{id}`):
+ * в состоянии ядра его нет, и к долгу оно не относится. Фронт ничего не
+ * пересчитывает: любая «своя» арифметика здесь означала бы вторую версию правды.
  *
  * Три состояния на каждой вкладке — загрузка / ошибка / действительно пусто.
  * Раньше упавший запрос показывался как «Графіка ще немає», и оператор говорил
@@ -31,6 +33,8 @@ import { formatCreditMoney } from '@/features/credit/api/money'
 import { normalizeDraft } from '@/features/credit/api/draft'
 import type {
   CreditBalances,
+  CreditBucket,
+  CreditDisbursement,
   CreditDocumentMeta,
   CreditJournalEntry,
   CreditLoanDetail as LoanDetail,
@@ -38,13 +42,24 @@ import type {
   CreditPayment,
   CreditScheduleVersion,
 } from '@/features/credit/api/types'
+import {
+  CREDIT_BUCKETS,
+  CREDIT_DISBURSEMENT_FAILURE_CODES,
+  CREDIT_DOCUMENT_META_KINDS,
+  CREDIT_RAIL_REVIEW_REASONS,
+} from '@/features/credit/api/enums'
 import { CreditStatusBadge } from './components/CreditStatusBadge'
 import { CreditDocumentOpenButton } from './components/CreditDocumentOpenButton'
 import {
+  CopyButton,
   CreditCardHeader,
   CreditNotice,
   type CreditHeaderMetric,
 } from './components/CreditCardHeader'
+import { Pii } from '@/lib/openreplay/pii'
+import { CreditIdentifierRows } from './components/CreditIdentifiers'
+import { loanAgeDays, todayInTimezone } from '@/features/credit/api/loanAge'
+import { useNowTick } from '@/features/credit/hooks/useNowTick'
 
 /** Часовой пояс кредита: окно отказа регуляторное, показывать его надо
  *  в зоне юрисдикции, иначе киевский оператор увидит чужие сутки. */
@@ -154,7 +169,14 @@ export function CreditLoanDetailPage() {
   const { data: loan, isLoading, error } = useCreditLoan(loanId)
   const stateQuery = useCreditLoanState(loanId)
   const scheduleQuery = useCreditLoanSchedule(loanId)
-  const journalQuery = useCreditLoanJournal(loanId)
+  // Корзина журнала: отбор делает СЕРВЕР, поэтому состояние живёт там же, где
+  // зовётся хук. «Все корзины» — пустая строка, при которой объект параметров
+  // не строится вовсе и запрос уходит без ключа `bucket`.
+  const [journalBucket, setJournalBucket] = useState<CreditBucket | ''>('')
+  const journalQuery = useCreditLoanJournal(
+    loanId,
+    journalBucket ? { bucket: journalBucket } : undefined
+  )
   const versionsQuery = useCreditLoanScheduleVersions(loanId)
   const documentsQuery = useCreditLoanDocuments(loanId)
   const [scheduleVersion, setScheduleVersion] = useState<number | null>(null)
@@ -207,7 +229,17 @@ export function CreditLoanDetailPage() {
     {
       key: 'balance',
       label: t('credit.fields.balance'),
-      value: money(balances?.total_due_minor ?? loan.balance_total_minor, loan.currency),
+      // Запасного значения из поля займа здесь НЕТ намеренно. Раньше стояло
+      // `?? loan.balance_total_minor`, и это выглядело осторожностью, а по
+      // факту было подменой источника: модуль отдаёт в этом поле `null`
+      // (проверено на живом кредите), поэтому «запасной путь» всегда давал
+      // прочерк — правду, но случайно.
+      //
+      // Опаснее другое: деньги, показанные оператору, обязаны приходить из
+      // ТОГО ЖЕ расчёта, что видит клиент, — из состояния ядра. Тихо
+      // подставить сюда поле займа значило бы назвать клиенту и оператору
+      // разные суммы, а это хуже прочерка. Нет состояния — нет числа.
+      value: money(balances?.total_due_minor, loan.currency),
     },
     {
       key: 'paid',
@@ -258,7 +290,7 @@ export function CreditLoanDetailPage() {
                 to={`/dashboard/credit/applications/${loan.application_id}`}
                 className="text-foreground font-medium hover:underline"
               >
-                {borrower.fullName || t('credit.card.borrowerUnknown')}
+                <Pii>{borrower.fullName || t('credit.card.borrowerUnknown')}</Pii>
               </Link>
               {borrower.phone && <span>{borrower.phone}</span>}
               {borrower.email && <span>{borrower.email}</span>}
@@ -298,7 +330,14 @@ export function CreditLoanDetailPage() {
       />
 
       <div className="mt-4">
-        {tab === 'passport' && <LoanPassport loan={loan} state={state} />}
+        {tab === 'passport' && (
+          <LoanPassport
+            loan={loan}
+            state={state}
+            stateLoading={stateQuery.isLoading}
+            stateError={stateQuery.error}
+          />
+        )}
         {tab === 'balances' && (
           <LoanBalances
             currency={loan.currency}
@@ -332,6 +371,7 @@ export function CreditLoanDetailPage() {
         )}
         {tab === 'documents' && (
           <LoanDocuments
+            loanId={loan.loan_id}
             documents={documentsQuery.data?.items ?? []}
             isLoading={documentsQuery.isLoading}
             error={documentsQuery.error}
@@ -341,6 +381,8 @@ export function CreditLoanDetailPage() {
         {tab === 'journal' && (
           <LoanJournal
             entries={journalQuery.data?.items ?? []}
+            bucket={journalBucket}
+            onBucketChange={setJournalBucket}
             isLoading={journalQuery.isLoading}
             error={journalQuery.error}
             onRetry={() => void journalQuery.refetch()}
@@ -351,11 +393,314 @@ export function CreditLoanDetailPage() {
   )
 }
 
-function LoanPassport({ loan, state }: { loan: LoanDetail; state?: CreditLoanState }) {
+/**
+ * Статусы кредита, при которых деньги ОБЯЗАНЫ были двинуться.
+ *
+ * Нужны для единственного случая: попытки отправки нет вовсе. У живого
+ * кредита отсутствие блока ничего не значит и лишняя панель только отвлекает,
+ * а у застрявшего — это и есть ответ на вопрос «почему клиент без денег».
+ */
+const AWAITING_MONEY = new Set(['pending_disbursement', 'disbursement_failed', 'funding_exception'])
+
+/** Тона выплаты — своим словарём, а не через `CreditStatusBadge`.
+ *  Там `cancelled` уже занят статусом кредита и покрашен красным, а отозванная
+ *  выплата — предупреждение: общий словарь дал бы одному слову два смысла. */
+const DISBURSEMENT_TONE: Record<CreditDisbursement['state'], string> = {
+  pending: 'bg-muted text-muted-foreground',
+  settled: 'bg-success-100 text-success-700',
+  failed: 'bg-error-100 text-error-700',
+  reversed: 'bg-error-100 text-error-700',
+  cancelled: 'bg-warning-100 text-warning-800',
+  unknown: 'bg-error-100 text-error-700',
+}
+
+type RetryVerdict =
+  | 'available'
+  | 'reviewOpen'
+  | 'notFailed'
+  | 'settled'
+  | 'inFlight'
+  | 'unknownState'
+
+/**
+ * Можно ли повторить отправку — ПО УСЛОВИЮ КОМАНДЫ, а не по флагу модуля.
+ *
+ * `retry_allowed` модуль считает как `state ∈ {failed, cancelled, reversed}`
+ * (`app/loans.py:229,281`), а команда возобновления
+ * `POST /rails/loans/{id}/resume-disbursement` отвечает 409, если последняя
+ * попытка не `failed` (`disbursement_not_failed`) либо по ней открыт разбор
+ * (`disbursement_review_not_resolved`). Предикаты разъехались, и на стенде
+ * 31.08.2026 из-за этого отказ получили бы ВСЕ 16 «разрешённых» повторов:
+ * шесть `reversed` — по первому охраннику, десять `failed` с открытым
+ * разбором — по второму. Пока модуль не свёл флаг к условию команды, читать
+ * флаг как разрешение нельзя — повторяем условие команды здесь.
+ */
+function retryVerdict(disbursement: CreditDisbursement): RetryVerdict {
+  if (disbursement.state === 'failed') {
+    return disbursement.review_reason === null ? 'available' : 'reviewOpen'
+  }
+  if (disbursement.state === 'settled') return 'settled'
+  if (disbursement.state === 'pending') return 'inFlight'
+  if (disbursement.state === 'unknown') return 'unknownState'
+  return 'notFailed'
+}
+
+/**
+ * Выплата прошла ровно: деньги зачислены, отказа не было, человека не ждёт и
+ * дата зачисления известна от провайдера, а не выведена нами.
+ *
+ * Такому кредиту блок не нужен — дата выдачи уже стоит в паспорте, и вторая
+ * панель об одном и том же добавляет шума, а не смысла. Показывать блок стоит
+ * ровно тогда, когда в нём есть что прочитать.
+ */
+function isRoutineDisbursement(disbursement: CreditDisbursement): boolean {
+  return (
+    disbursement.state === 'settled' &&
+    disbursement.failure_code === null &&
+    disbursement.failed_at === null &&
+    disbursement.review_reason === null &&
+    disbursement.provider_time_source !== 'observed'
+  )
+}
+
+/**
+ * Ход выдачи денег.
+ *
+ * Заводится потому, что до сих пор оператор у кредита с неудавшейся выдачей
+ * видел один бейдж «Видача не пройшла» и ничего больше — при том что причина,
+ * даты и признак ожидания разбора уже лежали в `/loans/{id}/state`, который
+ * карточка и так запрашивает.
+ *
+ * Кнопки повтора здесь нет НАМЕРЕННО (см. `retryVerdict`): показать «повторити»
+ * там, где команда ответит 409, хуже, чем не показать ничего, — оператор жмёт
+ * и делает вывод, что сломана система, а не что расходятся два предиката.
+ */
+function LoanDisbursement({
+  loan,
+  state,
+  isLoading,
+  error,
+}: {
+  loan: LoanDetail
+  state?: CreditLoanState
+  isLoading: boolean
+  error: unknown
+}) {
   const { t } = useTranslation('common')
+  const timezone = JURISDICTION_TIMEZONE[loan.jurisdiction]
+  const disbursement = state?.disbursement
+
+  // «Попытки не было» и «мы не знаем» — РАЗНЫЕ ответы на вопрос «почему клиент
+  // без денег», и путать их дороже всего именно здесь. Пока состояние ядра
+  // грузится или запрос упал, `disbursement` тоже пуст — и панель раньше
+  // говорила категоричное «спроби переказу не було жодної». Оператор передавал
+  // это клиенту, тогда как перевод мог уйти и провалиться.
+  //
+  // Это ровно тот дефект, что уже был у графика («Графіка ще немає» на упавшем
+  // запросе), поэтому лечим тем же способом, что и соседние панели.
+  if (isLoading) {
+    return (
+      <Panel title={t('credit.card.disbursement')}>
+        <TableSkeleton columns={2} rows={3} />
+      </Panel>
+    )
+  }
+  if (error) {
+    return (
+      <Panel title={t('credit.card.disbursement')}>
+        <p className="text-muted-foreground text-sm">{t('credit.card.disbursementUnknown')}</p>
+      </Panel>
+    )
+  }
+
+  if (!disbursement) {
+    if (!AWAITING_MONEY.has(loan.status)) return null
+    return (
+      <Panel title={t('credit.card.disbursement')}>
+        <p className="text-muted-foreground text-sm">{t('credit.card.disbursementNotSent')}</p>
+      </Panel>
+    )
+  }
+  if (isRoutineDisbursement(disbursement)) return null
+
+  const verdict = retryVerdict(disbursement)
+  // Код провайдера, которого мы не знаем, — это не пропущенный перевод, а
+  // чужой словарь. Показываем его как чужое слово, а не как голое имя ключа.
+  const failureText =
+    disbursement.failure_code === null
+      ? '—'
+      : (CREDIT_DISBURSEMENT_FAILURE_CODES as readonly string[]).includes(disbursement.failure_code)
+        ? t(`credit.disbursementFailure.${disbursement.failure_code}`)
+        : t('credit.card.disbursementUnknownCode', { code: disbursement.failure_code })
+  const reviewText =
+    disbursement.review_reason === null
+      ? null
+      : (CREDIT_RAIL_REVIEW_REASONS as readonly string[]).includes(disbursement.review_reason)
+        ? t(`credit.railReviewReason.${disbursement.review_reason}`)
+        : t('credit.card.disbursementUnknownCode', { code: disbursement.review_reason })
+
+  return (
+    <Panel
+      title={t('credit.card.disbursement')}
+      footer={t('credit.card.disbursementNoRetryButton')}
+    >
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <span
+          className={`inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-medium ${DISBURSEMENT_TONE[disbursement.state]}`}
+        >
+          <span className="h-2 w-2 rounded-full bg-current opacity-70" />
+          {t(`credit.disbursementState.${disbursement.state}`)}
+        </span>
+        <span className="text-muted-foreground text-sm">
+          {t('credit.card.disbursementUpdated', {
+            when: formatDateTime(disbursement.updated_at, timezone),
+          })}
+        </span>
+      </div>
+
+      {reviewText && (
+        <CreditNotice className="mb-3">
+          {disbursement.review_raised_at
+            ? t('credit.card.disbursementReview', {
+                reason: reviewText,
+                since: formatDateTime(disbursement.review_raised_at, timezone),
+              })
+            : t('credit.card.disbursementReviewNoDate', { reason: reviewText })}
+        </CreditNotice>
+      )}
+
+      {/* Дата зачисления, выведенная нами, и дата от провайдера — разные вещи:
+          от неё считается регуляторное окно отказа, и «оценено» надо сказать
+          вслух, иначе срок клиента выглядит посчитанным. */}
+      {disbursement.provider_time_source === 'observed' && (
+        <CreditNotice className="mb-3">{t('credit.card.disbursementObservedTime')}</CreditNotice>
+      )}
+
+      <Field label={t('credit.fields.disbursementAmount')}>
+        {money(disbursement.amount_minor, disbursement.currency)}
+      </Field>
+      <Field label={t('credit.fields.disbursementMethod')}>
+        {t(`credit.disbursementMethod.${disbursement.method}`)}
+      </Field>
+      <Field label={t('credit.fields.settledAt')}>
+        {formatDateTime(disbursement.settled_at ?? undefined, timezone)}
+      </Field>
+      <Field label={t('credit.fields.failedAt')}>
+        {formatDateTime(disbursement.failed_at ?? undefined, timezone)}
+      </Field>
+      <Field label={t('credit.fields.failureCode')}>{failureText}</Field>
+      <Field label={t('credit.fields.timeSource')}>
+        {disbursement.provider_time_source
+          ? t(`credit.providerTimeSource.${disbursement.provider_time_source}`)
+          : '—'}
+      </Field>
+      <Field label={t('credit.fields.provider')}>{disbursement.provider}</Field>
+      <Field label={t('credit.fields.providerTxId')}>
+        {disbursement.provider_tx_id ? (
+          <span className="inline-flex items-center gap-1.5">
+            <span className="font-mono text-xs">{disbursement.provider_tx_id}</span>
+            <CopyButton value={disbursement.provider_tx_id} label={t('credit.actions.copy')} />
+          </span>
+        ) : (
+          '—'
+        )}
+      </Field>
+      {/* Слово провайдера как есть: перевод чужого статуса — это уже наша
+          трактовка, а по нему сверяются с поддержкой рельса дословно. */}
+      <Field label={t('credit.fields.providerStatus')}>{disbursement.provider_status ?? '—'}</Field>
+      <Field label={t('credit.fields.clientTransactionId')}>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="font-mono text-xs">{disbursement.client_transaction_id}</span>
+          <CopyButton value={disbursement.client_transaction_id} label={t('credit.actions.copy')} />
+        </span>
+      </Field>
+      <Field label={t('credit.fields.retry')}>{t(`credit.disbursementRetry.${verdict}`)}</Field>
+
+      {disbursement.retry_allowed && verdict !== 'available' && (
+        <CreditNotice className="mt-3">
+          {t('credit.card.disbursementRetryContradiction')}
+        </CreditNotice>
+      )}
+      {disbursement.provider === 'mock' && (
+        <CreditNotice className="mt-3" tone="info">
+          {t('credit.card.mockProviderWarning', { provider: disbursement.provider })}
+        </CreditNotice>
+      )}
+    </Panel>
+  )
+}
+
+/**
+ * Деньги, которые МОДУЛЬ должен клиенту, — не долг клиента. Излишек бывает у
+ * кредита, снятого в карантине выдачи, когда клиент вернул больше тела.
+ *
+ * (а) Не в «Складові боргу»: всё, что там стоит, оператор читает как
+ *     составляющую долга, а там уже живёт переплата из `/state`. Поле приходит
+ *     в паспорте, поэтому и панель — на вкладке паспорта, без `/state`.
+ * (б) `Number.isFinite`, а не `> 0`: у отстающего модуля ключа нет, и `> 0`
+ *     молча убрал бы панель — экран сказал бы «излишка нет», не зная этого.
+ *     Нет ключа — своя фраза и никакой суммы: прочерк читался бы как «пусто».
+ *     И заголовок — имя величины, а не «Винні клієнту»: заголовок не
+ *     утверждает того, чего не знает тело.
+ * (в) Без тона тревоги: красное и жёлтое в разделе значат «клиент в минусе»,
+ *     а это нейтральный факт, который оператор сообщает клиенту.
+ * (г) Ни с чем не складывается: сумма печатается как пришла, ни в баланс, ни
+ *     в «Сплачено» не входит.
+ */
+function LoanOwedToClient({ loan }: { loan: LoanDetail }) {
+  const { t } = useTranslation('common')
+  const excess = loan.advance_refund_excess_minor
+  if (Number.isFinite(excess) && excess <= 0) return null
+
+  return (
+    <Panel
+      title={
+        Number.isFinite(excess)
+          ? t('credit.card.owedToClient')
+          : t('credit.fields.advanceRefundExcess')
+      }
+    >
+      {Number.isFinite(excess) ? (
+        <>
+          <Field label={t('credit.fields.advanceRefundExcess')}>
+            <span className="tabular-nums">{money(excess, loan.currency)}</span>
+          </Field>
+          <p className="text-muted-foreground mt-1 text-xs">{t('credit.card.owedToClientHint')}</p>
+        </>
+      ) : (
+        <p className="text-muted-foreground text-sm">{t('credit.card.owedToClientUnknown')}</p>
+      )}
+    </Panel>
+  )
+}
+
+function LoanPassport({
+  loan,
+  state,
+  stateLoading,
+  stateError,
+}: {
+  loan: LoanDetail
+  state?: CreditLoanState
+  // Состояние запроса тянем сюда только ради панели выдачи: она обязана
+  // отличать «попытки не было» от «мы не знаем».
+  stateLoading: boolean
+  stateError: unknown
+}) {
+  const { t } = useTranslation('common')
+  // Возраст кредита считается от «сейчас», когда среза сервиса ещё нет, и без
+  // собственного тика замер бы на моменте открытия карточки: смена дал бы
+  // «14 днів» до самого закрытия вкладки.
+  const now = useNowTick()
+  const timezone = JURISDICTION_TIMEZONE[loan.jurisdiction]
   const caps = state?.caps
   const capEntries = caps ? Object.entries(caps) : []
   const failedCaps = capEntries.filter(([, ok]) => !ok)
+  // Считаем от СЕГОДНЯ В ЮРИСДИКЦИИ, как это делает кабинет клиента, а не от
+  // `as_of`: тот равен горизонту ночного расчёта и уходит вперёд — на стенде
+  // кредиты, выданные 31.08, имели `as_of` 04.10, и оператор увидел бы «34
+  // днів» там, где клиент видит «1 день».
+  const ageDays = loanAgeDays(loan.disbursed_at, todayInTimezone(now, timezone))
 
   return (
     <>
@@ -367,7 +712,17 @@ function LoanPassport({ loan, state }: { loan: LoanDetail; state?: CreditLoanSta
           {loan.product_code} · {loan.product_version}
         </Field>
         <Field label={t('credit.fields.jurisdiction')}>{loan.jurisdiction}</Field>
-        <Field label={t('credit.fields.disbursedAt')}>{formatDateTime(loan.disbursed_at)}</Field>
+        {/* Зона обязательна: без неё дата выдачи рисуется по часам браузера, а
+            возраст рядом считается по календарю юрисдикции. Канадская выдача
+            после ~15:00 по местному времени попадала у киевского оператора в
+            следующие сутки — «видано сьогодні, живе день» в соседних строках. */}
+        <Field label={t('credit.fields.disbursedAt')}>
+          {formatDateTime(loan.disbursed_at, timezone)}
+        </Field>
+        {/* Сколько кредит живёт. Поля в модуле нет — это разность дат (см.
+            loanAge.ts), поэтому и стоит рядом с датой выдачи, из которой
+            посчитано, а не в шапке среди цифр, пришедших от сервиса. */}
+        <Field label={t('credit.fields.loanAgeDays')}>{ageDays === null ? '—' : ageDays}</Field>
         {/* «Кінцевий строк», а не «Дата погашення»: последнее оператор читает
             как ближайший платёж — тот теперь в шапке отдельной строкой. */}
         <Field label={t('credit.fields.maturity')}>{formatDate(loan.maturity_date)}</Field>
@@ -381,6 +736,10 @@ function LoanPassport({ loan, state }: { loan: LoanDetail; state?: CreditLoanSta
           </Field>
         )}
       </Panel>
+
+      <LoanOwedToClient loan={loan} />
+
+      <LoanDisbursement loan={loan} state={state} isLoading={stateLoading} error={stateError} />
 
       {caps && (
         <Panel
@@ -409,6 +768,19 @@ function LoanPassport({ loan, state }: { loan: LoanDetail; state?: CreditLoanSta
           )}
         </Panel>
       )}
+
+      <Panel title={t('credit.card.identifiers')}>
+        <CreditIdentifierRows
+          items={[
+            { key: 'loan', label: t('credit.fields.loanId'), value: loan.loan_id },
+            {
+              key: 'application',
+              label: t('credit.fields.applicationId'),
+              value: loan.application_id,
+            },
+          ]}
+        />
+      </Panel>
 
       <Panel title={t('credit.card.links')}>
         <Field label={t('credit.fields.application')}>
@@ -814,17 +1186,31 @@ function LoanPayments({
 }
 
 function LoanDocuments({
+  loanId,
   documents,
   isLoading,
   error,
   onRetry,
 }: {
+  loanId: string
   documents: CreditDocumentMeta[]
   isLoading: boolean
   error: unknown
   onRetry: () => void
 }) {
   const { t } = useTranslation('common')
+  const [failure, setFailure] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  // Плашка над таблицей одна: отказ и уведомление вытесняют друг друга, иначе
+  // запоздавший ответ одного документа лёг бы рядом с итогом другого.
+  const showFailure = (message: string | null) => {
+    setFailure(message)
+    if (message !== null) setNotice(null)
+  }
+  const showNotice = (message: string | null) => {
+    setNotice(message)
+    if (message !== null) setFailure(null)
+  }
   return (
     <AsyncPanel
       title={t('credit.tabs.documents')}
@@ -835,6 +1221,20 @@ function LoanDocuments({
       onRetry={onRetry}
       footer={t('credit.card.documentsCurrentOnly')}
     >
+      {failure && (
+        <Alert variant="error" className="mb-3">
+          {failure}
+        </Alert>
+      )}
+      {/* Живая область стоит в DOM всегда: вставленную вместе с текстом часть
+          дикторов не объявляет, а у самой плашки роли нет. */}
+      <div role="status" aria-live="polite">
+        {notice && (
+          <CreditNotice tone="info" className="mb-3">
+            {notice}
+          </CreditNotice>
+        )}
+      </div>
       <table className="w-full text-sm">
         <thead>
           <tr className="border-border text-muted-foreground border-b text-xs">
@@ -850,7 +1250,11 @@ function LoanDocuments({
         <tbody>
           {documents.map((doc) => (
             <tr key={doc.document_id} className="border-border border-b last:border-0">
-              <td className="py-2 pr-3">{t(`credit.documentKind.${doc.kind}`, doc.kind)}</td>
+              <td className="py-2 pr-3">
+                {CREDIT_DOCUMENT_META_KINDS.includes(doc.kind)
+                  ? t(`credit.documentKind.${doc.kind}`)
+                  : t('credit.documentKind.unknown', { code: doc.kind })}
+              </td>
               <td className="py-2 pr-3 font-mono text-xs">{doc.title ?? doc.document_id}</td>
               <td className="text-muted-foreground py-2 pr-3 text-xs">
                 {doc.template_version ?? '—'}
@@ -859,7 +1263,12 @@ function LoanDocuments({
                 {formatDateTime(doc.generated_at)}
               </td>
               <td className="py-2 text-right">
-                <CreditDocumentOpenButton document={doc} />
+                <CreditDocumentOpenButton
+                  document={doc}
+                  owner={{ kind: 'loan', id: loanId }}
+                  onError={showFailure}
+                  onNotice={showNotice}
+                />
               </td>
             </tr>
           ))}
@@ -869,13 +1278,37 @@ function LoanDocuments({
   )
 }
 
+/**
+ * Журнал проводок с отбором по корзине.
+ *
+ * (а) Отбор делает СЕРВЕР — параметр `bucket` уходит в запрос, а массив
+ *     `entries` здесь не фильтруется. Клиентский `filter` обманул бы дважды:
+ *     `PAGE = 60` режет хвост ДО отбора («в корзине пусто» = «они на 61-й»),
+ *     и объявленный дверью параметр остался бы мёртвым.
+ * (б) Селектор и пометка живут НАД `AsyncPanel`: он при загрузке, ошибке и
+ *     пустоте рисует ВМЕСТО children, и фильтр исчезал бы ровно тогда, когда
+ *     его результат пуст, — снять его было бы нечем, кроме перезагрузки.
+ * (в) Пометка под активным фильтром говорит о свойстве ВЫБОРКИ: компенсирующая
+ *     запись могла остаться за фильтром, и незачёркнутая строка не означает
+ *     «деньги действующие». Она одна на панель, а не у каждой строки:
+ *     достоверного признака у экрана нет по построению, и шестьдесят повторов
+ *     одного предложения читать перестают.
+ * (г) Второй ключ сортировки — `posted_at`, а НЕ `seq`: модуль нумерует `seq`
+ *     ПОСЛЕ отбора, и под фильтром одна и та же проводка получает другой номер.
+ *     `seq` остаётся третьим ключом — только для ничьей по `posted_at` и только
+ *     как порядок внутри одного ответа, где он и есть порядок записи.
+ */
 function LoanJournal({
   entries,
+  bucket,
+  onBucketChange,
   isLoading,
   error,
   onRetry,
 }: {
   entries: CreditJournalEntry[]
+  bucket: CreditBucket | ''
+  onBucketChange: (bucket: CreditBucket | '') => void
   isLoading: boolean
   error: unknown
   onRetry: () => void
@@ -884,83 +1317,124 @@ function LoanJournal({
   const [expanded, setExpanded] = useState(false)
   const PAGE = 60
   // Порядок задаём явно: полагаться на порядок ответа — значит молча
-  // перепутать проводки, когда сервис сменит сортировку.
+  // перепутать проводки, когда сервис сменит сортировку. Ничья по
+  // `posted_at` — обычный случай: проводки одной операции пишутся одной
+  // транзакцией и несут одно `now()`. Её разбирает `seq`: значение под фильтром
+  // другое, но относительный порядок внутри одного ответа — порядок записи.
   const ordered = [...entries].sort(
-    (a, b) => b.business_date.localeCompare(a.business_date) || b.seq - a.seq
+    (a, b) =>
+      b.business_date.localeCompare(a.business_date) ||
+      b.posted_at.localeCompare(a.posted_at) ||
+      b.seq - a.seq
   )
   const visible = expanded ? ordered : ordered.slice(0, PAGE)
   const reversed = new Set(ordered.map((e) => e.reversal_of_entry_id).filter(Boolean) as string[])
 
   return (
-    <AsyncPanel
-      title={t('credit.tabs.journal')}
-      isLoading={isLoading}
-      error={error}
-      isEmpty={entries.length === 0}
-      emptyText={t('credit.card.noJournal')}
-      onRetry={onRetry}
-      footer={
-        ordered.length > PAGE
-          ? t('credit.card.journalShown', { shown: visible.length, total: ordered.length })
-          : undefined
-      }
-    >
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-border text-muted-foreground border-b text-xs">
-            <th className="py-2 text-left font-medium">{t('credit.columns.date')}</th>
-            <th className="py-2 text-left font-medium">{t('credit.columns.entryType')}</th>
-            <th className="py-2 text-left font-medium">{t('credit.columns.bucket')}</th>
-            <th className="py-2 text-right font-medium">{t('credit.columns.installment')}</th>
-            <th className="py-2 text-right font-medium">{t('credit.columns.amount')}</th>
-            <th className="py-2 text-left font-medium">{t('credit.columns.rule')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {visible.map((entry) => {
-            const isReversed = reversed.has(entry.entry_id)
-            // Пометка «(сторно)» нужна там, где по типу это не видно:
-            // компенсирующей может быть и `cancellation`. У самого
-            // `reversal` она давала тавтологию «Сторнування (сторно)».
-            const isReversal =
-              Boolean(entry.reversal_of_entry_id) && entry.entry_type !== 'reversal'
-            return (
-              <tr
-                key={entry.entry_id}
-                className={`border-border border-b last:border-0 ${
-                  isReversed ? 'text-muted-foreground line-through' : ''
-                }`}
-              >
-                <td className="py-2">{formatDate(entry.business_date)}</td>
-                <td className="py-2">
-                  {t(`credit.entryType.${entry.entry_type}`, entry.entry_type)}
-                  {isReversal && (
-                    <span className="text-muted-foreground ml-1 text-xs">
-                      {t('credit.card.isReversal')}
-                    </span>
-                  )}
-                </td>
-                <td className="py-2">{t(`credit.bucket.${entry.bucket}`, entry.bucket)}</td>
-                <td className="text-muted-foreground py-2 text-right tabular-nums">
-                  {entry.installment_seq ?? '—'}
-                </td>
-                <td className="py-2 text-right tabular-nums">
-                  {money(entry.amount_minor, entry.currency)}
-                </td>
-                <td className="text-muted-foreground py-2 text-xs">{entry.rule_id ?? '—'}</td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-      {ordered.length > PAGE && !expanded && (
-        <div className="mt-3">
-          <Button size="sm" variant="white-secondary" onClick={() => setExpanded(true)}>
-            {t('credit.actions.showMore')}
-          </Button>
-        </div>
+    <div>
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        <label className="text-muted-foreground flex flex-col gap-1.5 text-xs">
+          {t('credit.columns.bucket')}
+          <select
+            className="border-input-border bg-card text-foreground h-10 rounded-md border px-3 text-sm"
+            value={bucket}
+            onChange={(event) => {
+              // Раскрытый срез прежней корзины не переносится: иначе `PAGE`
+              // отключался бы в каждой следующей. Сброс — в том же событии, а
+              // не `key` (пересоздал бы `<select>` и снял бы с него фокус) и не
+              // эффект (кадр между сменой и эффектом рисует весь список).
+              setExpanded(false)
+              onBucketChange(event.target.value as CreditBucket | '')
+            }}
+          >
+            <option value="">{t('credit.filters.anyBucket')}</option>
+            {/* Итерация по словарю кода, а не семь строк руками: дверь значение
+                со словарём не сверяет и на неизвестное отвечает 200 с пустым
+                `items` — опечатка дошла бы до оператора как «в корзине пусто». */}
+            {CREDIT_BUCKETS.map((name) => (
+              <option key={name} value={name}>
+                {t(`credit.bucket.${name}`, name)}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      {bucket !== '' && (
+        <CreditNotice>{t('credit.card.journalBucketReversalUnknown')}</CreditNotice>
       )}
-    </AsyncPanel>
+
+      <AsyncPanel
+        title={t('credit.tabs.journal')}
+        isLoading={isLoading}
+        error={error}
+        isEmpty={entries.length === 0}
+        emptyText={bucket ? t('credit.card.noJournalInBucket') : t('credit.card.noJournal')}
+        onRetry={onRetry}
+        footer={
+          ordered.length > PAGE
+            ? t('credit.card.journalShown', { shown: visible.length, total: ordered.length })
+            : undefined
+        }
+      >
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-border text-muted-foreground border-b text-xs">
+              <th className="py-2 pr-3 text-left font-medium">{t('credit.columns.date')}</th>
+              <th className="py-2 pr-3 text-left font-medium">{t('credit.columns.entryType')}</th>
+              <th className="py-2 pr-3 text-left font-medium">{t('credit.columns.bucket')}</th>
+              <th className="py-2 pr-3 text-right font-medium">
+                {t('credit.columns.installment')}
+              </th>
+              <th className="py-2 pr-3 text-right font-medium">{t('credit.columns.amount')}</th>
+              <th className="py-2 text-left font-medium">{t('credit.columns.rule')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visible.map((entry) => {
+              const isReversed = reversed.has(entry.entry_id)
+              // Пометка «(сторно)» нужна там, где по типу это не видно:
+              // компенсирующей может быть и `cancellation`. У самого
+              // `reversal` она давала тавтологию «Сторнування (сторно)».
+              const isReversal =
+                Boolean(entry.reversal_of_entry_id) && entry.entry_type !== 'reversal'
+              return (
+                <tr
+                  key={entry.entry_id}
+                  className={`border-border border-b last:border-0 ${
+                    isReversed ? 'text-muted-foreground line-through' : ''
+                  }`}
+                >
+                  <td className="py-2 pr-3">{formatDate(entry.business_date)}</td>
+                  <td className="py-2 pr-3">
+                    {t(`credit.entryType.${entry.entry_type}`, entry.entry_type)}
+                    {isReversal && (
+                      <span className="text-muted-foreground ml-1 text-xs">
+                        {t('credit.card.isReversal')}
+                      </span>
+                    )}
+                  </td>
+                  <td className="py-2 pr-3">{t(`credit.bucket.${entry.bucket}`, entry.bucket)}</td>
+                  <td className="text-muted-foreground py-2 pr-3 text-right tabular-nums">
+                    {entry.installment_seq ?? '—'}
+                  </td>
+                  <td className="py-2 pr-3 text-right tabular-nums">
+                    {money(entry.amount_minor, entry.currency)}
+                  </td>
+                  <td className="text-muted-foreground py-2 text-xs">{entry.rule_id ?? '—'}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+        {ordered.length > PAGE && !expanded && (
+          <div className="mt-3">
+            <Button size="sm" variant="white-secondary" onClick={() => setExpanded(true)}>
+              {t('credit.actions.showMore')}
+            </Button>
+          </div>
+        )}
+      </AsyncPanel>
+    </div>
   )
 }
 

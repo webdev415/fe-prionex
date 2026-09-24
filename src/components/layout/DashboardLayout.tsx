@@ -4,9 +4,11 @@ import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth'
 import { useV3UiEnabled } from '@/features/scoring/hooks/useV3Scores'
 import { useAuthStore } from '@/stores/authStore'
+import { useUbkiAvailable } from '@/features/ubki/hooks/useUbkiAvailable'
 import { useSidebarStore } from '@/stores/sidebarStore'
 import { useSearchStore } from '@/stores/searchStore'
 import { usePermissionRefresh } from '@/hooks'
+import { useProjectCountry } from '@/hooks/useProjectCountry'
 import { ImpersonationBanner } from '@/features/auth/components/ImpersonationBanner'
 import { LogoutConfirmationModal } from './LogoutConfirmationModal'
 import { Sidebar, type SidebarItem, type SidebarSubItem } from './Sidebar'
@@ -18,9 +20,11 @@ import { NotificationBell } from './NotificationBell'
 import { ThemeModeToggle } from './ThemeModeToggle'
 import { DRAFT_PAGE_PERMISSIONS, PERMISSIONS } from '@/constants/permissions'
 import type { Permission } from '@/constants/permissions'
-import { useHasPermission } from '@/hooks/usePermissions'
+import { useHasPermission, useHasAnyPermission } from '@/hooks/usePermissions'
+import { useCreditSectionEnabled } from '@/features/credit/hooks/useCredit'
 import { SearchResults, type SearchResult } from '@/components/ui/SearchResults'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { NEW_CONVERSATION_QUERY } from '@/pages/AiAssistant/conversationUrl'
 import {
   isOnexDockSoloSurface,
   shouldStripDashboardChrome,
@@ -53,6 +57,7 @@ import { RouteChangeTracker, TrackingProvider } from '@/features/operatorAnalyti
 import { LawyerWorkplaceHeaderNav } from '@/pages/LawyerWorkplace/components/LawyerWorkplaceHeaderNav'
 import { useLegalInboxSummary } from '@/features/lawyerWorkplace'
 import { useAiAssistantSettings } from '@/features/aiSettings/hooks/useAiAssistantSettings'
+import { piiProps } from '@/lib/openreplay/pii'
 
 // Minimum digit count required to fire a phone-type search. Mirrors the
 // backend guard at services/client/app/routers/search.py (PHONE_MIN_DIGITS).
@@ -72,13 +77,19 @@ export function AiAssistantHeaderButton() {
   const location = useLocation()
   const { t } = useTranslation('common')
   const canUseAssistant = useHasPermission(PERMISSIONS.AI_ASSISTANT.USE)
+  const assistantSpeaksTheProjectLanguage = useProjectCountry() === 'UA'
   const { data: aiSettings } = useAiAssistantSettings()
+  // Активность пункта — по pathname: маркер живёт в query и подсветку не трогает.
   const isActive = location.pathname === '/dashboard/ai-assistant'
 
   // Entitlement + kill-switch: hide for users without use_ai_assistant and
   // for everyone while the global switch is off. Fail-open: while settings
   // are loading/unavailable the button stays (backend still enforces).
-  if (!canUseAssistant || aiSettings?.assistant_enabled === false) {
+  if (
+    !canUseAssistant ||
+    !assistantSpeaksTheProjectLanguage ||
+    aiSettings?.assistant_enabled === false
+  ) {
     return null
   }
 
@@ -86,7 +97,10 @@ export function AiAssistantHeaderButton() {
     <button
       type="button"
       aria-label={t('pages.aiAssistant.headerButtonAria')}
-      onClick={() => navigate('/dashboard/ai-assistant')}
+      // Вход из шапки — всегда чистый лист (`?conversation=new`). Без маркера
+      // при включённом «помнить контекст» кнопка возвращала бы последний диалог,
+      // а не открывала новый — см. pages/AiAssistant/conversationUrl.ts.
+      onClick={() => navigate(`/dashboard/ai-assistant?${NEW_CONVERSATION_QUERY}`)}
       className={cn(
         'hover:bg-muted relative flex h-9 w-9 items-center justify-center rounded-full transition-colors focus:outline-none',
         isActive && 'bg-muted'
@@ -239,7 +253,10 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
               <Icons.Headset size={20} className="text-white" strokeWidth={1.5} />
             </div>
             <div className="flex min-w-0 flex-1 flex-col">
-              <div className="text-foreground truncate text-sm font-semibold">
+              {/* The phone below stays readable — it is digits, which the
+                  tracker masks on its own, and it is what keeps the bubble
+                  identifiable in a replay. */}
+              <div className="text-foreground truncate text-sm font-semibold" {...piiProps}>
                 {minimizedCall.clientName}
               </div>
               <div className="text-muted-foreground text-xs">
@@ -288,7 +305,7 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
               <Icons.Voice size={20} className="text-white" strokeWidth={1.5} />
             </div>
             <div className="flex min-w-0 flex-1 flex-col">
-              <div className="text-foreground truncate text-sm font-semibold">
+              <div className="text-foreground truncate text-sm font-semibold" {...piiProps}>
                 {minimizedCall.callData?.clientName || minimizedCall.clientName}
               </div>
               <div className="text-muted-foreground text-xs">
@@ -352,7 +369,7 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
           <button
             type="button"
             className="bg-secondary-800 flex h-10 w-10 cursor-pointer items-center justify-center rounded-md text-white transition-colors hover:opacity-90 focus:outline-none lg:hidden"
-            aria-label="Menu"
+            aria-label={t('navigation.menu', 'Menu')}
           >
             <Icons.User02 size={20} strokeWidth={1.5} className="text-primary-500" />
           </button>
@@ -360,7 +377,12 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuItem disabled className="text-foreground text-sm">
             <Icons.User02 size={16} className="mr-2" />
-            <span className="truncate">{displayName}</span>
+            {/* The operator's own name, and a PORTAL: Radix renders the menu
+                under document.body, so inheritance from anything in the header
+                would not reach it. The attribute goes inside the content. */}
+            <span className="truncate" {...piiProps}>
+              {displayName}
+            </span>
           </DropdownMenuItem>
 
           {minimizedCall && (
@@ -476,6 +498,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const { logout, isImpersonating, impersonatedUser, exitImpersonation } = useAuth()
+
+  // Рубильник раздела кредита. Модуль его ХРАНИТ И ОТДАЁТ, но сам ничего по
+  // нему не запрещает — намеренно: раздел это витрина оператора, а оператор
+  // обслуживает уже выданные кредиты, и закрывать ему API нельзя. Прячет
+  // раздел та сторона, которой он принадлежит, то есть CRM. Вот она.
+  // Спрашиваем только у тех, кто раздел и так видит по правам.
+  const canSeeCreditSection = useHasAnyPermission([
+    PERMISSIONS.CREDIT.APPLICATIONS_VIEW,
+    PERMISSIONS.CREDIT.LOANS_VIEW,
+    PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+  ])
+  const creditSectionEnabled = useCreditSectionEnabled(canSeeCreditSection)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [isExitingImpersonation, setIsExitingImpersonation] = useState(false)
@@ -728,6 +762,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   ]
 
   const user = useAuthStore((state) => state.user)
+  const ubkiAvailable = useUbkiAvailable()
 
   const canViewLegalWorkplace = useMemo(
     () =>
@@ -884,6 +919,19 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             mode: 'any' as const,
           },
           {
+            // Рядом с «Заявками» и сразу после них: это подмножество тех же
+            // заявок, отобранное по решению «ручной разбор», и оператор ищет
+            // его там же, где список.
+            path: '/dashboard/credit/underwriting',
+            label: t('navigation.creditUnderwriting', 'Manual review queue'),
+            icon: 'work',
+            requiredPermissions: [
+              PERMISSIONS.CREDIT.APPLICATIONS_VIEW,
+              PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+            ],
+            mode: 'any' as const,
+          },
+          {
             path: '/dashboard/credit/loans',
             label: t('navigation.creditLoans', 'Loans'),
             icon: 'transaction-history',
@@ -999,14 +1047,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             ],
             mode: 'any' as const,
           },
-          {
-            // TODO(ubki): swap to a dedicated manage_integrations permission
-            // once it exists (reusing messaging integrations for now).
-            path: '/dashboard/system-settings/integrations/ubki',
-            label: t('navigation.ubkiIntegration', 'UBKI Integration'),
-            icon: 'briefcase-01',
-            requiredPermission: PERMISSIONS.MESSAGING.MANAGE_INTEGRATIONS,
-          },
+          ...(ubkiAvailable
+            ? [
+                {
+                  // TODO(ubki): swap to a dedicated manage_integrations permission
+                  // once it exists (reusing messaging integrations for now).
+                  path: '/dashboard/system-settings/integrations/ubki',
+                  label: t('navigation.ubkiIntegration', 'UBKI Integration'),
+                  icon: 'briefcase-01',
+                  requiredPermission: PERMISSIONS.MESSAGING.MANAGE_INTEGRATIONS,
+                },
+              ]
+            : []),
           {
             path: '/dashboard/system-settings/tags',
             label: t('navigation.tags', 'Tags'),
@@ -1148,6 +1200,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       .filter((item) => {
         if (item.disabled) return true
 
+        // Раздел выключен риск-менеджером — пункта в меню нет. Проверка стоит
+        // ДО прав: выключенный раздел скрыт и от того, у кого права есть.
+        if (item.path === '/dashboard/credit' && !creditSectionEnabled) return false
+
         // If item has sub-items, show parent when at least one sub-item is visible
         if (item.subItems) {
           return item.subItems.length > 0
@@ -1169,7 +1225,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     return { navItems: regularItems, bottomNavItems: bottomItems }
     // i18n.language is needed to recalculate navigation items when language changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.permissions, t, i18n.language, legalUnprocessedCount, v3UiEnabled])
+  }, [
+    user?.permissions,
+    t,
+    i18n.language,
+    legalUnprocessedCount,
+    v3UiEnabled,
+    ubkiAvailable,
+    creditSectionEnabled,
+  ])
 
   const { navItems, bottomNavItems } = navItemsResult
   const { toggleSidebar } = useSidebarStore()
@@ -1253,7 +1317,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     'focus:ring-primary-500 focus:ring-offset-background group border-border bg-card hover:bg-muted active:bg-muted flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow-md focus:ring-2 focus:ring-offset-2 focus:outline-none active:shadow-sm disabled:cursor-not-allowed disabled:opacity-50 xl:hidden',
                     isLawyerWorkplaceRoute && 'self-center'
                   )}
-                  aria-label="Toggle menu"
+                  aria-label={t('navigation.toggleMenu', 'Toggle menu')}
                 >
                   <Icons.Menu11
                     size={20}

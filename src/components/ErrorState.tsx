@@ -5,6 +5,7 @@
  * Provides a standardized way to show errors with optional retry functionality.
  */
 
+import { useTranslation } from 'react-i18next'
 import { Button } from './ui/Button'
 import { Alert } from './ui/Alert'
 import { getErrorMessage } from '@/lib/errors'
@@ -18,6 +19,7 @@ interface ErrorStateProps {
 }
 
 export function ErrorState({ error, onRetry, title, className }: ErrorStateProps) {
+  const { t } = useTranslation('common')
   const errorMessage = getErrorMessage(error)
 
   return (
@@ -29,7 +31,7 @@ export function ErrorState({ error, onRetry, title, className }: ErrorStateProps
       <p className="mb-6 text-sm text-gray-600">{errorMessage}</p>
       {onRetry && (
         <Button onClick={onRetry} variant="primary" className="bg-primary-300 text-dark-500">
-          Try Again
+          {t('components.errorState.tryAgain', 'Try Again')}
         </Button>
       )}
     </div>

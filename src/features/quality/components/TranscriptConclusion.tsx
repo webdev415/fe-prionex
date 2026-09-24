@@ -29,6 +29,7 @@ import {
   normalizeConclusion,
   splitUttReferences,
 } from '../lib/transcriptConclusion'
+import { Pii, piiProps } from '@/lib/openreplay/pii'
 
 export interface TranscriptConclusionProps {
   review: CallAiReview | null | undefined
@@ -69,7 +70,12 @@ function UttText({
   return (
     <>
       {segments.map((segment, i) => {
-        if (segment.kind === 'text') return <span key={i}>{segment.text}</span>
+        if (segment.kind === 'text')
+          return (
+            <span key={i} {...piiProps}>
+              {segment.text}
+            </span>
+          )
         const target = utterances[segment.utt]
         const t0 = typeof target?.t0 === 'number' && Number.isFinite(target.t0) ? target.t0 : null
         if (t0 == null) {
@@ -292,7 +298,7 @@ export function TranscriptConclusion({ review, utterances, onSeek }: TranscriptC
                         {priorityLabel(rec.priority)}
                       </span>
                     ) : null}
-                    {rec.text}
+                    <Pii>{rec.text}</Pii>
                     {rec.evidence ? (
                       <span className="text-muted-foreground">
                         {' '}

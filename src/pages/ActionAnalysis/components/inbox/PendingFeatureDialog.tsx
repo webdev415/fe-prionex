@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
+import { piiProps } from '@/lib/openreplay/pii'
 
 /**
  * Generic placeholder modal for Quick Actions whose backend lives in a
@@ -45,7 +46,9 @@ export function PendingFeatureDialog({
           {operatorName ? (
             <div className="bg-muted flex items-center gap-2 rounded-lg px-3 py-2">
               <Icons.User size={14} className="text-muted-foreground" />
-              <span className="text-foreground text-sm font-medium">{operatorName}</span>
+              <span className="text-foreground text-sm font-medium" {...piiProps}>
+                {operatorName}
+              </span>
             </div>
           ) : null}
 

@@ -147,6 +147,7 @@ export function OptOutTab() {
   const columns: Column<Row>[] = [
     {
       key: 'client',
+      obscured: true,
       header: t('pages.ubkiIntegration.optOut.columns.client', 'Client'),
       render: (r) => (
         <div className="text-xs">

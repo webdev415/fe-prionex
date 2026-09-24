@@ -8,3 +8,4 @@ export {
   useBulkSubmitByClients,
   useUbkiLogs,
 } from './hooks/useUbki'
+export { useUbkiAvailable } from './hooks/useUbkiAvailable'

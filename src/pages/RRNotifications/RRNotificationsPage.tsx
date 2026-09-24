@@ -283,7 +283,7 @@ export function RRNotificationsPage() {
               onChange={(e) => setTemplateText(e.target.value)}
               rows={4}
               className="text-sm"
-              placeholder="{client_name} has a scheduled RR payment of {amount} due on {due_date}"
+              placeholder={t('pages.rrNotifications.templatePlaceholder')}
             />
 
             {/* Variables detected — chips showing which vars are

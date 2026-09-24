@@ -12,6 +12,7 @@
  */
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/Tooltip'
@@ -33,9 +34,9 @@ const KEY_PARAMS = [
   'regulatory_package_version',
 ]
 
-function formatValue(value: unknown): string {
+function formatValue(value: unknown, t: TFunction): string {
   if (value === null || value === undefined) return '—'
-  if (typeof value === 'boolean') return value ? 'да' : 'нет'
+  if (typeof value === 'boolean') return value ? t('common.yes') : t('common.no')
   if (typeof value === 'object') return JSON.stringify(value)
   return String(value)
 }
@@ -144,7 +145,7 @@ function ProductCard({
             {KEY_PARAMS.filter((key) => key in payload).map((key) => (
               <div key={key} className="contents">
                 <dt className="text-muted-foreground font-mono text-xs">{key}</dt>
-                <dd className="m-0">{formatValue(payload[key])}</dd>
+                <dd className="m-0">{formatValue(payload[key], t)}</dd>
               </div>
             ))}
           </dl>

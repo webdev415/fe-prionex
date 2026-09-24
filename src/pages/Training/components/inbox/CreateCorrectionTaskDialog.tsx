@@ -13,6 +13,7 @@ import {
 import { useOperators } from '@/features/users/hooks'
 import { useAuthStore } from '@/stores/authStore'
 import { formatDateTime } from '@/lib/localeFormat'
+import { piiProps } from '@/lib/openreplay/pii'
 
 /**
  * Trainer creates a correction task linked to one of the operator's
@@ -204,7 +205,10 @@ export function CreateCorrectionTaskDialog({
               <span className="text-xs font-medium text-gray-600">
                 {t('pages.training.correction.operator', 'Operator')}
               </span>
-              <div className="rounded-lg bg-gray-50 px-3 py-2 text-sm font-medium text-gray-800">
+              <div
+                className="rounded-lg bg-gray-50 px-3 py-2 text-sm font-medium text-gray-800"
+                {...piiProps}
+              >
                 {operator?.full_name ?? `#${operatorId}`}
               </div>
             </div>

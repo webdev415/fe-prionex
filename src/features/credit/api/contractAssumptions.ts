@@ -21,9 +21,14 @@
  * него. Утверждение без объяснения бесполезно: следующий не поймёт, можно ли
  * его удалить.
  */
+import type { CreditApplicationStage } from './applicationStages'
 import type {
+  CreditApplicationDetail,
   CreditApplicationStatus,
+  CreditDecision,
+  CreditDocumentMeta,
   CreditJournalEntry,
+  CreditLoanDetail,
   CreditLoanStatus,
   CreditPayment,
 } from './types'
@@ -32,6 +37,8 @@ import type {
 type Assert<T extends true> = T
 /** Есть ли у типа такое поле (в том числе необязательное). */
 type Has<T, K extends string> = K extends keyof T ? true : false
+/** Поле обязательно (объявлено без `?:`). `Has` этого не различает. */
+type IsRequired<T, K extends keyof T> = Record<never, never> extends Pick<T, K> ? false : true
 /** Есть ли значение в объединении. */
 type Includes<Union, V extends string> = V extends Union ? true : false
 
@@ -80,3 +87,66 @@ export type _app_status_referred = Assert<Includes<CreditApplicationStatus, 'ref
 export type _app_status_declined = Assert<Includes<CreditApplicationStatus, 'declined'>>
 export type _app_status_disbursed = Assert<Includes<CreditApplicationStatus, 'disbursed'>>
 export type _app_status_scoring = Assert<Includes<CreditApplicationStatus, 'scoring'>>
+
+/* ─── Этап заявки ───────────────────────────────────────────────────────
+   Позиция ленты в карточке читается из ответа модуля. Эти три утверждения
+   стерегут СОСТАВ ТИПА, и только его: удалит кто-нибудь поле из
+   `CreditApplicationDetail` — красная сборка с именем строки. Чего они НЕ
+   стерегут, надо знать: ответ приходит неконтролируемым приведением типа, без
+   разбора схемы, и объект уходит в компонент целиком, а компонент объявляет
+   нужные поля в СВОЁМ структурном типе. Поэтому сцену «страница передала ленте
+   обрезанный объект» эти строки не поймают — её стережёт отдельный тест
+   уровня страницы (`CreditApplicationDetailPage.test.tsx`, «передаёт ленте три
+   поля этапа»). `Has` ловит локальное удаление и ничего не говорит о
+   контракте (см. шапку про два класса утверждений). */
+export type _app_has_stage = Assert<Has<CreditApplicationDetail, 'stage'>>
+export type _app_has_stage_index = Assert<Has<CreditApplicationDetail, 'stage_index'>>
+export type _app_has_stage_total = Assert<Has<CreditApplicationDetail, 'stage_total'>>
+/* А это — второй класс: утверждение о СОДЕРЖИМОМ перечня. Переименуют этап
+   обратно в `bank` — красная сборка с именем строки, а не молча неверный
+   экран: имя этапа уезжает в ключ словаря и на экран оператора. */
+export type _app_stage_income_check = Assert<Includes<CreditApplicationStage, 'income_check'>>
+
+/* ─── Статусы, на которых стоит состояние строки ленты ──────────────────
+   `serverStepState` (`applicationStages.ts`) сравнивает статус заявки с этими
+   строками поимённо: 'contracted'/'disbursed' → шаг пройден, 'expired'/
+   'abandoned' → у мёртвой заявки текущего шага нет, 'declined' → сбой.
+   'declined' и 'disbursed' уже утверждены выше; ниже — три недостающие.
+   Переименует модуль любую из них — без этих строк сборка останется зелёной,
+   а на экране строка индекса молча станет «поточний крок»: ровно тот класс
+   отказа, ради которого файл и заведён. */
+export type _app_status_contracted = Assert<Includes<CreditApplicationStatus, 'contracted'>>
+export type _app_status_expired = Assert<Includes<CreditApplicationStatus, 'expired'>>
+export type _app_status_abandoned = Assert<Includes<CreditApplicationStatus, 'abandoned'>>
+
+/* ─── Излишек возврата и указатель на заменённое решение ───────────────
+   Оба поля объявлены БЕЗ `?:`, чтобы каждая фикстура и каждый новый читатель
+   назвали значение. Что сломается, если вернуть `?:`: фикстура без поля снова
+   соберётся, а карточка кредита на отстающем модуле станет прятать излишек
+   как «излишка нет» — без единого слова компилятора. `Has` здесь бесполезен:
+   необязательное поле он тоже засчитывает.
+   Стерегут ЛОКАЛЬНЫЙ тип, не контракт (см. шапку про `Has` у этапа заявки):
+   у `supersedes_decision_id` required строже контракта намеренно — модуль
+   кладёт ключ всегда. Третья строка стережёт `null`: без него «ничего не
+   заменяло» некуда положить, и фикстуры начали бы выдумывать id. */
+export type _loan_excess_required = Assert<
+  IsRequired<CreditLoanDetail, 'advance_refund_excess_minor'>
+>
+export type _decision_supersedes_required = Assert<
+  IsRequired<CreditDecision, 'supersedes_decision_id'>
+>
+export type _decision_supersedes_nullable = Assert<
+  null extends CreditDecision['supersedes_decision_id'] ? true : false
+>
+
+/* ─── Признак «содержимое откроется» у документа ───────────────────────
+   Кнопка документа читает его ДО нажатия: `false` — по записям модуля
+   выдавать нечего, и кнопка говорит это вместо запроса. Что сломается, если
+   поле станет необязательным или пропадёт: кнопка перестанет заранее говорить
+   «не откроется», а фикстуры забудут значение молча — компилятор промолчит.
+   Стережёт ЛОКАЛЬНЫЙ тип, не контракт (см. шапку про `Has` у этапа заявки):
+   в контракте поле не required, здесь required намеренно — модуль кладёт
+   ключ всегда. */
+export type _document_content_available_required = Assert<
+  IsRequired<CreditDocumentMeta, 'content_available'>
+>

@@ -26,6 +26,10 @@ export const APPLICATION_SORTABLE = [
   'updated_at',
   'requested_amount_minor',
   'number',
+  // Время входа в текущий шаг. Добавлено в модуль вместе с лентой переходов:
+  // без серверной сортировки вопрос «кто стоит на банковской проверке дольше
+  // всех» решался бы в пределах загруженной страницы, то есть не решался бы.
+  'step_entered_at',
 ] as const
 
 /** `-field` → {key: field, order: 'desc'}; пусто → undefined. */

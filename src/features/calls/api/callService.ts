@@ -9,6 +9,8 @@ import type {
   UpdateCallOutcomeRequest,
   AMIHealthResponse,
   IncomingCallData,
+  BlockedCallAttemptResult,
+  CallingWindowStatus,
 } from '../types'
 
 // Use same base URL as other services - all requests go through Kong Gateway
@@ -49,6 +51,22 @@ export interface FetchRecordingOptions {
 }
 
 class CallService {
+  /** Whether the project's calling window allows a call right now (KAN-1107). */
+  async getCallingWindowStatus(clientId?: number | null): Promise<CallingWindowStatus> {
+    const response = await api.get(`${API_BASE_URL}/api/v1/calls/calling-window/status`, {
+      params: clientId != null ? { client_id: clientId } : undefined,
+    })
+    return response.data
+  }
+
+  async reportBlockedCallAttempt(clientId?: number | null): Promise<BlockedCallAttemptResult> {
+    const response = await api.post(
+      `${API_BASE_URL}/api/v1/calls/calling-window/blocked-attempts`,
+      { client_id: clientId ?? null }
+    )
+    return response.data
+  }
+
   async originateCall(request: OriginateCallRequest): Promise<OriginateCallResponse> {
     const response = await api.post(`${API_BASE_URL}/api/v1/calls/originate`, request)
     return response.data

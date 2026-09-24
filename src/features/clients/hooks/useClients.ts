@@ -6,6 +6,7 @@
 import { useEffect } from 'react'
 import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import i18n from '@/lib/i18n'
 import type { AxiosError } from 'axios'
 import { clientApi } from '../api/clientApi'
 import { paymentApi } from '../api/paymentApi'
@@ -215,10 +216,14 @@ export function useCreateClient() {
       queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
       queryClient.invalidateQueries({ queryKey: clientKeys.count() })
       queryClient.invalidateQueries({ queryKey: clientKeys.prioritySummary() })
-      toast.success('Client created successfully')
+      toast.success(
+        i18n.t('toasts.clients.created', { defaultValue: 'Client created successfully' })
+      )
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to create client'
+      const message =
+        error?.response?.data?.detail ||
+        i18n.t('toasts.clients.createFailed', { defaultValue: 'Failed to create client' })
       toast.error(message)
     },
   })
@@ -247,10 +252,16 @@ export function useDeleteClient() {
       queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
       queryClient.invalidateQueries({ queryKey: clientKeys.count() })
       queryClient.invalidateQueries({ queryKey: clientKeys.prioritySummary() })
-      toast.success('Client deleted successfully')
+      toast.success(
+        i18n.t('pages.clients.modals.deleteClient.deletedSuccess', {
+          defaultValue: 'Client deleted successfully',
+        })
+      )
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to delete client'
+      const message =
+        error?.response?.data?.detail ||
+        i18n.t('toasts.clients.deleteFailed', { defaultValue: 'Failed to delete client' })
       toast.error(message)
     },
   })
@@ -274,10 +285,18 @@ export function useSetManualPriority() {
       })
       queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
       queryClient.invalidateQueries({ queryKey: clientKeys.prioritySummary() })
-      toast.success('Manual priority set successfully')
+      toast.success(
+        i18n.t('toasts.clients.manualPrioritySet', {
+          defaultValue: 'Manual priority set successfully',
+        })
+      )
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to set manual priority'
+      const message =
+        error?.response?.data?.detail ||
+        i18n.t('toasts.clients.manualPriorityFailed', {
+          defaultValue: 'Failed to set manual priority',
+        })
       toast.error(message)
     },
   })
@@ -335,10 +354,14 @@ export function useAssignClient() {
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ['clients', variables.clientId, 'tags'] })
       }, 5000)
-      toast.success('Client assigned successfully')
+      toast.success(
+        i18n.t('toasts.clients.assigned', { defaultValue: 'Client assigned successfully' })
+      )
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to assign client'
+      const message =
+        error?.response?.data?.detail ||
+        i18n.t('toasts.clients.assignFailed', { defaultValue: 'Failed to assign client' })
       toast.error(message)
     },
   })
@@ -382,7 +405,9 @@ export function useBulkAssignClients() {
       }
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to bulk assign clients'
+      const message =
+        error?.response?.data?.detail ||
+        i18n.t('toasts.clients.bulkAssignFailed', { defaultValue: 'Failed to bulk assign clients' })
       toast.error(message)
     },
   })
@@ -617,10 +642,12 @@ export function useUpdateTask(clientId: number) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: clientKeys.tasks(clientId) })
       queryClient.invalidateQueries({ queryKey: ['tasks', 'my-tasks'] })
-      toast.success('Task updated successfully')
+      toast.success(i18n.t('toasts.tasks.updated', { defaultValue: 'Task updated successfully' }))
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to update task'
+      const message =
+        error?.response?.data?.detail ||
+        i18n.t('toasts.tasks.updateFailed', { defaultValue: 'Failed to update task' })
       toast.error(message)
     },
   })
@@ -637,10 +664,12 @@ export function useDeleteTask(clientId: number) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: clientKeys.tasks(clientId) })
       queryClient.invalidateQueries({ queryKey: ['tasks', 'my-tasks'] })
-      toast.success('Task deleted successfully')
+      toast.success(i18n.t('toasts.tasks.deleted', { defaultValue: 'Task deleted successfully' }))
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to delete task'
+      const message =
+        error?.response?.data?.detail ||
+        i18n.t('toasts.tasks.deleteFailed', { defaultValue: 'Failed to delete task' })
       toast.error(message)
     },
   })
@@ -737,10 +766,18 @@ export function useAddSpamCallHistory(clientId: number) {
     mutationFn: (phone: string) => interactionApi.addSpamCallHistory(clientId, phone),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: clientKeys.dialHistory(clientId) })
-      toast.success('Phone number added to spam call history')
+      toast.success(
+        i18n.t('toasts.clients.spamNumberAdded', {
+          defaultValue: 'Phone number added to spam call history',
+        })
+      )
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error.response?.data?.detail || 'Failed to add to spam call history'
+      const message =
+        error.response?.data?.detail ||
+        i18n.t('toasts.clients.spamNumberAddFailed', {
+          defaultValue: 'Failed to add to spam call history',
+        })
       toast.error(message)
     },
   })
@@ -877,10 +914,12 @@ export function useCloseDebt() {
         exact: true,
       })
       queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
-      toast.success('Loan closed successfully')
+      toast.success(i18n.t('toasts.loans.closed', { defaultValue: 'Loan closed successfully' }))
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to close loan'
+      const message =
+        error?.response?.data?.detail ||
+        i18n.t('toasts.loans.closeFailed', { defaultValue: 'Failed to close loan' })
       toast.error(message)
     },
   })
@@ -903,10 +942,12 @@ export function useReopenDebt() {
         exact: true,
       })
       queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
-      toast.success('Loan reopened successfully')
+      toast.success(i18n.t('toasts.loans.reopened', { defaultValue: 'Loan reopened successfully' }))
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to reopen loan'
+      const message =
+        error?.response?.data?.detail ||
+        i18n.t('toasts.loans.reopenFailed', { defaultValue: 'Failed to reopen loan' })
       toast.error(message)
     },
   })
@@ -934,10 +975,16 @@ export function useUpdateDebtClosureDate() {
         queryKey: clientKeys.detail(variables.clientId),
         exact: true,
       })
-      toast.success('Closure date updated')
+      toast.success(
+        i18n.t('toasts.loans.closureDateUpdated', { defaultValue: 'Closure date updated' })
+      )
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to update closure date'
+      const message =
+        error?.response?.data?.detail ||
+        i18n.t('toasts.loans.closureDateUpdateFailed', {
+          defaultValue: 'Failed to update closure date',
+        })
       toast.error(message)
     },
   })
@@ -965,10 +1012,18 @@ export function useCompleteRestructuringAgreement() {
         queryKey: clientKeys.detail(variables.clientId),
         exact: true,
       })
-      toast.success('Restructuring agreement completed')
+      toast.success(
+        i18n.t('toasts.restructuring.completed', {
+          defaultValue: 'Restructuring agreement completed',
+        })
+      )
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to complete restructuring agreement'
+      const message =
+        error?.response?.data?.detail ||
+        i18n.t('toasts.restructuring.completeFailed', {
+          defaultValue: 'Failed to complete restructuring agreement',
+        })
       toast.error(message)
     },
   })
@@ -1004,10 +1059,18 @@ export function useTransitionRRStatus() {
       queryClient.invalidateQueries({
         queryKey: clientKeys.restructuringDetail(variables.clientId, variables.raId),
       })
-      toast.success('Restructuring status updated')
+      toast.success(
+        i18n.t('toasts.restructuring.statusUpdated', {
+          defaultValue: 'Restructuring status updated',
+        })
+      )
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to update restructuring status'
+      const message =
+        error?.response?.data?.detail ||
+        i18n.t('toasts.restructuring.statusUpdateFailed', {
+          defaultValue: 'Failed to update restructuring status',
+        })
       toast.error(message)
     },
   })
@@ -1030,10 +1093,16 @@ export function useDisconnectRR() {
       queryClient.invalidateQueries({
         queryKey: clientKeys.restructuringDetail(variables.clientId, variables.raId),
       })
-      toast.success('Restructuring disconnected')
+      toast.success(
+        i18n.t('toasts.restructuring.disconnected', { defaultValue: 'Restructuring disconnected' })
+      )
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to disconnect restructuring'
+      const message =
+        error?.response?.data?.detail ||
+        i18n.t('toasts.restructuring.disconnectFailed', {
+          defaultValue: 'Failed to disconnect restructuring',
+        })
       toast.error(message)
     },
   })
@@ -1052,10 +1121,16 @@ export function useActivateRR() {
       queryClient.invalidateQueries({
         queryKey: clientKeys.restructuringDetail(variables.clientId, variables.raId),
       })
-      toast.success('Restructuring activated')
+      toast.success(
+        i18n.t('toasts.restructuring.activated', { defaultValue: 'Restructuring activated' })
+      )
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to activate restructuring'
+      const message =
+        error?.response?.data?.detail ||
+        i18n.t('toasts.restructuring.activateFailed', {
+          defaultValue: 'Failed to activate restructuring',
+        })
       toast.error(message)
     },
   })
@@ -1071,10 +1146,16 @@ export function useDeleteRRDraft() {
       queryClient.invalidateQueries({
         queryKey: clientKeys.restructuringAgreements(variables.clientId),
       })
-      toast.success('Draft restructuring deleted')
+      toast.success(
+        i18n.t('toasts.restructuring.draftDeleted', { defaultValue: 'Draft restructuring deleted' })
+      )
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to delete draft restructuring'
+      const message =
+        error?.response?.data?.detail ||
+        i18n.t('toasts.restructuring.draftDeleteFailed', {
+          defaultValue: 'Failed to delete draft restructuring',
+        })
       toast.error(message)
     },
   })
@@ -1142,10 +1223,16 @@ export function useRecordRROverpayment() {
       queryClient.invalidateQueries({
         queryKey: clientKeys.restructuringAgreements(variables.clientId),
       })
-      toast.success('Overpayment recorded')
+      toast.success(
+        i18n.t('toasts.restructuring.overpaymentRecorded', { defaultValue: 'Overpayment recorded' })
+      )
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to record overpayment'
+      const message =
+        error?.response?.data?.detail ||
+        i18n.t('toasts.restructuring.overpaymentFailed', {
+          defaultValue: 'Failed to record overpayment',
+        })
       toast.error(message)
     },
   })
@@ -1164,7 +1251,7 @@ export function useCreateTask() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: clientKeys.tasks(variables.client_id) })
       queryClient.invalidateQueries({ queryKey: ['tasks', 'my-tasks'] })
-      toast.success('Task created successfully')
+      toast.success(i18n.t('toasts.tasks.created', { defaultValue: 'Task created successfully' }))
     },
     onError: (
       error: AxiosError<{
@@ -1222,10 +1309,16 @@ export function useCreateInteraction() {
       interactionApi.createInteraction(data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: clientKeys.activities(variables.client_id) })
-      toast.success('Interaction recorded successfully')
+      toast.success(
+        i18n.t('toasts.interactions.recorded', {
+          defaultValue: 'Interaction recorded successfully',
+        })
+      )
     },
     onError: (error: AxiosError<{ detail?: string }>) => {
-      const message = error?.response?.data?.detail || 'Failed to record interaction'
+      const message =
+        error?.response?.data?.detail ||
+        i18n.t('toasts.interactions.recordFailed', { defaultValue: 'Failed to record interaction' })
       toast.error(message)
     },
   })

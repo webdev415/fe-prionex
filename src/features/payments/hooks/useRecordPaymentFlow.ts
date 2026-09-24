@@ -16,6 +16,7 @@
 import { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import i18n from '@/lib/i18n'
 
 import { useRecordPayment, useVerifyPayment } from '@/features/payments'
 import type { PaymentType } from '@/features/payments/api/types'
@@ -68,7 +69,9 @@ export function useRecordPaymentFlow(
   const handleRecordPayment = useCallback(
     (data: RecordPaymentInput) => {
       if (!clientId) {
-        toast.error('Client ID is required')
+        toast.error(
+          i18n.t('toasts.payments.clientIdRequired', { defaultValue: 'Client ID is required' })
+        )
         return
       }
       // react-datepicker yields LOCAL time; format with local getters.

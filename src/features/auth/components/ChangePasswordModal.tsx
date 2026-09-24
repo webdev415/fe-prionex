@@ -34,7 +34,7 @@ export function ChangePasswordModal({
     if (!newPassword) {
       newErrors.newPassword = t('pages.profile.newPasswordRequired')
     } else if (newPassword.length < 8) {
-      newErrors.newPassword = t('passwordMinLength', { ns: 'auth' })
+      newErrors.newPassword = t('validation.passwordMinLength', { ns: 'auth' })
     }
 
     if (newPassword !== confirmPassword) {
