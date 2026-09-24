@@ -43,6 +43,66 @@ export interface ExportDashboardParams {
   projectId: number
   format: ExportFormat
   period?: Period
+  /**
+   * Window start, YYYY-MM-DD — the same date the screen shows, computed in the
+   * user's profile time zone. Without it the backend re-derives "today" on its
+   * own clock and the file can disagree with the screen (board #1338).
+   */
+  startDate?: string
+  /** Window end, YYYY-MM-DD, same rules as `startDate`. */
+  endDate?: string
+  /** IANA time zone of the window (the profile `timezone`); omitted when unknown. */
+  timezone?: string | null
+}
+
+/**
+ * Query params for GET /api/v1/export/dashboard (contract C4): period plus the
+ * explicit window and its time zone. Empty values are left out rather than
+ * sent as blanks, so the backend keeps its defaults for them.
+ */
+export function buildDashboardExportParams({
+  projectId,
+  format,
+  period = 'today',
+  startDate,
+  endDate,
+  timezone,
+}: ExportDashboardParams): ExportParams {
+  const params: ExportParams = {
+    project_id: projectId,
+    format,
+    period: mapPeriodToBackend(period),
+  }
+  // report-service uses explicit start_date/end_date regardless of the named
+  // period (dashboard_service._get_date_range); the named period drives only
+  // the trend comparison, so a named period + window is not a conflict.
+  if (startDate) params.start_date = startDate
+  if (endDate) params.end_date = endDate
+  // `timezone` on purpose (report-service export router), unlike `user_timezone` elsewhere.
+  if (timezone) params.timezone = timezone
+  return params
+}
+
+/**
+ * Download file name for the dashboard export, dated by the exported window —
+ * the same profile-time-zone dates the request carries — not by the UTC clock:
+ * at 00:30 Kyiv on 22.09 a «today» export holds 22.09 and must say so.
+ * One day → `dashboard_<period>_<date>`; a range → `…_<start>_<end>`. Without
+ * a window it falls back to today's UTC date (the old name).
+ */
+export function buildDashboardExportFilename({
+  format,
+  period = 'today',
+  startDate,
+  endDate,
+}: Pick<ExportDashboardParams, 'format' | 'period' | 'startDate' | 'endDate'>): string {
+  let dated: string
+  if (startDate && endDate) {
+    dated = startDate === endDate ? startDate : `${startDate}_${endDate}`
+  } else {
+    dated = endDate || startDate || new Date().toISOString().split('T')[0]
+  }
+  return `dashboard_${period}_${dated}.${getExtension(format)}`
 }
 
 /**
@@ -53,7 +113,16 @@ export interface ExportDashboardParams {
  * const { mutate: exportDashboard, isPending } = useExportDashboard()
  *
  * <Button
- *   onClick={() => exportDashboard({ projectId: 1, format: 'csv', period: 'today' })}
+ *   onClick={() =>
+ *     exportDashboard({
+ *       projectId: 1,
+ *       format: 'csv',
+ *       period: 'today',
+ *       startDate: '2026-09-21',
+ *       endDate: '2026-09-21',
+ *       timezone: 'Europe/Kyiv',
+ *     })
+ *   }
  *   disabled={isPending}
  * >
  *   {isPending ? 'Exporting...' : 'Export CSV'}
@@ -62,15 +131,11 @@ export interface ExportDashboardParams {
  */
 export function useExportDashboard() {
   return useMutation({
-    mutationFn: async ({ projectId, format, period = 'today' }: ExportDashboardParams) => {
-      const params: ExportParams = {
-        project_id: projectId,
-        format,
-        period: mapPeriodToBackend(period),
-      }
+    mutationFn: async (exportParams: ExportDashboardParams) => {
+      const params = buildDashboardExportParams(exportParams)
 
       const blob = await reportApi.exportDashboard(params)
-      const filename = `dashboard_${period}_${new Date().toISOString().split('T')[0]}.${getExtension(format)}`
+      const filename = buildDashboardExportFilename(exportParams)
       downloadBlob(blob, filename)
 
       return { filename }

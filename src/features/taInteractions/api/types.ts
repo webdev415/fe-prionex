@@ -34,6 +34,10 @@ export interface TAInteraction {
   archived: boolean
   is_pinned: boolean
   pinned_at: string | null
+  // KAN-1110 — when this record's author stops being able to edit/delete it
+  // without the separate permission. Server-computed (`created_at` + 5 min) so
+  // the countdown cannot drift from the API guard.
+  self_edit_expires_at: string
 }
 
 export interface TAInteractionListResponse {

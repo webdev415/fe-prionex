@@ -5659,7 +5659,6 @@
           "notes": "Notes (Optional)",
           "selectEmployee": "Select employee...",
           "selectSearcher": "Select searcher...",
-          "noUsersAvailable": "No users available",
           "enterAdditionalNotes": "Enter additional notes...",
           "warningMessage": "Note: At least one assignment (Employee or Searcher) must be selected.",
           "assignClient": "Assign Client",
@@ -6701,6 +6700,8 @@
         "rrValidationPaymentDateRequired": "Payment date {{num}} is required",
         "rrValidationPaymentAmountRequired": "Payment amount {{num}} is required",
         "rrValidationSumMismatch": "Sum of payments ({{sum}}) must equal total amount ({{total}})",
+        "rrValidationAmountOutOfRange": "Total restructuring amount ({{amount}}) must be between {{lower}} and {{upper}}",
+        "rrValidationNothingToReturn": "This loan has nothing left to return, so it cannot be restructured",
         "viewDetail": "View",
         "makePayment": "Make Payment",
         "payments": "Payments",
@@ -7198,6 +7199,15 @@
         "cancelled": "Cancelled",
         "completed": "Completed",
         "completedEarly": "Completed early"
+      },
+      "assignee": {
+        "searchPlaceholder": "Search employee",
+        "allEmployees": "All employees",
+        "noMatches": "No matches",
+        "unassign": "Unassign",
+        "pinned": "Pinned",
+        "pin": "Pin",
+        "unpin": "Unpin"
       },
       "documents": {
         "previewFrameTitle": "Document preview"
@@ -9563,11 +9573,9 @@
       },
       "filters": {
         "responsibleOperator": "Responsible Operator:",
-        "clientPhone": "Client Phone:",
         "selectEmployee": "Select employee",
-        "typePhoneNumber": "Type phone number",
-        "dateOfSale": "Date of sale:",
-        "allOperators": "All Operators"
+        "allOperators": "All Operators",
+        "period": "Period:"
       },
       "exportCsv": "Export CSV",
       "estimated": "Estimated",
@@ -9575,6 +9583,7 @@
         "title": "Calls Made",
         "noData": "No data available",
         "total": "Total",
+        "operatorsSum": "by operators",
         "byHour": "By Hour",
         "calls": "calls",
         "byOperator": "By Operator"
@@ -9589,7 +9598,9 @@
         "answered": "Answered",
         "noAnswer": "No Answer",
         "busy": "Busy",
-        "failed": "Failed"
+        "failed": "Failed",
+        "other": "Other",
+        "notEnoughCallsToRank": "Not enough calls to compare operators"
       },
       "smsModal": {
         "title": "SMS Sent",

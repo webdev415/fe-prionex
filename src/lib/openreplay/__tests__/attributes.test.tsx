@@ -33,15 +33,16 @@ interface Finding {
   host?: string
 }
 
-const SOURCES = import.meta.glob('/src/**/*.tsx', { query: '?raw', import: 'default' })
+const SOURCES = import.meta.glob<string>('/src/**/*.tsx', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+})
 
 async function readAll(): Promise<[string, string][]> {
-  const entries = Object.entries(SOURCES).filter(
+  return Object.entries(SOURCES).filter(
     ([path]) => !path.includes('__tests__') && !/\.(test|spec)\.tsx$/.test(path)
   )
-  return Promise.all(
-    entries.map(async ([p, load]) => [p, (await load()) as string] as const)
-  ) as Promise<[string, string][]>
 }
 
 /**
@@ -125,7 +126,7 @@ describe('iframe capture — the rule', () => {
   })
 })
 
-describe('the whole of src/', () => {
+describe('the whole of src/', { timeout: 60_000 }, () => {
   it(
     'leaves no <iframe> capturing',
     async () => {

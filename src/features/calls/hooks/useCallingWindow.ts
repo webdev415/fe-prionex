@@ -1,5 +1,7 @@
-import { useQuery } from '@tanstack/react-query'
+import { useRef } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import { callService } from '../api/callService'
 import type { CallingWindowReason, CallingWindowStatus } from '../types'
 
@@ -23,11 +25,13 @@ const POLL_INTERVAL_MS = 60_000
 
 export function useCallingWindow(clientId?: number | null) {
   const { t } = useTranslation('common')
+  const queryClient = useQueryClient()
+  // The client is part of the key: in Spain the window is judged in the
+  // debtor's own zone, so two debtors in one project can differ by an hour.
+  const queryKey = ['callingWindowStatus', clientId ?? null]
 
   const { data, isLoading } = useQuery<CallingWindowStatus>({
-    // The client is part of the key: in Spain the window is judged in the
-    // debtor's own zone, so two debtors in one project can differ by an hour.
-    queryKey: ['callingWindowStatus', clientId ?? null],
+    queryKey,
     queryFn: () => callService.getCallingWindowStatus(clientId),
     refetchInterval: POLL_INTERVAL_MS,
     refetchOnWindowFocus: true,
@@ -39,11 +43,48 @@ export function useCallingWindow(clientId?: number | null) {
   // disable calling for projects that have no window at all.
   const allowed = data?.allowed ?? true
 
+  const message = data && !data.allowed ? reasonMessage(t, data.reason) : null
+
+  // A ref, not the mutation's isPending: that is read from the last render, so
+  // two presses landing in the same frame both saw "not pending" and both
+  // wrote a record.
+  const inFlight = useRef(false)
+  const report = useMutation({
+    mutationFn: () => callService.reportBlockedCallAttempt(clientId),
+    onSettled: () => {
+      inFlight.current = false
+    },
+    onSuccess: (result) => {
+      // The server re-checks the window before recording anything. If it has
+      // opened since the page last asked, nothing was recorded — refresh so
+      // the button comes back rather than refusing a call that is now legal.
+      if (result.allowed) queryClient.invalidateQueries({ queryKey })
+    },
+  })
+
+  /**
+   * An operator pressed a call button the window had disabled.
+   *
+   * The button stays disabled, so this is the only trace the attempt leaves:
+   * without it the audit log showed no blocked calls at all. The reason is
+   * shown straight away rather than after the round trip — it is what the
+   * operator pressed the button to find out.
+   */
+  const reportBlocked = () => {
+    if (message) toast.warning(message)
+    // One record per press: a double-click or a key held down must not write
+    // a burst of identical entries.
+    if (inFlight.current) return
+    inFlight.current = true
+    report.mutate()
+  }
+
   return {
     allowed,
     isLoading,
     reason: data?.reason ?? null,
-    message: data && !data.allowed ? reasonMessage(t, data.reason) : null,
+    message,
+    reportBlocked,
   }
 }
 

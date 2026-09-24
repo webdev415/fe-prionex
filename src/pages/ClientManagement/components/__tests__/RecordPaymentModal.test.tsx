@@ -1,5 +1,6 @@
 ﻿/** RR status_id taxonomy mirrored from rr_status_service.py:
- *   1 = CONNECTED, 2 = VIOLATED, 3 = CANCELLED, 4 = COMPLETED, 5 = COMPLETED_EARLY.
+ *   1 = CONNECTED, 2 = VIOLATED, 3 = CANCELLED, 4 = COMPLETED, 5 = COMPLETED_EARLY,
+ *   6 = DRAFT.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -690,5 +691,67 @@ describe('RecordPaymentModal — a method switch does not swallow an unrelated e
     fireEvent.click(screen.getByLabelText(`${K}.bankTransfer`))
 
     expect(screen.getByText(`${K}.validationPaymentMustBePositive`)).toBeInTheDocument()
+  })
+})
+
+/**
+ * KAN-1120 — a Draft plan takes payments too.
+ *
+ * Leaving Draft out of the eligible set meant the payment that activates a
+ * plan could not be earmarked for it: the operator picked another type, the
+ * RR auto-activated on the amount anyway, and the first installment it was
+ * meant to cover stayed unpaid, because nothing linked the two.
+ */
+describe('RecordPaymentModal — Draft RR (KAN-1120)', () => {
+  it('offers payment_by_rr when the picked debt has a Draft RR', () => {
+    mockRrList.mockReturnValue([
+      { id: 11, debt_id: 901, status_id: 6, status_name: 'Draft' },
+    ] as RestructuringAgreementSummary[])
+
+    renderModal()
+
+    expect(
+      screen.getByText('pages.training.filters.paymentTypes.payment_by_rr')
+    ).toBeInTheDocument()
+  })
+
+  it('submits the Draft RR id, so the payment lands on its schedule', () => {
+    // The id is the whole point: without it the backend cannot anchor the
+    // payment to the first installment of that plan.
+    mockRrList.mockReturnValue([
+      { id: 11, debt_id: 901, status_id: 6, status_name: 'Draft' },
+    ] as RestructuringAgreementSummary[])
+
+    const { onSave } = renderModal()
+    fillAmount('1000')
+    const saveButton = screen
+      .getAllByRole('button')
+      .find((b) => /save/i.test(b.textContent ?? '')) as HTMLButtonElement
+    fireEvent.click(saveButton)
+
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        paymentType: 'payment_by_rr',
+        restructuringAgreementId: 11,
+      })
+    )
+  })
+
+  it('keeps a Connected RR winning over a Draft on the same debt', () => {
+    // Same precedence the Violated case already follows, and the same one
+    // client-service uses when it resolves the active plan.
+    mockRrList.mockReturnValue([
+      { id: 11, debt_id: 901, status_id: 6, status_name: 'Draft' },
+      { id: 12, debt_id: 901, status_id: 1, status_name: 'Connected' },
+    ] as RestructuringAgreementSummary[])
+
+    const { onSave } = renderModal()
+    fillAmount('1000')
+    const saveButton = screen
+      .getAllByRole('button')
+      .find((b) => /save/i.test(b.textContent ?? '')) as HTMLButtonElement
+    fireEvent.click(saveButton)
+
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ restructuringAgreementId: 12 }))
   })
 })

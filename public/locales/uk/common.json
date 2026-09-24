@@ -5948,6 +5948,8 @@
         "rrValidationPaymentDateRequired": "Дата платежу {{num}} обов'язкова",
         "rrValidationPaymentAmountRequired": "Сума платежу {{num}} обов'язкова",
         "rrValidationSumMismatch": "Сума платежів ({{sum}}) повинна дорівнювати загальній сумі ({{total}})",
+        "rrValidationAmountOutOfRange": "Загальна сума реструктуризації ({{amount}}) повинна бути в межах від {{lower}} до {{upper}}",
+        "rrValidationNothingToReturn": "За цим кредитом немає суми до повернення, тому його не можна реструктуризувати",
         "viewDetail": "Переглянути",
         "makePayment": "Зробити платіж",
         "payments": "Платежі",
@@ -6411,7 +6413,6 @@
           "notes": "Примітки (необов'язково)",
           "selectEmployee": "Виберіть співробітника...",
           "selectSearcher": "Виберіть шукача...",
-          "noUsersAvailable": "Користувачі відсутні",
           "enterAdditionalNotes": "Введіть додаткові примітки...",
           "warningMessage": "Примітка: Має бути вибрано принаймні одне призначення (Співробітник або Шукач).",
           "assignClient": "Призначити клієнта",
@@ -7240,6 +7241,15 @@
         "cancelled": "Скасовано",
         "completed": "Завершено",
         "completedEarly": "Завершено достроково"
+      },
+      "assignee": {
+        "searchPlaceholder": "Пошук співробітника",
+        "allEmployees": "Усі співробітники",
+        "noMatches": "Збігів не знайдено",
+        "unassign": "Зняти призначення",
+        "pinned": "Закріплені",
+        "pin": "Закріпити",
+        "unpin": "Відкріпити"
       },
       "documents": {
         "previewFrameTitle": "Перегляд документа"
@@ -8907,11 +8917,9 @@
       },
       "filters": {
         "responsibleOperator": "Відповідальний оператор:",
-        "clientPhone": "Телефон клієнта:",
         "selectEmployee": "Виберіть співробітника",
-        "typePhoneNumber": "Введіть номер телефону",
-        "dateOfSale": "Дата продажу:",
-        "allOperators": "Усі оператори"
+        "allOperators": "Усі оператори",
+        "period": "Період:"
       },
       "exportCsv": "Експортувати CSV",
       "estimated": "Приблизно",
@@ -8919,6 +8927,7 @@
         "title": "Зроблено дзвінків",
         "noData": "Дані недоступні",
         "total": "Всього",
+        "operatorsSum": "за операторами",
         "byHour": "По годинах",
         "calls": "дзвінків",
         "byOperator": "За операторами"
@@ -8933,7 +8942,9 @@
         "answered": "Відповів",
         "noAnswer": "Немає відповіді",
         "busy": "Зайнятий",
-        "failed": "Не вдалося"
+        "failed": "Не вдалося",
+        "other": "Інше",
+        "notEnoughCallsToRank": "Недостатньо дзвінків для порівняння операторів"
       },
       "smsModal": {
         "title": "Відправлено SMS",

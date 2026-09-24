@@ -5667,7 +5667,6 @@
           "notes": "Notas (opcional)",
           "selectEmployee": "Seleccionar empleado…",
           "selectSearcher": "Seleccionar localizador…",
-          "noUsersAvailable": "No hay usuarios disponibles",
           "enterAdditionalNotes": "Introduzca notas adicionales…",
           "warningMessage": "Nota: debe seleccionar al menos una asignación (empleado o localizador).",
           "assignClient": "Asignar cliente",
@@ -6710,6 +6709,8 @@
         "rrValidationPaymentDateRequired": "La fecha de pago {{num}} es obligatoria",
         "rrValidationPaymentAmountRequired": "El importe del pago {{num}} es obligatorio",
         "rrValidationSumMismatch": "La suma de los pagos ({{sum}}) debe ser igual al importe total ({{total}})",
+        "rrValidationAmountOutOfRange": "El importe total de la reestructuración ({{amount}}) debe estar entre {{lower}} y {{upper}}",
+        "rrValidationNothingToReturn": "Este crédito no tiene importe pendiente de devolución, por lo que no se puede reestructurar",
         "viewDetail": "Ver",
         "makePayment": "Registrar pago",
         "payments": "Pagos",
@@ -7234,6 +7235,15 @@
         "cancelled": "Cancelado",
         "completed": "Completado",
         "completedEarly": "Completado anticipadamente"
+      },
+      "assignee": {
+        "searchPlaceholder": "Buscar empleado",
+        "allEmployees": "Todos los empleados",
+        "noMatches": "Sin coincidencias",
+        "unassign": "Quitar asignación",
+        "pinned": "Fijados",
+        "pin": "Fijar",
+        "unpin": "Dejar de fijar"
       },
       "documents": {
         "previewFrameTitle": "Vista previa del documento"
@@ -9601,11 +9611,9 @@
       },
       "filters": {
         "responsibleOperator": "Operador responsable:",
-        "clientPhone": "Teléfono del cliente:",
         "selectEmployee": "Seleccionar empleado",
-        "typePhoneNumber": "Escriba el número de teléfono",
-        "dateOfSale": "Fecha de venta:",
-        "allOperators": "Todos los operadores"
+        "allOperators": "Todos los operadores",
+        "period": "Período:"
       },
       "exportCsv": "Exportar CSV",
       "estimated": "Estimado",
@@ -9613,6 +9621,7 @@
         "title": "Llamadas realizadas",
         "noData": "No hay datos disponibles",
         "total": "Total",
+        "operatorsSum": "por operadores",
         "byHour": "Por hora",
         "calls": "llamadas",
         "byOperator": "Por operador"
@@ -9627,7 +9636,9 @@
         "answered": "Contestadas",
         "noAnswer": "Sin respuesta",
         "busy": "Ocupado",
-        "failed": "Fallidas"
+        "failed": "Fallidas",
+        "other": "Otras",
+        "notEnoughCallsToRank": "No hay suficientes llamadas para comparar operadores"
       },
       "smsModal": {
         "title": "SMS enviados",
