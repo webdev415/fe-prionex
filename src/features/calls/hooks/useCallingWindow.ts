@@ -54,6 +54,12 @@ export function useCallingWindow(clientId?: number | null) {
     onSettled: () => {
       inFlight.current = false
     },
+    onError: (error) => {
+      // Not shown to the operator: they already have the refusal on screen and
+      // can do nothing about a failed audit write. But it must not vanish —
+      // the record is the whole point of the feature.
+      console.error('Could not record a blocked call attempt', error)
+    },
     onSuccess: (result) => {
       // The server re-checks the window before recording anything. If it has
       // opened since the page last asked, nothing was recorded — refresh so

@@ -45,8 +45,24 @@ export function CallingWindowTooltip({
   if (!message) return <>{children}</>
 
   const onKeyDown = (event: KeyboardEvent<HTMLSpanElement>) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      // Space would otherwise scroll the page, as it does for any non-button.
+    // A held key repeats about every 30ms, and each repeat is the same press,
+    // not a new attempt. Without this an operator resting on Enter queued a
+    // toast per repeat and, as each request settled, another audit row.
+    if (event.repeat) return
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      onBlockedAttempt?.()
+      return
+    }
+    if (event.key === ' ') {
+      // Only suppress the page scroll here. A button activates on Space at
+      // key *up*, and this stands in for one.
+      event.preventDefault()
+    }
+  }
+
+  const onKeyUp = (event: KeyboardEvent<HTMLSpanElement>) => {
+    if (event.key === ' ') {
       event.preventDefault()
       onBlockedAttempt?.()
     }
@@ -68,6 +84,7 @@ export function CallingWindowTooltip({
             data-calling-window-blocked=""
             onClick={onBlockedAttempt}
             onKeyDown={onKeyDown}
+            onKeyUp={onKeyUp}
             className={`inline-block ${className}`}
           >
             {children}

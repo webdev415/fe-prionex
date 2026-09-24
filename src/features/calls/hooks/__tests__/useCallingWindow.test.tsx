@@ -236,4 +236,23 @@ describe('reportBlocked — a press on a button the window disabled', () => {
       expect(mocked.getCallingWindowStatus.mock.calls.length).toBeGreaterThan(before)
     )
   })
+
+  it('does not let a failed report vanish', async () => {
+    // The operator is not told — they already have the refusal on screen and
+    // can do nothing about it — but the loss has to be visible to whoever
+    // runs the system.
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
+    mocked.reportBlockedCallAttempt.mockRejectedValue(new Error('gateway down'))
+    const { result } = await blockedHook()
+
+    act(() => result.current.reportBlocked())
+
+    await waitFor(() =>
+      expect(logged).toHaveBeenCalledWith(
+        'Could not record a blocked call attempt',
+        expect.any(Error)
+      )
+    )
+    logged.mockRestore()
+  })
 })

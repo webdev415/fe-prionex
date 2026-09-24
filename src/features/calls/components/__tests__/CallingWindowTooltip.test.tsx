@@ -69,10 +69,36 @@ describe('CallingWindowTooltip', () => {
       expect(onBlockedAttempt).toHaveBeenCalledTimes(1)
     })
 
-    it.each(['Enter', ' '])('reports the %j key, as a button would', (key) => {
+    it('reports Enter on key down, as a button does', () => {
       const onBlockedAttempt = renderReporting('Outside the allowed calling hours')
-      fireEvent.keyDown(wrapper(), { key })
+      fireEvent.keyDown(wrapper(), { key: 'Enter' })
       expect(onBlockedAttempt).toHaveBeenCalledTimes(1)
+    })
+
+    it('reports Space on key up, as a button does', () => {
+      const onBlockedAttempt = renderReporting('Outside the allowed calling hours')
+      fireEvent.keyDown(wrapper(), { key: ' ' })
+      expect(onBlockedAttempt).not.toHaveBeenCalled()
+      fireEvent.keyUp(wrapper(), { key: ' ' })
+      expect(onBlockedAttempt).toHaveBeenCalledTimes(1)
+    })
+
+    it.each(['Enter', ' '])('ignores the auto-repeat of a held %j', (key) => {
+      // A held key repeats about every 30ms. Each repeat is the same press,
+      // and each one queued another toast and eventually another audit row.
+      const onBlockedAttempt = renderReporting('Outside the allowed calling hours')
+      for (let i = 0; i < 20; i++) {
+        fireEvent.keyDown(wrapper(), { key, repeat: true })
+      }
+      expect(onBlockedAttempt).not.toHaveBeenCalled()
+    })
+
+    it('reports again on a genuine second press', () => {
+      const onBlockedAttempt = renderReporting('Outside the allowed calling hours')
+      fireEvent.keyDown(wrapper(), { key: 'Enter' })
+      fireEvent.keyUp(wrapper(), { key: 'Enter' })
+      fireEvent.keyDown(wrapper(), { key: 'Enter' })
+      expect(onBlockedAttempt).toHaveBeenCalledTimes(2)
     })
 
     it('ignores other keys', () => {
