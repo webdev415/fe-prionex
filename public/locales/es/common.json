@@ -12854,6 +12854,7 @@
       "overpayment": "Pago en exceso"
     },
     "documentKind": {
+      "agreement_draft": "Borrador de contrato",
       "contract": "Contrato de crédito",
       "schedule": "Calendario de pagos",
       "pcci": "Información precontractual del crédito",
@@ -12870,7 +12871,8 @@
       "pad_form": "Autorización de domiciliación",
       "pay_stub": "Nómina",
       "utility_bill": "Factura de suministros",
-      "other": "Otro"
+      "other": "Otro",
+      "unknown": "Tipo desconocido ({{code}})"
     },
     "consent": {
       "terms": "Términos y condiciones",
