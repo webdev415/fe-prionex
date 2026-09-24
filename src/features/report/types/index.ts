@@ -58,12 +58,12 @@ export interface DashboardKPIsUI {
   paymentsAverage: number
   paymentsLargest: number
 
-  // Trends
-  callsTrend: KPITrendUI
-  contactRateTrend: KPITrendUI
-  smsTrend: KPITrendUI
-  messagesTrend: KPITrendUI
-  paymentsTrend: KPITrendUI
+  // Trends — null when report-service sends no trend for the KPI (board #1448)
+  callsTrend: KPITrendUI | null
+  contactRateTrend: KPITrendUI | null
+  smsTrend: KPITrendUI | null
+  messagesTrend: KPITrendUI | null
+  paymentsTrend: KPITrendUI | null
 }
 
 /**

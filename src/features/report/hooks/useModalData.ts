@@ -61,9 +61,10 @@ function convertHourlyToLocalTime(
 export interface CallsMadeModalData {
   /** Header «Всього»: the dashboard KPI (falls back to the operator sum when the KPI is 0). */
   total: number
-  change: number
-  changeType: ChangeType
-  previousTotal: number
+  /** Trend vs the previous period; all three null when the KPI has no trend (board #1448). */
+  change: number | null
+  changeType: ChangeType | null
+  previousTotal: number | null
   byHour: { label: string; calls: number }[]
   byOperator: { name: string; calls: number }[]
   /**
@@ -140,9 +141,9 @@ export function useCallsMadeModal({
 
     return {
       total: totalCalls,
-      change: dashboard.kpis.callsTrend.change,
-      changeType: dashboard.kpis.callsTrend.changeType,
-      previousTotal: dashboard.kpis.callsTrend.previousValue,
+      change: dashboard.kpis.callsTrend?.change ?? null,
+      changeType: dashboard.kpis.callsTrend?.changeType ?? null,
+      previousTotal: dashboard.kpis.callsTrend?.previousValue ?? null,
       byHour: convertHourlyToLocalTime(rawHourly, userTimezone),
       byOperator: operators
         .map((op) => ({
@@ -184,9 +185,10 @@ export interface ContactRateModalData {
   rate: number
   contacted: number
   total: number
-  change: number
-  changeType: ChangeType
-  previousRate: number
+  /** Trend vs the previous period; all three null when the KPI has no trend (board #1448). */
+  change: number | null
+  changeType: ChangeType | null
+  previousRate: number | null
   outcomes: ContactRateOutcome[]
   bestPerformer: { name: string; rate: number } | null
   needsImprovement: { name: string; rate: number } | null
@@ -349,9 +351,9 @@ export function useContactRateModal({
       rate: contactRate,
       contacted,
       total: totalCalls,
-      change: dashboard.kpis.contactRateTrend.change,
-      changeType: dashboard.kpis.contactRateTrend.changeType,
-      previousRate: dashboard.kpis.contactRateTrend.previousValue,
+      change: dashboard.kpis.contactRateTrend?.change ?? null,
+      changeType: dashboard.kpis.contactRateTrend?.changeType ?? null,
+      previousRate: dashboard.kpis.contactRateTrend?.previousValue ?? null,
       outcomes,
       bestPerformer,
       needsImprovement,
@@ -380,9 +382,10 @@ export interface SMSSentModalData {
   failed: number
   pending: number
   deliveryRate: number
-  change: number
-  changeType: ChangeType
-  previousTotal: number
+  /** Trend vs the previous period; all three null when the KPI has no trend (board #1448). */
+  change: number | null
+  changeType: ChangeType | null
+  previousTotal: number | null
   byOperator: { name: string; smsSent: number }[]
 }
 
@@ -468,9 +471,9 @@ export function useSMSSentModal({
       failed,
       pending: Math.max(0, pending),
       deliveryRate,
-      change: dashboard.kpis.smsTrend.change,
-      changeType: dashboard.kpis.smsTrend.changeType,
-      previousTotal: dashboard.kpis.smsTrend.previousValue,
+      change: dashboard.kpis.smsTrend?.change ?? null,
+      changeType: dashboard.kpis.smsTrend?.changeType ?? null,
+      previousTotal: dashboard.kpis.smsTrend?.previousValue ?? null,
       byOperator: operators
         .map((op) => ({
           name: op.operatorName,
