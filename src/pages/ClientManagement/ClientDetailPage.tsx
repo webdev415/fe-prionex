@@ -175,6 +175,7 @@ import { callDialogBlockedReason } from './callDialogGate'
 import { CallingWindowTooltip } from '@/features/calls/components/CallingWindowTooltip'
 import { useCallOrigination } from '@/features/calls/hooks/useCallOrigination'
 import { useAuthStore } from '@/stores/authStore'
+import { useChainExecutorStore } from '@/stores/chainExecutorStore'
 import { backendToFrontendPaymentMethod } from '@/features/payments/utils'
 import { PaymentMethodCell } from '@/features/payments/components/PaymentMethodCell'
 import { useUserDepartment } from '@/features/users'
@@ -576,6 +577,36 @@ export function ClientDetailPage() {
     number | null
   >(null)
   const chainExecutorMinimizeRef = useRef<(() => void) | null>(null)
+  const clearMinimizedChainExecutor = useChainExecutorStore((s) => s.clear)
+
+  /** Forget which template/phone this open was launched with. */
+  const resetChainExecutorLaunchArgs = useCallback(() => {
+    setIsChainExecutorOpen(false)
+    setChainExecutorContactSource(null)
+    setChainExecutorPrefilledPhone(null)
+    setChainExecutorPrefilledPhoneSource(null)
+    setChainExecutorInitialTemplateId(null)
+  }, [])
+
+  /**
+   * Abandon the TA fill-in outright — ESC and the × button (KAN-1112).
+   *
+   * Distinct from minimizing, which deliberately KEEPS the entered steps so the
+   * operator can come back to them. Abandoning must leave nothing behind: a
+   * surviving minimized session is not merely stale state, it actively blocks
+   * the next hotkey — ``decideHotkeyLaunch`` refuses to launch while one exists
+   * (``blocked: 'minimized'``).
+   *
+   * That is the flow the ticket is about: wrong hotkey → ESC → correct hotkey.
+   * Without the clear, the second press is swallowed and the operator is stuck
+   * with a template they never wanted.
+   *
+   * No confirmation prompt, per the ticket — ESC is expected to be instant.
+   */
+  const discardChainExecutor = useCallback(() => {
+    clearMinimizedChainExecutor()
+    resetChainExecutorLaunchArgs()
+  }, [clearMinimizedChainExecutor, resetChainExecutorLaunchArgs])
 
   // Call origination hook (provides user, call state, handlers)
   const userTimezone = useAuthStore((state) => state.user?.timezone)
@@ -5844,13 +5875,9 @@ export function ClientDetailPage() {
           {/* Chain Executor Modal */}
           <Modal
             open={isChainExecutorOpen}
-            onClose={() => {
-              setIsChainExecutorOpen(false)
-              setChainExecutorContactSource(null)
-              setChainExecutorPrefilledPhone(null)
-              setChainExecutorPrefilledPhoneSource(null)
-              setChainExecutorInitialTemplateId(null)
-            }}
+            /* ESC lands here (Radix onEscapeKeyDown -> onOpenChange). KAN-1112:
+               it must reset, not preserve — same as the × button below. */
+            onClose={discardChainExecutor}
             maxWidth="xl"
             showCloseButton={false}
             /* Marks this dialog as the TA executor's own so a hotkey pressed
@@ -5868,13 +5895,7 @@ export function ClientDetailPage() {
                 <Icons.Remove02 size={20} className="text-foreground" strokeWidth={1.5} />
               </button>
               <button
-                onClick={() => {
-                  setIsChainExecutorOpen(false)
-                  setChainExecutorContactSource(null)
-                  setChainExecutorPrefilledPhone(null)
-                  setChainExecutorPrefilledPhoneSource(null)
-                  setChainExecutorInitialTemplateId(null)
-                }}
+                onClick={discardChainExecutor}
                 className="hover:bg-muted flex h-8 w-8 items-center justify-center rounded-md transition-colors"
                 aria-label={t('components.modal.close', 'Close modal')}
               >
@@ -5891,20 +5912,11 @@ export function ClientDetailPage() {
                 prefilledPhone={chainExecutorPrefilledPhone}
                 prefilledPhoneSource={chainExecutorPrefilledPhoneSource}
                 initialTemplateId={chainExecutorInitialTemplateId}
-                onSave={() => {
-                  setIsChainExecutorOpen(false)
-                  setChainExecutorContactSource(null)
-                  setChainExecutorPrefilledPhone(null)
-                  setChainExecutorPrefilledPhoneSource(null)
-                  setChainExecutorInitialTemplateId(null)
-                }}
-                onMinimize={() => {
-                  setIsChainExecutorOpen(false)
-                  setChainExecutorContactSource(null)
-                  setChainExecutorPrefilledPhone(null)
-                  setChainExecutorPrefilledPhoneSource(null)
-                  setChainExecutorInitialTemplateId(null)
-                }}
+                onSave={resetChainExecutorLaunchArgs}
+                /* NOT discardChainExecutor: minimizing exists precisely to keep
+                   the entered steps, and ChainExecutor has just written them to
+                   the store. */
+                onMinimize={resetChainExecutorLaunchArgs}
                 onMinimizeRef={chainExecutorMinimizeRef}
               />
             </ModalContent>
