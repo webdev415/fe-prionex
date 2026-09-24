@@ -69,12 +69,12 @@
     "creditApplications": "Заявки",
     "creditLoans": "Кредити",
     "creditSettings": "Налаштування",
-    "creditUnderwriting": "Черга розбору",
     "menu": "Меню",
     "toggleMenu": "Перемкнути меню",
     "scoringV3Monitoring": "Звіт тіньового запуску v3",
     "scoringV3Settings": "Налаштування скорингу v3",
-    "operatorWorkList": "Пріоритетний список роботи"
+    "operatorWorkList": "Пріоритетний список роботи",
+    "creditUnderwriting": "Черга розбору"
   },
   "dialer": {
     "phone": {
@@ -158,7 +158,10 @@
       "pending": "Очікує",
       "phoneNumber": "Номер телефону",
       "incomingCall": "Вхідний дзвінок",
-      "acceptCall": "Прийняти дзвінок"
+      "acceptCall": "Прийняти дзвінок",
+      "noClientInteraction": "Цей номер набрано без даних клієнта, тому взаємодію неможливо зафіксувати в картці клієнта.",
+      "noClientChain": "Ланцюжок ТА потребує картки клієнта. До цього номера її не прикріплено.",
+      "unknownClient": "Невідомий контакт"
     },
     "accessGroup": {
       "all_groups": "Усі групи",
@@ -235,7 +238,9 @@
         "atLeastOneAttempt": "Щонайменше 1 спроба",
         "enterSeconds": "Введіть кількість секунд",
         "notNegative": "Не може бути від’ємним"
-      }
+      },
+      "answerMode": "Режим відповіді",
+      "answerModeHint": "Ручний режим дає оператору вікно підтвердження перед з'єднанням із клієнтом."
     },
     "numbers": {
       "inQueue": "У черзі",
@@ -329,6 +334,10 @@
       "allowed": "Дозволено: {{hours}}, {{days}} ({{timezone}})",
       "open": "Години дзвінків {{hours}} · {{days}} · зараз відкрито",
       "everyDay": "щодня"
+    },
+    "answerMode": {
+      "auto": "Автоматичний",
+      "manual": "Ручний (оператор приймає)"
     }
   },
   "search": {
@@ -947,7 +956,7 @@
       "expertLimitReached": "Денний ліміт експертного режиму вичерпано.",
       "expertUnavailable": "Зовнішній сервіс зараз недоступний, спробуйте пізніше.",
       "showReasoning": "Міркування 31B",
-      "showReasoningHint": "Увімкнено — модель міркує, хід міркувань у панелі «Активність». Вимкнено — 31B відповідає без міркувань, швидше.",
+      "showReasoningHint": "Увімк. — модель міркує, хід міркувань у панелі «Активність». Вимк. — 31B відповідає без міркувань, швидше. Сервер — як налаштовано на сервері.",
       "thinkingUsedOn": "31B · з міркуваннями",
       "thinkingUsedOff": "31B · без міркувань",
       "thinkingUsedMismatch": "Сервер відповів інакше, ніж налаштовано",
@@ -982,7 +991,14 @@
       "slashNewChat": "почати новий чат",
       "answerInProgress": "Відповідь ще готується — з’явиться тут, коли буде готова",
       "attachmentFrameTitle": "Перегляд вкладення",
-      "attachmentRemoveShort": "Видалити вкладення"
+      "attachmentRemoveShort": "Видалити вкладення",
+      "thinkingChoiceServer": "Сервер",
+      "thinkingChoiceOn": "Увімк.",
+      "thinkingChoiceOff": "Вимк.",
+      "thinkingChoiceServerHint": "Режим міркувань вирішує сервер",
+      "thinkingChoiceFactOn": "Вирішує сервер · останній хід був з міркуваннями",
+      "thinkingChoiceFactOff": "Вирішує сервер · останній хід був без міркувань",
+      "thinkingFlagUnsupported": "Вимкнення міркувань ще не підтримується сервером"
     },
     "lawyerWorkplace": {
       "navAria": "Навігація робочого місця юриста",
@@ -5655,6 +5671,8 @@
         "taxId": "ІПН",
         "saveSuccess": "Клієнта успішно оновлено",
         "saveError": "Не вдалося оновити клієнта",
+        "taxIdInvalid": "Податковий номер має містити рівно 10 цифр",
+        "taxIdInvalidEs": "Податковий номер має бути коректним іспанським DNI, NIE або CIF (9 символів, напр. 12345678Z, X1234567L, B12345678)",
         "addressCreated": "Адресу успішно додано",
         "addressUpdated": "Адресу успішно оновлено",
         "addressDeleted": "Адресу успішно видалено",
@@ -6305,8 +6323,6 @@
           "entryCount_many": "{{count}} записів",
           "pagingLimit": "Показано {{count}} останніх записів. Вкажіть діапазон дат, щоб побачити давнішу активність."
         },
-        "creditModuleTag": "кредит (наш)",
-        "creditModuleActionsHint": "Дії — у кредитному модулі",
         "workExperienceMonths": "{{count}} міс.",
         "errorOccurred": "Сталася помилка",
         "noTransitionPermission": "Ваша роль не дозволяє цей перехід.",
@@ -6314,7 +6330,9 @@
         "documentsCount_one": "{{count}} док.",
         "documentsCount_few": "{{count}} док.",
         "documentsCount_many": "{{count}} док.",
-        "documentsCount_other": "{{count}} док."
+        "documentsCount_other": "{{count}} док.",
+        "creditModuleTag": "кредит (наш)",
+        "creditModuleActionsHint": "Дії — у кредитному модулі"
       },
       "modals": {
         "addNote": {
@@ -10207,7 +10225,8 @@
         "omnicell": "OmniCell",
         "vodafone_obm": "Vodafone OBM",
         "my2_viber": "My2 Viber",
-        "intel_tele": "Intel-Tele.com"
+        "intel_tele": "Intel-Tele.com",
+        "zadarma": "Zadarma"
       },
       "credentials": {
         "turbosms": {
@@ -10277,6 +10296,18 @@
           },
           "reply_to_name": {
             "label": "Ім'я для відповіді"
+          }
+        },
+        "zadarma": {
+          "user_key": {
+            "label": "Ключ користувача"
+          },
+          "secret": {
+            "label": "Секрет"
+          },
+          "sender": {
+            "label": "Відправник (альфа-ім’я)",
+            "placeholder": "Погоджене альфа-ім’я; залиште порожнім, щоб узяти типове для акаунта"
           }
         }
       },

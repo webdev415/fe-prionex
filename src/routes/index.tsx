@@ -15,6 +15,10 @@ import { V3CutoverRoute } from '@/features/scoring/components/V3CutoverRoute'
 // раздела в главный чанк и убила бы их ленивую загрузку.
 import { CreditSectionGate } from '@/pages/Credit/components/CreditSectionGate'
 import { DRAFT_PAGE_PERMISSIONS, PERMISSIONS } from '@/constants/permissions'
+// Рубильник раздела кредита закрывает и МАРШРУТЫ, а не только пункт меню:
+// прямая ссылка на выключенный раздел обязана объяснить, а не открыть его.
+// Импорт точечный, не через бочку `@/pages/Credit`: та тянет все страницы
+// раздела в главный чанк и убила бы их ленивую загрузку.
 import { BulkOperatorAssignmentPageSkeleton } from '@/pages/Operations/BulkOperatorAssignmentPageSkeleton'
 import { BulkTagAssignmentPageSkeleton } from '@/pages/Operations/BulkTagAssignmentPageSkeleton'
 import { BulkContactTagAssignmentPageSkeleton } from '@/pages/Operations/BulkContactTagAssignmentPageSkeleton'
@@ -739,7 +743,7 @@ export const router = createBrowserRouter([
         path: 'system-settings/sms-templates',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
-            {withSuspense(<SmsTemplatesPage />)}
+            <UkrainianProjectRoute>{withSuspense(<SmsTemplatesPage />)}</UkrainianProjectRoute>
           </PermissionRoute>
         ),
       },

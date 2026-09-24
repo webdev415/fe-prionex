@@ -9,6 +9,7 @@ import { useSidebarStore } from '@/stores/sidebarStore'
 import { useSearchStore } from '@/stores/searchStore'
 import { usePermissionRefresh } from '@/hooks'
 import { useProjectCountry } from '@/hooks/useProjectCountry'
+import { useSmsServiceAvailable } from '@/features/sms'
 import { ImpersonationBanner } from '@/features/auth/components/ImpersonationBanner'
 import { LogoutConfirmationModal } from './LogoutConfirmationModal'
 import { Sidebar, type SidebarItem, type SidebarSubItem } from './Sidebar'
@@ -763,6 +764,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const user = useAuthStore((state) => state.user)
   const ubkiAvailable = useUbkiAvailable()
+  const smsServiceAvailable = useSmsServiceAvailable()
 
   const canViewLegalWorkplace = useMemo(
     () =>
@@ -1120,12 +1122,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             icon: 'chart-01',
             requiredPermission: PERMISSIONS.REPAYMENT_CONFIG.VIEW,
           },
-          {
-            path: '/dashboard/system-settings/sms-templates',
-            label: t('navigation.smsTemplates'),
-            icon: 'mail-send-01',
-            requiredPermission: PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
-          },
+          ...(smsServiceAvailable
+            ? [
+                {
+                  path: '/dashboard/system-settings/sms-templates',
+                  label: t('navigation.smsTemplates'),
+                  icon: 'mail-send-01',
+                  requiredPermission: PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+                },
+              ]
+            : []),
           {
             path: '/dashboard/system-settings/target-actions',
             label: t('navigation.taManagement', 'Target Actions'),
@@ -1231,6 +1237,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     i18n.language,
     legalUnprocessedCount,
     v3UiEnabled,
+    ubkiAvailable,
+    smsServiceAvailable,
     creditSectionEnabled,
   ])
 

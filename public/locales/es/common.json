@@ -144,7 +144,7 @@
       "selectTypeRequired": "Seleccione un tipo de interacción",
       "selectType": "Seleccione el tipo",
       "clientName": "Nombre del cliente",
-      "taxId": "NIF",
+      "taxId": "Número fiscal",
       "interactionType": "Tipo de interacción",
       "contactComment": "comentario del contacto",
       "enterComment": "Introduzca un comentario...",
@@ -158,7 +158,10 @@
       "pending": "Pendiente",
       "phoneNumber": "Número de teléfono",
       "incomingCall": "Llamada entrante",
-      "acceptCall": "Aceptar llamada"
+      "acceptCall": "Aceptar llamada",
+      "noClientInteraction": "Este número se marcó sin datos del cliente, por lo que no se puede registrar una interacción asociada a una ficha de cliente.",
+      "noClientChain": "Una cadena de acciones necesita una ficha de cliente. Este número no tiene ninguna asociada.",
+      "unknownClient": "Contacto desconocido"
     },
     "accessGroup": {
       "all_groups": "Todos los grupos",
@@ -235,7 +238,9 @@
         "atLeastOneAttempt": "Al menos 1 intento",
         "enterSeconds": "Introduzca un número de segundos",
         "notNegative": "No puede ser negativo"
-      }
+      },
+      "answerMode": "Modo de respuesta",
+      "answerModeHint": "El modo manual da al operador un margen para aceptar antes de conectar al cliente."
     },
     "numbers": {
       "inQueue": "En cola",
@@ -329,13 +334,17 @@
       "allowed": "Permitido: {{hours}}, {{days}} ({{timezone}})",
       "open": "Horario de llamadas {{hours}} · {{days}} · abierto ahora",
       "everyDay": "todos los días"
+    },
+    "answerMode": {
+      "auto": "Automático",
+      "manual": "Manual (acepta el operador)"
     }
   },
   "search": {
     "placeholder": "Buscar",
     "phoneNumber": "Número de teléfono",
     "fullName": "Nombre completo",
-    "tin": "NIF",
+    "tin": "Número fiscal",
     "contractNumber": "Número de contrato",
     "email": "Correo electrónico",
     "error": "No se pudo buscar clientes. Inténtelo de nuevo.",
@@ -927,7 +936,7 @@
       "modeFastShort": "Rápido",
       "modeThinkingShort": "Razonamiento",
       "modeFastHint": "Responde al instante",
-      "modeThinkingHint": "Analiza con más profundidad, pero más despacio",
+      "modeThinkingHint": "Analiza con más profundidad y muestra su razonamiento (31B)",
       "modeChangeHint": "Se ajusta junto al campo de entrada",
       "expertTitle": "Experto (Claude)",
       "expertTrigger": "Experto · {{model}}",
@@ -942,9 +951,11 @@
       "expertForbidden": "El modo experto no está disponible para su rol.",
       "expertLimitReached": "Se ha agotado el límite diario del modo experto.",
       "expertUnavailable": "El servicio externo no está disponible en este momento; inténtelo más tarde.",
-      "showReasoning": "Mostrar razonamiento",
-      "showReasoningHint": "El razonamiento se muestra en el panel «Actividad»",
-      "showReasoningFastHint": "El modo rápido no genera razonamiento",
+      "showReasoning": "Razonamiento 31B",
+      "showReasoningHint": "Activado — el modelo razona y el hilo de razonamiento va al panel «Actividad». Desactivado — 31B responde directamente, más rápido. Servidor — según la configuración del servidor.",
+      "thinkingUsedOn": "31B · con razonamiento",
+      "thinkingUsedOff": "31B · sin razonamiento",
+      "thinkingUsedMismatch": "El servidor respondió de forma distinta a la configuración",
       "voiceSilenceTimeout": "Tiempo de silencio (detención automática)",
       "voiceMaxDuration": "Duración máxima de grabación",
       "voiceSeconds": "{{count}} s",
@@ -978,9 +989,13 @@
       "attachmentFrameTitle": "Vista previa del archivo adjunto",
       "attachmentRemoveShort": "Quitar archivo adjunto",
       "reasoningSteps_many": "{{count}} pasos",
-      "thinkingUsedOn": "31B · con razonamiento",
-      "thinkingUsedOff": "31B · sin razonamiento",
-      "thinkingUsedMismatch": "El servidor respondió de forma distinta al ajuste"
+      "thinkingChoiceServer": "Servidor",
+      "thinkingChoiceOn": "Activado",
+      "thinkingChoiceOff": "Desactivado",
+      "thinkingChoiceServerHint": "El servidor decide el modo de razonamiento",
+      "thinkingChoiceFactOn": "Decide el servidor · el último turno fue con razonamiento",
+      "thinkingChoiceFactOff": "Decide el servidor · el último turno fue sin razonamiento",
+      "thinkingFlagUnsupported": "El servidor todavía no permite desactivar el razonamiento"
     },
     "lawyerWorkplace": {
       "navAria": "Navegación del área jurídica",
@@ -1768,7 +1783,7 @@
           },
           "variables": {
             "clientName": "Nombre completo del cliente",
-            "clientTaxId": "NIF del cliente",
+            "clientTaxId": "Número fiscal del cliente",
             "contract": "Contrato",
             "debtAmount": "Importe de la deuda",
             "senderName": "Remitente",
@@ -1917,7 +1932,7 @@
           "title": "Cliente",
           "name": "Nombre completo",
           "code": "Código de cliente",
-          "tin": "NIF",
+          "tin": "Número fiscal",
           "debt": "Deuda pendiente",
           "contract": "Contrato №",
           "status": "Estado",
@@ -4023,7 +4038,7 @@
           "firstName": "Introduzca el nombre",
           "lastName": "Introduzca los apellidos",
           "middleName": "Introduzca el segundo nombre (opcional)",
-          "phone": "+34 600 00 00 00 (opcional)",
+          "phone": "+34-600000000 (opcional)",
           "notSet": "No establecido"
         },
         "errors": {
@@ -4082,7 +4097,7 @@
         "passwordNumber": "La contraseña debe contener al menos un número",
         "passwordSpecial": "La contraseña debe contener al menos un carácter especial",
         "invalidEmail": "Dirección de correo electrónico no válida",
-        "phoneFormat": "El teléfono debe estar en formato E.164 (p. ej., +1-555-0101)",
+        "phoneFormat": "El teléfono debe estar en formato E.164 (p. ej., +34-600000000)",
         "usernameMin": "El nombre de usuario debe tener al menos 3 caracteres",
         "usernameMax": "El nombre de usuario debe tener como máximo 50 caracteres",
         "usernameChars": "El nombre de usuario solo puede contener letras, números, puntos, guiones bajos y guiones",
@@ -5255,7 +5270,7 @@
           "columns": {
             "rowNumber": "Fila",
             "contact": "Contacto",
-            "tinPrefix": "NIF",
+            "tinPrefix": "N.º fiscal",
             "category": "Categoría",
             "singleSelect": "selección única",
             "multiSelect": "selección múltiple",
@@ -5331,7 +5346,7 @@
           "columns": {
             "row": "Fila",
             "contractNumber": "Número de contrato",
-            "tin": "NIF",
+            "tin": "N.º fiscal",
             "client": "Cliente",
             "amount": "Importe",
             "date": "Fecha",
@@ -5459,7 +5474,7 @@
       "errorOccurred": "Se ha producido un error",
       "tableHeaders": {
         "fullName": "Nombre completo",
-        "taxIdNumber": "NIF",
+        "taxIdNumber": "N.º fiscal",
         "tags": "Etiquetas",
         "phoneNumber": "Número de teléfono",
         "createdDate": "Fecha de alta",
@@ -5749,7 +5764,7 @@
           "clientNotFound": "Cliente no encontrado",
           "clientNotFoundHint": "Este número no está vinculado a ningún cliente en sus proyectos.",
           "searchClient": "Buscar el cliente",
-          "searchClientPlaceholder": "Buscar por nombre, teléfono o NIF",
+          "searchClientPlaceholder": "Buscar por nombre, teléfono o número fiscal",
           "searchByNumber": "Buscar por este número",
           "interaction": {
             "title": "Formulario de interacción",
@@ -6025,7 +6040,7 @@
           "softDeleteWarning": "Esta acción eliminará al cliente de los registros activos (eliminación lógica). Los administradores pueden recuperar los datos si es necesario.",
           "clientDetails": "Datos del cliente",
           "fieldName": "Nombre:",
-          "fieldTaxId": "NIF:",
+          "fieldTaxId": "Número fiscal:",
           "fieldPhone": "Teléfono:",
           "fieldTotalDebt": "Deuda total:",
           "impactTitle": "Qué ocurrirá:",
@@ -6414,9 +6429,11 @@
         "save": "Guardar cambios",
         "saving": "Guardando…",
         "cancel": "Cancelar",
-        "taxId": "NIF",
+        "taxId": "Número fiscal",
         "saveSuccess": "Cliente actualizado correctamente",
         "saveError": "No se ha podido actualizar el cliente",
+        "taxIdInvalid": "El número fiscal debe tener exactamente 10 dígitos",
+        "taxIdInvalidEs": "El número fiscal debe ser un DNI, NIE o CIF válido (9 caracteres, p. ej. 12345678Z, X1234567L, B12345678)",
         "addressCreated": "Dirección añadida correctamente",
         "addressUpdated": "Dirección actualizada correctamente",
         "addressDeleted": "Dirección eliminada correctamente",
@@ -6502,7 +6519,7 @@
         },
         "department": "Departamento",
         "phones": "Teléfonos",
-        "tin": "NIF",
+        "tin": "Número fiscal",
         "dateOfBirth": "Fecha de nacimiento",
         "age": "Edad",
         "passport": "Pasaporte",
@@ -7074,7 +7091,7 @@
         "documentsCount_one": "{{count}} doc.",
         "documentsCount_many": "{{count}} docs.",
         "documentsCount_other": "{{count}} docs.",
-        "creditModuleTag": "crédito propio",
+        "creditModuleTag": "crédito (propio)",
         "creditModuleActionsHint": "Las acciones están en el módulo de crédito"
       },
       "debtSummary": {
@@ -7730,7 +7747,7 @@
           "clientFullName": "Nombre completo del cliente",
           "clientFirstName": "Nombre del cliente",
           "clientLastName": "Apellidos del cliente",
-          "clientTaxId": "NIF",
+          "clientTaxId": "Número fiscal",
           "clientPhone": "Teléfono principal",
           "clientEmail": "Correo electrónico principal",
           "clientAddress": "Dirección registrada",
@@ -8568,7 +8585,7 @@
           "score_change": "Cambio de puntuación",
           "algorithm_version": "Versión del algoritmo",
           "calculation_reason": "Motivo del cálculo",
-          "tax_id": "NIF",
+          "tax_id": "Número fiscal",
           "source": "Origen",
           "import_batch_id": "ID del lote de importación",
           "contract_number": "Número de contrato",
@@ -9206,7 +9223,7 @@
         "floorHint_many": "La lista contiene los clientes cuya última compra no tiene más de {{count}} meses; una lista vacía significa que no hubo compras en esa ventana.",
         "openClient": "Abrir cliente {{id}}",
         "columns": {
-          "inn": "NIF",
+          "inn": "N.º fiscal",
           "sellDate": "Fecha de venta",
           "assignmentDate": "Fecha de asignación",
           "employee": "Empleado",
@@ -9235,7 +9252,7 @@
         "invalidRange": "La fecha de hallazgo desde es posterior a la fecha de hallazgo hasta",
         "openClient": "Abrir cliente {{id}}",
         "columns": {
-          "inn": "NIF",
+          "inn": "N.º fiscal",
           "foundAt": "Fecha de hallazgo",
           "searcher": "Localizador",
           "employee": "Empleado",
@@ -9262,7 +9279,7 @@
         "invalidRange": "La fecha de solicitud desde es posterior a la fecha de solicitud hasta",
         "openClient": "Abrir cliente {{id}}",
         "columns": {
-          "inn": "NIF",
+          "inn": "N.º fiscal",
           "interactionAt": "Fecha de solicitud",
           "interactionType": "Motivos de la solicitud",
           "employee": "Empleado",
@@ -9299,7 +9316,7 @@
         },
         "openClient": "Abrir cliente {{id}}",
         "columns": {
-          "inn": "NIF",
+          "inn": "N.º fiscal",
           "tag": "Etiqueta",
           "sellDate": "Fecha de venta",
           "assignmentDate": "Fecha de asignación",
@@ -9332,7 +9349,7 @@
         "clearGapMin": "Borrar el mínimo de días de silencio",
         "openClient": "Abrir cliente {{id}}",
         "columns": {
-          "inn": "NIF",
+          "inn": "N.º fiscal",
           "sellDate": "Fecha de venta",
           "assignmentDate": "Fecha de asignación",
           "employee": "Empleado",
@@ -9461,7 +9478,7 @@
         "hidePaid": "Ocultar pagadas",
         "openClient": "Abrir cliente {{id}}",
         "columns": {
-          "inn": "NIF",
+          "inn": "N.º fiscal",
           "interactionDate": "Fecha de interacción",
           "interactionType": "Resultado",
           "promiseDate": "Fecha prometida",
@@ -9493,7 +9510,7 @@
         "hideWorked": "Ocultar devoluciones de llamada trabajadas",
         "openClient": "Abrir cliente {{id}}",
         "columns": {
-          "inn": "NIF",
+          "inn": "N.º fiscal",
           "interactionDate": "Fecha de interacción",
           "interactionType": "Resultado",
           "promiseDate": "Fecha prometida",
@@ -9527,7 +9544,7 @@
         "hidePaid": "Ocultar pagadores parciales",
         "openClient": "Abrir cliente {{id}}",
         "columns": {
-          "inn": "NIF",
+          "inn": "N.º fiscal",
           "interactionDate": "Fecha de interacción",
           "interactionType": "Resultado",
           "promiseDate": "Fecha prometida",
@@ -10216,7 +10233,8 @@
         "omnicell": "OmniCell",
         "vodafone_obm": "Vodafone OBM",
         "my2_viber": "My2 Viber",
-        "intel_tele": "Intel-Tele.com"
+        "intel_tele": "Intel-Tele.com",
+        "zadarma": "Zadarma"
       },
       "credentials": {
         "turbosms": {
@@ -10286,6 +10304,18 @@
           },
           "reply_to_name": {
             "label": "Nombre de respuesta"
+          }
+        },
+        "zadarma": {
+          "user_key": {
+            "label": "Clave de usuario"
+          },
+          "secret": {
+            "label": "Secreto"
+          },
+          "sender": {
+            "label": "Remitente (nombre alfanumérico)",
+            "placeholder": "Nombre alfanumérico aprobado; déjelo vacío para usar el de la cuenta"
           }
         }
       },
@@ -11091,7 +11121,7 @@
         "loadError": "No se ha podido cargar el envío.",
         "loading": "Cargando…",
         "clientFallback": "Cliente n.º {{id}}",
-        "clientTin": "NIF {{tin}}",
+        "clientTin": "Número fiscal {{tin}}",
         "debtId": "Deuda n.º {{id}}",
         "openClient": "Abrir cliente",
         "resending": "Reenviando…",
@@ -11123,7 +11153,7 @@
         "title": "Clientes excluidos",
         "selected": "Seleccionados: {{count}}",
         "removeSelected": "Eliminar seleccionados",
-        "searchPlaceholder": "Buscar por cliente / NIF / contrato…",
+        "searchPlaceholder": "Buscar por cliente / número fiscal / contrato…",
         "loadError": "No se han podido cargar los clientes excluidos.",
         "empty": "No hay clientes excluidos",
         "emptyHint": "Los clientes añadidos a la lista de exclusión no recibirán envíos a UBKI.",
@@ -11142,25 +11172,25 @@
           "imported": "Importados {{count}}",
           "skipped": "omitidos {{count}} (sin cliente coincidente)",
           "notFound": "No encontrados: {{list}}",
-          "error": "Error al importar. Compruebe que el archivo sea un CSV de NIF."
+          "error": "Error al importar. Compruebe que el archivo sea un CSV de números fiscales."
         },
         "add": {
           "button": "Añadir a exclusión",
           "clientButton": "Añadir cliente",
           "dialogTitle": "Añadir clientes a la exclusión",
           "dialogHint": "Sus créditos dejarán de enviarse a UBKI.",
-          "clientTins": "NIF de los clientes",
+          "clientTins": "Números fiscales de los clientes",
           "tinsPlaceholder": "p. ej. 2288805863, 3328719312",
           "tinsHelp": "Separados por comas o espacios.",
           "reason": "Motivo",
           "note": "Nota (opcional)",
           "notePlaceholder": "¿Por qué se excluye a estos clientes?",
-          "error": "No se ha podido añadir. Compruebe los NIF.",
+          "error": "No se ha podido añadir. Compruebe los números fiscales.",
           "adding": "Añadiendo…"
         },
         "columns": {
           "client": "Cliente",
-          "tin": "NIF",
+          "tin": "N.º fiscal",
           "reason": "Motivo",
           "setBy": "Establecido por",
           "dateAdded": "Fecha de alta",
@@ -11235,7 +11265,7 @@
           "allModes": "Todos los modos",
           "allOperators": "Todos los operadores",
           "allErrorCodes": "Todos los códigos de error",
-          "searchPlaceholder": "Buscar por cliente / NIF / contrato…",
+          "searchPlaceholder": "Buscar por cliente / número fiscal / contrato…",
           "reset": "Restablecer",
           "loadError": "No se ha podido cargar el registro de envíos. Inténtelo de nuevo.",
           "noSubmissions": "No se han encontrado envíos",
@@ -12246,6 +12276,36 @@
     }
   },
   "credit": {
+    "clientBlock": {
+      "arrears": "Atrasos",
+      "cancelled": "Cancelado",
+      "closed": "Cerrado",
+      "closedThrough": "Cerrado mediante",
+      "defaultReported": "Impago comunicado",
+      "disbursed": "Desembolsado",
+      "dpd": "Días de mora",
+      "identifiedByEmail": "Identificado por correo electrónico (OTP del área personal)",
+      "issued": "Concedido",
+      "jurisdiction": "Jurisdicción",
+      "linkNotFound": "El módulo no ha confirmado los préstamos de este cliente: se muestra la proyección y el vínculo se está resolviendo",
+      "maturity": "Vencimiento",
+      "moduleUnavailable": "El módulo de crédito no está disponible en este entorno",
+      "nextPayment": "Próximo pago",
+      "noContact": "Sin contacto 28 días",
+      "noLoans": "Sin préstamos",
+      "openInModule": "Abrir en el módulo de crédito",
+      "outstanding": "Saldo pendiente",
+      "overdue": "Vencido",
+      "paid": "Pagado",
+      "product": "Producto",
+      "projectionAsOf": "Proyección a fecha de",
+      "projectionOnly": "Los datos completos requieren credit.loans.read",
+      "returnPending": "Devolución pendiente",
+      "status": "Estado",
+      "temporaryFailure": "Los datos del módulo no están disponibles ahora mismo: vuelva a abrir la pestaña",
+      "tinOptional": "(opcional)",
+      "title": "Crédito (propio)"
+    },
     "status": {
       "in_progress": "En curso",
       "scoring": "Scoring",
@@ -12425,21 +12485,21 @@
       "signHash": "SHA-256 del documento",
       "signSession": "Sesión / IP",
       "templateVersion": "Versión de la plantilla",
-      "disbursementAmount": "Importe del pago",
+      "disbursementAmount": "Importe del desembolso",
       "disbursementMethod": "Método",
       "settledAt": "Liquidado el",
       "failedAt": "Falló el",
       "failureCode": "Motivo",
-      "timeSource": "Origen de la marca de tiempo",
+      "timeSource": "Origen de la hora",
       "provider": "Proveedor",
-      "providerTxId": "ID de transacción del proveedor",
-      "providerStatus": "Estado del proveedor",
+      "providerTxId": "ID de la operación del proveedor",
+      "providerStatus": "Estado en el proveedor",
       "clientTransactionId": "Nuestra clave de operación",
       "retry": "Reintento",
-      "applicationId": "ID de solicitud",
-      "externalApplicationId": "ID externo de solicitud",
-      "decisionId": "ID de decisión",
-      "loanId": "ID de préstamo",
+      "applicationId": "ID de la solicitud",
+      "externalApplicationId": "ID externo de la solicitud",
+      "decisionId": "ID de la decisión",
+      "loanId": "ID del préstamo",
       "loanAgeDays": "Días desde el desembolso"
     },
     "tabs": {
@@ -12513,6 +12573,8 @@
       "noDocuments": "Sin documentos para esta solicitud.",
       "noSchedule": "Aún no hay calendario.",
       "noJournal": "Sin movimientos en el libro mayor.",
+      "noJournalInBucket": "Sin movimientos en esta categoría.",
+      "journalBucketReversalUnknown": "Con el filtro por categoría, el asiento de compensación puede quedar fuera de la selección.",
       "scheduleVersion": "Calendario, versión {{version}}",
       "consents": "Consentimientos",
       "granted": "concedido",
@@ -12565,29 +12627,23 @@
       "openPreviousVersion": "Abrir",
       "paymentReversedOn": "Revertido el {{date}}",
       "paymentsReversedHint": "De los pagos mostrados, {{count}} se revirtieron por {{amount}} — ese importe no se contabiliza en la deuda, el dinero volvió al banco.",
-      "noJournalInBucket": "No hay asientos en este grupo.",
-      "journalBucketReversalUnknown": "Con un filtro de grupo, el asiento compensatorio puede quedar fuera de la selección.",
       "idleFor": "última actividad: hace {{duration}}",
       "outstandingLoans": "Préstamos pendientes",
-      "cooldownUntil": "Periodo de espera tras rechazo hasta {{date}}",
-      "disbursement": "Progreso de la transferencia",
-      "disbursementNotSent": "El pago nunca se envió: ni un solo intento de transferencia.",
+      "cooldownUntil": "Periodo de espera tras el rechazo hasta el {{date}}",
+      "disbursement": "Estado de la transferencia",
+      "disbursementNotSent": "El desembolso nunca se ha enviado: no ha habido ni un solo intento de transferencia.",
       "disbursementUpdated": "actualizado {{when}}",
-      "disbursementReview": "Pendiente de revisión: {{reason}} — desde {{since}}",
+      "disbursementReview": "Pendiente de revisión: {{reason}}, desde {{since}}",
       "disbursementReviewNoDate": "Pendiente de revisión: {{reason}}",
-      "disbursementUnknownCode": "Código «{{code}}»: redacción propia del proveedor, aún no la hemos traducido",
-      "disbursementObservedTime": "El proveedor no nos indicó la hora de liquidación: la dedujimos del momento en que lo supimos. El plazo de cancelación de dos días (CA s.124.4) se cuenta desde esta fecha: la fecha límite del cliente es estimada, no conocida.",
-      "disbursementNoRetryButton": "Aquí no hay botón de reintento deliberadamente: el comando de reanudación solo acepta el estado «fallido» con la revisión cerrada, no exige motivo de reintento, no acepta clave de idempotencia y no registra quién lo pulsó. Por ahora, un desarrollador del módulo realiza el reintento a petición.",
-      "disbursementRetryContradiction": "El módulo marca el reintento como permitido, pero el comando de reanudación lo rechazará: el indicador del módulo es más amplio que la condición del comando. Alinearlos corresponde al módulo.",
-      "disbursementUnknown": "Se desconoce el estado del desembolso: el núcleo no respondió. Esto NO significa que no se haya hecho ninguna transferencia: puede haber salido y fallado. Actualiza o vuelve más tarde.",
+      "disbursementUnknownCode": "Código «{{code}}»: es el texto del propio proveedor, aún no lo hemos traducido",
+      "disbursementObservedTime": "El proveedor no nos indicó la hora de liquidación; la hemos deducido del momento en que nos enteramos. El plazo de cancelación de dos días (CA s.124.4) se cuenta desde esta fecha: el plazo del cliente es una estimación, no un dato conocido.",
+      "disbursementNoRetryButton": "Aquí no hay botón de reintento a propósito: la orden de reanudación solo acepta el estado «fallido» con la revisión cerrada, no pide motivo del reintento, no acepta clave de idempotencia y no registra quién la pulsó. Por ahora, un desarrollador del módulo hace el reintento a petición.",
+      "disbursementRetryContradiction": "El módulo marca el reintento como permitido, pero la orden de reanudación lo rechazará: el indicador del módulo es más amplio que la condición de la orden. Alinearlos corresponde al módulo.",
+      "disbursementUnknown": "El estado del desembolso es desconocido: el núcleo no ha respondido. Esto NO significa que no se haya hecho ninguna transferencia: puede haber salido y fallado. Actualice o vuelva más tarde.",
       "stagesTitle": "Recorrido del cliente",
-      "stagesHint": "los mismos cinco pasos que el cliente ve en su portal",
+      "stagesHint": "los mismos cinco pasos que el cliente ve en su área personal",
       "stageOfTotal": "paso {{index}} de {{total}}",
       "identifiers": "Identificadores"
-    },
-    "stand": {
-      "notice": "Etapa 1: el módulo funciona fuera de Kong y aún no conoce los roles del CRM — el rol de abajo es una simulación del entorno de pruebas (WS-20 lo sustituirá por JWT).",
-      "role": "Rol del entorno de pruebas"
     },
     "settings": {
       "title": "Configuración del módulo de crédito",
@@ -12843,7 +12899,7 @@
       "gender": "Sexo",
       "national_id": "Documento de identidad nacional",
       "sin": "SIN",
-      "tax_id": "NIF",
+      "tax_id": "Número fiscal",
       "email": "Correo electrónico",
       "phone": "Teléfono",
       "number": "Número",
@@ -12876,51 +12932,11 @@
     "filters": {
       "dpdFrom": "Días de mora",
       "any": "Cualquiera",
-      "anyBucket": "Cualquier grupo"
+      "anyBucket": "Cualquier categoría"
     },
     "unavailable": {
       "title": "El módulo de crédito no está desplegado en este entorno",
-      "hint": "La sección está lista, pero el servicio de crédito aún no está enrutado aquí: en la etapa 1 funciona fuera de Kong. En local se sirve en localhost:8020; en el servidor de desarrollo la ruta /api/v1/credit aparecerá junto con el despliegue del módulo."
-    },
-    "standKey": {
-      "title": "Clave de servicio del entorno de pruebas",
-      "where": "Solicite a DevOps la INTERNAL_API_KEY del módulo de crédito en este entorno (deploy/.env en el servidor) y péguela aquí.",
-      "lifetime": "La clave se mantiene hasta que se cierre esta pestaña — que se vuelva a pedir al reabrirla es normal, no un fallo.",
-      "placeholder": "X-Internal-Api-Key",
-      "save": "Guardar clave",
-      "clear": "Borrar",
-      "present": "Hay una clave guardada para esta pestaña.",
-      "absent": "No hay clave guardada: el módulo responde 401."
-    },
-    "clientBlock": {
-      "arrears": "Mora",
-      "cancelled": "Cancelado",
-      "closed": "Cerrado",
-      "closedThrough": "Cerrado mediante",
-      "defaultReported": "Impago reportado",
-      "disbursed": "Desembolsado",
-      "dpd": "DPD",
-      "identifiedByEmail": "Identificado por correo electrónico (OTP del portal)",
-      "issued": "Otorgado",
-      "jurisdiction": "Jurisdicción",
-      "linkNotFound": "El módulo no confirmó los préstamos de este cliente: se muestra la proyección, el vínculo se está resolviendo",
-      "maturity": "Vencimiento",
-      "moduleUnavailable": "El módulo de crédito no está disponible en este entorno",
-      "nextPayment": "Próximo pago",
-      "noContact": "Sin contacto 28 días",
-      "noLoans": "Sin préstamos",
-      "openInModule": "Abrir en el módulo de crédito",
-      "outstanding": "Saldo pendiente",
-      "overdue": "Vencido",
-      "paid": "Pagado",
-      "product": "Producto",
-      "projectionAsOf": "Proyección a fecha de",
-      "projectionOnly": "Los datos completos requieren credit.loans.read",
-      "returnPending": "Devolución pendiente",
-      "status": "Estado",
-      "temporaryFailure": "Los datos del módulo no están disponibles ahora mismo: vuelve a abrir la pestaña",
-      "tinOptional": "(opcional)",
-      "title": "Crédito (propio)"
+      "hint": "La sección está lista, pero el servicio de crédito no responde en este entorno. No es un problema de sus permisos: póngase en contacto con un administrador o con el equipo de soporte; el motivo técnico se muestra abajo."
     },
     "idle": {
       "underHour": "menos de una hora",
@@ -12929,54 +12945,54 @@
       "sinceCreated": "desde la creación"
     },
     "switches": {
-      "rule": "Apagar un interruptor detiene solo lo NUEVO. La gestión de los préstamos ya otorgados nunca se detiene: se aceptan pagos, se mantienen el calendario y los documentos, y el derecho de desistimiento de dos días sigue vigente.",
+      "rule": "Desactivar un interruptor solo detiene lo NUEVO. La gestión de los préstamos ya concedidos nunca se detiene: se aceptan pagos, se sirven el calendario y los documentos, y se mantiene el derecho de desistimiento de dos días.",
       "on": "Activado",
       "off": "Desactivado",
       "names": {
-        "applications_intake": "Recepción de solicitudes desde el sitio",
-        "client_cabinet": "Portal del cliente",
+        "applications_intake": "Recepción de solicitudes desde la web",
+        "client_cabinet": "Área personal del cliente",
         "crm_section": "Sección del módulo en el CRM"
       },
       "effects": {
-        "applications_intake": "Desactivado: no se crea ninguna solicitud nueva ni se firma ningún contrato. Los préstamos otorgados se gestionan con normalidad.",
-        "client_cabinet": "Interruptor de emergencia del portal. El cliente no puede iniciar sesión, pero sí puede pagar: los pagos, el adeudo automático y los devengos siguen funcionando.",
-        "crm_section": "El módulo guarda este interruptor pero no aplica nada: el CRM oculta la sección. El operador pierde la interfaz, la API sigue funcionando."
+        "applications_intake": "Desactivado: no se crea ninguna solicitud nueva ni se firma ningún contrato. Los préstamos concedidos se gestionan con normalidad.",
+        "client_cabinet": "Interruptor de emergencia del área personal. El cliente no puede iniciar sesión, pero sí puede pagar: los pagos, la domiciliación y los devengos siguen funcionando.",
+        "crm_section": "El módulo guarda este interruptor, pero no aplica nada: es el CRM quien oculta la sección. El operador pierde la interfaz, la API sigue funcionando."
       },
       "confirm": {
-        "applications_intake": "Se detienen las nuevas solicitudes y la firma de contratos. Los préstamos otorgados no se ven afectados.",
-        "client_cabinet": "Los clientes no podrán iniciar sesión. Seguir pagando sigue siendo posible.",
-        "crm_section": "La sección desaparece del menú del operador en el CRM. El módulo y el portal del cliente siguen funcionando."
+        "applications_intake": "Se detienen las solicitudes nuevas y la firma de contratos. Los préstamos concedidos no se ven afectados.",
+        "client_cabinet": "Los clientes no podrán iniciar sesión. Seguirán pudiendo pagar.",
+        "crm_section": "La sección desaparece del menú del operador en el CRM. El módulo y el área personal del cliente siguen funcionando."
       },
-      "reasonPlaceholder": "Por qué lo desactivamos: queda en el historial",
-      "reasonRequired": "Sin un motivo, nadie podrá explicar la parada una semana después",
+      "reasonPlaceholder": "Por qué lo desactivamos: quedará en el historial",
+      "reasonRequired": "Sin un motivo, nadie podrá explicar la parada dentro de una semana",
       "turnOff": "Desactivar",
-      "readOnly": "Solo el gestor de riesgos puede cambiarlo",
-      "saveFailed": "El cambio falló: el estado no se ha modificado",
-      "loadFailed": "No se pudo leer el estado de los interruptores. No des por hecho que todo está activado.",
+      "readOnly": "Solo el gestor de riesgos puede cambiar los interruptores",
+      "saveFailed": "No se ha podido cambiar: el estado no ha cambiado",
+      "loadFailed": "No se ha podido leer el estado de los interruptores. No dé por hecho que todo está activado.",
       "historyTitle": "Historial de cambios",
       "historyEmpty": "Todavía no hay cambios",
-      "sectionOff": "El gestor de riesgos desactivó la sección. La gestión de los préstamos otorgados no se detiene: contacta con el gestor de riesgos.",
-      "sectionOffHere": "La sección está desactivada por el interruptor «Sección del módulo en el CRM». Esta página permanece abierta deliberadamente: de lo contrario no habría forma de volver a activar la sección. La gestión de los préstamos otorgados no se detiene."
+      "sectionOff": "El gestor de riesgos ha desactivado la sección. La gestión de los préstamos concedidos no se ha detenido: póngase en contacto con el gestor de riesgos.",
+      "sectionOffHere": "La sección está desactivada por el interruptor «Sección del módulo en el CRM». Esta página sigue abierta a propósito; de lo contrario no habría forma de volver a activar la sección. La gestión de los préstamos concedidos no se ha detenido."
     },
     "disbursementState": {
       "pending": "El dinero está en camino",
       "settled": "Liquidado",
       "failed": "No enviado",
-      "reversed": "El dinero volvió al remitente",
+      "reversed": "El dinero ha vuelto al remitente",
       "cancelled": "Operación retirada",
       "unknown": "Se desconoce dónde está el dinero"
     },
     "disbursementMethod": {
       "interac": "Interac e-Transfer",
-      "eft": "EFT — transferencia a cuenta"
+      "eft": "EFT: transferencia a cuenta"
     },
     "disbursementFailure": {
-      "payout_refused_pending_review": "Detuvimos el pago nosotros mismos a la espera de revisión",
+      "payout_refused_pending_review": "Detuvimos nosotros el desembolso hasta la revisión",
       "provider_never_created": "El proveedor nunca creó la operación",
-      "NSF": "El banco rechazó: fondos insuficientes"
+      "NSF": "El banco lo rechazó: fondos insuficientes"
     },
     "disbursementRetry": {
-      "available": "Posible: suscriptor o gestor de riesgos",
+      "available": "Posible: analista de crédito o gestor de riesgos",
       "reviewOpen": "Primero la revisión, después el reintento",
       "notFailed": "No es posible: la reanudación solo acepta el estado «no enviado»",
       "settled": "No hace falta: el dinero ya se ha liquidado",
@@ -12984,38 +13000,38 @@
       "unknownState": "Prohibido: no sabemos dónde está el dinero"
     },
     "providerTimeSource": {
-      "provider": "Marca de tiempo propia del proveedor",
-      "observed": "Estimada a partir del momento en que lo supimos"
+      "provider": "Hora indicada por el proveedor",
+      "observed": "Estimada a partir del momento en que nos enteramos"
     },
     "queue": {
       "title": "Cola de revisión manual",
       "total": "{{count}} en total",
       "empty": "La cola está vacía",
-      "noNumberHint": "El endpoint de la cola devuelve solo el id de la solicitud: no incluye el número de solicitud ni el correo del cliente. Abre la ficha haciendo clic en una fila para verlos.",
-      "noAssignmentHint": "La asignación a un suscriptor todavía no existe: el mecanismo llega con WS-20, así que la columna «Asignada» está vacía en todas las filas.",
+      "noNumberHint": "El endpoint de la cola solo devuelve el ID de la solicitud: no incluye el número de solicitud ni el correo del cliente. Abra la ficha haciendo clic en una fila para verlos.",
+      "noAssignmentHint": "La asignación a un analista de crédito todavía no existe: el mecanismo llega con WS-20, así que la columna «Asignada» está vacía en todas las filas.",
       "noSortingHint": "El módulo devuelve toda la cola como una sola lista en orden de derivación: no hay ordenación por columnas ni paginación, porque el servidor no admite ninguna de las dos."
     },
     "railReviewReason": {
-      "payout_account_not_pinned": "La decisión no fijó una cuenta de pago",
+      "payout_account_not_pinned": "La decisión no fijó una cuenta de desembolso",
       "payout_details_changed_after_approval": "Los datos de la cuenta cambiaron después de la aprobación",
-      "effective_time_corrected": "La hora de liquidación se corrigió tras la observación",
+      "effective_time_corrected": "La hora de liquidación se corrigió después de observarla",
       "provider_amount_mismatch": "El importe del proveedor no coincide con el nuestro",
       "provider_amount_unconfirmed": "El proveedor no confirmó el importe",
       "provider_contradiction": "El proveedor se contradice",
-      "provider_dishonour_unknown": "El proveedor informó de una reversión sin motivo",
+      "provider_dishonour_unknown": "El proveedor comunicó una devolución sin motivo",
       "provider_foreign_operation": "El proveedor devolvió una operación ajena",
       "provider_impossible_time": "La hora de la operación del proveedor es imposible",
       "provider_recipient_mismatch": "El destinatario del proveedor no es el que indicamos",
-      "provider_unidentified_success": "Un éxito en el proveedor que no pudimos vincular a nuestra operación",
+      "provider_unidentified_success": "Un éxito en el proveedor que no pudimos asociar a nuestra operación",
       "provider_unknown_status": "El proveedor devolvió un estado que no conocemos"
     },
     "referralReason": {
       "income_not_verified": "Ingresos no verificados por el banco",
-      "income_mismatch": "Los ingresos declarados difieren de los datos del banco",
+      "income_mismatch": "Los ingresos declarados no coinciden con los datos del banco",
       "income_frequency_unverified": "Frecuencia de ingresos no verificada",
       "income_not_plausible": "El banco mostró un importe, pero sin un patrón de nómina detrás",
       "login_attribution_unverified": "El proveedor no confirmó que el acceso bancario pertenezca a esta solicitud",
-      "schedule_infeasible": "No se puede construir ningún calendario para las fechas solicitadas",
+      "schedule_infeasible": "No se puede crear un calendario para las fechas solicitadas",
       "manual": "Un operador derivó la solicitud a revisión",
       "RC-04": "Ya existe un préstamo activo",
       "RC-08": "Periodo de espera tras un rechazo",
@@ -13025,7 +13041,7 @@
     "stage": {
       "registration": "Registro",
       "questionnaire": "Formulario de solicitud",
-      "income_check": "Comprobación de ingresos",
+      "income_check": "Verificación de ingresos",
       "decision": "Decisión",
       "signing": "Firma"
     },
@@ -13036,20 +13052,20 @@
       "failed": "no superado"
     },
     "clientLink": {
-      "byPhone": "vinculado por teléfono",
-      "ambiguous": "{{count}} fichas coinciden con este teléfono: elige una manualmente",
+      "byPhone": "encontrado por teléfono",
+      "ambiguous": "{{count}} fichas coinciden con este teléfono: elija una manualmente",
       "notFound": "no encontrado en el CRM por teléfono",
       "notSearched": {
-        "no_phone": "no buscado: sin teléfono",
+        "no_phone": "sin buscar: no hay teléfono",
         "loading": "buscando…",
-        "failed": "no buscado: el CRM no respondió"
+        "failed": "sin buscar: el CRM no respondió"
       }
     },
     "access": {
-      "notAuthenticated": "El módulo no aceptó tu inicio de sesión",
-      "notAuthenticatedHint": "Es posible que tu sesión haya caducado. Vuelve a iniciar sesión en el CRM; si eso no ayuda, contacta con un administrador: el módulo verifica el inicio de sesión con el CRM.",
+      "notAuthenticated": "El módulo no ha aceptado su inicio de sesión",
+      "notAuthenticatedHint": "Puede que su sesión haya caducado. Vuelva a iniciar sesión en el CRM; si no funciona, póngase en contacto con un administrador: el módulo verifica el inicio de sesión con el CRM.",
       "noRights": "Sin acceso a la sección de crédito",
-      "noRightsHint": "Tu acceso al CRM no incluye permisos de la sección de crédito. Los concede un administrador del CRM: pide que te asignen el rol correspondiente."
+      "noRightsHint": "Su acceso al CRM no incluye permisos para la sección de crédito. Los concede un administrador del CRM: solicite que le asignen el rol correspondiente."
     }
   },
   "toasts": {

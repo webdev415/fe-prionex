@@ -36,6 +36,7 @@ export const KNOWN_MESSAGING_SERVICES = [
   'vodafone_obm',
   'my2_viber',
   'intel_tele',
+  'zadarma',
 ] as const
 export type MessagingService = (typeof KNOWN_MESSAGING_SERVICES)[number]
 
@@ -45,6 +46,7 @@ export const SERVICE_CHANNEL_MATRIX: Record<MessagingService, MessagingChannel[]
   vodafone_obm: ['sms'],
   my2_viber: ['viber'],
   intel_tele: ['email'],
+  zadarma: ['sms'],
 }
 
 export const getSupportedChannelsForService = (service: string): MessagingChannel[] =>
@@ -59,6 +61,7 @@ export const MESSAGING_SERVICE_LABELS: Record<MessagingService, string> = {
   vodafone_obm: 'Vodafone OBM',
   my2_viber: 'My2 Viber',
   intel_tele: 'Intel-Tele.com',
+  zadarma: 'Zadarma',
 }
 
 export const getMessagingServiceLabel = (service: string): string =>
@@ -71,6 +74,7 @@ export const IMPLEMENTED_MESSAGING_SERVICES: MessagingService[] = [
   'vodafone_obm',
   'my2_viber',
   'intel_tele',
+  'zadarma',
 ]
 
 export const REQUIRED_CREDENTIAL_KEYS: Record<MessagingService, string[]> = {
@@ -79,6 +83,7 @@ export const REQUIRED_CREDENTIAL_KEYS: Record<MessagingService, string[]> = {
   vodafone_obm: ['username', 'password', 'sender'],
   my2_viber: ['api_key', 'sender'],
   intel_tele: ['username', 'api_key', 'from_email'],
+  zadarma: ['user_key', 'secret'],
 }
 
 export const OPTIONAL_CREDENTIAL_KEYS: Record<MessagingService, string[]> = {
@@ -87,6 +92,7 @@ export const OPTIONAL_CREDENTIAL_KEYS: Record<MessagingService, string[]> = {
   omnicell: [],
   vodafone_obm: ['sender_id'],
   my2_viber: [],
+  zadarma: ['sender'],
 }
 
 const CREDENTIAL_ALIASES: Record<string, string[]> = {
@@ -97,6 +103,7 @@ const CREDENTIAL_ALIASES: Record<string, string[]> = {
   reply_to_email: ['reply_to_email', 'reply_to'],
   username: ['username', 'login'],
   password: ['password', 'secret'],
+  user_key: ['user_key', 'api_key'],
 }
 
 export function isMessagingProviderImplemented(service: string): boolean {

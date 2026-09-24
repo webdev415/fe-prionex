@@ -69,12 +69,12 @@
     "creditApplications": "Applications",
     "creditLoans": "Loans",
     "creditSettings": "Settings",
-    "creditUnderwriting": "Manual review queue",
     "menu": "Menu",
     "toggleMenu": "Toggle menu",
     "scoringV3Monitoring": "v3 Shadow-Run Report",
     "scoringV3Settings": "v3 Scoring Settings",
-    "operatorWorkList": "Priority Work List"
+    "operatorWorkList": "Priority Work List",
+    "creditUnderwriting": "Manual review queue"
   },
   "dialer": {
     "phone": {
@@ -158,7 +158,10 @@
       "pending": "Pending",
       "phoneNumber": "Phone Number",
       "incomingCall": "Incoming Call",
-      "acceptCall": "Accept call"
+      "acceptCall": "Accept call",
+      "noClientInteraction": "This number was dialed without client details, so an interaction cannot be logged against a client record.",
+      "noClientChain": "A TA chain needs a client record. None is attached to this number.",
+      "unknownClient": "Unknown contact"
     },
     "accessGroup": {
       "all_groups": "All groups",
@@ -235,7 +238,9 @@
         "atLeastOneAttempt": "At least 1 attempt",
         "enterSeconds": "Enter a number of seconds",
         "notNegative": "Cannot be negative"
-      }
+      },
+      "answerMode": "Answer mode",
+      "answerModeHint": "Manual gives operators an accept window before the customer is connected."
     },
     "numbers": {
       "inQueue": "In Queue",
@@ -329,6 +334,10 @@
       "allowed": "Allowed: {{hours}}, {{days}} ({{timezone}})",
       "open": "Calling hours {{hours}} · {{days}} · open now",
       "everyDay": "every day"
+    },
+    "answerMode": {
+      "auto": "Automatic",
+      "manual": "Manual (operator accepts)"
     }
   },
   "search": {
@@ -938,7 +947,7 @@
       "expertLimitReached": "The daily expert-mode limit is used up.",
       "expertUnavailable": "The external service is unavailable right now, try again later.",
       "showReasoning": "31B reasoning",
-      "showReasoningHint": "On — the model reasons and the train of thought goes to the «Activity» panel. Off — 31B answers straight away, faster.",
+      "showReasoningHint": "On — the model reasons and the train of thought goes to the «Activity» panel. Off — 31B answers straight away, faster. Server — as configured on the server.",
       "thinkingUsedOn": "31B · with reasoning",
       "thinkingUsedOff": "31B · without reasoning",
       "thinkingUsedMismatch": "The server answered differently from the setting",
@@ -973,7 +982,14 @@
       "slashNewChat": "start a new chat",
       "answerInProgress": "The answer is still being prepared — it will appear here when ready",
       "attachmentFrameTitle": "Attachment preview",
-      "attachmentRemoveShort": "Remove attachment"
+      "attachmentRemoveShort": "Remove attachment",
+      "thinkingChoiceServer": "Server",
+      "thinkingChoiceOn": "On",
+      "thinkingChoiceOff": "Off",
+      "thinkingChoiceServerHint": "The server decides the reasoning mode",
+      "thinkingChoiceFactOn": "Server decides · the last turn was with reasoning",
+      "thinkingChoiceFactOff": "Server decides · the last turn was without reasoning",
+      "thinkingFlagUnsupported": "Turning reasoning off is not supported by the server yet"
     },
     "lawyerWorkplace": {
       "navAria": "Lawyer Workplace navigation",
@@ -6408,6 +6424,8 @@
         "taxId": "Tax ID",
         "saveSuccess": "Client updated successfully",
         "saveError": "Failed to update client",
+        "taxIdInvalid": "The tax number must be exactly 10 digits",
+        "taxIdInvalidEs": "The tax number must be a valid Spanish DNI, NIE or CIF (9 characters, e.g. 12345678Z, X1234567L, B12345678)",
         "addressCreated": "Address added successfully",
         "addressUpdated": "Address updated successfully",
         "addressDeleted": "Address removed successfully",
@@ -7031,14 +7049,14 @@
           "entryCount_other": "{{count}} entries",
           "pagingLimit": "Showing the {{count}} most recent entries. Set a date range to reach older activity."
         },
-        "creditModuleTag": "own credit",
-        "creditModuleActionsHint": "Actions live in the credit module",
         "workExperienceMonths": "{{count}} mo.",
         "errorOccurred": "An error occurred",
         "noTransitionPermission": "Your role doesn't allow this transition.",
         "rrDraftAlreadyExists": "This credit already has a draft restructuring agreement.",
         "documentsCount_one": "{{count}} doc.",
-        "documentsCount_other": "{{count}} docs."
+        "documentsCount_other": "{{count}} docs.",
+        "creditModuleTag": "own credit",
+        "creditModuleActionsHint": "Actions live in the credit module"
       },
       "debtSummary": {
         "title": "Debt Summary",
@@ -10175,7 +10193,8 @@
         "omnicell": "OmniCell",
         "vodafone_obm": "Vodafone OBM",
         "my2_viber": "My2 Viber",
-        "intel_tele": "Intel-Tele.com"
+        "intel_tele": "Intel-Tele.com",
+        "zadarma": "Zadarma"
       },
       "credentials": {
         "turbosms": {
@@ -10245,6 +10264,18 @@
           },
           "reply_to_name": {
             "label": "Reply-to name"
+          }
+        },
+        "zadarma": {
+          "user_key": {
+            "label": "User key"
+          },
+          "secret": {
+            "label": "Secret"
+          },
+          "sender": {
+            "label": "Sender (Alpha name)",
+            "placeholder": "Approved alpha name, leave empty to use the account default"
           }
         }
       },

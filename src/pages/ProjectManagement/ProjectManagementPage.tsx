@@ -294,7 +294,7 @@ export function ProjectManagementPage() {
       sortable: true,
       render: (project) => (
         <span className="text-foreground text-xs font-medium">
-          {formatCurrency(project.total_debt_amount, project.currency)}
+          {formatCurrency(project.total_debt_amount, project.currency ?? 'UAH')}
         </span>
       ),
     },

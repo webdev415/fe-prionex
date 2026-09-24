@@ -188,8 +188,12 @@ export interface SimCardStats {
  */
 export interface RoutedCall {
   call_id: string
-  client_id: number
-  client_name: string
+  // Nullable: a number uploaded to a dial list without client context still
+  // gets routed and must still be answerable. Anything that writes against the
+  // client (interactions, TA chains) has to handle its absence rather than
+  // substitute an id of 0, which resolves to no client and fails on save.
+  client_id: number | null
+  client_name: string | null
   phone: string
   line_type: TelephonyType
   started_at: string

@@ -113,6 +113,15 @@ export interface ChainInstance {
   id: number
   chain_id: number
   chain_name: string | null
+  /**
+   * The chain's own two settings, travelling with the instance (KAN-1045).
+   * `is_system_hidden` is Visibility = "System (hidden)" from KAN-318: such a
+   * chain is launched by its trigger and must never be shown to an operator,
+   * so the client card needs to know that without a second chain fetch.
+   * Optional because a response from a server older than KAN-1045 omits them.
+   */
+  chain_type?: 'manual' | 'automatic' | null
+  is_system_hidden?: boolean
   client_id: number
   status: 'active' | 'completed' | 'cancelled'
   current_step_order: number | null

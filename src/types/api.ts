@@ -67,6 +67,8 @@ export interface CurrentUserResponse {
     id: number
     name: string
     code: string
+    currency?: string
+    country?: string
   }
   department_id?: number | null
   department_name?: string | null
@@ -102,6 +104,8 @@ export interface User {
   fullName?: string
   projects: UserProject[]
   active_project_id: string | null
+  active_project_currency?: string
+  active_project_country?: string
   active_role_id: string | null
   active_role_name: string | null
   active_department_id: number | null
@@ -244,6 +248,8 @@ export interface ImpersonationResponse {
     active_project: {
       project_id: number
       project_name: string
+      currency?: string
+      country?: string
       role_id: number
       role_name: string
     }

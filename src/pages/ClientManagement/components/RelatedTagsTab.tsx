@@ -11,6 +11,7 @@ import { useHasAnyPermission } from '@/hooks/usePermissions'
 import { PERMISSIONS } from '@/constants/permissions'
 import { ALL_MESSAGING_SEND_PERMISSIONS } from '@/features/messaging/utils/messagingPermissions'
 import { useAuthStore } from '@/stores/authStore'
+import { useSmsServiceAvailable } from '@/features/sms'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/Tooltip'
 import {
   isCallBlocked,
@@ -50,6 +51,7 @@ export function RelatedTagsTab({
   const { t } = useTranslation('common')
   const { user } = useAuthStore()
   const canSendMessaging = useHasAnyPermission(ALL_MESSAGING_SEND_PERMISSIONS)
+  const smsServiceAvailable = useSmsServiceAvailable()
 
   const { entries, isLoading } = useLinkedClientsRelatedTags(
     clientId,
@@ -149,22 +151,24 @@ export function RelatedTagsTab({
                           )}
                         </Tooltip>
                       </PermissionGuard>
-                      <PermissionGuard permission={PERMISSIONS.COMMUNICATION.SEND_SMS}>
-                        <button
-                          type="button"
-                          disabled={isMessageBlocked(phone.blocking)}
-                          onClick={() => onSms(phone.displayPhone)}
-                          className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
-                          title={
-                            isMessageBlocked(phone.blocking)
-                              ? messageBlockReason(phone.blocking) ||
-                                t('pages.contactTags.smsBlocked', 'SMS blocked')
-                              : t('pages.clients.detail.sendSms', 'Send SMS')
-                          }
-                        >
-                          <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
-                        </button>
-                      </PermissionGuard>
+                      {smsServiceAvailable && (
+                        <PermissionGuard permission={PERMISSIONS.COMMUNICATION.SEND_SMS}>
+                          <button
+                            type="button"
+                            disabled={isMessageBlocked(phone.blocking)}
+                            onClick={() => onSms(phone.displayPhone)}
+                            className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
+                            title={
+                              isMessageBlocked(phone.blocking)
+                                ? messageBlockReason(phone.blocking) ||
+                                  t('pages.contactTags.smsBlocked', 'SMS blocked')
+                                : t('pages.clients.detail.sendSms', 'Send SMS')
+                            }
+                          >
+                            <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
+                          </button>
+                        </PermissionGuard>
+                      )}
                       {canSendMessaging && (
                         <button
                           type="button"

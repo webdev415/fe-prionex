@@ -4,4 +4,5 @@
  */
 
 export * from './useSMS'
+export * from './useSmsServiceAvailable'
 export * from './useSMSMutations'

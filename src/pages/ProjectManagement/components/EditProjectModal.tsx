@@ -145,7 +145,8 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
         'bank_code',
       ]
       for (const f of cbFields) {
-        const formValue = (formData[f] ?? '') as string
+        const typed = (formData[f] ?? '') as string
+        const formValue = f === 'edrpou_code' ? typed.toUpperCase() : typed
         const projectValue = (project[f] ?? '') as string
         if (formValue !== projectValue) {
           updateData[f] = formValue === '' ? null : formValue
