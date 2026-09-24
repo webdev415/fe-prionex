@@ -12,6 +12,7 @@ import type {
   CreateRoleInput,
   UpdateRoleInput,
   PermissionsResponse,
+  HubRoleCatalog,
 } from '../types'
 
 /**
@@ -99,6 +100,20 @@ export async function getPermissions(): Promise<PermissionsResponse> {
   return response.data
 }
 
+/**
+ * The HUB chat-role catalogue for one project (KAN-1476): which values the
+ * caller may put on a role there, and whether the choice is switched on.
+ *
+ * Declared on the backend before `/roles/{role_id}`, so the literal segment is
+ * not read as a role id.
+ */
+export async function getHubRoles(projectId: number): Promise<HubRoleCatalog> {
+  const response = await api.get<HubRoleCatalog>('/api/v1/admin/roles/hub-roles', {
+    params: { project_id: projectId },
+  })
+  return response.data
+}
+
 export const rolesApi = {
   getRoles,
   getRole,
@@ -108,4 +123,5 @@ export const rolesApi = {
   getPermissions,
   getRoleUsers,
   archiveRole,
+  getHubRoles,
 }

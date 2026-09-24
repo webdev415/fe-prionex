@@ -4626,13 +4626,32 @@
         "type": "Tipo",
         "systemDefault": "Predeterminado del sistema",
         "customRole": "Rol personalizado",
-        "notAvailableForDefault": "No disponible para roles predeterminados"
+        "notAvailableForDefault": "No disponible para roles predeterminados",
+        "hubRole": "Rol en el chat (HUB)",
+        "hubRoleNotSet": "Sin definir — según el nombre del rol",
+        "hubRoleHint": "Sin definir: HUB determina los permisos por el nombre del rol; si HUB no conoce el nombre — permisos mínimos (empleado). Los cambios se aplican en HUB en ~6 min sin volver a iniciar sesión",
+        "hubRoleUnavailableOption": "{{code}} (no disponible para seleccionar)",
+        "hubRoleCatalogUnavailable": "catálogo de HUB no disponible",
+        "hubRoleLockedDefault": "Rol predeterminado: el rol en el chat lo fija el sistema y no se puede cambiar aquí.",
+        "hubRoleLockedNotAssignable": "Este valor no está disponible para que lo elija ahora, así que no se puede cambiar aquí."
       },
       "accessLevel": {
         "my": "Solo los míos",
         "group": "Mi grupo",
         "department": "Mi departamento",
         "all": "Todo el proyecto"
+      },
+      "hubRole": {
+        "options": {
+          "none": "Sin acceso a HUB",
+          "employee": "Empleado (permisos mínimos)",
+          "training_workspace": "Formador (espacio de formación)",
+          "quality_workspace": "Control de calidad (espacio QA)",
+          "lawyer": "Abogado",
+          "operator": "Operador",
+          "supervisor": "Supervisor",
+          "admin": "Administrador de HUB"
+        }
       },
       "validation": {
         "nameRequired": "El nombre del rol es obligatorio",
