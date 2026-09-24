@@ -11387,6 +11387,16 @@
         "systemMigrated": "system (migrated)",
         "viewAll": "View All ({{count}})",
         "deleteMessage": "Are you sure you want to delete this comment? This cannot be undone."
+      },
+      "commentPhones": {
+        "copied": "Phone number copied",
+        "copyFailed": "Could not copy the number",
+        "copyPhone": "Copy phone",
+        "lastCall": "Last call",
+        "never": "Never",
+        "notContact": "Not a contact",
+        "panelAria": "Phone number actions",
+        "savedContact": "Saved contact"
       }
     },
     "contactTags": {

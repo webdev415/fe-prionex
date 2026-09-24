@@ -11,6 +11,7 @@ import type {
   IncomingCallData,
   BlockedCallAttemptResult,
   CallingWindowStatus,
+  LastCallByPhoneResponse,
 } from '../types'
 
 // Use same base URL as other services - all requests go through Kong Gateway
@@ -96,6 +97,24 @@ class CallService {
   ): Promise<CallHistoryResponse> {
     const response = await api.get(`${API_BASE_URL}/api/v1/calls/client/${clientId}`, {
       params: filters,
+    })
+    return response.data
+  }
+
+  /**
+   * When was this number last called? (KAN-1212)
+   *
+   * `phone` travels as bare digits (`380` + 9). The endpoint matches both the
+   * bare and the `+`-prefixed stored forms itself, so the caller never has to
+   * guess which shape the contact happens to be saved as.
+   *
+   * A number nobody has ever called answers `{ last_call: null }` rather than
+   * 404 — "never called" is an ordinary fact about a real number, not a
+   * missing resource — so callers must not treat the null as an error.
+   */
+  async getLastCallByPhone(phone: string): Promise<LastCallByPhoneResponse> {
+    const response = await api.get(`${API_BASE_URL}/api/v1/calls/last-by-phone`, {
+      params: { phone },
     })
     return response.data
   }
