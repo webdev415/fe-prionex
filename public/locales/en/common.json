@@ -12809,6 +12809,7 @@
       "overpayment": "Overpayment"
     },
     "documentKind": {
+      "agreement_draft": "Draft agreement",
       "contract": "Loan agreement",
       "schedule": "Payment schedule",
       "pcci": "Pre-contract credit information",
@@ -12825,7 +12826,8 @@
       "pad_form": "PAD authorisation",
       "pay_stub": "Pay stub",
       "utility_bill": "Utility bill",
-      "other": "Other"
+      "other": "Other",
+      "unknown": "Unknown kind ({{code}})"
     },
     "consent": {
       "terms": "Terms and conditions",

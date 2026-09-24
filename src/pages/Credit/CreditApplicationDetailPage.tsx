@@ -20,6 +20,7 @@ import {
 } from '@/features/credit/hooks/useCredit'
 import type { CreditApiError } from '@/features/credit/api/creditApi'
 import { normalizeDraft } from '@/features/credit/api/draft'
+import { CREDIT_DOCUMENT_META_KINDS } from '@/features/credit/api/enums'
 import type { CreditApplicationDetail, CreditDecisionOutcome } from '@/features/credit/api/types'
 import { CreditStatusBadge } from './components/CreditStatusBadge'
 import { CreditDocumentOpenButton } from './components/CreditDocumentOpenButton'
@@ -447,7 +448,18 @@ function ApplicationForm({ application }: { application: CreditApplicationDetail
 function ApplicationDocuments({ application }: { application: CreditApplicationDetail }) {
   const { t } = useTranslation('common')
   const [failure, setFailure] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
   const documents = application.documents ?? []
+  // Плашка над таблицей одна: отказ и уведомление вытесняют друг друга, иначе
+  // запоздавший ответ одного документа лёг бы рядом с итогом другого.
+  const showFailure = (message: string | null) => {
+    setFailure(message)
+    if (message !== null) setNotice(null)
+  }
+  const showNotice = (message: string | null) => {
+    setNotice(message)
+    if (message !== null) setFailure(null)
+  }
 
   return (
     <Panel title={t('credit.tabs.documents')}>
@@ -456,6 +468,15 @@ function ApplicationDocuments({ application }: { application: CreditApplicationD
           {failure}
         </Alert>
       )}
+      {/* Живая область стоит в DOM всегда: вставленную вместе с текстом часть
+          дикторов не объявляет, а у самой плашки роли нет. */}
+      <div role="status" aria-live="polite">
+        {notice && (
+          <CreditNotice tone="info" className="mb-3">
+            {notice}
+          </CreditNotice>
+        )}
+      </div>
       {documents.length === 0 ? (
         <p className="text-muted-foreground text-sm">{t('credit.card.noDocuments')}</p>
       ) : (
@@ -471,7 +492,11 @@ function ApplicationDocuments({ application }: { application: CreditApplicationD
           <tbody>
             {documents.map((doc) => (
               <tr key={doc.document_id} className="border-border border-b last:border-0">
-                <td className="py-2">{t(`credit.documentKind.${doc.kind}`, doc.kind)}</td>
+                <td className="py-2">
+                  {CREDIT_DOCUMENT_META_KINDS.includes(doc.kind)
+                    ? t(`credit.documentKind.${doc.kind}`)
+                    : t('credit.documentKind.unknown', { code: doc.kind })}
+                </td>
                 <td className="py-2 font-mono text-xs">{doc.title ?? doc.document_id}</td>
                 <td className="text-muted-foreground py-2 text-xs">
                   {formatDateTime(doc.generated_at)}
@@ -480,7 +505,8 @@ function ApplicationDocuments({ application }: { application: CreditApplicationD
                   <CreditDocumentOpenButton
                     document={doc}
                     owner={{ kind: 'application', id: application.application_id }}
-                    onError={setFailure}
+                    onError={showFailure}
+                    onNotice={showNotice}
                   />
                 </td>
               </tr>

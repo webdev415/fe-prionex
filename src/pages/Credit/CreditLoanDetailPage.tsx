@@ -45,6 +45,7 @@ import type {
 import {
   CREDIT_BUCKETS,
   CREDIT_DISBURSEMENT_FAILURE_CODES,
+  CREDIT_DOCUMENT_META_KINDS,
   CREDIT_RAIL_REVIEW_REASONS,
 } from '@/features/credit/api/enums'
 import { CreditStatusBadge } from './components/CreditStatusBadge'
@@ -1199,6 +1200,17 @@ function LoanDocuments({
 }) {
   const { t } = useTranslation('common')
   const [failure, setFailure] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  // Плашка над таблицей одна: отказ и уведомление вытесняют друг друга, иначе
+  // запоздавший ответ одного документа лёг бы рядом с итогом другого.
+  const showFailure = (message: string | null) => {
+    setFailure(message)
+    if (message !== null) setNotice(null)
+  }
+  const showNotice = (message: string | null) => {
+    setNotice(message)
+    if (message !== null) setFailure(null)
+  }
   return (
     <AsyncPanel
       title={t('credit.tabs.documents')}
@@ -1214,6 +1226,15 @@ function LoanDocuments({
           {failure}
         </Alert>
       )}
+      {/* Живая область стоит в DOM всегда: вставленную вместе с текстом часть
+          дикторов не объявляет, а у самой плашки роли нет. */}
+      <div role="status" aria-live="polite">
+        {notice && (
+          <CreditNotice tone="info" className="mb-3">
+            {notice}
+          </CreditNotice>
+        )}
+      </div>
       <table className="w-full text-sm">
         <thead>
           <tr className="border-border text-muted-foreground border-b text-xs">
@@ -1229,7 +1250,11 @@ function LoanDocuments({
         <tbody>
           {documents.map((doc) => (
             <tr key={doc.document_id} className="border-border border-b last:border-0">
-              <td className="py-2 pr-3">{t(`credit.documentKind.${doc.kind}`, doc.kind)}</td>
+              <td className="py-2 pr-3">
+                {CREDIT_DOCUMENT_META_KINDS.includes(doc.kind)
+                  ? t(`credit.documentKind.${doc.kind}`)
+                  : t('credit.documentKind.unknown', { code: doc.kind })}
+              </td>
               <td className="py-2 pr-3 font-mono text-xs">{doc.title ?? doc.document_id}</td>
               <td className="text-muted-foreground py-2 pr-3 text-xs">
                 {doc.template_version ?? '—'}
@@ -1241,7 +1266,8 @@ function LoanDocuments({
                 <CreditDocumentOpenButton
                   document={doc}
                   owner={{ kind: 'loan', id: loanId }}
-                  onError={setFailure}
+                  onError={showFailure}
+                  onNotice={showNotice}
                 />
               </td>
             </tr>
@@ -1353,11 +1379,13 @@ function LoanJournal({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-border text-muted-foreground border-b text-xs">
-              <th className="py-2 text-left font-medium">{t('credit.columns.date')}</th>
-              <th className="py-2 text-left font-medium">{t('credit.columns.entryType')}</th>
-              <th className="py-2 text-left font-medium">{t('credit.columns.bucket')}</th>
-              <th className="py-2 text-right font-medium">{t('credit.columns.installment')}</th>
-              <th className="py-2 text-right font-medium">{t('credit.columns.amount')}</th>
+              <th className="py-2 pr-3 text-left font-medium">{t('credit.columns.date')}</th>
+              <th className="py-2 pr-3 text-left font-medium">{t('credit.columns.entryType')}</th>
+              <th className="py-2 pr-3 text-left font-medium">{t('credit.columns.bucket')}</th>
+              <th className="py-2 pr-3 text-right font-medium">
+                {t('credit.columns.installment')}
+              </th>
+              <th className="py-2 pr-3 text-right font-medium">{t('credit.columns.amount')}</th>
               <th className="py-2 text-left font-medium">{t('credit.columns.rule')}</th>
             </tr>
           </thead>
@@ -1376,8 +1404,8 @@ function LoanJournal({
                     isReversed ? 'text-muted-foreground line-through' : ''
                   }`}
                 >
-                  <td className="py-2">{formatDate(entry.business_date)}</td>
-                  <td className="py-2">
+                  <td className="py-2 pr-3">{formatDate(entry.business_date)}</td>
+                  <td className="py-2 pr-3">
                     {t(`credit.entryType.${entry.entry_type}`, entry.entry_type)}
                     {isReversal && (
                       <span className="text-muted-foreground ml-1 text-xs">
@@ -1385,11 +1413,11 @@ function LoanJournal({
                       </span>
                     )}
                   </td>
-                  <td className="py-2">{t(`credit.bucket.${entry.bucket}`, entry.bucket)}</td>
-                  <td className="text-muted-foreground py-2 text-right tabular-nums">
+                  <td className="py-2 pr-3">{t(`credit.bucket.${entry.bucket}`, entry.bucket)}</td>
+                  <td className="text-muted-foreground py-2 pr-3 text-right tabular-nums">
                     {entry.installment_seq ?? '—'}
                   </td>
-                  <td className="py-2 text-right tabular-nums">
+                  <td className="py-2 pr-3 text-right tabular-nums">
                     {money(entry.amount_minor, entry.currency)}
                   </td>
                   <td className="text-muted-foreground py-2 text-xs">{entry.rule_id ?? '—'}</td>
