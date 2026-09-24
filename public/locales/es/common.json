@@ -12499,7 +12499,6 @@
       "finalAmount": "Importe final",
       "declineCodes": "Códigos de rechazo",
       "underwriter": "Analista de crédito",
-      "underwriterId": "ID del analista",
       "rationale": "Justificación",
       "rules": "Conjunto de reglas / modelo",
       "decidedAt": "Decidido el",
@@ -12583,6 +12582,11 @@
       "loanAgeDays": "Días desde el desembolso",
       "advanceRefundExcess": "Excedente de devolución tras la cancelación",
       "supersedesDecision": "Sustituye la decisión anterior"
+    },
+    "decisionError": {
+      "operatorIdNotNumeric": "La decisión no se guardó: el número de usuario de su pase de CRM no es un número entero, por lo que no se puede registrar al autor de la decisión. Contacte al administrador: es un ajuste del inicio de sesión, no un error suyo.",
+      "operatorIdAmbiguous": "La decisión no se guardó: su pase de CRM indica dos números de usuario distintos, por lo que no se puede determinar al autor de la decisión. Contacte al administrador.",
+      "underwriterNotTheCaller": "La decisión no se guardó: el autor de una decisión manual es el titular del pase de CRM, y la página envió otro número. Actualice la página e inténtelo de nuevo."
     },
     "tabs": {
       "form": "Formulario de solicitud",

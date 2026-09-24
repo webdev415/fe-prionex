@@ -846,13 +846,13 @@ export interface CreditJournalParams {
   as_of?: string
 }
 
+/** Автора ручного решения модуль берёт из пропуска CRM; поле не шлётся (17-22). */
 export interface ManualDecisionPayload {
   outcome: CreditDecisionOutcome
   rationale: string
   final_amount_minor?: number
   decline_codes?: string[]
   cooldown_until?: string
-  underwriter_id?: number
 }
 
 /**

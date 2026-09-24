@@ -18,6 +18,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { CreditApplicationDetailPage } from '../CreditApplicationDetailPage'
 import * as hooks from '@/features/credit/hooks/useCredit'
+import { CreditApiError } from '@/features/credit/api/creditApi'
 import type { CreditApplicationDetail, CreditDecision } from '@/features/credit/api/types'
 
 // Страница ищет клиента CRM по телефону заёмщика (см. CreditClientLink), поэтому
@@ -208,7 +209,11 @@ describe('CreditApplicationDetailPage → решение заменяет пре
     vi.clearAllMocks()
   })
 
-  function renderDecision(application: CreditApplicationDetail, permissions: string[] = []) {
+  function renderDecision(
+    application: CreditApplicationDetail,
+    permissions: string[] = [],
+    mutation: { mutate?: (payload: unknown) => void; isError?: boolean; error?: unknown } = {}
+  ) {
     vi.mocked(hooks.useCreditApplication).mockReturnValue({
       ...idle,
       data: application,
@@ -220,6 +225,7 @@ describe('CreditApplicationDetailPage → решение заменяет пре
     vi.mocked(hooks.useCreditManualDecision).mockReturnValue({
       mutate: vi.fn(),
       isPending: false,
+      ...mutation,
     } as never)
     const view = render(<MemoryRouter>{withQuery(<CreditApplicationDetailPage />)}</MemoryRouter>)
     fireEvent.click(screen.getByRole('tab', { name: 'credit.tabs.decision' }))
@@ -291,5 +297,150 @@ describe('CreditApplicationDetailPage → решение заменяет пре
     ).toBeNull()
     expect(screen.getByText('credit.card.currentDecision')).toBeInTheDocument()
     expect(screen.getByText('credit.fields.decidedAt')).toBeInTheDocument()
+  })
+
+  /**
+   * Автор ручного решения — владелец пропуска CRM: модуль берёт его сам, а число
+   * в теле считает лишь заявлением и отказывает, если оно чужое. Форма больше не
+   * предлагает вписать номер и не шлёт его; три отказа модуля по пропуску оператор
+   * читает текстом своего кода, а не русским `detail`.
+   *
+   * Сцена — та же, что S-5 (`referred` + право решать), поверх неё синтетический
+   * заёмщик. «Текущее решение» и «Ручное решение» несут одни и те же ключи полей,
+   * поэтому поиск по форме — только внутри её панели.
+   */
+  describe('ручное решение: автор — из пропуска, а не из формы', () => {
+    const DETAIL = 'Синтетический отказ модуля: автор решения не совпадает с пропуском'
+    const REFUSALS = [
+      [403, 'operator_id_not_numeric', 'credit.decisionError.operatorIdNotNumeric'],
+      [403, 'operator_id_ambiguous', 'credit.decisionError.operatorIdAmbiguous'],
+      [422, 'underwriter_not_the_caller', 'credit.decisionError.underwriterNotTheCaller'],
+    ] as const
+
+    function renderManual(
+      mutation: Parameters<typeof renderDecision>[2] = {},
+      decision: CreditDecision = DECISION
+    ) {
+      renderDecision(
+        {
+          ...withDecision(decision, 'referred'),
+          client_email: 'applicant.fe1722b@example.org',
+          draft: { personal: { first_name: 'Тест', last_name: 'Синтетичний' } },
+        } as CreditApplicationDetail,
+        ['credit.decisions.decide'],
+        mutation
+      )
+      return within(
+        screen.getByText('credit.card.manualDecision').closest('section') as HTMLElement
+      )
+    }
+
+    it('D-1: ввода автора в форме нет, а соседние поля формы на месте', () => {
+      const panel = renderManual()
+
+      expect(
+        panel.queryByText('credit.fields.underwriterId'),
+        'the manual decision form offers an author input again — any number typed there signs the decision'
+      ).toBeNull()
+      expect(panel.getByText('credit.fields.outcome')).toBeInTheDocument()
+      expect(panel.getByText('credit.fields.rationale')).toBeInTheDocument()
+      // Числовое поле в форме одно — сумма одобрения; поиск умеет его найти.
+      expect(
+        panel.getAllByRole('spinbutton'),
+        'the manual decision form has a numeric input besides the approved amount'
+      ).toHaveLength(1)
+      expect(panel.getByText('credit.fields.finalAmount')).toContainElement(
+        panel.getByRole('spinbutton')
+      )
+      // Текстовый ввод в форме один — обоснование; поиск умеет его найти.
+      expect(
+        panel.getAllByRole('textbox'),
+        'the manual decision form has a text input besides the rationale'
+      ).toHaveLength(1)
+      expect(panel.getByRole('textbox')).toBe(
+        panel.getByPlaceholderText('credit.card.rationalePlaceholder')
+      )
+    })
+
+    it.each([
+      ['approved', ['final_amount_minor', 'outcome', 'rationale']],
+      ['declined', ['decline_codes', 'outcome', 'rationale']],
+      ['referred', ['outcome', 'rationale']],
+    ] as const)('D-2: исход %s уходит без автора в теле', (outcome, keys) => {
+      const mutate = vi.fn()
+      const panel = renderManual({ mutate })
+
+      fireEvent.change(panel.getByRole('combobox'), { target: { value: outcome } })
+      fireEvent.change(panel.getByPlaceholderText('credit.card.rationalePlaceholder'), {
+        target: { value: 'Синтетичне обґрунтування ручного рішення' },
+      })
+      fireEvent.click(panel.getByRole('button', { name: 'credit.actions.saveDecision' }))
+
+      expect(mutate).toHaveBeenCalledTimes(1)
+      const payload = mutate.mock.calls[0][0] as Record<string, unknown>
+      expect(Object.keys(payload).sort(), `the ${outcome} body carries unexpected keys`).toEqual([
+        ...keys,
+      ])
+      expect(
+        'underwriter_id' in payload,
+        'the form sends the decision author in the body again'
+      ).toBe(false)
+    })
+
+    it.each([
+      [103, '103'],
+      [null, '—'],
+    ])('D-3: автор решения %s показан строкой «Андеррайтер»', (underwriter, shown) => {
+      renderManual({}, { ...DECISION, underwriter_id: underwriter })
+
+      const label = screen.queryByText('credit.fields.underwriter')
+      expect(label, 'the current decision lost its author row').not.toBeNull()
+      expect(
+        label?.parentElement?.textContent,
+        'the author row shows something other than the author the module recorded'
+      ).toBe(`credit.fields.underwriter${shown}`)
+    })
+
+    it.each(REFUSALS)('D-4: %i %s — текст оператора, а не detail модуля', (status, code, key) => {
+      const panel = renderManual({ isError: true, error: new CreditApiError(DETAIL, status, code) })
+
+      expect(
+        panel.queryByText(key),
+        `the ${code} refusal is not named by its own text`
+      ).not.toBeNull()
+      expect(
+        panel.queryByText(DETAIL),
+        `the operator reads the module's raw Russian detail for ${code}`
+      ).toBeNull()
+    })
+
+    it.each([
+      ['422 validation_failed', new CreditApiError(DETAIL, 422, 'validation_failed'), DETAIL],
+      ['403 шлюза без кода', new CreditApiError('Forbidden', 403), 'Forbidden'],
+      ['не ошибка модуля', new Error('Network Error'), 'Network Error'],
+    ])('D-5: %s — прежний текст дословно', (_scene, error, shown) => {
+      const panel = renderManual({ isError: true, error })
+
+      // Тот же поиск, что в D-4, находит тот же detail — пустота там значит
+      // «текста нет», а не «поиск его не видит».
+      expect(
+        panel.queryByText(shown),
+        'a refusal outside the three codes lost its message'
+      ).not.toBeNull()
+      expect(
+        panel.queryByText(/credit\.decisionError\./),
+        'a refusal outside the three codes is shown as a pass refusal'
+      ).toBeNull()
+    })
+
+    it.each(REFUSALS)('D-6: %i %s — одна плашка, и текст в ней', (status, code, key) => {
+      const panel = renderManual({ isError: true, error: new CreditApiError(DETAIL, status, code) })
+
+      const alerts = panel.getAllByRole('alert')
+      expect(alerts, 'the manual decision refusal is drawn as more than one plate').toHaveLength(1)
+      expect(alerts[0].textContent, 'the refusal plate holds something other than its text').toBe(
+        key
+      )
+    })
   })
 })
