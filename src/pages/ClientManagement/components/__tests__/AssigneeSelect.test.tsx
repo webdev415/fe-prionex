@@ -81,6 +81,18 @@ describe('AssigneeSelect', () => {
     expect(container).toContainElement(screen.getByRole('listbox'))
   })
 
+  it('positions the panel as fixed so the modal scroll box cannot clip it', () => {
+    setup()
+
+    fireEvent.click(trigger())
+
+    // An absolute panel is cut off by the modal body's overflow once the picker
+    // sits near its bottom. Fixed positioning lays it out against the dialog
+    // box instead, while the test above keeps it inside the dialog's DOM.
+    const panel = screen.getByRole('listbox').closest('[style]') as HTMLElement
+    expect(panel.style.position).toBe('fixed')
+  })
+
   it('shows the placeholder while nothing is chosen', () => {
     setup({ placeholder: 'Select employee' })
 

@@ -51,6 +51,7 @@ import { useTags } from '@/features/tags/hooks/useTags'
 import { useTargetActions } from '@/features/targetActions/hooks/useTargetActions'
 import type { TargetAction } from '@/features/targetActions/api/types'
 import { useSMSTemplates, useSmsServiceAvailable } from '@/features/sms'
+import { useProjectCountry } from '@/hooks/useProjectCountry'
 import {
   useCanReadMessagingDrafts,
   useMessagingDrafts,
@@ -162,6 +163,7 @@ function ChainBuilderConfigPanelSkeleton() {
 
 export function ChainBuilderPage() {
   const { t } = useTranslation('common')
+  const projectCountry = useProjectCountry()
   const { user } = useAuthStore()
   const projectId = user?.active_project_id ? parseInt(user.active_project_id, 10) : undefined
 
@@ -187,9 +189,9 @@ export function ChainBuilderPage() {
   const usableMessagingServices = useMemo(
     () =>
       messagingIntegrations.filter((integration) =>
-        isMessagingIntegrationUsable(integration, messageChannel)
+        isMessagingIntegrationUsable(integration, messageChannel, projectCountry)
       ),
-    [messagingIntegrations, messageChannel]
+    [messagingIntegrations, messageChannel, projectCountry]
   )
   const { data: taskSubjects = [] } = useTaskSubjects()
   const { data: operators = [] } = useOperators(projectId ?? null)

@@ -10,18 +10,31 @@
  * Rendered INLINE rather than through a portal, unlike the card's popover. The
  * modals are Radix dialogs that close on a pointer-down outside their content,
  * and a portalled panel is outside it — so portalling would dismiss the whole
- * modal on every pick. ``SearchableSelect``, the control this replaces, is
- * absolutely positioned inside its own wrapper for the same reason.
+ * modal on every pick.
+ *
+ * It is positioned with ``strategy: 'fixed'`` rather than ``absolute``, though,
+ * because the modals' body scrolls: an absolute panel is clipped by that scroll
+ * box, and near its bottom most of the list was cut off. A fixed panel is laid
+ * out against the dialog box itself (whose transform makes it the containing
+ * block), which the scroll box cannot clip. It stays a DOM child of this
+ * wrapper, so the dialog still counts it as inside. ``flip`` opens it upward
+ * when there is no room below, and ``size`` caps it to the space there is.
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { autoUpdate, flip, offset, shift, size, useFloating } from '@floating-ui/react'
 
 import { useOperatorPins, usePinOperator, useUnpinOperator } from '@/features/users'
 import { Icons } from '@/lib/icons'
 import { piiProps } from '@/lib/openreplay/pii'
 import { cn } from '@/lib/utils'
 import { AssigneeOptionList, type AssigneeOption } from './AssigneeOptionList'
+
+/** Keeps the panel off the very edge of the space it is measured against. */
+const PANEL_EDGE_PADDING = 8
+/** Below this the list is unusable; better to overlap than to shrink further. */
+const PANEL_MIN_HEIGHT = 160
 
 interface Props {
   id?: string
@@ -59,6 +72,27 @@ export function AssigneeSelect({
 
   const close = useCallback(() => setIsOpen(false), [])
 
+  const { refs, floatingStyles } = useFloating({
+    open: isOpen,
+    placement: 'bottom-start',
+    strategy: 'fixed',
+    middleware: [
+      offset(4),
+      flip({ padding: PANEL_EDGE_PADDING }),
+      shift({ padding: PANEL_EDGE_PADDING }),
+      size({
+        padding: PANEL_EDGE_PADDING,
+        apply({ rects, availableHeight, elements }) {
+          Object.assign(elements.floating.style, {
+            width: `${rects.reference.width}px`,
+            maxHeight: `${Math.max(availableHeight, PANEL_MIN_HEIGHT)}px`,
+          })
+        },
+      }),
+    ],
+    whileElementsMounted: autoUpdate,
+  })
+
   // Closing on an outside press is scoped to this wrapper, so a click on the
   // other row's picker closes this one and opens that one in a single gesture.
   useEffect(() => {
@@ -92,6 +126,7 @@ export function AssigneeSelect({
   return (
     <div ref={wrapperRef} className="relative w-full">
       <button
+        ref={refs.setReference}
         id={id}
         type="button"
         disabled={disabled}
@@ -123,7 +158,14 @@ export function AssigneeSelect({
       </button>
 
       {isOpen && (
-        <div className="border-border bg-card absolute top-[calc(100%+4px)] right-0 left-0 z-[200] rounded-lg border p-1.5 shadow-lg">
+        <div
+          /* eslint-disable-next-line react-hooks/refs -- Floating UI's
+             `setFloating` is a callback ref, not a ref object, so nothing is
+             read during render; same false positive as in AssigneeDropdown. */
+          ref={refs.setFloating}
+          style={floatingStyles}
+          className="border-border bg-card z-[200] overflow-y-auto rounded-lg border p-1.5 shadow-lg"
+        >
           <AssigneeOptionList
             operators={operators}
             isLoading={isLoading}

@@ -47,6 +47,7 @@ import {
   type MessagingTemplateFocusField,
 } from '@/features/messaging'
 import type { MessagingChannel, MessagingDraft } from '@/features/messaging'
+import { useProjectCountry } from '@/hooks/useProjectCountry'
 import { CHANNEL_SPECS } from '@/pages/MessagingDrafts/draftModalShared'
 import {
   blockingVariables,
@@ -123,6 +124,7 @@ export function SendMessageModal({
   onSent,
 }: SendMessageModalProps) {
   const { t } = useTranslation('common')
+  const projectCountry = useProjectCountry()
   const { user } = useAuthStore()
   const canSendSms = useHasPermission(sendPermissionForChannel('sms'))
   const canSendViber = useHasPermission(sendPermissionForChannel('viber'))
@@ -210,14 +212,19 @@ export function SendMessageModal({
           (item === 'viber' && canSendViber) ||
           (item === 'email' && canSendEmail)
         if (!allowed) return false
-        return integrations.some((integration) => isMessagingIntegrationUsable(integration, item))
+        return integrations.some((integration) =>
+          isMessagingIntegrationUsable(integration, item, projectCountry)
+        )
       }),
-    [canSendEmail, canSendSms, canSendViber, integrations]
+    [canSendEmail, canSendSms, canSendViber, integrations, projectCountry]
   )
 
   const availableIntegrations = useMemo(
-    () => integrations.filter((integration) => isMessagingIntegrationUsable(integration, channel)),
-    [channel, integrations]
+    () =>
+      integrations.filter((integration) =>
+        isMessagingIntegrationUsable(integration, channel, projectCountry)
+      ),
+    [channel, integrations, projectCountry]
   )
 
   const clientDisplayName = useMemo(() => formatClientNameInitials(clientName), [clientName])

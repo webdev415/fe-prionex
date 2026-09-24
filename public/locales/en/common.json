@@ -7207,7 +7207,9 @@
         "unassign": "Unassign",
         "pinned": "Pinned",
         "pin": "Pin",
-        "unpin": "Unpin"
+        "unpin": "Unpin",
+        "pinFailed": "Could not pin this employee",
+        "unpinFailed": "Could not unpin this employee"
       },
       "documents": {
         "previewFrameTitle": "Document preview"
@@ -9966,7 +9968,9 @@
         "delivered": "delivered",
         "resultsLine": "{{delivered}}/{{total}} delivered",
         "filteredCampaigns": "{{count}} campaigns match filters",
-        "totalCost": "Total cost"
+        "totalCost": "Total cost",
+        "resultsLineSent": "{{sent}}/{{total}} sent",
+        "noDeliveryReports": "No delivery reports"
       },
       "cost": {
         "actual": "Actual",
@@ -9990,7 +9994,9 @@
         "destination": "Destination",
         "sentAt": "Sent",
         "deliveredAt": "Delivered",
-        "error": "Error"
+        "error": "Error",
+        "deliveryNotReported": "Not reported",
+        "deliveryNotReportedHint": "This provider does not send delivery reports. Check the provider cabinet for the delivery status."
       },
       "actions": {
         "viewDetails": "View details",
@@ -10094,6 +10100,15 @@
         "defaultName": "CSV {{channel}} campaign",
         "templateFailed": "Could not download template",
         "parseFailed": "Could not parse CSV file"
+      },
+      "recipientStatus": {
+        "pending": "Pending",
+        "queued": "Queued",
+        "sent": "Sent",
+        "delivered": "Delivered",
+        "failed": "Failed",
+        "bounced": "Bounced",
+        "skipped": "Skipped"
       }
     },
     "messagingDrafts": {
@@ -12466,7 +12481,9 @@
       "externalApplicationId": "External application ID",
       "decisionId": "Decision ID",
       "loanId": "Loan ID",
-      "loanAgeDays": "Days since disbursement"
+      "loanAgeDays": "Days since disbursement",
+      "advanceRefundExcess": "Refund excess after cancellation",
+      "supersedesDecision": "Supersedes the previous decision"
     },
     "tabs": {
       "form": "Application form",
@@ -12609,7 +12626,10 @@
       "stagesTitle": "Client path",
       "stagesHint": "the same five steps the client sees in their cabinet",
       "stageOfTotal": "step {{index}} of {{total}}",
-      "identifiers": "Identifiers"
+      "identifiers": "Identifiers",
+      "owedToClient": "Owed to the client",
+      "owedToClientHint": "After cancelling, the client returned more than they received. The module owes this amount back to the client — it is not the client's debt and not an overpayment.",
+      "owedToClientUnknown": "The module did not say whether we owe the client: the field is missing from the response. This does not mean there is no excess."
     },
     "settings": {
       "title": "Credit module settings",
@@ -13032,6 +13052,17 @@
       "notAuthenticatedHint": "Your session may have expired. Sign in to CRM again; if that does not help, contact an administrator — the module verifies sign-in with CRM.",
       "noRights": "No access to the credit section",
       "noRightsHint": "Your CRM pass carries no credit-section permissions. A CRM administrator grants them — ask to be assigned the matching role."
+    },
+    "documentOpen": {
+      "unavailable": "File unavailable",
+      "unavailableHint": "According to the module's records, this document's content cannot be served: the file was not stored, or the revision was replaced without keeping its content.",
+      "errorNotFound": "The module did not find this document in this card. Refresh the page; if that does not help, contact the administrator.",
+      "errorGone": "This revision cannot be reproduced: its content was not stored. Open the current version.",
+      "errorMissing": "The document file is temporarily unavailable. Try again later.",
+      "errorDiverged": "The module did not serve the document: its content does not match the signed fingerprint. Report this to the administrator.",
+      "errorForbidden": "You do not have permission to view credit section documents.",
+      "errorGeneric": "Could not open the document (code {{status}}).",
+      "tabBlocked": "The new tab did not open, so the document was handed over as a file download."
     }
   },
   "toasts": {

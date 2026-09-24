@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useProjectCountry } from '@/hooks/useProjectCountry'
 import { useTranslation } from 'react-i18next'
 import i18n, { intlLocaleForUiLanguage } from '@/lib/i18n'
 import { toast } from 'sonner'
@@ -89,6 +90,7 @@ interface CsvCampaignLaunchModalProps {
 
 export function CsvCampaignLaunchModal({ open, onClose, onLaunched }: CsvCampaignLaunchModalProps) {
   const { t } = useTranslation('common')
+  const projectCountry = useProjectCountry()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const canLaunchSms = useHasPermission(launchPermissionForChannel('sms'))
   const canLaunchViber = useHasPermission(launchPermissionForChannel('viber'))
@@ -134,14 +136,19 @@ export function CsvCampaignLaunchModal({ open, onClose, onLaunched }: CsvCampaig
           (item === 'viber' && canLaunchViber) ||
           (item === 'email' && canLaunchEmail)
         if (!allowed) return false
-        return integrations.some((integration) => isMessagingIntegrationUsable(integration, item))
+        return integrations.some((integration) =>
+          isMessagingIntegrationUsable(integration, item, projectCountry)
+        )
       }),
-    [canLaunchEmail, canLaunchSms, canLaunchViber, integrations]
+    [canLaunchEmail, canLaunchSms, canLaunchViber, integrations, projectCountry]
   )
 
   const availableIntegrations = useMemo(
-    () => integrations.filter((integration) => isMessagingIntegrationUsable(integration, channel)),
-    [channel, integrations]
+    () =>
+      integrations.filter((integration) =>
+        isMessagingIntegrationUsable(integration, channel, projectCountry)
+      ),
+    [channel, integrations, projectCountry]
   )
 
   const selectedDraft = useMemo(
