@@ -5643,7 +5643,6 @@
           "notes": "Notes (Optional)",
           "selectEmployee": "Select employee...",
           "selectSearcher": "Select searcher...",
-          "noUsersAvailable": "No users available",
           "enterAdditionalNotes": "Enter additional notes...",
           "warningMessage": "Note: At least one assignment (Employee or Searcher) must be selected.",
           "assignClient": "Assign Client",
@@ -6685,6 +6684,8 @@
         "rrValidationPaymentDateRequired": "Payment date {{num}} is required",
         "rrValidationPaymentAmountRequired": "Payment amount {{num}} is required",
         "rrValidationSumMismatch": "Sum of payments ({{sum}}) must equal total amount ({{total}})",
+        "rrValidationAmountOutOfRange": "Total restructuring amount ({{amount}}) must be between {{lower}} and {{upper}}",
+        "rrValidationNothingToReturn": "This loan has nothing left to return, so it cannot be restructured",
         "viewDetail": "View",
         "makePayment": "Make Payment",
         "payments": "Payments",
@@ -7182,6 +7183,17 @@
         "cancelled": "Cancelled",
         "completed": "Completed",
         "completedEarly": "Completed early"
+      },
+      "assignee": {
+        "searchPlaceholder": "Search employee",
+        "allEmployees": "All employees",
+        "noMatches": "No matches",
+        "unassign": "Unassign",
+        "pinned": "Pinned",
+        "pin": "Pin",
+        "unpin": "Unpin",
+        "pinFailed": "Could not pin this employee",
+        "unpinFailed": "Could not unpin this employee"
       },
       "documents": {
         "previewFrameTitle": "Document preview"
@@ -9547,11 +9559,9 @@
       },
       "filters": {
         "responsibleOperator": "Responsible Operator:",
-        "clientPhone": "Client Phone:",
         "selectEmployee": "Select employee",
-        "typePhoneNumber": "Type phone number",
-        "dateOfSale": "Date of sale:",
-        "allOperators": "All Operators"
+        "allOperators": "All Operators",
+        "period": "Period:"
       },
       "exportCsv": "Export CSV",
       "estimated": "Estimated",
@@ -9559,6 +9569,7 @@
         "title": "Calls Made",
         "noData": "No data available",
         "total": "Total",
+        "operatorsSum": "by operators",
         "byHour": "By Hour",
         "calls": "calls",
         "byOperator": "By Operator"
@@ -9573,7 +9584,9 @@
         "answered": "Answered",
         "noAnswer": "No Answer",
         "busy": "Busy",
-        "failed": "Failed"
+        "failed": "Failed",
+        "other": "Other",
+        "notEnoughCallsToRank": "Not enough calls to compare operators"
       },
       "smsModal": {
         "title": "SMS Sent",
@@ -12416,7 +12429,9 @@
       "externalApplicationId": "External application ID",
       "decisionId": "Decision ID",
       "loanId": "Loan ID",
-      "loanAgeDays": "Days since disbursement"
+      "loanAgeDays": "Days since disbursement",
+      "advanceRefundExcess": "Refund excess after cancellation",
+      "supersedesDecision": "Supersedes the previous decision"
     },
     "tabs": {
       "form": "Application form",
@@ -12559,7 +12574,10 @@
       "stagesTitle": "Client path",
       "stagesHint": "the same five steps the client sees in their cabinet",
       "stageOfTotal": "step {{index}} of {{total}}",
-      "identifiers": "Identifiers"
+      "identifiers": "Identifiers",
+      "owedToClient": "Owed to the client",
+      "owedToClientHint": "After cancelling, the client returned more than they received. The module owes this amount back to the client — it is not the client's debt and not an overpayment.",
+      "owedToClientUnknown": "The module did not say whether we owe the client: the field is missing from the response. This does not mean there is no excess."
     },
     "settings": {
       "title": "Credit module settings",
@@ -12982,6 +13000,17 @@
       "notAuthenticatedHint": "Your session may have expired. Sign in to CRM again; if that does not help, contact an administrator — the module verifies sign-in with CRM.",
       "noRights": "No access to the credit section",
       "noRightsHint": "Your CRM pass carries no credit-section permissions. A CRM administrator grants them — ask to be assigned the matching role."
+    },
+    "documentOpen": {
+      "unavailable": "File unavailable",
+      "unavailableHint": "According to the module's records, this document's content cannot be served: the file was not stored, or the revision was replaced without keeping its content.",
+      "errorNotFound": "The module did not find this document in this card. Refresh the page; if that does not help, contact the administrator.",
+      "errorGone": "This revision cannot be reproduced: its content was not stored. Open the current version.",
+      "errorMissing": "The document file is temporarily unavailable. Try again later.",
+      "errorDiverged": "The module did not serve the document: its content does not match the signed fingerprint. Report this to the administrator.",
+      "errorForbidden": "You do not have permission to view credit section documents.",
+      "errorGeneric": "Could not open the document (code {{status}}).",
+      "tabBlocked": "The new tab did not open, so the document was handed over as a file download."
     }
   },
   "toasts": {

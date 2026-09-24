@@ -477,7 +477,11 @@ function ApplicationDocuments({ application }: { application: CreditApplicationD
                   {formatDateTime(doc.generated_at)}
                 </td>
                 <td className="py-2 text-right">
-                  <CreditDocumentOpenButton document={doc} onError={setFailure} />
+                  <CreditDocumentOpenButton
+                    document={doc}
+                    owner={{ kind: 'application', id: application.application_id }}
+                    onError={setFailure}
+                  />
                 </td>
               </tr>
             ))}
@@ -558,6 +562,24 @@ function ApplicationDecision({
             {decision.ruleset_version} / {decision.model_version}
           </Field>
           <Field label={t('credit.fields.decidedAt')}>{formatDateTime(decision.decided_at)}</Field>
+          {/* Указатель, а не ссылка: двери «решение по id» в модуле нет
+              (replayDecision отвечает 501), заявка несёт только действующее
+              решение, и ссылка вела бы на эту же карточку или в никуда. Id с
+              копированием — то, что оператор передаст разработчику.
+              `null` — «ничего не заменяло», поэтому строки нет вовсе, а не
+              прочерк, как у прочих идентификаторов. Ключа нет (модуль старше
+              B-3) — строки тоже нет: такой модуль решений не пересматривает. */}
+          {decision.supersedes_decision_id && (
+            <CreditIdentifierRows
+              items={[
+                {
+                  key: 'supersedes',
+                  label: t('credit.fields.supersedesDecision'),
+                  value: decision.supersedes_decision_id,
+                },
+              ]}
+            />
+          )}
         </Panel>
       )}
 

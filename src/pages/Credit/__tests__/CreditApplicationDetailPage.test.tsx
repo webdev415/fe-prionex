@@ -13,12 +13,12 @@
  */
 import type { ReactNode } from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { CreditApplicationDetailPage } from '../CreditApplicationDetailPage'
 import * as hooks from '@/features/credit/hooks/useCredit'
-import type { CreditApplicationDetail } from '@/features/credit/api/types'
+import type { CreditApplicationDetail, CreditDecision } from '@/features/credit/api/types'
 
 // Страница ищет клиента CRM по телефону заёмщика (см. CreditClientLink), поэтому
 // ей нужен клиент запросов. Запрос в тестах не уходит: телефона в фикстурах нет,
@@ -155,5 +155,141 @@ describe('CreditApplicationDetailPage → этап заявки доезжает
     expect(rows[3]).toContain('credit.stage.decision')
     expect(rows[3]).toContain('credit.stageState.current')
     expect(rows[1]).not.toContain('credit.stageState.current')
+  })
+})
+
+/**
+ * Решение заменило прежнее (T-FE-6-04): модуль пересмотрел своё автоматическое
+ * решение после смены реквизитов выплаты и указал `supersedes_decision_id`.
+ *
+ * Это указатель, а не ссылка: двери «решение по id» нет, заявка несёт только
+ * действующее решение. Оператору нужен id прежнего — моноширинно и с
+ * копированием, чтобы продиктовать его разработчику. Id разные: текущее
+ * `d2d2…`, прежнее `d1d1…`, переопределения человеком нет (`null`).
+ *
+ * Ключа нет только у модуля старше B-3: ключ и пересмотр пришли одной правкой,
+ * поэтому отсутствие ключа экран показывает как `null` (S-6), а не пустой строкой.
+ */
+describe('CreditApplicationDetailPage → решение заменяет прежнее', () => {
+  const CURRENT = 'd2d2d2d2-2222-4222-8222-222222222222'
+  const PREVIOUS = 'd1d1d1d1-1111-4111-8111-111111111111'
+
+  const DECISION: CreditDecision = {
+    decision_id: CURRENT,
+    application_id: '6a547e31-ba5e-4723-a2ea-ea55c8ef5197',
+    outcome: 'approved',
+    decision_mode: 'automatic',
+    decline_codes: [],
+    final_amount_minor: 30_000,
+    currency: 'CAD',
+    cooldown_until: null,
+    ruleset_version: 'ca-ab-local@0.1.0',
+    model_version: 'admission-stub@0',
+    input_snapshot_id: 's1',
+    underwriter_id: null,
+    rationale: null,
+    overrides_decision_id: null,
+    supersedes_decision_id: PREVIOUS,
+    decided_at: '2026-09-17T10:00:00Z',
+  }
+
+  const withDecision = (
+    decision: CreditDecision,
+    status: CreditApplicationDetail['status'] = 'approved'
+  ) =>
+    ({
+      ...APPLICATION,
+      status,
+      decision,
+      decision_id: decision.decision_id,
+    }) as CreditApplicationDetail
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  function renderDecision(application: CreditApplicationDetail, permissions: string[] = []) {
+    vi.mocked(hooks.useCreditApplication).mockReturnValue({
+      ...idle,
+      data: application,
+    } as unknown as ReturnType<typeof hooks.useCreditApplication>)
+    vi.mocked(hooks.useCreditOverview).mockReturnValue({
+      ...idle,
+      data: { permissions },
+    } as never)
+    vi.mocked(hooks.useCreditManualDecision).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    } as never)
+    const view = render(<MemoryRouter>{withQuery(<CreditApplicationDetailPage />)}</MemoryRouter>)
+    fireEvent.click(screen.getByRole('tab', { name: 'credit.tabs.decision' }))
+    return view
+  }
+
+  const pointerRow = () => screen.getByText('credit.fields.supersedesDecision').parentElement
+
+  it('S-1: показывает id прежнего решения моноширинно и копирует его', () => {
+    const writeText = vi.fn(() => Promise.resolve())
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+    renderDecision(withDecision(DECISION))
+
+    const row = pointerRow()
+    expect(row).not.toBeNull()
+    const id = within(row as HTMLElement).getByText(PREVIOUS)
+    expect(id.className).toContain('font-mono')
+    fireEvent.click(within(row as HTMLElement).getByRole('button', { name: 'credit.actions.copy' }))
+    expect(writeText).toHaveBeenCalledWith(PREVIOUS)
+  })
+
+  it('S-2: ничего не заменяло — строки нет, а панель решения на месте', () => {
+    renderDecision(withDecision({ ...DECISION, supersedes_decision_id: null }))
+
+    expect(screen.queryByText('credit.fields.supersedesDecision')).toBeNull()
+    expect(screen.getByText('credit.card.currentDecision')).toBeInTheDocument()
+    expect(screen.getByText('credit.fields.decidedAt')).toBeInTheDocument()
+  })
+
+  it('S-3: указатель — не ссылка: ни <a> в строке, ни href с этим id на странице', () => {
+    renderDecision(withDecision(DECISION))
+
+    const linkToPrevious = `a[href*="${PREVIOUS.slice(0, 8)}"]`
+    expect(pointerRow()?.querySelector('a')).toBeNull()
+    expect(document.querySelector(linkToPrevious)).toBeNull()
+    // Контроль селектора: ссылку с этим id он находит — пустота выше значит
+    // «ссылки нет», а не «селектор ничего не умеет найти».
+    const probe = document.createElement('a')
+    probe.setAttribute('href', `/dashboard/credit/decisions/${PREVIOUS}`)
+    expect(probe.matches(linkToPrevious)).toBe(true)
+  })
+
+  it('S-4: в строке id прежнего решения, а не текущего', () => {
+    renderDecision(withDecision(DECISION))
+
+    const text = pointerRow()?.textContent ?? ''
+    expect(text).toContain(PREVIOUS)
+    expect(text).not.toContain(CURRENT)
+  })
+
+  it('S-5: указатель не гейтит ручное решение (REQ-FE-6-08)', () => {
+    renderDecision(withDecision(DECISION, 'referred'), ['credit.decisions.decide'])
+
+    expect(pointerRow()?.textContent).toContain(PREVIOUS)
+    expect(screen.getByText('credit.card.manualDecision')).toBeInTheDocument()
+  })
+
+  it('S-6: ключа нет (модуль старше B-3) — строки нет, как при null, а панель решения на месте', () => {
+    const lagging: Partial<CreditDecision> = { ...DECISION }
+    delete lagging.supersedes_decision_id
+    expect('supersedes_decision_id' in DECISION).toBe(true)
+    expect('supersedes_decision_id' in lagging).toBe(false)
+
+    renderDecision(withDecision(lagging as CreditDecision))
+
+    expect(
+      screen.queryByText('credit.fields.supersedesDecision'),
+      'a decision without the supersedes key rendered the pointer row — absence was printed as an empty pointer'
+    ).toBeNull()
+    expect(screen.getByText('credit.card.currentDecision')).toBeInTheDocument()
+    expect(screen.getByText('credit.fields.decidedAt')).toBeInTheDocument()
   })
 })

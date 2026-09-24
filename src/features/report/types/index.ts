@@ -139,6 +139,22 @@ export interface OperatorPerformanceUI {
   summary: OperatorSummaryUI
   dailyBreakdown: DailyBreakdownUI[]
   comparisonToAverage?: Record<string, number>
+  /**
+   * report-service `ranking_eligible` (board #1332 AC#2): `false` = never
+   * crowned in dashboard rankings, `null` = unresolved, `undefined` = an older
+   * backend that does not send it.
+   */
+  rankingEligible?: boolean | null
+}
+
+/**
+ * «Top collector» picked by report-service (board #1332 AC#2)
+ */
+export interface TopCollectorUI {
+  operatorId: number
+  operatorName: string
+  paymentsCollected: number
+  paymentsCount: number
 }
 
 /**
@@ -164,6 +180,12 @@ export interface OperatorPerformanceResponseUI {
   }
   operators: OperatorPerformanceUI[]
   teamAverage?: TeamAverageUI
+  /**
+   * report-service `top_collector`. `null` = the backend says nobody may be
+   * shown (the tile is hidden); `undefined` = an older backend that does not
+   * send the key (the dashboard falls back to its own pick over the rows).
+   */
+  topCollector?: TopCollectorUI | null
   generatedAt: string
 }
 
@@ -208,6 +230,12 @@ export interface CallStatisticsUI {
   noAnswer: number
   busy: number
   failed: number
+  /**
+   * Calls in none of the four buckets above, so answered + noAnswer + busy +
+   * failed + other = totalCalls (report-service `calls_other`, derived when
+   * an older backend omits it).
+   */
+  other: number
   contactRate: number
   totalTalkTime: number
   totalTalkTimeFormatted: string
@@ -305,7 +333,13 @@ export interface AgentPerformanceRow {
   calls: number
   contactRate: number
   avgDuration: string
+  /** Answered calls (operator summary `calls_answered`) — weights the totals row. */
+  callsAnswered?: number
+  /** Talk time in seconds (operator summary `total_talk_time`) — weights the totals row. */
+  totalTalkTime?: number
   sms: number
   messages: number
   payments: number
+  /** Operator `rankingEligible` — `false` keeps the row out of «top collector». */
+  rankingEligible?: boolean | null
 }

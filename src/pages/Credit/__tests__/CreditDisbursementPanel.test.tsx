@@ -131,6 +131,7 @@ const LOAN: CreditLoanDetail = {
   jurisdiction: 'CA-AB',
   schedule_version: 1,
   delinquency_days: 0,
+  advance_refund_excess_minor: 0,
   paid_minor: 0,
   disbursed_at: '2026-08-31T12:51:24.903371+00:00',
   maturity_date: '2026-10-12',
