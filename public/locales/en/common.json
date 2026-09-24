@@ -158,7 +158,10 @@
       "pending": "Pending",
       "phoneNumber": "Phone Number",
       "incomingCall": "Incoming Call",
-      "acceptCall": "Accept call"
+      "acceptCall": "Accept call",
+      "noClientInteraction": "This number was dialed without client details, so an interaction cannot be logged against a client record.",
+      "noClientChain": "A TA chain needs a client record. None is attached to this number.",
+      "unknownClient": "Unknown contact"
     },
     "accessGroup": {
       "all_groups": "All groups",
@@ -235,7 +238,9 @@
         "atLeastOneAttempt": "At least 1 attempt",
         "enterSeconds": "Enter a number of seconds",
         "notNegative": "Cannot be negative"
-      }
+      },
+      "answerMode": "Answer mode",
+      "answerModeHint": "Manual gives operators an accept window before the customer is connected."
     },
     "numbers": {
       "inQueue": "In Queue",
@@ -329,6 +334,10 @@
       "allowed": "Allowed: {{hours}}, {{days}} ({{timezone}})",
       "open": "Calling hours {{hours}} · {{days}} · open now",
       "everyDay": "every day"
+    },
+    "answerMode": {
+      "auto": "Automatic",
+      "manual": "Manual (operator accepts)"
     }
   },
   "search": {
@@ -938,7 +947,7 @@
       "expertLimitReached": "The daily expert-mode limit is used up.",
       "expertUnavailable": "The external service is unavailable right now, try again later.",
       "showReasoning": "31B reasoning",
-      "showReasoningHint": "On — the model reasons and the train of thought goes to the «Activity» panel. Off — 31B answers straight away, faster.",
+      "showReasoningHint": "On — the model reasons and the train of thought goes to the «Activity» panel. Off — 31B answers straight away, faster. Server — as configured on the server.",
       "thinkingUsedOn": "31B · with reasoning",
       "thinkingUsedOff": "31B · without reasoning",
       "thinkingUsedMismatch": "The server answered differently from the setting",
@@ -973,7 +982,14 @@
       "slashNewChat": "start a new chat",
       "answerInProgress": "The answer is still being prepared — it will appear here when ready",
       "attachmentFrameTitle": "Attachment preview",
-      "attachmentRemoveShort": "Remove attachment"
+      "attachmentRemoveShort": "Remove attachment",
+      "thinkingChoiceServer": "Server",
+      "thinkingChoiceOn": "On",
+      "thinkingChoiceOff": "Off",
+      "thinkingChoiceServerHint": "The server decides the reasoning mode",
+      "thinkingChoiceFactOn": "Server decides · the last turn was with reasoning",
+      "thinkingChoiceFactOff": "Server decides · the last turn was without reasoning",
+      "thinkingFlagUnsupported": "Turning reasoning off is not supported by the server yet"
     },
     "lawyerWorkplace": {
       "navAria": "Lawyer Workplace navigation",
