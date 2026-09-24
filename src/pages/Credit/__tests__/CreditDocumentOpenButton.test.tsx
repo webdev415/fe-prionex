@@ -603,6 +603,12 @@ describe('CreditDocumentOpenButton → вкладка в самом нажати
       const { onError, button } = renderButton(DOC, LOAN_OWNER)
       fireEvent.click(button)
       await waitFor(() => expect(lastRefusal(onError)).toBe('credit.documentOpen.errorMissing'))
+      // Второе нажатие — только по освободившейся кнопке: пока идёт первое, она
+      // занята (`isLoading` → `disabled`), и React клик по ней не доставит. Отказ
+      // и уведомление приходят раньше, чем кнопка освобождается, а какая из двух
+      // задач цикла событий — коммит React или выход `waitFor` — придёт первой,
+      // решает нагрузка раннера: в CI второе нажатие попадало в занятую кнопку.
+      await waitFor(() => expect(button).toBeEnabled())
       const callsBefore = onError.mock.calls.length
       events = []
       fireEvent.click(button)
@@ -623,6 +629,12 @@ describe('CreditDocumentOpenButton → вкладка в самом нажати
       const { onError, onNotice, button } = renderButton(DOC, LOAN_OWNER)
       fireEvent.click(button)
       await waitFor(() => expect(lastNotice(onNotice)).toBe('credit.documentOpen.tabBlocked'))
+      // Второе нажатие — только по освободившейся кнопке: пока идёт первое, она
+      // занята (`isLoading` → `disabled`), и React клик по ней не доставит. Отказ
+      // и уведомление приходят раньше, чем кнопка освобождается, а какая из двух
+      // задач цикла событий — коммит React или выход `waitFor` — придёт первой,
+      // решает нагрузка раннера: в CI второе нажатие попадало в занятую кнопку.
+      await waitFor(() => expect(button).toBeEnabled())
       const noticesBefore = onNotice.mock.calls.length
       const errorsBefore = onError.mock.calls.length
       blockTabs = false
