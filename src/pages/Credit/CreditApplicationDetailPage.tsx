@@ -525,6 +525,8 @@ function ApplicationDocuments({ application }: { application: CreditApplicationD
  * по-русски, а оператору нужен текст на его языке. Ключи — статическими
  * литералами: страж словарей видит только их. Прочие отказы — прежним
  * сообщением: в `validation_failed` оно называет поле, которое надо поправить.
+ * Сообщения нет (брошен не `Error` или текст пуст) — общий текст отказа: пустая
+ * плашка не говорит оператору даже того, что решение не записано.
  */
 function manualDecisionErrorText(t: TFunction, error: unknown): string {
   if (error instanceof CreditApiError) {
@@ -537,7 +539,8 @@ function manualDecisionErrorText(t: TFunction, error: unknown): string {
         return t('credit.decisionError.underwriterNotTheCaller')
     }
   }
-  return (error as Error).message
+  const message = error instanceof Error ? error.message : ''
+  return message.trim() ? message : t('credit.decisionError.generic')
 }
 
 function ApplicationDecision({
