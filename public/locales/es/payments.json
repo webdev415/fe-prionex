@@ -1,0 +1,27 @@
+{
+  "breakdown": {
+    "title": "Desglose de la deuda",
+    "principal": "Principal",
+    "interest": "Intereses",
+    "fees": "Comisiones",
+    "penalties": "Penalizaciones",
+    "fines": "Recargos",
+    "original": "Importe original",
+    "allocated": "Asignado",
+    "paid": "Pagado",
+    "written_off": "Condonado",
+    "remaining": "Restante",
+    "total": "Total",
+    "no_debt": "Sin deuda asociada",
+    "pending_note": "Estimado (pendiente de verificación)",
+    "cancelled_note": "Pago cancelado",
+    "computed": "Asignación calculada",
+    "component": "Componente",
+    "verified_note": "Asignación aplicada",
+    "reversed_note": "Revertido",
+    "error": "No se ha podido cargar el desglose. Inténtelo de nuevo.",
+    "retry": "Reintentar",
+    "unmatched": "Sin conciliar / Exceso de pago",
+    "unmatched_tooltip": "El importe no se ha podido conciliar totalmente con los saldos actuales de los componentes de la deuda. Suele indicar un exceso de pago o datos de deuda desactualizados."
+  }
+}

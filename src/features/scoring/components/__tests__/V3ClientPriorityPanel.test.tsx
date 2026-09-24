@@ -12,6 +12,8 @@ import { render, screen } from '@testing-library/react'
 import { V3ClientPriorityPanel } from '../V3ClientPriorityPanel'
 import * as useV3ScoresModule from '@/features/scoring/hooks/useV3Scores'
 
+vi.mock('react-i18next', async () => (await import('@/test/englishI18n')).englishReactI18nextMock())
+
 vi.mock('@/features/scoring/hooks/useV3Scores', async () => {
   const actual = await vi.importActual<typeof useV3ScoresModule>(
     '@/features/scoring/hooks/useV3Scores'

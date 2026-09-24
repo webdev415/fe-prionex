@@ -17,7 +17,7 @@
  * "Зливи" drains feed.
  */
 
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import {
@@ -37,6 +37,10 @@ import { REPORTS_URL_KEYS } from '@/lib/reportsUrlKeys'
 import { useAuthStore } from '@/stores/authStore'
 import { SESSION } from '@/constants'
 import { getDateRangeForPeriod } from '@/lib/dateUtils'
+import {
+  computeAgentPerformanceTotals,
+  resolveTopCollector,
+} from '@/features/report/utils/dashboardMetrics'
 import {
   useDashboard,
   useAgentPerformanceTable,
@@ -100,10 +104,8 @@ function DashboardTab() {
   const [showMessagesModal, setShowMessagesModal] = useState(false)
   const [showPaymentsModal, setShowPaymentsModal] = useState(false)
 
-  // Filter states - lifted up to trigger API refetch
+  // Filter state - lifted up to trigger API refetch
   const [selectedOperator, setSelectedOperator] = useState<number | null>(null)
-  const [customFromDate, setCustomFromDate] = useState<string | null>(null)
-  const [customToDate, setCustomToDate] = useState<string | null>(null)
 
   // Get current project and auth status from auth store
   const activeProjectId = useAuthStore((state) => state.user?.active_project_id)
@@ -121,48 +123,30 @@ function DashboardTab() {
     [selectedPeriod, userTimezone]
   )
 
-  // Handler to change period and reset custom dates
-  const handlePeriodChange = useCallback((newPeriod: Period) => {
-    setSelectedPeriod(newPeriod)
-    setCustomFromDate(null)
-    setCustomToDate(null)
-  }, [])
-
-  // Use custom dates if set, otherwise use period-based dates
-  const actualDateRange = useMemo(() => {
-    if (customFromDate || customToDate) {
-      return {
-        from: customFromDate || dateRange.from,
-        to: customToDate || dateRange.to,
-      }
-    }
-    return dateRange
-  }, [dateRange, customFromDate, customToDate])
-
-  // Fetch dashboard data from API
-  // Use 'custom' period when custom dates are set, and convert dates to ISO strings
+  // Fetch dashboard data from API for the period's window
   const {
     data: dashboardData,
     isLoading: isDashboardLoading,
     error: dashboardError,
   } = useDashboard({
     projectId,
-    period: customFromDate || customToDate ? 'custom' : selectedPeriod,
-    startDate: customFromDate || actualDateRange.from,
-    endDate: customToDate || actualDateRange.to,
+    period: selectedPeriod,
+    startDate: dateRange.from,
+    endDate: dateRange.to,
     timezone: userTimezone,
   })
 
   // Fetch operator performance data for table with date range and filters
   const {
     data: agentPerformance,
+    topCollector: tableTopCollector,
     isLoading: isOperatorLoading,
     isFetching: isOperatorFetching,
   } = useAgentPerformanceTable({
     projectId,
     operatorId: selectedOperator ?? undefined,
-    fromDate: actualDateRange.from,
-    toDate: actualDateRange.to,
+    fromDate: dateRange.from,
+    toDate: dateRange.to,
     timezone: userTimezone,
   })
 
@@ -199,29 +183,57 @@ function DashboardTab() {
 
   const isTableLoading = isOperatorLoading || isOperatorFetching
 
-  // Fallback KPIs derived from operator performance (useful when dashboard KPIs are zero/lagging)
-  const callsFromOperators = useMemo(() => {
-    if (!agentPerformance || agentPerformance.length === 0) return 0
-    return agentPerformance.reduce((sum, row) => sum + (row.calls || 0), 0)
-  }, [agentPerformance])
+  // Project-wide operator rows. The KPI cards and the payments modal are
+  // project-wide, so everything they derive from operator rows is taken over
+  // ALL operators, not over the table narrowed by «Відповідальний оператор».
+  // With no filter the table rows are that list already; with a filter the
+  // unfiltered list is read separately (same query key as the unfiltered
+  // table, so usually straight from cache) as soon as the filter is applied —
+  // warm by the time the payments modal opens, and the KPI fallbacks need it
+  // anyway.
+  const { data: allOperatorsPerformance, topCollector: allOperatorsTopCollector } =
+    useAgentPerformanceTable({
+      projectId,
+      fromDate: dateRange.from,
+      toDate: dateRange.to,
+      timezone: userTimezone,
+      enabled: selectedOperator !== null,
+    })
+  const projectWideRows = selectedOperator === null ? agentPerformance : allOperatorsPerformance
+  // report-service names no top collector on a filtered request, so the
+  // project-wide one is read from the unfiltered query, like the rows.
+  const projectWideTopCollector =
+    selectedOperator === null ? tableTopCollector : allOperatorsTopCollector
 
-  const contactRateFromOperators = useMemo(() => {
-    if (!agentPerformance || agentPerformance.length === 0) return 0
-    const totalCalls = agentPerformance.reduce((sum, row) => sum + (row.calls || 0), 0)
-    if (totalCalls === 0) return 0
-    const weighted = agentPerformance.reduce(
-      (sum, row) => sum + (row.contactRate || 0) * (row.calls || 0),
-      0
-    )
-    return Math.round((weighted / totalCalls) * 10) / 10
-  }, [agentPerformance])
+  // Fallback KPIs derived from operator performance (useful when dashboard
+  // KPIs are zero/lagging): Σcalls and Σanswered / Σcalls — the same weighted
+  // numbers as the table's unfiltered «Всього» row.
+  const projectWideTotals = useMemo(
+    () => computeAgentPerformanceTotals(projectWideRows ?? []),
+    [projectWideRows]
+  )
+  const callsFromOperators = projectWideTotals.calls
+  const contactRateFromOperators = projectWideTotals.contactRate
 
-  // Handle export
+  // «Top collector» in the payments modal: name AND amount from the same
+  // operator. report-service picks it among the collectors only (#1332 AC#2);
+  // an older backend without that field → the largest collected amount among
+  // the rows.
+  const topCollector = useMemo(
+    () => resolveTopCollector(projectWideTopCollector, projectWideRows ?? []),
+    [projectWideTopCollector, projectWideRows]
+  )
+
+  // Handle export — the same period, window and time zone the screen is
+  // querying with, so the file matches what the user sees.
   const handleExport = () => {
     exportDashboard({
       projectId,
       format: 'csv',
       period: selectedPeriod,
+      startDate: dateRange.from,
+      endDate: dateRange.to,
+      timezone: userTimezone,
     })
   }
 
@@ -284,7 +296,7 @@ function DashboardTab() {
         <div className="hidden lg:block" aria-hidden />
         <div className="flex w-full justify-center lg:w-auto">
           <div className="bg-card flex w-full max-w-md items-center justify-center gap-1 rounded-lg p-1 shadow-sm sm:w-auto sm:max-w-none">
-            <PeriodTabs selectedPeriod={selectedPeriod} onPeriodChange={handlePeriodChange} />
+            <PeriodTabs selectedPeriod={selectedPeriod} onPeriodChange={setSelectedPeriod} />
           </div>
         </div>
         <div className="flex w-full justify-center sm:justify-end lg:justify-self-end">
@@ -367,11 +379,8 @@ function DashboardTab() {
             selectedPeriod={selectedPeriod}
             selectedOperator={selectedOperator}
             onOperatorChange={setSelectedOperator}
-            customFromDate={customFromDate}
-            customToDate={customToDate}
-            onFromDateChange={setCustomFromDate}
-            onToDateChange={setCustomToDate}
-            userTimezone={userTimezone}
+            fromDate={dateRange.from}
+            toDate={dateRange.to}
           />
         </div>
       </div>
@@ -442,8 +451,8 @@ function DashboardTab() {
               change: dashboardData.kpis.paymentsTrend.change,
               direction: dashboardData.kpis.paymentsTrend.changeType === 'increase' ? 'up' : 'down',
             },
-            topCollectorName: dashboardData.topOperators[0]?.operatorName,
-            topCollectorAmount: agentPerformance?.[0]?.payments,
+            topCollectorName: topCollector?.name,
+            topCollectorAmount: topCollector?.amount,
           }}
         />
       )}

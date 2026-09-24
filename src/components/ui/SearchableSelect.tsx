@@ -8,6 +8,7 @@
  */
 
 import { useState, useRef, useEffect, useLayoutEffect, useId, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { Icons } from '@/lib/icons'
 import { piiProps } from '@/lib/openreplay/pii'
@@ -72,6 +73,7 @@ export function SearchableSelect({
   const generatedId = useId()
   const triggerId = id || generatedId
 
+  const { t } = useTranslation('common')
   const [isOpen, setIsOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [displayName, setDisplayName] = useState(
@@ -252,7 +254,7 @@ export function SearchableSelect({
               </li>
             ) : filtered.length === 0 ? (
               <li className="text-muted-foreground px-3 py-6 text-center text-xs">
-                No results found
+                {t('components.searchableSelect.noResults', 'No results found')}
               </li>
             ) : (
               filtered.map((option) => (

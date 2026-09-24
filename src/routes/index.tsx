@@ -3,6 +3,7 @@ import { lazy, Suspense } from 'react'
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom'
 import { ProtectedRoute } from './ProtectedRoute'
 import { PermissionRoute } from './PermissionRoute'
+import { UkrainianProjectRoute } from './UkrainianProjectRoute'
 import { GuestRoute } from './GuestRoute'
 import { useTabTracker } from '@/features/auth/hooks/useTabTracker'
 import { DashboardLayout } from '@/components/layout'
@@ -318,7 +319,7 @@ export const router = createBrowserRouter([
         path: 'ai-assistant',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.AI_ASSISTANT.USE}>
-            {withSuspense(<AiAssistantPage />)}
+            <UkrainianProjectRoute>{withSuspense(<AiAssistantPage />)}</UkrainianProjectRoute>
           </PermissionRoute>
         ),
       },
@@ -651,7 +652,7 @@ export const router = createBrowserRouter([
         path: 'system-settings/integrations/ubki',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.MESSAGING.MANAGE_INTEGRATIONS}>
-            {withSuspense(<UbkiIntegrationPage />)}
+            <UkrainianProjectRoute>{withSuspense(<UbkiIntegrationPage />)}</UkrainianProjectRoute>
           </PermissionRoute>
         ),
       },

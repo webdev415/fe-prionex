@@ -99,6 +99,7 @@ export type {
   TopOperatorUI,
   OperatorPerformanceResponseUI,
   OperatorPerformanceUI,
+  TopCollectorUI,
   OperatorSummaryUI,
   DailyBreakdownUI,
   TeamAverageUI,

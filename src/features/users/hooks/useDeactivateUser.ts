@@ -6,6 +6,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import i18n from '@/lib/i18n'
 import { usersApi } from '../api/usersApi'
 import { usersKeys } from './useUsers'
 import { rolesKeys } from '@/features/roles/hooks/useRoles'
@@ -23,7 +24,7 @@ import { getErrorMessage } from '@/lib/errors'
  * const handleDeactivate = (userId: number) => {
  *   mutate(userId, {
  *     onSuccess: () => {
- *       toast.success('User deactivated successfully')
+ *       toast.success(i18n.t('toasts.users.deactivated', { defaultValue: 'User deactivated successfully' }))
  *     },
  *   })
  * }
@@ -35,7 +36,9 @@ export function useDeactivateUser() {
   return useMutation({
     mutationFn: (userId: number) => usersApi.deactivateUser(userId),
     onSuccess: (_, userId) => {
-      toast.success('User deactivated successfully')
+      toast.success(
+        i18n.t('toasts.users.deactivated', { defaultValue: 'User deactivated successfully' })
+      )
       queryClient.invalidateQueries({ queryKey: usersKeys.detail(userId) })
       queryClient.invalidateQueries({ queryKey: usersKeys.lists() })
       // Invalidate roles list to update user_count for roles

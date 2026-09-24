@@ -17,7 +17,12 @@ import { Checkbox } from '@/components/ui/Checkbox'
 import { Label } from '@/components/ui/Label'
 import { RadioGroup, RadioItem } from '@/components/ui/Radio'
 import { useUpdateProject } from '@/features/projects/hooks/useProjectMutations'
-import type { ApiProjectDetail, UpdateProjectInput } from '@/features/projects/types'
+import {
+  PROJECT_COUNTRIES,
+  PROJECT_CURRENCIES,
+  type ApiProjectDetail,
+  type UpdateProjectInput,
+} from '@/features/projects/types'
 import { formatPickerDateAsYMD } from '@/lib/dateUtils'
 import { Icons } from '@/lib/icons'
 import {
@@ -25,6 +30,7 @@ import {
   validateCompanyBankingField,
   type CompanyBankingFieldName,
 } from './companyBankingFields'
+import { ProjectChoiceField } from './ProjectChoiceField'
 
 interface EditProjectModalProps {
   project: ApiProjectDetail | null
@@ -49,6 +55,8 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
     start_date: project.start_date || '',
     end_date: project.end_date || '',
     status: project.status === 'archived' ? 'inactive' : project.status,
+    currency: project.currency ?? 'UAH',
+    country: project.country ?? 'UA',
     // Company legal & banking details; hydrated from the project
     // detail (NULL → '' so the inputs stay controlled).
     full_company_name: project.full_company_name ?? '',
@@ -116,6 +124,8 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
       }
       if (formData.status !== project.status && project.status !== 'archived')
         updateData.status = formData.status
+      if (formData.currency !== (project.currency ?? 'UAH')) updateData.currency = formData.currency
+      if (formData.country !== (project.country ?? 'UA')) updateData.country = formData.country
 
       // Diff each company/banking field against the persisted value and only
       // include it in the payload if the operator actually touched it. A
@@ -253,6 +263,31 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
                 </RadioGroup>
               </div>
             )}
+            <div className="grid grid-cols-2 gap-4">
+              <ProjectChoiceField
+                name="country"
+                label={t('pages.projects.modals.country.label')}
+                options={PROJECT_COUNTRIES.map((country) => ({
+                  value: country,
+                  label: t(`pages.projects.modals.country.${country}`),
+                }))}
+                value={formData.country}
+                onChange={(value) => handleChange('country', value)}
+                disabled={updateMutation.isPending}
+              />
+              <ProjectChoiceField
+                name="currency"
+                label={t('pages.projects.modals.currency.label')}
+                options={PROJECT_CURRENCIES.map((currency) => ({
+                  value: currency,
+                  label: t(`pages.projects.modals.currency.${currency}`),
+                }))}
+                value={formData.currency}
+                onChange={(value) => handleChange('currency', value)}
+                disabled={updateMutation.isPending}
+                hint={t('pages.projects.modals.currency.hint')}
+              />
+            </div>
             <div className="bg-border h-px w-full" />
           </div>
 
@@ -356,7 +391,7 @@ function EditProjectForm({ project, onClose, onSuccess }: EditProjectFormProps) 
                 disabled={updateMutation.isPending}
                 variant={errors.edrpou_code ? 'error' : 'default'}
                 error={errors.edrpou_code}
-                maxLength={8}
+                maxLength={9}
               />
             </div>
             <Textarea

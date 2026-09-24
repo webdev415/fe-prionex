@@ -7,6 +7,7 @@
 import { useState, useCallback, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import i18n, { spanishLocaleOr } from '@/lib/i18n'
 import { Link } from 'react-router-dom'
 import { SearchFiltersBar } from './components/SearchFiltersBar'
 import { AuditLogDetailModal } from './components/AuditLogDetailModal'
@@ -35,6 +36,7 @@ import { toast } from 'sonner'
 import { useHasPermission, useUserPermissions } from '@/hooks/usePermissions'
 import { PERMISSIONS } from '@/constants/permissions'
 import { auditEntityLink, RECORD_AFTER_CLIENT_TYPES } from './auditEntityLink'
+import { activeCurrency } from '@/lib/projectCurrency'
 
 const DEFAULT_PAGE_SIZE = 10
 
@@ -468,7 +470,7 @@ export function AuditLogsPage() {
   const formatCurrency = useCallback((amount: string | number): string => {
     const num = typeof amount === 'string' ? parseFloat(amount) : amount
     if (isNaN(num)) return String(amount)
-    return new Intl.NumberFormat('uk-UA', {
+    return new Intl.NumberFormat(spanishLocaleOr(i18n.language, 'uk-UA'), {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
       useGrouping: true,
@@ -486,7 +488,7 @@ export function AuditLogsPage() {
         log.old_value &&
         log.new_value
       ) {
-        return `Debt: ${formatCurrency(log.old_value)} → ${formatCurrency(log.new_value)} UAH`
+        return `Debt: ${formatCurrency(log.old_value)} → ${formatCurrency(log.new_value)} ${activeCurrency()}`
       }
       if (log.action === 'CREATE' && log.entity_type === 'user') {
         return `Role: ${log.new_value || 'N/A'}, Project: ${log.entity_name || 'N/A'}`

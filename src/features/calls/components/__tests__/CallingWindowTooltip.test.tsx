@@ -7,7 +7,7 @@
  * dead control and no reason.
  */
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { Button } from '@/components/ui/Button'
 import { CallingWindowTooltip } from '../CallingWindowTooltip'
 
@@ -47,5 +47,56 @@ describe('CallingWindowTooltip', () => {
     // explanation. Regression guard for the first version.
     renderWith('Calls are not allowed today')
     expect(screen.getByRole('button', { name: 'Call' })).not.toHaveAttribute('title')
+  })
+
+  describe('pressing the disabled button', () => {
+    // The button itself is disabled and, in the browser, pointer-events:none —
+    // so the press lands on the wrapper. That is what these drive.
+    function renderReporting(message: string | null) {
+      const onBlockedAttempt = vi.fn()
+      render(
+        <CallingWindowTooltip message={message} onBlockedAttempt={onBlockedAttempt}>
+          <Button disabled={Boolean(message)}>Call</Button>
+        </CallingWindowTooltip>
+      )
+      return onBlockedAttempt
+    }
+    const wrapper = () => document.querySelector('[data-calling-window-blocked]') as HTMLElement
+
+    it('reports a click', () => {
+      const onBlockedAttempt = renderReporting('Outside the allowed calling hours')
+      fireEvent.click(wrapper())
+      expect(onBlockedAttempt).toHaveBeenCalledTimes(1)
+    })
+
+    it.each(['Enter', ' '])('reports the %j key, as a button would', (key) => {
+      const onBlockedAttempt = renderReporting('Outside the allowed calling hours')
+      fireEvent.keyDown(wrapper(), { key })
+      expect(onBlockedAttempt).toHaveBeenCalledTimes(1)
+    })
+
+    it('ignores other keys', () => {
+      const onBlockedAttempt = renderReporting('Outside the allowed calling hours')
+      fireEvent.keyDown(wrapper(), { key: 'Tab' })
+      expect(onBlockedAttempt).not.toHaveBeenCalled()
+    })
+
+    it('takes the tab stop the disabled button gives up', () => {
+      renderReporting('Outside the allowed calling hours')
+      expect(wrapper()).toHaveAttribute('tabindex', '0')
+    })
+
+    it('leaves one button for assistive technology, not two', () => {
+      // A role on the wrapper announced the control twice, one inside the
+      // other. The disabled button is the one that should be heard.
+      renderReporting('Outside the allowed calling hours')
+      expect(screen.getAllByRole('button', { name: 'Call' })).toHaveLength(1)
+      expect(screen.getByRole('button', { name: 'Call' })).toBeDisabled()
+    })
+
+    it('has nothing to report when calling is allowed', () => {
+      renderReporting(null)
+      expect(wrapper()).toBeNull()
+    })
   })
 })

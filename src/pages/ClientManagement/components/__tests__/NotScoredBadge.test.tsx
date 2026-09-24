@@ -12,9 +12,11 @@
  *   3. otherwise             -> Not scored    (never the legacy badge)
  */
 
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { NotScoredBadge } from '../NotScoredBadge'
+
+vi.mock('react-i18next', async () => (await import('@/test/englishI18n')).englishReactI18nextMock())
 
 /** The shared decision, written once so both screens can be checked against it. */
 function priorityBadgeFor({

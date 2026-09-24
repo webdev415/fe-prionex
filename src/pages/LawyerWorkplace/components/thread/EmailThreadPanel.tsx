@@ -10,7 +10,7 @@ import {
   formatTemplateDate,
   extractIncomingRef,
   extractCaseNo,
-  LEGAL_COMPANY_INFO,
+  projectCompanyInfo,
   type LegalTemplateFillContext,
   downloadLegalAttachment,
   useLegalComposerReplyTemplates,
@@ -21,6 +21,9 @@ import {
   loadReplyDraftForMessage,
 } from '@/features/lawyerWorkplace'
 import { getErrorMessage } from '@/lib/errors'
+import { activeProjectCountry } from '@/lib/projectCountry'
+import { useProjectDetail } from '@/features/projects/hooks/useProjects'
+import { useAuthStore } from '@/stores/authStore'
 import { getFilenameExtensionLabel } from '@/features/lawyerWorkplace/utils/attachmentExtension'
 import { documentApi, type ClientDocument } from '@/features/clients/api/documentApi'
 import { useClientLoans } from '@/features/clients/hooks/useClients'
@@ -226,6 +229,12 @@ export function EmailThreadPanel({
     enabled: Boolean(letter),
   })
   const replyMutation = useReplyToLegalThread()
+  const projectCountry = useAuthStore((s) => activeProjectCountry(s.user))
+  const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
+  const letterProjectId =
+    letter?.parameters.clientProjectId ?? (activeProjectId ? Number(activeProjectId) : null)
+  const { data: letterProject } = useProjectDetail(letter ? letterProjectId : null)
+  const company = projectCompanyInfo(letterProject?.country ?? projectCountry, letterProject)
   const letterId = letter?.id ?? ''
   const [mailboxOverride, setMailboxOverride] = useState<{
     letterId: string
@@ -260,8 +269,8 @@ export function EmailThreadPanel({
       caseNo: extractCaseNo(letter.subject),
       date: formatTemplateDate(new Date().toISOString(), language),
       lawyerName: lawyerMe?.display_name ?? null,
-      companyName: LEGAL_COMPANY_INFO.name,
-      companyPhone: LEGAL_COMPANY_INFO.phone,
+      companyName: company.name,
+      companyPhone: company.phone,
     }
     const filled = fillTemplateVariables(body, context)
     onReplyDraftChange(replyDraft.trim() ? `${replyDraft.trim()}\n\n${filled}` : filled)

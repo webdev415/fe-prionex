@@ -9,9 +9,10 @@ import {
   setAccessToken,
   triggerAuthExpired,
 } from '@/lib/api'
-import { applyPersistedLanguageFromServer } from '@/lib/i18n'
+import i18n, { applyPersistedLanguageFromServer } from '@/lib/i18n'
 import { applyPersistedThemeFromServer } from '@/stores/themeStore'
 import { cancelSessionHeartbeat, scheduleSessionHeartbeat } from '@/lib/sessionHeartbeat'
+import { activeProjectCurrency, setActiveCurrency } from '@/lib/projectCurrency'
 import type { User, LoginRequest, AuthErrorState } from '@/types/api'
 import {
   buildUserFromJwtToken,
@@ -682,10 +683,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
         // Show a sticky "reconnecting" toast, dismissed once auth-service is
         // reachable again (see the interceptor in api.ts).
-        toast.warning('Connection problem — reconnecting…', {
-          id: 'auth-offline',
-          duration: Infinity,
-        })
+        toast.warning(
+          i18n.t('components.connection.reconnecting', {
+            defaultValue: 'Connection problem — reconnecting…',
+          }),
+          {
+            id: 'auth-offline',
+            duration: Infinity,
+          }
+        )
         runOnceOnNextAuthSuccess(() => {
           toast.dismiss('auth-offline')
         })
@@ -1004,6 +1010,10 @@ useAuthStore.subscribe((state) => {
     lastPersistedTimezone = tz
     localStorage.setItem('user_timezone', tz)
   }
+})
+
+useAuthStore.subscribe((state) => {
+  setActiveCurrency(activeProjectCurrency(state.user))
 })
 
 export default useAuthStore

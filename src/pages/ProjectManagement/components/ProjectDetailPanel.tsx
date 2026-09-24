@@ -113,7 +113,7 @@ export function ProjectDetailPanel({
             />
             <MetricCard
               label={t('pages.projects.detailPanel.totalDebt')}
-              value={formatCurrency(project.total_debt_amount)}
+              value={formatCurrency(project.total_debt_amount, project.currency)}
             />
           </div>
         </div>

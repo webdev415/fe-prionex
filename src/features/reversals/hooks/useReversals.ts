@@ -11,6 +11,7 @@
 import type { AxiosError } from 'axios'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import i18n from '@/lib/i18n'
 
 import { reversalsApi } from '../api/reversalsApi'
 import type {
@@ -89,7 +90,9 @@ export function useCreateReversal(options?: {
         options.onValidationErrors(structured)
         return
       }
-      toast.error('Failed to create reversal')
+      toast.error(
+        i18n.t('toasts.reversals.createFailed', { defaultValue: 'Failed to create reversal' })
+      )
     },
   })
 }

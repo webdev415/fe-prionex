@@ -301,7 +301,10 @@ export function ImportDetailsPage() {
                 {t('pages.imports.details.uploadedBy')}{' '}
               </span>
               <span className="text-foreground flex-1 text-sm leading-[155%] font-medium tracking-[-0.32px] break-words sm:text-base">
-                {importDetail.uploadedBy} at {importDetail.uploadedAt}
+                {t('pages.imports.uploadedByAt', {
+                  user: importDetail.uploadedBy,
+                  time: importDetail.uploadedAt,
+                })}
               </span>
             </div>
 

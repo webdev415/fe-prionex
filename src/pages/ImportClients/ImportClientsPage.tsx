@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
+import i18n, { spanishLocaleOr } from '@/lib/i18n'
 import { StepIndicator, type Step } from '@/components/ui/StepIndicator'
 import { Button } from '@/components/ui/Button'
 import { DoubleButton } from '@/components/ui/DoubleButton'
@@ -191,7 +192,7 @@ export function ImportClientsPage() {
       : currentJobId
         ? {
             fileName: t('pages.imports.step2.simple.uploading'),
-            startedAt: new Date().toLocaleTimeString('en-US', {
+            startedAt: new Date().toLocaleTimeString(spanishLocaleOr(i18n.language, 'en-US'), {
               hour: '2-digit',
               minute: '2-digit',
             }),

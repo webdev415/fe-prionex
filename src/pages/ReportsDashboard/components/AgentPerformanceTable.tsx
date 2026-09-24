@@ -4,10 +4,9 @@
  * Table displaying agent performance metrics with filters.
  */
 
-import { useState, useMemo, type ReactNode } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { intlLocaleForUiLanguage } from '@/lib/i18n'
-import { Input } from '@/components/ui/Input'
 import {
   Select,
   SelectTrigger,
@@ -16,11 +15,11 @@ import {
   SelectValue,
 } from '@/components/ui/Select'
 import { Label } from '@/components/ui/Label'
-import { DateSelect } from '@/components/ui/DateSelect'
 import { LinkButton } from '@/components/ui/LinkButton'
 import { Icons } from '@/lib/icons'
-import { getDateStringInTimezone } from '@/lib/dateUtils'
 import type { Period } from '../types'
+import { formatIsoDate, withCurrency } from '@/lib/formatters'
+import { computeAgentPerformanceTotals } from '@/features/report/utils/dashboardMetrics'
 
 // ============================================================================
 // Utility Functions
@@ -62,42 +61,15 @@ function exportToCSV(data: Record<string, unknown>[], filename: string): void {
 }
 
 /**
- * Calculate average duration from array of durations in seconds
+ * Human-readable window shown in the read-only «Період» field: one date for a
+ * single day, "from – to" otherwise. Inputs are the YYYY-MM-DD strings the
+ * page queries with, so what the user reads is exactly the queried window.
  */
-function calculateAverageDuration(durations: number[]): string {
-  if (durations.length === 0) return '0:00'
-  const avgSeconds = Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
-  const minutes = Math.floor(avgSeconds / 60)
-  const seconds = avgSeconds % 60
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`
-}
-
-/**
- * Get date range based on period
- */
-function getDateRange(period: Period): { from: Date; to: Date } {
-  const now = new Date()
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-
-  switch (period) {
-    case 'today':
-      return { from: today, to: today }
-    case 'thisWeek': {
-      const dayOfWeek = today.getDay()
-      const monday = new Date(today)
-      monday.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1))
-      const sunday = new Date(monday)
-      sunday.setDate(monday.getDate() + 6)
-      return { from: monday, to: sunday }
-    }
-    case 'thisMonth': {
-      const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
-      const lastOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0)
-      return { from: firstOfMonth, to: lastOfMonth }
-    }
-    default:
-      return { from: today, to: today }
-  }
+function formatPeriodWindow(fromDate: string, toDate: string): string {
+  if (!fromDate && !toDate) return '—'
+  if (!toDate || fromDate === toDate) return formatIsoDate(fromDate)
+  if (!fromDate) return formatIsoDate(toDate)
+  return `${formatIsoDate(fromDate)} – ${formatIsoDate(toDate)}`
 }
 
 export interface AgentPerformance {
@@ -106,6 +78,10 @@ export interface AgentPerformance {
   calls: number
   contactRate: number
   avgDuration: string
+  /** Answered calls; when absent the totals derive it from calls × rate. */
+  callsAnswered?: number
+  /** Talk time in seconds; when absent the totals derive it from avg × answered. */
+  totalTalkTime?: number
   sms: number
   messages: number
   payments: number
@@ -117,11 +93,12 @@ export interface AgentPerformanceTableProps {
   selectedPeriod: Period
   selectedOperator: number | null
   onOperatorChange: (operatorId: number | null) => void
-  customFromDate: string | null
-  customToDate: string | null
-  onFromDateChange: (date: string | null) => void
-  onToDateChange: (date: string | null) => void
-  userTimezone?: string | null
+  /**
+   * Window the table (and the KPI cards) are queried for, YYYY-MM-DD in the
+   * user's profile time zone. Shown read-only — the period tabs drive it.
+   */
+  fromDate: string
+  toDate: string
 }
 
 export interface Column<T> {
@@ -140,30 +117,12 @@ export function AgentPerformanceTable({
   selectedPeriod,
   selectedOperator,
   onOperatorChange,
-  customFromDate,
-  customToDate,
-  onFromDateChange,
-  onToDateChange,
-  userTimezone,
+  fromDate,
+  toDate,
 }: AgentPerformanceTableProps) {
   const { t, i18n } = useTranslation('common')
-  const [clientPhone, setClientPhone] = useState<string>('')
 
-  // Calculate default date range from period
-  const defaultDateRange = useMemo(() => getDateRange(selectedPeriod), [selectedPeriod])
-
-  // Parse ISO date strings as local dates to avoid timezone issues
-  const parseLocalDate = (isoString: string): Date => {
-    const [year, month, day] = isoString.split('-').map(Number)
-    return new Date(year, month - 1, day) // month is 0-indexed
-  }
-
-  // Use custom dates if set, otherwise use period-based dates
-  const dateRange = useMemo(() => {
-    const from = customFromDate ? parseLocalDate(customFromDate) : defaultDateRange.from
-    const to = customToDate ? parseLocalDate(customToDate) : defaultDateRange.to
-    return { from, to }
-  }, [customFromDate, customToDate, defaultDateRange])
+  const periodText = formatPeriodWindow(fromDate, toDate)
 
   // Get unique operators for filter (map to their IDs)
   const operators = useMemo(
@@ -173,17 +132,6 @@ export function AgentPerformanceTable({
       ),
     [data]
   )
-
-  // Client-side filter for phone only (operator and date filters handled by API)
-  const filteredData = useMemo(() => {
-    if (!clientPhone || clientPhone.trim() === '') {
-      return data
-    }
-
-    // In real implementation, this would filter by actual client phone data
-    // For now, just return all data
-    return data
-  }, [data, clientPhone])
 
   const formatCurrency = (amount: number) => {
     const locale = intlLocaleForUiLanguage(i18n.language)
@@ -245,50 +193,19 @@ export function AgentPerformanceTable({
       align: 'right',
       render: (item) => (
         <span className="text-foreground text-xs font-medium">
-          {formatCurrency(item.payments)} {t('pages.reports.currencySymbol')}
+          {withCurrency(formatCurrency(item.payments), 'suffix')}
         </span>
       ),
     },
   ]
 
-  // Calculate totals from filtered data
-  const totals = useMemo(() => {
-    if (filteredData.length === 0) {
-      return {
-        calls: 0,
-        contactRate: 0,
-        avgDuration: '0:00',
-        sms: 0,
-        messages: 0,
-        payments: 0,
-      }
-    }
-
-    const totalCalls = filteredData.reduce((sum, item) => sum + item.calls, 0)
-    const avgContactRate = Math.round(
-      filteredData.reduce((sum, item) => sum + item.contactRate, 0) / filteredData.length
-    )
-
-    // Calculate average duration from individual durations
-    // Parse duration strings back to seconds for calculation
-    const durations = filteredData.map((item) => {
-      const [minutes, seconds] = item.avgDuration.split(':').map(Number)
-      return minutes * 60 + seconds
-    })
-    const avgDuration = calculateAverageDuration(durations)
-
-    return {
-      calls: totalCalls,
-      contactRate: avgContactRate,
-      avgDuration,
-      sms: filteredData.reduce((sum, item) => sum + item.sms, 0),
-      messages: filteredData.reduce((sum, item) => sum + item.messages, 0),
-      payments: filteredData.reduce((sum, item) => sum + item.payments, 0),
-    }
-  }, [filteredData])
+  // Weighted totals: rate = Σanswered / Σcalls, avg duration = Σtalk / Σanswered
+  // (never the plain mean of the row values — a 0-call row would drag it down).
+  // Operator and date filtering happen on the API side, so the rows are summed as-is.
+  const totals = useMemo(() => computeAgentPerformanceTotals(data), [data])
 
   const handleExport = () => {
-    const exportData = filteredData.map((item) => ({
+    const exportData = data.map((item) => ({
       Operator: item.operator,
       Calls: item.calls,
       'Contact Rate (%)': item.contactRate,
@@ -318,7 +235,7 @@ export function AgentPerformanceTable({
       {/* Header */}
       <div className="flex flex-col gap-2 self-stretch sm:flex-row sm:items-center sm:justify-between">
         <span className="text-foreground text-base leading-[155%] font-medium tracking-[-0.32px]">
-          {t('pages.reports.agentPerformance.title', { count: filteredData.length })}
+          {t('pages.reports.agentPerformance.title', { count: data.length })}
         </span>
         <LinkButton
           variant="regular-black"
@@ -337,7 +254,6 @@ export function AgentPerformanceTable({
           <div className="flex w-full min-w-0 flex-col items-start justify-center gap-1 xl:flex-1">
             <Label
               htmlFor="responsible-operator"
-              required
               className="text-foreground text-xs leading-[140%] font-medium tracking-[-0.24px]"
             >
               {t('pages.reports.filters.responsibleOperator')}
@@ -361,53 +277,17 @@ export function AgentPerformanceTable({
               </SelectContent>
             </Select>
           </div>
+          {/* Read-only: the period tabs above choose the window. Two disabled
+              date pickers used to sit here and looked like a broken filter. */}
           <div className="flex w-full min-w-0 flex-col items-start justify-center gap-1 xl:flex-1">
-            <Label
-              htmlFor="client-phone"
-              required
-              className="text-foreground text-xs leading-[140%] font-medium tracking-[-0.24px]"
-            >
-              {t('pages.reports.filters.clientPhone')}
-            </Label>
-            <Input
-              type="text"
-              id="client-phone"
-              placeholder={t('pages.reports.filters.typePhoneNumber')}
-              value={clientPhone}
-              onChange={(e) => setClientPhone(e.target.value)}
-              className="w-full"
-            />
-          </div>
-          <div className="flex w-full min-w-0 flex-col items-start justify-center gap-1 xl:min-w-[280px] xl:flex-[1.4]">
             <span className="text-foreground text-xs leading-[140%] font-medium tracking-[-0.24px]">
-              {t('pages.reports.filters.dateOfSale')}
+              {t('pages.reports.filters.period')}
             </span>
-            <div className="grid w-full grid-cols-1 gap-2 min-[480px]:grid-cols-[1fr_auto_1fr] min-[480px]:items-center min-[480px]:gap-3">
-              <DateSelect
-                key={`date-from-${selectedPeriod}`}
-                disabled={true} // Disable manual date selection when period is selected
-                value={dateRange.from}
-                onChange={({ value }) => {
-                  onFromDateChange(value ? getDateStringInTimezone(value, userTimezone) : null)
-                }}
-                allowManualInput
-                format="dd.MM.yyyy"
-                className="w-full min-w-0"
-              />
-              <span className="text-muted-foreground hidden text-center text-base leading-[155%] font-medium tracking-[-0.32px] min-[480px]:block">
-                -
-              </span>
-              <DateSelect
-                key={`date-to-${selectedPeriod}`}
-                disabled={true} // Disable manual date selection when period is selected
-                value={dateRange.to}
-                onChange={({ value }) => {
-                  onToDateChange(value ? getDateStringInTimezone(value, userTimezone) : null)
-                }}
-                allowManualInput
-                format="dd.MM.yyyy"
-                className="w-full min-w-0"
-              />
+            <div
+              data-testid="agent-performance-period"
+              className="border-input-border bg-muted text-foreground flex h-[45px] w-full items-center rounded-lg border px-4 text-sm font-light"
+            >
+              {periodText}
             </div>
           </div>
         </div>
@@ -461,7 +341,7 @@ export function AgentPerformanceTable({
                     ))}
                   </tr>
                 ))
-              ) : filteredData.length === 0 ? (
+              ) : data.length === 0 ? (
                 <tr>
                   <td
                     colSpan={columns.length}
@@ -472,7 +352,7 @@ export function AgentPerformanceTable({
                 </tr>
               ) : (
                 <>
-                  {filteredData.map((item, rowIndex) => (
+                  {data.map((item, rowIndex) => (
                     <tr
                       key={item.id}
                       className={`transition-colors ${rowIndex % 2 === 0 ? 'bg-muted' : 'bg-card'}`}
@@ -518,7 +398,7 @@ export function AgentPerformanceTable({
                       {totals.messages}
                     </td>
                     <td className="text-foreground h-[49px] px-3 text-right text-xs font-semibold sm:px-6">
-                      {formatCurrency(totals.payments)} {t('pages.reports.currencySymbol')}
+                      {withCurrency(formatCurrency(totals.payments), 'suffix')}
                     </td>
                   </tr>
                 </>

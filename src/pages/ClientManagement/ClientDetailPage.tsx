@@ -5,6 +5,7 @@
  */
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import { spanishLocaleOr } from '@/lib/i18n'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQueries, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -44,7 +45,7 @@ import { RecordPaymentModal } from './components/RecordPaymentModal'
 import { useRecordPaymentFlow } from '@/features/payments/hooks/useRecordPaymentFlow'
 // import { DeleteClientModal } from './components/DeleteClientModal'
 import { EditClientModal } from './components/EditClientModal'
-import { AssignRoleModal, type AssignRoleMode } from './components/AssignRoleModal'
+import { AssigneeDropdown, type AssigneeRole } from './components/AssigneeDropdown'
 import { PriorityBadge } from './components/PriorityBadge'
 import { V3ClientPriorityPanel } from '@/features/scoring/components/V3ClientPriorityPanel'
 import { NotScoredBadge } from './components/NotScoredBadge'
@@ -150,6 +151,7 @@ import {
   type PeriodicityType,
 } from '@/features/clients/utils/rrSchedule'
 import { buildContactPayload } from '@/features/clients/utils/contactPayload'
+import { checkRrAmount } from '@/features/clients/utils/rrAmountBounds'
 import type { RestructuringPaymentEntry } from '@/features/clients/api/types'
 import type { OverpaymentResponse, RRStatusHistoryEntry } from '@/features/clients/api/clientApi'
 import { useUpdateInteraction } from '@/features/clients/hooks/useNoteInteraction'
@@ -178,7 +180,12 @@ import { PaymentMethodCell } from '@/features/payments/components/PaymentMethodC
 import { useUserDepartment } from '@/features/users'
 import { PermissionGuard } from '@/components/auth'
 import { useHasAnyPermission, useHasPermission } from '@/hooks/usePermissions'
-import { useSubmitDebtToUbki, useBulkSubmitToUbki, ubkiKeys } from '@/features/ubki'
+import {
+  useSubmitDebtToUbki,
+  useBulkSubmitToUbki,
+  ubkiKeys,
+  useUbkiAvailable,
+} from '@/features/ubki'
 import { PERMISSIONS } from '@/constants/permissions'
 import { searchClientsByPhoneExact } from '@/api/clientSearchApi'
 import { ChainExecutor, TAInteractionHistory } from './components/taChains'
@@ -188,7 +195,7 @@ import { useTAHotkeyBindings } from '@/features/taHotkeys/hooks/useTAHotkeys'
 import { resolveRecentCallPhone } from '@/features/taHotkeys/recentCallPhone'
 import { RelatedTagsTab } from './components/RelatedTagsTab'
 import type { PhoneMeta } from '@/features/tags/hooks/useLinkedClientsRelatedTags'
-import { formatUkrainePhoneForDisplay } from '@/lib/phone'
+import { formatUkrainePhoneForDisplay, isDialablePhone } from '@/lib/phone'
 import { isAdminRole } from '@/features/tags/utils/visibility'
 import {
   ALL_MESSAGING_SEND_PERMISSIONS,
@@ -250,10 +257,6 @@ type ExtendedCallItem = {
 
 /** Strip formatting for phone match / API lookup (backend normalizes further). */
 const stripPhoneFormat = (value: string) => value.replace(/[\s\-().]/g, '')
-
-/** True if value looks like a Ukrainian mobile/phone number (incl. 380… without +). */
-const looksLikeUkrainePhone = (value: string) =>
-  /^(\+?38)?0\d{9}$/.test(stripPhoneFormat(value)) || /^380\d{9}$/.test(stripPhoneFormat(value))
 
 /** Today at local midnight — used as max/default for closure-date pickers. */
 const getTodayAtMidnight = (): Date => {
@@ -407,9 +410,6 @@ export function ClientDetailPage() {
 
   useClientCardOpenTracking(id, trackEvent)
 
-  // Returns true if the value looks like a Ukrainian phone number,
-  // regardless of the contact type's isPhone flag
-  const looksLikePhone = (value: string) => looksLikeUkrainePhone(value)
   const [selectedRaId, setSelectedRaId] = useState<number | null>(null)
   // KAN-335: loan whose "detailed calculation after sale" modal is open.
   const [calcLoan, setCalcLoan] = useState<{ id: number; loanNumber?: string | null } | null>(null)
@@ -817,6 +817,29 @@ export function ClientDetailPage() {
       return
     }
 
+    // KAN-1122: the total must sit inside this loan's [lower; upper] range.
+    // Advisory only — the API applies the same rule and is the authority
+    // (create_restructuring_agreement in clients.py). The bounds are the
+    // figures the loan card already shows, so an operator is judged against
+    // what they were shown. A loan whose bounds cannot be read yields
+    // 'unknown' and is left to the API rather than blocked here.
+    const selectedLoan = eligibleLoansForRr.find((loan) => String(loan.id) === connectRrForm.debtId)
+    const amountCheck = checkRrAmount(totalAmount, selectedLoan)
+    if (amountCheck.verdict === 'nothing-left') {
+      setConnectRrError(t(`${d}.rrValidationNothingToReturn`))
+      return
+    }
+    if (amountCheck.verdict === 'out-of-range') {
+      setConnectRrError(
+        t(`${d}.rrValidationAmountOutOfRange`, {
+          amount: totalAmount.toFixed(2),
+          lower: amountCheck.lower.toFixed(2),
+          upper: amountCheck.upper.toFixed(2),
+        })
+      )
+      return
+    }
+
     const formatDate = (dt: Date | null) => {
       if (!dt) return null
       const y = dt.getFullYear()
@@ -893,7 +916,8 @@ export function ClientDetailPage() {
   // --- UBKI (credit bureau) outbound submission ---
   const ubkiQueryClient = useQueryClient()
   // Client opt-out flag (backend exposes it on the client detail response).
-  const canSubmitToUbki = useHasPermission(PERMISSIONS.UBKI.SUBMIT)
+  const ubkiAvailable = useUbkiAvailable()
+  const canSubmitToUbki = useHasPermission(PERMISSIONS.UBKI.SUBMIT) && ubkiAvailable
   const { mutate: submitDebtToUbki, isPending: isSubmittingToUbki } = useSubmitDebtToUbki()
   const { mutate: bulkSubmitToUbki, isPending: isBulkSubmittingToUbki } = useBulkSubmitToUbki()
   const doNotSendToUbki = clientDetail?.do_not_send_to_ubki ?? false
@@ -1068,7 +1092,7 @@ export function ClientDetailPage() {
     // remembered.
     const blocked = callDialogBlockedReason(callingWindow, spamOptionEnabled)
     if (blocked) {
-      toast.warning(blocked)
+      callingWindow.reportBlocked()
       return
     }
     setCallModalPreferences({ phone, initialCallType, spamOptionEnabled })
@@ -1197,8 +1221,13 @@ export function ClientDetailPage() {
   const { data: responsibleEmployeeDepartment } = useUserDepartment(
     profile?.responsible_employee_id || 0
   )
+  // Same lookup for the searcher, so that row reads "Name (Department)" too.
+  const { data: responsibleSearcherDepartment } = useUserDepartment(
+    profile?.responsible_searcher_id || 0
+  )
 
-  // Assign client mutation (used by AssignRoleModal)
+  // Assign client mutation (used by the Operators-tab assign flow; the two
+  // responsible rows drive their own copy inside AssigneeDropdown).
   const assignClientMutation = useAssignClient()
 
   // Single-client assign (Operators tab "+") — opens AssignClientModal,
@@ -1322,6 +1351,7 @@ export function ClientDetailPage() {
       department: responsibleEmployeeDepartment || '-',
       responsibleEmployee: profile.responsible_employee_name ?? '-',
       responsibleResearcher: profile.responsible_searcher_name ?? '-',
+      searcherDepartment: responsibleSearcherDepartment || '-',
       phones,
       // Personal details (nested for compatibility)
       personalDetails: {
@@ -1355,7 +1385,9 @@ export function ClientDetailPage() {
             position: profile.employment.position ?? '-',
             experience:
               profile.employment.work_experience_months != null
-                ? `${profile.employment.work_experience_months} міс.`
+                ? t('pages.clients.detail.workExperienceMonths', {
+                    count: profile.employment.work_experience_months,
+                  })
                 : '-',
             managerFullName: profile.employment.manager_full_name ?? '-',
             employmentType: profile.employment.employment_type
@@ -1622,6 +1654,7 @@ export function ClientDetailPage() {
     documents,
     activities,
     responsibleEmployeeDepartment,
+    responsibleSearcherDepartment,
     clientTags,
     t,
     userTimezone,
@@ -1690,10 +1723,10 @@ export function ClientDetailPage() {
     client.phones?.forEach((p) => add(p.number))
     // Recommenders / contacts: referrer, third-party phones, etc. (not only types 1,2,29)
     client.recommenders?.forEach((r) => {
-      if (r.isPhone || looksLikeUkrainePhone(r.contactValue)) add(r.contactValue)
+      if (r.isPhone || isDialablePhone(r.contactValue)) add(r.contactValue)
     })
     const wp = client.work?.workPhone
-    if (wp && wp !== '-' && looksLikeUkrainePhone(wp)) add(wp)
+    if (wp && wp !== '-' && isDialablePhone(wp)) add(wp)
     return Array.from(set)
   }, [client])
 
@@ -1762,7 +1795,7 @@ export function ClientDetailPage() {
       })
     )
     client.recommenders?.forEach((recommender) => {
-      if (recommender.isPhone || looksLikeUkrainePhone(recommender.contactValue)) {
+      if (recommender.isPhone || isDialablePhone(recommender.contactValue)) {
         addPhone(recommender.contactValue, {
           contactTypeId: null,
           spamAllowed: true,
@@ -1776,7 +1809,7 @@ export function ClientDetailPage() {
       }
     })
     const workPhone = client.work?.workPhone
-    if (workPhone && workPhone !== '-' && looksLikeUkrainePhone(workPhone)) {
+    if (workPhone && workPhone !== '-' && isDialablePhone(workPhone)) {
       addPhone(workPhone, {
         contactTypeId: null,
         spamAllowed: true,
@@ -1827,7 +1860,9 @@ export function ClientDetailPage() {
   const [isEditInteractionModalOpen, setIsEditInteractionModalOpen] = useState(false)
   const { mutate: updateInteraction, isPending: isUpdating } = useUpdateInteraction()
   const [editingInteraction, setEditingInteraction] = useState<InteractionResponse | null>(null)
-  const [assignRoleModalMode, setAssignRoleModalMode] = useState<AssignRoleMode | null>(null)
+  // Which responsible row has its assignee popover open, if any. One slot for
+  // both rows: each toggles independently, but two popovers never overlap.
+  const [openAssigneeRow, setOpenAssigneeRow] = useState<AssigneeRole | null>(null)
   // const userRole = useUserRole()
   // const canDelete = userRole === 'Admin' || userRole === 'Supervisor'
   const [selectedCallData, setSelectedCallData] = useState<{
@@ -2269,12 +2304,14 @@ export function ClientDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-16">
         <Icons.Warning className="text-error-500 h-8 w-8" strokeWidth={2} />
-        <p className="text-foreground font-medium">Failed to load client</p>
+        <p className="text-foreground font-medium">
+          {t('pages.clients.debtSummary.failedToLoadClient')}
+        </p>
         <p className="text-muted-foreground text-sm">
-          {profileError?.message || 'An error occurred'}
+          {profileError?.message || t('pages.clients.detail.errorOccurred')}
         </p>
         <Button variant="outline" onClick={() => navigate('/dashboard/client')} className="mt-4">
-          Back to Clients
+          {t('pages.clients.detail.backToClients')}
         </Button>
       </div>
     )
@@ -2308,6 +2345,10 @@ export function ClientDetailPage() {
     client.responsibleEmployee && client.department && client.department !== '-'
       ? `${client.responsibleEmployee} (${client.department})`
       : client.responsibleEmployee
+  const responsibleSearcherWithDepartment =
+    client.responsibleResearcher && client.searcherDepartment && client.searcherDepartment !== '-'
+      ? `${client.responsibleResearcher} (${client.searcherDepartment})`
+      : client.responsibleResearcher
   // Date of birth carries the age inline. The model keeps the raw ISO value —
   // other consumers parse it — so format for display here. `age` is computed
   // server-side per request, so it is always current.
@@ -3207,6 +3248,7 @@ export function ClientDetailPage() {
             <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
               <CallingWindowTooltip
                 message={callingWindow.allowed ? null : callingWindow.message}
+                onBlockedAttempt={callingWindow.reportBlocked}
                 className="w-full flex-1 xl:w-auto xl:flex-none"
               >
                 <Button
@@ -3353,16 +3395,17 @@ export function ClientDetailPage() {
                         {responsibleEmployeeWithDepartment}
                       </p>
                     )}
-                    {/* Reassign trigger is always visible; warn-on-click happens on
-                        the modal's Submit (PERMISSIONS.CLIENTS.REASSIGN_RESPONSIBLE). */}
-                    <button
-                      onClick={() => setAssignRoleModalMode('employee')}
-                      className="text-muted-foreground hover:text-foreground shrink-0 transition-colors"
-                      title={t('pages.clients.detail.assignEmployee', 'Assign employee')}
-                      type="button"
-                    >
-                      <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
-                    </button>
+                    {/* Trigger stays visible without the permission; the popover
+                        warns on click, as the modal it replaces warned on Submit. */}
+                    <AssigneeDropdown
+                      clientId={clientId}
+                      slot="employee"
+                      currentUserId={profile?.responsible_employee_id ?? null}
+                      isOpen={openAssigneeRow === 'employee'}
+                      onOpen={() => setOpenAssigneeRow('employee')}
+                      onClose={() => setOpenAssigneeRow(null)}
+                      data-testid="assign-employee-trigger"
+                    />
                   </div>
                 </div>
                 <div className="flex min-h-8 items-center self-stretch p-0">
@@ -3372,19 +3415,20 @@ export function ClientDetailPage() {
                   <div className="ml-2 flex flex-1 items-center justify-end gap-1">
                     {profile?.responsible_searcher_id && (
                       <p className="text-foreground truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                        {client.responsibleResearcher}
+                        {responsibleSearcherWithDepartment}
                       </p>
                     )}
-                    {/* Reassign trigger is always visible; warn-on-click happens on
-                        the modal's Submit (PERMISSIONS.CLIENTS.REASSIGN_RESPONSIBLE). */}
-                    <button
-                      onClick={() => setAssignRoleModalMode('searcher')}
-                      className="text-muted-foreground hover:text-foreground shrink-0 transition-colors"
-                      title={t('pages.clients.detail.assignSearcher', 'Assign searcher')}
-                      type="button"
-                    >
-                      <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
-                    </button>
+                    {/* Same component as the employee row above — only `role`
+                        differs, so the two stay in step by construction. */}
+                    <AssigneeDropdown
+                      clientId={clientId}
+                      slot="searcher"
+                      currentUserId={profile?.responsible_searcher_id ?? null}
+                      isOpen={openAssigneeRow === 'searcher'}
+                      onOpen={() => setOpenAssigneeRow('searcher')}
+                      onClose={() => setOpenAssigneeRow(null)}
+                      data-testid="assign-searcher-trigger"
+                    />
                   </div>
                 </div>
                 {/* The UBKI opt-out toggle moved into the Edit Client form —
@@ -3897,7 +3941,7 @@ export function ClientDetailPage() {
                           </span>
                           {client.work?.workPhone &&
                             client.work.workPhone !== '-' &&
-                            looksLikePhone(client.work.workPhone) &&
+                            isDialablePhone(client.work.workPhone) &&
                             renderLinkedContactBadges(client.work.workPhone, 'end')}
                         </div>
                         {client.work?.workPhone && client.work.workPhone !== '-' && (
@@ -4602,7 +4646,9 @@ export function ClientDetailPage() {
                           ) : undefined
                         }
                         ubkiHistory={
-                          <UbkiSubmissionHistory clientId={clientId} loans={ubkiLoans} />
+                          ubkiAvailable ? (
+                            <UbkiSubmissionHistory clientId={clientId} loans={ubkiLoans} />
+                          ) : undefined
                         }
                       />
                     )}
@@ -4991,7 +5037,9 @@ export function ClientDetailPage() {
                                             }
                                           ).initiated_at || item.date
                                   const locale =
-                                    i18n.language?.split('-')[0] === 'uk' ? 'uk-UA' : 'en-GB'
+                                    i18n.language?.split('-')[0] === 'uk'
+                                      ? 'uk-UA'
+                                      : spanishLocaleOr(i18n.language, 'en-GB')
                                   const date = new Date(String(timestamp)).toLocaleDateString(
                                     locale,
                                     {
@@ -5118,7 +5166,9 @@ export function ClientDetailPage() {
                                           new Date().toISOString()
                                         const dt = new Date(String(timestamp))
                                         const time = dt.toLocaleTimeString(
-                                          i18n.language?.split('-')[0] === 'uk' ? 'uk-UA' : 'en-GB',
+                                          i18n.language?.split('-')[0] === 'uk'
+                                            ? 'uk-UA'
+                                            : spanishLocaleOr(i18n.language, 'en-GB'),
                                           {
                                             hour: '2-digit',
                                             minute: '2-digit',
@@ -5292,7 +5342,9 @@ export function ClientDetailPage() {
                                         ? call.initiated_at
                                         : call.date
                                     const locale =
-                                      i18n.language?.split('-')[0] === 'uk' ? 'uk-UA' : 'en-GB'
+                                      i18n.language?.split('-')[0] === 'uk'
+                                        ? 'uk-UA'
+                                        : spanishLocaleOr(i18n.language, 'en-GB')
                                     const date = new Date(String(timestamp)).toLocaleDateString(
                                       locale,
                                       {
@@ -5454,7 +5506,9 @@ export function ClientDetailPage() {
                                     const timestamp =
                                       'sent_at' in sms && sms.sent_at ? sms.sent_at : sms.date
                                     const locale =
-                                      i18n.language?.split('-')[0] === 'uk' ? 'uk-UA' : 'en-GB'
+                                      i18n.language?.split('-')[0] === 'uk'
+                                        ? 'uk-UA'
+                                        : spanishLocaleOr(i18n.language, 'en-GB')
                                     const date = new Date(String(timestamp)).toLocaleDateString(
                                       locale,
                                       {
@@ -5557,7 +5611,9 @@ export function ClientDetailPage() {
                                         item.failed_at ||
                                         new Date().toISOString()
                                       const locale =
-                                        i18n.language?.split('-')[0] === 'uk' ? 'uk-UA' : 'en-GB'
+                                        i18n.language?.split('-')[0] === 'uk'
+                                          ? 'uk-UA'
+                                          : spanishLocaleOr(i18n.language, 'en-GB')
                                       const date = new Date(String(timestamp)).toLocaleDateString(
                                         locale,
                                         {
@@ -5596,7 +5652,7 @@ export function ClientDetailPage() {
                                             const time = dt.toLocaleTimeString(
                                               i18n.language?.split('-')[0] === 'uk'
                                                 ? 'uk-UA'
-                                                : 'en-GB',
+                                                : spanishLocaleOr(i18n.language, 'en-GB'),
                                               {
                                                 hour: '2-digit',
                                                 minute: '2-digit',
@@ -5833,7 +5889,7 @@ export function ClientDetailPage() {
               <button
                 onClick={discardChainExecutor}
                 className="hover:bg-muted flex h-8 w-8 items-center justify-center rounded-md transition-colors"
-                aria-label="Close modal"
+                aria-label={t('components.modal.close', 'Close modal')}
               >
                 <Icons.Cancel01 size={20} className="text-foreground" strokeWidth={1.5} />
               </button>
@@ -6201,36 +6257,9 @@ export function ClientDetailPage() {
         }}
       /> */}
 
-        {/* Assign Role Modal (Employee / Searcher) */}
-        {assignRoleModalMode && (
-          <AssignRoleModal
-            open={true}
-            mode={assignRoleModalMode}
-            currentUserId={
-              assignRoleModalMode === 'employee'
-                ? (profile?.responsible_employee_id ?? null)
-                : (profile?.responsible_searcher_id ?? null)
-            }
-            onClose={() => setAssignRoleModalMode(null)}
-            onAssign={({ userId, reason }) => {
-              assignClientMutation.mutate(
-                {
-                  clientId,
-                  data: {
-                    responsible_employee_id:
-                      assignRoleModalMode === 'employee' ? parseInt(userId) : undefined,
-                    responsible_searcher_id:
-                      assignRoleModalMode === 'searcher' ? parseInt(userId) : undefined,
-                    assignment_reason: reason,
-                  },
-                },
-                {
-                  onSuccess: () => setAssignRoleModalMode(null),
-                }
-              )
-            }}
-          />
-        )}
+        {/* The per-row Assign Role modal is gone: both responsible rows now use
+            the inline AssigneeDropdown above. The "Operators +" and Bulk
+            Actions modals are separate components and keep their behaviour. */}
 
         {/* KAN-335: Detailed calculation (after sale) modal */}
         {calcLoan && (

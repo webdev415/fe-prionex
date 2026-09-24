@@ -16,7 +16,11 @@ import { DateSelect } from '@/components/ui/DateSelect'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { Label } from '@/components/ui/Label'
 import { useCreateProject } from '@/features/projects/hooks/useProjectMutations'
-import type { CreateProjectInput } from '@/features/projects/types'
+import {
+  PROJECT_COUNTRIES,
+  PROJECT_CURRENCIES,
+  type CreateProjectInput,
+} from '@/features/projects/types'
 import { formatPickerDateAsYMD } from '@/lib/dateUtils'
 import { Icons } from '@/lib/icons'
 import {
@@ -25,6 +29,7 @@ import {
   validateCompanyBankingField,
   type CompanyBankingFieldName,
 } from './companyBankingFields'
+import { ProjectChoiceField } from './ProjectChoiceField'
 
 interface CreateProjectModalProps {
   open: boolean
@@ -42,6 +47,8 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
     contract_number: '',
     start_date: '',
     end_date: '',
+    currency: 'UAH',
+    country: 'UA',
     // Company legal & banking details, all optional
     full_company_name: '',
     address: '',
@@ -103,6 +110,8 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
         contract_number: formData.contract_number || undefined,
         start_date: formData.start_date || undefined,
         end_date: noEndDate ? undefined : formData.end_date || undefined,
+        currency: formData.currency,
+        country: formData.country,
         // Spread the serialized company/banking payload (undefined for
         // empty fields so the BE stores NULL, not "").
         ...serializeCompanyBankingFields(formData),
@@ -117,6 +126,8 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
         contract_number: '',
         start_date: '',
         end_date: '',
+        currency: 'UAH',
+        country: 'UA',
         full_company_name: '',
         address: '',
         edrpou_code: '',
@@ -205,6 +216,31 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
                 disabled={createMutation.isPending}
                 variant={errors.code ? 'error' : 'default'}
                 error={errors.code}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <ProjectChoiceField
+                name="country"
+                label={t('pages.projects.modals.country.label')}
+                options={PROJECT_COUNTRIES.map((country) => ({
+                  value: country,
+                  label: t(`pages.projects.modals.country.${country}`),
+                }))}
+                value={formData.country}
+                onChange={(value) => handleChange('country', value)}
+                disabled={createMutation.isPending}
+              />
+              <ProjectChoiceField
+                name="currency"
+                label={t('pages.projects.modals.currency.label')}
+                options={PROJECT_CURRENCIES.map((currency) => ({
+                  value: currency,
+                  label: t(`pages.projects.modals.currency.${currency}`),
+                }))}
+                value={formData.currency}
+                onChange={(value) => handleChange('currency', value)}
+                disabled={createMutation.isPending}
+                hint={t('pages.projects.modals.currency.hint')}
               />
             </div>
             <div className="bg-border h-px w-full" />
@@ -310,7 +346,7 @@ export function CreateProjectModal({ open, onClose, onSuccess }: CreateProjectMo
                 disabled={createMutation.isPending}
                 variant={errors.edrpou_code ? 'error' : 'default'}
                 error={errors.edrpou_code}
-                maxLength={8}
+                maxLength={9}
               />
             </div>
             <Textarea

@@ -26,6 +26,7 @@ import {
   ANALYTICS_TABLE_TD,
   ANALYTICS_TABLE_TH,
 } from './analyticsTableStyles'
+import { withCurrency } from '@/lib/formatters'
 import { piiProps } from '@/lib/openreplay/pii'
 import { PiiTooltip } from '@/components/ui/PiiTooltip'
 
@@ -190,14 +191,14 @@ export function PromisesAndCallbacksSubTab() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <AnalyticsKpiTile
           label={t('pages.training.promises.kpi.total', 'Total promises')}
-          value={`${formatAmount(cards?.total_promises_amount, i18n.language)} ₴`}
+          value={withCurrency(formatAmount(cards?.total_promises_amount, i18n.language), 'suffix')}
           icon={<span className="text-lg leading-none font-semibold">Σ</span>}
           iconBg="bg-[#F7F7F7]"
           iconTone="text-[#05040D]"
         />
         <AnalyticsKpiTile
           label={t('pages.training.promises.kpi.paid', 'Paid')}
-          value={`${formatAmount(cards?.paid_amount, i18n.language)} ₴`}
+          value={withCurrency(formatAmount(cards?.paid_amount, i18n.language), 'suffix')}
           valueTone="text-emerald-600"
           icon={<Icons.Wallet01 size={18} />}
           iconBg="bg-[#ECFDF5]"
@@ -213,7 +214,7 @@ export function PromisesAndCallbacksSubTab() {
         />
         <AnalyticsKpiTile
           label={t('pages.training.promises.kpi.pending', 'Pending')}
-          value={`${formatAmount(cards?.pending_amount, i18n.language)} ₴`}
+          value={withCurrency(formatAmount(cards?.pending_amount, i18n.language), 'suffix')}
           valueTone="text-amber-600"
           icon={<Icons.Clock01 size={18} />}
           iconBg="bg-[#FEFCE8]"
@@ -473,7 +474,7 @@ function PromiseRow({ row }: { row: PromiseCallbackItem }) {
       <td className={ANALYTICS_TABLE_TD}>{row.contract_number ?? '—'}</td>
       <td className={`${ANALYTICS_TABLE_TD} font-semibold text-[#05040D]`}>
         {row.promise_to_pay_amount != null
-          ? `${formatAmount(row.promise_to_pay_amount, i18n.language)} ₴`
+          ? withCurrency(formatAmount(row.promise_to_pay_amount, i18n.language), 'suffix')
           : '—'}
       </td>
       <td className={`${ANALYTICS_TABLE_TD} ${isOverdue ? 'font-medium text-[#EF4444]' : ''}`}>

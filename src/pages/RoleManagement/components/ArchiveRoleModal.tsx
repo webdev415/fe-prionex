@@ -264,7 +264,8 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
                         {t('pages.roles.modals.archive.setToDefault')}
                       </span>
                       <span className="text-foreground w-1/2 text-sm font-light">
-                        {defaultOperatorRole?.name || 'Operator'}
+                        {defaultOperatorRole?.name ||
+                          t('pages.roles.modals.archive.defaultOperatorRole')}
                       </span>
                     </div>
                   </div>

@@ -5,6 +5,8 @@
  * Matches the SemiCircularProgress structure with animated placeholders.
  */
 
+import { useTranslation } from 'react-i18next'
+
 interface SemiCircularProgressSkeletonProps {
   size?: number
   className?: string
@@ -14,6 +16,7 @@ export function SemiCircularProgressSkeleton({
   size = 300,
   className,
 }: SemiCircularProgressSkeletonProps) {
+  const { t } = useTranslation('common')
   const segments = 15
   const segmentWidth = size * 0.055
   const segmentHeight = size * 0.14
@@ -75,7 +78,7 @@ export function SemiCircularProgressSkeleton({
           className="fill-muted animate-pulse text-2xl leading-tight font-light tracking-[-0.48px]"
         >
           {/* Placeholder text */}
-          <tspan opacity="0.5">Completed</tspan>
+          <tspan opacity="0.5">{t('pages.imports.details.statuses.completed')}</tspan>
         </text>
       </svg>
     </div>

@@ -8,6 +8,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import i18n from '@/lib/i18n'
 import type { AxiosError } from 'axios'
 
 import { writeoffsBulkApi } from '../api/bulkUploadApi'
@@ -52,7 +53,11 @@ export function useBulkWriteoffUpload(options?: UseBulkWriteoffUploadOptions) {
         options.onHeaderError(headerError)
         return
       }
-      toast.error('Bulk write-off upload failed.')
+      toast.error(
+        i18n.t('toasts.writeoffs.bulkUploadFailed', {
+          defaultValue: 'Bulk write-off upload failed.',
+        })
+      )
     },
   })
 }
