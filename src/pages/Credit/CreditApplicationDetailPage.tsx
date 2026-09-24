@@ -7,6 +7,7 @@
  */
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { Link, useParams } from 'react-router-dom'
 import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
@@ -18,7 +19,7 @@ import {
   useCreditManualDecision,
   useCreditOverview,
 } from '@/features/credit/hooks/useCredit'
-import type { CreditApiError } from '@/features/credit/api/creditApi'
+import { CreditApiError } from '@/features/credit/api/creditApi'
 import { normalizeDraft } from '@/features/credit/api/draft'
 import { CREDIT_DOCUMENT_META_KINDS } from '@/features/credit/api/enums'
 import type { CreditApplicationDetail, CreditDecisionOutcome } from '@/features/credit/api/types'
@@ -518,6 +519,27 @@ function ApplicationDocuments({ application }: { application: CreditApplicationD
   )
 }
 
+/**
+ * Отказ ручного решения по машинному коду модуля. Три кода — отказы по пропуску
+ * CRM, из которого модуль берёт автора решения: `detail` модуля написан
+ * по-русски, а оператору нужен текст на его языке. Ключи — статическими
+ * литералами: страж словарей видит только их. Прочие отказы — прежним
+ * сообщением: в `validation_failed` оно называет поле, которое надо поправить.
+ */
+function manualDecisionErrorText(t: TFunction, error: unknown): string {
+  if (error instanceof CreditApiError) {
+    switch (error.code) {
+      case 'operator_id_not_numeric':
+        return t('credit.decisionError.operatorIdNotNumeric')
+      case 'operator_id_ambiguous':
+        return t('credit.decisionError.operatorIdAmbiguous')
+      case 'underwriter_not_the_caller':
+        return t('credit.decisionError.underwriterNotTheCaller')
+    }
+  }
+  return (error as Error).message
+}
+
 function ApplicationDecision({
   application,
   canDecide,
@@ -534,7 +556,6 @@ function ApplicationDecision({
   const [amount, setAmount] = useState(String((application.requested_amount_minor ?? 0) / 100))
   const [rationale, setRationale] = useState('')
   const [codes, setCodes] = useState<string[]>([])
-  const [underwriterId, setUnderwriterId] = useState('')
 
   const snapshot = useMemo(
     () => JSON.stringify(decision?.input_snapshot ?? {}, null, 2),
@@ -547,7 +568,6 @@ function ApplicationDecision({
       rationale: rationale.trim(),
       ...(outcome === 'approved' ? { final_amount_minor: Math.round(Number(amount) * 100) } : {}),
       ...(outcome === 'declined' ? { decline_codes: codes } : {}),
-      ...(underwriterId ? { underwriter_id: Number(underwriterId) } : {}),
     })
   }
 
@@ -631,7 +651,7 @@ function ApplicationDecision({
         <Panel title={t('credit.card.manualDecision')}>
           {mutation.isError && (
             <Alert variant="error" className="mb-3">
-              {(mutation.error as CreditApiError).message}
+              {manualDecisionErrorText(t, mutation.error)}
             </Alert>
           )}
           {mutation.isSuccess && (
@@ -664,15 +684,6 @@ function ApplicationDecision({
                 />
               </label>
             )}
-            <label className="text-muted-foreground flex flex-col gap-1.5 text-xs">
-              {t('credit.fields.underwriterId')}
-              <Input
-                type="number"
-                min="1"
-                value={underwriterId}
-                onChange={(event) => setUnderwriterId(event.target.value)}
-              />
-            </label>
           </div>
 
           {outcome === 'declined' && (
