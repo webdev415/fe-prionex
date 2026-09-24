@@ -13,7 +13,7 @@ import { Icons } from '@/lib/icons'
 import { DocumentsAccordion } from './components/DocumentsAccordion'
 import { DocumentUploadModal } from './components/DocumentUploadModal'
 import { LoanCalculationModal } from './components/LoanCalculationModal'
-import { LoanCard, type LoanCardAction } from './components/LoanCard'
+import { LoanCard, type LoanCardAction, type LoanCardLoan } from './components/LoanCard'
 import { LoansCardList } from './components/LoansCardList'
 import { UbkiSubmissionHistory } from './components/UbkiSubmissionHistory'
 import { SaleNotesSection } from './components/SaleNotesSection'
@@ -174,6 +174,7 @@ import { callDialogBlockedReason } from './callDialogGate'
 import { CallingWindowTooltip } from '@/features/calls/components/CallingWindowTooltip'
 import { useCallOrigination } from '@/features/calls/hooks/useCallOrigination'
 import { useAuthStore } from '@/stores/authStore'
+import { useChainExecutorStore } from '@/stores/chainExecutorStore'
 import { backendToFrontendPaymentMethod } from '@/features/payments/utils'
 import { PaymentMethodCell } from '@/features/payments/components/PaymentMethodCell'
 import { useUserDepartment } from '@/features/users'
@@ -208,6 +209,14 @@ import {
   useMessagingClientHistory,
 } from '@/features/messaging'
 import { useOperators } from '@/features/users/hooks/useUsers'
+import { ClientCreditBlock } from '@/pages/Credit/components/ClientCreditBlock'
+import { isCreditModuleEnabled } from '@/features/credit/api/creditModuleFlag'
+import {
+  DEBT_ORIGIN_CREDIT_MODULE,
+  isCreditProjection,
+  splitDebtsByOrigin,
+} from '@/features/clients/api/creditProjection'
+import type { DebtDetail } from '@/features/clients/api/types'
 import { piiProps } from '@/lib/openreplay/pii'
 import { PiiTooltip } from '@/components/ui/PiiTooltip'
 
@@ -277,6 +286,120 @@ const ENABLE_BULK_UBKI_SUBMISSION = true
 
 /** Ties the priority chip's ``aria-controls`` to the panel it discloses. */
 const V3_PANEL_ID = 'v3-priority-panel'
+
+/**
+ * Купленный долг в форму строки списка «Позики».
+ *
+ * Вынесено из большого `useMemo` карточки в отдельную функцию не ради красоты:
+ * с WS-11 (14-7b) тот же маппинг нужен ВТОРОМУ списку — списку показа, куда
+ * входит и кредит модуля. Копия маппинга разошлась бы с оригиналом на первом
+ * же новом поле, и обе стороны остались бы зелёными.
+ */
+function mapCollectionDebtToRow(d: DebtDetail) {
+  return {
+    id: d.id,
+    loanNumber: d.contract_number,
+    issueDate: formatDate(d.credit_issued_date ?? undefined),
+    counterparty: d.seller_company,
+    // If the per-debt purchase_date is empty, fall back to
+    // the linked factoring agreement's contract_purchase_date.
+    saleDate: formatDate(
+      d.purchase_date ?? d.factoring_agreement?.contract_purchase_date ?? undefined
+    ),
+    // Factoring chain surfaced via the row-expansion "Info" button.
+    sellerLegalName: d.seller_legal_name ?? null,
+    factoringAgreementPreviousLender: d.factoring_agreement?.previous_lender ?? null,
+    factoringAgreementPurchaseDate: d.factoring_agreement?.contract_purchase_date
+      ? formatDate(d.factoring_agreement.contract_purchase_date)
+      : null,
+    principalAmount: Number(d.principal_amount ?? 0),
+    principalDebt: d.principal_debt != null ? Number(d.principal_debt) : null,
+    remainingDebtAmount: Number(d.remaining_debt_amount ?? 0),
+    totalToReturn: Number(d.total_to_return ?? 0),
+    // KAN-994 — closing-coefficient band, or null when no tooltip is due
+    // (no principal debt, no matching age range, no purchase date). The
+    // backend does the arithmetic and the date comparison so every viewer
+    // sees the same figures; the card renders the strings verbatim.
+    closingCoefficient: d.closing_coefficient ?? null,
+    // KAN-784 AC2: fully-returned loan that fell short of the principal
+    // guard — auto-close was blocked, so it needs operator-driven closure.
+    needsManualClosureReview: d.needs_manual_closure_review ?? false,
+    // Closure date — surfaced for closed debts so the user can see it and,
+    // with the close_client_debt permission, edit it after closure.
+    creditClosedDate: d.credit_closed_date ?? null,
+    creditReopenedDate: d.credit_reopened_date ?? null,
+    // Legacy TABLE460.f53 — eligible-for-return amount carried over from
+    // the sale. Surfaced as its own column only when at least one loan row
+    // has it and it diverges from remainingDebtAmount (see loanColumns).
+    eligibleForReturn: d.legacy_f53 != null ? Number(d.legacy_f53) : null,
+    // KAN-993 — "Debt term (days)" card field (credit_term_days already
+    // populated on the backend; surfaced on the redesigned Loans card).
+    creditTermDays: d.credit_term_days ?? null,
+    status: d.status,
+    // UBKI outbound submission state (credit bureau)
+    sentToCreditBureau: d.sent_to_credit_bureau ?? false,
+    creditBureauSentDate: d.credit_bureau_sent_date ?? null,
+  }
+}
+
+/**
+ * ПЯТНАДЦАТЬ полей формы строки, у которых для нашего кредита значения НЕТ.
+ *
+ * Они заполняются пустыми не для показа, а потому что у `LoanCardLoan` нет ни
+ * одного опционального поля из старых двадцати. Рисовать их нельзя: карточка
+ * ветвится по `origin` и эти поля пропускает (см. `LoanCard`). Ноль на экране
+ * — это ФАКТ («основного боргу нема»), который оператор произнесёт человеку
+ * вслух, а семь прочерков подряд читаются как «данные потерялись».
+ */
+const EMPTY_FACTORING_FIELDS = {
+  issueDate: '',
+  counterparty: '',
+  saleDate: '',
+  sellerLegalName: null,
+  factoringAgreementPreviousLender: null,
+  factoringAgreementPurchaseDate: null,
+  principalDebt: null,
+  totalToReturn: 0,
+  closingCoefficient: null,
+  creditClosedDate: null,
+  eligibleForReturn: null,
+  creditTermDays: null,
+  sentToCreditBureau: false,
+  creditBureauSentDate: null,
+  needsManualClosureReview: false,
+} as const
+
+/**
+ * Проекция кредитного модуля в форму строки списка.
+ *
+ * Заполняются только те поля, значение которых у проекции ЕСТЬ: номер
+ * договора, статус, две суммы — плюс три признака происхождения, по которым
+ * карточка решает, что рисовать. Суммы приходят в major-единицах и передаются
+ * как есть: делить на 100 здесь нечего.
+ */
+function mapCreditProjectionToRow(d: DebtDetail): LoanCardLoan {
+  return {
+    ...EMPTY_FACTORING_FIELDS,
+    id: d.id,
+    loanNumber: d.contract_number,
+    status: d.status,
+    // 🔴 «Сума позики» — из `principal_amount`, того же столбца, что у
+    // купленной строки (`mapCollectionDebtToRow`): модуль кладёт туда
+    // начисленное тело, то есть сумму выдачи. `original_debt_amount`
+    // client-service НЕ отдаёт вовсе — его нет ни в `DebtDetail` ответа
+    // карточки, ни в словаре, который его наполняет, — и `Number(undefined ?? 0)`
+    // печатал «Сума позики 0,00 CAD» на каждом кредите. Отсутствие — не ноль:
+    // `null` карточка печатает прочерком.
+    principalAmount: d.principal_amount != null ? Number(d.principal_amount) : null,
+    remainingDebtAmount: Number(d.remaining_debt_amount ?? 0),
+    // Значение берётся у правила, а не переписывается литералом: правило по
+    // происхождению строки живёт в одном файле, и второй его экземпляр в
+    // карточке разошёлся бы с первым молча.
+    origin: DEBT_ORIGIN_CREDIT_MODULE,
+    currency: d.currency ?? null,
+    lifecycleDetail: d.lifecycle_detail ?? null,
+  }
+}
 
 export function ClientDetailPage() {
   const { t, i18n } = useTranslation('common')
@@ -416,6 +539,13 @@ export function ClientDetailPage() {
     | 'activity'
     | 'ta-chains'
   >('loans')
+  /**
+   * Блок «Кредит (наш)» на этом стенде. Читается ОДНОЙ функцией, потому что
+   * значение нужно трём местам сразу — полосе вкладок, гейту данных и фильтру
+   * списка «Позики»; разойдясь, они дают «вкладки нет, а долг из «Позики» уже
+   * убрали», то есть долг пропадает с экрана целиком.
+   */
+  const creditBlockEnabled = isCreditModuleEnabled()
   const [activeCallSmsTab, setActiveCallSmsTab] = useState<'all' | 'calls' | 'sms' | 'messaging'>(
     'all'
   )
@@ -446,6 +576,36 @@ export function ClientDetailPage() {
     number | null
   >(null)
   const chainExecutorMinimizeRef = useRef<(() => void) | null>(null)
+  const clearMinimizedChainExecutor = useChainExecutorStore((s) => s.clear)
+
+  /** Forget which template/phone this open was launched with. */
+  const resetChainExecutorLaunchArgs = useCallback(() => {
+    setIsChainExecutorOpen(false)
+    setChainExecutorContactSource(null)
+    setChainExecutorPrefilledPhone(null)
+    setChainExecutorPrefilledPhoneSource(null)
+    setChainExecutorInitialTemplateId(null)
+  }, [])
+
+  /**
+   * Abandon the TA fill-in outright — ESC and the × button (KAN-1112).
+   *
+   * Distinct from minimizing, which deliberately KEEPS the entered steps so the
+   * operator can come back to them. Abandoning must leave nothing behind: a
+   * surviving minimized session is not merely stale state, it actively blocks
+   * the next hotkey — ``decideHotkeyLaunch`` refuses to launch while one exists
+   * (``blocked: 'minimized'``).
+   *
+   * That is the flow the ticket is about: wrong hotkey → ESC → correct hotkey.
+   * Without the clear, the second press is swallowed and the operator is stuck
+   * with a template they never wanted.
+   *
+   * No confirmation prompt, per the ticket — ESC is expected to be instant.
+   */
+  const discardChainExecutor = useCallback(() => {
+    clearMinimizedChainExecutor()
+    resetChainExecutorLaunchArgs()
+  }, [clearMinimizedChainExecutor, resetChainExecutorLaunchArgs])
 
   // Call origination hook (provides user, call state, handlers)
   const userTimezone = useAuthStore((state) => state.user?.timezone)
@@ -527,19 +687,71 @@ export function ClientDetailPage() {
     error: profileError,
   } = useClientProfile(clientId, isValidClientId)
   const { data: loans = [], isLoading: isLoansLoading } = useClientLoans(clientId, isValidClientId)
+  /**
+   * 🔴 ОДНО разделение на весь экран, а не выборка по месту: две копии правила
+   * разошлись бы на первом же новом значении `origin`.
+   *
+   * `collectionDebts` — то, что остаётся предметом взыскания: реструктуризация,
+   * списание, платёж, УБКИ, сообщения, история ЦД (список «Позики» с 14-7b
+   * читает список ПОКАЗА ниже, а не этот выход). Кредит,
+   * который мы выдали сами, ни одним из этих действий не ведётся — CRM им не
+   * владеет, и строка, попавшая в такое действие, означала бы списание или
+   * отправку в бюро по чужой записи.
+   *
+   * `creditProjections` — то, что разворачивает карта кредитного модуля под
+   * строкой списка.
+   *
+   * `displayDebts` — ПОЛНЫЙ список для показа; из него и только из него
+   * собирается `displayLoans` ниже. Разделение идёт БЕЗУСЛОВНО: флаг стенда
+   * больше не параметр правила, потому что принадлежность долга от переменной
+   * сборки не зависит (прежде выключенный флаг возвращал кредит во все
+   * действия взыскания разом).
+   */
+  const { collectionDebts, creditProjections, displayDebts } = useMemo(
+    () => splitDebtsByOrigin(loans),
+    [loans]
+  )
+  /**
+   * Строки списка «Позики» — купленные долги И наш кредит, в порядке ответа
+   * client-service.
+   *
+   * 🔴 Единственный потребитель третьего выхода правила. Ни одно действие
+   * взыскания этот список не получает: у них остаётся очищенный список, и
+   * страж P-24 запрещает передачу `displayLoans`/`displayDebts` по имени.
+   */
+  const displayLoans = useMemo<LoanCardLoan[]>(
+    () =>
+      displayDebts.map((d) =>
+        isCreditProjection(d) ? mapCreditProjectionToRow(d) : mapCollectionDebtToRow(d)
+      ),
+    [displayDebts]
+  )
+  /**
+   * Развёрнутые карты кредита — по образцу `rrExpandedIds` выше. Разворотов
+   * может быть несколько сразу: у клиента бывает не один кредит.
+   */
+  const [creditExpandedIds, setCreditExpandedIds] = useState<Set<number>>(new Set())
+  const toggleCreditExpand = (id: number) =>
+    setCreditExpandedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   // Authoritative client detail (carries server-computed ``total_debt``) — same
   // hook + query key the Debt Summary page uses, so react-query dedupes the call.
   // Powers the RecordPaymentModal's ``currentDebt`` prop with the identical value.
   const { data: clientDetail } = useClient(clientId, isValidClientId)
-  const eligibleLoansForRr = useMemo(() => (loans ?? []).filter(isOpenLoan), [loans])
+  // Реструктуризация — действие взыскания: кредит модуля в неё не попадает.
+  const eligibleLoansForRr = useMemo(() => collectionDebts.filter(isOpenLoan), [collectionDebts])
   const openLoanOptions = useMemo(
     () =>
-      (loans ?? []).filter(isOpenLoan).map((l) => ({
+      collectionDebts.filter(isOpenLoan).map((l) => ({
         id: l.id,
         loanNumber: l.contract_number,
         totalToRepay: Number(l.remaining_debt_amount ?? 0),
       })),
-    [loans]
+    [collectionDebts]
   )
   const hasEligibleLoansForRr = eligibleLoansForRr.length > 0
   const { data: restructuringAgreements = [] } = useClientRestructuringAgreements(
@@ -946,20 +1158,23 @@ export function ClientDetailPage() {
     [paymentsSection, reversedPaymentIds]
   )
   const hasEligibleLoanForWriteoff = useMemo(
-    () => (loans ?? []).some((d) => d.status === 'active'),
-    [loans]
+    () => collectionDebts.some((d) => d.status === 'active'),
+    [collectionDebts]
   )
   // Debt ids of the client's already-loaded loans, used for the
   // "Send all loans to UBKI" bulk action and the submission-history filter.
-  const ubkiLoanIds = useMemo(() => (loans ?? []).map((d) => d.id), [loans])
+  // Кредит модуля сюда не попадает: о нём модуль отчитывается в бюро сам
+  // (собственное поле `default_reported_at` его карточки), и вторая отправка
+  // была бы повторной передачей тех же данных под нашим именем.
+  const ubkiLoanIds = useMemo(() => collectionDebts.map((d) => d.id), [collectionDebts])
   // debt id + human loan number (contract_number) for the history panel display.
   const ubkiLoans = useMemo(
     () =>
-      (loans ?? []).map((d) => ({
+      collectionDebts.map((d) => ({
         id: d.id,
         loanNumber: d.contract_number ?? String(d.id),
       })),
-    [loans]
+    [collectionDebts]
   )
   const handleBulkSubmitToUbki = () => {
     if (ubkiLoanIds.length === 0) return
@@ -1253,51 +1468,12 @@ export function ClientDetailPage() {
         author: c.created_by_name ?? `User #${c.created_by}`,
       })),
       tags: clientTags ?? [],
-      // Loans mapped from DebtDetail to UI shape
-      loans: (loans ?? []).map((d) => ({
-        id: d.id,
-        loanNumber: d.contract_number,
-        issueDate: formatDate(d.credit_issued_date ?? undefined),
-        counterparty: d.seller_company,
-        // If the per-debt purchase_date is empty, fall back to
-        // the linked factoring agreement's contract_purchase_date.
-        saleDate: formatDate(
-          d.purchase_date ?? d.factoring_agreement?.contract_purchase_date ?? undefined
-        ),
-        // Factoring chain surfaced via the row-expansion "Info" button.
-        sellerLegalName: d.seller_legal_name ?? null,
-        factoringAgreementPreviousLender: d.factoring_agreement?.previous_lender ?? null,
-        factoringAgreementPurchaseDate: d.factoring_agreement?.contract_purchase_date
-          ? formatDate(d.factoring_agreement.contract_purchase_date)
-          : null,
-        principalAmount: Number(d.principal_amount ?? 0),
-        principalDebt: d.principal_debt != null ? Number(d.principal_debt) : null,
-        remainingDebtAmount: Number(d.remaining_debt_amount ?? 0),
-        totalToReturn: Number(d.total_to_return ?? 0),
-        // KAN-994 — closing-coefficient band, or null when no tooltip is due
-        // (no principal debt, no matching age range, no purchase date). The
-        // backend does the arithmetic and the date comparison so every viewer
-        // sees the same figures; the card renders the strings verbatim.
-        closingCoefficient: d.closing_coefficient ?? null,
-        // KAN-784 AC2: fully-returned loan that fell short of the principal
-        // guard — auto-close was blocked, so it needs operator-driven closure.
-        needsManualClosureReview: d.needs_manual_closure_review ?? false,
-        // Closure date — surfaced for closed debts so the user can see it and,
-        // with the close_client_debt permission, edit it after closure.
-        creditClosedDate: d.credit_closed_date ?? null,
-        creditReopenedDate: d.credit_reopened_date ?? null,
-        // Legacy TABLE460.f53 — eligible-for-return amount carried over from
-        // the sale. Surfaced as its own column only when at least one loan row
-        // has it and it diverges from remainingDebtAmount (see loanColumns).
-        eligibleForReturn: d.legacy_f53 != null ? Number(d.legacy_f53) : null,
-        // KAN-993 — "Debt term (days)" card field (credit_term_days already
-        // populated on the backend; surfaced on the redesigned Loans card).
-        creditTermDays: d.credit_term_days ?? null,
-        status: d.status,
-        // UBKI outbound submission state (credit bureau)
-        sentToCreditBureau: d.sent_to_credit_bureau ?? false,
-        creditBureauSentDate: d.credit_bureau_sent_date ?? null,
-      })),
+      // Loans mapped from DebtDetail to UI shape (`mapCollectionDebtToRow`).
+      // 🔴 Источник здесь ОСТАЁТСЯ очищенным: этот список читают не только
+      // «Позики» — он часть большого мемо карточки, и на нём стоят действия
+      // взыскания. Список ПОКАЗА собирается отдельно (`displayLoans`), и в
+      // «Позики» уходит именно он.
+      loans: collectionDebts.map(mapCollectionDebtToRow),
       // Payments mapped from PaymentResponse to UI shape
       // Split into system payments (payment_date >= purchase_date) and
       // primary creditor payments (payment_date < purchase_date).
@@ -1470,6 +1646,7 @@ export function ClientDetailPage() {
   }, [
     profile,
     loans,
+    collectionDebts,
     paymentsSection,
     callSmsHistory,
     tasks,
@@ -2367,6 +2544,25 @@ export function ClientDetailPage() {
     )
   }
 
+  /**
+   * WS-11 (14-7b) — карта класса А под строкой своего кредита.
+   *
+   * Отбор идёт по номеру договора: строк столько, сколько проекций, и каждая
+   * обязана развернуть СВОЙ кредит — дверь отдаёт все кредиты клиента разом.
+   * Выключенный флаг стенда гасит карту (ручки при нём и так нет), но НЕ
+   * трогает ни строку, ни пометку, ни исключение из действий взыскания.
+   */
+  const renderCreditPanel = (loan: LoanCardLoan) =>
+    creditBlockEnabled ? (
+      <ClientCreditBlock
+        clientId={clientId}
+        projections={creditProjections}
+        contractNumber={loan.loanNumber}
+        enabled={isValidClientId}
+        variant="row"
+      />
+    ) : undefined
+
   // KAN-339: the inline RR detail line rendered under a loan row for every
   // restructuring agreement it has (any status). Replaces the removed RR grid —
   // same fields (amount / connection date / total to repay / status) plus the
@@ -3245,7 +3441,17 @@ export function ClientDetailPage() {
                     {t('pages.clients.detail.tin')}
                   </label>
                   <p className="text-foreground ml-2 flex-1 truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                    {client.personalDetails.tin}
+                    {/* У клиента, которого кредитный модуль опознал по
+                        подтверждённому в кабинете e-mail, ИНН нет вовсе
+                        (ревизия 176 client-service). Пустая строка на этом
+                        месте читается как дефект загрузки, поэтому здесь стоит
+                        ОБЪЯСНЕНИЕ — текст, а не сам e-mail: карточка не
+                        разглашает больше, чем разглашала. */}
+                    {client.personalDetails.tin
+                      ? client.personalDetails.tin
+                      : profile?.identity_key === 'email'
+                        ? t('credit.clientBlock.identifiedByEmail')
+                        : '—'}
                   </p>
                 </div>
                 <div className="flex min-h-8 items-center self-stretch p-0">
@@ -4186,6 +4392,15 @@ export function ClientDetailPage() {
                       </span>
                     </button>
                   )}
+                  {/* Девятой вкладки «Кредит (наш)» здесь БОЛЬШЕ НЕТ (WS-11,
+                      14-7b): кредит модуля стал строкой в «Позики» с чипом
+                      «кредит (наш)», а карта разворачивается под самой строкой.
+                      Решение владельца: операторы работают в привычном списке,
+                      вкладки не умножаются.
+                      ⚠️ Ключ `pages.clients.detail.tabs.credit` и строка в
+                      `TAB_LABEL_KEYS` НАМЕРЕННО остались: лента активности
+                      показывает уже записанные переключения на эту вкладку, и
+                      без ключа оператор увидел бы машинное слово `credit`. */}
                 </div>
               </div>
 
@@ -4206,7 +4421,7 @@ export function ClientDetailPage() {
                       </div>
                     ) : (
                       <LoansCardList
-                        loans={client.loans}
+                        loans={displayLoans}
                         renderLoan={(loan, isClosed) => {
                           const hasRr = rrDebtIds.has(loan.id)
                           // A loan can carry several agreements; the inline panel
@@ -4380,6 +4595,19 @@ export function ClientDetailPage() {
                                 setSelectedLoanId((prev) => (prev === loan.id ? null : loan.id))
                               }
                               actions={actions}
+                              creditExpanded={creditExpandedIds.has(loan.id)}
+                              // Ручки нет при выключенном флаге стенда: пометка
+                              // у строки остаётся, разворачивать нечего.
+                              onToggleCredit={
+                                creditBlockEnabled ? () => toggleCreditExpand(loan.id) : undefined
+                              }
+                              // 🔴 Панель передаётся ТОЛЬКО развёрнутой: узел,
+                              // отданный сюда свёрнутым, смонтировался бы и
+                              // отправил запрос в модуль при открытии «Позики»
+                              // у каждого клиента (гейт ленивости KAN-610).
+                              creditPanel={
+                                creditExpandedIds.has(loan.id) ? renderCreditPanel(loan) : undefined
+                              }
                             />
                           )
                         }}
@@ -5545,6 +5773,12 @@ export function ClientDetailPage() {
                     />
                   </div>
                 )}
+
+                {/* Тела вкладки «Кредит (наш)» здесь больше нет: карта живёт
+                    под строкой списка «Позики» (`renderCreditPanel`). Гейт
+                    ленивости KAN-610 никуда не делся — он переехал на
+                    монтирование панели: пока строку не развернули, блок не
+                    смонтирован и запрос в модуль не уходит. */}
               </div>
             </div>
           </div>
@@ -5626,20 +5860,16 @@ export function ClientDetailPage() {
           {/* Content based on active tab */}
           {activeCommentTab === 'ta-chains' && (
             <div className="flex w-full flex-col gap-4">
-              <TAInteractionHistory clientId={clientId} debts={loans} />
+              <TAInteractionHistory clientId={clientId} debts={collectionDebts} />
             </div>
           )}
 
           {/* Chain Executor Modal */}
           <Modal
             open={isChainExecutorOpen}
-            onClose={() => {
-              setIsChainExecutorOpen(false)
-              setChainExecutorContactSource(null)
-              setChainExecutorPrefilledPhone(null)
-              setChainExecutorPrefilledPhoneSource(null)
-              setChainExecutorInitialTemplateId(null)
-            }}
+            /* ESC lands here (Radix onEscapeKeyDown -> onOpenChange). KAN-1112:
+               it must reset, not preserve — same as the × button below. */
+            onClose={discardChainExecutor}
             maxWidth="xl"
             showCloseButton={false}
             /* Marks this dialog as the TA executor's own so a hotkey pressed
@@ -5657,13 +5887,7 @@ export function ClientDetailPage() {
                 <Icons.Remove02 size={20} className="text-foreground" strokeWidth={1.5} />
               </button>
               <button
-                onClick={() => {
-                  setIsChainExecutorOpen(false)
-                  setChainExecutorContactSource(null)
-                  setChainExecutorPrefilledPhone(null)
-                  setChainExecutorPrefilledPhoneSource(null)
-                  setChainExecutorInitialTemplateId(null)
-                }}
+                onClick={discardChainExecutor}
                 className="hover:bg-muted flex h-8 w-8 items-center justify-center rounded-md transition-colors"
                 aria-label={t('components.modal.close', 'Close modal')}
               >
@@ -5675,25 +5899,16 @@ export function ClientDetailPage() {
                 clientId={clientId}
                 clientName={client?.fullName ?? `Client #${clientId}`}
                 responsibleEmployeeId={profile?.responsible_employee_id ?? null}
-                debts={loans}
+                debts={collectionDebts}
                 contactSource={chainExecutorContactSource}
                 prefilledPhone={chainExecutorPrefilledPhone}
                 prefilledPhoneSource={chainExecutorPrefilledPhoneSource}
                 initialTemplateId={chainExecutorInitialTemplateId}
-                onSave={() => {
-                  setIsChainExecutorOpen(false)
-                  setChainExecutorContactSource(null)
-                  setChainExecutorPrefilledPhone(null)
-                  setChainExecutorPrefilledPhoneSource(null)
-                  setChainExecutorInitialTemplateId(null)
-                }}
-                onMinimize={() => {
-                  setIsChainExecutorOpen(false)
-                  setChainExecutorContactSource(null)
-                  setChainExecutorPrefilledPhone(null)
-                  setChainExecutorPrefilledPhoneSource(null)
-                  setChainExecutorInitialTemplateId(null)
-                }}
+                onSave={resetChainExecutorLaunchArgs}
+                /* NOT discardChainExecutor: minimizing exists precisely to keep
+                   the entered steps, and ChainExecutor has just written them to
+                   the store. */
+                onMinimize={resetChainExecutorLaunchArgs}
                 onMinimizeRef={chainExecutorMinimizeRef}
               />
             </ModalContent>
@@ -5793,7 +6008,7 @@ export function ClientDetailPage() {
             setEditingInteraction(null)
           }}
           interaction={editingInteraction}
-          loanOptions={loans
+          loanOptions={collectionDebts
             // Edit modal always lists every loan, including closed ones,
             // so a historical interaction's saved credit value is never
             // orphaned when its debt has since been closed. The new
@@ -5848,7 +6063,11 @@ export function ClientDetailPage() {
           onClose={() => setIsRecordPaymentModalOpen(false)}
           customerName={client.fullName}
           currentDebt={Number(clientDetail?.total_debt ?? 0)}
-          debts={loans}
+          // ⚠️ `currentDebt` выше — серверная сумма `total_debt`, и кредит
+          // модуля в неё ВХОДИТ: чинится на стороне client-service отдельной
+          // единицей-эрратой API-L1 (В-3 API-L4). Список долгов здесь уже
+          // очищен, сумма — ещё нет.
+          debts={collectionDebts}
           canVerify={canVerifyPayment}
           clientId={client.id}
           onSave={handleRecordPayment}
@@ -7006,7 +7225,7 @@ export function ClientDetailPage() {
             setIsWriteoffOpen(false)
             setWriteoffInitialDebtId(null)
           }}
-          debts={loans ?? []}
+          debts={collectionDebts}
           initialDebtId={writeoffInitialDebtId}
         />
 

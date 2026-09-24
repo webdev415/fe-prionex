@@ -73,7 +73,8 @@
     "toggleMenu": "Mostrar u ocultar menú",
     "scoringV3Monitoring": "Informe de ejecución en sombra v3",
     "scoringV3Settings": "Configuración de puntuación v3",
-    "operatorWorkList": "Lista de trabajo prioritaria"
+    "operatorWorkList": "Lista de trabajo prioritaria",
+    "creditUnderwriting": "Cola de revisión manual"
   },
   "dialer": {
     "phone": {
@@ -976,7 +977,10 @@
       "answerInProgress": "La respuesta aún se está preparando — aparecerá aquí cuando esté lista",
       "attachmentFrameTitle": "Vista previa del archivo adjunto",
       "attachmentRemoveShort": "Quitar archivo adjunto",
-      "reasoningSteps_many": "{{count}} pasos"
+      "reasoningSteps_many": "{{count}} pasos",
+      "thinkingUsedOn": "31B · con razonamiento",
+      "thinkingUsedOff": "31B · sin razonamiento",
+      "thinkingUsedMismatch": "El servidor respondió de forma distinta al ajuste"
     },
     "lawyerWorkplace": {
       "navAria": "Navegación del área jurídica",
@@ -6849,7 +6853,8 @@
           "callSms": "Llamada / SMS",
           "taChains": "Cadenas AO",
           "searcherComments": "Comentarios del localizador",
-          "activity": "Actividad"
+          "activity": "Actividad",
+          "credit": "Crédito (propio)"
         },
         "relatedTags": {
           "loading": "Cargando etiquetas relacionadas…",
@@ -7068,7 +7073,9 @@
         "rrDraftAlreadyExists": "Este crédito ya tiene un borrador de acuerdo de reestructuración.",
         "documentsCount_one": "{{count}} doc.",
         "documentsCount_many": "{{count}} docs.",
-        "documentsCount_other": "{{count}} docs."
+        "documentsCount_other": "{{count}} docs.",
+        "creditModuleTag": "crédito propio",
+        "creditModuleActionsHint": "Las acciones están en el módulo de crédito"
       },
       "debtSummary": {
         "title": "Resumen de la deuda",
@@ -12321,7 +12328,16 @@
       "allocation": "Asignación",
       "totalRow": "Total",
       "interest": "Intereses",
-      "fee": "Comisión"
+      "fee": "Comisión",
+      "lastActivity": "Última actividad",
+      "step": "Paso",
+      "onStep": "En el paso",
+      "application": "Solicitud",
+      "reasons": "Motivo de revisión",
+      "referred": "Derivada",
+      "waiting": "En cola",
+      "assigned": "Asignada",
+      "disbursed": "Desembolsado"
     },
     "fields": {
       "name": "Nombre",
@@ -12408,7 +12424,23 @@
       "signedAt": "Firmado el",
       "signHash": "SHA-256 del documento",
       "signSession": "Sesión / IP",
-      "templateVersion": "Versión de la plantilla"
+      "templateVersion": "Versión de la plantilla",
+      "disbursementAmount": "Importe del pago",
+      "disbursementMethod": "Método",
+      "settledAt": "Liquidado el",
+      "failedAt": "Falló el",
+      "failureCode": "Motivo",
+      "timeSource": "Origen de la marca de tiempo",
+      "provider": "Proveedor",
+      "providerTxId": "ID de transacción del proveedor",
+      "providerStatus": "Estado del proveedor",
+      "clientTransactionId": "Nuestra clave de operación",
+      "retry": "Reintento",
+      "applicationId": "ID de solicitud",
+      "externalApplicationId": "ID externo de solicitud",
+      "decisionId": "ID de decisión",
+      "loanId": "ID de préstamo",
+      "loanAgeDays": "Días desde el desembolso"
     },
     "tabs": {
       "form": "Formulario de solicitud",
@@ -12532,7 +12564,26 @@
       "scheduleVersionEmpty": "La versión {{version}} ({{reason}}) no tiene cuotas — están en la versión {{previous}}.",
       "openPreviousVersion": "Abrir",
       "paymentReversedOn": "Revertido el {{date}}",
-      "paymentsReversedHint": "De los pagos mostrados, {{count}} se revirtieron por {{amount}} — ese importe no se contabiliza en la deuda, el dinero volvió al banco."
+      "paymentsReversedHint": "De los pagos mostrados, {{count}} se revirtieron por {{amount}} — ese importe no se contabiliza en la deuda, el dinero volvió al banco.",
+      "noJournalInBucket": "No hay asientos en este grupo.",
+      "journalBucketReversalUnknown": "Con un filtro de grupo, el asiento compensatorio puede quedar fuera de la selección.",
+      "idleFor": "última actividad: hace {{duration}}",
+      "outstandingLoans": "Préstamos pendientes",
+      "cooldownUntil": "Periodo de espera tras rechazo hasta {{date}}",
+      "disbursement": "Progreso de la transferencia",
+      "disbursementNotSent": "El pago nunca se envió: ni un solo intento de transferencia.",
+      "disbursementUpdated": "actualizado {{when}}",
+      "disbursementReview": "Pendiente de revisión: {{reason}} — desde {{since}}",
+      "disbursementReviewNoDate": "Pendiente de revisión: {{reason}}",
+      "disbursementUnknownCode": "Código «{{code}}»: redacción propia del proveedor, aún no la hemos traducido",
+      "disbursementObservedTime": "El proveedor no nos indicó la hora de liquidación: la dedujimos del momento en que lo supimos. El plazo de cancelación de dos días (CA s.124.4) se cuenta desde esta fecha: la fecha límite del cliente es estimada, no conocida.",
+      "disbursementNoRetryButton": "Aquí no hay botón de reintento deliberadamente: el comando de reanudación solo acepta el estado «fallido» con la revisión cerrada, no exige motivo de reintento, no acepta clave de idempotencia y no registra quién lo pulsó. Por ahora, un desarrollador del módulo realiza el reintento a petición.",
+      "disbursementRetryContradiction": "El módulo marca el reintento como permitido, pero el comando de reanudación lo rechazará: el indicador del módulo es más amplio que la condición del comando. Alinearlos corresponde al módulo.",
+      "disbursementUnknown": "Se desconoce el estado del desembolso: el núcleo no respondió. Esto NO significa que no se haya hecho ninguna transferencia: puede haber salido y fallado. Actualiza o vuelve más tarde.",
+      "stagesTitle": "Recorrido del cliente",
+      "stagesHint": "los mismos cinco pasos que el cliente ve en su portal",
+      "stageOfTotal": "paso {{index}} de {{total}}",
+      "identifiers": "Identificadores"
     },
     "stand": {
       "notice": "Etapa 1: el módulo funciona fuera de Kong y aún no conoce los roles del CRM — el rol de abajo es una simulación del entorno de pruebas (WS-20 lo sustituirá por JWT).",
@@ -12544,7 +12595,8 @@
       "tabs": {
         "products": "Productos de crédito",
         "parameters": "Configuración del módulo",
-        "integrations": "Integraciones"
+        "integrations": "Integraciones",
+        "switches": "Interruptores de emergencia"
       },
       "needRiskManager": "Esta sección está disponible para el gestor de riesgos: contiene los umbrales y la configuración de los productos.",
       "mutationDisabled": "La edición requiere un segundo aprobador (UW-04) — disponible cuando lleguen los roles del CRM (WS-20).",
@@ -12823,7 +12875,8 @@
     },
     "filters": {
       "dpdFrom": "Días de mora",
-      "any": "Cualquiera"
+      "any": "Cualquiera",
+      "anyBucket": "Cualquier grupo"
     },
     "unavailable": {
       "title": "El módulo de crédito no está desplegado en este entorno",
@@ -12838,6 +12891,165 @@
       "clear": "Borrar",
       "present": "Hay una clave guardada para esta pestaña.",
       "absent": "No hay clave guardada: el módulo responde 401."
+    },
+    "clientBlock": {
+      "arrears": "Mora",
+      "cancelled": "Cancelado",
+      "closed": "Cerrado",
+      "closedThrough": "Cerrado mediante",
+      "defaultReported": "Impago reportado",
+      "disbursed": "Desembolsado",
+      "dpd": "DPD",
+      "identifiedByEmail": "Identificado por correo electrónico (OTP del portal)",
+      "issued": "Otorgado",
+      "jurisdiction": "Jurisdicción",
+      "linkNotFound": "El módulo no confirmó los préstamos de este cliente: se muestra la proyección, el vínculo se está resolviendo",
+      "maturity": "Vencimiento",
+      "moduleUnavailable": "El módulo de crédito no está disponible en este entorno",
+      "nextPayment": "Próximo pago",
+      "noContact": "Sin contacto 28 días",
+      "noLoans": "Sin préstamos",
+      "openInModule": "Abrir en el módulo de crédito",
+      "outstanding": "Saldo pendiente",
+      "overdue": "Vencido",
+      "paid": "Pagado",
+      "product": "Producto",
+      "projectionAsOf": "Proyección a fecha de",
+      "projectionOnly": "Los datos completos requieren credit.loans.read",
+      "returnPending": "Devolución pendiente",
+      "status": "Estado",
+      "temporaryFailure": "Los datos del módulo no están disponibles ahora mismo: vuelve a abrir la pestaña",
+      "tinOptional": "(opcional)",
+      "title": "Crédito (propio)"
+    },
+    "idle": {
+      "underHour": "menos de una hora",
+      "hoursShort": "{{value}} h",
+      "daysShort": "{{value}} d",
+      "sinceCreated": "desde la creación"
+    },
+    "switches": {
+      "rule": "Apagar un interruptor detiene solo lo NUEVO. La gestión de los préstamos ya otorgados nunca se detiene: se aceptan pagos, se mantienen el calendario y los documentos, y el derecho de desistimiento de dos días sigue vigente.",
+      "on": "Activado",
+      "off": "Desactivado",
+      "names": {
+        "applications_intake": "Recepción de solicitudes desde el sitio",
+        "client_cabinet": "Portal del cliente",
+        "crm_section": "Sección del módulo en el CRM"
+      },
+      "effects": {
+        "applications_intake": "Desactivado: no se crea ninguna solicitud nueva ni se firma ningún contrato. Los préstamos otorgados se gestionan con normalidad.",
+        "client_cabinet": "Interruptor de emergencia del portal. El cliente no puede iniciar sesión, pero sí puede pagar: los pagos, el adeudo automático y los devengos siguen funcionando.",
+        "crm_section": "El módulo guarda este interruptor pero no aplica nada: el CRM oculta la sección. El operador pierde la interfaz, la API sigue funcionando."
+      },
+      "confirm": {
+        "applications_intake": "Se detienen las nuevas solicitudes y la firma de contratos. Los préstamos otorgados no se ven afectados.",
+        "client_cabinet": "Los clientes no podrán iniciar sesión. Seguir pagando sigue siendo posible.",
+        "crm_section": "La sección desaparece del menú del operador en el CRM. El módulo y el portal del cliente siguen funcionando."
+      },
+      "reasonPlaceholder": "Por qué lo desactivamos: queda en el historial",
+      "reasonRequired": "Sin un motivo, nadie podrá explicar la parada una semana después",
+      "turnOff": "Desactivar",
+      "readOnly": "Solo el gestor de riesgos puede cambiarlo",
+      "saveFailed": "El cambio falló: el estado no se ha modificado",
+      "loadFailed": "No se pudo leer el estado de los interruptores. No des por hecho que todo está activado.",
+      "historyTitle": "Historial de cambios",
+      "historyEmpty": "Todavía no hay cambios",
+      "sectionOff": "El gestor de riesgos desactivó la sección. La gestión de los préstamos otorgados no se detiene: contacta con el gestor de riesgos.",
+      "sectionOffHere": "La sección está desactivada por el interruptor «Sección del módulo en el CRM». Esta página permanece abierta deliberadamente: de lo contrario no habría forma de volver a activar la sección. La gestión de los préstamos otorgados no se detiene."
+    },
+    "disbursementState": {
+      "pending": "El dinero está en camino",
+      "settled": "Liquidado",
+      "failed": "No enviado",
+      "reversed": "El dinero volvió al remitente",
+      "cancelled": "Operación retirada",
+      "unknown": "Se desconoce dónde está el dinero"
+    },
+    "disbursementMethod": {
+      "interac": "Interac e-Transfer",
+      "eft": "EFT — transferencia a cuenta"
+    },
+    "disbursementFailure": {
+      "payout_refused_pending_review": "Detuvimos el pago nosotros mismos a la espera de revisión",
+      "provider_never_created": "El proveedor nunca creó la operación",
+      "NSF": "El banco rechazó: fondos insuficientes"
+    },
+    "disbursementRetry": {
+      "available": "Posible: suscriptor o gestor de riesgos",
+      "reviewOpen": "Primero la revisión, después el reintento",
+      "notFailed": "No es posible: la reanudación solo acepta el estado «no enviado»",
+      "settled": "No hace falta: el dinero ya se ha liquidado",
+      "inFlight": "Demasiado pronto: el dinero todavía está en camino",
+      "unknownState": "Prohibido: no sabemos dónde está el dinero"
+    },
+    "providerTimeSource": {
+      "provider": "Marca de tiempo propia del proveedor",
+      "observed": "Estimada a partir del momento en que lo supimos"
+    },
+    "queue": {
+      "title": "Cola de revisión manual",
+      "total": "{{count}} en total",
+      "empty": "La cola está vacía",
+      "noNumberHint": "El endpoint de la cola devuelve solo el id de la solicitud: no incluye el número de solicitud ni el correo del cliente. Abre la ficha haciendo clic en una fila para verlos.",
+      "noAssignmentHint": "La asignación a un suscriptor todavía no existe: el mecanismo llega con WS-20, así que la columna «Asignada» está vacía en todas las filas.",
+      "noSortingHint": "El módulo devuelve toda la cola como una sola lista en orden de derivación: no hay ordenación por columnas ni paginación, porque el servidor no admite ninguna de las dos."
+    },
+    "railReviewReason": {
+      "payout_account_not_pinned": "La decisión no fijó una cuenta de pago",
+      "payout_details_changed_after_approval": "Los datos de la cuenta cambiaron después de la aprobación",
+      "effective_time_corrected": "La hora de liquidación se corrigió tras la observación",
+      "provider_amount_mismatch": "El importe del proveedor no coincide con el nuestro",
+      "provider_amount_unconfirmed": "El proveedor no confirmó el importe",
+      "provider_contradiction": "El proveedor se contradice",
+      "provider_dishonour_unknown": "El proveedor informó de una reversión sin motivo",
+      "provider_foreign_operation": "El proveedor devolvió una operación ajena",
+      "provider_impossible_time": "La hora de la operación del proveedor es imposible",
+      "provider_recipient_mismatch": "El destinatario del proveedor no es el que indicamos",
+      "provider_unidentified_success": "Un éxito en el proveedor que no pudimos vincular a nuestra operación",
+      "provider_unknown_status": "El proveedor devolvió un estado que no conocemos"
+    },
+    "referralReason": {
+      "income_not_verified": "Ingresos no verificados por el banco",
+      "income_mismatch": "Los ingresos declarados difieren de los datos del banco",
+      "income_frequency_unverified": "Frecuencia de ingresos no verificada",
+      "income_not_plausible": "El banco mostró un importe, pero sin un patrón de nómina detrás",
+      "login_attribution_unverified": "El proveedor no confirmó que el acceso bancario pertenezca a esta solicitud",
+      "schedule_infeasible": "No se puede construir ningún calendario para las fechas solicitadas",
+      "manual": "Un operador derivó la solicitud a revisión",
+      "RC-04": "Ya existe un préstamo activo",
+      "RC-08": "Periodo de espera tras un rechazo",
+      "RC-11": "Capacidad de pago insuficiente / ingresos por debajo del mínimo",
+      "client_not_identifiable": "No se pudo identificar al cliente"
+    },
+    "stage": {
+      "registration": "Registro",
+      "questionnaire": "Formulario de solicitud",
+      "income_check": "Comprobación de ingresos",
+      "decision": "Decisión",
+      "signing": "Firma"
+    },
+    "stageState": {
+      "done": "completado",
+      "current": "paso actual",
+      "todo": "pendiente",
+      "failed": "no superado"
+    },
+    "clientLink": {
+      "byPhone": "vinculado por teléfono",
+      "ambiguous": "{{count}} fichas coinciden con este teléfono: elige una manualmente",
+      "notFound": "no encontrado en el CRM por teléfono",
+      "notSearched": {
+        "no_phone": "no buscado: sin teléfono",
+        "loading": "buscando…",
+        "failed": "no buscado: el CRM no respondió"
+      }
+    },
+    "access": {
+      "notAuthenticated": "El módulo no aceptó tu inicio de sesión",
+      "notAuthenticatedHint": "Es posible que tu sesión haya caducado. Vuelve a iniciar sesión en el CRM; si eso no ayuda, contacta con un administrador: el módulo verifica el inicio de sesión con el CRM.",
+      "noRights": "Sin acceso a la sección de crédito",
+      "noRightsHint": "Tu acceso al CRM no incluye permisos de la sección de crédito. Los concede un administrador del CRM: pide que te asignen el rol correspondiente."
     }
   },
   "toasts": {

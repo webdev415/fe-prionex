@@ -79,7 +79,12 @@ describe('a toast is marked, not the Toaster', () => {
 })
 
 describe('react-datepicker (step 5.4)', () => {
-  it('still renders inline, with no portal to mark', async () => {
+  // The scan below reads EVERY `src/**/*.tsx` as raw text, so its time grows
+  // with the repository, not with the subject: 4.4 s alone on a workstation,
+  // over the default 20 s on the CI runner once the credit frontend (+67 files)
+  // landed (three red runs in a row, 21.09.2026). The bound is generous on
+  // purpose — the test is a repository scan, not a rendering benchmark.
+  it('still renders inline, with no portal to mark', { timeout: 60_000 }, async () => {
     // The step is a CHECK, not a change: `withPortal` and `portalId` are not
     // used anywhere in `src/`, so the calendar renders in place and ordinary
     // inheritance covers it. This test is what makes that a fact with an expiry

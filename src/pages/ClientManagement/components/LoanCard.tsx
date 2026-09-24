@@ -4,10 +4,12 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@/components/ui/DropdownMenu'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/Tooltip'
 import { Icons } from '@/lib/icons'
+import { formatNumber } from '@/lib/localeFormat'
 import { cn } from '@/lib/utils'
 import { formatDate, formatMoneyUAHTwoDecimals } from '@/lib/formatters'
 
@@ -58,7 +60,12 @@ export type LoanCardLoan = {
   sellerLegalName: string | null
   factoringAgreementPreviousLender: string | null
   factoringAgreementPurchaseDate: string | null
-  principalAmount: number
+  /**
+   * `null` — только у кредита модуля, чья проекция суммы выдачи не принесла:
+   * отсутствие печатается прочерком, а не нулём. Купленный долг несёт число
+   * всегда.
+   */
+  principalAmount: number | null
   principalDebt: number | null
   remainingDebtAmount: number
   totalToReturn: number
@@ -80,6 +87,21 @@ export type LoanCardLoan = {
   creditBureauSentDate: string | null
   /** KAN-784 AC2 — fully repaid but short of principal; auto-close blocked. */
   needsManualClosureReview: boolean
+  /**
+   * WS-11 (14-7b) — откуда взялась строка. Три поля ниже ОПЦИОНАЛЬНЫ намеренно:
+   * у купленного долга их нет и не будет, и их обязательность заставила бы
+   * править каждую существующую фабрику строки, включая чужие тесты.
+   *
+   * `origin === 'credit_module'` — кредит, который выдали МЫ. Карточка ветвится
+   * по нему, а не по «значение пустое»: у проекции нет продавца, дат покупки и
+   * коридора выкупа, и `Number(x ?? 0)` превратил бы «поля нет» в «₴ 0.00» —
+   * утверждение, которое оператор произнесёт человеку вслух.
+   */
+  origin?: 'factoring' | 'credit_module'
+  /** Код валюты строки (`CAD`). У кредита он свой — гривна карточки соврала бы. */
+  currency?: string | null
+  /** Машинная стадия модуля (`delinquent`); печатается ТОЛЬКО словарём. */
+  lifecycleDetail?: string | null
 }
 
 export type LoanCardAction = {
@@ -112,7 +134,56 @@ type LoanCardProps = {
   onFocus: () => void
   /** Status-dependent action entries for the "..." dropdown. */
   actions: LoanCardAction[]
+  /**
+   * WS-11 (14-7b) — разворот карты кредитного модуля, по образцу трёх пропсов
+   * РР выше. Ручка отдельная, а не клик по карточке: клик уже занят фокусом
+   * (`onClick={onFocus}` ниже), и переиспользовать его значило бы каждый
+   * разворот притемнять соседние карточки.
+   */
+  creditExpanded?: boolean
+  /**
+   * Отсутствует — значит ручки нет: на стенде с выключенным флагом пометка
+   * остаётся, а разворачивать нечего. Пометка и ручка — разные вещи в одном
+   * элементе.
+   */
+  onToggleCredit?: () => void
+  /** Карта класса А, рисуемая под карточкой при `creditExpanded`. */
+  creditPanel?: React.ReactNode
 }
+
+/**
+ * Стадия кредита модуля → строка словаря. Известное множество — РЕАЛЬНЫЙ выход
+ * модуля, а не словарь статусов фронта (WS-11, 14-7b, Р-FEL1B-13).
+ *
+ * `lifecycle_detail` дверь client-service принимает свободной строкой, и
+ * перечнем его значения не опубликованы нигде. Здесь они записаны по коду
+ * модуля (`credit-module crm_projection.py@8ccb0295`: `PROJECTED_STATUS` и
+ * `crm_status_of`), и это значения ДВУХ словарей в одном поле: нюанс статуса
+ * (`delinquent` … `withdrawn`; `closed`, когда причины закрытия нет) и причина
+ * закрытия (`repaid`, `early_settled`). Сторно выдачи приходит словом ЧУЖОЙ
+ * стороны — `disbursement_reversed`, — а подпись у него наша:
+ * `disbursement_failed`. Прежний отбор по `CREDIT_LOAN_STATUSES` молчал ровно у
+ * самых частых закрытий — «погашено» и «погашено досрочно», — а у редкого
+ * «списано» говорил, и молчание читалось как «с этим кредитом что-то не так».
+ *
+ * Новых ключей нет: каждый адрес — существующая строка словаря. Значение вне
+ * таблицы не печатается вовсе — машинное слово на экране оператора есть утечка
+ * внутреннего словаря, а не подпись. `Map`, а не объект: у объекта «известными»
+ * оказались бы и имена его прототипа (`constructor`).
+ */
+const LIFECYCLE_DETAIL_KEY: ReadonlyMap<string, string> = new Map([
+  ['delinquent', 'credit.loanStatus.delinquent'],
+  ['forbearance', 'credit.loanStatus.forbearance'],
+  ['protected', 'credit.loanStatus.protected'],
+  ['charged_off', 'credit.loanStatus.charged_off'],
+  ['written_off', 'credit.loanStatus.written_off'],
+  ['cancelled', 'credit.loanStatus.cancelled'],
+  ['withdrawn', 'credit.loanStatus.withdrawn'],
+  ['closed', 'credit.loanStatus.closed'],
+  ['disbursement_reversed', 'credit.loanStatus.disbursement_failed'],
+  ['repaid', 'credit.closeReason.repaid'],
+  ['early_settled', 'credit.closeReason.early_settled'],
+])
 
 const RR_TONE: Record<NonNullable<LoanCardProps['rrStatus']>['tone'], string> = {
   active: 'bg-green-100 text-green-800',
@@ -208,9 +279,55 @@ export function LoanCard({
   dimmed = false,
   onFocus,
   actions,
+  creditExpanded = false,
+  onToggleCredit,
+  creditPanel,
 }: LoanCardProps) {
-  const { t } = useTranslation('common')
-  const visibleActions = actions.filter((a) => !a.hidden)
+  const { t, i18n } = useTranslation('common')
+  // 🔴 Кредит, выданный НАМИ, — не предмет взыскания: им владеет кредитный
+  // модуль, и вторая отправка в бюро была бы повторной передачей чужой записи.
+  // Пунктов меню у такой строки НОЛЬ — не «неактивный пункт»: неактивный
+  // остаётся пунктом, попадает в `queryAllByRole('menuitem')`, читается
+  // скринридером как действие и однажды будет «временно включён». Вместо
+  // пунктов — неинтерактивная подпись, объясняющая, где действия живут.
+  const isCreditModule = loan.origin === 'credit_module'
+  const visibleActions = isCreditModule ? [] : actions.filter((a) => !a.hidden)
+  const actionsHint = t(
+    'pages.clients.detail.creditModuleActionsHint',
+    'Actions live in the credit module'
+  )
+  /**
+   * Деньги кредитной строки — числом по локали плюс КОД валюты проекции.
+   *
+   * Общий `formatMoneyUAHTwoDecimals` здесь не годится: он печатает `₴`
+   * жёстко (четыре возврата подряд), а живой кредит приходит в `CAD` —
+   * «₴ 456.00» было бы ложью о деньгах, произнесённой клиенту вслух.
+   * `formatCreditMoney` тоже не годится, по обратной причине: он делит на 100
+   * (суммы модуля — в minor units), а проекция `debts` приходит в major —
+   * получилось бы «4,56 CAD»: код валюты верен, сумма занижена в сто раз.
+   * Валюты нет вовсе — печатается одно число: выдумывать символ нельзя.
+   *
+   * Разряды `Intl` сам связывает неразрывным пробелом, поэтому замены пробелов,
+   * как у `money()` ниже, здесь нет: общий форматтер группирует обычными.
+   */
+  const rowMoney = (v: number | null | undefined) => {
+    if (v == null) return '—'
+    const value = formatNumber(v, i18n.language, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
+    // Нечисловой вход `formatNumber` отдаёт своим плейсхолдером «—»
+    // (`INVALID_PLACEHOLDER`, `src/lib/localeFormat.ts:18`; наружу константа не
+    // экспортируется), и код валюты к нему не клеится: «— CAD» читается как
+    // сумма в долларах, а значения нет.
+    if (value === '—') return value
+    return loan.currency ? `${value} ${loan.currency}` : value
+  }
+  // Стадия модуля печатается ТОЛЬКО переведённой и только из известного
+  // множества (`LIFECYCLE_DETAIL_KEY`). Проверка идёт по таблице значений, а не
+  // через `i18n.exists`: под тестовым моком словаря тот вернул бы сам ключ.
+  const lifecycleKey =
+    loan.lifecycleDetail != null ? LIFECYCLE_DETAIL_KEY.get(loan.lifecycleDetail) : undefined
 
   // The formatter groups thousands with plain spaces ("₴ 61 502.86"), so any
   // wrapping context can split a number across lines. Binding those spaces
@@ -303,17 +420,27 @@ export function LoanCard({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            {visibleActions.map((a) => (
-              <DropdownMenuItem
-                key={a.key}
-                disabled={a.disabled}
-                onSelect={a.onSelect}
-                className={cn(a.danger && 'text-destructive focus:text-destructive')}
-              >
-                {a.icon}
-                {a.label}
-              </DropdownMenuItem>
-            ))}
+            {/* Кнопка-триггер «…» остаётся и у кредитной строки: её отсутствие
+                на одной карточке из ряда читается как поломка там, где её нет.
+                А внутри — подпись вместо пунктов: ответ стоит там, где его
+                ищут, и при этом не заводит ни одного действия. */}
+            {isCreditModule ? (
+              <DropdownMenuLabel className="text-muted-foreground font-normal">
+                {actionsHint}
+              </DropdownMenuLabel>
+            ) : (
+              visibleActions.map((a) => (
+                <DropdownMenuItem
+                  key={a.key}
+                  disabled={a.disabled}
+                  onSelect={a.onSelect}
+                  className={cn(a.danger && 'text-destructive focus:text-destructive')}
+                >
+                  {a.icon}
+                  {a.label}
+                </DropdownMenuItem>
+              ))
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -332,7 +459,49 @@ export function LoanCard({
               <span className="text-foreground min-w-0 text-[14px] font-bold break-words">
                 № {loan.loanNumber}
               </span>
-              {hasRr && (
+              {/* Пометка «кредит (наш)» — она же ручка разворота, по образцу
+                  чипа РР ниже. Слово «Кредит» в этой карточке уже занято
+                  КУПЛЕННЫМ долгом (пять ключей словаря той же страницы), и две
+                  одинаковые подписи о разных деньгах на одном экране — ровно
+                  то, от чего пометка должна защитить. */}
+              {isCreditModule &&
+                (onToggleCredit ? (
+                  <button
+                    type="button"
+                    title={actionsHint}
+                    // Без остановки всплытия клик по чипу переключил бы ФОКУС
+                    // карточки (`onClick={onFocus}` на корне) и притемнил
+                    // соседние карточки на каждом развороте.
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onToggleCredit()
+                    }}
+                    className="inline-flex shrink-0 items-center gap-1 rounded bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-800"
+                  >
+                    {t('pages.clients.detail.creditModuleTag', 'own credit')}
+                    <Icons.ArrowDown
+                      size={14}
+                      className={cn('transition-transform', creditExpanded && 'rotate-180')}
+                    />
+                  </button>
+                ) : (
+                  // Флаг стенда выключен: пометка остаётся, разворачивать
+                  // нечего. Принадлежность долга от переменной сборки не
+                  // зависит, а карта — зависит.
+                  <span
+                    title={actionsHint}
+                    className="inline-flex shrink-0 items-center rounded bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-800"
+                  >
+                    {t('pages.clients.detail.creditModuleTag', 'own credit')}
+                  </span>
+                ))}
+              {/* 🔴 РР у кредита модуля заперт СТРУКТУРНО, а не данными: страница
+                  считает `hasRr` одинаково для всех строк, а сервер при создании
+                  соглашения происхождение долга не проверяет. Реструктуризация —
+                  действие взыскания по долгу, которым CRM не владеет, поэтому
+                  чип, статус и панель РР ветвятся по `origin` — как меню и
+                  суммы выше. */}
+              {!isCreditModule && hasRr && (
                 <button
                   type="button"
                   onClick={(e) => {
@@ -348,7 +517,7 @@ export function LoanCard({
                   />
                 </button>
               )}
-              {hasRr && rrStatus && (
+              {!isCreditModule && hasRr && rrStatus && (
                 <span
                   className={cn(
                     'shrink-0 rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap',
@@ -379,46 +548,61 @@ export function LoanCard({
             </span>
           </MetaLine>
 
-          <MetaLine label={t('pages.clients.detail.tableHeaders.saleDate')}>
-            <span className="text-foreground text-[14px] font-bold break-words">
-              {loan.saleDate}
-              {isClosed && loan.creditClosedDate && (
-                <span className="text-muted-foreground ml-2 text-[12px] font-normal">
-                  (
-                  {t('pages.clients.detail.closedInline', 'Closed: {{date}}', {
-                    // Raw ISO in the model — the edit-closure action parses it.
-                    // Display must be DD-MM-YYYY (AC #2), so format here.
-                    date: formatDate(loan.creditClosedDate),
-                  })}
-                  )
-                </span>
-              )}
-            </span>
-          </MetaLine>
+          {/* Стадия модуля вместо даты продажи и продавца: у своего кредита
+              продавца нет ПО ОПРЕДЕЛЕНИЮ, а пустая строка с тултипом
+              «Первинний кредитор» читалась бы как потерянные данные. */}
+          {isCreditModule && lifecycleKey && (
+            <MetaLine label={t('credit.clientBlock.status', 'Status')}>
+              <span className="text-foreground text-[14px] font-bold break-words">
+                {t(lifecycleKey)}
+              </span>
+            </MetaLine>
+          )}
 
-          <MetaLine label={t('pages.clients.detail.tableHeaders.counterparty')}>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="decoration-muted-foreground/60 text-foreground cursor-help text-[14px] font-bold break-words underline decoration-dotted underline-offset-4">
-                    {loan.counterparty}
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <div className="flex flex-col gap-1 text-xs">
-                    <span>
-                      {t('pages.clients.detail.primaryCreditor', 'Primary creditor')}:{' '}
-                      {loan.sellerLegalName ?? '—'}
+          {!isCreditModule && (
+            <>
+              <MetaLine label={t('pages.clients.detail.tableHeaders.saleDate')}>
+                <span className="text-foreground text-[14px] font-bold break-words">
+                  {loan.saleDate}
+                  {isClosed && loan.creditClosedDate && (
+                    <span className="text-muted-foreground ml-2 text-[12px] font-normal">
+                      (
+                      {t('pages.clients.detail.closedInline', 'Closed: {{date}}', {
+                        // Raw ISO in the model — the edit-closure action parses it.
+                        // Display must be DD-MM-YYYY (AC #2), so format here.
+                        date: formatDate(loan.creditClosedDate),
+                      })}
+                      )
                     </span>
-                    <span>
-                      {t('pages.clients.detail.previousCreditor', 'Previous creditor')}:{' '}
-                      {loan.factoringAgreementPreviousLender ?? '—'}
-                    </span>
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </MetaLine>
+                  )}
+                </span>
+              </MetaLine>
+
+              <MetaLine label={t('pages.clients.detail.tableHeaders.counterparty')}>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="decoration-muted-foreground/60 text-foreground cursor-help text-[14px] font-bold break-words underline decoration-dotted underline-offset-4">
+                        {loan.counterparty}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <div className="flex flex-col gap-1 text-xs">
+                        <span>
+                          {t('pages.clients.detail.primaryCreditor', 'Primary creditor')}:{' '}
+                          {loan.sellerLegalName ?? '—'}
+                        </span>
+                        <span>
+                          {t('pages.clients.detail.previousCreditor', 'Previous creditor')}:{' '}
+                          {loan.factoringAgreementPreviousLender ?? '—'}
+                        </span>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </MetaLine>
+            </>
+          )}
         </div>
 
         {/* Zone 2 — amounts. Columns are identical on every card, so the
@@ -428,95 +612,137 @@ export function LoanCard({
             card, keeping large values on one line whenever there is room.
             min-width matches the true content width (88+88+120 + 32 gap + 16
             padding = 344) so the grid can never overflow its flex box. */}
-        <div className="border-border grid min-w-[342px] flex-[1_1_400px] grid-cols-[minmax(80px,1fr)_minmax(80px,1fr)_minmax(150px,1.8fr)] items-start gap-x-2 gap-y-[3px] border-x pr-1 pl-3">
-          <AmountCell
-            label={t('pages.clients.detail.tableHeaders.loanAmount', 'Loan amount')}
-            value={money(loan.principalAmount)}
-          />
-          <AmountCell
-            label={t('pages.clients.detail.tableHeaders.principalDebt')}
-            value={money(loan.principalDebt)}
-            valueTooltip={principalDebtTooltip}
-          />
-          <AmountCell
-            label={
-              isLawful
-                ? t(
-                    'pages.clients.detail.tableHeaders.remainingDebtLawful',
-                    'Remaining debt (Lawful)'
-                  )
-                : t('pages.clients.detail.tableHeaders.remainingDebtAmount', 'Remaining debt')
-            }
-            // Header says "(Lawful)" → the value must be that field.
-            value={money(isLawful ? loan.eligibleForReturn : loan.remainingDebtAmount)}
-            // Both facts can matter at once: the plain remaining debt (when the
-            // lawful figure differs from it) and the payments-adjusted total.
-            // Neither may push the other out.
-            secondary={
-              isLawful || hasPayments ? (
-                <>
-                  {isLawful && (
-                    <span className="block">
-                      {t('pages.clients.detail.remainingDebtPlain', 'Remaining debt: {{amount}}', {
-                        amount: money(loan.remainingDebtAmount),
-                      })}
-                    </span>
-                  )}
-                  {hasPayments && (
-                    <span className="block">
-                      {t(
-                        'pages.clients.detail.includingPayments',
-                        'Including payments: {{amount}}',
-                        { amount: money(loan.totalToReturn) }
-                      )}
-                    </span>
-                  )}
-                </>
-              ) : undefined
-            }
-            // The copy names "Remaining debt" explicitly, so it stays accurate
-            // even when the displayed value is the lawful figure.
-            valueTooltip={
-              hasPayments
-                ? t(
-                    'pages.clients.detail.remainingDebtTooltip',
-                    'Remaining debt including payments: {{total}} ({{remaining}} − {{payments}})',
-                    {
-                      total: money(loan.totalToReturn),
-                      remaining: money(loan.remainingDebtAmount),
-                      payments: money(loan.remainingDebtAmount - loan.totalToReturn),
-                    }
-                  )
-                : undefined
-            }
-          />
-        </div>
+        {/* 🔴 У кредитной строки рисуются ДВЕ суммы из трёх, а не три с нулями.
+            «Основний борг» проекция не несёт вовсе, и `money(null)` напечатал
+            бы «—», а `Number(x ?? 0)` — «₴ 0.00»: ноль на экране есть ФАКТ
+            («основного боргу нема»), который оператор произнесёт человеку.
+            Ветвление идёт по `origin`, а не по «значение пустое»: у проекции
+            `totalToReturn` равен нулю, и общий путь включил бы ветку
+            `hasPayments` с подписью «Including payments: ₴ 0.00». */}
+        {isCreditModule ? (
+          <div className="border-border grid min-w-[342px] flex-[1_1_400px] grid-cols-[minmax(80px,1fr)_minmax(150px,1.8fr)] items-start gap-x-2 gap-y-[3px] border-x pr-1 pl-3">
+            <AmountCell
+              label={t('pages.clients.detail.tableHeaders.loanAmount', 'Loan amount')}
+              value={rowMoney(loan.principalAmount)}
+            />
+            <AmountCell
+              label={t('pages.clients.detail.tableHeaders.remainingDebtAmount', 'Remaining debt')}
+              value={rowMoney(loan.remainingDebtAmount)}
+            />
+          </div>
+        ) : (
+          <div className="border-border grid min-w-[342px] flex-[1_1_400px] grid-cols-[minmax(80px,1fr)_minmax(80px,1fr)_minmax(150px,1.8fr)] items-start gap-x-2 gap-y-[3px] border-x pr-1 pl-3">
+            <AmountCell
+              label={t('pages.clients.detail.tableHeaders.loanAmount', 'Loan amount')}
+              value={money(loan.principalAmount)}
+            />
+            <AmountCell
+              label={t('pages.clients.detail.tableHeaders.principalDebt')}
+              value={money(loan.principalDebt)}
+              valueTooltip={principalDebtTooltip}
+            />
+            <AmountCell
+              label={
+                isLawful
+                  ? t(
+                      'pages.clients.detail.tableHeaders.remainingDebtLawful',
+                      'Remaining debt (Lawful)'
+                    )
+                  : t('pages.clients.detail.tableHeaders.remainingDebtAmount', 'Remaining debt')
+              }
+              // Header says "(Lawful)" → the value must be that field.
+              value={money(isLawful ? loan.eligibleForReturn : loan.remainingDebtAmount)}
+              // Both facts can matter at once: the plain remaining debt (when the
+              // lawful figure differs from it) and the payments-adjusted total.
+              // Neither may push the other out.
+              secondary={
+                isLawful || hasPayments ? (
+                  <>
+                    {isLawful && (
+                      <span className="block">
+                        {t(
+                          'pages.clients.detail.remainingDebtPlain',
+                          'Remaining debt: {{amount}}',
+                          {
+                            amount: money(loan.remainingDebtAmount),
+                          }
+                        )}
+                      </span>
+                    )}
+                    {hasPayments && (
+                      <span className="block">
+                        {t(
+                          'pages.clients.detail.includingPayments',
+                          'Including payments: {{amount}}',
+                          { amount: money(loan.totalToReturn) }
+                        )}
+                      </span>
+                    )}
+                  </>
+                ) : undefined
+              }
+              // The copy names "Remaining debt" explicitly, so it stays accurate
+              // even when the displayed value is the lawful figure.
+              valueTooltip={
+                hasPayments
+                  ? t(
+                      'pages.clients.detail.remainingDebtTooltip',
+                      'Remaining debt including payments: {{total}} ({{remaining}} − {{payments}})',
+                      {
+                        total: money(loan.totalToReturn),
+                        remaining: money(loan.remainingDebtAmount),
+                        payments: money(loan.remainingDebtAmount - loan.totalToReturn),
+                      }
+                    )
+                  : undefined
+              }
+            />
+          </div>
+        )}
 
         {/* Zone 3 — secondary dates. min-width = 118px label col (fixed, so
             values align vertically — AC #3) + 6px gap + ~65px for the widest
             value ("31-07-2018") + 16px padding, so a date never has to break.
             When the row runs out of room this block wraps to its own line
-            rather than forcing the card wider. */}
-        <div className="flex min-w-[200px] flex-[1_0_200px] flex-col gap-1 px-2">
-          <SecRow label={t('pages.clients.detail.tableHeaders.issueDate')} value={loan.issueDate} />
-          <SecRow
-            label={t('pages.clients.detail.tableHeaders.purchaseDateFa', 'Purchase date (FA)')}
-            value={loan.factoringAgreementPurchaseDate ?? '—'}
-          />
-          <SecRow
-            label={t('pages.clients.detail.tableHeaders.debtTerm', 'Debt term')}
-            value={
-              loan.creditTermDays != null
-                ? t('pages.clients.detail.days', '{{days}} days', { days: loan.creditTermDays })
-                : '—'
-            }
-          />
-        </div>
+            rather than forcing the card wider.
+
+            У кредитной строки зона не рисуется вовсе: ни даты выдачи в форме
+            карточки, ни даты покупки, ни срока долга у проекции нет, и три
+            прочерка подряд читались бы как «данные потерялись». Даты кредита
+            живут в развёрнутой карте. */}
+        {!isCreditModule && (
+          <div className="flex min-w-[200px] flex-[1_0_200px] flex-col gap-1 px-2">
+            <SecRow
+              label={t('pages.clients.detail.tableHeaders.issueDate')}
+              value={loan.issueDate}
+            />
+            <SecRow
+              label={t('pages.clients.detail.tableHeaders.purchaseDateFa', 'Purchase date (FA)')}
+              value={loan.factoringAgreementPurchaseDate ?? '—'}
+            />
+            <SecRow
+              label={t('pages.clients.detail.tableHeaders.debtTerm', 'Debt term')}
+              value={
+                loan.creditTermDays != null
+                  ? t('pages.clients.detail.days', '{{days}} days', { days: loan.creditTermDays })
+                  : '—'
+              }
+            />
+          </div>
+        )}
       </div>
 
-      {/* RR panel — collapsed by default, expands on chip click (AC #6). */}
-      {hasRr && rrExpanded && rrPanel && (
+      {/* RR panel — collapsed by default, expands on chip click (AC #6).
+          У кредита модуля её нет никогда — см. чип РР выше. */}
+      {!isCreditModule && hasRr && rrExpanded && rrPanel && (
         <div className="relative border-t px-[18px] py-3.5">{rrPanel}</div>
+      )}
+
+      {/* Карта кредитного модуля — та же форма, что панель РР. Монтируется
+          ТОЛЬКО развёрнутой: спрятанная стилями, она отправила бы запрос в
+          модуль при открытии вкладки «Позики» у каждого клиента. */}
+      {isCreditModule && creditExpanded && creditPanel && (
+        <div className="relative border-t px-[18px] py-3.5">{creditPanel}</div>
       )}
     </div>
   )

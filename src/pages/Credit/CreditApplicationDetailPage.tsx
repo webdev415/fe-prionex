@@ -25,12 +25,17 @@ import { CreditStatusBadge } from './components/CreditStatusBadge'
 import { CreditDocumentOpenButton } from './components/CreditDocumentOpenButton'
 import { CreditDraftBlocks } from './components/CreditDraftBlocks'
 import { CreditFlagList } from './components/CreditFlagList'
+import { CreditStageProgress } from './components/CreditStageProgress'
+import { CreditClientLink } from './components/CreditClientLink'
 import { collectApplicationFlags } from '@/features/credit/api/applicantFlags'
+import { formatIdle, idleMinutes } from '@/features/credit/api/idle'
+import { useNowTick } from '@/features/credit/hooks/useNowTick'
 import {
   CreditCardHeader,
   CreditNotice,
   type CreditHeaderMetric,
 } from './components/CreditCardHeader'
+import { CreditIdentifierRows } from './components/CreditIdentifiers'
 import { CreditIbvTab } from './components/CreditIbvTab'
 import { CreditDecisionBasis } from './components/CreditDecisionBasis'
 import {
@@ -75,6 +80,9 @@ export function CreditApplicationDetailPage() {
   const { data: overview } = useCreditOverview()
   const { data: application, isLoading, error } = useCreditApplication(applicationId)
   const [tab, setTab] = useState('form')
+  // Своим тиком, а не по приходу данных: карточку держат открытой часами,
+  // а запрос может не повториться ни разу — «5 хвилин тому» замёрзло бы.
+  const now = useNowTick()
 
   const canDecide = Boolean(overview?.permissions.includes('credit.decisions.decide'))
 
@@ -139,6 +147,13 @@ export function CreditApplicationDetailPage() {
   const stuck =
     UNFINISHED_STATUSES.includes(application.status) &&
     (application.resume_step || (application.missing_fields ?? []).length > 0)
+  // Сколько заявка стоит без движения. Модуль не пишет время входа в каждый
+  // шаг анкеты, поэтому «сколько он там стоит» строим от `updated_at` —
+  // единственной метки, которая уже есть (см. `api/idle.ts`).
+  const idle = idleMinutes(application.updated_at, now)
+  const standing = application.client_standing
+  const cooldownActive =
+    !!standing?.cooldown_until && new Date(standing.cooldown_until).getTime() > now.getTime()
   // «Что-то не так» — требование CEO. Два вида признаков держим раздельно:
   // противоречия и нехватка требуют от оператора разных действий.
   const flags = collectApplicationFlags(application)
@@ -186,6 +201,44 @@ export function CreditApplicationDetailPage() {
                     {(application.missing_fields ?? [])
                       .map((field) => t(`credit.blocks.${field}`, field))
                       .join(', ')}
+                  </>
+                )}
+                {idle !== null && (
+                  <>
+                    {' · '}
+                    {t('credit.card.idleFor', { duration: formatIdle(idle, t) })}
+                  </>
+                )}
+              </CreditNotice>
+            )}
+            {/* Весь путь клиента по этапам: этап, его номер и длину пути
+                присылает МОДУЛЬ — тот же ответ, по которому клиент видит свой
+                шаг в кабинете. Стоит рядом с «застряв на кроці» намеренно: та
+                строка отвечает «где встал», эта — «сколько позади и сколько
+                осталось». */}
+            <CreditStageProgress application={application} />
+            {/* Основания, на которых машина откажет: непогашенный заём и
+                остывание после прошлого отказа. Оператор решает здесь же —
+                значит и предъявлять их надо здесь. */}
+            {(cooldownActive || (standing?.outstanding_loans ?? []).length > 0) && (
+              <CreditNotice>
+                {(standing?.outstanding_loans ?? []).length > 0 && (
+                  <>
+                    {t('credit.card.outstandingLoans')}:{' '}
+                    {(standing?.outstanding_loans ?? [])
+                      .map(
+                        (loan) =>
+                          `${loan.contract_number} (${t(`credit.loanStatus.${loan.status}`, loan.status)})`
+                      )
+                      .join(', ')}
+                  </>
+                )}
+                {cooldownActive && (standing?.outstanding_loans ?? []).length > 0 && ' · '}
+                {cooldownActive && (
+                  <>
+                    {t('credit.card.cooldownUntil', {
+                      date: formatDate(standing?.cooldown_until ?? ''),
+                    })}
                   </>
                 )}
               </CreditNotice>
@@ -333,8 +386,13 @@ function ApplicationForm({ application }: { application: CreditApplicationDetail
 
       <Panel title={t('credit.card.links')}>
         <Field label={t('credit.fields.clientId')}>
+          {/* Раньше здесь стояло «клієнта ще не створено», и это обещало, что
+              запись появится сама. Не появится: CRM требует при создании
+              десятизначный налоговый номер, у канадского заёмщика такого нет.
+              Теперь ищем по телефону сами и говорим, что именно узнали —
+              включая «не искали», которое не равно «не найдено». */}
           {application.client_id === null ? (
-            <span className="text-muted-foreground text-xs">{t('credit.card.clientPending')}</span>
+            <CreditClientLink clientId={null} phone={application.client_phone} />
           ) : (
             <Link
               to={`/dashboard/clients/${application.client_id}`}
@@ -356,6 +414,31 @@ function ApplicationForm({ application }: { application: CreditApplicationDetail
             '—'
           )}
         </Field>
+      </Panel>
+
+      {/* Ссылка «Відкрити кредит» отвечает на «куда нажать», но не на «что
+          продиктовать»: сами идентификаторы в ней не видны. */}
+      <Panel title={t('credit.card.identifiers')}>
+        <CreditIdentifierRows
+          items={[
+            {
+              key: 'application',
+              label: t('credit.fields.applicationId'),
+              value: application.application_id,
+            },
+            {
+              key: 'external',
+              label: t('credit.fields.externalApplicationId'),
+              value: application.external_application_id,
+            },
+            {
+              key: 'decision',
+              label: t('credit.fields.decisionId'),
+              value: application.decision_id,
+            },
+            { key: 'loan', label: t('credit.fields.loanId'), value: application.loan_id },
+          ]}
+        />
       </Panel>
     </>
   )

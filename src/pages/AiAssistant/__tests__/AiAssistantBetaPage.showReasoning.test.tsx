@@ -5,6 +5,9 @@
  * чисто клиентская настройка: запрос к мозгу не меняется. Снятый тумблер убирает
  * ход рассуждения (плашку в бабле и одноимённую секцию панели «Активность»), но
  * НЕ источники факт-сносок — по ним оператор проверяет числа в ответе.
+ *
+ * Сам тумблер показывается только в режиме «Думаючий»: на fast раздумий не
+ * бывает, поэтому настройке там нечего скрывать.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -199,6 +202,27 @@ describe('AiAssistantBetaPage — тумблер «Показывать разд
     vi.unstubAllGlobals()
   })
 
+  it('тумблер есть только в «Думаючому» и по умолчанию включён', async () => {
+    renderPage()
+
+    // Быстрый режим: раздумий не бывает — настройки в меню нет вовсе.
+    const fastMenu = openModeMenu()
+    expect(within(fastMenu).queryByTestId('assistant-show-reasoning-row')).not.toBeInTheDocument()
+    expect(
+      within(fastMenu).queryByRole('switch', { name: 'pages.aiAssistant.showReasoning' })
+    ).not.toBeInTheDocument()
+    closeModeMenu()
+
+    selectThinkingMode()
+
+    // «Думаючий»: тумблер появился и по умолчанию включён — раздумья видно сразу.
+    const thinkingMenu = openModeMenu()
+    expect(within(thinkingMenu).getByTestId('assistant-show-reasoning-row')).toBeInTheDocument()
+    expect(
+      within(thinkingMenu).getByRole('switch', { name: 'pages.aiAssistant.showReasoning' })
+    ).toHaveAttribute('aria-checked', 'true')
+  })
+
   it('по умолчанию раздумья показываются: тумблер включён, плашка и окно рассуждения на месте', async () => {
     mockThinkingTurn('Сверяю таблицу долгов.')
     renderPage()
@@ -291,22 +315,34 @@ describe('AiAssistantBetaPage — тумблер «Показывать разд
     expect(screen.getByTestId('assistant-citations')).toBeInTheDocument()
   })
 
-  it('на fast: подсказка про отсутствие раздумий, источники факт-сносок не страдают', async () => {
+  it('на fast тумблера нет, а снятая настройка не трогает источники факт-сносок', async () => {
+    // Оператор снял тумблер раньше, в «Думаючому»; сохранённое значение уважаем.
+    localStorage.setItem(
+      AI_ASSISTANT_STORAGE_KEY,
+      JSON.stringify({
+        state: {
+          userId: USER_ID,
+          conversationId: null,
+          settings: { ...DEFAULT_ASSISTANT_SETTINGS, mode: 'fast', showReasoning: false },
+          historySidebarCollapsed: false,
+          reasoningPanelWidth: DEFAULT_REASONING_PANEL_WIDTH,
+        },
+        version: 0,
+      })
+    )
+    await useAiAssistantStore.persist.rehydrate()
+
     mockFastTurnWithCitations()
     renderPage()
 
-    // Быстрый режим раздумий не присылает — меню честно говорит об этом, но
-    // тумблер остаётся живым (настроить можно заранее).
+    // Быстрый режим раздумий не присылает — настройки их видимости в меню нет.
     const fastMenu = openModeMenu()
+    expect(within(fastMenu).queryByTestId('assistant-show-reasoning-row')).not.toBeInTheDocument()
     expect(
-      within(fastMenu).getByText('pages.aiAssistant.showReasoningFastHint')
-    ).toBeInTheDocument()
-    expect(
-      within(fastMenu).getByRole('switch', { name: 'pages.aiAssistant.showReasoning' })
-    ).not.toBeDisabled()
+      within(fastMenu).queryByRole('switch', { name: 'pages.aiAssistant.showReasoning' })
+    ).not.toBeInTheDocument()
     closeModeMenu()
 
-    setShowReasoning(false)
     send('быстрый ответ')
     await screen.findByText(/Остаток долга/)
 
