@@ -256,7 +256,24 @@ export function useCancelChainInstance() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: number) => cancelChainInstance(id),
+    // Drop it from the cache before the request is sent (KAN-1112).
+    //
+    // The instances query has staleTime 10s, so a mount that happens while the
+    // cancel is still in flight reads the instance as ALIVE — and
+    // decideHotkeyAutoStart then latches "do not start", permanently, because
+    // autoStartDecidedRef never unlatches. The operator presses their next
+    // hotkey and gets an empty step instead of the template.
+    //
+    // ESC abandons a fill-in and immediately invites another hotkey, so that
+    // window is reachable by a normal operator, not just a fast one.
+    onMutate: (id: number) => {
+      qc.setQueriesData<Array<{ id: number }> | undefined>({ queryKey: INST_KEY }, (old) =>
+        Array.isArray(old) ? old.filter((instance) => instance.id !== id) : old
+      )
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: INST_KEY }),
+    // A failed cancel must not leave the UI believing the chain is gone.
+    onError: () => qc.invalidateQueries({ queryKey: INST_KEY }),
   })
 }
 
