@@ -140,6 +140,14 @@ interface Props {
   onSave?: () => void
   onMinimize?: () => void
   onMinimizeRef?: React.MutableRefObject<(() => void) | null>
+  /**
+   * KAN-1112 — lets the page's ESC / ✕ handler ABANDON the fill-in, not merely
+   * close the modal. Abandoning has a server side: a hotkey launch has already
+   * created a chain instance, and leaving it alive makes the NEXT hotkey open
+   * an empty step instead of its template (`decideHotkeyAutoStart` refuses to
+   * start while one is active). Mirrors `onMinimizeRef`.
+   */
+  onDiscardRef?: React.MutableRefObject<(() => void) | null>
 }
 
 interface InstantStepValue {
@@ -250,6 +258,7 @@ export function ChainExecutor({
   onSave,
   onMinimize,
   onMinimizeRef,
+  onDiscardRef,
 }: Props) {
   const { t } = useTranslation('common')
 
@@ -696,6 +705,42 @@ export function ChainExecutor({
     if (onMinimizeRef) onMinimizeRef.current = handleMinimize
     return () => {
       if (onMinimizeRef) onMinimizeRef.current = null
+    }
+  })
+
+  /**
+   * Abandon the fill-in: cancel the chain instance this opening created, and
+   * drop the saved snapshot. The page closes the modal itself.
+   *
+   * Cancelling is the half that was missing. ESC used to clear only the local
+   * snapshot, so the instance survived on the server and the operator's next
+   * hotkey opened a chain with an EMPTY step 1 rather than the template they
+   * pressed — the flow this ticket exists to fix.
+   *
+   * Deliberately NOT awaited: ESC must feel instant. The mutation invalidates
+   * the instances query on success, and the next hotkey is a separate human
+   * action, so the refetch has landed long before it arrives.
+   *
+   * Errors are swallowed on purpose. The operator has abandoned this work; a
+   * red toast about a cancel they never asked for would be noise, and the
+   * instance is cancelled by the next successful save anyway.
+   */
+  const handleDiscard = () => {
+    clearMinimized()
+    if (activeInstance) {
+      // The optimistic cache removal lives in useCancelChainInstance's
+      // onMutate, so the next hotkey cannot read a stale instance even while
+      // the request is still in flight. Not awaited: ESC must feel instant.
+      // Errors are swallowed — the operator has abandoned this work, and a red
+      // toast about a cancel they never asked for would be noise.
+      void cancelMut.mutateAsync(activeInstance.id).catch(() => {})
+    }
+  }
+
+  useEffect(() => {
+    if (onDiscardRef) onDiscardRef.current = handleDiscard
+    return () => {
+      if (onDiscardRef) onDiscardRef.current = null
     }
   })
 

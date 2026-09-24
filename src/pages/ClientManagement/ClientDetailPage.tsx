@@ -578,6 +578,9 @@ export function ClientDetailPage() {
     number | null
   >(null)
   const chainExecutorMinimizeRef = useRef<(() => void) | null>(null)
+  // KAN-1112 — ChainExecutor owns the active instance, so the abandon has to
+  // reach into it. Mirrors chainExecutorMinimizeRef.
+  const chainExecutorDiscardRef = useRef<(() => void) | null>(null)
   const clearMinimizedChainExecutor = useChainExecutorStore((s) => s.clear)
 
   /** Forget which template/phone this open was launched with. */
@@ -605,6 +608,12 @@ export function ClientDetailPage() {
    * No confirmation prompt, per the ticket — ESC is expected to be instant.
    */
   const discardChainExecutor = useCallback(() => {
+    // Cancel the chain instance this opening created, THEN close. Clearing the
+    // local snapshot alone is not enough: a hotkey launch has already started
+    // an instance server-side, and decideHotkeyAutoStart refuses to start a
+    // template while one is active — so the operator's next hotkey opened an
+    // empty step instead of the result they pressed.
+    chainExecutorDiscardRef.current?.()
     clearMinimizedChainExecutor()
     resetChainExecutorLaunchArgs()
   }, [clearMinimizedChainExecutor, resetChainExecutorLaunchArgs])
@@ -5989,6 +5998,7 @@ export function ClientDetailPage() {
                    the store. */
                 onMinimize={resetChainExecutorLaunchArgs}
                 onMinimizeRef={chainExecutorMinimizeRef}
+                onDiscardRef={chainExecutorDiscardRef}
               />
             </ModalContent>
           </Modal>
