@@ -158,10 +158,7 @@
       "pending": "Pendiente",
       "phoneNumber": "Número de teléfono",
       "incomingCall": "Llamada entrante",
-      "acceptCall": "Aceptar llamada",
-      "noClientInteraction": "Este número se marcó sin datos del cliente, por lo que no se puede registrar una interacción asociada a una ficha de cliente.",
-      "noClientChain": "Una cadena de acciones necesita una ficha de cliente. Este número no tiene ninguna asociada.",
-      "unknownClient": "Contacto desconocido"
+      "acceptCall": "Aceptar llamada"
     },
     "accessGroup": {
       "all_groups": "Todos los grupos",
@@ -238,9 +235,7 @@
         "atLeastOneAttempt": "Al menos 1 intento",
         "enterSeconds": "Introduzca un número de segundos",
         "notNegative": "No puede ser negativo"
-      },
-      "answerMode": "Modo de respuesta",
-      "answerModeHint": "El modo manual da al operador un margen para aceptar antes de conectar al cliente."
+      }
     },
     "numbers": {
       "inQueue": "En cola",
@@ -334,10 +329,6 @@
       "allowed": "Permitido: {{hours}}, {{days}} ({{timezone}})",
       "open": "Horario de llamadas {{hours}} · {{days}} · abierto ahora",
       "everyDay": "todos los días"
-    },
-    "answerMode": {
-      "auto": "Automático",
-      "manual": "Manual (acepta el operador)"
     }
   },
   "search": {
@@ -952,7 +943,7 @@
       "expertLimitReached": "Se ha agotado el límite diario del modo experto.",
       "expertUnavailable": "El servicio externo no está disponible en este momento; inténtelo más tarde.",
       "showReasoning": "Razonamiento 31B",
-      "showReasoningHint": "Activado — el modelo razona y el hilo de razonamiento va al panel «Actividad». Desactivado — 31B responde directamente, más rápido. Servidor — según la configuración del servidor.",
+      "showReasoningHint": "Activado — el modelo razona y el hilo de razonamiento va al panel «Actividad». Desactivado — 31B responde directamente, más rápido.",
       "thinkingUsedOn": "31B · con razonamiento",
       "thinkingUsedOff": "31B · sin razonamiento",
       "thinkingUsedMismatch": "El servidor respondió de forma distinta a la configuración",
@@ -988,14 +979,7 @@
       "answerInProgress": "La respuesta aún se está preparando — aparecerá aquí cuando esté lista",
       "attachmentFrameTitle": "Vista previa del archivo adjunto",
       "attachmentRemoveShort": "Quitar archivo adjunto",
-      "reasoningSteps_many": "{{count}} pasos",
-      "thinkingChoiceServer": "Servidor",
-      "thinkingChoiceOn": "Activado",
-      "thinkingChoiceOff": "Desactivado",
-      "thinkingChoiceServerHint": "El servidor decide el modo de razonamiento",
-      "thinkingChoiceFactOn": "Decide el servidor · el último turno fue con razonamiento",
-      "thinkingChoiceFactOff": "Decide el servidor · el último turno fue sin razonamiento",
-      "thinkingFlagUnsupported": "El servidor todavía no permite desactivar el razonamiento"
+      "reasoningSteps_many": "{{count}} pasos"
     },
     "lawyerWorkplace": {
       "navAria": "Navegación del área jurídica",
@@ -5667,6 +5651,7 @@
           "notes": "Notas (opcional)",
           "selectEmployee": "Seleccionar empleado…",
           "selectSearcher": "Seleccionar localizador…",
+          "noUsersAvailable": "No hay usuarios disponibles",
           "enterAdditionalNotes": "Introduzca notas adicionales…",
           "warningMessage": "Nota: debe seleccionar al menos una asignación (empleado o localizador).",
           "assignClient": "Asignar cliente",
@@ -6709,8 +6694,6 @@
         "rrValidationPaymentDateRequired": "La fecha de pago {{num}} es obligatoria",
         "rrValidationPaymentAmountRequired": "El importe del pago {{num}} es obligatorio",
         "rrValidationSumMismatch": "La suma de los pagos ({{sum}}) debe ser igual al importe total ({{total}})",
-        "rrValidationAmountOutOfRange": "El importe total de la reestructuración ({{amount}}) debe estar entre {{lower}} y {{upper}}",
-        "rrValidationNothingToReturn": "Este crédito no tiene importe pendiente de devolución, por lo que no se puede reestructurar",
         "viewDetail": "Ver",
         "makePayment": "Registrar pago",
         "payments": "Pagos",
@@ -7243,7 +7226,9 @@
         "unassign": "Quitar asignación",
         "pinned": "Fijados",
         "pin": "Fijar",
-        "unpin": "Dejar de fijar"
+        "unpin": "Dejar de fijar",
+        "pinFailed": "No se pudo fijar a este empleado",
+        "unpinFailed": "No se pudo dejar de fijar a este empleado"
       },
       "documents": {
         "previewFrameTitle": "Vista previa del documento"
@@ -10006,7 +9991,9 @@
         "delivered": "entregados",
         "resultsLine": "{{delivered}}/{{total}} entregados",
         "filteredCampaigns": "{{count}} campañas coinciden con los filtros",
-        "totalCost": "Coste total"
+        "totalCost": "Coste total",
+        "resultsLineSent": "{{sent}}/{{total}} enviados",
+        "noDeliveryReports": "Sin informes de entrega"
       },
       "cost": {
         "actual": "Real",
@@ -10030,7 +10017,9 @@
         "destination": "Destino",
         "sentAt": "Enviado",
         "deliveredAt": "Entregado",
-        "error": "Error"
+        "error": "Error",
+        "deliveryNotReported": "No informado",
+        "deliveryNotReportedHint": "Este proveedor no envía informes de entrega. Consulte el panel del proveedor para ver el estado de entrega."
       },
       "actions": {
         "viewDetails": "Ver detalles",
@@ -10134,6 +10123,15 @@
         "defaultName": "Campaña de {{channel}} por CSV",
         "templateFailed": "No se pudo descargar la plantilla",
         "parseFailed": "No se pudo analizar el archivo CSV"
+      },
+      "recipientStatus": {
+        "pending": "Pendiente",
+        "queued": "En cola",
+        "sent": "Enviado",
+        "delivered": "Entregado",
+        "failed": "Fallido",
+        "bounced": "Rebotado",
+        "skipped": "Omitido"
       }
     },
     "messagingDrafts": {
@@ -12500,7 +12498,9 @@
       "externalApplicationId": "ID externo de la solicitud",
       "decisionId": "ID de la decisión",
       "loanId": "ID del préstamo",
-      "loanAgeDays": "Días desde el desembolso"
+      "loanAgeDays": "Días desde el desembolso",
+      "advanceRefundExcess": "Excedente de devolución tras la cancelación",
+      "supersedesDecision": "Sustituye la decisión anterior"
     },
     "tabs": {
       "form": "Formulario de solicitud",
@@ -12643,7 +12643,10 @@
       "stagesTitle": "Recorrido del cliente",
       "stagesHint": "los mismos cinco pasos que el cliente ve en su área personal",
       "stageOfTotal": "paso {{index}} de {{total}}",
-      "identifiers": "Identificadores"
+      "identifiers": "Identificadores",
+      "owedToClient": "Adeudado al cliente",
+      "owedToClientHint": "Tras cancelar, el cliente devolvió más de lo que recibió. El módulo debe devolverle esta cantidad: no es una deuda del cliente ni un sobrepago.",
+      "owedToClientUnknown": "El módulo no indicó si le debemos algo al cliente: el campo falta en la respuesta. Esto no significa que no haya excedente."
     },
     "settings": {
       "title": "Configuración del módulo de crédito",
@@ -13066,6 +13069,17 @@
       "notAuthenticatedHint": "Puede que su sesión haya caducado. Vuelva a iniciar sesión en el CRM; si no funciona, póngase en contacto con un administrador: el módulo verifica el inicio de sesión con el CRM.",
       "noRights": "Sin acceso a la sección de crédito",
       "noRightsHint": "Su acceso al CRM no incluye permisos para la sección de crédito. Los concede un administrador del CRM: solicite que le asignen el rol correspondiente."
+    },
+    "documentOpen": {
+      "unavailable": "Archivo no disponible",
+      "unavailableHint": "Según los registros del módulo, el contenido de este documento no se puede entregar: el archivo no se guardó o la versión se reemplazó sin conservar su contenido.",
+      "errorNotFound": "El módulo no encontró este documento en esta ficha. Actualice la página; si no ayuda, contacte al administrador.",
+      "errorGone": "Esta versión del documento no se puede reproducir: su contenido no se guardó. Abra la versión vigente.",
+      "errorMissing": "El archivo del documento no está disponible temporalmente. Inténtelo más tarde.",
+      "errorDiverged": "El módulo no entregó el documento: su contenido no coincide con la huella firmada. Informe al administrador.",
+      "errorForbidden": "No tiene permiso para ver los documentos de la sección de crédito.",
+      "errorGeneric": "No se pudo abrir el documento (código {{status}}).",
+      "tabBlocked": "La pestaña nueva no se abrió, así que el documento se entregó como descarga de archivo."
     }
   },
   "toasts": {

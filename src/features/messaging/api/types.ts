@@ -1,3 +1,4 @@
+import type { Country } from '@/lib/projectCountry'
 export type MessagingChannel = 'sms' | 'viber' | 'email'
 export type MessagingSource = 'single' | 'bulk' | 'csv'
 
@@ -54,6 +55,23 @@ export const getSupportedChannelsForService = (service: string): MessagingChanne
 
 export const serviceSupportsChannel = (service: string, channel: MessagingChannel): boolean =>
   getSupportedChannelsForService(service).includes(channel)
+
+/**
+ * Countries each provider serves. A Ukrainian gateway cannot deliver to a
+ * Spanish number and vice versa, so offering it on the wrong project only
+ * produces a failed send.
+ */
+export const SERVICE_COUNTRIES: Record<MessagingService, Country[]> = {
+  turbosms: ['UA'],
+  omnicell: ['UA'],
+  vodafone_obm: ['UA'],
+  my2_viber: ['UA'],
+  intel_tele: ['UA', 'ES'],
+  zadarma: ['ES'],
+}
+
+export const serviceServesCountry = (service: string, country: Country): boolean =>
+  (SERVICE_COUNTRIES[service as MessagingService] ?? []).includes(country)
 
 export const MESSAGING_SERVICE_LABELS: Record<MessagingService, string> = {
   turbosms: 'TurboSMS',
@@ -163,9 +181,13 @@ export function canTestMessagingIntegration(
 /** Integration may be used for sends: live provider, channel enabled, test passed, credentials stored. */
 export function isMessagingIntegrationUsable(
   integration: MessagingIntegration,
-  channel: MessagingChannel
+  channel: MessagingChannel,
+  country?: Country
 ): boolean {
   if (!isMessagingProviderImplemented(integration.service)) {
+    return false
+  }
+  if (country && !serviceServesCountry(integration.service, country)) {
     return false
   }
   if (!serviceSupportsChannel(integration.service, channel)) {

@@ -158,10 +158,7 @@
       "pending": "Pending",
       "phoneNumber": "Phone Number",
       "incomingCall": "Incoming Call",
-      "acceptCall": "Accept call",
-      "noClientInteraction": "This number was dialed without client details, so an interaction cannot be logged against a client record.",
-      "noClientChain": "A TA chain needs a client record. None is attached to this number.",
-      "unknownClient": "Unknown contact"
+      "acceptCall": "Accept call"
     },
     "accessGroup": {
       "all_groups": "All groups",
@@ -238,9 +235,7 @@
         "atLeastOneAttempt": "At least 1 attempt",
         "enterSeconds": "Enter a number of seconds",
         "notNegative": "Cannot be negative"
-      },
-      "answerMode": "Answer mode",
-      "answerModeHint": "Manual gives operators an accept window before the customer is connected."
+      }
     },
     "numbers": {
       "inQueue": "In Queue",
@@ -334,10 +329,6 @@
       "allowed": "Allowed: {{hours}}, {{days}} ({{timezone}})",
       "open": "Calling hours {{hours}} · {{days}} · open now",
       "everyDay": "every day"
-    },
-    "answerMode": {
-      "auto": "Automatic",
-      "manual": "Manual (operator accepts)"
     }
   },
   "search": {
@@ -947,7 +938,7 @@
       "expertLimitReached": "The daily expert-mode limit is used up.",
       "expertUnavailable": "The external service is unavailable right now, try again later.",
       "showReasoning": "31B reasoning",
-      "showReasoningHint": "On — the model reasons and the train of thought goes to the «Activity» panel. Off — 31B answers straight away, faster. Server — as configured on the server.",
+      "showReasoningHint": "On — the model reasons and the train of thought goes to the «Activity» panel. Off — 31B answers straight away, faster.",
       "thinkingUsedOn": "31B · with reasoning",
       "thinkingUsedOff": "31B · without reasoning",
       "thinkingUsedMismatch": "The server answered differently from the setting",
@@ -982,14 +973,7 @@
       "slashNewChat": "start a new chat",
       "answerInProgress": "The answer is still being prepared — it will appear here when ready",
       "attachmentFrameTitle": "Attachment preview",
-      "attachmentRemoveShort": "Remove attachment",
-      "thinkingChoiceServer": "Server",
-      "thinkingChoiceOn": "On",
-      "thinkingChoiceOff": "Off",
-      "thinkingChoiceServerHint": "The server decides the reasoning mode",
-      "thinkingChoiceFactOn": "Server decides · the last turn was with reasoning",
-      "thinkingChoiceFactOff": "Server decides · the last turn was without reasoning",
-      "thinkingFlagUnsupported": "Turning reasoning off is not supported by the server yet"
+      "attachmentRemoveShort": "Remove attachment"
     },
     "lawyerWorkplace": {
       "navAria": "Lawyer Workplace navigation",
@@ -7207,7 +7191,9 @@
         "unassign": "Unassign",
         "pinned": "Pinned",
         "pin": "Pin",
-        "unpin": "Unpin"
+        "unpin": "Unpin",
+        "pinFailed": "Could not pin this employee",
+        "unpinFailed": "Could not unpin this employee"
       },
       "documents": {
         "previewFrameTitle": "Document preview"
@@ -9966,7 +9952,9 @@
         "delivered": "delivered",
         "resultsLine": "{{delivered}}/{{total}} delivered",
         "filteredCampaigns": "{{count}} campaigns match filters",
-        "totalCost": "Total cost"
+        "totalCost": "Total cost",
+        "resultsLineSent": "{{sent}}/{{total}} sent",
+        "noDeliveryReports": "No delivery reports"
       },
       "cost": {
         "actual": "Actual",
@@ -9990,7 +9978,9 @@
         "destination": "Destination",
         "sentAt": "Sent",
         "deliveredAt": "Delivered",
-        "error": "Error"
+        "error": "Error",
+        "deliveryNotReported": "Not reported",
+        "deliveryNotReportedHint": "This provider does not send delivery reports. Check the provider cabinet for the delivery status."
       },
       "actions": {
         "viewDetails": "View details",
@@ -10094,6 +10084,15 @@
         "defaultName": "CSV {{channel}} campaign",
         "templateFailed": "Could not download template",
         "parseFailed": "Could not parse CSV file"
+      },
+      "recipientStatus": {
+        "pending": "Pending",
+        "queued": "Queued",
+        "sent": "Sent",
+        "delivered": "Delivered",
+        "failed": "Failed",
+        "bounced": "Bounced",
+        "skipped": "Skipped"
       }
     },
     "messagingDrafts": {
@@ -12456,7 +12455,9 @@
       "externalApplicationId": "External application ID",
       "decisionId": "Decision ID",
       "loanId": "Loan ID",
-      "loanAgeDays": "Days since disbursement"
+      "loanAgeDays": "Days since disbursement",
+      "advanceRefundExcess": "Refund excess after cancellation",
+      "supersedesDecision": "Supersedes the previous decision"
     },
     "tabs": {
       "form": "Application form",
@@ -12599,7 +12600,10 @@
       "stagesTitle": "Client path",
       "stagesHint": "the same five steps the client sees in their cabinet",
       "stageOfTotal": "step {{index}} of {{total}}",
-      "identifiers": "Identifiers"
+      "identifiers": "Identifiers",
+      "owedToClient": "Owed to the client",
+      "owedToClientHint": "After cancelling, the client returned more than they received. The module owes this amount back to the client — it is not the client's debt and not an overpayment.",
+      "owedToClientUnknown": "The module did not say whether we owe the client: the field is missing from the response. This does not mean there is no excess."
     },
     "settings": {
       "title": "Credit module settings",
@@ -13022,6 +13026,17 @@
       "notAuthenticatedHint": "Your session may have expired. Sign in to CRM again; if that does not help, contact an administrator — the module verifies sign-in with CRM.",
       "noRights": "No access to the credit section",
       "noRightsHint": "Your CRM pass carries no credit-section permissions. A CRM administrator grants them — ask to be assigned the matching role."
+    },
+    "documentOpen": {
+      "unavailable": "File unavailable",
+      "unavailableHint": "According to the module's records, this document's content cannot be served: the file was not stored, or the revision was replaced without keeping its content.",
+      "errorNotFound": "The module did not find this document in this card. Refresh the page; if that does not help, contact the administrator.",
+      "errorGone": "This revision cannot be reproduced: its content was not stored. Open the current version.",
+      "errorMissing": "The document file is temporarily unavailable. Try again later.",
+      "errorDiverged": "The module did not serve the document: its content does not match the signed fingerprint. Report this to the administrator.",
+      "errorForbidden": "You do not have permission to view credit section documents.",
+      "errorGeneric": "Could not open the document (code {{status}}).",
+      "tabBlocked": "The new tab did not open, so the document was handed over as a file download."
     }
   },
   "toasts": {
