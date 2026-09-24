@@ -269,6 +269,19 @@ export function hasResponseDetail(error: unknown): boolean {
 }
 
 /**
+ * The machine-readable refusal code of a backend answer (`{ detail, code }`),
+ * or null when the answer carries none. A screen that reacts to ONE refusal
+ * (say, PROJECT_SCOPE_DENIED) asks by code, never by the translated sentence.
+ */
+export function getErrorCode(error: unknown): string | null {
+  if (!isApiError(error)) return null
+  const data = error.response?.data
+  if (!data || typeof data !== 'object') return null
+  const code = (data as Record<string, unknown>).code
+  return typeof code === 'string' && code !== '' ? code : null
+}
+
+/**
  * Get HTTP status code from error
  */
 export function getErrorStatus(error: unknown): number | null {

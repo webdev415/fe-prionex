@@ -4615,13 +4615,32 @@
         "type": "Тип",
         "systemDefault": "Системна за замовчуванням",
         "customRole": "Користувацька роль",
-        "notAvailableForDefault": "Недоступно для стандартних ролей"
+        "notAvailableForDefault": "Недоступно для стандартних ролей",
+        "hubRole": "Роль у чаті (HUB)",
+        "hubRoleNotSet": "Не задано — за назвою ролі",
+        "hubRoleHint": "Не задано: HUB визначає права за назвою ролі; якщо назва HUB невідома — мінімальні права (співробітник). Зміни діють у HUB протягом ~6 хв без повторного входу",
+        "hubRoleUnavailableOption": "{{code}} (недоступно для вибору)",
+        "hubRoleCatalogUnavailable": "каталог HUB недоступний",
+        "hubRoleLockedDefault": "Роль за замовчуванням: роль у чаті задає система, тут її не змінити.",
+        "hubRoleLockedNotAssignable": "Це значення вам зараз недоступне для вибору, тож змінити його тут не можна."
       },
       "accessLevel": {
         "my": "Тільки мої",
         "group": "Моя група",
         "department": "Мій відділ",
         "all": "Весь проект"
+      },
+      "hubRole": {
+        "options": {
+          "none": "Без доступу до HUB",
+          "employee": "Співробітник (мінімальні права)",
+          "training_workspace": "Тренер (навчальний простір)",
+          "quality_workspace": "Контроль якості (простір QA)",
+          "lawyer": "Юрист",
+          "operator": "Оператор",
+          "supervisor": "Супервайзер",
+          "admin": "Адміністратор HUB"
+        }
       },
       "validation": {
         "nameRequired": "Назва ролі обов’язкова",

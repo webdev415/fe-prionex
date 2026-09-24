@@ -18,6 +18,8 @@ export const rolesKeys = {
   details: () => [...rolesKeys.all, 'detail'] as const,
   detail: (id: number) => [...rolesKeys.details(), id] as const,
   permissions: () => [...rolesKeys.all, 'permissions'] as const,
+  hubRolesAll: () => [...rolesKeys.all, 'hubRoles'] as const,
+  hubRoles: (projectId: number) => [...rolesKeys.hubRolesAll(), projectId] as const,
 }
 
 /**
