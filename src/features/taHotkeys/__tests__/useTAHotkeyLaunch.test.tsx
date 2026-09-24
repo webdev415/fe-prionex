@@ -33,7 +33,7 @@ vi.mock('react-i18next', async (importOriginal) => {
 })
 
 import { useTAHotkeyLaunch } from '../useTAHotkeyLaunch'
-import { TA_EXECUTOR_DIALOG_CLASS } from '../hotkey'
+import { HOTKEY_BLOCKING_ATTR, TA_EXECUTOR_DIALOG_CLASS } from '../hotkey'
 
 function Harness({
   enabled = true,
@@ -94,6 +94,28 @@ describe('useTAHotkeyLaunch', () => {
     await user.click(getByLabelText('notes'))
     await user.keyboard('{Control>}1{/Control}')
     expect(onLaunch).not.toHaveBeenCalled()
+  })
+
+  it('ignores the combination while a hotkey-blocking popup is open, wherever focus is', async () => {
+    const onLaunch = vi.fn()
+    const user = userEvent.setup()
+    const { rerender } = render(
+      <>
+        <Harness onLaunch={onLaunch} />
+        <div {...{ [HOTKEY_BLOCKING_ATTR]: '' }} />
+      </>
+    )
+
+    // Focus on <body>, as after a click on a popup's heading: nothing the
+    // typing rule would catch, so only the popup's presence can silence it.
+    expect(document.activeElement).toBe(document.body)
+    await user.keyboard('{Control>}1{/Control}')
+    expect(onLaunch).not.toHaveBeenCalled()
+
+    // Gone again once the popup unmounts.
+    rerender(<Harness onLaunch={onLaunch} />)
+    await user.keyboard('{Control>}1{/Control}')
+    expect(onLaunch).toHaveBeenCalledWith(12)
   })
 
   it('ignores the combination inside somebody else’s dialog', async () => {

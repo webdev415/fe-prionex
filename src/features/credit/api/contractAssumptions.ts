@@ -25,7 +25,10 @@ import type { CreditApplicationStage } from './applicationStages'
 import type {
   CreditApplicationDetail,
   CreditApplicationStatus,
+  CreditDecision,
+  CreditDocumentMeta,
   CreditJournalEntry,
+  CreditLoanDetail,
   CreditLoanStatus,
   CreditPayment,
 } from './types'
@@ -34,6 +37,8 @@ import type {
 type Assert<T extends true> = T
 /** Есть ли у типа такое поле (в том числе необязательное). */
 type Has<T, K extends string> = K extends keyof T ? true : false
+/** Поле обязательно (объявлено без `?:`). `Has` этого не различает. */
+type IsRequired<T, K extends keyof T> = Record<never, never> extends Pick<T, K> ? false : true
 /** Есть ли значение в объединении. */
 type Includes<Union, V extends string> = V extends Union ? true : false
 
@@ -113,3 +118,35 @@ export type _app_stage_income_check = Assert<Includes<CreditApplicationStage, 'i
 export type _app_status_contracted = Assert<Includes<CreditApplicationStatus, 'contracted'>>
 export type _app_status_expired = Assert<Includes<CreditApplicationStatus, 'expired'>>
 export type _app_status_abandoned = Assert<Includes<CreditApplicationStatus, 'abandoned'>>
+
+/* ─── Излишек возврата и указатель на заменённое решение ───────────────
+   Оба поля объявлены БЕЗ `?:`, чтобы каждая фикстура и каждый новый читатель
+   назвали значение. Что сломается, если вернуть `?:`: фикстура без поля снова
+   соберётся, а карточка кредита на отстающем модуле станет прятать излишек
+   как «излишка нет» — без единого слова компилятора. `Has` здесь бесполезен:
+   необязательное поле он тоже засчитывает.
+   Стерегут ЛОКАЛЬНЫЙ тип, не контракт (см. шапку про `Has` у этапа заявки):
+   у `supersedes_decision_id` required строже контракта намеренно — модуль
+   кладёт ключ всегда. Третья строка стережёт `null`: без него «ничего не
+   заменяло» некуда положить, и фикстуры начали бы выдумывать id. */
+export type _loan_excess_required = Assert<
+  IsRequired<CreditLoanDetail, 'advance_refund_excess_minor'>
+>
+export type _decision_supersedes_required = Assert<
+  IsRequired<CreditDecision, 'supersedes_decision_id'>
+>
+export type _decision_supersedes_nullable = Assert<
+  null extends CreditDecision['supersedes_decision_id'] ? true : false
+>
+
+/* ─── Признак «содержимое откроется» у документа ───────────────────────
+   Кнопка документа читает его ДО нажатия: `false` — по записям модуля
+   выдавать нечего, и кнопка говорит это вместо запроса. Что сломается, если
+   поле станет необязательным или пропадёт: кнопка перестанет заранее говорить
+   «не откроется», а фикстуры забудут значение молча — компилятор промолчит.
+   Стережёт ЛОКАЛЬНЫЙ тип, не контракт (см. шапку про `Has` у этапа заявки):
+   в контракте поле не required, здесь required намеренно — модуль кладёт
+   ключ всегда. */
+export type _document_content_available_required = Assert<
+  IsRequired<CreditDocumentMeta, 'content_available'>
+>
