@@ -7339,7 +7339,8 @@
         "deleteConfirm": "Видалити цю взаємодію? Цю дію не можна скасувати.",
         "deleteSuccess": "Взаємодію видалено",
         "showFullNote": "Показати",
-        "hideFullNote": "Сховати"
+        "hideFullNote": "Сховати",
+        "selfEditWindowClosed": "П'ятихвилинне вікно для редагування власного запису закрилося"
       },
       "editInteraction": {
         "title": "Редагувати взаємодію",
