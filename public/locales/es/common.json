@@ -7353,7 +7353,8 @@
         "deleteConfirm": "¿Está seguro de que desea eliminar esta interacción? Esta acción no se puede deshacer.",
         "deleteSuccess": "Interacción eliminada",
         "showFullNote": "Mostrar",
-        "hideFullNote": "Ocultar"
+        "hideFullNote": "Ocultar",
+        "selfEditWindowClosed": "La ventana de cinco minutos para editar tu propio registro se ha cerrado"
       },
       "editInteraction": {
         "title": "Editar interacción",
