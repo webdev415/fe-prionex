@@ -4811,7 +4811,9 @@
           "errorDetails": "Detalles del error",
           "startNewImport": "Iniciar nueva importación"
         },
-        "sectionTitle": "Subir archivo de documentos"
+        "sectionTitle": "Subir archivo de documentos",
+        "rulesNotReady": "La carga masiva no está disponible hasta que se defina un tipo de documento predeterminado para {{folders}} en Configuración → Generación de documentos → Reglas de carga masiva.",
+        "rulesCheckFailed": "No se pudieron comprobar las reglas de carga masiva. Puede que la importación funcione igualmente; inténtelo de nuevo para asegurarse."
       },
       "title": "Importar clientes",
       "viewHistory": "Ver historial",
@@ -7610,7 +7612,8 @@
       "tabs": {
         "journal": "Registro de documentos",
         "templates": "Plantillas de documentos",
-        "types": "Tipos de documento"
+        "types": "Tipos de documento",
+        "bulkRules": "Reglas de carga masiva"
       },
       "types": {
         "title": "Tipos de documento",
@@ -7641,7 +7644,8 @@
           "deleted": "Tipo de documento eliminado",
           "hidden": "Tipo ocultado",
           "shown": "Tipo mostrado"
-        }
+        },
+        "deleteBlockedByRules": "Este tipo lo usan {{count}} regla(s) de carga masiva. Cambie primero esas reglas u oculte el tipo."
       },
       "actions": {
         "uploaded": "Subido",
@@ -7820,7 +7824,39 @@
         }
       },
       "tabsScrollLeft": "Desplazar pestañas a la izquierda",
-      "tabsScrollRight": "Desplazar pestañas a la derecha"
+      "tabsScrollRight": "Desplazar pestañas a la derecha",
+      "bulkRules": {
+        "title": "Reglas de carga masiva",
+        "subtitle": "Un archivo recibe el tipo de la primera regla cuya palabra clave aparezca en su nombre; gana el Orden más bajo. La coincidencia no distingue mayúsculas y lee el nombre completo del archivo, incluida la extensión.",
+        "creditsTitle": "Carpeta credits/",
+        "usersTitle": "Carpeta users/",
+        "addRule": "Añadir regla",
+        "empty": "Aún no hay reglas: todos los archivos toman el tipo predeterminado de abajo.",
+        "notSet": "Sin definir",
+        "unknownType": "Tipo desconocido",
+        "defaultLabel": "Tipo de documento predeterminado",
+        "defaultHint": "Se aplica a los archivos que no coinciden con ninguna palabra clave. La carga masiva no puede iniciarse hasta que ambas carpetas tengan uno.",
+        "blockedBanner": "La carga masiva de documentos está bloqueada hasta que se defina un tipo de documento predeterminado para {{folders}}.",
+        "loadError": "No se pudieron cargar las reglas de carga masiva",
+        "confirmDeleteTitle": "¿Eliminar la regla «{{keyword}}»?",
+        "confirmDelete": "Los archivos que coincidan con esta palabra clave tomarán el tipo predeterminado de esta carpeta.",
+        "editRule": "Editar la regla {{keyword}}",
+        "deleteRule": "Eliminar la regla {{keyword}}",
+        "columns": {
+          "order": "Orden",
+          "keyword": "Palabra clave",
+          "type": "Tipo de documento",
+          "actions": "Acciones"
+        },
+        "errors": {
+          "keywordRequired": "Introduzca una palabra clave",
+          "typeRequired": "Elija un tipo de documento",
+          "positionInvalid": "El orden debe ser un número entero de 1 o más",
+          "saveFailed": "No se pudo guardar la regla",
+          "deleteFailed": "No se pudo eliminar la regla",
+          "defaultFailed": "No se pudo definir el tipo predeterminado"
+        }
+      }
     },
     "interactionLog": {
       "title": "Registro de interacciones",
