@@ -19,6 +19,7 @@ import {
   formatLauncherName,
   getMessagingServiceLabel,
   MESSAGING_CHANNELS,
+  serviceReportsDelivery,
 } from '@/features/messaging'
 import { MessagingCampaignsTableSkeleton } from './components/MessagingCampaignsPageSkeleton'
 import type { MessagingCampaignSummary } from '@/features/messaging'
@@ -177,11 +178,26 @@ export function MessagingCampaignsPage() {
         header: t('pages.messagingCampaigns.table.summary', 'Results'),
         align: 'left',
         render: (campaign) =>
-          t('pages.messagingCampaigns.summary.resultsLine', {
-            delivered: campaign.delivered_count,
-            total: campaign.total_recipients,
-            defaultValue: `${campaign.delivered_count}/${campaign.total_recipients} delivered`,
-          }),
+          serviceReportsDelivery(campaign.service) ? (
+            t('pages.messagingCampaigns.summary.resultsLine', {
+              delivered: campaign.delivered_count,
+              total: campaign.total_recipients,
+              defaultValue: `${campaign.delivered_count}/${campaign.total_recipients} delivered`,
+            })
+          ) : (
+            <div className="flex flex-col gap-0.5">
+              <span>
+                {t('pages.messagingCampaigns.summary.resultsLineSent', {
+                  sent: campaign.sent_count,
+                  total: campaign.total_recipients,
+                  defaultValue: `${campaign.sent_count}/${campaign.total_recipients} sent`,
+                })}
+              </span>
+              <span className="text-muted-foreground text-xs font-light">
+                {t('pages.messagingCampaigns.summary.noDeliveryReports', 'No delivery reports')}
+              </span>
+            </div>
+          ),
       },
       {
         key: 'cost',

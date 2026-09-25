@@ -69,6 +69,7 @@ import { useReversals } from '@/features/reversals/hooks/useReversals'
 import { CallRecordingModal, type CallRecordingModalHandle } from './components/CallRecordingModal'
 import { CallTranscriptPanel } from '@/features/quality/components/CallTranscriptPanel'
 import { ViewSMSModal } from './components/ViewSMSModal'
+import { useSmsServiceAvailable } from '@/features/sms'
 import { SendSMSModal } from './components/SendSMSModal'
 import { ViewMessageModal } from './components/ViewMessageModal'
 import { SendMessageModal } from './components/SendMessageModal'
@@ -886,6 +887,7 @@ export function ClientDetailPage() {
   const ubkiQueryClient = useQueryClient()
   // Client opt-out flag (backend exposes it on the client detail response).
   const ubkiAvailable = useUbkiAvailable()
+  const smsServiceAvailable = useSmsServiceAvailable()
   const canSubmitToUbki = useHasPermission(PERMISSIONS.UBKI.SUBMIT) && ubkiAvailable
   const { mutate: submitDebtToUbki, isPending: isSubmittingToUbki } = useSubmitDebtToUbki()
   const { mutate: bulkSubmitToUbki, isPending: isBulkSubmittingToUbki } = useBulkSubmitToUbki()
@@ -3625,24 +3627,26 @@ export function ClientDetailPage() {
                               )}
                             </Tooltip>
                           </PermissionGuard>
-                          <PermissionGuard permission={PERMISSIONS.COMMUNICATION.SEND_SMS}>
-                            <button
-                              disabled={isMessageBlocked(phone.blocking)}
-                              onClick={() => {
-                                setSelectedPhoneForSMS(phone.number)
-                                setIsSendSMSModalOpen(true)
-                              }}
-                              className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
-                              title={
-                                isMessageBlocked(phone.blocking)
-                                  ? messageBlockReason(phone.blocking) ||
-                                    t('pages.contactTags.smsBlocked', 'SMS blocked')
-                                  : t('pages.clients.detail.sendSms', 'Send SMS')
-                              }
-                            >
-                              <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
-                            </button>
-                          </PermissionGuard>
+                          {smsServiceAvailable && (
+                            <PermissionGuard permission={PERMISSIONS.COMMUNICATION.SEND_SMS}>
+                              <button
+                                disabled={isMessageBlocked(phone.blocking)}
+                                onClick={() => {
+                                  setSelectedPhoneForSMS(phone.number)
+                                  setIsSendSMSModalOpen(true)
+                                }}
+                                className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
+                                title={
+                                  isMessageBlocked(phone.blocking)
+                                    ? messageBlockReason(phone.blocking) ||
+                                      t('pages.contactTags.smsBlocked', 'SMS blocked')
+                                    : t('pages.clients.detail.sendSms', 'Send SMS')
+                                }
+                              >
+                                <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
+                              </button>
+                            </PermissionGuard>
+                          )}
                           <PermissionGuard permissions={ALL_MESSAGING_SEND_PERMISSIONS} mode="any">
                             <button
                               disabled={isMessageBlocked(phone.blocking)}
@@ -3926,17 +3930,19 @@ export function ClientDetailPage() {
                                 <Icons.Headset size={16} className="flex-shrink-0" />
                               </button>
                             </PermissionGuard>
-                            <PermissionGuard permission={PERMISSIONS.COMMUNICATION.SEND_SMS}>
-                              <button
-                                onClick={() => {
-                                  setSelectedPhoneForSMS(client.work?.workPhone || '')
-                                  setIsSendSMSModalOpen(true)
-                                }}
-                                className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
-                              >
-                                <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
-                              </button>
-                            </PermissionGuard>
+                            {smsServiceAvailable && (
+                              <PermissionGuard permission={PERMISSIONS.COMMUNICATION.SEND_SMS}>
+                                <button
+                                  onClick={() => {
+                                    setSelectedPhoneForSMS(client.work?.workPhone || '')
+                                    setIsSendSMSModalOpen(true)
+                                  }}
+                                  className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
+                                >
+                                  <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
+                                </button>
+                              </PermissionGuard>
+                            )}
                             <PermissionGuard
                               permissions={ALL_MESSAGING_SEND_PERMISSIONS}
                               mode="any"
@@ -4891,17 +4897,19 @@ export function ClientDetailPage() {
                         >
                           {t('pages.clients.activity.calls')}
                         </button>
-                        <button
-                          onClick={() => setActiveCallSmsTab('sms')}
-                          className={cn(
-                            'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs transition-colors md:px-4 md:text-sm',
-                            activeCallSmsTab === 'sms'
-                              ? 'bg-primary/10 text-primary-700'
-                              : 'hover:text-primary-700 hover:bg-primary/20 text-muted-foreground cursor-pointer'
-                          )}
-                        >
-                          {t('pages.clients.activity.sms')}
-                        </button>
+                        {smsServiceAvailable && (
+                          <button
+                            onClick={() => setActiveCallSmsTab('sms')}
+                            className={cn(
+                              'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs transition-colors md:px-4 md:text-sm',
+                              activeCallSmsTab === 'sms'
+                                ? 'bg-primary/10 text-primary-700'
+                                : 'hover:text-primary-700 hover:bg-primary/20 text-muted-foreground cursor-pointer'
+                            )}
+                          >
+                            {t('pages.clients.activity.sms')}
+                          </button>
+                        )}
                         {canAccessMessagingHistory && (
                           <button
                             onClick={() => setActiveCallSmsTab('messaging')}

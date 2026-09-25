@@ -739,7 +739,7 @@ export const router = createBrowserRouter([
         path: 'system-settings/sms-templates',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.SYSTEM.MANAGE_SETTINGS}>
-            {withSuspense(<SmsTemplatesPage />)}
+            <UkrainianProjectRoute>{withSuspense(<SmsTemplatesPage />)}</UkrainianProjectRoute>
           </PermissionRoute>
         ),
       },

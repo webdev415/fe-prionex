@@ -10003,7 +10003,9 @@
         "delivered": "доставлено",
         "resultsLine": "{{delivered}}/{{total}} доставлено",
         "filteredCampaigns": "{{count}} кампаній відповідають фільтрам",
-        "totalCost": "Загальна вартість"
+        "totalCost": "Загальна вартість",
+        "resultsLineSent": "{{sent}}/{{total}} відправлено",
+        "noDeliveryReports": "Звіти про доставку відсутні"
       },
       "cost": {
         "actual": "Фактично",
@@ -10027,7 +10029,9 @@
         "destination": "Отримувач",
         "sentAt": "Надіслано",
         "deliveredAt": "Доставлено",
-        "error": "Помилка"
+        "error": "Помилка",
+        "deliveryNotReported": "Не повідомляється",
+        "deliveryNotReportedHint": "Цей провайдер не надсилає звіти про доставку. Перевірте статус доставки в кабінеті провайдера."
       },
       "actions": {
         "viewDetails": "Переглянути деталі",
@@ -10131,6 +10135,15 @@
         "defaultName": "CSV кампанія {{channel}}",
         "templateFailed": "Не вдалося завантажити шаблон",
         "parseFailed": "Не вдалося розібрати CSV"
+      },
+      "recipientStatus": {
+        "pending": "Очікується",
+        "queued": "У черзі",
+        "sent": "Відправлено",
+        "delivered": "Доставлено",
+        "failed": "Не вдалося",
+        "bounced": "Відхилено",
+        "skipped": "Пропущено"
       }
     },
     "messagingDrafts": {
@@ -10230,7 +10243,8 @@
         "omnicell": "OmniCell",
         "vodafone_obm": "Vodafone OBM",
         "my2_viber": "My2 Viber",
-        "intel_tele": "Intel-Tele.com"
+        "intel_tele": "Intel-Tele.com",
+        "zadarma": "Zadarma"
       },
       "credentials": {
         "turbosms": {
@@ -10300,6 +10314,18 @@
           },
           "reply_to_name": {
             "label": "Ім'я для відповіді"
+          }
+        },
+        "zadarma": {
+          "user_key": {
+            "label": "Ключ користувача"
+          },
+          "secret": {
+            "label": "Секрет"
+          },
+          "sender": {
+            "label": "Відправник (альфа-ім’я)",
+            "placeholder": "Погоджене альфа-ім’я; залиште порожнім, щоб узяти типове для акаунта"
           }
         }
       },

@@ -1,3 +1,4 @@
+import type { Country } from '@/lib/projectCountry'
 export type MessagingChannel = 'sms' | 'viber' | 'email'
 export type MessagingSource = 'single' | 'bulk' | 'csv'
 
@@ -36,6 +37,7 @@ export const KNOWN_MESSAGING_SERVICES = [
   'vodafone_obm',
   'my2_viber',
   'intel_tele',
+  'zadarma',
 ] as const
 export type MessagingService = (typeof KNOWN_MESSAGING_SERVICES)[number]
 
@@ -45,6 +47,7 @@ export const SERVICE_CHANNEL_MATRIX: Record<MessagingService, MessagingChannel[]
   vodafone_obm: ['sms'],
   my2_viber: ['viber'],
   intel_tele: ['email'],
+  zadarma: ['sms'],
 }
 
 export const getSupportedChannelsForService = (service: string): MessagingChannel[] =>
@@ -53,12 +56,30 @@ export const getSupportedChannelsForService = (service: string): MessagingChanne
 export const serviceSupportsChannel = (service: string, channel: MessagingChannel): boolean =>
   getSupportedChannelsForService(service).includes(channel)
 
+/**
+ * Countries each provider serves. A Ukrainian gateway cannot deliver to a
+ * Spanish number and vice versa, so offering it on the wrong project only
+ * produces a failed send.
+ */
+export const SERVICE_COUNTRIES: Record<MessagingService, Country[]> = {
+  turbosms: ['UA'],
+  omnicell: ['UA'],
+  vodafone_obm: ['UA'],
+  my2_viber: ['UA'],
+  intel_tele: ['UA', 'ES'],
+  zadarma: ['ES'],
+}
+
+export const serviceServesCountry = (service: string, country: Country): boolean =>
+  (SERVICE_COUNTRIES[service as MessagingService] ?? []).includes(country)
+
 export const MESSAGING_SERVICE_LABELS: Record<MessagingService, string> = {
   turbosms: 'TurboSMS',
   omnicell: 'OmniCell',
   vodafone_obm: 'Vodafone OBM',
   my2_viber: 'My2 Viber',
   intel_tele: 'Intel-Tele.com',
+  zadarma: 'Zadarma',
 }
 
 export const getMessagingServiceLabel = (service: string): string =>
@@ -71,6 +92,7 @@ export const IMPLEMENTED_MESSAGING_SERVICES: MessagingService[] = [
   'vodafone_obm',
   'my2_viber',
   'intel_tele',
+  'zadarma',
 ]
 
 export const REQUIRED_CREDENTIAL_KEYS: Record<MessagingService, string[]> = {
@@ -79,6 +101,7 @@ export const REQUIRED_CREDENTIAL_KEYS: Record<MessagingService, string[]> = {
   vodafone_obm: ['username', 'password', 'sender'],
   my2_viber: ['api_key', 'sender'],
   intel_tele: ['username', 'api_key', 'from_email'],
+  zadarma: ['user_key', 'secret'],
 }
 
 export const OPTIONAL_CREDENTIAL_KEYS: Record<MessagingService, string[]> = {
@@ -87,6 +110,7 @@ export const OPTIONAL_CREDENTIAL_KEYS: Record<MessagingService, string[]> = {
   omnicell: [],
   vodafone_obm: ['sender_id'],
   my2_viber: [],
+  zadarma: ['sender'],
 }
 
 const CREDENTIAL_ALIASES: Record<string, string[]> = {
@@ -97,6 +121,7 @@ const CREDENTIAL_ALIASES: Record<string, string[]> = {
   reply_to_email: ['reply_to_email', 'reply_to'],
   username: ['username', 'login'],
   password: ['password', 'secret'],
+  user_key: ['user_key', 'api_key'],
 }
 
 export function isMessagingProviderImplemented(service: string): boolean {
@@ -156,9 +181,13 @@ export function canTestMessagingIntegration(
 /** Integration may be used for sends: live provider, channel enabled, test passed, credentials stored. */
 export function isMessagingIntegrationUsable(
   integration: MessagingIntegration,
-  channel: MessagingChannel
+  channel: MessagingChannel,
+  country?: Country
 ): boolean {
   if (!isMessagingProviderImplemented(integration.service)) {
+    return false
+  }
+  if (country && !serviceServesCountry(integration.service, country)) {
     return false
   }
   if (!serviceSupportsChannel(integration.service, channel)) {
