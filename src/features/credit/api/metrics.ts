@@ -53,14 +53,18 @@ export function formatMinorTotal(minor: number, currency?: string): string {
  * Счёт «таблетки» статуса над списком заявок — из сводки модуля.
  *
  * Сводки нет (грузится или отказала) — числа нет вовсе: неизвестное не
- * выдаётся за ноль. Сводка есть, а ключа статуса нет — это ноль в проекте
- * (`group by` модуля), и ноль показывается.
+ * выдаётся за ноль. Какие статусы сводка считает, говорит она сама
+ * (`application_statuses`): статус вне этого перечня сводкой не агрегируется,
+ * и его ноль был бы выдумкой — числа нет так же, как без сводки. Статус из
+ * перечня без ключа в счётчиках — это ноль в проекте (`group by` модуля), и
+ * ноль показывается.
  */
 export function applicationStatusCount(
   overview: CreditOverview | undefined,
   status: CreditApplicationStatus
 ): string | null {
   if (!overview) return null
+  if (!overview.application_statuses.includes(status)) return null
   return formatCount(overview.applications[status] ?? 0)
 }
 

@@ -8,7 +8,7 @@
  * Данные — API кредитного модуля (`/api/v1/credit/*`). Прямых обращений в
  * credit_db нет и быть не может (правило 28).
  */
-import { useId, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { DataTable, type Column, type SortOrder } from '@/components/ui/DataTable'
@@ -147,10 +147,37 @@ export function CreditApplicationsPage() {
   // Счётчики «таблеток» — по всему разделу (сводка), а список сужают поиск и
   // даты: тогда числа и «усього N» расходятся по построению, и это подписано.
   const countsNarrowed = Boolean(query || created.from || created.to || updated.from || updated.to)
+  // Выбор дня применяет и набранный поиск: иначе на экране в поле один поиск,
+  // а в запросе — прежний, и оператор читает список не по тому, что видит.
   const pickDay = (setDay: (day: string) => void, day: string) => {
     setDay(day)
+    setQuery(searchDraft.trim())
     setPageParam('1')
   }
+
+  // Мусор вместо дня (вручную правленая ссылка) поле не показывает и в запрос не
+  // шлёт — значит, и в ссылке ему не место: пересланная коллеге, она несла бы
+  // фильтр, которого нет. Запись заменяет текущую (`replace` у useURLState), а
+  // не добавляет шаг истории.
+  useEffect(() => {
+    if (createdFrom && !createdFromDay) setCreatedFrom('')
+    if (createdTo && !createdToDay) setCreatedTo('')
+    if (updatedFrom && !updatedFromDay) setUpdatedFrom('')
+    if (updatedTo && !updatedToDay) setUpdatedTo('')
+  }, [
+    createdFrom,
+    createdFromDay,
+    createdTo,
+    createdToDay,
+    updatedFrom,
+    updatedFromDay,
+    updatedTo,
+    updatedToDay,
+    setCreatedFrom,
+    setCreatedTo,
+    setUpdatedFrom,
+    setUpdatedTo,
+  ])
 
   const { data: overview, error: overviewError } = useCreditOverview()
   const {
@@ -385,8 +412,12 @@ export function CreditApplicationsPage() {
             {t('credit.applications.statusCountsHint')}
           </p>
         )}
+        {/* noValidate: min/max полей дат — подсказка календарю, а не запрет. С
+            проверкой браузера перевёрнутая пара блокировала бы «Пошук» молча;
+            её судит страница (строка под полями и плашка над таблицей). */}
         <form
           className="flex flex-wrap items-end gap-2"
+          noValidate
           onSubmit={(event) => {
             event.preventDefault()
             setQuery(searchDraft.trim())
@@ -454,18 +485,22 @@ export function CreditApplicationsPage() {
           </Button>
         </form>
         {(created.inverted || updated.inverted) && (
-          <p id={rangeHintId} role="alert" className="text-error-500 mt-2 text-xs">
+          <p id={rangeHintId} className="text-error-500 mt-2 text-xs">
             {t('credit.filters.rangeInverted')}
           </p>
         )}
         <p className="text-muted-foreground mt-2 text-xs">{t('credit.filters.calendarHint')}</p>
       </div>
 
-      <CreditMetricCards
-        metrics={metrics}
-        activeStatuses={statuses}
-        onToggleStatus={toggleStatus}
-      />
+      <CreditMetricCards metrics={metrics} />
+
+      {/* Перевёрнутая пара в запрос не ушла, и список шире, чем выбрано полями:
+          это громко, над таблицей, а не только строкой под полями. */}
+      {(created.inverted || updated.inverted) && (
+        <Alert variant="error" className="mb-4">
+          {t('credit.applications.dateRangeNotApplied')}
+        </Alert>
+      )}
 
       {error && (
         <Alert variant="error" className="mb-4">
