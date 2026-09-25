@@ -28,8 +28,6 @@ import {
   SOFT_DENIED_REASON_CODES,
   type AssistantCitationVerdict,
   type AssistantExpertCapability,
-  type AssistantFeedbackComprehension,
-  type AssistantFeedbackRating,
 } from '@/features/aiAssistant/api'
 import { normalizeCitations } from '@/features/aiAssistant/sse'
 import type {
@@ -81,7 +79,14 @@ import {
   type AssistantVoiceSilenceTimeout,
 } from '@/stores/aiAssistantStore'
 import type { AssistantConversationDetail, AssistantMode } from '@/features/aiAssistant/api'
-import { feedbackFromConversation, mergeFeedback } from '@/features/aiAssistant/feedbackHydration'
+import {
+  feedbackFromConversation,
+  feedbackRequestBody,
+  isFeedbackFieldLocked,
+  mergeFeedback,
+  type FeedbackField,
+  type MessageFeedbackState,
+} from '@/features/aiAssistant/feedbackHydration'
 import { isAxiosError } from 'axios'
 import {
   isNewConversationParam,
@@ -421,11 +426,6 @@ const LONG_PRESS_MS = 500
 
 /** Стабильная пустая карта пометок — чтобы не минтить новый объект на рендер. */
 const EMPTY_CITATION_MARKS: Record<number, AssistantCitationVerdict> = {}
-
-type MessageFeedback = {
-  rating?: AssistantFeedbackRating
-  comprehension?: AssistantFeedbackComprehension
-}
 
 // Styling for markdown produced by the assistant (no typography plugin in the
 // project, so element styles are scoped to the message bubble via arbitrary
@@ -1091,7 +1091,9 @@ export function AiAssistantBetaPage() {
   // подстановка команды не должна тут же переоткрывать меню).
   const [slashActiveIndex, setSlashActiveIndex] = useState(0)
   const [slashDismissed, setSlashDismissed] = useState(false)
-  const [feedbackByMessage, setFeedbackByMessage] = useState<Record<number, MessageFeedback>>({})
+  const [feedbackByMessage, setFeedbackByMessage] = useState<Record<number, MessageFeedbackState>>(
+    {}
+  )
   // Пометки источников «верно/неверно» (Слой 5), keyed by серверный message_id →
   // (номер сноски → вердикт). Оптимистичны: применяются сразу, откатываются при
   // ошибке POST. Живут в рамках монтирования (после F5 приходят с бэкенда — TODO
@@ -1294,6 +1296,30 @@ export function AiAssistantBetaPage() {
   const conversationQuery = useAssistantConversation(
     storedConversationId ?? 0,
     shouldHydrateConversation
+  )
+
+  /**
+   * Оценки ответов = снимок диалога с сервера, поверх которого локальные клики.
+   *
+   * Выводится в рендере из `conversationQuery.data`, а не копируется в state
+   * разовой гидратацией: снимок меняется и после неё — опрос недописанного
+   * ответа, фоновый refetch, оценка, вписанная в кэш `useSendFeedback` после
+   * успешного POST. Разовая копия при возврате к диалогу в той же сессии брала
+   * снимок, снятый до клика, — ответ выглядел неоценённым, и следующий клик
+   * затирал сохранённую оценку. Снимок чужого диалога (указатель уже сменился,
+   * гидратация ещё не прошла) не подмешивается.
+   */
+  const conversationDetail = conversationQuery.data
+  const serverFeedback = useMemo(
+    () =>
+      conversationDetail != null && conversationDetail.id === conversationId
+        ? feedbackFromConversation(conversationDetail)
+        : {},
+    [conversationDetail, conversationId]
+  )
+  const effectiveFeedback = useMemo(
+    () => mergeFeedback(serverFeedback, feedbackByMessage),
+    [serverFeedback, feedbackByMessage]
   )
 
   // Write-through: settings survive unmount/reload and stay scoped to the user.
@@ -1690,10 +1716,6 @@ export function AiAssistantBetaPage() {
           ]
         : mapped
     )
-    // Оценки ответов из истории: после F5 выбранные 👍/👎 и «Зрозуміло» остаются
-    // подсвеченными и заблокированными, как сразу после клика.
-    const savedFeedback = feedbackFromConversation(detail)
-    setFeedbackByMessage((current) => mergeFeedback(savedFeedback, current))
     setAwaitingServerAnswer(pending)
     setIsExplicitSelection(false)
     window.setTimeout(() => scrollToConversationBottom('auto'), 0)
@@ -2820,27 +2842,26 @@ export function AiAssistantBetaPage() {
    * говорит, почему не вышло, — молчаливого провала здесь больше нет.
    */
   const handleFeedback = useCallback(
-    (messageId: number | null, patch: Partial<MessageFeedback>) => {
+    (messageId: number | null, patch: Pick<MessageFeedbackState, FeedbackField>) => {
       if (messageId == null) {
         toast.error(t('pages.aiAssistant.feedbackUnavailable'))
         return
       }
+      // Тело — из того, что видит оператор (сервер + локальные клики): вторая
+      // пара не должна затирать первую, сохранённую в прошлой сессии.
       const previous = feedbackByMessage[messageId]
-      const merged: MessageFeedback = { ...previous, ...patch }
+      const merged: MessageFeedbackState = { ...effectiveFeedback[messageId], ...patch }
       setFeedbackByMessage((current) => ({ ...current, [messageId]: merged }))
-      mutateFeedback(
-        { message_id: messageId, ...merged },
-        {
-          onError: () => {
-            // Свой текст, а не общий apiError: «оценка не сохранилась» и
-            // «ассистент недоступен» — разные события для оператора.
-            toast.error(t('pages.aiAssistant.feedbackFailed'))
-            setFeedbackByMessage((current) => ({ ...current, [messageId]: previous ?? {} }))
-          },
-        }
-      )
+      mutateFeedback(feedbackRequestBody(messageId, merged), {
+        onError: () => {
+          // Свой текст, а не общий apiError: «оценка не сохранилась» и
+          // «ассистент недоступен» — разные события для оператора.
+          toast.error(t('pages.aiAssistant.feedbackFailed'))
+          setFeedbackByMessage((current) => ({ ...current, [messageId]: previous ?? {} }))
+        },
+      })
     },
-    [feedbackByMessage, mutateFeedback, t]
+    [effectiveFeedback, feedbackByMessage, mutateFeedback, t]
   )
 
   // Пометка источника факт-сноски «верно/неверно» (Слой 5). Оптимистично
@@ -3013,12 +3034,16 @@ export function AiAssistantBetaPage() {
   const renderFeedbackControls = (serverMessageId: number | null) => {
     // Без серверного id хранить нечего — состояние пустое, а клик уходит в
     // honest-путь handleFeedback (тост, не тишина).
-    const feedback = serverMessageId == null ? {} : (feedbackByMessage[serverMessageId] ?? {})
-    const ratingLocked = feedback.rating != null
-    const comprehensionLocked = feedback.comprehension != null
+    const feedback: MessageFeedbackState =
+      serverMessageId == null ? {} : (effectiveFeedback[serverMessageId] ?? {})
+    // Незнакомая сохранённая оценка тоже запирает пару — см. `unrecognised`.
+    const ratingLocked = isFeedbackFieldLocked(feedback, 'rating')
+    const comprehensionLocked = isFeedbackFieldLocked(feedback, 'comprehension')
 
     return (
-      <>
+      // `contents`: обёртка не ломает flex-ряд, но даёт тестам и отладке
+      // границу блока оценки конкретного ответа.
+      <span className="contents" data-testid={`message-feedback-${serverMessageId ?? 'unknown'}`}>
         <button
           type="button"
           aria-label={t('pages.aiAssistant.feedbackUseful')}
@@ -3058,7 +3083,7 @@ export function AiAssistantBetaPage() {
         >
           {t('pages.aiAssistant.feedbackUnclear')}
         </button>
-      </>
+      </span>
     )
   }
 
