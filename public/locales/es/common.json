@@ -11407,6 +11407,16 @@
       }
     },
     "client": {
+      "commentPhones": {
+        "copied": "Número de teléfono copiado",
+        "copyFailed": "No se ha podido copiar el número",
+        "copyPhone": "Copiar teléfono",
+        "lastCall": "Última llamada",
+        "never": "Nunca",
+        "notContact": "No es un contacto",
+        "panelAria": "Acciones del número de teléfono",
+        "savedContact": "Contacto guardado"
+      },
       "saleNotes": {
         "addedBy": "Añadido por",
         "collapse": "Contraer",
