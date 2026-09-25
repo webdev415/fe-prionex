@@ -21,6 +21,7 @@ import type { ReactNode } from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { CreditLoanDetailPage } from '../CreditLoanDetailPage'
 import * as hooks from '@/features/credit/hooks/useCredit'
 import type {
@@ -179,7 +180,16 @@ function openPassport(
   }
   return render(
     <MemoryRouter>
-      <CreditLoanDetailPage />
+      {/* Паспорт кредита ищет клиента CRM по телефону заявки — ему нужен клиент
+          запросов; `gcTime: Infinity` — без пятиминутного таймера сборки кэша,
+          который пережил бы тест. */}
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } })
+        }
+      >
+        <CreditLoanDetailPage />
+      </QueryClientProvider>
     </MemoryRouter>
   )
 }

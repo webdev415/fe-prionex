@@ -50,6 +50,7 @@ import {
 } from '@/features/credit/api/enums'
 import { CreditStatusBadge } from './components/CreditStatusBadge'
 import { CreditDocumentOpenButton } from './components/CreditDocumentOpenButton'
+import { CreditClientLink } from './components/CreditClientLink'
 import {
   CopyButton,
   CreditCardHeader,
@@ -336,6 +337,9 @@ export function CreditLoanDetailPage() {
             state={state}
             stateLoading={stateQuery.isLoading}
             stateError={stateQuery.error}
+            borrowerPhone={applicationQuery.data?.client_phone ?? null}
+            borrowerLoading={applicationQuery.isLoading}
+            borrowerFailed={Boolean(applicationQuery.error)}
           />
         )}
         {tab === 'balances' && (
@@ -679,6 +683,9 @@ function LoanPassport({
   state,
   stateLoading,
   stateError,
+  borrowerPhone,
+  borrowerLoading,
+  borrowerFailed,
 }: {
   loan: LoanDetail
   state?: CreditLoanState
@@ -686,6 +693,11 @@ function LoanPassport({
   // отличать «попытки не было» от «мы не знаем».
   stateLoading: boolean
   stateError: unknown
+  // Телефон заёмщика знает заявка, а не паспорт кредита. Её состояние нужно
+  // целиком: пока заявка грузится или не пришла, «телефону немає» было бы ложью.
+  borrowerPhone?: string | null
+  borrowerLoading?: boolean
+  borrowerFailed?: boolean
 }) {
   const { t } = useTranslation('common')
   // Возраст кредита считается от «сейчас», когда среза сервиса ещё нет, и без
@@ -792,8 +804,21 @@ function LoanPassport({
           </Link>
         </Field>
         <Field label={t('credit.fields.clientId')}>
+          {/* Раньше здесь обещали «створюється при укладенні договору», но клиента
+              CRM для канадского заёмщика не создаст никто — связь ищется так же,
+              как в карточке заявки: по телефону, с честным «не шукали». */}
           {loan.client_id === null ? (
-            <span className="text-muted-foreground text-xs">{t('credit.card.clientPending')}</span>
+            borrowerLoading ? (
+              <span className="text-muted-foreground text-xs">
+                {t('credit.clientLink.notSearched.loading')}
+              </span>
+            ) : borrowerFailed ? (
+              <span className="text-muted-foreground text-xs">
+                {t('credit.card.borrowerApplicationFailed')}
+              </span>
+            ) : (
+              <CreditClientLink clientId={null} phone={borrowerPhone} />
+            )
           ) : (
             <Link
               to={`/dashboard/clients/${loan.client_id}`}
