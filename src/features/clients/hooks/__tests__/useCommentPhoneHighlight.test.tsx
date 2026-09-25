@@ -29,7 +29,9 @@ function highlight(root: HTMLElement, contacts: PhoneLookupContact[] = [], signa
   return renderHook(() => useCommentPhoneHighlight({ container: root, contacts, signature }))
 }
 
-const spans = (root: HTMLElement) => Array.from(root.querySelectorAll('[data-phone]'))
+const spans = (root: HTMLElement) => Array.from(root.querySelectorAll<HTMLElement>('[data-phone]'))
+/** The number a span carries lives in its TEXT — never in an attribute. */
+const numbers = (root: HTMLElement) => spans(root).map((s) => s.textContent)
 
 afterEach(() => {
   container?.remove()
@@ -40,7 +42,7 @@ describe('useCommentPhoneHighlight', () => {
   it('wraps every number in the comment', () => {
     const root = mountComment(`<p>тел. ${UNKNOWN} і ще ${KNOWN}</p>`)
     highlight(root)
-    expect(spans(root).map((s) => s.getAttribute('data-phone'))).toEqual([UNKNOWN, KNOWN])
+    expect(numbers(root)).toEqual([UNKNOWN, KNOWN])
   })
 
   it('marks a contact number known and an unseen one new', () => {
@@ -64,7 +66,7 @@ describe('useCommentPhoneHighlight', () => {
     const root = mountComment(`<p><a href="/x/${UNKNOWN}">посилання</a> ${KNOWN}</p>`)
     highlight(root)
     expect(root.querySelector('a')?.getAttribute('href')).toBe(`/x/${UNKNOWN}`)
-    expect(spans(root).map((s) => s.getAttribute('data-phone'))).toEqual([KNOWN])
+    expect(numbers(root)).toEqual([KNOWN])
   })
 
   it('walks every comment body, not just the first', () => {
@@ -186,6 +188,21 @@ describe('useCommentPhoneHighlight', () => {
     expect(result.current.selected).toBeNull()
   })
 
+  it('puts the number in NO attribute at all, only in the text', () => {
+    // The comment body is data-openreplay-obscured, but obscuring inherits to
+    // text nodes, images and inputs only: attribute values are sent verbatim
+    // outside privateMode. With obscureTextNumbers the visible digits are
+    // masked, so any attribute carrying them would be the one cleartext copy
+    // of every third-party number in the recording.
+    const root = mountComment(`<p>${UNKNOWN}</p>`)
+    highlight(root)
+    const span = spans(root)[0]
+
+    const leaking = Array.from(span.attributes).filter((attr) => attr.value.includes(UNKNOWN))
+    expect(leaking.map((attr) => attr.name)).toEqual([])
+    expect(span.textContent).toBe(UNKNOWN)
+  })
+
   it('never puts the number in a title or aria-label', () => {
     // Same leak vector the dropdown guards: the tracker sends both verbatim
     // even from obscured nodes.
@@ -240,6 +257,6 @@ describe('useCommentPhoneHighlight', () => {
     const { container: rendered } = render(<Harness />)
     const root = rendered.firstElementChild as HTMLElement
     highlight(root)
-    expect(spans(root).map((s) => s.getAttribute('data-phone'))).toEqual([UNKNOWN])
+    expect(numbers(root)).toEqual([UNKNOWN])
   })
 })

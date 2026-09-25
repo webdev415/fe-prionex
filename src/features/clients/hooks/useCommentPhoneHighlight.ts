@@ -47,6 +47,26 @@ interface Options {
   signature: string
 }
 
+/**
+ * The number a highlight span carries — read from its TEXT, never an attribute.
+ *
+ * `data-phone` is a presence marker with an EMPTY value, and that is a privacy
+ * requirement rather than a style choice. The comment body is marked
+ * `data-openreplay-obscured`, but obscuring inherits only to text nodes, images
+ * and inputs: `sendNodeAttribute` ships attribute values verbatim outside
+ * `privateMode`, which is off here. With `obscureTextNumbers: true` the visible
+ * digits are masked in the recording, so an attribute holding the raw number
+ * would be the ONE cleartext copy of every third-party phone number in every
+ * creditor comment. The same reasoning already keeps the number out of `title`
+ * and `aria-label` below.
+ *
+ * The text is intact in the live DOM — the tracker masks what it SENDS, not the
+ * page — so reading it here costs nothing.
+ */
+function phoneOf(span: HTMLElement): string {
+  return (span.textContent ?? '').trim()
+}
+
 function isAlreadyWrapped(node: Text): boolean {
   return node.parentElement?.hasAttribute(PHONE_ATTR) ?? false
 }
@@ -73,7 +93,7 @@ function highlightPhones(container: HTMLElement, known: ReadonlySet<string>): vo
     // but an unconditional write would still churn the class of every number in
     // the comment on every pass, for nothing.
     for (const span of body.querySelectorAll<HTMLElement>(`[${PHONE_ATTR}]`)) {
-      const current = span.getAttribute(PHONE_ATTR)
+      const current = phoneOf(span)
       if (!current) continue
       const state = classifyPhone(current, known)
       if (span.getAttribute(STATE_ATTR) === state) continue
@@ -112,7 +132,9 @@ function highlightPhones(container: HTMLElement, known: ReadonlySet<string>): vo
         }
         const state = classifyPhone(match.value, known)
         const span = document.createElement('span')
-        span.setAttribute(PHONE_ATTR, match.value)
+        // Empty on purpose — see `phoneOf`. The marker is what the selector
+        // and the delegated listener need; the digits live in the text.
+        span.setAttribute(PHONE_ATTR, '')
         span.setAttribute(STATE_ATTR, state)
         // role/tabindex so the number is reachable without a mouse. No
         // aria-label and no title: the tracker sends both verbatim even from
@@ -187,7 +209,7 @@ export function useCommentPhoneHighlight({ container, contacts, signature }: Opt
       const target = event.target as Element | null
       const span = target?.closest<HTMLElement>(`[${PHONE_ATTR}]`)
       if (!span || !container.contains(span)) return
-      const phone = span.getAttribute(PHONE_ATTR)
+      const phone = phoneOf(span)
       if (!phone) return
       const state = (span.getAttribute(STATE_ATTR) as PhoneHighlightState) ?? 'new'
       setSelected((current) =>

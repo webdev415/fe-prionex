@@ -76,9 +76,9 @@ function renderSection(over: Partial<React.ComponentProps<typeof SaleNotesSectio
   return { ...utils, ...handlers }
 }
 
-const phoneSpans = () => Array.from(document.querySelectorAll('[data-phone]'))
-const spanFor = (phone: string) =>
-  phoneSpans().find((s) => s.getAttribute('data-phone') === phone) as HTMLElement
+const phoneSpans = () => Array.from(document.querySelectorAll<HTMLElement>('[data-phone]'))
+// By TEXT, not by attribute: the span carries no copy of the number (PII).
+const spanFor = (phone: string) => phoneSpans().find((s) => s.textContent === phone) as HTMLElement
 
 const writeText = vi.fn()
 
@@ -103,7 +103,7 @@ beforeEach(() => {
 describe('the primary-creditor comment section', () => {
   it('highlights the numbers in the comment', () => {
     renderSection()
-    expect(phoneSpans().map((s) => s.getAttribute('data-phone'))).toEqual([KNOWN, NEW])
+    expect(phoneSpans().map((s) => s.textContent)).toEqual([KNOWN, NEW])
   })
 
   it('colours a contact number known and an unseen one new', () => {
@@ -190,7 +190,7 @@ describe('the primary-creditor comment section', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /View All/i }))
 
-    expect(phoneSpans().map((s) => s.getAttribute('data-phone'))).toEqual([KNOWN, NEW])
+    expect(phoneSpans().map((s) => s.textContent)).toEqual([KNOWN, NEW])
   })
 
   it('treats every number as new when the client has no contacts', () => {
