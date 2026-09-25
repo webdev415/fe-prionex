@@ -6,12 +6,15 @@
  *    бесполезна);
  *  - фильтр по статусу уходит в запрос, а не фильтрует локально: страниц много,
  *    локальная фильтрация показывала бы верификатору неполную очередь;
- *  - метрики считаются из сводки, а не выдумываются нулями;
+ *  - статусы переключает один ряд «таблеток», и счёт в них — из сводки, а не
+ *    выдумывается нулями (без сводки чисел нет);
+ *  - даты создания и последнего движения уходят в модуль днём, без перевода, и
+ *    перевёрнутая пара не уходит вовсе;
  *  - колонка шага появляется по данным модуля, а не по релизу фронта.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { MemoryRouter, useLocation, useNavigationType } from 'react-router-dom'
 import { CreditApplicationsPage } from '../CreditApplicationsPage'
 import { CreditLoansPage } from '../CreditLoansPage'
 import { CreditUnderwritingQueuePage } from '../CreditUnderwritingQueuePage'
@@ -22,11 +25,13 @@ import {
   useCreditUnderwritingQueue,
 } from '@/features/credit/hooks/useCredit'
 import { CreditApiError } from '@/features/credit/api/creditApi'
-import type {
-  CreditApplicationSummary,
-  CreditLoanSummary,
-  CreditOverview,
-  CreditQueueItem,
+import {
+  CREDIT_APPLICATION_STATUSES,
+  type CreditApplicationsParams,
+  type CreditApplicationSummary,
+  type CreditLoanSummary,
+  type CreditOverview,
+  type CreditQueueItem,
 } from '@/features/credit/api/types'
 
 // Мокаем ХУКИ, а не HTTP-клиент: живой QueryClient оставляет таймеры
@@ -77,6 +82,39 @@ function renderPage(initialEntry = '/dashboard/credit/applications') {
   )
 }
 
+/** «Таблетка» статуса: имя — подпись, затем (если есть сводка) её счёт. */
+function pill(status: string): HTMLElement {
+  return screen.getByRole('button', { name: new RegExp(`^credit\\.status\\.${status}(\\s|$)`) })
+}
+
+/** Параметры последнего вызова хука списка — то, что ушло бы в модуль. */
+function lastListParams(): CreditApplicationsParams | undefined {
+  return vi.mocked(useCreditApplications).mock.lastCall?.[0]
+}
+
+function dayField(labelKey: string): HTMLInputElement {
+  return screen.getByLabelText(labelKey) as HTMLInputElement
+}
+
+/** Текущий адрес страницы и способ последней навигации — чтобы видеть, что стало со ссылкой. */
+function UrlProbe() {
+  const location = useLocation()
+  const navigation = useNavigationType()
+  return <output data-testid="url">{`${navigation} ${location.search}`}</output>
+}
+
+function renderPageWithUrl(initialEntry: string) {
+  return render(
+    <MemoryRouter initialEntries={[initialEntry]}>
+      <CreditApplicationsPage />
+      <UrlProbe />
+    </MemoryRouter>
+  )
+}
+
+const DATES_URL =
+  '/dashboard/credit/applications?created_from=2026-08-31&created_to=2026-09-01&updated_from=2026-09-20&updated_to=2026-09-24'
+
 describe('CreditApplicationsPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -104,20 +142,31 @@ describe('CreditApplicationsPage', () => {
 
     // В тестовой среде i18n замокан и возвращает ключ (см. src/test/setup.ts),
     // поэтому ищем кнопку по ключу перевода, а не по русскому/английскому тексту.
-    fireEvent.click(screen.getByRole('button', { name: 'credit.status.referred' }))
+    // Регэксп, а не точная строка: в имени «таблетки» теперь стоит и её счёт.
+    fireEvent.click(pill('referred'))
 
     await waitFor(() => {
       expect(vi.mocked(useCreditApplications)).toHaveBeenCalledWith(
         expect.objectContaining({ status: ['referred'] })
       )
     })
+    // Карточек статусов больше нет: выбор виден только по «таблетке».
+    await waitFor(() => {
+      expect(
+        pill('referred').getAttribute('aria-pressed'),
+        'выбранная «таблетка» не отмечена'
+      ).toBe('true')
+    })
+    expect(pill('declined').getAttribute('aria-pressed'), 'невыбранная «таблетка» отмечена').toBe(
+      'false'
+    )
   })
 
-  it('метрики берутся из сводки модуля', async () => {
+  it('счёт статуса берётся из сводки модуля', async () => {
     renderPage()
     await screen.findByText('DEMO-202608-03A17C')
-    // счётчик статуса «ручной разбор» из overview
-    expect(await screen.findByText('2')).toBeInTheDocument()
+    // счётчик статуса «ручной разбор» из overview — в самой «таблетке»
+    expect(within(pill('referred')).getByText('2')).toBeInTheDocument()
   })
 
   // Колонка шага. Модуль начал отдавать `resume_step` в сводке позже самого
@@ -182,6 +231,369 @@ describe('CreditApplicationsPage', () => {
     renderPage()
     await screen.findByText('credit.columns.onStep')
     expect(screen.getByText(/credit\.idle\.sinceCreated/)).toBeInTheDocument()
+  })
+})
+
+// ───────────────────────────────────────────────────────────────────────────
+// Один ряд статусов и фильтры дат.
+//
+// Статус переключали два ряда одного и того же параметра `status` — «таблетки»
+// и кликабельные карточки статусов. Остаётся один: «таблетки» со счётом из
+// сводки, где ноль тоже виден, а без сводки чисел нет. Даты уходят в модуль
+// днём `YYYY-MM-DD` в ключи `created_from`/`created_to`/`updated_from`/
+// `updated_to`; границы суток по календарю юрисдикции заявки считает модуль,
+// фронт суток не считает. Моки ставятся здесь же, в `beforeEach`: соседний
+// параметризованный блок сбрасывает реализации (`mockReset`), и донашивать
+// чужие было бы проверкой не того.
+
+describe('заявки: один ряд статусов и даты', () => {
+  beforeEach(() => {
+    vi.mocked(useCreditOverview).mockReset()
+    vi.mocked(useCreditApplications).mockReset()
+    vi.mocked(useCreditOverview).mockReturnValue({ data: OVERVIEW, error: null } as ReturnType<
+      typeof useCreditOverview
+    >)
+    vi.mocked(useCreditApplications).mockReturnValue({
+      data: { items: [ROW], next_cursor: null, total: 1 },
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useCreditApplications>)
+  })
+
+  const statusButtons = () => screen.getAllByRole('button', { name: /^credit\.status\./ })
+
+  it('над таблицей один ряд статусов — восемь «таблеток» по контракту, в его порядке', async () => {
+    renderPage()
+    await screen.findByText('DEMO-202608-03A17C')
+    // Положительный контроль того же поиска: «таблетка» находится.
+    expect(pill('referred')).toBeInTheDocument()
+    const buttons = statusButtons()
+    expect(
+      buttons.length,
+      `кнопок статуса ${buttons.length}, а не 8: второй ряд статусов вернулся`
+    ).toBe(8)
+    buttons.forEach((button, index) => {
+      expect(
+        button.textContent?.startsWith(`credit.status.${CREDIT_APPLICATION_STATUSES[index]}`),
+        `кнопка ${index} — не «таблетка» ${CREDIT_APPLICATION_STATUSES[index]}`
+      ).toBe(true)
+    })
+  })
+
+  it('счёт «таблетки» — из сводки модуля, ноль виден', async () => {
+    renderPage()
+    await screen.findByText('DEMO-202608-03A17C')
+    // `approved` сводка объявляет (`application_statuses`), но ключа в счётчиках
+    // нет — это ноль в проекте, и он виден.
+    const expected: Array<[string, string]> = [
+      ['referred', '2'],
+      ['declined', '118'],
+      ['disbursed', '257'],
+      ['approved', '0'],
+    ]
+    for (const [status, count] of expected) {
+      expect(
+        within(pill(status)).queryByText(count),
+        `в «таблетке» ${status} нет счёта ${count} из сводки`
+      ).not.toBeNull()
+    }
+    // Положительный контроль сцены «без сводки чисел нет»: цифра здесь есть.
+    expect(/\d/.test(pill('referred').textContent ?? '')).toBe(true)
+  })
+
+  it('статус, которого сводка не считает, стоит без числа, а не с выдуманным нулём', async () => {
+    renderPage()
+    await screen.findByText('DEMO-202608-03A17C')
+    // `expired` и `contracted` в `OVERVIEW.application_statuses` нет.
+    for (const status of ['expired', 'contracted']) {
+      expect(
+        /\d/.test(pill(status).textContent ?? ''),
+        `«таблетка» ${status} получила число, хотя сводка этот статус не считает`
+      ).toBe(false)
+    }
+  })
+
+  it('без сводки «таблетки» стоят без чисел — неизвестное не выдаётся за ноль', async () => {
+    vi.mocked(useCreditOverview).mockReturnValue({
+      data: undefined,
+      error: new CreditApiError('forbidden', 403, 'forbidden'),
+    } as unknown as ReturnType<typeof useCreditOverview>)
+    renderPage()
+    await screen.findByText('DEMO-202608-03A17C')
+    const buttons = statusButtons()
+    expect(buttons).toHaveLength(8)
+    for (const button of buttons) {
+      expect(
+        /\d/.test(button.textContent ?? ''),
+        `без сводки в «таблетке» число: «${button.textContent}»`
+      ).toBe(false)
+    }
+  })
+
+  it('денежные карточки и конверсия остались и не кликабельны', async () => {
+    renderPage()
+    await screen.findByText('DEMO-202608-03A17C')
+    for (const key of ['credit.metrics.requested', 'credit.metrics.conversion']) {
+      const card = screen.getByText(key)
+      expect(card.closest('button'), `карточка ${key} стала кнопкой`).toBeNull()
+    }
+  })
+
+  it('даты из ссылки доходят до запроса днём, каждая в свой ключ', async () => {
+    renderPage(DATES_URL)
+    await screen.findByText('DEMO-202608-03A17C')
+    const params = lastListParams()
+    expect(params?.created_from, 'created_from из ссылки не дошёл до запроса').toBe('2026-08-31')
+    expect(params?.created_to, 'created_to из ссылки не дошёл до запроса').toBe('2026-09-01')
+    expect(params?.updated_from, 'updated_from из ссылки не дошёл до запроса').toBe('2026-09-20')
+    expect(params?.updated_to, 'updated_to из ссылки не дошёл до запроса').toBe('2026-09-24')
+    expect(dayField('credit.filters.createdFrom').value, 'поле «Створено з» не из ссылки').toBe(
+      '2026-08-31'
+    )
+    expect(dayField('credit.filters.createdTo').value, 'поле «Створено по» не из ссылки').toBe(
+      '2026-09-01'
+    )
+    expect(dayField('credit.filters.updatedFrom').value, 'поле «Останній рух з» не из ссылки').toBe(
+      '2026-09-20'
+    )
+    expect(dayField('credit.filters.updatedTo').value, 'поле «Останній рух по» не из ссылки').toBe(
+      '2026-09-24'
+    )
+  })
+
+  const FIELDS: Array<[string, keyof CreditApplicationsParams, string]> = [
+    ['credit.filters.createdFrom', 'created_from', '2026-08-31'],
+    ['credit.filters.createdTo', 'created_to', '2026-09-01'],
+    ['credit.filters.updatedFrom', 'updated_from', '2026-09-20'],
+    ['credit.filters.updatedTo', 'updated_to', '2026-09-24'],
+  ]
+
+  it.each(FIELDS)(
+    'поле %s пишет свой параметр %s и возвращает на первую страницу',
+    async (labelKey, key, day) => {
+      renderPage('/dashboard/credit/applications?page=3')
+      await screen.findByText('DEMO-202608-03A17C')
+      expect(lastListParams()?.cursor, 'сцена не про то: старт не с третьей страницы').toBeDefined()
+      fireEvent.change(dayField(labelKey), { target: { value: day } })
+      await waitFor(() => {
+        expect(lastListParams()?.[key], `${labelKey} не записало ${key}`).toBe(day)
+      })
+      const params = lastListParams()
+      for (const [, otherKey] of FIELDS) {
+        if (otherKey === key) continue
+        expect(params?.[otherKey], `${labelKey} записало чужой ключ ${otherKey}`).toBeUndefined()
+      }
+      expect(params?.cursor, `${labelKey} не вернуло на первую страницу`).toBeUndefined()
+    }
+  )
+
+  it('«Сброс» чистит и четыре даты', async () => {
+    renderPage(DATES_URL)
+    await screen.findByText('DEMO-202608-03A17C')
+    fireEvent.click(screen.getByRole('button', { name: 'credit.actions.reset' }))
+    await waitFor(() => {
+      const params = lastListParams()
+      for (const [labelKey, key] of FIELDS) {
+        expect(params?.[key], `«Сброс» не очистил ${key}`).toBeUndefined()
+        expect(dayField(labelKey).value, `«Сброс» не очистил поле ${labelKey}`).toBe('')
+      }
+    })
+  })
+
+  it('мусор в ссылке вместо дня в запрос не уходит', async () => {
+    renderPage('/dashboard/credit/applications?created_from=31.08.2026')
+    await screen.findByText('DEMO-202608-03A17C')
+    expect(lastListParams()?.created_from, 'мусор из ссылки ушёл в запрос как дата').toBeUndefined()
+    expect(dayField('credit.filters.createdFrom').value).toBe('')
+  })
+
+  it.each([
+    [
+      '?created_from=2026-08-31&updated_to=2026-09-24',
+      { createdTo: ['min', '2026-08-31'], updatedFrom: ['max', '2026-09-24'] },
+      { createdFrom: 'max', updatedTo: 'min' },
+    ],
+    [
+      '?created_to=2026-09-01&updated_from=2026-09-20',
+      { createdFrom: ['max', '2026-09-01'], updatedTo: ['min', '2026-09-20'] },
+      { createdTo: 'min', updatedFrom: 'max' },
+    ],
+  ] as Array<[string, Record<string, [string, string]>, Record<string, string>]>)(
+    'соседнее поле пары ограничивает календарь (%s)',
+    async (search, bounded, unbounded) => {
+      renderPage(`/dashboard/credit/applications${search}`)
+      await screen.findByText('DEMO-202608-03A17C')
+      for (const [field, [attribute, day]] of Object.entries(bounded)) {
+        expect(
+          dayField(`credit.filters.${field}`).getAttribute(attribute),
+          `у поля ${field} нет ${attribute} ${day} от соседа по паре`
+        ).toBe(day)
+      }
+      for (const [field, attribute] of Object.entries(unbounded)) {
+        expect(
+          dayField(`credit.filters.${field}`).hasAttribute(attribute),
+          `у поля ${field} ${attribute} без соседа по паре`
+        ).toBe(false)
+      }
+    }
+  )
+
+  it.each(['', '?created_from=2026-08-31'])(
+    'подсказка о календаре провинции видна всегда (%s)',
+    async (search) => {
+      renderPage(`/dashboard/credit/applications${search}`)
+      await screen.findByText('DEMO-202608-03A17C')
+      expect(
+        screen.queryByText('credit.filters.calendarHint'),
+        'подсказки о календаре провинции нет'
+      ).not.toBeNull()
+    }
+  )
+
+  it('без поиска и дат подписи счётчиков нет', async () => {
+    renderPage()
+    await screen.findByText('DEMO-202608-03A17C')
+    expect(
+      screen.queryByText('credit.applications.statusCountsHint'),
+      'подпись счётчиков видна без поиска и дат'
+    ).toBeNull()
+  })
+
+  it.each([
+    '?q=demo',
+    '?created_from=2026-08-31',
+    '?created_to=2026-09-01',
+    '?updated_from=2026-09-20',
+    '?updated_to=2026-09-24',
+  ])('при сужении списка (%s) подпись счётчиков видна', async (search) => {
+    renderPage(`/dashboard/credit/applications${search}`)
+    await screen.findByText('DEMO-202608-03A17C')
+    expect(
+      screen.queryByText('credit.applications.statusCountsHint'),
+      `список сужен (${search}), а подписи, что счётчики по всему разделу, нет`
+    ).not.toBeNull()
+  })
+
+  it('перевёрнутая пара не уходит, помечена одной строкой, вторая пара уходит', async () => {
+    renderPage(
+      '/dashboard/credit/applications?created_from=2026-09-02&created_to=2026-08-31&updated_from=2026-09-20'
+    )
+    await screen.findByText('DEMO-202608-03A17C')
+    const params = lastListParams()
+    expect(params?.created_from, 'перевёрнутая пара ушла в запрос (created_from)').toBeUndefined()
+    expect(params?.created_to, 'перевёрнутая пара ушла в запрос (created_to)').toBeUndefined()
+    expect(params?.updated_from, 'вторая пара пострадала от перевёрнутой').toBe('2026-09-20')
+
+    const hints = screen.getAllByText('credit.filters.rangeInverted')
+    expect(hints, 'строк о перевёрнутом диапазоне не одна').toHaveLength(1)
+    const hintId = hints[0].id
+    expect(hintId, 'у строки о перевёрнутом диапазоне нет id').not.toBe('')
+    for (const labelKey of ['credit.filters.createdFrom', 'credit.filters.createdTo']) {
+      const field = dayField(labelKey)
+      expect(field.getAttribute('aria-invalid'), `поле ${labelKey} не помечено`).toBe('true')
+      expect(
+        field.getAttribute('aria-describedby'),
+        `поле ${labelKey} не ссылается на строку о перевёрнутом диапазоне`
+      ).toBe(hintId)
+      const label = field.closest('label')
+      expect(label).not.toBeNull()
+      expect(
+        within(label as HTMLElement).queryByRole('alert'),
+        `у поля ${labelKey} своя строка ошибки`
+      ).toBeNull()
+    }
+    expect(
+      dayField('credit.filters.updatedFrom').getAttribute('aria-invalid'),
+      'поле второй пары помечено перевёрнутым'
+    ).not.toBe('true')
+  })
+
+  it('форма фильтров не отдаёт даты на суд браузеру: min/max — подсказка, не запрет', async () => {
+    renderPage()
+    await screen.findByText('DEMO-202608-03A17C')
+    const form = screen
+      .getByPlaceholderText('credit.applications.searchPlaceholder')
+      .closest('form')
+    expect(form, 'поле поиска не в форме фильтров').not.toBeNull()
+    expect(
+      (form as HTMLFormElement).noValidate,
+      'браузер проверяет min/max полей дат и молча блокирует «Пошук» при перевёрнутой паре'
+    ).toBe(true)
+  })
+
+  it('выбор дня применяет и набранный, но не отправленный поиск', async () => {
+    renderPage()
+    await screen.findByText('DEMO-202608-03A17C')
+    fireEvent.change(screen.getByPlaceholderText('credit.applications.searchPlaceholder'), {
+      target: { value: 'demo' },
+    })
+    // Положительный контроль: набранный поиск без «Пошук» в запрос ещё не ушёл.
+    expect(lastListParams()?.query).toBeUndefined()
+    fireEvent.change(dayField('credit.filters.createdFrom'), { target: { value: '2026-08-31' } })
+    await waitFor(() => {
+      expect(lastListParams()?.created_from).toBe('2026-08-31')
+    })
+    expect(
+      lastListParams()?.query,
+      'выбор дня потерял набранный поиск: в поле один поиск, в запросе другой'
+    ).toBe('demo')
+  })
+
+  it.each([
+    ['created', '?created_from=2026-09-02&created_to=2026-08-31'],
+    ['updated', '?updated_from=2026-09-24&updated_to=2026-09-20'],
+  ])('перевёрнутая пара %s громко названа над таблицей', async (_pair, search) => {
+    renderPage(`/dashboard/credit/applications${search}`)
+    await screen.findByText('DEMO-202608-03A17C')
+    expect(
+      screen.queryByText('credit.applications.dateRangeNotApplied'),
+      `перевёрнутая пара (${search}) молча расширила список: плашки над таблицей нет`
+    ).not.toBeNull()
+  })
+
+  it.each(['', '?created_from=2026-08-31&created_to=2026-08-31'])(
+    'без перевёрнутой пары плашки нет (%s)',
+    async (search) => {
+      renderPage(`/dashboard/credit/applications${search}`)
+      await screen.findByText('DEMO-202608-03A17C')
+      expect(
+        screen.queryByText('credit.applications.dateRangeNotApplied'),
+        'плашка «фильтр дат не применён» без перевёрнутой пары'
+      ).toBeNull()
+    }
+  )
+
+  it('мусор вместо дня уходит и из ссылки — заменой, без шага истории', async () => {
+    renderPageWithUrl('/dashboard/credit/applications?created_from=31.08.2026&q=demo')
+    await screen.findByText('DEMO-202608-03A17C')
+    await waitFor(() => {
+      expect(
+        screen.getByTestId('url').textContent,
+        'мусор вместо дня остался в ссылке'
+      ).not.toContain('created_from')
+    })
+    const url = screen.getByTestId('url').textContent ?? ''
+    // Положительный контроль: остальная ссылка на месте, а не стёрта целиком.
+    expect(url, 'вместе с мусором из ссылки ушёл поиск').toContain('q=demo')
+    expect(url.startsWith('REPLACE '), `ссылка поправлена новым шагом истории: ${url}`).toBe(true)
+  })
+
+  it('равные границы — законный один день: уходят обе, пометки нет', async () => {
+    renderPage('/dashboard/credit/applications?created_from=2026-08-31&created_to=2026-08-31')
+    await screen.findByText('DEMO-202608-03A17C')
+    const params = lastListParams()
+    expect(params?.created_from, 'один день не ушёл (created_from)').toBe('2026-08-31')
+    expect(params?.created_to, 'один день не ушёл (created_to)').toBe('2026-08-31')
+    for (const labelKey of ['credit.filters.createdFrom', 'credit.filters.createdTo']) {
+      expect(
+        dayField(labelKey).getAttribute('aria-invalid'),
+        `один день помечен перевёрнутым (${labelKey})`
+      ).not.toBe('true')
+    }
+    expect(
+      screen.queryByText('credit.filters.rangeInverted'),
+      'один день назван перевёрнутым диапазоном'
+    ).toBeNull()
   })
 })
 
