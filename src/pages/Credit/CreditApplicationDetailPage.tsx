@@ -33,6 +33,7 @@ import { CreditPriorApplications } from './components/CreditPriorApplications'
 import { CreditApplicationTimeline } from './components/CreditApplicationTimeline'
 import { CreditCommunications } from './components/CreditCommunications'
 import { collectApplicationFlags } from '@/features/credit/api/applicantFlags'
+import { hasStatusRows, hasTimeline } from '@/features/credit/api/timeline'
 import { formatIdle, idleMinutes } from '@/features/credit/api/idle'
 import { useNowTick } from '@/features/credit/hooks/useNowTick'
 import {
@@ -770,14 +771,19 @@ function ApplicationHistory({ application }: { application: CreditApplicationDet
     <>
       <Panel title={t('credit.tabs.history')}>
         {/* Хронология модуля уже несёт переходы статуса дорожкой `status`, поэтому
-            `audit` рядом не выводится — переходы не дублируются. Нет поля (стенд
-            отстаёт от контракта) — прежний список `audit` и честная пометка. */}
-        {Array.isArray(timeline) ? (
-          <CreditApplicationTimeline
-            timeline={timeline}
-            portalEvents={application.portal_events}
-            portalEventsTotal={application.portal_events_total}
-          />
+            `audit` рядом не выводится — переходы не дублируются. Нет поля или лента
+            пуста (стенд отстаёт от контракта) — прежний список `audit` и честная
+            пометка. В ленте нет ни одного перехода — `audit` остаётся под ней:
+            иначе история статусов пропала бы молча. */}
+        {hasTimeline(timeline) ? (
+          <>
+            <CreditApplicationTimeline
+              timeline={timeline}
+              portalEvents={application.portal_events}
+              portalEventsTotal={application.portal_events_total}
+            />
+            {!hasStatusRows(timeline) && <AuditList application={application} />}
+          </>
         ) : (
           <>
             <p className="text-muted-foreground mb-2 text-xs">{t('credit.timeline.notProvided')}</p>

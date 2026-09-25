@@ -21,7 +21,7 @@ import {
   formatTalkDuration,
   type CreditCrmChannelState,
 } from '@/features/credit/api/communications'
-import { mailRows, portalEventLabel } from '@/features/credit/api/timeline'
+import { hasTimeline, mailRows, portalEventLabel } from '@/features/credit/api/timeline'
 import type { CreditTimelineRow } from '@/features/credit/api/types'
 import { useCreditCrmCommunications } from '@/features/credit/hooks/useCreditCommunications'
 
@@ -34,6 +34,9 @@ export function CreditCommunications({
 }) {
   const { t } = useTranslation('common')
   const { calls, sms } = useCreditCrmCommunications(clientId)
+  // Без хронологии писем «нет» не значит «не было»: модуль ленту не передал, и
+  // сказать про письма нечего. «Листів немає» — только когда лента пришла.
+  const timelineProvided = hasTimeline(timeline)
   const mail = mailRows(timeline)
 
   return (
@@ -60,18 +63,14 @@ export function CreditCommunications({
             ))
           }
         </ChannelBody>
-        {typeof clientId === 'number' && (
-          <Link
-            to={`/dashboard/clients/${clientId}`}
-            className="text-information-600 mt-2 inline-block text-xs underline"
-          >
-            {t('credit.communications.openClientCard')}
-          </Link>
-        )}
       </Subblock>
 
       <Subblock title={t('credit.communications.mail')}>
-        {mail.length === 0 ? (
+        {!timelineProvided ? (
+          <p className="text-muted-foreground text-xs">
+            {t('credit.communications.mailNotProvided')}
+          </p>
+        ) : mail.length === 0 ? (
           <p className="text-muted-foreground text-xs">{t('credit.communications.mailNone')}</p>
         ) : (
           <ul>
@@ -107,6 +106,16 @@ export function CreditCommunications({
       <p className="text-muted-foreground mt-1 text-xs">
         {t('credit.communications.smsCanadaMissing')}
       </p>
+      {/* Полная история звонков и SMS — в карточке клиента, под теми же правами;
+          ссылка общая для обоих каналов, поэтому стоит вне их подблоков. */}
+      {typeof clientId === 'number' && (
+        <Link
+          to={`/dashboard/clients/${clientId}`}
+          className="text-information-600 mt-2 inline-block text-xs underline"
+        >
+          {t('credit.communications.openClientCard')}
+        </Link>
+      )}
     </div>
   )
 }
@@ -140,12 +149,14 @@ function ChannelBody<T>({
     case 'failed':
       return <p className="text-warning-800 text-xs">{t('credit.communications.failed')}</p>
     case 'ok':
-      if (state.total === 0 || state.items.length === 0) {
+      // «Не знайдено» — только когда CRM сказала «ноль». Пустой список при
+      // ненулевом числе — это «показано 0 из N», а не отсутствие истории.
+      if (state.total === 0) {
         return <p className="text-muted-foreground text-xs">{none}</p>
       }
       return (
         <>
-          <ul>{children(state.items)}</ul>
+          {state.items.length > 0 && <ul>{children(state.items)}</ul>}
           {state.items.length < state.total && (
             <p className="text-muted-foreground mt-1 text-xs">
               {t('credit.communications.shownOf', {

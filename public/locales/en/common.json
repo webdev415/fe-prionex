@@ -13062,6 +13062,7 @@
       "shownOf": "Showing {{shown}} of {{total}}",
       "openClientCard": "Everything is in the client card",
       "mailNone": "No e-mails for this application in the timeline. The site reports e-mails to the module once 17-6g is connected; earlier e-mails are not visible here.",
+      "mailNotProvided": "The module did not send the timeline — site e-mails are unavailable; this does not mean there were none",
       "mailLoanStage": "Loan-stage e-mails (payout, payments, closure) are not shown in the application card",
       "gotoMissing": "GoTo calls do not reach CRM. Only calls of the CRM client the module linked to this application are shown here",
       "smsCanadaMissing": "SMS for Canada is not connected",

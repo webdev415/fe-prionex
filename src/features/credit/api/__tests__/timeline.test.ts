@@ -8,6 +8,8 @@
 import { describe, it, expect } from 'vitest'
 import type { TFunction } from 'i18next'
 import {
+  hasStatusRows,
+  hasTimeline,
   isKnownPortalEvent,
   isMailRow,
   mailRows,
@@ -85,6 +87,11 @@ describe('U-2: письма клиенту — строки хронологии
     expect(mailRows([first, STATUS_ROW, clientRow('ibv_login'), second])).toEqual([first, second])
     expect(mailRows(undefined)).toEqual([])
   })
+
+  it('не-массив на месте ленты — пусто, а не падение', () => {
+    expect(mailRows({ track: 'client' })).toEqual([])
+    expect(mailRows('timeline')).toEqual([])
+  })
 })
 
 describe('U-3: честное число событий сайта', () => {
@@ -106,5 +113,23 @@ describe('U-3: честное число событий сайта', () => {
 
   it('модуль числа не прислал — сравнивать не с чем', () => {
     expect(truncatedPortalEvents(events(3), undefined)).toBeNull()
+  })
+
+  it('число есть, а ленты нет — «показано 0 из N» не выдумывается', () => {
+    expect(truncatedPortalEvents(undefined, 250)).toBeNull()
+  })
+})
+
+describe('U-8: пришла ли хронология и есть ли в ней переходы', () => {
+  it('пустая лента — как отсутствие поля', () => {
+    expect(hasTimeline([])).toBe(false)
+    expect(hasTimeline(undefined)).toBe(false)
+    expect(hasTimeline({})).toBe(false)
+    expect(hasTimeline([STATUS_ROW])).toBe(true)
+  })
+
+  it('лента только из событий сайта — переходов в ней нет', () => {
+    expect(hasStatusRows([clientRow('ibv_login')])).toBe(false)
+    expect(hasStatusRows([clientRow('ibv_login'), STATUS_ROW])).toBe(true)
   })
 })

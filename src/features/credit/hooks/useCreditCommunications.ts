@@ -22,24 +22,28 @@ export function useCreditCrmCommunications(clientId: number | null | undefined) 
       callSmsApi.getClientCalls(clientId as number, { limit: CREDIT_CRM_HISTORY_LIMIT }),
     enabled,
     retry: false,
+    // Карточку перечитывают часто (переход между вкладками), а история звонков
+    // за минуту не меняется — без этого каждый заход был бы двумя запросами в CRM.
+    staleTime: 60_000,
   })
   const sms = useQuery({
     queryKey: ['credit', 'crmSms', clientId],
     queryFn: () => callSmsApi.getClientSms(clientId as number, { limit: CREDIT_CRM_HISTORY_LIMIT }),
     enabled,
     retry: false,
+    staleTime: 60_000,
   })
   return {
     calls: crmChannelState({
       clientId,
-      isLoading: calls.isLoading,
+      isSuccess: calls.isSuccess,
       error: calls.error,
       items: calls.data?.calls,
       total: calls.data?.total,
     }),
     sms: crmChannelState({
       clientId,
-      isLoading: sms.isLoading,
+      isSuccess: sms.isSuccess,
       error: sms.error,
       items: sms.data?.messages,
       total: sms.data?.total,

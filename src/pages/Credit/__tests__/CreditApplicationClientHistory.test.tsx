@@ -330,6 +330,22 @@ describe('блок «Клієнт»: другие заявки клиента', 
     renderPage(withPrior(value as CreditApplicantApplications | undefined))
     expect(clientPanel().textContent).toContain('credit.clientHistory.legacyNotCounted')
   })
+
+  it.each([
+    ['только число', { total: 3 }],
+    ['признаки не списком', { total: 3, items: [], identity_keys: 'email' }],
+    ['список не массивом', { total: 3, items: {}, identity_keys: ['email'] }],
+  ] as const)(
+    'H-10: поле неполной формы (%s) — «модуль не передав», карточка не падает',
+    (_name, value) => {
+      renderPage(withPrior(value as unknown as CreditApplicantApplications))
+      const text = clientPanel().textContent ?? ''
+      expect(text).toContain('credit.clientHistory.notCounted')
+      expect(text).not.toContain('credit.clientHistory.otherApplications')
+      // Положительный контроль: страница отрисована целиком, не экран ошибки.
+      expect(screen.getAllByText(/CA-900001/).length).toBeGreaterThan(0)
+    }
+  )
 })
 
 // ─────────────────────────────────────────────── хронология (T) ────
@@ -472,6 +488,30 @@ describe('вкладка «Історія»: хронология модуля',
     renderPage(withTimeline([R1]))
     openHistory()
     expect(historyPanel().textContent).not.toContain('credit.timeline.notProvided')
+  })
+
+  it('T-7c: лента пустая — как отсутствие: пометка и прежний список переходов', () => {
+    renderPage(withTimeline([]))
+    openHistory()
+    expect(within(historyPanel()).getByText('credit.timeline.notProvided')).toBeTruthy()
+    const lines = within(historyPanel())
+      .getAllByRole('listitem')
+      .map((node) => node.textContent)
+    expect(lines.slice(0, 2)).toEqual([
+      `${formatDateTime(TRANSITION_CREATE.at)}credit.status.in_progress(credit.actor.create)`,
+      `${formatDateTime(TRANSITION_REFER.at)}credit.status.scoring → credit.status.referred(credit.actor.decision)`,
+    ])
+  })
+
+  it('T-7d: в ленте нет переходов статуса — прежний список переходов под ней', () => {
+    renderPage(withTimeline([R1, R3]))
+    openHistory()
+    const text = historyPanel().textContent ?? ''
+    expect(text).not.toContain('credit.timeline.notProvided')
+    expect(text).toContain('credit.portalEvent.ibv_login')
+    expect(itemWith(historyPanel(), 'credit.status.referred').textContent).toBe(
+      `${formatDateTime(TRANSITION_REFER.at)}credit.status.scoring → credit.status.referred(credit.actor.decision)`
+    )
   })
 
   it('T-8: `details` и `who` не рисуются', () => {
@@ -633,6 +673,8 @@ describe('вкладка «Історія»: коммуникации', () => {
       name: 'credit.communications.openClientCard',
     })
     expect(card.getAttribute('href')).toBe('/dashboard/clients/7')
+    // Ссылка общая для обоих каналов — не внутри подблока SMS.
+    expect(within(subblock('credit.communications.sms')).queryByRole('link')).toBeNull()
     const text = communicationsPanel().textContent ?? ''
     expect(text).not.toContain('+14035550188')
     expect(text).not.toContain('EXT-fe176e')
@@ -743,6 +785,21 @@ describe('вкладка «Історія»: коммуникации', () => {
   })
 
   it.each([
+    ['поля нет', undefined],
+    ['лента пустая', []],
+  ] as const)(
+    'C-9c: хронологии нет (%s) — «не передав», а не «листів немає»',
+    (_name, timeline) => {
+      renderPage({ ...APPLICATION, timeline } as unknown as CreditApplicationDetail)
+      openHistory()
+      const block = subblock('credit.communications.mail')
+      expect(block.textContent).toContain('credit.communications.mailNotProvided')
+      expect(block.textContent).not.toContain('credit.communications.mailNone')
+      expect(block.textContent).toContain('credit.communications.mailLoanStage')
+    }
+  )
+
+  it.each([
     ['без связи', null],
     ['со связью', 7],
   ] as const)('C-10: %s — маркеры отсутствующих каналов видны всегда', (_name, clientId) => {
@@ -752,5 +809,33 @@ describe('вкладка «Історія»: коммуникации', () => {
     const text = communicationsPanel().textContent ?? ''
     expect(text).toContain('credit.communications.gotoMissing')
     expect(text).toContain('credit.communications.smsCanadaMissing')
+  })
+
+  it('C-11: число есть, а строк нет — «показано 0 з N», не «не знайдено»', async () => {
+    crmAnswers({ calls: [], total: 5 }, { messages: [], total: 0 })
+    renderPage(linked())
+    openHistory()
+    const block = subblock('credit.communications.calls')
+    expect(
+      await within(block).findByText('credit.communications.shownOf shown=0 total=5')
+    ).toBeTruthy()
+    expect(block.textContent).not.toContain('credit.communications.noneCalls')
+  })
+
+  it('C-12: повторный заход на вкладку за минуту не шлёт запросы в CRM снова', async () => {
+    crmAnswers({ calls: [], total: 0 }, { messages: [], total: 0 })
+    renderPage(linked())
+    openHistory()
+    await within(subblock('credit.communications.calls')).findByText(
+      'credit.communications.noneCalls'
+    )
+    await within(subblock('credit.communications.sms')).findByText('credit.communications.noneSms')
+    openForm()
+    openHistory()
+    await within(subblock('credit.communications.calls')).findByText(
+      'credit.communications.noneCalls'
+    )
+    expect(callSmsApi.getClientCalls).toHaveBeenCalledTimes(1)
+    expect(callSmsApi.getClientSms).toHaveBeenCalledTimes(1)
   })
 })
