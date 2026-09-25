@@ -7,8 +7,10 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useRoles } from '@/features/roles'
+import { useRoles, useHubRoles } from '@/features/roles'
 import type { ApiRole } from '@/features/roles/types'
+import { hasHubRoleField } from '@/features/roles/hubRoles'
+import { HubRoleValue } from '@/features/roles/components/HubRoleValue'
 import { useProjects } from '@/features/projects'
 import {
   DataTable,
@@ -107,6 +109,17 @@ export function RoleManagementPage() {
   const defaultRoles = roles.filter((role) => role.is_default)
   const customRoles = roles.filter((role) => !role.is_default)
 
+  // KAN-1476: the HUB chat-role column exists only when the backend sends the
+  // field; its values are named by the project's catalogue.
+  const showHubRole = roles.some(hasHubRoleField)
+  const hubCatalog = useHubRoles(showHubRole ? (selectedProjectId ?? undefined) : undefined)
+
+  const hubRoleColumn: Column<ApiRole> = {
+    key: 'hub_role',
+    header: t('pages.roles.forms.hubRole', 'HUB chat role'),
+    render: (role) => <HubRoleValue code={role.hub_role} status={hubCatalog.status} />,
+  }
+
   const columns: Column<ApiRole>[] = [
     {
       key: 'name',
@@ -118,6 +131,7 @@ export function RoleManagementPage() {
       header: t('pages.roles.tableHeaders.description'),
       render: (role) => <span className="font-medium">{role.description || '—'}</span>,
     },
+    ...(showHubRole ? [hubRoleColumn] : []),
     {
       key: 'user_count',
       header: t('pages.roles.tableHeaders.users'),
