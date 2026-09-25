@@ -88,7 +88,13 @@ export function BulkDocumentImportPage() {
   // check itself is broken the page says so, leaves Start alone and lets the
   // backend refuse with its 409, which names the folders it is actually
   // missing. Only a readiness that came back and said "not ready" blocks here.
-  const rulesBlockStart = !readinessFailed && !rulesReady
+  //
+  // A failed *refetch* keeps the answer it already had, so an error alone does
+  // not mean the page is in the dark: it is unknown only when nothing came
+  // back at all. Otherwise a retry that fails would replace a correct notice
+  // with an alarm and unblock a Start the cached answer says is not ready.
+  const readinessUnknown = readinessFailed && readiness === undefined
+  const rulesBlockStart = !readinessUnknown && !rulesReady
   const canSubmit =
     agreementId !== '' && uploadId !== null && !rulesBlockStart && !uploading && !starting
 
@@ -249,7 +255,7 @@ export function BulkDocumentImportPage() {
           {/* No document-type picker: the project's rules type each file on
               their own. What the operator needs here is whether those rules
               are complete, and a way to reach them if they are not. */}
-          {!isLoadingReadiness && readinessFailed && (
+          {!isLoadingReadiness && readinessUnknown && (
             <div
               role="alert"
               className="border-error-300 bg-error-50 text-error-800 flex items-start gap-2 rounded-lg border p-3 text-sm"
@@ -272,7 +278,7 @@ export function BulkDocumentImportPage() {
             </div>
           )}
 
-          {!isLoadingReadiness && !readinessFailed && !rulesReady && (
+          {!isLoadingReadiness && !readinessUnknown && !rulesReady && (
             <div
               role="status"
               className="border-warning-300 bg-warning-50 text-warning-800 flex items-start gap-2 rounded-lg border p-3 text-sm"

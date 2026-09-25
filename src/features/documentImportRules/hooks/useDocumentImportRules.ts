@@ -27,6 +27,25 @@ export const documentImportRulesKeys = {
   readiness: () => [...documentImportRulesKeys.all, 'readiness'] as const,
 }
 
+/** The inputs the rule form actually renders an error under. */
+const RENDERED_FIELDS = ['keyword', 'document_type_id', 'position'] as const
+
+/**
+ * The field an error belongs to, or undefined when the form has nowhere to put
+ * it.
+ *
+ * Both shapes name the field in free text the frontend does not control: a
+ * model-level validator answers ``loc: ["body"]``, a path parameter
+ * ``loc: ["path", "rule_id"]``. Passing those through as a field would file the
+ * error against an input that is never rendered — it would disappear instead of
+ * falling through to a toast, which is the whole point of reading it.
+ */
+function renderedField(value: unknown): DocumentImportFieldError['field'] {
+  return RENDERED_FIELDS.includes(value as (typeof RENDERED_FIELDS)[number])
+    ? (value as DocumentImportFieldError['field'])
+    : undefined
+}
+
 /**
  * The message and field behind a refused change, or null for anything else.
  *
@@ -41,8 +60,8 @@ export function fieldErrorOf(error: unknown): DocumentImportFieldError | null {
   if (!detail) return null
 
   if (typeof detail === 'object' && !Array.isArray(detail)) {
-    const { message, field } = detail as DocumentImportFieldError
-    if (message) return { message, field }
+    const { message, field } = detail as { message?: string; field?: unknown }
+    if (message) return { message, field: renderedField(field) }
     return null
   }
 
@@ -55,7 +74,7 @@ export function fieldErrorOf(error: unknown): DocumentImportFieldError | null {
       // Pydantic prefixes its messages with "Value error, "; the rest is the
       // sentence the validator wrote for a person to read.
       message: first.msg.replace(/^Value error,\s*/, ''),
-      field: typeof last === 'string' ? (last as DocumentImportFieldError['field']) : undefined,
+      field: renderedField(last),
     }
   }
 

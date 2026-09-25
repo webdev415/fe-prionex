@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 vi.mock('react-i18next', () => ({
@@ -29,23 +29,42 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('react-router-dom', () => ({ useNavigate: () => vi.fn() }))
 
-const readiness = { ready: true, missing_defaults: [] as string[] }
+// Mutable so a test can put the hook into any of its three states: answered,
+// answered "not ready", or failed. A double that cannot express failure would
+// let the failure branch be deleted with every test still green.
+const readiness = {
+  ready: true,
+  missing_defaults: [] as string[],
+  failed: false,
+  keptAnswer: false,
+}
+const refetchReadiness = vi.fn()
 
 vi.mock('@/features/documentImportRules', () => ({
   useDocumentImportReadiness: () => ({
-    data: readiness,
+    // A first load that failed has no data. A *refetch* that failed keeps the
+    // answer it already had, which react-query reports as error + data — both
+    // are real states and the page treats them differently.
+    data:
+      readiness.failed && !readiness.keptAnswer
+        ? undefined
+        : { ready: readiness.ready, missing_defaults: readiness.missing_defaults },
     isLoading: false,
-    refetch: vi.fn(),
+    isError: readiness.failed,
+    refetch: refetchReadiness,
   }),
 }))
+
+const uploadFile = vi.fn()
+const startImport = vi.fn()
 
 vi.mock('@/features/documentImport', () => ({
   documentImportApi: { abortUpload: vi.fn() },
   useDownloadExampleArchive: () => ({ mutate: vi.fn(), isPending: false }),
   useUploadDocumentArchive: () => ({
-    uploadFile: vi.fn(),
+    uploadFile,
     cancelUpload: vi.fn(),
-    startImport: vi.fn(),
+    startImport,
     uploading: false,
     starting: false,
     progress: 0,
@@ -81,9 +100,26 @@ function renderPage() {
   )
 }
 
+/** Choose an agreement and stage a ZIP — what Start needs before it can run. */
+async function stageAnUpload() {
+  // Radix Select opens on pointerdown, not click, and reads the item by role.
+  const trigger = screen.getByRole('combobox')
+  fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false, pointerType: 'mouse' })
+  fireEvent.click(await screen.findByRole('option', { name: 'FA-1' }))
+
+  const input = document.querySelector('input[type="file"]') as HTMLInputElement
+  const file = new File(['zip-bytes'], 'docs.zip', { type: 'application/zip' })
+  fireEvent.change(input, { target: { files: [file] } })
+  await waitFor(() => expect(uploadFile).toHaveBeenCalled())
+}
+
 beforeEach(() => {
+  vi.clearAllMocks()
   readiness.ready = true
   readiness.missing_defaults = []
+  readiness.failed = false
+  readiness.keptAnswer = false
+  uploadFile.mockResolvedValue({ upload_id: 'upload-1' })
 })
 
 describe('BulkDocumentImportPage', () => {
@@ -118,5 +154,68 @@ describe('BulkDocumentImportPage', () => {
     renderPage()
 
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+})
+
+describe('BulkDocumentImportPage when the readiness check itself fails', () => {
+  it('says the check failed rather than blaming the configuration', () => {
+    readiness.failed = true
+
+    renderPage()
+
+    // Not the missing-defaults notice: the page does not know what is missing,
+    // and sending the operator to a settings screen they may not be able to
+    // open, over defaults that may already be set, is worse than saying so.
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    const alert = screen.getByRole('alert')
+    expect(alert).toHaveTextContent(/Could not check the bulk-upload rules/i)
+  })
+
+  it('offers a retry that re-reads readiness', () => {
+    readiness.failed = true
+
+    renderPage()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+
+    expect(refetchReadiness).toHaveBeenCalled()
+  })
+
+  it('does not disable Start over a check it could not make', async () => {
+    readiness.failed = true
+
+    renderPage()
+    await stageAnUpload()
+
+    // The backend refuses with a 409 naming the folders if the rules really
+    // are incomplete; a disabled button here would block people whose rules
+    // are fine.
+    expect(screen.getByRole('button', { name: /Start Import/i })).toBeEnabled()
+  })
+
+  it('keeps trusting the answer it already has when a refetch fails', async () => {
+    // react-query holds the last good data through a failed refetch. Reading
+    // the error alone would swap a correct "credits/ has no default" notice
+    // for an alarm, and unblock a Start that answer says is not ready.
+    readiness.failed = true
+    readiness.keptAnswer = true
+    readiness.ready = false
+    readiness.missing_defaults = ['credits']
+
+    renderPage()
+    await stageAnUpload()
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('credits/')
+    expect(screen.getByRole('button', { name: /Start Import/i })).toBeDisabled()
+  })
+
+  it('re-reads readiness when the backend refuses the start with 409', async () => {
+    startImport.mockRejectedValue({ response: { status: 409 } })
+
+    renderPage()
+    await stageAnUpload()
+    fireEvent.click(screen.getByRole('button', { name: /Start Import/i }))
+
+    await waitFor(() => expect(refetchReadiness).toHaveBeenCalled())
   })
 })
