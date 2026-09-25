@@ -94,11 +94,13 @@ vi.mock('@/features/documentImportRules/api/documentImportRulesApi', () => ({
   },
 }))
 
+const listTypes = vi.fn(async (includeHidden: boolean) =>
+  includeHidden ? TYPES : TYPES.filter((type) => !type.is_hidden)
+)
+
 vi.mock('@/features/documentTypes/api/documentTypesApi', () => ({
   documentTypesApi: {
-    list: vi.fn(async (includeHidden: boolean) =>
-      includeHidden ? TYPES : TYPES.filter((type) => !type.is_hidden)
-    ),
+    list: (...args: unknown[]) => listTypes(...(args as [boolean])),
     create: vi.fn(),
     update: vi.fn(),
     updateVisibility: vi.fn(),
@@ -194,6 +196,31 @@ describe('BulkUploadRulesTab', () => {
       const row = within(card).getByText('credit_passport').closest('tr') as HTMLElement
       expect(within(row).getByText('2')).toBeInTheDocument()
     })
+  })
+
+  it('re-reads the document types after a rule changes', async () => {
+    // Each type row carries the number of rules pointing at it, and that is
+    // what disables its Delete button on the Document Types tab. Left cached,
+    // a type that just became a rule's target still offers Delete — and the
+    // click fails with the 409 the disabled button exists to prevent.
+    api.createRule.mockResolvedValueOnce(
+      ruleSet('credits', {
+        rules: [{ id: 9, position: 1, keyword: 'akt', document_type_id: 12 }],
+      })
+    )
+    const user = userEvent.setup()
+    renderTab()
+    await screen.findByText('credit_passport')
+    const before = listTypes.mock.calls.length
+
+    await user.click(within(creditsCard()).getByRole('button', { name: 'Add rule' }))
+    await user.type(within(creditsCard()).getByLabelText('Keyword'), 'akt')
+    await user.click(within(creditsCard()).getAllByLabelText('Document type')[0])
+    await user.click(await screen.findByRole('option', { name: /archived type/ }))
+    await user.click(within(creditsCard()).getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => expect(api.createRule).toHaveBeenCalled())
+    await waitFor(() => expect(listTypes.mock.calls.length).toBeGreaterThan(before))
   })
 
   it('puts a refused keyword under the keyword input, not in a toast', async () => {

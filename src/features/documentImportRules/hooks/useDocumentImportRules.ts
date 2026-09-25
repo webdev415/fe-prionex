@@ -9,6 +9,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { documentTypesKeys } from '@/features/documentTypes'
 import { documentImportRulesApi } from '../api/documentImportRulesApi'
 import type {
   DocumentImportFieldError,
@@ -82,9 +83,16 @@ export function useDocumentImportReadiness(options: { enabled?: boolean } = {}) 
 
 /**
  * Put a rule set answered by a mutation straight into the cached config, and
- * mark readiness stale: setting the last missing default is what unblocks the
+ * mark two other things stale.
+ *
+ * Readiness, because setting the last missing default is what unblocks the
  * upload screen, and it must not keep saying "blocked" until something else
  * happens to refetch.
+ *
+ * The document types list, because each row carries the number of rules
+ * pointing at it and that is what disables its Delete button. Left cached, a
+ * type that just became the target of a rule still shows Delete enabled — the
+ * click then fails with the 409 the button exists to prevent.
  */
 function useApplyRuleSet() {
   const queryClient = useQueryClient()
@@ -103,6 +111,7 @@ function useApplyRuleSet() {
           : current
     )
     queryClient.invalidateQueries({ queryKey: documentImportRulesKeys.readiness() })
+    queryClient.invalidateQueries({ queryKey: documentTypesKeys.lists() })
   }
 }
 

@@ -328,83 +328,88 @@ export function BulkUploadRuleSetCard({ folder, ruleSet, documentTypes, disabled
         </Button>
       </div>
 
-      <table className="w-full table-fixed text-sm">
-        <thead>
-          <tr className="text-muted-foreground border-border border-b text-left">
-            <th className="w-20 py-2 font-normal">
-              {t('pages.documentGeneration.bulkRules.columns.order', 'Order')}
-            </th>
-            <th className="py-2 font-normal">
-              {t('pages.documentGeneration.bulkRules.columns.keyword', 'Keyword')}
-            </th>
-            <th className="py-2 font-normal">
-              {t('pages.documentGeneration.bulkRules.columns.type', 'Document type')}
-            </th>
-            <th className="w-24 py-2 text-right font-normal">
-              {t('pages.documentGeneration.bulkRules.columns.actions', 'Actions')}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {ruleSet.rules.length === 0 && activeDraft === null && (
-            <tr>
-              <td colSpan={4} className="text-muted-foreground py-6 text-center">
-                {t(
-                  'pages.documentGeneration.bulkRules.empty',
-                  'No rules yet — every file takes the default type below.'
-                )}
-              </td>
+      {/* Scrolls rather than clips: the editing row carries Save and Cancel
+          side by side, which is wider than the two icon buttons a saved row
+          shows, and the card is half a grid column on a wide screen. */}
+      <div className="overflow-x-auto">
+        <table className="w-full table-fixed text-sm">
+          <thead>
+            <tr className="text-muted-foreground border-border border-b text-left">
+              <th className="w-20 py-2 font-normal">
+                {t('pages.documentGeneration.bulkRules.columns.order', 'Order')}
+              </th>
+              <th className="py-2 font-normal">
+                {t('pages.documentGeneration.bulkRules.columns.keyword', 'Keyword')}
+              </th>
+              <th className="py-2 font-normal">
+                {t('pages.documentGeneration.bulkRules.columns.type', 'Document type')}
+              </th>
+              <th className="w-40 py-2 text-right font-normal">
+                {t('pages.documentGeneration.bulkRules.columns.actions', 'Actions')}
+              </th>
             </tr>
-          )}
-
-          {ruleSet.rules.map((rule) =>
-            activeDraft?.id === rule.id ? (
-              editorRow(activeDraft, String(rule.id))
-            ) : (
-              <tr key={rule.id} className="border-border border-b">
-                <td className="py-2">{rule.position}</td>
-                <td className="py-2 break-words">{rule.keyword}</td>
-                <td className="py-2 break-words">{typeName(rule.document_type_id)}</td>
-                <td className="py-2 text-right whitespace-nowrap">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    title={t('actions.edit', 'Edit')}
-                    aria-label={t(
-                      'pages.documentGeneration.bulkRules.editRule',
-                      'Edit rule {{keyword}}',
-                      { keyword: rule.keyword }
-                    )}
-                    onClick={() => startEdit(rule)}
-                    disabled={disabled || busy || activeDraft !== null}
-                  >
-                    <Icons.Edit size={16} strokeWidth={2} />
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    title={t('actions.delete', 'Delete')}
-                    aria-label={t(
-                      'pages.documentGeneration.bulkRules.deleteRule',
-                      'Delete rule {{keyword}}',
-                      { keyword: rule.keyword }
-                    )}
-                    onClick={() => remove(rule)}
-                    disabled={disabled || busy || activeDraft !== null}
-                    className="text-error-600 hover:bg-error-100"
-                  >
-                    <Icons.Delete size={16} strokeWidth={2} />
-                  </Button>
+          </thead>
+          <tbody>
+            {ruleSet.rules.length === 0 && activeDraft === null && (
+              <tr>
+                <td colSpan={4} className="text-muted-foreground py-6 text-center">
+                  {t(
+                    'pages.documentGeneration.bulkRules.empty',
+                    'No rules yet — every file takes the default type below.'
+                  )}
                 </td>
               </tr>
-            )
-          )}
+            )}
 
-          {activeDraft !== null && activeDraft.id == null && editorRow(activeDraft, 'new')}
-        </tbody>
-      </table>
+            {ruleSet.rules.map((rule) =>
+              activeDraft?.id === rule.id ? (
+                editorRow(activeDraft, String(rule.id))
+              ) : (
+                <tr key={rule.id} className="border-border border-b">
+                  <td className="py-2">{rule.position}</td>
+                  <td className="py-2 break-words">{rule.keyword}</td>
+                  <td className="py-2 break-words">{typeName(rule.document_type_id)}</td>
+                  <td className="py-2 text-right whitespace-nowrap">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      title={t('actions.edit', 'Edit')}
+                      aria-label={t(
+                        'pages.documentGeneration.bulkRules.editRule',
+                        'Edit rule {{keyword}}',
+                        { keyword: rule.keyword }
+                      )}
+                      onClick={() => startEdit(rule)}
+                      disabled={disabled || busy || activeDraft !== null}
+                    >
+                      <Icons.Edit size={16} strokeWidth={2} />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      title={t('actions.delete', 'Delete')}
+                      aria-label={t(
+                        'pages.documentGeneration.bulkRules.deleteRule',
+                        'Delete rule {{keyword}}',
+                        { keyword: rule.keyword }
+                      )}
+                      onClick={() => remove(rule)}
+                      disabled={disabled || busy || activeDraft !== null}
+                      className="text-error-600 hover:bg-error-100"
+                    >
+                      <Icons.Delete size={16} strokeWidth={2} />
+                    </Button>
+                  </td>
+                </tr>
+              )
+            )}
+
+            {activeDraft !== null && activeDraft.id == null && editorRow(activeDraft, 'new')}
+          </tbody>
+        </table>
+      </div>
 
       <div className="border-border mt-3 border-t pt-3">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
