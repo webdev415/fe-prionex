@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useProjectCountry } from '@/hooks/useProjectCountry'
 import i18n, { intlLocaleForUiLanguage } from '@/lib/i18n'
 import { toast } from 'sonner'
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
@@ -111,6 +112,7 @@ export function BulkSendMessageModal({
   onLaunched,
 }: BulkSendMessageModalProps) {
   const { t } = useTranslation('common')
+  const projectCountry = useProjectCountry()
   const canLaunchSms = useHasPermission(launchPermissionForChannel('sms'))
   const canLaunchViber = useHasPermission(launchPermissionForChannel('viber'))
   const canLaunchEmail = useHasPermission(launchPermissionForChannel('email'))
@@ -152,14 +154,19 @@ export function BulkSendMessageModal({
           (item === 'viber' && canLaunchViber) ||
           (item === 'email' && canLaunchEmail)
         if (!allowed) return false
-        return integrations.some((integration) => isMessagingIntegrationUsable(integration, item))
+        return integrations.some((integration) =>
+          isMessagingIntegrationUsable(integration, item, projectCountry)
+        )
       }),
-    [canLaunchEmail, canLaunchSms, canLaunchViber, integrations]
+    [canLaunchEmail, canLaunchSms, canLaunchViber, integrations, projectCountry]
   )
 
   const availableIntegrations = useMemo(
-    () => integrations.filter((integration) => isMessagingIntegrationUsable(integration, channel)),
-    [channel, integrations]
+    () =>
+      integrations.filter((integration) =>
+        isMessagingIntegrationUsable(integration, channel, projectCountry)
+      ),
+    [channel, integrations, projectCountry]
   )
 
   const selectedDraft = useMemo(
