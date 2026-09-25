@@ -1153,6 +1153,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               PERMISSIONS.DOCUMENT_GENERATION.VIEW_TEMPLATES,
               PERMISSIONS.DOCUMENT_GENERATION.CREATE_EDIT_TEMPLATES,
               PERMISSIONS.DOCUMENT_GENERATION.DELETE_TEMPLATES,
+              // Kept in step with the route: manage_settings alone opens the
+              // bulk-upload rules tab, so it has to reach the page.
+              PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
             ],
             mode: 'any' as const,
           },

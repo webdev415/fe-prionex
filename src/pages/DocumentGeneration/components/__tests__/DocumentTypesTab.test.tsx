@@ -46,6 +46,7 @@ function resetStore() {
       color: '#3B82F6',
       is_hidden: false,
       doc_count: 3,
+      rule_count: 0,
       created_at: '2026-07-01T00:00:00Z',
       updated_at: '2026-07-01T00:00:00Z',
     },
@@ -56,6 +57,18 @@ function resetStore() {
       color: '#8B5CF6',
       is_hidden: false,
       doc_count: 0,
+      rule_count: 0,
+      created_at: '2026-07-01T00:00:00Z',
+      updated_at: '2026-07-01T00:00:00Z',
+    },
+    {
+      id: nextId++,
+      project_id: 1,
+      name: 'ruled',
+      color: '#0EA5E9',
+      is_hidden: false,
+      doc_count: 0,
+      rule_count: 2,
       created_at: '2026-07-01T00:00:00Z',
       updated_at: '2026-07-01T00:00:00Z',
     },
@@ -66,6 +79,7 @@ function resetStore() {
       color: '#111111',
       is_hidden: true,
       doc_count: 0,
+      rule_count: 0,
       created_at: '2026-07-01T00:00:00Z',
       updated_at: '2026-07-01T00:00:00Z',
     },
@@ -85,6 +99,7 @@ vi.mock('@/features/documentTypes/api/documentTypesApi', () => ({
         color: input.color.toUpperCase(),
         is_hidden: false,
         doc_count: 0,
+        rule_count: 0,
         created_at: '2026-07-01T00:00:00Z',
         updated_at: '2026-07-01T00:00:00Z',
       }
@@ -217,6 +232,27 @@ describe('DocumentTypesTab', () => {
     await waitFor(() => {
       expect(screen.queryByText('inn')).not.toBeInTheDocument()
     })
+  })
+
+  it('disables delete on a type a bulk-upload rule points at', async () => {
+    const user = userEvent.setup()
+    renderTab()
+    await waitFor(() => expect(screen.getByText('ruled')).toBeInTheDocument())
+
+    // No documents, so the count column says nothing is blocking — but the
+    // rules do, and deleting would leave an armed rule pointing at nothing.
+    const row = screen.getByText('ruled').closest('tr')!
+    const disabled = row.querySelector('button:disabled')
+    expect(disabled).not.toBeNull()
+
+    await user.hover(disabled as HTMLElement)
+    // Radix renders the tooltip twice (visible + an aria live copy), so this
+    // asserts there is one and that it names the rules rather than documents —
+    // the count itself is interpolated by i18next, which the mock here does not
+    // do, and asserting on it would test the mock.
+    const tooltips = await screen.findAllByText(/bulk-upload rule/)
+    expect(tooltips.length).toBeGreaterThan(0)
+    expect(tooltips[0]).not.toHaveTextContent('documents')
   })
 
   it('toggles visibility (hide → show)', async () => {

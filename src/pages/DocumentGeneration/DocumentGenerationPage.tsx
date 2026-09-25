@@ -38,7 +38,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useHasPermission, useHasAnyPermission } from '@/hooks'
 import { PERMISSIONS } from '@/constants/permissions'
 import { DocumentTypePill } from '@/components/DocumentTypePill'
-import { DocumentTemplatesTab, DocumentTypesTab } from './components'
+import { BulkUploadRulesTab, DocumentTemplatesTab, DocumentTypesTab } from './components'
 import { piiProps } from '@/lib/openreplay/pii'
 
 const ACTIONS: DocumentAction[] = ['uploaded', 'generated']
@@ -46,7 +46,7 @@ const ACTIONS: DocumentAction[] = ['uploaded', 'generated']
 const DEFAULT_PAGE_SIZE = 20
 const ALL_VALUE = '__all__'
 
-type Tab = 'journal' | 'templates' | 'types'
+type Tab = 'journal' | 'templates' | 'types' | 'bulkRules'
 
 interface Filters {
   document_type_id?: number
@@ -379,6 +379,23 @@ export function DocumentGenerationPage() {
               {t('pages.documentGeneration.tabs.types', 'Document Types')}
             </button>
           )}
+          {canManageTypes && (
+            <button
+              ref={(node) => {
+                tabButtonRefs.current.bulkRules = node
+              }}
+              type="button"
+              onClick={() => setTab('bulkRules')}
+              className={cn(
+                '-mb-px shrink-0 cursor-pointer border-b-2 px-3 py-2 text-sm font-normal whitespace-nowrap transition-colors sm:px-4',
+                tab === 'bulkRules'
+                  ? 'border-primary-600 text-primary-600'
+                  : 'text-muted-foreground hover:text-foreground border-transparent'
+              )}
+            >
+              {t('pages.documentGeneration.tabs.bulkRules', 'Bulk Upload Rules')}
+            </button>
+          )}
         </div>
 
         <button
@@ -593,6 +610,8 @@ export function DocumentGenerationPage() {
         <DocumentTemplatesTab />
       ) : tab === 'types' && canManageTypes ? (
         <DocumentTypesTab />
+      ) : tab === 'bulkRules' && canManageTypes ? (
+        <BulkUploadRulesTab />
       ) : null}
     </div>
   )
