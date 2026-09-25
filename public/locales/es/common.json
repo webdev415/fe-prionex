@@ -7353,7 +7353,8 @@
         "deleteConfirm": "¿Está seguro de que desea eliminar esta interacción? Esta acción no se puede deshacer.",
         "deleteSuccess": "Interacción eliminada",
         "showFullNote": "Mostrar",
-        "hideFullNote": "Ocultar"
+        "hideFullNote": "Ocultar",
+        "selfEditWindowClosed": "La ventana de cinco minutos para editar tu propio registro se ha cerrado"
       },
       "editInteraction": {
         "title": "Editar interacción",
@@ -10012,7 +10013,9 @@
         "delivered": "entregados",
         "resultsLine": "{{delivered}}/{{total}} entregados",
         "filteredCampaigns": "{{count}} campañas coinciden con los filtros",
-        "totalCost": "Coste total"
+        "totalCost": "Coste total",
+        "resultsLineSent": "{{sent}}/{{total}} enviados",
+        "noDeliveryReports": "Sin informes de entrega"
       },
       "cost": {
         "actual": "Real",
@@ -10036,7 +10039,9 @@
         "destination": "Destino",
         "sentAt": "Enviado",
         "deliveredAt": "Entregado",
-        "error": "Error"
+        "error": "Error",
+        "deliveryNotReported": "No informado",
+        "deliveryNotReportedHint": "Este proveedor no envía informes de entrega. Consulte el panel del proveedor para ver el estado de entrega."
       },
       "actions": {
         "viewDetails": "Ver detalles",
@@ -10140,6 +10145,15 @@
         "defaultName": "Campaña de {{channel}} por CSV",
         "templateFailed": "No se pudo descargar la plantilla",
         "parseFailed": "No se pudo analizar el archivo CSV"
+      },
+      "recipientStatus": {
+        "pending": "Pendiente",
+        "queued": "En cola",
+        "sent": "Enviado",
+        "delivered": "Entregado",
+        "failed": "Fallido",
+        "bounced": "Rebotado",
+        "skipped": "Omitido"
       }
     },
     "messagingDrafts": {
@@ -10239,7 +10253,8 @@
         "omnicell": "OmniCell",
         "vodafone_obm": "Vodafone OBM",
         "my2_viber": "My2 Viber",
-        "intel_tele": "Intel-Tele.com"
+        "intel_tele": "Intel-Tele.com",
+        "zadarma": "Zadarma"
       },
       "credentials": {
         "turbosms": {
@@ -10309,6 +10324,18 @@
           },
           "reply_to_name": {
             "label": "Nombre de respuesta"
+          }
+        },
+        "zadarma": {
+          "user_key": {
+            "label": "Clave de usuario"
+          },
+          "secret": {
+            "label": "Secreto"
+          },
+          "sender": {
+            "label": "Remitente (nombre alfanumérico)",
+            "placeholder": "Nombre alfanumérico aprobado; déjelo vacío para usar el de la cuenta"
           }
         }
       },

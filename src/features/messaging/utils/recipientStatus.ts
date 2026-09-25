@@ -14,6 +14,12 @@ function isIntelTeleSentAsDelivered(service: string | undefined, normalized: str
   return (service || '').trim().toLowerCase() === 'intel_tele' && normalized === 'sent'
 }
 
+const SERVICES_WITHOUT_DELIVERY_REPORTS = new Set(['zadarma'])
+
+export function serviceReportsDelivery(service: string | undefined): boolean {
+  return !SERVICES_WITHOUT_DELIVERY_REPORTS.has((service || '').trim().toLowerCase())
+}
+
 /**
  * Map API recipient status to CallLogCard / legacy SMS display labels.
  * ``sent`` means accepted by the provider but not yet confirmed delivered,

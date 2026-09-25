@@ -7316,7 +7316,8 @@
         "deleteConfirm": "Are you sure you want to delete this interaction? This cannot be undone.",
         "deleteSuccess": "Interaction deleted",
         "showFullNote": "Show",
-        "hideFullNote": "Hide"
+        "hideFullNote": "Hide",
+        "selfEditWindowClosed": "The five-minute window to edit your own record has closed"
       },
       "editInteraction": {
         "title": "Edit interaction",
@@ -9971,7 +9972,9 @@
         "delivered": "delivered",
         "resultsLine": "{{delivered}}/{{total}} delivered",
         "filteredCampaigns": "{{count}} campaigns match filters",
-        "totalCost": "Total cost"
+        "totalCost": "Total cost",
+        "resultsLineSent": "{{sent}}/{{total}} sent",
+        "noDeliveryReports": "No delivery reports"
       },
       "cost": {
         "actual": "Actual",
@@ -9995,7 +9998,9 @@
         "destination": "Destination",
         "sentAt": "Sent",
         "deliveredAt": "Delivered",
-        "error": "Error"
+        "error": "Error",
+        "deliveryNotReported": "Not reported",
+        "deliveryNotReportedHint": "This provider does not send delivery reports. Check the provider cabinet for the delivery status."
       },
       "actions": {
         "viewDetails": "View details",
@@ -10099,6 +10104,15 @@
         "defaultName": "CSV {{channel}} campaign",
         "templateFailed": "Could not download template",
         "parseFailed": "Could not parse CSV file"
+      },
+      "recipientStatus": {
+        "pending": "Pending",
+        "queued": "Queued",
+        "sent": "Sent",
+        "delivered": "Delivered",
+        "failed": "Failed",
+        "bounced": "Bounced",
+        "skipped": "Skipped"
       }
     },
     "messagingDrafts": {
@@ -10198,7 +10212,8 @@
         "omnicell": "OmniCell",
         "vodafone_obm": "Vodafone OBM",
         "my2_viber": "My2 Viber",
-        "intel_tele": "Intel-Tele.com"
+        "intel_tele": "Intel-Tele.com",
+        "zadarma": "Zadarma"
       },
       "credentials": {
         "turbosms": {
@@ -10268,6 +10283,18 @@
           },
           "reply_to_name": {
             "label": "Reply-to name"
+          }
+        },
+        "zadarma": {
+          "user_key": {
+            "label": "User key"
+          },
+          "secret": {
+            "label": "Secret"
+          },
+          "sender": {
+            "label": "Sender (Alpha name)",
+            "placeholder": "Approved alpha name, leave empty to use the account default"
           }
         }
       },

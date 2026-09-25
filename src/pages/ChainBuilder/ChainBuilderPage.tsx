@@ -50,7 +50,8 @@ import type { TAChainStep } from '@/features/taChains/api/types'
 import { useTags } from '@/features/tags/hooks/useTags'
 import { useTargetActions } from '@/features/targetActions/hooks/useTargetActions'
 import type { TargetAction } from '@/features/targetActions/api/types'
-import { useSMSTemplates } from '@/features/sms'
+import { useSMSTemplates, useSmsServiceAvailable } from '@/features/sms'
+import { useProjectCountry } from '@/hooks/useProjectCountry'
 import {
   useCanReadMessagingDrafts,
   useMessagingDrafts,
@@ -162,6 +163,7 @@ function ChainBuilderConfigPanelSkeleton() {
 
 export function ChainBuilderPage() {
   const { t } = useTranslation('common')
+  const projectCountry = useProjectCountry()
   const { user } = useAuthStore()
   const projectId = user?.active_project_id ? parseInt(user.active_project_id, 10) : undefined
 
@@ -187,9 +189,9 @@ export function ChainBuilderPage() {
   const usableMessagingServices = useMemo(
     () =>
       messagingIntegrations.filter((integration) =>
-        isMessagingIntegrationUsable(integration, messageChannel)
+        isMessagingIntegrationUsable(integration, messageChannel, projectCountry)
       ),
-    [messagingIntegrations, messageChannel]
+    [messagingIntegrations, messageChannel, projectCountry]
   )
   const { data: taskSubjects = [] } = useTaskSubjects()
   const { data: operators = [] } = useOperators(projectId ?? null)
@@ -340,6 +342,11 @@ export function ChainBuilderPage() {
   const [newTriggerConfig, setNewTriggerConfig] = useState<Record<string, string>>({})
   const [newBlockerType, setNewBlockerType] = useState(BLOCKER_TYPES[0])
   const [newBlockerConfig, setNewBlockerConfig] = useState<Record<string, string>>({})
+  const smsServiceAvailable = useSmsServiceAvailable()
+  const effectTypes = useMemo(
+    () => EFFECT_TYPES.filter((effectType) => effectType !== 'send_sms' || smsServiceAvailable),
+    [smsServiceAvailable]
+  )
   const [newEffectType, setNewEffectType] = useState(EFFECT_TYPES[0])
   const [newEffectConditions, setNewEffectConditions] = useState<Set<number>>(new Set())
   const [effectCondDropdownOpen, setEffectCondDropdownOpen] = useState(false)
@@ -988,7 +995,7 @@ export function ChainBuilderPage() {
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                {EFFECT_TYPES.map((effectType) => (
+                                {effectTypes.map((effectType) => (
                                   <SelectItem key={effectType} value={effectType}>
                                     {typeLabel('effect', effectType)}
                                   </SelectItem>
