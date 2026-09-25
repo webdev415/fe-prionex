@@ -105,8 +105,9 @@ export function trendToChangeType(direction: 'up' | 'down' | 'stable'): ChangeTy
 /**
  * Transform backend trend data to UI format
  *
- * @param trend - Backend KPI trend data
- * @returns UI-formatted trend data
+ * @param trend - Backend KPI trend data; null/absent when report-service has
+ *   no comparison value for the KPI (board #1448)
+ * @returns UI-formatted trend data, or null when there is no trend to show
  *
  * @example
  * ```typescript
@@ -120,9 +121,11 @@ export function trendToChangeType(direction: 'up' | 'down' | 'stable'): ChangeTy
  * //   changeType: 'increase',
  * //   previousValue: 100
  * // }
+ * transformTrend(null) // Returns: null
  * ```
  */
-export function transformTrend(trend: KPITrend): KPITrendUI {
+export function transformTrend(trend: KPITrend | null | undefined): KPITrendUI | null {
+  if (!trend) return null
   return {
     change: Math.abs(trend.change),
     changeType: trendToChangeType(trend.direction),

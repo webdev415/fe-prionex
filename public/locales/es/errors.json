@@ -129,6 +129,14 @@
     "EMAIL_ALREADY_EXISTS": "Ya existe un usuario con el correo electrónico {{email}}",
     "PROJECT_ASSIGNMENT_DUPLICATE": "El mismo proyecto está asignado más de una vez",
     "CURRENT_PASSWORD_REQUIRED": "Se requiere la contraseña actual",
-    "NEW_PASSWORD_SAME_AS_CURRENT": "La nueva contraseña debe ser diferente de la actual"
+    "NEW_PASSWORD_SAME_AS_CURRENT": "La nueva contraseña debe ser diferente de la actual",
+    "HUB_ROLE_DISABLED": "La elección del rol en el chat (HUB) está desactivada ahora — guarde el rol sin ella.",
+    "HUB_ROLE_UNKNOWN": "Este rol del chat (HUB) no está en el catálogo. Recargue la página y elija un valor de la lista.",
+    "HUB_ROLE_ADMIN_REQUIRES_HUB_ADMIN": "Solo un administrador de HUB de este proyecto puede conceder o retirar el rol «Administrador de HUB».",
+    "HUB_ADMIN_ALIAS_REQUIRES_HUB_ADMIN": "Un rol llamado «admin» o «administrator» obtiene permisos de administrador de HUB — solo un administrador de HUB de este proyecto puede darle ese nombre.",
+    "HUB_ADMIN_ASSIGNMENT_REQUIRES_HUB_ADMIN": "Este rol da permisos de administrador de HUB — solo un administrador de HUB de este proyecto puede asignarle personas.",
+    "HUB_ROLE_DEFAULT_LOCKED": "El rol en el chat (HUB) de un rol predeterminado no se puede cambiar.",
+    "HUB_ROLE_FORBIDDEN_WHILE_IMPERSONATING": "Mientras actúa como otro usuario no puede cambiar roles del chat (HUB) ni asignar personas a roles de administrador de HUB.",
+    "PROJECT_SCOPE_DENIED": "No tiene permiso para esta acción en este proyecto."
   }
 }

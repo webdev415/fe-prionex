@@ -1099,6 +1099,7 @@ export function DebtSummaryPage() {
               <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
                 <CallingWindowTooltip
                   message={callingWindow.allowed ? null : callingWindow.message}
+                  onBlockedAttempt={callingWindow.reportBlocked}
                   className="w-full sm:w-auto sm:flex-1"
                 >
                   <Button

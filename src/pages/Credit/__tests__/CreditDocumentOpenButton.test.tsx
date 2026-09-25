@@ -9,7 +9,9 @@
  *     и не русским `detail`, — в обеих карточках, и новое нажатие его снимает;
  *  4) вкладка открывается в самом нажатии (после `await` её блокирует браузер),
  *     а без вкладки (блокировщик, OneX) документ уходит скачиванием тем же
- *     файлом, и это называется словами;
+ *     файлом, и это называется словами — уведомлением, а не отказом: в OneX
+ *     вкладки нет никогда, и красная плашка висела бы на каждом удачном
+ *     открытии; над таблицей не больше одной плашки;
  *  5) имя скачивания очищено от символов, подменяющих видимое имя, — всем
  *     перечнем, не представителями;
  *  5а) во вкладку уходят только инертные типы: HTML, SVG и прочее при `inline`
@@ -36,6 +38,7 @@ import { render, screen, fireEvent, waitFor, within, cleanup } from '@testing-li
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AxiosError, type AxiosResponse, type InternalAxiosRequestConfig } from 'axios'
+import { alertVariants } from '@/components/ui/Alert'
 import { creditHttp } from '@/features/credit/api/creditApi'
 import * as hooks from '@/features/credit/hooks/useCredit'
 import type {
@@ -48,6 +51,7 @@ import {
   CreditDocumentOpenButton,
   type CreditDocumentOwner,
 } from '../components/CreditDocumentOpenButton'
+import { CreditNotice } from '../components/CreditCardHeader'
 import { CreditApplicationDetailPage } from '../CreditApplicationDetailPage'
 import { CreditLoanDetailPage } from '../CreditLoanDetailPage'
 import en from '../../../../public/locales/en/common.json'
@@ -58,6 +62,7 @@ const IDS = vi.hoisted(() => ({
   application: 'aaaaaaaa-0000-4000-8000-000000000001',
   loan: 'bbbbbbbb-0000-4000-8000-000000000002',
   document: 'dddddddd-0000-4000-8000-000000000003',
+  secondDocument: 'dddddddd-0000-4000-8000-000000000007',
   // Владельцы, записанные в САМОМ документе, — чужие: кнопка обязана их не читать.
   foreignApplication: 'eeeeeeee-0000-4000-8000-000000000004',
   foreignLoan: 'ffffffff-0000-4000-8000-000000000005',
@@ -196,6 +201,13 @@ const missingFile = () =>
 const pdf = () => new Blob(['%PDF-1.4'], { type: 'application/pdf' })
 const inlinePdf = () => ok(pdf(), 'inline; filename="s.pdf"')
 
+/** Договор так, как его отдаёт модуль: `text/markdown`, показать во вкладке. */
+const inlineAgreement = () =>
+  ok(
+    new Blob(['# Договір'], { type: 'text/markdown; charset=utf-8' }),
+    'inline; filename="agreement-agr-1.md"'
+  )
+
 /** `Content-Disposition` скачивания с именем в `filename*`, как его кодирует модуль. */
 const attachmentNamed = (name: string, ascii = 'x') =>
   `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(name)}`
@@ -314,20 +326,32 @@ function lastTab(): FakeTab {
 
 function renderButton(document: CreditDocumentMeta, owner: CreditDocumentOwner) {
   const onError = vi.fn()
+  const onNotice = vi.fn()
   const view = render(
-    <CreditDocumentOpenButton document={document} owner={owner} onError={onError} />
+    <CreditDocumentOpenButton
+      document={document}
+      owner={owner}
+      onError={onError}
+      onNotice={onNotice}
+    />
   )
   // Кнопок на экране может быть две (сцена с контролем) — ищем в своём контейнере.
   const button = within(view.container).getByRole('button', {
     name: 'credit.actions.openDocument',
   })
-  return { onError, button, unmount: view.unmount }
+  return { onError, onNotice, button, unmount: view.unmount }
 }
 
 /** Последний непустой отказ, который получил `onError` (`null` — снятие прежнего). */
 function lastRefusal(onError: Mock): string | undefined {
   const refusals = onError.mock.calls.map(([message]) => message).filter((m) => m !== null)
   return refusals.at(-1) as string | undefined
+}
+
+/** Последнее непустое уведомление, которое получил `onNotice` (`null` — снятие). */
+function lastNotice(onNotice: Mock): string | undefined {
+  const notices = onNotice.mock.calls.map(([message]) => message).filter((m) => m !== null)
+  return notices.at(-1) as string | undefined
 }
 
 /** Отказ, который получил `onError`: нажатие, ожидание разбора тела, одна строка. */
@@ -527,19 +551,17 @@ describe('CreditDocumentOpenButton → вкладка в самом нажати
     expect(lastTab().close).not.toHaveBeenCalled()
   })
 
-  it('T-15b: вкладку не дали — документ уходит скачиванием тем же файлом, оператор узнаёт почему', async () => {
+  it('T-15b: вкладку не дали — документ уходит скачиванием тем же файлом, оператор узнаёт почему уведомлением, а не отказом', async () => {
     blockTabs = true
-    const agreement = new Blob(['# Договір'], { type: 'text/markdown; charset=utf-8' })
     const { restore } = withAdapter(
-      inTurn(
-        ok(agreement, 'inline; filename="agreement-agr-1.md"'),
-        ok(pdf(), attachmentNamed('файл.pdf'))
-      )
+      inTurn(inlineAgreement(), ok(pdf(), attachmentNamed('файл.pdf')))
     )
     try {
       const shown = renderButton(DOC, LOAN_OWNER)
       fireEvent.click(shown.button)
-      await waitFor(() => expect(lastRefusal(shown.onError)).toBe('credit.documentOpen.tabBlocked'))
+      await waitFor(() => expect(lastNotice(shown.onNotice)).toBe('credit.documentOpen.tabBlocked'))
+      // Файл получен — это не отказ: канал отказа слышал только снятие прежнего.
+      expect(shown.onError.mock.calls, 'удачное скачивание ушло каналом отказа').toEqual([[null]])
       // Тот же файл, что показала бы вкладка: blob создан (его и ловит замер
       // S-1), тип текстовый, байты те же, имя — из заголовка сервера.
       expect(created).toHaveLength(1)
@@ -548,11 +570,28 @@ describe('CreditDocumentOpenButton → вкладка в самом нажати
       expect(downloads).toEqual(['agreement-agr-1.md'])
 
       // Положительный контроль: скачивание, которое заказал сам сервер, при той
-      // же блокировке проходит молча — текст только там, где показ не удался.
+      // же блокировке проходит молча — ни уведомления, ни отказа.
       const saved = renderButton(DOC, LOAN_OWNER)
       fireEvent.click(saved.button)
       await waitFor(() => expect(downloads).toEqual(['agreement-agr-1.md', 'файл.pdf']))
       expect(lastRefusal(saved.onError)).toBeUndefined()
+      expect(lastNotice(saved.onNotice)).toBeUndefined()
+    } finally {
+      restore()
+    }
+  })
+
+  it('T-15c: вкладку не дали, а тип показывать нельзя — скачивание молча, как attachment', async () => {
+    blockTabs = true
+    const served = new Blob(['<html></html>'], { type: 'text/html' })
+    const { restore } = withAdapter(ok(served, 'inline; filename="x.html"'))
+    try {
+      const { onError, onNotice, button } = renderButton(DOC, LOAN_OWNER)
+      fireEvent.click(button)
+      await waitFor(() => expect(downloads).toEqual(['x.html']))
+      // Показывать было нечего и при вкладке — объяснять оператору нечего.
+      expect(lastNotice(onNotice)).toBeUndefined()
+      expect(lastRefusal(onError)).toBeUndefined()
     } finally {
       restore()
     }
@@ -564,6 +603,12 @@ describe('CreditDocumentOpenButton → вкладка в самом нажати
       const { onError, button } = renderButton(DOC, LOAN_OWNER)
       fireEvent.click(button)
       await waitFor(() => expect(lastRefusal(onError)).toBe('credit.documentOpen.errorMissing'))
+      // Второе нажатие — только по освободившейся кнопке: пока идёт первое, она
+      // занята (`isLoading` → `disabled`), и React клик по ней не доставит. Отказ
+      // и уведомление приходят раньше, чем кнопка освобождается, а какая из двух
+      // задач цикла событий — коммит React или выход `waitFor` — придёт первой,
+      // решает нагрузка раннера: в CI второе нажатие попадало в занятую кнопку.
+      await waitFor(() => expect(button).toBeEnabled())
       const callsBefore = onError.mock.calls.length
       events = []
       fireEvent.click(button)
@@ -572,6 +617,38 @@ describe('CreditDocumentOpenButton → вкладка в самом нажати
       expect(onError).toHaveBeenCalledTimes(callsBefore + 1)
       expect(onError).toHaveBeenLastCalledWith(null)
       await waitFor(() => expect(lastTab().location.href).toBe(BLOB_URL))
+    } finally {
+      restore()
+    }
+  })
+
+  it('T-17b: прежнее уведомление снимается в самом нажатии вместе с отказом', async () => {
+    blockTabs = true
+    const { restore } = withAdapter(inTurn(inlineAgreement(), inlinePdf()))
+    try {
+      const { onError, onNotice, button } = renderButton(DOC, LOAN_OWNER)
+      fireEvent.click(button)
+      await waitFor(() => expect(lastNotice(onNotice)).toBe('credit.documentOpen.tabBlocked'))
+      // Второе нажатие — только по освободившейся кнопке: пока идёт первое, она
+      // занята (`isLoading` → `disabled`), и React клик по ней не доставит. Отказ
+      // и уведомление приходят раньше, чем кнопка освобождается, а какая из двух
+      // задач цикла событий — коммит React или выход `waitFor` — придёт первой,
+      // решает нагрузка раннера: в CI второе нажатие попадало в занятую кнопку.
+      await waitFor(() => expect(button).toBeEnabled())
+      const noticesBefore = onNotice.mock.calls.length
+      const errorsBefore = onError.mock.calls.length
+      blockTabs = false
+      events = []
+      fireEvent.click(button)
+      // Синхронно, в том же нажатии: запрос ещё не ушёл, сняты оба канала.
+      expect(events).toEqual(['open'])
+      expect(onNotice).toHaveBeenCalledTimes(noticesBefore + 1)
+      expect(onNotice).toHaveBeenLastCalledWith(null)
+      expect(onError).toHaveBeenCalledTimes(errorsBefore + 1)
+      expect(onError).toHaveBeenLastCalledWith(null)
+      await waitFor(() => expect(lastTab().location.href).toBe(BLOB_URL))
+      // Показ во вкладке удался — нового уведомления нет.
+      expect(onNotice).toHaveBeenLastCalledWith(null)
     } finally {
       restore()
     }
@@ -1021,7 +1098,7 @@ const APPLICATION_T = {
   documents: [DOC],
 } as unknown as CreditApplicationDetail
 
-function mockLoanHooks() {
+function mockLoanHooks(documents: CreditDocumentMeta[]) {
   vi.mocked(hooks.useCreditLoan).mockReturnValue({
     ...idle,
     data: LOAN_T,
@@ -1040,14 +1117,14 @@ function mockLoanHooks() {
   }
   vi.mocked(hooks.useCreditLoanDocuments).mockReturnValue({
     ...idle,
-    data: { items: [DOC] },
+    data: { items: documents },
   } as unknown as ReturnType<typeof hooks.useCreditLoanDocuments>)
 }
 
-function mockApplicationHooks() {
+function mockApplicationHooks(documents: CreditDocumentMeta[]) {
   vi.mocked(hooks.useCreditApplication).mockReturnValue({
     ...idle,
-    data: APPLICATION_T,
+    data: { ...APPLICATION_T, documents },
   } as unknown as ReturnType<typeof hooks.useCreditApplication>)
   vi.mocked(hooks.useCreditOverview).mockReturnValue(idle as never)
   vi.mocked(hooks.useCreditManualDecision).mockReturnValue({
@@ -1056,8 +1133,8 @@ function mockApplicationHooks() {
   } as never)
 }
 
-function renderLoanCard() {
-  mockLoanHooks()
+function renderLoanCard(documents: CreditDocumentMeta[] = [DOC]) {
+  mockLoanHooks(documents)
   render(
     <MemoryRouter>
       <CreditLoanDetailPage />
@@ -1069,8 +1146,8 @@ function renderLoanCard() {
   openDocumentsTab()
 }
 
-function renderApplicationCard() {
-  mockApplicationHooks()
+function renderApplicationCard(documents: CreditDocumentMeta[] = [DOC]) {
+  mockApplicationHooks(documents)
   render(
     <MemoryRouter>
       {/* `gcTime: Infinity` — без пятиминутного таймера сборки кэша запросов: он
@@ -1097,10 +1174,69 @@ function clickOpen() {
   fireEvent.click(screen.getByRole('button', { name: 'credit.actions.openDocument' }))
 }
 
-/** Отказ показан оператору: текст стоит в элементе с ролью alert. */
+/**
+ * Тон плашки — по классам, снятым с самих компонентов: у `Alert` — с
+ * `alertVariants`, у `CreditNotice` — с его отрисовки. jsdom стилей не считает,
+ * и цвет, который увидит оператор, живёт только в классе. Роль тона не
+ * различает, а у `CreditNotice` её нет вовсе.
+ */
+type Tone = 'alertError' | 'alertInfo' | 'noticeInfo'
+
+let palette: Record<Tone, string[]> | undefined
+
+function tones(): Record<Tone, string[]> {
+  if (!palette) {
+    // Отсоединённый контейнер: на экране сцены эталон не появляется.
+    const { container, unmount } = render(<CreditNotice tone="info">x</CreditNotice>, {
+      container: document.createElement('div'),
+    })
+    const noticeInfo = [...(container.firstElementChild as HTMLElement).classList]
+    unmount()
+    palette = {
+      alertError: alertVariants({ variant: 'error' }).split(' '),
+      alertInfo: alertVariants({ variant: 'info' }).split(' '),
+      noticeInfo,
+    }
+  }
+  return palette
+}
+
+function toneOf(element: Element): Tone[] {
+  const known = tones()
+  return (Object.keys(known) as Tone[]).filter((tone) =>
+    known[tone].every((name) => element.classList.contains(name))
+  )
+}
+
+/**
+ * Плашки над таблицей документов: отказы (`role="alert"`) и уведомления любого
+ * известного тона. Счёт — внутри панели документов: у карточки кредита есть
+ * свои светлые плашки в других панелях.
+ */
+function plaques(): Element[] {
+  return [...documentsPanel().querySelectorAll('div')].filter(
+    (node) => node.getAttribute('role') === 'alert' || toneOf(node).length > 0
+  )
+}
+
+function documentsPanel(): HTMLElement {
+  const heading = screen.getByRole('heading', { name: 'credit.tabs.documents' })
+  const panel = heading.closest('section')
+  if (!panel) throw new Error('панели документов нет')
+  return panel
+}
+
+/** Отказ показан оператору: текст стоит в элементе с ролью alert, тон — отказа. */
 async function expectRefusalShown(key: string) {
   const alert = await screen.findByText(key)
   expect(alert).toHaveAttribute('role', 'alert')
+  expect(toneOf(alert)).toEqual(['alertError'])
+}
+
+/** Уведомление показано оператору: светлая плашка раздела, не `Alert`. */
+async function expectNoticeShown(key: string) {
+  const notice = await screen.findByText(key)
+  expect(toneOf(notice), 'уведомление нарисовано не CreditNotice info').toEqual(['noticeInfo'])
 }
 
 /** Ошибка → новое удачное нажатие: прежний отказ снят, документ открыт. */
@@ -1110,7 +1246,7 @@ async function expectRefusalClearedBySuccess() {
   clickOpen()
   await waitFor(() => expect(lastTab().location.href).toBe(BLOB_URL))
   expect(screen.queryByText('credit.documentOpen.errorMissing')).not.toBeInTheDocument()
-  expect(screen.queryAllByRole('alert')).toHaveLength(0)
+  expect(plaques()).toHaveLength(0)
 }
 
 describe('карточки → владелец двери из своей карточки', () => {
@@ -1118,8 +1254,8 @@ describe('карточки → владелец двери из своей ка�
     const { seen, restore } = withAdapter(missingFile())
     try {
       renderLoanCard()
-      // До нажатия ни одного alert на экране: ниже появится именно наш.
-      expect(screen.queryAllByRole('alert')).toHaveLength(0)
+      // До нажатия ни одной плашки: ниже появится именно наш отказ.
+      expect(plaques()).toHaveLength(0)
       clickOpen()
       await expectRefusalShown('credit.documentOpen.errorMissing')
     } finally {
@@ -1160,7 +1296,7 @@ describe('карточки → владелец двери из своей ка�
     const { seen, restore } = withAdapter(missingFile())
     try {
       renderApplicationCard()
-      expect(screen.queryAllByRole('alert')).toHaveLength(0)
+      expect(plaques()).toHaveLength(0)
       clickOpen()
       await expectRefusalShown('credit.documentOpen.errorMissing')
     } finally {
@@ -1182,3 +1318,202 @@ describe('карточки → владелец двери из своей ка�
     expect(seen.map((config) => config.url)).toEqual([APPLICATION_DOOR, APPLICATION_DOOR])
   })
 })
+
+// ── Уведомление вместо отказа ────────────────────────────────────────────────
+// Сцены идут по ОБЕИМ карточкам: плашка у каждой своя, и тон, перепутанный в
+// одной, другая не выдаст.
+
+const D2 = IDS.secondDocument
+const SECOND_DOC: CreditDocumentMeta = {
+  ...DOC,
+  document_id: D2,
+  kind: 'contract',
+  title: 'second.pdf',
+}
+
+const CARDS = [
+  ['кредита', renderLoanCard, LOAN_DOOR, `/api/v1/credit/loans/${L}/documents/${D2}/content`],
+  [
+    'заявки',
+    renderApplicationCard,
+    APPLICATION_DOOR,
+    `/api/v1/credit/applications/${A}/documents/${D2}/content`,
+  ],
+] as const
+
+const TAB_BLOCKED = 'credit.documentOpen.tabBlocked'
+const MISSING = 'credit.documentOpen.errorMissing'
+
+describe.each(CARDS)(
+  'карточка %s → уведомление вместо отказа',
+  (_card, renderCard, door, secondDoor) => {
+    it('T-20: вкладку не дали — уведомление тоном сведений, не отказа; плашка одна', async () => {
+      blockTabs = true
+      const { seen, restore } = withAdapter(inlineAgreement())
+      try {
+        renderCard()
+        // До нажатия ни одной плашки: ниже появится именно наша.
+        expect(plaques()).toHaveLength(0)
+        clickOpen()
+        await expectNoticeShown(TAB_BLOCKED)
+        expect(downloads).toEqual(['agreement-agr-1.md'])
+        expect(plaques()).toHaveLength(1)
+      } finally {
+        restore()
+      }
+      expect(seen.map((config) => config.url)).toEqual([door])
+    })
+
+    it('T-26: живая область стоит до уведомления, и текст появляется внутри неё', async () => {
+      blockTabs = true
+      const { restore } = withAdapter(inlineAgreement())
+      try {
+        renderCard()
+        // Область есть и пуста ДО уведомления: вставленную вместе с текстом
+        // часть дикторов не объявляет.
+        const region = within(documentsPanel()).getByRole('status')
+        expect(region).toHaveAttribute('aria-live', 'polite')
+        expect(region).toBeEmptyDOMElement()
+        clickOpen()
+        await expectNoticeShown(TAB_BLOCKED)
+        // Тот же узел: область не пересоздана вместе с текстом.
+        expect(within(documentsPanel()).getByRole('status')).toBe(region)
+        expect(within(region).getByText(TAB_BLOCKED)).toBeInTheDocument()
+      } finally {
+        restore()
+      }
+    })
+
+    it('T-21: отказ после уведомления заменяет уведомление', async () => {
+      blockTabs = true
+      const { restore } = withAdapter(inTurn(inlineAgreement(), missingFile()))
+      try {
+        renderCard()
+        clickOpen()
+        await expectNoticeShown(TAB_BLOCKED)
+        clickOpen()
+        await expectRefusalShown(MISSING)
+        expect(screen.queryByText(TAB_BLOCKED)).not.toBeInTheDocument()
+        expect(plaques()).toHaveLength(1)
+        // Отказ вне живой области: у него своя `role="alert"`, а внутри
+        // `status` диктор объявил бы его дважды и вежливым тоном.
+        expect(within(documentsPanel()).getByRole('status')).toBeEmptyDOMElement()
+      } finally {
+        restore()
+      }
+    })
+
+    it('T-22: уведомление после отказа заменяет отказ', async () => {
+      blockTabs = true
+      const { restore } = withAdapter(inTurn(missingFile(), inlineAgreement()))
+      try {
+        renderCard()
+        clickOpen()
+        await expectRefusalShown(MISSING)
+        clickOpen()
+        await expectNoticeShown(TAB_BLOCKED)
+        expect(screen.queryByText(MISSING)).not.toBeInTheDocument()
+        expect(plaques()).toHaveLength(1)
+      } finally {
+        restore()
+      }
+    })
+
+    it('T-23: новое нажатие снимает уведомление в самом нажатии, до ответа', async () => {
+      blockTabs = true
+      let release: () => void = () => {}
+      const gate = new Promise<void>((resolve) => {
+        release = resolve
+      })
+      const pdfReply = inlinePdf()
+      const { restore } = withAdapter(
+        inTurn(inlineAgreement(), async (config) => {
+          await gate
+          return pdfReply(config)
+        })
+      )
+      try {
+        renderCard()
+        clickOpen()
+        await expectNoticeShown(TAB_BLOCKED)
+        blockTabs = false
+        clickOpen()
+        // Ответа ещё нет, а уведомления прошлого нажатия уже нет.
+        expect(plaques()).toHaveLength(0)
+        release()
+        await waitFor(() => expect(lastTab().location.href).toBe(BLOB_URL))
+        expect(plaques()).toHaveLength(0)
+      } finally {
+        restore()
+      }
+    })
+
+    it('T-24: запоздавший отказ прежнего нажатия вытесняет уведомление — плашка одна', async () => {
+      // Два документа: первый отвечает после второго. Кнопка снимает плашки
+      // только в СВОЁМ нажатии — одну плашку держит карточка.
+      blockTabs = true
+      let release: () => void = () => {}
+      const gate = new Promise<void>((resolve) => {
+        release = resolve
+      })
+      const refusal = missingFile()
+      const agreement = inlineAgreement()
+      const { seen, restore } = withAdapter(async (config) => {
+        if (config.url === secondDoor) return agreement(config)
+        await gate
+        return refusal(config)
+      })
+      try {
+        renderCard([DOC, SECOND_DOC])
+        const [first, second] = screen.getAllByRole('button', {
+          name: 'credit.actions.openDocument',
+        })
+        fireEvent.click(first)
+        await waitFor(() => expect(seen).toHaveLength(1))
+        fireEvent.click(second)
+        await expectNoticeShown(TAB_BLOCKED)
+        release()
+        await expectRefusalShown(MISSING)
+        expect(screen.queryByText(TAB_BLOCKED)).not.toBeInTheDocument()
+        expect(plaques()).toHaveLength(1)
+      } finally {
+        restore()
+      }
+      expect(seen.map((config) => config.url)).toEqual([door, secondDoor])
+    })
+
+    it('T-25: запоздавшее уведомление прежнего нажатия вытесняет отказ — плашка одна', async () => {
+      // Зеркало T-24: первый документ скачан без вкладки уже после того, как
+      // второй отказал.
+      blockTabs = true
+      let release: () => void = () => {}
+      const gate = new Promise<void>((resolve) => {
+        release = resolve
+      })
+      const refusal = missingFile()
+      const agreement = inlineAgreement()
+      const { seen, restore } = withAdapter(async (config) => {
+        if (config.url === secondDoor) return refusal(config)
+        await gate
+        return agreement(config)
+      })
+      try {
+        renderCard([DOC, SECOND_DOC])
+        const [first, second] = screen.getAllByRole('button', {
+          name: 'credit.actions.openDocument',
+        })
+        fireEvent.click(first)
+        await waitFor(() => expect(seen).toHaveLength(1))
+        fireEvent.click(second)
+        await expectRefusalShown(MISSING)
+        release()
+        await expectNoticeShown(TAB_BLOCKED)
+        expect(screen.queryByText(MISSING)).not.toBeInTheDocument()
+        expect(plaques()).toHaveLength(1)
+      } finally {
+        restore()
+      }
+      expect(seen.map((config) => config.url)).toEqual([door, secondDoor])
+    })
+  }
+)

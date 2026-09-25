@@ -274,6 +274,20 @@ function journalQuery(params?: CreditJournalParams): Record<string, unknown> | u
   return query
 }
 
+/**
+ * Даты списка заявок — тем же правилом, что журнал: нет значения — нет ключа.
+ * Пустая строка тоже не значение: так отдаёт себя очищенное поле фильтра.
+ * День уходит как есть; границы суток по календарю юрисдикции считает модуль.
+ */
+function dateRange(params: CreditApplicationsParams): Record<string, string> {
+  const range: Record<string, string> = {}
+  if (params.created_from) range.created_from = params.created_from
+  if (params.created_to) range.created_to = params.created_to
+  if (params.updated_from) range.updated_from = params.updated_from
+  if (params.updated_to) range.updated_to = params.updated_to
+  return range
+}
+
 export const creditApi = {
   /** Сводка стенда: счётчики по статусам и права текущей роли. */
   overview: () => get<CreditOverview>('/admin/overview'),
@@ -285,6 +299,7 @@ export const creditApi = {
       sort: params.sort,
       limit: params.limit ?? 25,
       cursor: params.cursor,
+      ...dateRange(params),
     }),
 
   application: (applicationId: string) =>

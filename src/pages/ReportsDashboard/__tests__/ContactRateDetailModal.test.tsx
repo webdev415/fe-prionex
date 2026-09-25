@@ -1,6 +1,6 @@
 /**
- * ContactRateDetailModal — the ranking floor of board #1326 (D3) and the
- * «Інше» outcome row (calls_other).
+ * ContactRateDetailModal — the ranking floor of board #1326 (D3), the
+ * «Інше» outcome row (calls_other) and a KPI without a trend (#1448).
  *
  * react-i18next is mocked globally in src/test/setup.ts — t() returns the key.
  */
@@ -86,5 +86,22 @@ describe('ContactRateDetailModal «Результати дзвінків» — �
     renderModal(modalData())
 
     expect(screen.queryByText('pages.reports.contactRateModal.other')).not.toBeInTheDocument()
+  })
+})
+
+describe('ContactRateDetailModal without a KPI trend (#1448)', () => {
+  it('shows the trend row when the KPI has a trend', () => {
+    renderModal(modalData({ change: 4, previousRate: 16 }))
+
+    expect(screen.getByText('4%')).toBeInTheDocument()
+    expect(screen.getByText('pages.reports.kpi.vs')).toBeInTheDocument()
+  })
+
+  it('shows the rate without an arrow, a bare «%» or a comparison when the trend is null', () => {
+    renderModal(modalData({ change: null, changeType: null, previousRate: null }))
+
+    expect(screen.getByText(/^20\.0% \(20/)).toBeInTheDocument()
+    expect(screen.queryByText('pages.reports.kpi.vs')).not.toBeInTheDocument()
+    expect(screen.queryByText('%')).not.toBeInTheDocument()
   })
 })

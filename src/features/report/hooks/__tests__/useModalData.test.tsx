@@ -37,7 +37,7 @@ vi.mock('../useCommunicationStatistics', () => ({
   useCommunicationStatistics: () => queryResult(sources.communication),
 }))
 
-import { useCallsMadeModal, useContactRateModal } from '../useModalData'
+import { useCallsMadeModal, useContactRateModal, useSMSSentModal } from '../useModalData'
 
 const trend = { change: 0, changeType: 'increase' as const, previousValue: 0 }
 
@@ -272,5 +272,73 @@ describe('useContactRateModal «Результати дзвінків» add up t
     const outcomes = outcomesFor({ total_calls: 0, calls_other: 4 })
 
     expect(outcomes.find((o) => o.key === 'other')?.count).toBe(4)
+  })
+})
+
+describe('modal hooks with a KPI that has no trend (#1448)', () => {
+  const up = { change: 7, changeType: 'increase' as const, previousValue: 90 }
+
+  function dashboardWithTrends(trends: Partial<DashboardUI['kpis']>): DashboardUI {
+    const base = dashboard(100, 25)
+    return { ...base, kpis: { ...base.kpis, ...trends } }
+  }
+
+  beforeEach(() => {
+    sources.operators = operatorResponse([])
+    sources.communication = communication([])
+  })
+
+  it('hands the calls modal a null trend instead of throwing', () => {
+    sources.dashboard = dashboardWithTrends({ callsTrend: null })
+
+    const { result } = renderHook(() =>
+      useCallsMadeModal({ projectId: 1, period: 'today', userTimezone: 'UTC' })
+    )
+
+    expect(result.current.data).toMatchObject({
+      total: 100,
+      change: null,
+      changeType: null,
+      previousTotal: null,
+    })
+  })
+
+  it('hands the contact-rate modal a null trend instead of throwing', () => {
+    sources.dashboard = dashboardWithTrends({ contactRateTrend: null })
+
+    const { result } = renderHook(() => useContactRateModal({ projectId: 1, period: 'today' }))
+
+    expect(result.current.data).toMatchObject({
+      rate: 25,
+      change: null,
+      changeType: null,
+      previousRate: null,
+    })
+  })
+
+  it('hands the SMS modal a null trend instead of throwing', () => {
+    sources.dashboard = dashboardWithTrends({ smsTrend: null })
+
+    const { result } = renderHook(() => useSMSSentModal({ projectId: 1, period: 'today' }))
+
+    expect(result.current.data).toMatchObject({
+      change: null,
+      changeType: null,
+      previousTotal: null,
+    })
+  })
+
+  it('still passes a present trend through', () => {
+    sources.dashboard = dashboardWithTrends({ callsTrend: up, paymentsTrend: null })
+
+    const { result } = renderHook(() =>
+      useCallsMadeModal({ projectId: 1, period: 'today', userTimezone: 'UTC' })
+    )
+
+    expect(result.current.data).toMatchObject({
+      change: 7,
+      changeType: 'increase',
+      previousTotal: 90,
+    })
   })
 })

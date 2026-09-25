@@ -295,6 +295,43 @@ describe('CreditLoanDetailPage → журнал проводок', () => {
     expect(screen.getByText(/card\.isReversal/)).toBeInTheDocument()
   })
 
+  it('J-13 колонки не слипаются: у каждой, кроме последней, правый отступ — в заголовке и в строке', () => {
+    // «Сума» выровнена вправо, «Правило» — влево: без отступа между ними на
+    // экране стояло «СумаПравило» и «400,00 CADdisbursement». jsdom вёрстку не
+    // считает, поэтому смотрим класс — тот же `pr-3`, что у таблицы документов.
+    renderJournal([entry({ seq: 1, rule_id: 'disbursement' })])
+    const amount = screen.getByRole('columnheader', { name: 'credit.columns.amount' })
+    const table = amount.closest('table')
+    if (!table) throw new Error('таблицы журнала нет')
+    const headers = [...table.querySelectorAll('thead th')]
+    const cells = [...table.querySelectorAll('tbody tr:first-child td')]
+    // Контроль выборки: шесть колонок, последняя — «Правило», строка той же ширины.
+    expect(headers.map((th) => th.textContent)).toEqual([
+      'credit.columns.date',
+      'credit.columns.entryType',
+      'credit.columns.bucket',
+      'credit.columns.installment',
+      'credit.columns.amount',
+      'credit.columns.rule',
+    ])
+    expect(cells).toHaveLength(headers.length)
+    const column = headers.indexOf(amount)
+    expect(amount.classList.contains('pr-3'), 'у заголовка «Сума» нет правого отступа').toBe(true)
+    expect(cells[column].classList.contains('pr-3'), 'у суммы в строке нет правого отступа').toBe(
+      true
+    )
+    const withoutPadding = [...headers.slice(0, -1), ...cells.slice(0, -1)]
+      .filter((node) => !node.classList.contains('pr-3'))
+      .map((node) => node.textContent)
+    expect(withoutPadding).toEqual([])
+    // У последней колонки отступа нет: справа от неё соседа нет, а у таблицы
+    // во всю ширину он отнял бы место у «Правило».
+    expect(headers.at(-1)?.classList.contains('pr-3'), 'у заголовка «Правило» правый отступ').toBe(
+      false
+    )
+    expect(cells.at(-1)?.classList.contains('pr-3'), 'у правила в строке правый отступ').toBe(false)
+  })
+
   /**
    * Отбор по корзине — сцены J-1…J-12 story 11-4b.
    *

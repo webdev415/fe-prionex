@@ -7,6 +7,7 @@
  */
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { Link, useParams } from 'react-router-dom'
 import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
@@ -18,8 +19,9 @@ import {
   useCreditManualDecision,
   useCreditOverview,
 } from '@/features/credit/hooks/useCredit'
-import type { CreditApiError } from '@/features/credit/api/creditApi'
+import { CreditApiError } from '@/features/credit/api/creditApi'
 import { normalizeDraft } from '@/features/credit/api/draft'
+import { CREDIT_DOCUMENT_META_KINDS } from '@/features/credit/api/enums'
 import type { CreditApplicationDetail, CreditDecisionOutcome } from '@/features/credit/api/types'
 import { CreditStatusBadge } from './components/CreditStatusBadge'
 import { CreditDocumentOpenButton } from './components/CreditDocumentOpenButton'
@@ -447,7 +449,18 @@ function ApplicationForm({ application }: { application: CreditApplicationDetail
 function ApplicationDocuments({ application }: { application: CreditApplicationDetail }) {
   const { t } = useTranslation('common')
   const [failure, setFailure] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
   const documents = application.documents ?? []
+  // Плашка над таблицей одна: отказ и уведомление вытесняют друг друга, иначе
+  // запоздавший ответ одного документа лёг бы рядом с итогом другого.
+  const showFailure = (message: string | null) => {
+    setFailure(message)
+    if (message !== null) setNotice(null)
+  }
+  const showNotice = (message: string | null) => {
+    setNotice(message)
+    if (message !== null) setFailure(null)
+  }
 
   return (
     <Panel title={t('credit.tabs.documents')}>
@@ -456,6 +469,15 @@ function ApplicationDocuments({ application }: { application: CreditApplicationD
           {failure}
         </Alert>
       )}
+      {/* Живая область стоит в DOM всегда: вставленную вместе с текстом часть
+          дикторов не объявляет, а у самой плашки роли нет. */}
+      <div role="status" aria-live="polite">
+        {notice && (
+          <CreditNotice tone="info" className="mb-3">
+            {notice}
+          </CreditNotice>
+        )}
+      </div>
       {documents.length === 0 ? (
         <p className="text-muted-foreground text-sm">{t('credit.card.noDocuments')}</p>
       ) : (
@@ -471,7 +493,11 @@ function ApplicationDocuments({ application }: { application: CreditApplicationD
           <tbody>
             {documents.map((doc) => (
               <tr key={doc.document_id} className="border-border border-b last:border-0">
-                <td className="py-2">{t(`credit.documentKind.${doc.kind}`, doc.kind)}</td>
+                <td className="py-2">
+                  {CREDIT_DOCUMENT_META_KINDS.includes(doc.kind)
+                    ? t(`credit.documentKind.${doc.kind}`)
+                    : t('credit.documentKind.unknown', { code: doc.kind })}
+                </td>
                 <td className="py-2 font-mono text-xs">{doc.title ?? doc.document_id}</td>
                 <td className="text-muted-foreground py-2 text-xs">
                   {formatDateTime(doc.generated_at)}
@@ -480,7 +506,8 @@ function ApplicationDocuments({ application }: { application: CreditApplicationD
                   <CreditDocumentOpenButton
                     document={doc}
                     owner={{ kind: 'application', id: application.application_id }}
-                    onError={setFailure}
+                    onError={showFailure}
+                    onNotice={showNotice}
                   />
                 </td>
               </tr>
@@ -490,6 +517,30 @@ function ApplicationDocuments({ application }: { application: CreditApplicationD
       )}
     </Panel>
   )
+}
+
+/**
+ * Отказ ручного решения по машинному коду модуля. Три кода — отказы по пропуску
+ * CRM, из которого модуль берёт автора решения: `detail` модуля написан
+ * по-русски, а оператору нужен текст на его языке. Ключи — статическими
+ * литералами: страж словарей видит только их. Прочие отказы — прежним
+ * сообщением: в `validation_failed` оно называет поле, которое надо поправить.
+ * Сообщения нет (брошен не `Error` или текст пуст) — общий текст отказа: пустая
+ * плашка не говорит оператору даже того, что решение не записано.
+ */
+function manualDecisionErrorText(t: TFunction, error: unknown): string {
+  if (error instanceof CreditApiError) {
+    switch (error.code) {
+      case 'operator_id_not_numeric':
+        return t('credit.decisionError.operatorIdNotNumeric')
+      case 'operator_id_ambiguous':
+        return t('credit.decisionError.operatorIdAmbiguous')
+      case 'underwriter_not_the_caller':
+        return t('credit.decisionError.underwriterNotTheCaller')
+    }
+  }
+  const message = error instanceof Error ? error.message : ''
+  return message.trim() ? message : t('credit.decisionError.generic')
 }
 
 function ApplicationDecision({
@@ -508,7 +559,6 @@ function ApplicationDecision({
   const [amount, setAmount] = useState(String((application.requested_amount_minor ?? 0) / 100))
   const [rationale, setRationale] = useState('')
   const [codes, setCodes] = useState<string[]>([])
-  const [underwriterId, setUnderwriterId] = useState('')
 
   const snapshot = useMemo(
     () => JSON.stringify(decision?.input_snapshot ?? {}, null, 2),
@@ -521,7 +571,6 @@ function ApplicationDecision({
       rationale: rationale.trim(),
       ...(outcome === 'approved' ? { final_amount_minor: Math.round(Number(amount) * 100) } : {}),
       ...(outcome === 'declined' ? { decline_codes: codes } : {}),
-      ...(underwriterId ? { underwriter_id: Number(underwriterId) } : {}),
     })
   }
 
@@ -605,7 +654,7 @@ function ApplicationDecision({
         <Panel title={t('credit.card.manualDecision')}>
           {mutation.isError && (
             <Alert variant="error" className="mb-3">
-              {(mutation.error as CreditApiError).message}
+              {manualDecisionErrorText(t, mutation.error)}
             </Alert>
           )}
           {mutation.isSuccess && (
@@ -638,15 +687,6 @@ function ApplicationDecision({
                 />
               </label>
             )}
-            <label className="text-muted-foreground flex flex-col gap-1.5 text-xs">
-              {t('credit.fields.underwriterId')}
-              <Input
-                type="number"
-                min="1"
-                value={underwriterId}
-                onChange={(event) => setUnderwriterId(event.target.value)}
-              />
-            </label>
           </div>
 
           {outcome === 'declined' && (

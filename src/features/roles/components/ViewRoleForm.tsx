@@ -8,7 +8,10 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { usePermissions } from '../hooks/useRoleMutations'
+import { useHubRoles } from '../hooks/useHubRoles'
+import { hasHubRoleField } from '../hubRoles'
 import type { RoleDetailResponse } from '../types'
+import { HubRoleValue } from './HubRoleValue'
 
 interface ViewRoleFormProps {
   role: RoleDetailResponse
@@ -18,6 +21,9 @@ interface ViewRoleFormProps {
 export function ViewRoleForm({ role }: ViewRoleFormProps) {
   const { t } = useTranslation('common')
   const { data: permissionsData, isLoading: loadingPermissions } = usePermissions()
+  // KAN-1476: the row exists only when the backend knows the field at all.
+  const showHubRole = hasHubRoleField(role)
+  const hubCatalog = useHubRoles(showHubRole ? role.project_id : undefined)
 
   // Get selected permission IDs from role
   const selectedPermissionIds = useMemo(
@@ -90,6 +96,18 @@ export function ViewRoleForm({ role }: ViewRoleFormProps) {
             : t('pages.roles.forms.customRole')}
         </span>
       </div>
+
+      {/* HUB chat role (KAN-1476) */}
+      {showHubRole && (
+        <div className="flex items-center gap-2">
+          <span className="text-muted-foreground text-sm font-light">
+            {t('pages.roles.forms.hubRole', 'HUB chat role')}:
+          </span>
+          <span className="text-foreground text-sm font-semibold">
+            <HubRoleValue code={role.hub_role} status={hubCatalog.status} />
+          </span>
+        </div>
+      )}
 
       {/* Users */}
       <div className="flex items-center gap-2">

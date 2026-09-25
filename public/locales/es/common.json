@@ -4610,13 +4610,32 @@
         "type": "Tipo",
         "systemDefault": "Predeterminado del sistema",
         "customRole": "Rol personalizado",
-        "notAvailableForDefault": "No disponible para roles predeterminados"
+        "notAvailableForDefault": "No disponible para roles predeterminados",
+        "hubRole": "Rol en el chat (HUB)",
+        "hubRoleNotSet": "Sin definir — según el nombre del rol",
+        "hubRoleHint": "Sin definir: HUB determina los permisos por el nombre del rol; si HUB no conoce el nombre — permisos mínimos (empleado). Los cambios se aplican en HUB en ~6 min sin volver a iniciar sesión",
+        "hubRoleUnavailableOption": "{{code}} (no disponible para seleccionar)",
+        "hubRoleCatalogUnavailable": "catálogo de HUB no disponible",
+        "hubRoleLockedDefault": "Rol predeterminado: el rol en el chat lo fija el sistema y no se puede cambiar aquí.",
+        "hubRoleLockedNotAssignable": "Este valor no está disponible para que lo elija ahora, así que no se puede cambiar aquí."
       },
       "accessLevel": {
         "my": "Solo los míos",
         "group": "Mi grupo",
         "department": "Mi departamento",
         "all": "Todo el proyecto"
+      },
+      "hubRole": {
+        "options": {
+          "none": "Sin acceso a HUB",
+          "employee": "Empleado (permisos mínimos)",
+          "training_workspace": "Formador (espacio de formación)",
+          "quality_workspace": "Control de calidad (espacio QA)",
+          "lawyer": "Abogado",
+          "operator": "Operador",
+          "supervisor": "Supervisor",
+          "admin": "Administrador de HUB"
+        }
       },
       "validation": {
         "nameRequired": "El nombre del rol es obligatorio",
@@ -6694,6 +6713,8 @@
         "rrValidationPaymentDateRequired": "La fecha de pago {{num}} es obligatoria",
         "rrValidationPaymentAmountRequired": "El importe del pago {{num}} es obligatorio",
         "rrValidationSumMismatch": "La suma de los pagos ({{sum}}) debe ser igual al importe total ({{total}})",
+        "rrValidationAmountOutOfRange": "El importe total de la reestructuración ({{amount}}) debe estar entre {{lower}} y {{upper}}",
+        "rrValidationNothingToReturn": "Este crédito no tiene importe pendiente de devolución, por lo que no se puede reestructurar",
         "viewDetail": "Ver",
         "makePayment": "Registrar pago",
         "payments": "Pagos",
@@ -12417,7 +12438,6 @@
       "finalAmount": "Importe final",
       "declineCodes": "Códigos de rechazo",
       "underwriter": "Analista de crédito",
-      "underwriterId": "ID del analista",
       "rationale": "Justificación",
       "rules": "Conjunto de reglas / modelo",
       "decidedAt": "Decidido el",
@@ -12502,6 +12522,12 @@
       "advanceRefundExcess": "Excedente de devolución tras la cancelación",
       "supersedesDecision": "Sustituye la decisión anterior"
     },
+    "decisionError": {
+      "operatorIdNotNumeric": "La decisión no se guardó: el número de usuario de su pase de CRM no es un número entero, por lo que no se puede registrar al autor de la decisión. Contacte al administrador: es un ajuste del inicio de sesión, no un error suyo.",
+      "operatorIdAmbiguous": "La decisión no se guardó: su pase de CRM indica dos números de usuario distintos, por lo que no se puede determinar al autor de la decisión. Contacte al administrador.",
+      "underwriterNotTheCaller": "La decisión no se guardó: el autor de una decisión manual es el titular del pase de CRM, y la página envió otro número. Actualice la página e inténtelo de nuevo.",
+      "generic": "La decisión no se guardó. Inténtelo de nuevo; si vuelve a ocurrir, contacte al administrador."
+    },
     "tabs": {
       "form": "Formulario de solicitud",
       "documents": "Documentos",
@@ -12542,7 +12568,9 @@
       "title": "Solicitudes de crédito",
       "total": "{{count}} en total",
       "searchPlaceholder": "Número de solicitud o correo electrónico",
-      "empty": "Ninguna solicitud coincide con el filtro"
+      "empty": "Ninguna solicitud coincide con el filtro",
+      "statusCountsHint": "Los contadores de estado abarcan toda la sección y no tienen en cuenta la búsqueda ni las fechas.",
+      "dateRangeNotApplied": "Filtro de fechas no aplicado: la fecha inicial es posterior a la final. La lista se muestra sin este rango."
     },
     "loans": {
       "title": "Créditos",
@@ -12770,6 +12798,7 @@
       "overpayment": "Pago en exceso"
     },
     "documentKind": {
+      "agreement_draft": "Borrador de contrato",
       "contract": "Contrato de crédito",
       "schedule": "Calendario de pagos",
       "pcci": "Información precontractual del crédito",
@@ -12786,7 +12815,8 @@
       "pad_form": "Autorización de domiciliación",
       "pay_stub": "Nómina",
       "utility_bill": "Factura de suministros",
-      "other": "Otro"
+      "other": "Otro",
+      "unknown": "Tipo desconocido ({{code}})"
     },
     "consent": {
       "terms": "Términos y condiciones",
@@ -12935,7 +12965,13 @@
     "filters": {
       "dpdFrom": "Días de mora",
       "any": "Cualquiera",
-      "anyBucket": "Cualquier categoría"
+      "anyBucket": "Cualquier categoría",
+      "createdFrom": "Creado desde",
+      "createdTo": "Creado hasta",
+      "updatedFrom": "Última actividad desde",
+      "updatedTo": "Última actividad hasta",
+      "calendarHint": "Los límites del día siguen el calendario de la provincia de la solicitud (Alberta: hora de Edmonton), no su hora local. Las columnas Creado y Última actividad muestran su hora local.",
+      "rangeInverted": "La fecha inicial es posterior a la final: este rango no se aplica."
     },
     "unavailable": {
       "title": "El módulo de crédito no está desplegado en este entorno",

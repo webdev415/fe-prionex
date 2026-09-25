@@ -67,8 +67,9 @@ export const CREDIT_SCHEDULE_REASONS = [
   'disbursement_reversed',
 ] as const
 
-/** Виды документов (DocumentKind). */
+/** Виды документов, которые создаёт модуль (DocumentKind). */
 export const CREDIT_DOCUMENT_KINDS = [
+  'agreement_draft',
   'contract',
   'schedule',
   'pcci',
@@ -80,6 +81,29 @@ export const CREDIT_DOCUMENT_KINDS = [
   'cancellation_notice',
   'regulatory_card_ua',
 ] as const
+
+/** Виды документов, которые загружает клиент (UploadedDocumentKind). */
+export const CREDIT_UPLOADED_DOCUMENT_KINDS = [
+  'bank_statement_pdf',
+  'id_photo',
+  'void_cheque',
+  'pad_form',
+  'pay_stub',
+  'utility_bill',
+  'other',
+] as const
+
+/**
+ * Всё, что приходит в `DocumentMeta.kind`: в контракте это oneOf двух перечней,
+ * и список документов заявки несёт вперемешку договоры модуля и загрузки
+ * клиента. Подпись есть у каждого значения отсюда; прочее экран называет
+ * неизвестным видом с кодом — по одному `CREDIT_DOCUMENT_KINDS` выписка клиента
+ * стала бы «неизвестной».
+ */
+export const CREDIT_DOCUMENT_META_KINDS: readonly string[] = [
+  ...CREDIT_DOCUMENT_KINDS,
+  ...CREDIT_UPLOADED_DOCUMENT_KINDS,
+]
 
 /** Статусы кредита — те же значения, что и в union `CreditLoanStatus`. */
 export const CREDIT_LOAN_STATUSES = [
@@ -250,7 +274,7 @@ export const CREDIT_DYNAMIC_NAMESPACES: Record<string, readonly string[]> = {
   entryType: CREDIT_ENTRY_TYPES,
   bucket: CREDIT_BUCKETS,
   scheduleReason: CREDIT_SCHEDULE_REASONS,
-  documentKind: CREDIT_DOCUMENT_KINDS,
+  documentKind: CREDIT_DOCUMENT_META_KINDS,
   loanStatus: CREDIT_LOAN_STATUSES,
   status: CREDIT_ALL_APPLICATION_STATUSES,
   disbursementState: CREDIT_DISBURSEMENT_STATES,

@@ -10,6 +10,7 @@ import i18n from '@/lib/i18n'
 import { rolesApi } from '../api/rolesApi'
 import { rolesKeys } from './useRoles'
 import { getErrorMessage } from '@/lib/errors'
+import { isStaleHubCatalogueRefusal } from '../hubRoles'
 import type { CreateRoleInput, UpdateRoleInput } from '../types'
 
 /**
@@ -38,6 +39,15 @@ export function useCreateRole() {
     },
     onError: (error) => {
       toast.error(getErrorMessage(error))
+      // KAN-1476: the backend refused the HUB chat role the form sent. Ask the
+      // catalogue again: the form hides the field (HUB_ROLE_DISABLED) or
+      // narrows it, and it shows - and sends - only a value the fresh
+      // catalogue still offers as assignable (effectiveHubRoleValue). The form
+      // also drops its pick on such a refusal, so a retry of the same save goes
+      // through without the refused value rather than being refused again.
+      if (isStaleHubCatalogueRefusal(error)) {
+        queryClient.invalidateQueries({ queryKey: rolesKeys.hubRolesAll() })
+      }
     },
   })
 }
@@ -60,6 +70,10 @@ export function useUpdateRole() {
     },
     onError: (error) => {
       toast.error(getErrorMessage(error))
+      // KAN-1476: see useCreateRole.
+      if (isStaleHubCatalogueRefusal(error)) {
+        queryClient.invalidateQueries({ queryKey: rolesKeys.hubRolesAll() })
+      }
     },
   })
 }
