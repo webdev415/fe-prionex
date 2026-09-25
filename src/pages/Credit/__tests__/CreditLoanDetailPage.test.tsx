@@ -10,9 +10,13 @@
  */
 import type { ReactNode } from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { AxiosError, type AxiosResponse } from 'axios'
 import { CreditLoanDetailPage } from '../CreditLoanDetailPage'
+import { searchClientsByPhoneExact } from '@/api/clientSearchApi'
+import { callSmsApi } from '@/features/clients/api/callSmsApi'
 import * as hooks from '@/features/credit/hooks/useCredit'
 // Словарь корзин импортируется, а не переписывается списком: переписанный
 // повторил бы опечатку кода и зеленел бы вместе с ней (сцена J-1).
@@ -22,11 +26,29 @@ import type { CreditLoanDetail, CreditLoanState, CreditPayment } from '@/feature
 // слова» сверяет новые подписи с теми, что уже значат другое, по живым
 // значениям словаря, а не по переписанным литералам.
 import en from '../../../../public/locales/en/common.json'
+import es from '../../../../public/locales/es/common.json'
 import uk from '../../../../public/locales/uk/common.json'
 
 // Мокаем хуки, а не HTTP: живой QueryClient оставляет таймеры notifyManager,
 // которые срабатывают после teardown jsdom и падают в чужом файле.
 vi.mock('@/features/credit/hooks/useCredit')
+// Поиск клиента CRM по телефону и история звонков/SMS — транспорт, а не хуки: сцены
+// ниже проверяют, КУДА карточка ходит, а куда не ходит вовсе.
+vi.mock('@/api/clientSearchApi', () => ({ searchClientsByPhoneExact: vi.fn() }))
+vi.mock('@/features/clients/api/callSmsApi', () => ({
+  callSmsApi: { getClientCalls: vi.fn(), getClientSms: vi.fn() },
+}))
+
+// Паспорт кредита ищет клиента CRM по телефону заявки (`CreditClientLink`) — ему
+// нужен клиент запросов. `gcTime: Infinity` — без пятиминутного таймера сборки
+// кэша: запрос создаётся и выключенным, а таймер пережил бы тест.
+const withQuery = (ui: ReactNode) => (
+  <QueryClientProvider
+    client={new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } })}
+  >
+    {ui}
+  </QueryClientProvider>
+)
 // Общий мок в src/test/setup.ts возвращает ГОЛЫЙ КЛЮЧ и подстановку теряет —
 // проверять по нему текст бесполезно. Здесь мок печатает ключ вместе с
 // подставленными значениями, поэтому тест видит, ЧТО именно ушло в строку:
@@ -191,11 +213,7 @@ function mockHooks(payments: CreditPayment[]) {
 }
 
 function openPayments() {
-  render(
-    <MemoryRouter>
-      <CreditLoanDetailPage />
-    </MemoryRouter>
-  )
+  render(<MemoryRouter>{withQuery(<CreditLoanDetailPage />)}</MemoryRouter>)
   // Вкладка — по роли: текст «платіж» встречается и в блоке следующего
   // платежа, и getByText нашёл бы несколько узлов.
   fireEvent.click(screen.getByRole('tab', { name: /Платеж|Платіж|Payment/i }))
@@ -218,11 +236,7 @@ describe('CreditLoanDetailPage → платежи', () => {
   })
 
   it('отличает сторно не только цветом', () => {
-    const { container } = render(
-      <MemoryRouter>
-        <CreditLoanDetailPage />
-      </MemoryRouter>
-    )
+    const { container } = render(<MemoryRouter>{withQuery(<CreditLoanDetailPage />)}</MemoryRouter>)
     fireEvent.click(screen.getByRole('tab', { name: /Платеж|Платіж|Payment/i }))
     // jsdom не применяет Tailwind, поэтому смотрим класс: важно, что
     // зачёркивание есть у сторнированных сумм и его нет у зачтённой —
@@ -242,11 +256,7 @@ describe('CreditLoanDetailPage → платежи', () => {
   it('не помечает обычные платежи', () => {
     vi.clearAllMocks()
     mockHooks([PAYMENTS[1]])
-    const { container } = render(
-      <MemoryRouter>
-        <CreditLoanDetailPage />
-      </MemoryRouter>
-    )
+    const { container } = render(<MemoryRouter>{withQuery(<CreditLoanDetailPage />)}</MemoryRouter>)
     fireEvent.click(screen.getByRole('tab', { name: /Платеж|Платіж|Payment/i }))
     expect(container.querySelectorAll('.line-through')).toHaveLength(0)
     expect(screen.queryByText(/paymentsReversedHint/)).not.toBeInTheDocument()
@@ -273,11 +283,7 @@ describe('CreditLoanDetailPage → журнал проводок', () => {
       ...idle,
       data: { items, total: items.length },
     } as never)
-    render(
-      <MemoryRouter>
-        <CreditLoanDetailPage />
-      </MemoryRouter>
-    )
+    render(<MemoryRouter>{withQuery(<CreditLoanDetailPage />)}</MemoryRouter>)
     fireEvent.click(screen.getByRole('tab', { name: /Журнал|Journal/i }))
   }
 
@@ -359,11 +365,7 @@ describe('CreditLoanDetailPage → журнал проводок', () => {
           ...(params?.bucket ? filteredState : {}),
         }) as never
     )
-    render(
-      <MemoryRouter>
-        <CreditLoanDetailPage />
-      </MemoryRouter>
-    )
+    render(<MemoryRouter>{withQuery(<CreditLoanDetailPage />)}</MemoryRouter>)
     fireEvent.click(screen.getByRole('tab', { name: /Журнал|Journal/i }))
   }
 
@@ -635,11 +637,7 @@ describe('CreditLoanDetailPage → паспорт', () => {
   })
 
   function openPassport() {
-    render(
-      <MemoryRouter>
-        <CreditLoanDetailPage />
-      </MemoryRouter>
-    )
+    render(<MemoryRouter>{withQuery(<CreditLoanDetailPage />)}</MemoryRouter>)
   }
 
   it('показывает UUID кредита и заявки — их диктуют, а не кликают', () => {
@@ -747,11 +745,7 @@ describe('CreditLoanDetailPage → излишек возврата (обязат
       ...idle,
       data: state,
     } as unknown as ReturnType<typeof hooks.useCreditLoanState>)
-    return render(
-      <MemoryRouter>
-        <CreditLoanDetailPage />
-      </MemoryRouter>
-    )
+    return render(<MemoryRouter>{withQuery(<CreditLoanDetailPage />)}</MemoryRouter>)
   }
 
   const openBalances = () =>
@@ -957,4 +951,130 @@ describe('CreditLoanDetailPage → излишек возврата (обязат
       }
     }
   })
+})
+
+/**
+ * Связь кредита с клиентом CRM — вместо ложного «створюється при укладенні
+ * договору».
+ *
+ * Клиента CRM для канадского заёмщика не создаст никто, поэтому карточка кредита
+ * ищет его так же, как карточка заявки: по телефону заявки, с честным «не
+ * шукали». Три состояния заявки различаются: грузится (не «телефону немає»), не
+ * получена (не «телефону немає» и без поиска), получена. Звонки и SMS в карточку
+ * кредита не добавлены — они живут в карточке заявки.
+ */
+describe('CreditLoanDetailPage → связь с клиентом CRM', () => {
+  // Синтетика: вымышленный номер NANP (станция 555, абонентская часть 01xx).
+  const PHONE = '+14035550123'
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockHooks(PAYMENTS)
+    vi.mocked(searchClientsByPhoneExact).mockResolvedValue([])
+  })
+
+  function withApplication(application: Partial<Record<string, unknown>>, rest = {}) {
+    vi.mocked(hooks.useCreditApplication).mockReturnValue({
+      ...idle,
+      data: { draft: {}, client_email: null, ...application },
+      ...rest,
+    } as never)
+  }
+
+  function openPassport() {
+    render(<MemoryRouter>{withQuery(<CreditLoanDetailPage />)}</MemoryRouter>)
+  }
+
+  const clientRow = () => screen.getByText('credit.fields.clientId').parentElement
+
+  it('L-1: без client_id ищет клиента по телефону заявки; «створюється…» нет', async () => {
+    withApplication({ client_phone: PHONE })
+    openPassport()
+    await waitFor(() => expect(searchClientsByPhoneExact).toHaveBeenCalledWith(PHONE))
+    expect(await screen.findByText('credit.clientLink.notFound')).toBeInTheDocument()
+    expect(screen.queryByText('credit.card.clientPending')).not.toBeInTheDocument()
+  })
+
+  it('L-2: заявка без телефона — «не шукали: телефону немає»', () => {
+    withApplication({ client_phone: null })
+    openPassport()
+    expect(clientRow()?.textContent).toContain('credit.clientLink.notSearched.no_phone')
+    expect(searchClientsByPhoneExact).not.toHaveBeenCalled()
+  })
+
+  it('L-3: заявка ещё грузится — «шукаємо», а не «телефону немає»', () => {
+    vi.mocked(hooks.useCreditApplication).mockReturnValue({ ...idle, isLoading: true } as never)
+    openPassport()
+    expect(clientRow()?.textContent).toContain('credit.clientLink.notSearched.loading')
+    expect(clientRow()?.textContent).not.toContain('credit.clientLink.notSearched.no_phone')
+  })
+
+  it('L-4: client_id есть — ссылка на клиента, как раньше', () => {
+    vi.mocked(hooks.useCreditLoan).mockReturnValue({
+      ...idle,
+      data: { ...LOAN, client_id: 5 },
+    } as unknown as ReturnType<typeof hooks.useCreditLoan>)
+    withApplication({ client_phone: PHONE })
+    openPassport()
+    const link = screen.getByRole('link', { name: '#5' })
+    expect(link.getAttribute('href')).toBe('/dashboard/clients/5')
+    expect(searchClientsByPhoneExact).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['без связи', null],
+    ['со связью', 5],
+  ] as const)('L-5: %s — звонки и SMS CRM карточка кредита не запрашивает', (_name, clientId) => {
+    vi.mocked(hooks.useCreditLoan).mockReturnValue({
+      ...idle,
+      data: { ...LOAN, client_id: clientId },
+    } as unknown as ReturnType<typeof hooks.useCreditLoan>)
+    withApplication({ client_phone: PHONE })
+    openPassport()
+    expect(callSmsApi.getClientCalls).not.toHaveBeenCalled()
+    expect(callSmsApi.getClientSms).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['500', 500],
+    ['404', 404],
+  ] as const)('L-6: заявка не получена (%s) — «телефон невідомий», без поиска', (_name, status) => {
+    vi.mocked(hooks.useCreditApplication).mockReturnValue({
+      ...idle,
+      error: new AxiosError('x', 'ERR_BAD_RESPONSE', undefined, undefined, {
+        status,
+      } as AxiosResponse),
+    } as never)
+    openPassport()
+    expect(clientRow()?.textContent).toContain('credit.card.borrowerApplicationFailed')
+    expect(clientRow()?.textContent).not.toContain('credit.clientLink.notSearched.no_phone')
+    expect(searchClientsByPhoneExact).not.toHaveBeenCalled()
+  })
+
+  // Своя копия поиска по словарю (`i18nKeys.test.ts`): помощник стража не
+  // экспортируется, а сам страж неиспользуемых ключей в общем виде не ловит.
+  function lookup(dictionary: unknown, key: string): unknown {
+    return key.split('.').reduce<unknown>((node, part) => {
+      if (node && typeof node === 'object' && part in node) {
+        return (node as Record<string, unknown>)[part]
+      }
+      return undefined
+    }, dictionary)
+  }
+
+  it.each([
+    ['uk', uk],
+    ['en', en],
+    ['es', es],
+  ] as const)(
+    'L-7: %s — ключа прежней строки нет, соседний ключ того же поиска есть',
+    (_lang, dictionary) => {
+      expect(lookup(dictionary, 'credit.card.clientPending')).toBeUndefined()
+      // Положительный контроль ТОГО ЖЕ поиска: иначе «не найдено» выше значило бы
+      // «искать не умеем».
+      const control = lookup(dictionary, 'credit.card.projectionPending')
+      expect(typeof control).toBe('string')
+      expect(String(control).trim()).not.toBe('')
+    }
+  )
 })

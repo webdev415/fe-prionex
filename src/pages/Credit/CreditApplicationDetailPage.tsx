@@ -29,7 +29,11 @@ import { CreditDraftBlocks } from './components/CreditDraftBlocks'
 import { CreditFlagList } from './components/CreditFlagList'
 import { CreditStageProgress } from './components/CreditStageProgress'
 import { CreditClientLink } from './components/CreditClientLink'
+import { CreditPriorApplications } from './components/CreditPriorApplications'
+import { CreditApplicationTimeline } from './components/CreditApplicationTimeline'
+import { CreditCommunications } from './components/CreditCommunications'
 import { collectApplicationFlags } from '@/features/credit/api/applicantFlags'
+import { hasStatusRows, hasTimeline } from '@/features/credit/api/timeline'
 import { formatIdle, idleMinutes } from '@/features/credit/api/idle'
 import { useNowTick } from '@/features/credit/hooks/useNowTick'
 import {
@@ -418,6 +422,13 @@ function ApplicationForm({ application }: { application: CreditApplicationDetail
         </Field>
       </Panel>
 
+      {/* Сколько заявок этот клиент уже подавал — счёт модуля по его правилу
+          тождества; стоит сразу за связями, потому что отвечает на тот же
+          вопрос «кто это». */}
+      <Panel title={t('credit.clientHistory.title')}>
+        <CreditPriorApplications value={application.applicant_applications} />
+      </Panel>
+
       {/* Ссылка «Відкрити кредит» отвечает на «куда нажать», но не на «что
           продиктовать»: сами идентификаторы в ней не видны. */}
       <Panel title={t('credit.card.identifiers')}>
@@ -755,29 +766,70 @@ function ApplicationDecision({
 
 function ApplicationHistory({ application }: { application: CreditApplicationDetail }) {
   const { t } = useTranslation('common')
+  const timeline = application.timeline
   return (
-    <Panel title={t('credit.tabs.history')}>
-      <ul className="text-sm">
-        {(application.audit ?? []).map((entry, index) => (
-          <li
-            key={`${entry.at}-${index}`}
-            className="border-border flex gap-3 border-b py-2 last:border-0"
-          >
-            <span className="text-muted-foreground w-40 shrink-0 font-mono text-xs">
-              {formatDateTime(entry.at)}
+    <>
+      <Panel title={t('credit.tabs.history')}>
+        {/* Хронология модуля уже несёт переходы статуса дорожкой `status`, поэтому
+            `audit` рядом не выводится — переходы не дублируются. Нет поля или лента
+            пуста (стенд отстаёт от контракта) — прежний список `audit` и честная
+            пометка. В ленте нет ни одного перехода — `audit` остаётся под ней:
+            иначе история статусов пропала бы молча. */}
+        {hasTimeline(timeline) ? (
+          <>
+            <CreditApplicationTimeline
+              timeline={timeline}
+              portalEvents={application.portal_events}
+              portalEventsTotal={application.portal_events_total}
+            />
+            {!hasStatusRows(timeline) && <AuditList application={application} />}
+          </>
+        ) : (
+          <>
+            <p className="text-muted-foreground mb-2 text-xs">{t('credit.timeline.notProvided')}</p>
+            <AuditList application={application} />
+          </>
+        )}
+        <ApplicationSignAndConsents application={application} />
+      </Panel>
+      <Panel title={t('credit.communications.title')}>
+        <CreditCommunications clientId={application.client_id} timeline={timeline} />
+      </Panel>
+    </>
+  )
+}
+
+function AuditList({ application }: { application: CreditApplicationDetail }) {
+  const { t } = useTranslation('common')
+  return (
+    <ul className="text-sm">
+      {(application.audit ?? []).map((entry, index) => (
+        <li
+          key={`${entry.at}-${index}`}
+          className="border-border flex gap-3 border-b py-2 last:border-0"
+        >
+          <span className="text-muted-foreground w-40 shrink-0 font-mono text-xs">
+            {formatDateTime(entry.at)}
+          </span>
+          <span>
+            {entry.from_status
+              ? `${t(`credit.status.${entry.from_status}`, entry.from_status)} → `
+              : ''}
+            <strong>{t(`credit.status.${entry.to_status}`, entry.to_status)}</strong>
+            <span className="text-muted-foreground ml-2 text-xs">
+              ({t(`credit.actor.${entry.actor}`, entry.actor)})
             </span>
-            <span>
-              {entry.from_status
-                ? `${t(`credit.status.${entry.from_status}`, entry.from_status)} → `
-                : ''}
-              <strong>{t(`credit.status.${entry.to_status}`, entry.to_status)}</strong>
-              <span className="text-muted-foreground ml-2 text-xs">
-                ({t(`credit.actor.${entry.actor}`, entry.actor)})
-              </span>
-            </span>
-          </li>
-        ))}
-      </ul>
+          </span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function ApplicationSignAndConsents({ application }: { application: CreditApplicationDetail }) {
+  const { t } = useTranslation('common')
+  return (
+    <>
       {application.sign_evidence && (
         <div className="mt-4">
           <div className="text-muted-foreground mb-2 text-xs">{t('credit.card.signEvidence')}</div>
@@ -826,7 +878,7 @@ function ApplicationHistory({ application }: { application: CreditApplicationDet
           </ul>
         </>
       )}
-    </Panel>
+    </>
   )
 }
 

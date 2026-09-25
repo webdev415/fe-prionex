@@ -221,7 +221,16 @@ function renderLoanCard(kinds: string[]) {
   } as unknown as ReturnType<typeof hooks.useCreditLoanDocuments>)
   render(
     <MemoryRouter>
-      <CreditLoanDetailPage />
+      {/* Паспорт кредита ищет клиента CRM по телефону заявки — ему нужен клиент
+          запросов; `gcTime: Infinity` — без пятиминутного таймера сборки кэша,
+          который пережил бы тест. */}
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } })
+        }
+      >
+        <CreditLoanDetailPage />
+      </QueryClientProvider>
     </MemoryRouter>
   )
   // Контроль: отрисован паспорт ЭТОГО кредита, а не экран ошибки.
