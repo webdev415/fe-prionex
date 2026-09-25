@@ -952,6 +952,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               PERMISSIONS.CREDIT.PRODUCTS_VIEW,
               PERMISSIONS.CREDIT.APPLICATIONS_VIEW,
               PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+              // 17-40b: там вкладка «Сайт» — вход в админку сайта.
+              PERMISSIONS.SITE.CONTENT_EDIT,
+              PERMISSIONS.SITE.CONTENT_PUBLISH,
             ],
             mode: 'any' as const,
           },
