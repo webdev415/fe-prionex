@@ -91,6 +91,7 @@ beforeEach(() => {
   notesState.error = null
   lastCallState.lastCallAt = null
   lastCallState.isLoading = false
+  lastCallState.isError = false
 })
 
 // No manual DOM wipe here. Testing Library's auto-cleanup already unmounts and
@@ -210,5 +211,73 @@ describe('the primary-creditor comment section', () => {
     renderSection()
     expect(screen.getByText('No comments yet')).toBeInTheDocument()
     expect(phoneSpans()).toHaveLength(0)
+  })
+
+  it('renders Call disabled for a blocked contact instead of refusing the click', () => {
+    // Review H1: the strip and the Recommenders tab both disable the control.
+    // A button that looks live and then refuses is the dead control this
+    // matches the rest of the page to avoid.
+    const { onPhoneCall } = renderSection({
+      getCallBlockReason: () => 'Calls blocked: Do Not Call',
+    })
+    fireEvent.click(spanFor(KNOWN))
+
+    const call = screen.getByRole('button', { name: /^Call$/ })
+    expect(call).toBeDisabled()
+    expect(call).toHaveAttribute('title', 'Calls blocked: Do Not Call')
+
+    fireEvent.click(call)
+    expect(onPhoneCall).not.toHaveBeenCalled()
+  })
+
+  it('says the lookup failed rather than claiming the number was never called', () => {
+    // Review M2: "Never" is a claim about the NUMBER. A failed request knows
+    // nothing about it, and an operator reading a false "Never" dials someone
+    // who was called an hour ago.
+    lastCallState.isError = true
+    renderSection()
+    fireEvent.click(spanFor(NEW))
+
+    const panel = screen.getByRole('dialog')
+    expect(within(panel).getByText(/Could not load/)).toBeInTheDocument()
+    expect(within(panel).queryByText(/Never/)).not.toBeInTheDocument()
+  })
+
+  it('still says Never when the lookup succeeds and finds nothing', () => {
+    renderSection()
+    fireEvent.click(spanFor(NEW))
+    expect(within(screen.getByRole('dialog')).getByText(/Never/)).toBeInTheDocument()
+  })
+
+  it('hides Call from an operator without make_calls', () => {
+    // Review M1: every other call control is wrapped in <PermissionGuard>. A
+    // portal-rendered panel inherits nothing, so the page passes the answer in.
+    renderSection({ canCall: false })
+    fireEvent.click(spanFor(NEW))
+    expect(screen.queryByRole('button', { name: /^Call$/ })).not.toBeInTheDocument()
+  })
+
+  it('disables Call for an operator with no extension rather than hiding it', () => {
+    // The permission exists for this user; their setup cannot dial. The strip
+    // draws that distinction too — hidden vs greyed.
+    renderSection({ canDial: false })
+    fireEvent.click(spanFor(NEW))
+    expect(screen.getByRole('button', { name: /^Call$/ })).toBeDisabled()
+  })
+
+  it('hides Add contact from an operator who cannot edit the client', () => {
+    renderSection({ canAddContact: false })
+    fireEvent.click(spanFor(NEW))
+    expect(screen.queryByRole('button', { name: /Add Contact/i })).not.toBeInTheDocument()
+  })
+
+  it('leaves Call enabled when nothing blocks the number', () => {
+    const { onPhoneCall } = renderSection({ getCallBlockReason: () => null })
+    fireEvent.click(spanFor(KNOWN))
+
+    const call = screen.getByRole('button', { name: /^Call$/ })
+    expect(call).toBeEnabled()
+    fireEvent.click(call)
+    expect(onPhoneCall).toHaveBeenCalledWith(KNOWN, 'known')
   })
 })

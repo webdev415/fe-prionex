@@ -28,6 +28,15 @@ interface Props {
   onPhoneCall?: (phone: string, state: PhoneHighlightState) => void
   /** Open the Recommenders add-contact form with the number prefilled. */
   onPhoneAddContact?: (phone: string) => void
+  /** Why calls to this number are refused, or null. Asked per open panel so the
+   *  Call item can render disabled rather than refusing after the click. */
+  getCallBlockReason?: (phone: string) => string | null
+  /** Permission to place calls; false hides the panel's Call item. */
+  canCall?: boolean
+  /** Agent with an extension; false disables it instead. */
+  canDial?: boolean
+  /** Permission to edit contacts; false hides Add contact. */
+  canAddContact?: boolean
 }
 
 export function SaleNotesSection({
@@ -35,6 +44,10 @@ export function SaleNotesSection({
   phoneContacts,
   onPhoneCall,
   onPhoneAddContact,
+  getCallBlockReason,
+  canCall,
+  canDial,
+  canAddContact,
 }: Props) {
   const { t } = useTranslation('common')
   const [expanded, setExpanded] = useState(false)
@@ -92,7 +105,11 @@ export function SaleNotesSection({
     signature,
   })
 
-  const { lastCallAt, isLoading: isLoadingLastCall } = useLastCallByPhone(selected?.phone ?? null)
+  const {
+    lastCallAt,
+    isLoading: isLoadingLastCall,
+    isError: lastCallFailed,
+  } = useLastCallByPhone(selected?.phone ?? null)
 
   const handleCopy = async () => {
     if (!selected) return
@@ -166,6 +183,11 @@ export function SaleNotesSection({
           anchor={selected.anchor}
           lastCallAt={lastCallAt}
           isLoadingLastCall={isLoadingLastCall}
+          lastCallFailed={lastCallFailed}
+          callBlockedReason={getCallBlockReason?.(selected.phone) ?? null}
+          canCall={canCall}
+          canDial={canDial}
+          canAddContact={canAddContact}
           onCall={() => {
             onPhoneCall?.(selected.phone, selected.state)
             clear()

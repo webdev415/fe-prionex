@@ -8,6 +8,21 @@ vi.mock('../../api/callService')
 
 const PHONE = '380978170286'
 
+/** The app's own defaults (src/main.tsx): a five-minute staleTime. The plain
+ *  wrapper below omits it, which is why nothing here caught the stale-answer
+ *  bug — a fresh client makes every query look uncached. */
+function createAppLikeWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, staleTime: 1000 * 60 * 5 },
+    },
+  })
+
+  return ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  )
+}
+
 function createWrapper() {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -74,6 +89,32 @@ describe('useLastCallByPhone', () => {
     expect(callService.getLastCallByPhone).not.toHaveBeenCalled()
     expect(result.current.isLoading).toBe(false)
     expect(result.current.lastCallAt).toBeNull()
+  })
+
+  it('asks again when the panel is reopened, despite the app-wide 5-minute cache', async () => {
+    // Review M3. The operator calls the number FROM this panel; replaying the
+    // pre-call answer would state "Never" about someone they just dialled.
+    vi.mocked(callService.getLastCallByPhone).mockResolvedValue({ last_call: null })
+    const wrapper = createAppLikeWrapper()
+
+    const first = renderHook(() => useLastCallByPhone(PHONE), { wrapper })
+    await waitFor(() => expect(first.result.current.isLoading).toBe(false))
+    expect(callService.getLastCallByPhone).toHaveBeenCalledTimes(1)
+
+    first.unmount()
+    // One tick, because react-query schedules garbage collection rather than
+    // running it inside unmount. Reopening a panel always costs at least this
+    // much — it takes a click — so the wait is the realistic case, not a
+    // convenience for the assertion below.
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    const second = renderHook(() => useLastCallByPhone(PHONE), { wrapper })
+    // Loading, not a cached value rendered as fact: with gcTime 0 the entry is
+    // gone, so the panel shows "…" rather than the pre-call answer. Under the
+    // app default it would still be cached here and this would read false.
+    expect(second.result.current.isLoading).toBe(true)
+    await waitFor(() => expect(second.result.current.isLoading).toBe(false))
+    expect(callService.getLastCallByPhone).toHaveBeenCalledTimes(2)
   })
 
   it('keeps two numbers apart rather than sharing one answer', async () => {

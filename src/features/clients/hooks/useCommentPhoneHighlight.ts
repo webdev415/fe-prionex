@@ -58,9 +58,29 @@ function isAlreadyWrapped(node: Text): boolean {
  * walker, so a second pass over an already-wrapped comment mutates nothing.
  * The MutationObserver below depends on that — a walk that kept rewriting
  * would re-arm the observer with its own work and never settle.
+ *
+ * That rejection is also why existing spans are RE-CLASSIFIED first (review
+ * M4). The walker cannot see them, so their state was written once and never
+ * again: a number added as a contact from the panel stayed orange, kept saying
+ * "not a contact" and kept offering an Add contact the duplicate check would
+ * then refuse. Only a reload fixed it, because the memo on the note card
+ * deliberately stops React rebuilding the subtree.
  */
 function highlightPhones(container: HTMLElement, known: ReadonlySet<string>): void {
   for (const body of container.querySelectorAll<HTMLElement>(COMMENT_SELECTOR)) {
+    // Existing spans: update only what actually changed. The observer watches
+    // childList/subtree and not attributes, so a write here cannot re-arm it —
+    // but an unconditional write would still churn the class of every number in
+    // the comment on every pass, for nothing.
+    for (const span of body.querySelectorAll<HTMLElement>(`[${PHONE_ATTR}]`)) {
+      const current = span.getAttribute(PHONE_ATTR)
+      if (!current) continue
+      const state = classifyPhone(current, known)
+      if (span.getAttribute(STATE_ATTR) === state) continue
+      span.setAttribute(STATE_ATTR, state)
+      span.className = `${CLASS_BASE} ${CLASS_BY_STATE[state]}`
+    }
+
     // Gathered before any rewriting: replacing a node mid-walk invalidates the
     // TreeWalker, and the remaining numbers would be skipped.
     const targets: Text[] = []

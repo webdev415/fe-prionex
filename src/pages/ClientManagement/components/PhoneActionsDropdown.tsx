@@ -24,6 +24,27 @@ export interface PhoneActionsDropdownProps {
   lastCallAt: string | null
   /** True while the last-call lookup is still in flight. */
   isLoadingLastCall?: boolean
+  /** True when the lookup FAILED. Separate from a resolved `lastCallAt: null`
+   *  on purpose (review M2): "Never" is a claim about the NUMBER, and a failed
+   *  request knows nothing about it. */
+  lastCallFailed?: boolean
+  /** Why calls are refused for this contact, when they are (review H1).
+   *  Present => the Call item renders disabled with this as its tooltip, the
+   *  way the phone strip and the Recommenders tab render theirs. The gate
+   *  itself stays in the page: this only stops the operator discovering the
+   *  refusal by clicking. */
+  callBlockedReason?: string | null
+  /** May the operator place calls at all (`make_calls`)? False HIDES the item,
+   *  matching the PermissionGuard the phone strip wraps its own button in —
+   *  a permission the user lacks should not advertise itself. */
+  canCall?: boolean
+  /** Is the operator equipped to dial (agent with an Asterisk extension)?
+   *  False DISABLES rather than hides, again as the strip does: the action
+   *  exists for this user, their setup just cannot perform it. */
+  canDial?: boolean
+  /** May the operator edit contacts (`clients.edit`)? False hides Add contact,
+   *  whose only other call site is gated the same way. */
+  canAddContact?: boolean
   onCall: () => void
   onAddContact: () => void
   onCopy: () => void
@@ -57,6 +78,13 @@ export function PhoneActionsDropdown({
   anchor,
   lastCallAt,
   isLoadingLastCall = false,
+  lastCallFailed = false,
+  callBlockedReason = null,
+  // Default open: the panel is usable standalone (and in its own tests), and
+  // the page supplies the real answers.
+  canCall = true,
+  canDial = true,
+  canAddContact = true,
   onCall,
   onAddContact,
   onCopy,
@@ -132,6 +160,10 @@ export function PhoneActionsDropdown({
 
   const lastCallLabel = (() => {
     if (isLoadingLastCall) return '…'
+    // Before the "Never" branch: a lookup that failed must not be reported as
+    // a number nobody has ever called. The operator reads this line to decide
+    // whether to dial again, and a false "Never" sends them into a repeat call.
+    if (lastCallFailed) return t('pages.client.commentPhones.loadFailed', 'Could not load')
     if (!lastCallAt) return t('pages.client.commentPhones.never', 'Never')
     // The shared formatter, not a fixed pattern: the instant is stamped by the
     // backend, so it must be read in the operator's PROFILE timezone rather
@@ -177,18 +209,25 @@ export function PhoneActionsDropdown({
       </div>
 
       <div className="pt-1">
-        <button
-          type="button"
-          onClick={onCall}
-          className="focus:bg-muted hover:bg-muted flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm transition-colors outline-none"
-        >
-          <Icons.Phone size={16} />
-          {/* The page's existing label, not a second copy of it. */}
-          {t('pages.clients.detail.call', 'Call')}
-        </button>
+        {canCall && (
+          <button
+            type="button"
+            onClick={onCall}
+            disabled={!canDial || Boolean(callBlockedReason)}
+            // A tag label ("Calls blocked: Do Not Call"), never the number — the
+            // no-title rule above exists to keep the PHONE out of the tracker,
+            // and this carries none of it.
+            title={callBlockedReason || undefined}
+            className="focus:bg-muted hover:bg-muted flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm transition-colors outline-none disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+          >
+            {callBlockedReason ? <Icons.Lock size={16} /> : <Icons.Phone size={16} />}
+            {/* The page's existing label, not a second copy of it. */}
+            {t('pages.clients.detail.call', 'Call')}
+          </button>
+        )}
 
         {/* AC: offered for new numbers only — a saved contact has nothing to add. */}
-        {!isKnown && (
+        {!isKnown && canAddContact && (
           <button
             type="button"
             onClick={onAddContact}

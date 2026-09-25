@@ -16,10 +16,20 @@ import type { LastCallByPhoneResponse } from '../types'
  * is what keeps those two apart, so it is returned beside the value rather
  * than left for each caller to remember.
  *
- * Not cached beyond the default: the operator places a call FROM this dropdown,
- * and a stale "Never" moments after dialling would be worse than a second
- * request. The query is a single indexed lookup and only runs while a panel is
- * open, so refetching on each open is cheap.
+ * Opted OUT of the app's cache, explicitly (review M3). The app default is
+ * `staleTime: QUERY.STALE_TIME` — five minutes — and this query is the one
+ * place that cannot live with it: the operator places a call FROM this panel,
+ * and reopening it would replay the pre-call answer, stating "Ніколи" about a
+ * number they dialled a minute ago.
+ *
+ * `gcTime: 0` alongside `staleTime: 0` on purpose. `staleTime` alone refetches
+ * on reopen but renders the CACHED value first, so the stale "Never" is still
+ * shown for as long as the round trip takes. Dropping the entry instead means
+ * a reopened panel says "…" rather than something untrue. React-query collects its
+ * garbage on the next tick, not inside unmount, so this holds for a real
+ * reopen (which costs a click) and not for a same-tick remount.
+ *
+ * Affordable: one indexed lookup, only while a panel is open.
  */
 export function useLastCallByPhone(phone: string | null) {
   const enabled = Boolean(phone)
@@ -32,6 +42,9 @@ export function useLastCallByPhone(phone: string | null) {
     queryFn: () => callService.getLastCallByPhone(phone as string),
     enabled,
     refetchOnWindowFocus: false,
+    // See the docstring: the app's 5-minute default is wrong for this one.
+    staleTime: 0,
+    gcTime: 0,
   })
 
   return {

@@ -11412,6 +11412,7 @@
         "copyFailed": "No se ha podido copiar el número",
         "copyPhone": "Copiar teléfono",
         "lastCall": "Última llamada",
+        "loadFailed": "No se ha podido cargar",
         "never": "Nunca",
         "notContact": "No es un contacto",
         "panelAria": "Acciones del número de teléfono",

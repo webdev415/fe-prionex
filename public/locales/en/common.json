@@ -11385,6 +11385,7 @@
         "copyFailed": "Could not copy the number",
         "copyPhone": "Copy phone",
         "lastCall": "Last call",
+        "loadFailed": "Could not load",
         "never": "Never",
         "notContact": "Not a contact",
         "panelAria": "Phone number actions",

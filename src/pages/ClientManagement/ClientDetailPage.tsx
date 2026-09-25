@@ -18,6 +18,7 @@ import { LoansCardList } from './components/LoansCardList'
 import { UbkiSubmissionHistory } from './components/UbkiSubmissionHistory'
 import { SaleNotesSection } from './components/SaleNotesSection'
 import { toDigits, type PhoneHighlightState } from '@/features/clients/utils/phoneHighlight'
+import { commentCallDecision } from './commentPhoneCallGate'
 import {
   formatClientFullName,
   formatDate,
@@ -1084,6 +1085,10 @@ export function ClientDetailPage() {
 
   const canCreateTasks = useHasPermission(PERMISSIONS.CLIENTS.CREATE_TASKS)
   const canEditClient = useHasPermission(PERMISSIONS.CLIENTS.EDIT)
+  // KAN-1212 review M1 — the comment panel's Call item needs the same gate the
+  // phone strip and the Recommenders tab get from <PermissionGuard>, which a
+  // portal-rendered panel cannot inherit.
+  const canMakeCalls = useHasPermission(PERMISSIONS.COMMUNICATION.MAKE_CALLS)
   // KAN-993 — close/reopen/edit-closure live in the per-card "..." dropdown now,
   // so we need the permission as a boolean (was a <PermissionGuard> wrapper).
   const canCloseDebt = useHasPermission(PERMISSIONS.CLIENTS.CLOSE_DEBT)
@@ -2041,6 +2046,33 @@ export function ClientDetailPage() {
    * a number read out of a comment is no more exempt from them than one on a
    * contact card.
    */
+  /** EVERY contact row holding this number. Digits on both sides — contacts are
+   *  stored bare, with a leading +, and with punctuation, while the comment side
+   *  is always bare.
+   *
+   *  NOT filtered to phone-typed rows, and that is the point: the comment
+   *  colours a number green on ANY contact type, so a number whose only rows are
+   *  «Рекомендувач» / «Верифікована 3-я особа» matched nothing here — no call
+   *  line, no spam flag and, once the gate arrived, no blocking check either.
+   *  The type filter belongs at the call-line choice below, where it means
+   *  something. */
+  const findCommentPhoneContacts = (phone: string) => {
+    const digits = toDigits(phone)
+    return (client?.recommenders ?? []).filter(
+      (candidate) => toDigits(candidate.contactValue) === digits
+    )
+  }
+
+  /** Why the panel must render Call disabled, or null. Same decision the click
+   *  handler makes, asked earlier so the operator sees the refusal instead of
+   *  discovering it. */
+  const commentPhoneCallBlockReason = (phone: string): string | null => {
+    const decision = commentCallDecision(findCommentPhoneContacts(phone))
+    return decision.allowed
+      ? null
+      : decision.reason || t('pages.contactTags.callsBlocked', 'Calls blocked')
+  }
+
   const handleCommentPhoneCall = (phone: string, state: PhoneHighlightState) => {
     if (state === 'new') {
       // Not a contact: manual entry, Gray Line, digits pre-filled (AC25).
@@ -2048,13 +2080,22 @@ export function ClientDetailPage() {
       return
     }
     // Known: the call type is the CONTACT's default, so the contact has to be
-    // found again. Digits on both sides — contacts are stored bare, with a
-    // leading +, and with punctuation, while the comment side is always bare.
-    const digits = toDigits(phone)
-    const contact = client?.recommenders?.find(
-      (candidate) => candidate.isPhone && toDigits(candidate.contactValue) === digits
-    )
-    openOutboundCall(phone, contact?.contactTypeId ?? null)
+    // found again. A phone-typed row first — its type carries the call line —
+    // while the gate below weighs every row that holds the number.
+    const contacts = findCommentPhoneContacts(phone)
+    const contact = contacts.find((candidate) => candidate.isPhone) ?? contacts[0]
+
+    // Review H1 — the contact's blocking tags, which openOutboundCall does NOT
+    // check (its own guard is the calling window). Both other call entry points
+    // check them before dialling; this one skipped it, so a number tagged
+    // "Do Not Call" was dialable from the comment while the rest of the page
+    // locked it.
+    const decision = commentCallDecision(contacts)
+    if (!decision.allowed) {
+      toast.warning(decision.reason || t('pages.contactTags.callsBlocked', 'Calls blocked'))
+      return
+    }
+    openOutboundCall(phone, contact?.contactTypeId ?? null, decision.spamOverride)
   }
 
   /**
@@ -6026,6 +6067,10 @@ export function ClientDetailPage() {
               phoneContacts={client.recommenders}
               onPhoneCall={handleCommentPhoneCall}
               onPhoneAddContact={handleCommentPhoneAddContact}
+              getCallBlockReason={commentPhoneCallBlockReason}
+              canCall={canMakeCalls}
+              canDial={Boolean(user?.is_agent && user?.asterisk_extension)}
+              canAddContact={canEditClient}
             />
           )}
 

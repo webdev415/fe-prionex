@@ -87,6 +87,40 @@ describe('useCommentPhoneHighlight', () => {
     expect(root.querySelectorAll('[data-phone] [data-phone]')).toHaveLength(0)
   })
 
+  it('turns a number green once it becomes a contact, without rebuilding the comment', () => {
+    // Review M4. The operator adds the number from the panel, the profile
+    // refetches, and this effect re-runs with new contacts — but the walker
+    // rejects text already wrapped, so the span kept its original state and the
+    // number stayed orange until a reload. The note card is memoised precisely
+    // so React does NOT rebuild this subtree, which is what made it stick.
+    const root = mountComment(`<p>${KNOWN}</p>`)
+    const { rerender } = renderHook(
+      ({ contacts }) => useCommentPhoneHighlight({ container: root, contacts, signature: 'a' }),
+      { initialProps: { contacts: [] as PhoneLookupContact[] } }
+    )
+    expect(spans(root)[0].getAttribute('data-phone-state')).toBe('new')
+
+    const span = spans(root)[0]
+    rerender({ contacts: [phoneContact(KNOWN)] })
+
+    expect(spans(root)[0].getAttribute('data-phone-state')).toBe('known')
+    // The same element, not a replacement: an open panel is anchored to it.
+    expect(spans(root)[0]).toBe(span)
+  })
+
+  it('drops back to new when the contact is removed', () => {
+    const root = mountComment(`<p>${KNOWN}</p>`)
+    const { rerender } = renderHook(
+      ({ contacts }) => useCommentPhoneHighlight({ container: root, contacts, signature: 'a' }),
+      { initialProps: { contacts: [phoneContact(KNOWN)] as PhoneLookupContact[] } }
+    )
+    expect(spans(root)[0].getAttribute('data-phone-state')).toBe('known')
+
+    rerender({ contacts: [] })
+
+    expect(spans(root)[0].getAttribute('data-phone-state')).toBe('new')
+  })
+
   it('reports the number the operator clicked', () => {
     const root = mountComment(`<p>${UNKNOWN}</p>`)
     const { result } = highlight(root)
