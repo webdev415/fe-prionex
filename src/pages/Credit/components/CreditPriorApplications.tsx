@@ -42,7 +42,14 @@ function PriorApplicationsBody({
 }) {
   const { t } = useTranslation('common')
 
-  if (!value) {
+  // Ответ модуля приходит приведением типа без разбора схемы: поле без списка
+  // или без признаков — тот же «модуль не передав», а не падение карточки.
+  if (
+    !value ||
+    typeof value.total !== 'number' ||
+    !Array.isArray(value.items) ||
+    !Array.isArray(value.identity_keys)
+  ) {
     return <p className="text-muted-foreground">{t('credit.clientHistory.notCounted')}</p>
   }
   if (value.identity_keys.length === 0) {
@@ -82,7 +89,9 @@ function PriorApplicationsBody({
             <CreditStatusBadge status={item.status} />
             <span className="text-muted-foreground text-xs">{formatDate(item.created_at)}</span>
             <span className="text-xs">
-              {item.decision_outcome ? t(`credit.status.${item.decision_outcome}`) : '—'}
+              {item.decision_outcome
+                ? t(`credit.status.${item.decision_outcome}`, item.decision_outcome)
+                : '—'}
             </span>
           </li>
         ))}

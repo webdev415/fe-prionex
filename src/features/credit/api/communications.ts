@@ -28,7 +28,8 @@ export type CreditCrmChannelState<T> =
 export interface CreditCrmChannelInput<T> {
   /** `client_id` заявки от модуля; не число — связи нет. */
   clientId: number | null | undefined
-  isLoading: boolean
+  /** Запрос завершился ответом — состояние решает он, а не наличие списка. */
+  isSuccess: boolean
   error: unknown
   items: T[] | undefined
   total: number | undefined
@@ -41,8 +42,15 @@ export function crmChannelState<T>(input: CreditCrmChannelInput<T>): CreditCrmCh
       ? { kind: 'forbidden' }
       : { kind: 'failed' }
   }
-  if (input.isLoading || input.items === undefined) return { kind: 'loading' }
-  return { kind: 'ok', items: input.items, total: input.total ?? input.items.length }
+  if (!input.isSuccess) return { kind: 'loading' }
+  // Ответ пришёл, а списка в нём нет: это не «не найдено» (факт) и не вечная
+  // загрузка, а ответ, из которого историю не получить.
+  if (!Array.isArray(input.items)) return { kind: 'failed' }
+  return {
+    kind: 'ok',
+    items: input.items,
+    total: typeof input.total === 'number' ? input.total : input.items.length,
+  }
 }
 
 /** Длительность разговора `m:ss` из секунд; нет значения — «—». */

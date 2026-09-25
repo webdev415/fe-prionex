@@ -8,7 +8,7 @@ import { describe, it, expect } from 'vitest'
 import { AxiosError, type AxiosResponse } from 'axios'
 import { crmChannelState, formatTalkDuration } from '../communications'
 
-const base = { clientId: 7, isLoading: false, error: null, items: undefined, total: undefined }
+const base = { clientId: 7, isSuccess: false, error: null, items: undefined, total: undefined }
 
 const httpError = (status: number) =>
   new AxiosError('x', 'ERR_BAD_REQUEST', undefined, undefined, { status } as AxiosResponse)
@@ -21,7 +21,7 @@ describe('U-4: связи с клиентом CRM нет, запрос идёт'
   })
 
   it('запрос в пути — загрузка', () => {
-    expect(crmChannelState({ ...base, isLoading: true })).toEqual({ kind: 'loading' })
+    expect(crmChannelState({ ...base })).toEqual({ kind: 'loading' })
   })
 
   it('403 — нет права, а не «не найдено»', () => {
@@ -47,7 +47,7 @@ describe('U-5: CRM не ответила', () => {
 
 describe('U-6: ответ получен', () => {
   it('total: 0 — ответ «не знайдено», а не загрузка и не сбой', () => {
-    expect(crmChannelState({ ...base, items: [], total: 0 })).toEqual({
+    expect(crmChannelState({ ...base, isSuccess: true, items: [], total: 0 })).toEqual({
       kind: 'ok',
       items: [],
       total: 0,
@@ -55,7 +55,7 @@ describe('U-6: ответ получен', () => {
   })
 
   it('строки и честное число', () => {
-    expect(crmChannelState({ ...base, items: ['a', 'b'], total: 40 })).toEqual({
+    expect(crmChannelState({ ...base, isSuccess: true, items: ['a', 'b'], total: 40 })).toEqual({
       kind: 'ok',
       items: ['a', 'b'],
       total: 40,
@@ -70,5 +70,21 @@ describe('U-6: ответ получен', () => {
     [undefined, '—'],
   ] as const)('длительность %s → %s', (seconds, expected) => {
     expect(formatTalkDuration(seconds)).toBe(expected)
+  })
+})
+
+describe('U-7: состояние решает статус запроса, а не наличие списка', () => {
+  it('ответ пришёл без списка — сбой, никогда не вечная загрузка', () => {
+    expect(crmChannelState({ ...base, isSuccess: true, items: undefined })).toEqual({
+      kind: 'failed',
+    })
+  })
+
+  it('ответ пришёл с пустым списком и без числа — «не знайдено» с нулём', () => {
+    expect(crmChannelState({ ...base, isSuccess: true, items: [], total: undefined })).toEqual({
+      kind: 'ok',
+      items: [],
+      total: 0,
+    })
   })
 })

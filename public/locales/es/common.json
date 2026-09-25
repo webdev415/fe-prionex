@@ -13194,6 +13194,7 @@
       "shownOf": "Se muestran {{shown}} de {{total}}",
       "openClientCard": "Todo está en la ficha del cliente",
       "mailNone": "No hay correos de esta solicitud en la cronología. El sitio informa de los correos al módulo desde la conexión de 17-6g; los correos anteriores no se ven aquí.",
+      "mailNotProvided": "El módulo no envió la cronología: los correos del sitio no están disponibles; esto no significa que no los hubiera",
       "mailLoanStage": "Los correos de la etapa del préstamo (desembolso, pagos, cierre) no se muestran en la ficha de la solicitud",
       "gotoMissing": "Las llamadas de GoTo no llegan a CRM. Aquí solo se muestran las llamadas del cliente de CRM que el módulo vinculó a esta solicitud",
       "smsCanadaMissing": "SMS para Canadá no está conectado",

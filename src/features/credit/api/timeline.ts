@@ -38,21 +38,40 @@ export function isMailRow(row: CreditTimelineRow): boolean {
   )
 }
 
-/** Письма клиенту из хронологии — те же строки, в том же порядке. */
-export function mailRows(timeline: CreditTimelineRow[] | undefined): CreditTimelineRow[] {
-  return (timeline ?? []).filter(isMailRow)
+/**
+ * Хронология пришла и в ней есть строки. Пустой массив читается так же, как
+ * отсутствие поля: модуль кладёт в хронологию хотя бы переход создания заявки,
+ * и пустая лента значит «не передал», а не «ничего не было».
+ */
+export function hasTimeline(timeline: unknown): timeline is CreditTimelineRow[] {
+  return Array.isArray(timeline) && timeline.length > 0
+}
+
+/** Есть ли в хронологии переходы статуса — иначе их показывает прежний список `audit`. */
+export function hasStatusRows(timeline: CreditTimelineRow[]): boolean {
+  return timeline.some((row) => row.track === 'status')
+}
+
+/**
+ * Письма клиенту из хронологии — те же строки, в том же порядке. Читается
+ * защитно: ответ приходит приведением типа без разбора схемы, и не-массив на
+ * месте ленты не должен ронять карточку.
+ */
+export function mailRows(timeline: unknown): CreditTimelineRow[] {
+  return (Array.isArray(timeline) ? (timeline as CreditTimelineRow[]) : []).filter(isMailRow)
 }
 
 /**
  * Честное число событий сайта: лента карточки ограничена потолком модуля, и
  * без этой строки усечение читалось бы как «событий больше не было». `null` —
- * показано всё (или модуль числа не прислал, и сравнивать не с чем).
+ * показано всё, модуль числа не прислал или не прислал саму ленту: «показано 0
+ * из N» без ленты было бы выдумкой — сколько показано, неизвестно.
  */
 export function truncatedPortalEvents(
   portalEvents: CreditPortalEventRecord[] | undefined,
   total: number | undefined
 ): { shown: number; total: number } | null {
-  if (typeof total !== 'number') return null
-  const shown = portalEvents?.length ?? 0
+  if (typeof total !== 'number' || !Array.isArray(portalEvents)) return null
+  const shown = portalEvents.length
   return total > shown ? { shown, total } : null
 }
