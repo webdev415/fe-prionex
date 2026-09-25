@@ -1137,7 +1137,16 @@ function renderLoanCard(documents: CreditDocumentMeta[] = [DOC]) {
   mockLoanHooks(documents)
   render(
     <MemoryRouter>
-      <CreditLoanDetailPage />
+      {/* Паспорт кредита ищет клиента CRM по телефону заявки — ему нужен клиент
+          запросов; `gcTime: Infinity` — без пятиминутного таймера сборки кэша,
+          который пережил бы тест и спутал счёт таймеров кнопки в `afterEach`. */}
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } })
+        }
+      >
+        <CreditLoanDetailPage />
+      </QueryClientProvider>
     </MemoryRouter>
   )
   // Контроль до переключения: отрисован паспорт ЭТОГО кредита, а не экран
