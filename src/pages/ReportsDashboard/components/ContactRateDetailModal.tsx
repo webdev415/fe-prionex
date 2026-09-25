@@ -6,6 +6,7 @@
  */
 
 import { useTranslation } from 'react-i18next'
+import { dateSeparator } from '@/lib/formatters'
 import { Modal, ModalContent, ModalFooter, ModalTitle } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
@@ -37,7 +38,7 @@ export interface ContactRateRecord {
   duration: number
 }
 
-export type OutcomeType = 'answered' | 'noAnswer' | 'busy' | 'failed'
+export type OutcomeType = 'answered' | 'noAnswer' | 'busy' | 'failed' | 'other'
 
 export interface ContactRateDetailModalProps {
   open: boolean
@@ -56,6 +57,7 @@ const outcomeIcons: Record<
   noAnswer: Icons.Cancel01,
   busy: Icons.HeadphoneMute,
   failed: Icons.Warning,
+  other: Icons.Info,
 }
 
 export function ContactRateDetailModal({
@@ -72,7 +74,8 @@ export function ContactRateDetailModal({
     const now = new Date()
     const day = String(now.getDate()).padStart(2, '0')
     const month = String(now.getMonth() + 1).padStart(2, '0')
-    return `${day}-${month}-${now.getFullYear()}`
+    const sep = dateSeparator()
+    return `${day}${sep}${month}${sep}${now.getFullYear()}`
   }
 
   const getPeriodLabel = () => {
@@ -167,23 +170,26 @@ export function ContactRateDetailModal({
                 {data.rate.toFixed(1)}% ({data.contacted} {t('pages.reports.contactRateModal.of')}{' '}
                 {data.total} {t('pages.reports.callsMadeModal.calls')})
               </div>
-              <div className="flex items-center justify-center gap-4">
-                <span className="flex items-center justify-center gap-2">
-                  {data.changeType === 'increase' ? (
-                    <Icons.ArrowUp02 size={20} className="text-success-500" />
-                  ) : (
-                    <Icons.ArrowDown02 size={20} className="text-error-500" />
-                  )}
-                  <span className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                    {data.change}%
+              {/* KPI without a trend (null from report-service): no arrow, no «0 %» (#1448) */}
+              {data.change !== null && (
+                <div className="flex items-center justify-center gap-4">
+                  <span className="flex items-center justify-center gap-2">
+                    {data.changeType === 'increase' ? (
+                      <Icons.ArrowUp02 size={20} className="text-success-500" />
+                    ) : (
+                      <Icons.ArrowDown02 size={20} className="text-error-500" />
+                    )}
+                    <span className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                      {data.change}%
+                    </span>
                   </span>
-                </span>
-                <span className="text-foreground text-sm leading-[150%] tracking-[-0.28px]">
-                  <span className="font-light">{t('pages.reports.kpi.vs')} </span>
-                  <span className="font-medium">{getComparisonText()}</span>
-                  <span className="font-light"> ({data.previousRate}%)</span>
-                </span>
-              </div>
+                  <span className="text-foreground text-sm leading-[150%] tracking-[-0.28px]">
+                    <span className="font-light">{t('pages.reports.kpi.vs')} </span>
+                    <span className="font-medium">{getComparisonText()}</span>
+                    <span className="font-light"> ({data.previousRate}%)</span>
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* Outcomes Card */}
@@ -220,8 +226,10 @@ export function ContactRateDetailModal({
               </div>
             )}
 
-            {/* Best Performer & Needs Improvement */}
-            {(data.bestPerformer || data.needsImprovement) && (
+            {/* Best Performer & Needs Improvement — ranked only among operators
+                with enough calls (MIN_CALLS_FOR_RANKING); when nobody has
+                that many, say so instead of silently dropping the block. */}
+            {data.bestPerformer || data.needsImprovement ? (
               <div className="mb-4 flex flex-col items-start gap-2 self-stretch">
                 <div className="flex w-full flex-col gap-2 self-stretch sm:flex-row sm:flex-wrap sm:gap-4">
                   {data.bestPerformer && (
@@ -243,6 +251,10 @@ export function ContactRateDetailModal({
                     )}
                 </div>
               </div>
+            ) : (
+              <p className="text-muted-foreground mb-4 self-stretch text-sm leading-[150%] tracking-[-0.28px]">
+                {t('pages.reports.contactRateModal.notEnoughCallsToRank')}
+              </p>
             )}
           </>
         )}

@@ -23,17 +23,28 @@
  */
 import type { CreditApplicationStage } from './applicationStages'
 import type {
+  CreditApplicantApplication,
+  CreditApplicantApplications,
   CreditApplicationDetail,
   CreditApplicationStatus,
+  CreditDecision,
+  CreditDocumentMeta,
+  CreditIdentityKey,
   CreditJournalEntry,
+  CreditLoanDetail,
   CreditLoanStatus,
   CreditPayment,
+  CreditTimelineClient,
+  CreditTimelineRow,
+  CreditTimelineTransition,
 } from './types'
 
 /** Утверждение: `true` проходит, `false` роняет сборку именем строки. */
 type Assert<T extends true> = T
 /** Есть ли у типа такое поле (в том числе необязательное). */
 type Has<T, K extends string> = K extends keyof T ? true : false
+/** Поле обязательно (объявлено без `?:`). `Has` этого не различает. */
+type IsRequired<T, K extends keyof T> = Record<never, never> extends Pick<T, K> ? false : true
 /** Есть ли значение в объединении. */
 type Includes<Union, V extends string> = V extends Union ? true : false
 
@@ -113,3 +124,101 @@ export type _app_stage_income_check = Assert<Includes<CreditApplicationStage, 'i
 export type _app_status_contracted = Assert<Includes<CreditApplicationStatus, 'contracted'>>
 export type _app_status_expired = Assert<Includes<CreditApplicationStatus, 'expired'>>
 export type _app_status_abandoned = Assert<Includes<CreditApplicationStatus, 'abandoned'>>
+
+/* ─── Излишек возврата и указатель на заменённое решение ───────────────
+   Оба поля объявлены БЕЗ `?:`, чтобы каждая фикстура и каждый новый читатель
+   назвали значение. Что сломается, если вернуть `?:`: фикстура без поля снова
+   соберётся, а карточка кредита на отстающем модуле станет прятать излишек
+   как «излишка нет» — без единого слова компилятора. `Has` здесь бесполезен:
+   необязательное поле он тоже засчитывает.
+   Стерегут ЛОКАЛЬНЫЙ тип, не контракт (см. шапку про `Has` у этапа заявки):
+   у `supersedes_decision_id` required строже контракта намеренно — модуль
+   кладёт ключ всегда. Третья строка стережёт `null`: без него «ничего не
+   заменяло» некуда положить, и фикстуры начали бы выдумывать id. */
+export type _loan_excess_required = Assert<
+  IsRequired<CreditLoanDetail, 'advance_refund_excess_minor'>
+>
+export type _decision_supersedes_required = Assert<
+  IsRequired<CreditDecision, 'supersedes_decision_id'>
+>
+export type _decision_supersedes_nullable = Assert<
+  null extends CreditDecision['supersedes_decision_id'] ? true : false
+>
+
+/* ─── Признак «содержимое откроется» у документа ───────────────────────
+   Кнопка документа читает его ДО нажатия: `false` — по записям модуля
+   выдавать нечего, и кнопка говорит это вместо запроса. Что сломается, если
+   поле станет необязательным или пропадёт: кнопка перестанет заранее говорить
+   «не откроется», а фикстуры забудут значение молча — компилятор промолчит.
+   Стережёт ЛОКАЛЬНЫЙ тип, не контракт (см. шапку про `Has` у этапа заявки):
+   в контракте поле не required, здесь required намеренно — модуль кладёт
+   ключ всегда. */
+export type _document_content_available_required = Assert<
+  IsRequired<CreditDocumentMeta, 'content_available'>
+>
+
+/* ─── Хронология, события сайта и другие заявки клиента ───────────────
+   Три поля карточки заявки, на которых стоят блок «Клієнт» и вкладка «Історія».
+   Что сломается, если поле пропадёт из типа: страница перестанет его читать, и
+   вместо хронологии или счёта заявок оператор увидит маркер «модуль не передав»
+   на модуле, который всё отдаёт, — без единого слова компилятора. */
+export type _app_has_timeline = Assert<Has<CreditApplicationDetail, 'timeline'>>
+export type _app_has_portal_events_total = Assert<
+  Has<CreditApplicationDetail, 'portal_events_total'>
+>
+export type _app_has_applicant_applications = Assert<
+  Has<CreditApplicationDetail, 'applicant_applications'>
+>
+
+/* Дорожка строки выбирает метку и разбор: 'status' — переход, 'client' — событие
+   сайта. Переименует модуль значение — строка хронологии уйдёт в чужую ветку
+   или не нарисуется вовсе. */
+export type _timeline_track_client = Assert<Includes<CreditTimelineRow['track'], 'client'>>
+export type _timeline_track_status = Assert<Includes<CreditTimelineRow['track'], 'status'>>
+
+/* Область события: на 'client' стоит пометка «не прив'язана до цієї заявки».
+   Пропадёт значение — событие адреса клиента прочтётся как действие по этой
+   заявке, а это ложный факт в карточке. */
+export type _timeline_scope_client = Assert<Includes<CreditTimelineClient['scope'], 'client'>>
+export type _timeline_scope_application = Assert<
+  Includes<CreditTimelineClient['scope'], 'application'>
+>
+
+/* Свёртка «×N, до …» читает оба поля; станут необязательными — второй край
+   свёрнутой строки молча пропадёт, и строка соврёт о последней активности. */
+export type _timeline_row_count_required = Assert<IsRequired<CreditTimelineRow, 'count'>>
+export type _timeline_row_last_at_required = Assert<IsRequired<CreditTimelineRow, 'last_at'>>
+
+/* У кредита без связи карточка ищет клиента по телефону заявки. Потеряет
+   `client_id` тип `null` — ветка поиска станет недостижимой для компилятора, и
+   ложная строка «створюється при укладенні договору» вернётся незамеченной. */
+export type _loan_client_id_nullable = Assert<
+  null extends CreditLoanDetail['client_id'] ? true : false
+>
+
+/* Переход в хронологии: `null` у актора рисуется «—», у прежнего статуса — без
+   стрелки. Сузят поля до `string` — код начнёт звать `credit.actor.null` и
+   `credit.status.null`, ключей, которых не бывает. */
+export type _timeline_transition_actor_nullable = Assert<
+  null extends CreditTimelineTransition['actor'] ? true : false
+>
+export type _timeline_transition_from_nullable = Assert<
+  null extends CreditTimelineTransition['from_status'] ? true : false
+>
+
+/* Счёт заявок берётся из `total`, а не из длины списка, и `noIdentity` — из
+   пустого `identity_keys`. Станут необязательными — фикстура без них соберётся,
+   а экран покажет «0» там, где модуль ничего не сравнивал. */
+export type _applicant_total_required = Assert<IsRequired<CreditApplicantApplications, 'total'>>
+export type _applicant_identity_keys_required = Assert<
+  IsRequired<CreditApplicantApplications, 'identity_keys'>
+>
+/* Исход прошлой заявки `null` рисуется «—»; без `null` в типе «решения нет»
+   некуда положить, и фикстуры начали бы выдумывать исход. */
+export type _applicant_decision_outcome_nullable = Assert<
+  null extends CreditApplicantApplication['decision_outcome'] ? true : false
+>
+/* Признаки сравнения: подпись правила «за email або SIN» опирается на оба
+   значения. Переименует модуль признак — подпись станет ложью о правиле. */
+export type _identity_key_email = Assert<Includes<CreditIdentityKey, 'email'>>
+export type _identity_key_national_id = Assert<Includes<CreditIdentityKey, 'national_id'>>

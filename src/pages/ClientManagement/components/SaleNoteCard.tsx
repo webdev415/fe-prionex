@@ -1,6 +1,8 @@
 import { memo } from 'react'
 import { format, parseISO } from 'date-fns'
 import { useTranslation } from 'react-i18next'
+import i18n from '@/lib/i18n'
+import { displayFormatForLanguage } from '@/lib/dateUtils'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import type { SaleNote } from '@/features/clients/types/saleNotes'
@@ -24,7 +26,9 @@ function SaleNoteCardImpl({ note, isLatest, canDelete, onDelete }: Props) {
   const { t } = useTranslation('common')
 
   // Q1: DD-MM-YYYY (dashes). Null sale_date → em-dash.
-  const formattedDate = note.sale_date ? format(parseISO(note.sale_date), 'dd-MM-yyyy') : '—'
+  const formattedDate = note.sale_date
+    ? format(parseISO(note.sale_date), displayFormatForLanguage('dd-MM-yyyy', i18n.language))
+    : '—'
 
   const addedBy = formatAddedBy(
     note,

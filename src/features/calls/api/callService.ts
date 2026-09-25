@@ -9,6 +9,7 @@ import type {
   UpdateCallOutcomeRequest,
   AMIHealthResponse,
   IncomingCallData,
+  BlockedCallAttemptResult,
   CallingWindowStatus,
   LastCallByPhoneResponse,
 } from '../types'
@@ -56,6 +57,14 @@ class CallService {
     const response = await api.get(`${API_BASE_URL}/api/v1/calls/calling-window/status`, {
       params: clientId != null ? { client_id: clientId } : undefined,
     })
+    return response.data
+  }
+
+  async reportBlockedCallAttempt(clientId?: number | null): Promise<BlockedCallAttemptResult> {
+    const response = await api.post(
+      `${API_BASE_URL}/api/v1/calls/calling-window/blocked-attempts`,
+      { client_id: clientId ?? null }
+    )
     return response.data
   }
 

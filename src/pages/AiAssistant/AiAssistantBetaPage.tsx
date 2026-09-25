@@ -80,7 +80,12 @@ import {
 } from '@/stores/aiAssistantStore'
 import type { AssistantConversationDetail, AssistantMode } from '@/features/aiAssistant/api'
 import { isAxiosError } from 'axios'
-import { parseConversationParam, writeConversationParam } from './conversationUrl'
+import {
+  isNewConversationParam,
+  NEW_CONVERSATION_PARAM_VALUE,
+  parseConversationParam,
+  writeConversationParam,
+} from './conversationUrl'
 import { ANSWER_POLL_INTERVAL_MS, ANSWER_POLL_MAX_MS } from './answerPolling'
 import { ConversationSidebar } from './ConversationSidebar'
 import { ContextUsageRing } from './ContextUsageRing'
@@ -440,6 +445,7 @@ function getSpeechRecognitionCtor(): SpeechRecognitionCtor | null {
 function resolveSpeechLang(language?: string): string {
   if (!language) return 'en-US'
   if (language.startsWith('uk')) return 'uk-UA'
+  if (language.startsWith('es')) return 'es-ES'
   return 'en-US'
 }
 
@@ -1115,12 +1121,42 @@ export function AiAssistantBetaPage() {
   // что «поделиться разговором» = скопировать URL из адресной строки. Пишем
   // только ненулевой id (null на маунте — ещё не гидратировано, затирать
   // параметр рано); снятие параметра — явное, в «Новий чат» и при 404.
+  // Маркер `new` этот же эффект и перетирает: как только первая отправка
+  // вернула id созданного диалога, в адресе оказывается он.
   useEffect(() => {
     if (isEmbedded || conversationId == null) return
     writeConversationParam(conversationId)
   }, [conversationId, isEmbedded])
 
+  /**
+   * Явный запрос чистого листа: `?conversation=new` в адресе.
+   *
+   * Пустой адрес такого не значит — при включённом «помнить контекст» вход на
+   * /dashboard/ai-assistant без параметра штатно восстанавливает последний
+   * диалог. Поэтому маркер и нужен: по нему сохранённый указатель гасится, как
+   * по кнопке «Новий чат», а гидратация не запускается вовсе.
+   *
+   * Читается синхронно на первом рендере (инициализатор useState, не эффект):
+   * `shouldHydrateConversation` считается прямо в рендере, и запрос диалога
+   * ушёл бы ещё до того, как эффект успел бы его отменить.
+   *
+   * Флаг одноразовый — снимается тем же эффектом, что гасит указатель. Иначе
+   * он запретил бы и последующий выбор диалога в истории в этом же
+   * монтировании. Сам маркер из адреса не стираем: он держится до первой
+   * отправки, и её id его заменит.
+   */
+  const [isNewConversationRequest, setIsNewConversationRequest] = useState(
+    () => !isEmbedded && isNewConversationParam(window.location.search)
+  )
+  useEffect(() => {
+    if (!isNewConversationRequest || userId == null) return
+    clearStoredConversation()
+    setIsExplicitSelection(false)
+    setIsNewConversationRequest(false)
+  }, [clearStoredConversation, isNewConversationRequest, userId])
+
   const shouldHydrateConversation =
+    !isNewConversationRequest &&
     storedConversationId != null &&
     conversationId == null &&
     chatMessages.length === 0 &&
@@ -1971,7 +2007,11 @@ export function AiAssistantBetaPage() {
     setMessage('')
     setIsExplicitSelection(false)
     clearStoredConversation()
-    if (!isEmbedded) writeConversationParam(null)
+    // Маркер, а не снятие параметра: адрес обязан меняться на каждое нажатие.
+    // Пустой адрес неотличим от обычного входа на страницу, и при включённом
+    // «помнить контекст» перезагрузка по нему вернула бы прежний диалог —
+    // ровно то, чего кнопка и не хочет.
+    if (!isEmbedded) writeConversationParam(NEW_CONVERSATION_PARAM_VALUE)
   }, [clearStoredConversation, isEmbedded, resetChatState])
 
   // Меню слеш-команд (как в Claude Code): «/» в начале поля открывает список,

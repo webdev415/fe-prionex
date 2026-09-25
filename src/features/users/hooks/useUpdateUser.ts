@@ -6,6 +6,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import i18n from '@/lib/i18n'
 import { usersApi } from '../api/usersApi'
 import { usersKeys } from './useUsers'
 import { rolesKeys } from '@/features/roles/hooks/useRoles'
@@ -25,7 +26,7 @@ import type { UpdateUserInput } from '../types'
  * const handleSubmit = (data: UpdateUserInput) => {
  *   mutate({ userId: 1, data }, {
  *     onSuccess: () => {
- *       toast.success('User updated successfully')
+ *       toast.success(i18n.t('toasts.users.updated', { defaultValue: 'User updated successfully' }))
  *     },
  *   })
  * }
@@ -40,7 +41,7 @@ export function useUpdateUser() {
     mutationFn: ({ userId, data }: { userId: number; data: UpdateUserInput }) =>
       usersApi.updateUser(userId, data),
     onSuccess: (_, variables) => {
-      toast.success('User updated successfully')
+      toast.success(i18n.t('toasts.users.updated', { defaultValue: 'User updated successfully' }))
       // Invalidate specific user detail
       queryClient.invalidateQueries({ queryKey: usersKeys.detail(variables.userId) })
       // Invalidate users list

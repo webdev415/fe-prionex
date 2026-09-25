@@ -6,6 +6,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import i18n from '@/lib/i18n'
 import { usersApi } from '../api/usersApi'
 import { usersKeys } from './useUsers'
 import { rolesKeys } from '@/features/roles/hooks/useRoles'
@@ -24,7 +25,7 @@ import type { CreateUserInput } from '../types'
  * const handleSubmit = (data: CreateUserInput) => {
  *   mutate(data, {
  *     onSuccess: () => {
- *       toast.success('User created successfully')
+ *       toast.success(i18n.t('toasts.users.created', { defaultValue: 'User created successfully' }))
  *     },
  *   })
  * }
@@ -36,7 +37,7 @@ export function useCreateUser() {
   return useMutation({
     mutationFn: (input: CreateUserInput) => usersApi.createUser(input),
     onSuccess: () => {
-      toast.success('User created successfully')
+      toast.success(i18n.t('toasts.users.created', { defaultValue: 'User created successfully' }))
       // Invalidate users list to refetch with new user
       queryClient.invalidateQueries({ queryKey: usersKeys.lists() })
       // Invalidate roles list to update user_count for roles

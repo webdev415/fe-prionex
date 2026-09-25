@@ -1,6 +1,8 @@
 /**
  * Карточки метрик над списками раздела — аналог PriorityCards у клиентов:
- * клик по карточке ставит фильтр, повторный клик снимает.
+ * клик по карточке ставит фильтр, повторный клик снимает. Фильтр по карточке
+ * включает страница, передав `onToggleStatus`; без него карточки только
+ * показывают (у заявок статус переключают «таблетки» над списком).
  *
  * Сами метрики считает `features/credit/api/metrics.ts`; здесь только показ,
  * поэтому переход на серверные агрегаты (этап 2) этот файл не затронет.
@@ -17,8 +19,8 @@ const TONE_CLASS: Record<string, string> = {
 
 interface CreditMetricCardsProps {
   metrics: CreditMetric[]
-  activeStatuses: string[]
-  onToggleStatus: (status: string) => void
+  activeStatuses?: string[]
+  onToggleStatus?: (status: string) => void
 }
 
 export function CreditMetricCards({
@@ -32,8 +34,8 @@ export function CreditMetricCards({
   return (
     <div className="mb-4 flex flex-wrap gap-2">
       {metrics.map((metric) => {
-        const clickable = Boolean(metric.status)
-        const active = Boolean(metric.status && activeStatuses.includes(metric.status))
+        const clickable = Boolean(metric.status && onToggleStatus)
+        const active = Boolean(metric.status && activeStatuses?.includes(metric.status))
         const content = (
           <>
             <span className="text-muted-foreground block text-xs">{t(metric.labelKey)}</span>
@@ -50,7 +52,7 @@ export function CreditMetricCards({
           <button
             key={metric.key}
             type="button"
-            onClick={() => onToggleStatus(metric.status as string)}
+            onClick={() => onToggleStatus?.(metric.status as string)}
             aria-pressed={active}
             className={`${base} hover:border-gray-400 hover:bg-gray-50 ${
               active ? 'border-secondary-800 ring-secondary-800/20 ring-2' : ''

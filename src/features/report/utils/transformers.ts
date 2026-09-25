@@ -8,6 +8,7 @@
 import type {
   BackendDashboardResponse,
   BackendOperatorPerformanceResponse,
+  BackendTopCollector,
   BackendClientStatisticsResponse,
   BackendCommunicationStatisticsResponse,
   BackendHourlyBreakdown,
@@ -23,6 +24,7 @@ import type {
   TopOperatorUI,
   OperatorPerformanceResponseUI,
   OperatorPerformanceUI,
+  TopCollectorUI,
   DailyBreakdownUI,
   TeamAverageUI,
   ClientStatisticsUI,
@@ -103,8 +105,9 @@ export function trendToChangeType(direction: 'up' | 'down' | 'stable'): ChangeTy
 /**
  * Transform backend trend data to UI format
  *
- * @param trend - Backend KPI trend data
- * @returns UI-formatted trend data
+ * @param trend - Backend KPI trend data; null/absent when report-service has
+ *   no comparison value for the KPI (board #1448)
+ * @returns UI-formatted trend data, or null when there is no trend to show
  *
  * @example
  * ```typescript
@@ -118,9 +121,11 @@ export function trendToChangeType(direction: 'up' | 'down' | 'stable'): ChangeTy
  * //   changeType: 'increase',
  * //   previousValue: 100
  * // }
+ * transformTrend(null) // Returns: null
  * ```
  */
-export function transformTrend(trend: KPITrend): KPITrendUI {
+export function transformTrend(trend: KPITrend | null | undefined): KPITrendUI | null {
+  if (!trend) return null
   return {
     change: Math.abs(trend.change),
     changeType: trendToChangeType(trend.direction),
@@ -322,7 +327,30 @@ export function transformOperatorPerformance(
     },
     operators: data.operators.map(transformOperator),
     teamAverage: data.team_average ? transformTeamAverage(data.team_average) : undefined,
+    // Absent key (older backend) stays undefined so the dashboard can fall
+    // back to its own pick; an explicit null (nobody may be shown) stays null.
+    topCollector:
+      'top_collector' in data
+        ? data.top_collector
+          ? transformTopCollector(data.top_collector)
+          : null
+        : undefined,
     generatedAt: data.generated_at,
+  }
+}
+
+/**
+ * Transform the report-service «top collector» (board #1332 AC#2)
+ *
+ * @param top - Backend top collector (amount may be a numeric string)
+ * @returns UI-formatted top collector
+ */
+function transformTopCollector(top: BackendTopCollector): TopCollectorUI {
+  return {
+    operatorId: top.operator_id,
+    operatorName: top.operator_name,
+    paymentsCollected: parseNumber(top.payments_collected),
+    paymentsCount: top.payments_count,
   }
 }
 
@@ -373,6 +401,7 @@ function transformOperator(
     },
     dailyBreakdown: op.daily_breakdown.map(transformDailyBreakdown),
     comparisonToAverage: op.comparison_to_average,
+    rankingEligible: op.ranking_eligible,
   }
 }
 
@@ -482,6 +511,8 @@ function transformTeamAverage(
  * //   calls: 200,
  * //   contactRate: 72.5,
  * //   avgDuration: '02:30',
+ * //   callsAnswered: 145,
+ * //   totalTalkTime: 21750,
  * //   sms: 50,
  * //   payments: 1500
  * // }]
@@ -496,9 +527,12 @@ export function transformToAgentPerformanceRows(
     calls: op.summary.totalCalls,
     contactRate: op.summary.contactRate,
     avgDuration: op.summary.avgCallDurationFormatted,
+    callsAnswered: op.summary.callsAnswered,
+    totalTalkTime: op.summary.totalTalkTime,
     sms: op.summary.smsSent,
     messages: op.summary.messagesSent,
     payments: op.summary.paymentsCollected,
+    rankingEligible: op.rankingEligible,
   }))
 }
 
@@ -673,12 +707,35 @@ function transformCallStatistics(
     noAnswer: stats.calls_no_answer,
     busy: stats.calls_busy,
     failed: stats.calls_failed,
+    other: callsOther(stats),
     contactRate: stats.contact_rate,
     totalTalkTime: stats.total_talk_time,
     totalTalkTimeFormatted: formatDuration(stats.total_talk_time),
     avgCallDuration: stats.avg_call_duration,
     avgCallDurationFormatted: formatDuration(stats.avg_call_duration),
   }
+}
+
+/**
+ * Calls outside answered / no answer / busy / failed, so the «Результати
+ * дзвінків» rows add up to the total. Taken from report-service `calls_other`
+ * (the call-service /statistics name); an older backend that does not send it
+ * gets max(0, total − (answered + no answer + busy + failed)): 100 calls with
+ * 20 / 50 / 5 / 5 in the four buckets → 20 other.
+ */
+export function callsOther(
+  stats: BackendCommunicationStatisticsResponse['call_statistics']
+): number {
+  const reported = stats.calls_other
+  if (typeof reported === 'number' && Number.isFinite(reported) && reported >= 0) {
+    return reported
+  }
+  const bucketed =
+    (stats.calls_answered || 0) +
+    (stats.calls_no_answer || 0) +
+    (stats.calls_busy || 0) +
+    (stats.calls_failed || 0)
+  return Math.max(0, (stats.total_calls || 0) - bucketed)
 }
 
 /**
@@ -800,13 +857,19 @@ function transformDailyTrend(
  * Transform a single hourly breakdown entry.
  * The backend stores UTC hours; conversion to local time is handled
  * in the hook using the user's timezone.
+ *
+ * The count is read from `calls` — the report-service `HourlyBreakdown` field
+ * (contract C2). Reading ONLY call-service's internal `calls_made` gave
+ * `undefined` → NaN, the modal's `calls > 0` filter dropped every hour, and
+ * «По годинах» never rendered (board #1333). `calls_made` stays as a fallback
+ * for a payload that still carries the legacy name.
  */
-function transformHourlyBreakdown(entry: BackendHourlyBreakdown): HourlyBreakdownUI {
+export function transformHourlyBreakdown(entry: BackendHourlyBreakdown): HourlyBreakdownUI {
   const h = entry.hour
   const label = `${String(h).padStart(2, '0')}:00-${String(h + 1).padStart(2, '0')}:00`
   return {
     label,
-    calls: entry.calls_made,
-    callsAnswered: entry.calls_answered,
+    calls: entry.calls ?? entry.calls_made ?? 0,
+    callsAnswered: entry.calls_answered ?? 0,
   }
 }

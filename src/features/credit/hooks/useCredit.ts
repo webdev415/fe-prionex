@@ -9,6 +9,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { creditApi, newIdempotencyKey } from '../api/creditApi'
 import type {
   CreditApplicationsParams,
+  CreditJournalParams,
   CreditLoansParams,
   CreditQueueStatus,
   CreditSwitchName,
@@ -29,7 +30,15 @@ export const creditKeys = {
   loan: (id: string) => [...creditKeys.loans(), 'detail', id] as const,
   loanState: (id: string) => [...creditKeys.loans(), 'state', id] as const,
   loanSchedule: (id: string) => [...creditKeys.loans(), 'schedule', id] as const,
-  loanJournal: (id: string) => [...creditKeys.loans(), 'journal', id] as const,
+  /**
+   * Журнал кредита. Параметры отбора входят в ключ: без них смена корзины
+   * получала бы кэш прежней и на сервер не ходила вовсе.
+   *
+   * `params ?? {}` — чтобы «все корзины» и «параметров не передали» были ОДНИМ
+   * ключом: у одного и того же ответа не должно быть двух кэшей.
+   */
+  loanJournal: (id: string, params?: CreditJournalParams) =>
+    [...creditKeys.loans(), 'journal', id, params ?? {}] as const,
   /**
    * Кредиты одного клиента CRM. Корень — `credit`, а не `clients`: владелец
    * данных модуль, а у клиентов ключ `loans` УЖЕ занят купленными долгами
@@ -171,11 +180,27 @@ export function useCreditLoanDocuments(loanId: string | undefined) {
   })
 }
 
-export function useCreditLoanJournal(loanId: string | undefined) {
+/**
+ * Журнал проводок с СЕРВЕРНЫМ отбором.
+ *
+ * Параметры уходят и в запрос, и в КЛЮЧ: ключ без них означал бы «сменил
+ * корзину — получил кэш прежней и на сервер не сходил вовсе».
+ *
+ * `placeholderData` здесь сознательно НЕ ставится, в отличие от
+ * `useCreditApplications` и `useCreditLoans`: держать строки прежней корзины
+ * под подписью новой — ложь того же класса, против которой написана пометка о
+ * сторно под фильтром.
+ *
+ * `retry: false` — по доводу `useClientCreditLoans`: `CreditApiError` без
+ * `response`, глобальное правило считает повторяемым любой отказ, а
+ * параметризованный ключ заводит свою цепочку на каждую корзину.
+ */
+export function useCreditLoanJournal(loanId: string | undefined, params?: CreditJournalParams) {
   return useQuery({
-    queryKey: creditKeys.loanJournal(loanId ?? ''),
-    queryFn: () => creditApi.loanJournal(loanId as string),
+    queryKey: creditKeys.loanJournal(loanId ?? '', params),
+    queryFn: () => creditApi.loanJournal(loanId as string, params),
     enabled: Boolean(loanId),
+    retry: false,
   })
 }
 

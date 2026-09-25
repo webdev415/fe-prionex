@@ -67,8 +67,9 @@ export const CREDIT_SCHEDULE_REASONS = [
   'disbursement_reversed',
 ] as const
 
-/** Виды документов (DocumentKind). */
+/** Виды документов, которые создаёт модуль (DocumentKind). */
 export const CREDIT_DOCUMENT_KINDS = [
+  'agreement_draft',
   'contract',
   'schedule',
   'pcci',
@@ -80,6 +81,29 @@ export const CREDIT_DOCUMENT_KINDS = [
   'cancellation_notice',
   'regulatory_card_ua',
 ] as const
+
+/** Виды документов, которые загружает клиент (UploadedDocumentKind). */
+export const CREDIT_UPLOADED_DOCUMENT_KINDS = [
+  'bank_statement_pdf',
+  'id_photo',
+  'void_cheque',
+  'pad_form',
+  'pay_stub',
+  'utility_bill',
+  'other',
+] as const
+
+/**
+ * Всё, что приходит в `DocumentMeta.kind`: в контракте это oneOf двух перечней,
+ * и список документов заявки несёт вперемешку договоры модуля и загрузки
+ * клиента. Подпись есть у каждого значения отсюда; прочее экран называет
+ * неизвестным видом с кодом — по одному `CREDIT_DOCUMENT_KINDS` выписка клиента
+ * стала бы «неизвестной».
+ */
+export const CREDIT_DOCUMENT_META_KINDS: readonly string[] = [
+  ...CREDIT_DOCUMENT_KINDS,
+  ...CREDIT_UPLOADED_DOCUMENT_KINDS,
+]
 
 /** Статусы кредита — те же значения, что и в union `CreditLoanStatus`. */
 export const CREDIT_LOAN_STATUSES = [
@@ -245,12 +269,66 @@ export const CREDIT_REVIEW_REASONS = [
   'RC-11',
 ] as const
 
+/**
+ * События сайта, которые хронология карточки заявки умеет назвать словами.
+ *
+ * Это НАШ СНИМОК ЧУЖОГО СЛОВАРЯ: реестр витрины web-credit
+ * `docs/40-события-сайта.md` на `10936ea0` (таблицы «События витрины» и «События
+ * кабинета»; `code_requested` и `rate_limited` стоят в обеих — здесь по разу).
+ * Словарь событий контракт держит открытым: незнакомое имя модуль принимает и
+ * отдаёт как есть, поэтому расхождение с реестром не ломает экран, а
+ * показывается подписью `credit.portalEvent.unknown` с именем события.
+ */
+export const CREDIT_PORTAL_EVENTS = [
+  'code_requested',
+  'code_sent',
+  'code_verified',
+  'code_rejected',
+  'application_created',
+  'application_blocked',
+  'block_saved',
+  'ibv_session_opened',
+  'ibv_login',
+  'ibv_mfa',
+  'ibv_completed',
+  'ibv_confirmed',
+  'ibv_rejected',
+  'document_uploaded',
+  'signed',
+  'quote_mismatch',
+  'handoff_issued',
+  'rate_limited',
+  'antibot_rejected',
+  'intake_closed',
+  'signed_in',
+  'sign_in_rejected',
+  'signed_in_by_key',
+  'cancellation_requested',
+  'cancellation_failed',
+  'payoff_quoted',
+  'prepayment_mode_changed',
+  'document_opened',
+  'document_unavailable',
+  'continue_to_apply',
+  'notification_mailed',
+] as const
+
+/**
+ * События сайта, которые означают письмо клиенту: письмо-уведомление и письмо с
+ * кодом, принятые транспортом. Из них в блоке «Листи сайту» строятся строки —
+ * это те же строки хронологии, без отдельного запроса.
+ */
+export const CREDIT_MAIL_EVENTS = [
+  'notification_mailed',
+  'code_sent',
+] as const satisfies readonly (typeof CREDIT_PORTAL_EVENTS)[number][]
+
 /** Пространство словаря → значения, которые в него подставляются. */
 export const CREDIT_DYNAMIC_NAMESPACES: Record<string, readonly string[]> = {
   entryType: CREDIT_ENTRY_TYPES,
   bucket: CREDIT_BUCKETS,
   scheduleReason: CREDIT_SCHEDULE_REASONS,
-  documentKind: CREDIT_DOCUMENT_KINDS,
+  documentKind: CREDIT_DOCUMENT_META_KINDS,
   loanStatus: CREDIT_LOAN_STATUSES,
   status: CREDIT_ALL_APPLICATION_STATUSES,
   disbursementState: CREDIT_DISBURSEMENT_STATES,
@@ -274,4 +352,8 @@ export const CREDIT_DYNAMIC_NAMESPACES: Record<string, readonly string[]> = {
   // называет вслух по телефону.
   stage: CREDIT_APPLICATION_STAGES,
   stageState: CREDIT_STAGE_STATES,
+  // События сайта в хронологии карточки заявки — тоже чужой список (реестр
+  // витрины): подпись подставляется динамически, и событие без строки в
+  // словаре доехало бы до оператора машинным именем.
+  portalEvent: CREDIT_PORTAL_EVENTS,
 }

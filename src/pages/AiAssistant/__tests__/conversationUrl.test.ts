@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { parseConversationParam, writeConversationParam } from '../conversationUrl'
+import {
+  isNewConversationParam,
+  NEW_CONVERSATION_QUERY,
+  parseConversationParam,
+  writeConversationParam,
+} from '../conversationUrl'
 
 describe('parseConversationParam', () => {
   it('принимает положительное целое', () => {
@@ -17,6 +22,28 @@ describe('parseConversationParam', () => {
     expect(parseConversationParam('?conversation=4.2')).toBeNull()
     expect(parseConversationParam('?conversation=42abc')).toBeNull()
     expect(parseConversationParam('?conversation=9999999999999999999')).toBeNull()
+  })
+
+  it('маркер нового диалога — не id: для разбора это отсутствие deep-link', () => {
+    expect(parseConversationParam('?conversation=new')).toBeNull()
+    expect(parseConversationParam('?conversation=New')).toBeNull()
+  })
+})
+
+describe('isNewConversationParam', () => {
+  it('узнаёт маркер в любом регистре', () => {
+    expect(isNewConversationParam('?conversation=new')).toBe(true)
+    expect(isNewConversationParam('conversation=NEW')).toBe(true)
+    expect(isNewConversationParam('?conversation=New')).toBe(true)
+    expect(isNewConversationParam(`?tab=x&${NEW_CONVERSATION_QUERY}`)).toBe(true)
+  })
+
+  it('всё остальное маркером не считает', () => {
+    expect(isNewConversationParam('')).toBe(false)
+    expect(isNewConversationParam('?conversation=42')).toBe(false)
+    expect(isNewConversationParam('?conversation=')).toBe(false)
+    expect(isNewConversationParam('?conversation=newest')).toBe(false)
+    expect(isNewConversationParam('?other=new')).toBe(false)
   })
 })
 
@@ -44,6 +71,24 @@ describe('writeConversationParam', () => {
     writeConversationParam(null)
     expect(window.location.search).not.toContain('conversation')
     // Идемпотентность: значение уже такое — URL не пересобирается.
+    writeConversationParam(null)
+    expect(window.location.search).toBe('')
+  })
+
+  it("'new' ставит маркер и перетирается id созданного диалога", () => {
+    window.history.replaceState(window.history.state, '', '/dashboard/ai-assistant?tab=x')
+    writeConversationParam('new')
+    expect(window.location.search).toContain('conversation=new')
+    expect(window.location.search).toContain('tab=x')
+
+    // Первая отправка вернула id — маркер уступает ему место.
+    writeConversationParam(77)
+    expect(window.location.search).toContain('conversation=77')
+    expect(window.location.search).not.toContain('conversation=new')
+  })
+
+  it("маркер снимается 'null'ом наравне с id", () => {
+    writeConversationParam('new')
     writeConversationParam(null)
     expect(window.location.search).toBe('')
   })

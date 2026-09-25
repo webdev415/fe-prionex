@@ -116,7 +116,13 @@ function makeClient(): QueryClient {
 }
 
 function renderBlock(
-  ui: { projections?: DebtDetail[]; enabled?: boolean } = {},
+  ui: {
+    projections?: DebtDetail[]
+    enabled?: boolean
+    /** 14-7b: `row` — карта под строкой списка «Позики». Умолчание прежнее. */
+    variant?: 'block' | 'row'
+    contractNumber?: string
+  } = {},
   client: QueryClient = makeClient()
 ) {
   const wrapper = ({ children }: { children: ReactNode }) => (
@@ -129,6 +135,8 @@ function renderBlock(
       clientId={42}
       projections={ui.projections ?? []}
       enabled={ui.enabled ?? true}
+      variant={ui.variant}
+      contractNumber={ui.contractNumber}
     />,
     { wrapper }
   )
@@ -607,6 +615,162 @@ describe('r4: холодная загрузка страницы вне бюдж
     // Исполняемой формы динамического импорта страницы быть не должно
     // (упоминание в комментарии шапки не считается — ищем присваивание).
     expect(card).not.toMatch(/=\s*await import\(['"]\.\.\/ClientDetailPage['"]\)/)
+  })
+
+  it('🔴 тест списка (14-7b) импортирует LoansCardList и LoanCard статически', () => {
+    // ⚠️ Глоб выше каталог `components/__tests__/` НЕ покрывает — он прибит к
+    // литералу соседнего файла. Новый файл сцен списка живёт именно там, и без
+    // второго глоба тот же дефект вернулся бы в него незамеченным: чужой страж
+    // охраняет чужой файл, а не класс.
+    const sources = import.meta.glob('../../ClientManagement/components/__tests__/*.test.tsx', {
+      query: '?raw',
+      import: 'default',
+      eager: true,
+    }) as Record<string, string>
+    const list = Object.entries(sources).find(([path]) =>
+      path.endsWith('loansCardListCreditRow.test.tsx')
+    )?.[1]
+    expect(list, 'исходник теста списка не прочитан — проверять нечего').toBeTruthy()
+
+    // Положительный контроль: статические импорты ЕСТЬ оба.
+    expect(list).toMatch(/^import \{ LoansCardList \} from '\.\.\/LoansCardList'$/m)
+    expect(list).toMatch(/^import \{ LoanCard,[^}]*\} from '\.\.\/LoanCard'$/m)
+    expect(
+      list,
+      'в тесте списка динамический import карточки или списка — холодная загрузка в бюджете первой сцены'
+    ).not.toMatch(/=\s*await import\(['"]\.\.\/(LoanCard|LoansCardList)['"]\)/)
+  })
+})
+
+describe('C-1: под строкой списка отказ объясняется БЕЗ повтора её цифр', () => {
+  it('403 в режиме «под карточкой» — плашка и день среза, строк проекции нет', async () => {
+    clientLoans.mockRejectedValue(new CreditApiError('forbidden', 403, 'forbidden'))
+    const { container } = renderBlock({
+      projections: [PROJECTION],
+      variant: 'row',
+      contractNumber: 'FB-000088',
+    })
+
+    await screen.findByText('credit.access.noRights')
+    const text = container.textContent ?? ''
+    // Остаётся то, чего в строке НЕТ: причина, день среза и то, каким правом
+    // открывается полная карта. День среза — ЗНАЧЕНИЕМ: `2026-09-21T23:10:00Z`
+    // проекции в зоне Киева — уже 22-е (та же строка, что у S-4). Одна подпись
+    // без даты доказывала бы лишь, что ключ словаря на месте.
+    expect(text, 'день среза проекции не напечатан — вместо 22-09-2026 02:10 прочерк').toContain(
+      'credit.clientBlock.projectionAsOf 22-09-2026 02:10'
+    )
+    expect(text).toContain('credit.clientBlock.projectionOnly')
+    // 🔴 ДПЗ — пятая величина, а НЕ повтор цифр строки (Р-FEL1B-12): в строке
+    // его нет вовсе, а отказ двери получают все роли взыскания.
+    expect(
+      fieldValue(container, 'credit.clientBlock.dpd'),
+      'при отказе двери просрочка кредита не напечатана нигде — оператор взыскания её не видит'
+    ).toBe('41')
+    // 🔴 А цифры строки под ней НЕ повторяются: номер, «Видано», «Залишок» и
+    // статус уже стоят в самой строке, и две одинаковые суммы в двух местах
+    // читаются как два разных факта.
+    expect(
+      screen.queryByText('FB-000088'),
+      'под строкой напечатаны строки проекции — номер договора повторён второй раз'
+    ).toBeNull()
+    expect(text).not.toContain('6123.00')
+    expect(text).not.toContain('5000.00')
+    expect(text).not.toContain('credit.clientBlock.issued')
+    expect(text).not.toContain('credit.clientBlock.outstanding')
+    expect(text).not.toContain('credit.clientBlock.status')
+    // Собственного заголовка у панели нет — его роль играет сама строка.
+    expect(screen.queryByText('credit.clientBlock.title')).toBeNull()
+  })
+
+  it('ДПЗ не пришёл — поля нет, а не «0» (Р-5)', async () => {
+    // `null` — «модуль ничего не сказал», и ноль на его месте был бы фактом
+    // («просрочки нет»), который оператор произнесёт человеку вслух.
+    clientLoans.mockRejectedValue(new CreditApiError('forbidden', 403, 'forbidden'))
+    const { container } = renderBlock({
+      projections: [{ ...PROJECTION, days_past_due: null } as unknown as DebtDetail],
+      variant: 'row',
+      contractNumber: 'FB-000088',
+    })
+
+    await screen.findByText('credit.access.noRights')
+    // Контроль: панель отказа отрисована и день среза в ней есть.
+    expect(container.textContent ?? '').toContain('credit.clientBlock.projectionAsOf 22-09-2026')
+    expect(fieldValue(container, 'credit.clientBlock.dpd')).toBeNull()
+    expect(container.textContent ?? '').not.toContain('credit.clientBlock.dpd')
+  })
+
+  it('проекции этой строки нет — день среза «—», а не выдуманная дата (Э-H)', async () => {
+    clientLoans.mockRejectedValue(new CreditApiError('forbidden', 403, 'forbidden'))
+    const { container } = renderBlock({
+      projections: [],
+      variant: 'row',
+      contractNumber: 'FB-000088',
+    })
+
+    await screen.findByText('credit.access.noRights')
+    const text = container.textContent ?? ''
+    expect(text).toContain('credit.clientBlock.projectionAsOf —')
+    expect(text).not.toMatch(/\d{2}-\d{2}-\d{4}/)
+    // И ДПЗ неоткуда взять — поля нет.
+    expect(fieldValue(container, 'credit.clientBlock.dpd')).toBeNull()
+  })
+
+  it('контроль: тот же отказ в обычном режиме цифры печатает', async () => {
+    // Без этой половины «цифр нет» доказывало бы лишь то, что блок вообще
+    // ничего не нарисовал.
+    clientLoans.mockRejectedValue(new CreditApiError('forbidden', 403, 'forbidden'))
+    const { container } = renderBlock({ projections: [PROJECTION] })
+
+    await screen.findByText('credit.access.noRights')
+    expect(screen.getByText('FB-000088')).toBeInTheDocument()
+    expect(container.textContent ?? '').toContain('6123.00')
+    expect(screen.getByText('credit.clientBlock.title')).toBeInTheDocument()
+  })
+})
+
+describe('C-2: разворот строки показывает СВОЙ кредит, а не все кредиты клиента', () => {
+  /** Второй кредит того же клиента — дверь отдаёт оба одним ответом. */
+  const SECOND_LOAN: ClientLoanCard = {
+    ...LOAN,
+    loan_id: '22222222-2222-4222-8222-222222222222',
+    contract_number: 'FB-000090',
+    currency: 'CAD',
+    module_url: '/dashboard/credit/loans/22222222-2222-4222-8222-222222222222',
+  }
+
+  it('отбор по номеру договора — на экране только он', async () => {
+    clientLoans.mockResolvedValue({ items: [LOAN, SECOND_LOAN], next_cursor: null })
+    const { unmount } = renderBlock({ variant: 'row', contractNumber: 'FB-000090' })
+
+    await screen.findByText('FB-000090')
+    expect(
+      screen.queryByText('FB-000088'),
+      'под строкой FB-000090 развернулся и чужой кредит — отбор по номеру договора не работает'
+    ).toBeNull()
+    unmount()
+
+    // Контроль: при другом номере показывается ИМЕННО ДРУГОЙ кредит — значит
+    // отбор действительно читает номер, а не всегда берёт первый или
+    // последний элемент ответа.
+    renderBlock({ variant: 'row', contractNumber: 'FB-000088' })
+    await screen.findByText('FB-000088')
+    expect(screen.queryByText('FB-000090')).toBeNull()
+  })
+
+  it('номера нет в ответе — «связь не найдена», а не «кредитів немає»', async () => {
+    // CRM хранит проекцию этого долга; отрицать его нельзя.
+    clientLoans.mockResolvedValue({ items: [SECOND_LOAN], next_cursor: null })
+    renderBlock({
+      projections: [PROJECTION],
+      variant: 'row',
+      contractNumber: 'FB-000088',
+    })
+
+    await screen.findByText('credit.clientBlock.linkNotFound')
+    expect(screen.queryByText('credit.clientBlock.noLoans')).toBeNull()
+    // Чужой кредит под чужой строкой не показывается.
+    expect(screen.queryByText('FB-000090')).toBeNull()
   })
 })
 

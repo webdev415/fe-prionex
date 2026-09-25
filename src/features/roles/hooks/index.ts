@@ -7,6 +7,7 @@
 export { useRoles, rolesKeys } from './useRoles'
 export { useProjectRoles } from './useProjectRoles'
 export { useRole } from './useRole'
+export { useHubRoles } from './useHubRoles'
 export {
   usePermissions,
   useCreateRole,

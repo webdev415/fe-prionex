@@ -22,6 +22,7 @@ import type {
   CreditDecision,
   CreditDocumentMeta,
   CreditJournalEntry,
+  CreditJournalParams,
   CreditLoanDetail,
   CreditLoanState,
   CreditLoanSummary,
@@ -163,6 +164,83 @@ async function post<T>(path: string, body: unknown, headers?: Record<string, str
   }
 }
 
+/** Байты документа и решение сервера о показе (заголовок `Content-Disposition`). */
+export interface CreditDocumentContent {
+  blob: Blob
+  disposition: string
+}
+
+/** Тело отказа модуля — та же форма, что читает `toCreditError`. */
+type ProblemBody = {
+  title?: string
+  detail?: string
+  code?: string
+  errors?: Array<{ field?: string; message?: string }>
+}
+
+/**
+ * Текст тела ответа. Только `FileReader`: у `Blob` в jsdom нет `text()`, а путь,
+ * который проверяют тесты, обязан быть тем же, что работает в браузере.
+ */
+function readBodyText(blob: Blob): Promise<string | null> {
+  return new Promise((resolve) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : null)
+    reader.onerror = () => resolve(null)
+    reader.readAsText(blob)
+  })
+}
+
+/**
+ * Отказ двери содержимого документа.
+ *
+ * Запрос просит blob, и тело отказа приходит blob'ом же: `toCreditError` читает
+ * его как объект и теряет машинный код, по которому экран называет отказ. Здесь
+ * тело сперва разбирается. Не JSON (ответ шлюза или прокси) — кода нет, остаётся
+ * статус; исключения наружу разбор не бросает.
+ */
+async function toCreditErrorFromBody(error: unknown): Promise<CreditApiError> {
+  const axiosError = error as AxiosError<unknown>
+  const data = axiosError.response?.data
+  let payload: ProblemBody | undefined
+  try {
+    let parsed: unknown = data
+    if (data instanceof Blob) {
+      const text = await readBodyText(data)
+      parsed = text ? JSON.parse(text) : undefined
+    } else if (typeof data === 'string') {
+      parsed = data ? JSON.parse(data) : undefined
+    }
+    payload = parsed && typeof parsed === 'object' ? (parsed as ProblemBody) : undefined
+  } catch {
+    payload = undefined
+  }
+  return new CreditApiError(
+    payload?.detail || payload?.title || axiosError.message || 'Ошибка кредитного модуля',
+    axiosError.response?.status,
+    typeof payload?.code === 'string' ? payload.code : undefined,
+    payload?.errors
+  )
+}
+
+/**
+ * Содержимое документа по пути двери. Blob'ом, а не ссылкой: ручке нужны
+ * заголовки авторизации. Параметров нет: проект модуль берёт из пропуска.
+ */
+async function fetchDocumentContent(path: string): Promise<CreditDocumentContent> {
+  try {
+    const response = await creditHttp.get<Blob>(`${CREDIT_PREFIX}${path}`, {
+      responseType: 'blob',
+    })
+    return {
+      blob: response.data,
+      disposition: String(response.headers['content-disposition'] ?? ''),
+    }
+  } catch (error) {
+    throw await toCreditErrorFromBody(error)
+  }
+}
+
 /**
  * Новый ключ идемпотентности.
  *
@@ -181,6 +259,35 @@ export function newIdempotencyKey(prefix: string): string {
   return `${prefix}:${random}`
 }
 
+/**
+ * Query журнала: в объект попадают ТОЛЬКО заданные параметры.
+ *
+ * Ключ со значением `undefined` axios при сериализации отбросил бы, но тогда
+ * «параметр не отправлен» проверялось бы поведением сериализатора, а не
+ * содержимым запроса. Здесь это утверждение измеримо: нет значения — нет ключа.
+ */
+function journalQuery(params?: CreditJournalParams): Record<string, unknown> | undefined {
+  if (!params) return undefined
+  const query: Record<string, unknown> = {}
+  if (params.bucket) query.bucket = params.bucket
+  if (params.as_of) query.as_of = params.as_of
+  return query
+}
+
+/**
+ * Даты списка заявок — тем же правилом, что журнал: нет значения — нет ключа.
+ * Пустая строка тоже не значение: так отдаёт себя очищенное поле фильтра.
+ * День уходит как есть; границы суток по календарю юрисдикции считает модуль.
+ */
+function dateRange(params: CreditApplicationsParams): Record<string, string> {
+  const range: Record<string, string> = {}
+  if (params.created_from) range.created_from = params.created_from
+  if (params.created_to) range.created_to = params.created_to
+  if (params.updated_from) range.updated_from = params.updated_from
+  if (params.updated_to) range.updated_to = params.updated_to
+  return range
+}
+
 export const creditApi = {
   /** Сводка стенда: счётчики по статусам и права текущей роли. */
   overview: () => get<CreditOverview>('/admin/overview'),
@@ -192,6 +299,7 @@ export const creditApi = {
       sort: params.sort,
       limit: params.limit ?? 25,
       cursor: params.cursor,
+      ...dateRange(params),
     }),
 
   application: (applicationId: string) =>
@@ -308,28 +416,39 @@ export const creditApi = {
   loanScheduleVersions: (loanId: string) =>
     get<CreditPage<CreditScheduleVersion>>(`/loans/${loanId}/schedule/versions`),
 
-  loanJournal: (loanId: string) => get<CreditPage<CreditJournalEntry>>(`/loans/${loanId}/journal`),
+  /**
+   * Журнал проводок. Отбор делает СЕРВЕР, и резать полученный массив нельзя:
+   * `PAGE = 60` в карточке отрезает хвост ДО отбора, то есть «в корзине
+   * проводок нет» означало бы «они за шестидесятой строкой».
+   *
+   * «Все корзины» = ключа `bucket` в запросе НЕТ. Ключ со значением
+   * `undefined` не кладём, хотя сериализатор его и отбросил бы: утверждение
+   * «параметр не отправлен» должно быть измеримо, а не держаться на поведении
+   * axios (в отличие от соседних `loanState`/`loanSchedule`).
+   *
+   * Значение корзины дверь со словарём `LedgerBucket` НЕ сверяет — неизвестное
+   * даёт 200 с пустым `items`, и опечатка выглядела бы как «в корзине пусто».
+   * Поэтому значения берутся только из `CREDIT_BUCKETS`, а не пишутся строками.
+   */
+  loanJournal: (loanId: string, params?: CreditJournalParams) =>
+    get<CreditPage<CreditJournalEntry>>(`/loans/${loanId}/journal`, journalQuery(params)),
 
   loanDocuments: (loanId: string) =>
     get<CreditPage<CreditDocumentMeta>>(`/loans/${loanId}/documents`),
 
   /**
-   * Файл документа. Забираем blob'ом, а не ссылкой: ручке нужны заголовки
-   * авторизации. Сервер сам решает inline/attachment — фронт эту политику не
-   * переопределяет (загруженный клиентом файл недоверенный).
+   * Содержимое документа — дверью той сущности, из списка которой он пришёл:
+   * `/applications/{applicationId}/documents/{documentId}/content` и
+   * `/loans/{loanId}/documents/{documentId}/content`. Каждая отдаёт только
+   * документ СВОЕЙ заявки или кредита, чужой — 404, поэтому одной двери «по
+   * идентификатору документа» нет. Заменённые редакции не просим
+   * (`include_replaced` не шлём): обе панели показывают действующие. Сервер сам
+   * решает inline/attachment — фронт эту политику не переопределяет
+   * (загруженный клиентом файл недоверенный).
    */
-  documentContent: async (documentId: string): Promise<{ blob: Blob; disposition: string }> => {
-    try {
-      const response = await creditHttp.get<Blob>(
-        `${CREDIT_PREFIX}/admin/documents/${documentId}/content`,
-        { responseType: 'blob' }
-      )
-      return {
-        blob: response.data,
-        disposition: String(response.headers['content-disposition'] ?? ''),
-      }
-    } catch (error) {
-      throw toCreditError(error)
-    }
-  },
+  applicationDocumentContent: (applicationId: string, documentId: string) =>
+    fetchDocumentContent(`/applications/${applicationId}/documents/${documentId}/content`),
+
+  loanDocumentContent: (loanId: string, documentId: string) =>
+    fetchDocumentContent(`/loans/${loanId}/documents/${documentId}/content`),
 }

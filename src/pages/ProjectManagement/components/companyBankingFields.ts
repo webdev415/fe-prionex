@@ -10,7 +10,7 @@
  */
 
 // Regex triples — kept identical to the BE Pydantic validators.
-export const EDRPOU_REGEX = /^\d{8}$/
+export const EDRPOU_REGEX = /^(\d{8}|\d{8}[A-Z]|[A-Z]\d{7}[A-Z0-9])$/
 export const IBAN_REGEX = /^[A-Z]{2}\d{0,32}$/
 export const HOTLINE_PHONE_REGEX = /^[\d ]*$/
 // Simple email pattern; final source of truth is the BE (EmailStr). This is
@@ -45,7 +45,9 @@ export function validateCompanyBankingField(
 
   switch (field) {
     case 'edrpou_code':
-      return EDRPOU_REGEX.test(value) ? null : 'pages.projects.modals.errors.edrpouCodeFormat'
+      return EDRPOU_REGEX.test(value.toUpperCase())
+        ? null
+        : 'pages.projects.modals.errors.edrpouCodeFormat'
     case 'iban':
       return IBAN_REGEX.test(value) ? null : 'pages.projects.modals.errors.ibanFormat'
     case 'hotline_phone':
@@ -94,7 +96,7 @@ export function serializeCompanyBankingFields(
   return {
     full_company_name: emptyToUndefined(values.full_company_name),
     address: emptyToUndefined(values.address),
-    edrpou_code: emptyToUndefined(values.edrpou_code),
+    edrpou_code: emptyToUndefined(values.edrpou_code)?.toUpperCase(),
     website: emptyToUndefined(values.website),
     email: emptyToUndefined(values.email),
     hotline_phone: emptyToUndefined(values.hotline_phone),

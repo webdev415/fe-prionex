@@ -19,6 +19,8 @@ import {
   type LegalTemplateFillContext,
 } from '@/features/lawyerWorkplace/utils/letterTemplateVariables'
 import { Icons } from '@/lib/icons'
+import { isSpanishLanguage } from '@/lib/dateUtils'
+import { withCurrency } from '@/lib/formatters'
 import type { LetterTypeConfig, SettingsReplyTemplate } from '../../../settings/types'
 import { LetterTypeBadge } from '../LetterTypeBadge'
 import { LegalLetterVariablesPalette } from './LegalLetterVariablesPalette'
@@ -48,6 +50,27 @@ const TEMPLATE_PREVIEW_DEMO_CONTEXT: LegalTemplateFillContext = {
   attachments: 'Копія договору, розрахунок заборгованості',
   companyName: 'ТОВ «ФК «ТЕХНОФІНАНС»',
   companyPhone: '+380 44 000 00 00',
+}
+
+function spanishPreviewDemoContext(): LegalTemplateFillContext {
+  return {
+    clientName: 'García López, Lucía',
+    clientTaxId: '12345678Z',
+    contract: 'CR-2024-00518',
+    debtAmount: withCurrency('12.500,00'),
+    senderName: 'Banco de España',
+    incomingRef: '12-3456',
+    incomingDate: '01/07/2026',
+    caseNo: '456/2024',
+    requestNo: 'ВХ-0042',
+    outNo: 'ВИХ-0128',
+    date: '30/07/2026',
+    dueDate: '15/08/2026',
+    lawyerName: 'Martínez Ruiz, A.',
+    attachments: 'Copia del contrato, cálculo de la deuda',
+    companyName: 'Finanzas Ejemplo, S.L.',
+    companyPhone: '+34 910 000 000',
+  }
 }
 
 interface ReplyTemplateModalProps {
@@ -82,7 +105,8 @@ export function ReplyTemplateModal({
   onSave,
   isSubmitting = false,
 }: ReplyTemplateModalProps) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
+  const spanishPreview = isSpanishLanguage(i18n?.language)
   const isEditing = template !== null
   const subjectRef = useRef<HTMLInputElement>(null)
   const bodyRef = useRef<HTMLTextAreaElement>(null)
@@ -110,8 +134,12 @@ export function ReplyTemplateModal({
   }, [open, template, t])
 
   const previewText = useMemo(
-    () => fillTemplateVariables(body, TEMPLATE_PREVIEW_DEMO_CONTEXT),
-    [body]
+    () =>
+      fillTemplateVariables(
+        body,
+        spanishPreview ? spanishPreviewDemoContext() : TEMPLATE_PREVIEW_DEMO_CONTEXT
+      ),
+    [body, spanishPreview]
   )
 
   const toggleType = (typeId: string) => {

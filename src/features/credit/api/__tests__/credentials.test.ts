@@ -74,8 +74,8 @@ function captureRequests(): { seen: InternalAxiosRequestConfig[]; restore: () =>
   const adapter: AxiosAdapter = async (config) => {
     seen.push(config)
     return {
-      // `documentContent` просит `responseType: 'blob'`; пустой объект его
-      // устраивает — тело мы не читаем, читаем заголовки ЗАПРОСА.
+      // Двери содержимого документа просят `responseType: 'blob'`; пустой объект
+      // их устраивает — тело мы не читаем, читаем заголовки ЗАПРОСА.
       data: {} as never,
       status: 200,
       statusText: 'OK',
@@ -125,9 +125,21 @@ const CALLS: Array<{ name: string; invoke: () => Promise<unknown> }> = [
   { name: 'loanState', invoke: () => creditApi.loanState('l1') },
   { name: 'loanSchedule', invoke: () => creditApi.loanSchedule('l1') },
   { name: 'loanScheduleVersions', invoke: () => creditApi.loanScheduleVersions('l1') },
-  { name: 'loanJournal', invoke: () => creditApi.loanJournal('l1') },
+  // Дважды: у двери журнала своя ветка сборки query (`journalQuery`), и вызов
+  // с одним `loanId` до неё не доходит — запрос с отбором остался бы вне перебора.
+  {
+    name: 'loanJournal',
+    invoke: async () => {
+      await creditApi.loanJournal('l1')
+      return creditApi.loanJournal('l1', { bucket: 'principal', as_of: '2026-09-01' })
+    },
+  },
   { name: 'loanDocuments', invoke: () => creditApi.loanDocuments('l1') },
-  { name: 'documentContent', invoke: () => creditApi.documentContent('d1') },
+  {
+    name: 'applicationDocumentContent',
+    invoke: () => creditApi.applicationDocumentContent('a1', 'd1'),
+  },
+  { name: 'loanDocumentContent', invoke: () => creditApi.loanDocumentContent('l1', 'd1') },
 ]
 
 /** Весь запрос одной строкой: заголовки, адрес, параметры, тело. */

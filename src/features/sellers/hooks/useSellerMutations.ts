@@ -7,6 +7,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { AxiosError } from 'axios'
 import { toast } from 'sonner'
+import i18n from '@/lib/i18n'
 import { sellersApi } from '../api/sellersApi'
 import { sellersKeys } from './useSellers'
 import { getErrorMessage } from '@/lib/errors'
@@ -21,7 +22,9 @@ export function useCreateSeller() {
   return useMutation({
     mutationFn: (data: CreateSellerInput) => sellersApi.createSeller(data),
     onSuccess: () => {
-      toast.success('Seller created successfully')
+      toast.success(
+        i18n.t('toasts.sellers.created', { defaultValue: 'Seller created successfully' })
+      )
       queryClient.invalidateQueries({ queryKey: sellersKeys.lists() })
     },
     onError: (error) => {
@@ -40,7 +43,9 @@ export function useUpdateSeller() {
     mutationFn: ({ id, data }: { id: number; data: UpdateSellerInput }) =>
       sellersApi.updateSeller(id, data),
     onSuccess: (_, variables) => {
-      toast.success('Seller updated successfully')
+      toast.success(
+        i18n.t('toasts.sellers.updated', { defaultValue: 'Seller updated successfully' })
+      )
       queryClient.invalidateQueries({ queryKey: sellersKeys.detail(variables.id) })
       queryClient.invalidateQueries({ queryKey: sellersKeys.lists() })
     },
@@ -59,7 +64,9 @@ export function useDeleteSeller() {
   return useMutation({
     mutationFn: ({ sellerId }: { sellerId: number }) => sellersApi.deleteSeller(sellerId),
     onSuccess: () => {
-      toast.success('Seller deactivated successfully')
+      toast.success(
+        i18n.t('toasts.sellers.deactivated', { defaultValue: 'Seller deactivated successfully' })
+      )
       queryClient.invalidateQueries({ queryKey: sellersKeys.lists() })
     },
     onError: (error) => {
