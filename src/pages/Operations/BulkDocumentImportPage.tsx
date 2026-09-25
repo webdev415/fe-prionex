@@ -48,6 +48,7 @@ export function BulkDocumentImportPage() {
   const {
     data: readiness,
     isLoading: isLoadingReadiness,
+    isError: readinessFailed,
     refetch: refetchReadiness,
   } = useDocumentImportReadiness()
   const downloadExample = useDownloadExampleArchive()
@@ -81,7 +82,15 @@ export function BulkDocumentImportPage() {
   // project's type rules are complete — the backend refuses the start
   // otherwise, and a button that looks ready is worse than one that explains.
   const rulesReady = readiness?.ready ?? false
-  const canSubmit = agreementId !== '' && uploadId !== null && rulesReady && !uploading && !starting
+  // A readiness request that failed is not an answer. Telling the operator to
+  // go and set defaults that may already be set sends them somewhere they have
+  // no reason to be — and they often cannot open that screen anyway. When the
+  // check itself is broken the page says so, leaves Start alone and lets the
+  // backend refuse with its 409, which names the folders it is actually
+  // missing. Only a readiness that came back and said "not ready" blocks here.
+  const rulesBlockStart = !readinessFailed && !rulesReady
+  const canSubmit =
+    agreementId !== '' && uploadId !== null && !rulesBlockStart && !uploading && !starting
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -240,7 +249,30 @@ export function BulkDocumentImportPage() {
           {/* No document-type picker: the project's rules type each file on
               their own. What the operator needs here is whether those rules
               are complete, and a way to reach them if they are not. */}
-          {!isLoadingReadiness && !rulesReady && (
+          {!isLoadingReadiness && readinessFailed && (
+            <div
+              role="alert"
+              className="border-error-300 bg-error-50 text-error-800 flex items-start gap-2 rounded-lg border p-3 text-sm"
+            >
+              <Icons.Warning size={18} strokeWidth={2} className="mt-0.5 shrink-0" />
+              <span className="flex-1">
+                {t(
+                  'pages.imports.documents.rulesCheckFailed',
+                  'Could not check the bulk-upload rules. The import may still work; try again to be sure.'
+                )}
+              </span>
+              <Button
+                variant="white-secondary"
+                size="sm"
+                onClick={() => void refetchReadiness()}
+                className="shrink-0"
+              >
+                {t('actions.retry', 'Retry')}
+              </Button>
+            </div>
+          )}
+
+          {!isLoadingReadiness && !readinessFailed && !rulesReady && (
             <div
               role="status"
               className="border-warning-300 bg-warning-50 text-warning-800 flex items-start gap-2 rounded-lg border p-3 text-sm"

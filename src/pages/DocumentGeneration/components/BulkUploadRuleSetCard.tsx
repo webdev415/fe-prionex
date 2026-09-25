@@ -152,11 +152,15 @@ export function BulkUploadRuleSetCard({ folder, ruleSet, documentTypes, disabled
       setDraft(null)
     } catch (err) {
       const fieldError = fieldErrorOf(err)
-      if (fieldError) {
+      // On the field, not on the object: an error the backend did not attach
+      // to an input ("Rule not found", a 500) has no place to render inline,
+      // and storing it would leave the row open saying nothing at all.
+      if (fieldError?.field) {
         setError(fieldError)
       } else {
         toast.error(
-          t('pages.documentGeneration.bulkRules.errors.saveFailed', 'Could not save the rule')
+          fieldError?.message ??
+            t('pages.documentGeneration.bulkRules.errors.saveFailed', 'Could not save the rule')
         )
       }
     }
@@ -183,9 +187,12 @@ export function BulkUploadRuleSetCard({ folder, ruleSet, documentTypes, disabled
     if (!ok) return
     try {
       await deleteMutation.mutateAsync({ folder, ruleId: rule.id })
-    } catch {
+    } catch (err) {
+      // The backend's own sentence, when it wrote one — a refused delete says
+      // why, and "Could not delete the rule" throws that away.
       toast.error(
-        t('pages.documentGeneration.bulkRules.errors.deleteFailed', 'Could not delete the rule')
+        fieldErrorOf(err)?.message ??
+          t('pages.documentGeneration.bulkRules.errors.deleteFailed', 'Could not delete the rule')
       )
     }
   }

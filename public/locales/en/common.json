@@ -4804,7 +4804,8 @@
           "startNewImport": "Start new import"
         },
         "sectionTitle": "Upload Document Archive",
-        "rulesNotReady": "Bulk upload is unavailable until a default document type is set for {{folders}} under Settings → Document Generation → Bulk Upload Rules."
+        "rulesNotReady": "Bulk upload is unavailable until a default document type is set for {{folders}} under Settings → Document Generation → Bulk Upload Rules.",
+        "rulesCheckFailed": "Could not check the bulk-upload rules. The import may still work; try again to be sure."
       },
       "title": "Import Clients",
       "viewHistory": "View History",
