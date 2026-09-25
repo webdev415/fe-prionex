@@ -137,6 +137,18 @@ export interface AssistantConversationMessage {
    * бы про реальный контракт и снова спрятал бы `.map is not a function`.
    */
   citations?: unknown
+  /**
+   * Оценка оператора на этот ответ (👍/👎 и «зрозуміло/незрозуміло») — чтобы
+   * после F5 выбранные кнопки оставались подсвеченными. `null` — оценки нет;
+   * старый бэкенд поле не шлёт. Разбирает {@link feedbackFromConversation}.
+   */
+  feedback?: AssistantMessageFeedback | null
+}
+
+/** Сохранённая оценка сообщения в истории диалога (оба поля независимы). */
+export interface AssistantMessageFeedback {
+  rating?: string | null
+  comprehension?: string | null
 }
 
 export interface AssistantConversationDetail extends AssistantConversationSummary {

@@ -79,6 +79,7 @@ import {
   type AssistantVoiceSilenceTimeout,
 } from '@/stores/aiAssistantStore'
 import type { AssistantConversationDetail, AssistantMode } from '@/features/aiAssistant/api'
+import { feedbackFromConversation, mergeFeedback } from '@/features/aiAssistant/feedbackHydration'
 import { isAxiosError } from 'axios'
 import {
   isNewConversationParam,
@@ -1560,6 +1561,10 @@ export function AiAssistantBetaPage() {
           ]
         : mapped
     )
+    // Оценки ответов из истории: после F5 выбранные 👍/👎 и «Зрозуміло» остаются
+    // подсвеченными и заблокированными, как сразу после клика.
+    const savedFeedback = feedbackFromConversation(detail)
+    setFeedbackByMessage((current) => mergeFeedback(savedFeedback, current))
     setAwaitingServerAnswer(pending)
     setIsExplicitSelection(false)
     window.setTimeout(() => scrollToConversationBottom('auto'), 0)
