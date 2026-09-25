@@ -12498,7 +12498,8 @@
       "total": "{{count}} total",
       "searchPlaceholder": "Application number or email",
       "empty": "No applications match the filter",
-      "statusCountsHint": "Status counts cover the whole section and ignore search and dates."
+      "statusCountsHint": "Status counts cover the whole section and ignore search and dates.",
+      "dateRangeNotApplied": "Date filter not applied: the start date is later than the end date. The list is shown without this range."
     },
     "loans": {
       "title": "Loans",

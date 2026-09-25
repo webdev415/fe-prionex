@@ -122,10 +122,32 @@ describe('applicationStatusCount', () => {
   })
 
   it('статус без ключа в сводке — ноль, и ноль виден', () => {
+    // `expired` объявлен сводкой (`application_statuses`), но в счётчиках его нет.
+    const declared: CreditOverview = {
+      ...OVERVIEW,
+      application_statuses: [...OVERVIEW.application_statuses, 'expired'],
+    }
     expect(
-      applicationStatusCount(OVERVIEW, 'expired'),
+      applicationStatusCount(declared, 'expired'),
       'статус без ключа в сводке остался без числа, а это ноль в проекте'
     ).toBe('0')
+  })
+
+  it('статус, которого сводка не считает, — без числа, даже если ключ есть', () => {
+    // Перечень сводки — источник правды: ключ в счётчиках без статуса в перечне
+    // не делает число правдой, а отсутствующий статус не делает правдой ноль.
+    const counted: CreditOverview = {
+      ...OVERVIEW,
+      applications: { ...OVERVIEW.applications, in_progress: 3 },
+    }
+    expect(
+      applicationStatusCount(OVERVIEW, 'contracted'),
+      'статус вне перечня сводки получил выдуманный ноль'
+    ).toBeNull()
+    expect(
+      applicationStatusCount(counted, 'in_progress'),
+      'статус вне перечня сводки получил число из счётчиков'
+    ).toBeNull()
   })
 })
 

@@ -12543,7 +12543,8 @@
       "total": "{{count}} en total",
       "searchPlaceholder": "Número de solicitud o correo electrónico",
       "empty": "Ninguna solicitud coincide con el filtro",
-      "statusCountsHint": "Los contadores de estado abarcan toda la sección y no tienen en cuenta la búsqueda ni las fechas."
+      "statusCountsHint": "Los contadores de estado abarcan toda la sección y no tienen en cuenta la búsqueda ni las fechas.",
+      "dateRangeNotApplied": "Filtro de fechas no aplicado: la fecha inicial es posterior a la final. La lista se muestra sin este rango."
     },
     "loans": {
       "title": "Créditos",
