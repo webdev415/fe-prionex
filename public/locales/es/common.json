@@ -11462,6 +11462,16 @@
         "systemMigrated": "sistema (migrado)",
         "viewAll": "Ver todos ({{count}})",
         "deleteMessage": "¿Seguro que desea eliminar este comentario? Esta acción no se puede deshacer."
+      },
+      "commentPhones": {
+        "copied": "Número de teléfono copiado",
+        "copyFailed": "No se pudo copiar el número",
+        "copyPhone": "Copiar teléfono",
+        "lastCall": "Última llamada",
+        "never": "Nunca",
+        "notContact": "No es un contacto",
+        "panelAria": "Acciones del número de teléfono",
+        "savedContact": "Contacto guardado"
       }
     },
     "contactTags": {
