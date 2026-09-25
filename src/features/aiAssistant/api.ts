@@ -136,13 +136,31 @@ export interface AssistantConversationMessage {
   citations?: unknown
   /**
    * Оценка оператора на этот ответ (👍/👎 и «зрозуміло/незрозуміло») — чтобы
-   * после F5 выбранные кнопки оставались подсвеченными. `null` — оценки нет;
-   * старый бэкенд поле не шлёт. Разбирает {@link feedbackFromConversation}.
+   * после F5 и при возврате к диалогу выбранные кнопки оставались подсвеченными
+   * и заблокированными.
+   *
+   * Контракт `GET /conversations/{id}` (api-prionex,
+   * `services/ai-assistant/app/schemas/conversation.py`: `MessageItem.feedback:
+   * Optional[MessageFeedbackItem]`, `MessageFeedbackItem { rating: Optional[str],
+   * comprehension: Optional[str] }`): у КАЖДОГО сообщения поле есть —
+   * `{rating, comprehension}` (каждое `string | null`, пара та же, что
+   * принимает `POST /feedback`) либо `null`, если оценки нет. Отсутствие поля —
+   * старый бэкенд. Значения сервер хранит строкой без enum, поэтому клиент
+   * разбирает их терпимо ({@link feedbackFromConversation}): незнакомое, но
+   * присутствующее значение БЛОКИРУЕТ пару (оценка на сервере есть — клик не
+   * должен её затереть), а не-объект (массив, строка) считается «оценки нет».
+   *
+   * Парная сторона — `POST /feedback`: пропущенное поле сервер оставляет как
+   * было, явный `null` стирает. Страница `null` не шлёт.
    */
   feedback?: AssistantMessageFeedback | null
 }
 
-/** Сохранённая оценка сообщения в истории диалога (оба поля независимы). */
+/**
+ * Сохранённая оценка сообщения в истории диалога (оба поля независимы) —
+ * зеркало `MessageFeedbackItem` бэкенда. `string`, а не union: сервер enum не
+ * навязывает, сужает клиент.
+ */
 export interface AssistantMessageFeedback {
   rating?: string | null
   comprehension?: string | null

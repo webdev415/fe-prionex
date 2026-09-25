@@ -11,6 +11,7 @@ import {
   sendFeedback,
   updateConversation,
   type AssistantChatRequest,
+  type AssistantConversationDetail,
   type AssistantConversationPatch,
   type AssistantConversationsFilters,
   type AssistantConversationSummary,
@@ -22,6 +23,7 @@ import {
   type CreateAssistantMemoryRequest,
   type SendChatMessageCallbacks,
 } from './api'
+import { withSavedFeedback } from './feedbackHydration'
 import { EXPERT_CAPABILITY_OFF } from './api'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -31,6 +33,8 @@ export const aiAssistantKeys = {
   conversationLists: ['aiAssistant', 'conversations'] as const,
   conversations: (filters: AssistantConversationsFilters) =>
     [...aiAssistantKeys.all, 'conversations', filters] as const,
+  /** Prefix matching every single-conversation (detail) query. */
+  conversationDetails: ['aiAssistant', 'conversation'] as const,
   conversation: (id: number) => [...aiAssistantKeys.all, 'conversation', id] as const,
   /** Персональная память сотрудника («Персоналізація»). */
   memory: ['aiAssistant', 'memory'] as const,
@@ -167,9 +171,23 @@ export function useUpdateAssistantConversation() {
   })
 }
 
+/**
+ * POST оценки ответа. После успеха оценка вписывается в закэшированный снимок
+ * диалога: возврат к нему в той же сессии гидратирует кнопки из кэша
+ * (`staleTime` 30 с), и снимок, снятый до клика, показал бы ответ неоценённым —
+ * следующий клик ушёл бы как новая оценка. Оптимистичную подсветку и откат при
+ * ошибке держит вызывающий компонент.
+ */
 export function useSendFeedback() {
+  const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (payload: AssistantFeedbackRequest) => sendFeedback(payload),
+    onSuccess: (_data, payload) => {
+      queryClient.setQueriesData<AssistantConversationDetail>(
+        { queryKey: aiAssistantKeys.conversationDetails },
+        (detail) => withSavedFeedback(detail, payload)
+      )
+    },
   })
 }
 
