@@ -12497,7 +12497,9 @@
       "title": "Credit applications",
       "total": "{{count}} total",
       "searchPlaceholder": "Application number or email",
-      "empty": "No applications match the filter"
+      "empty": "No applications match the filter",
+      "statusCountsHint": "Status counts cover the whole section and ignore search and dates.",
+      "dateRangeNotApplied": "Date filter not applied: the start date is later than the end date. The list is shown without this range."
     },
     "loans": {
       "title": "Loans",
@@ -12892,7 +12894,13 @@
     "filters": {
       "dpdFrom": "Days past due",
       "any": "Any",
-      "anyBucket": "Any bucket"
+      "anyBucket": "Any bucket",
+      "createdFrom": "Created from",
+      "createdTo": "Created to",
+      "updatedFrom": "Last activity from",
+      "updatedTo": "Last activity to",
+      "calendarHint": "Day boundaries follow the calendar of the application's province (Alberta — Edmonton time), not your local time. The Created and Last activity columns show your local time.",
+      "rangeInverted": "The start date is later than the end date — this range is not applied."
     },
     "unavailable": {
       "title": "The credit module is not deployed on this stand",
