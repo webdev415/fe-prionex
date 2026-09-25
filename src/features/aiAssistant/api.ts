@@ -53,6 +53,16 @@ export interface AssistantChatRequest {
    */
   deep_research?: boolean
   /**
+   * Раздумья 31B: `true` — «думающий» ход рассуждает вслух, `false` — отвечает
+   * сразу, без хода рассуждения (быстрее). Поле уходит ТОЛЬКО у thinking-хода;
+   * fast и экспертный запросы остаются байт-в-байт прежними. Forward-compatible,
+   * как и `deep_research` выше: у ChatRequest `extra="ignore"` (не `forbid`),
+   * поэтому прокси, ещё не знающий поля, его МОЛЧА игнорирует и отвечает 200 — а
+   * не 422. «Сервер не применил мой флаг» видно по `done.thinking_used`, не по
+   * отказу; повтора запроса нет.
+   */
+  thinking?: boolean
+  /**
    * Images (screenshot paste), documents (pdf/xlsx/xls/csv) and/or one voice
    * note; at most {@link MAX_ATTACHMENTS} in total.
    */
@@ -127,6 +137,36 @@ export interface AssistantConversationMessage {
    * бы про реальный контракт и снова спрятал бы `.map is not a function`.
    */
   citations?: unknown
+  /**
+   * Оценка оператора на этот ответ (👍/👎 и «зрозуміло/незрозуміло») — чтобы
+   * после F5 и при возврате к диалогу выбранные кнопки оставались подсвеченными
+   * и заблокированными.
+   *
+   * Контракт `GET /conversations/{id}` (api-prionex,
+   * `services/ai-assistant/app/schemas/conversation.py`: `MessageItem.feedback:
+   * Optional[MessageFeedbackItem]`, `MessageFeedbackItem { rating: Optional[str],
+   * comprehension: Optional[str] }`): у КАЖДОГО сообщения поле есть —
+   * `{rating, comprehension}` (каждое `string | null`, пара та же, что
+   * принимает `POST /feedback`) либо `null`, если оценки нет. Отсутствие поля —
+   * старый бэкенд. Значения сервер хранит строкой без enum, поэтому клиент
+   * разбирает их терпимо ({@link feedbackFromConversation}): незнакомое, но
+   * присутствующее значение БЛОКИРУЕТ пару (оценка на сервере есть — клик не
+   * должен её затереть), а не-объект (массив, строка) считается «оценки нет».
+   *
+   * Парная сторона — `POST /feedback`: пропущенное поле сервер оставляет как
+   * было, явный `null` стирает. Страница `null` не шлёт.
+   */
+  feedback?: AssistantMessageFeedback | null
+}
+
+/**
+ * Сохранённая оценка сообщения в истории диалога (оба поля независимы) —
+ * зеркало `MessageFeedbackItem` бэкенда. `string`, а не union: сервер enum не
+ * навязывает, сужает клиент.
+ */
+export interface AssistantMessageFeedback {
+  rating?: string | null
+  comprehension?: string | null
 }
 
 export interface AssistantConversationDetail extends AssistantConversationSummary {
@@ -233,7 +273,10 @@ export const ATTACHMENTS_TOTAL_TOO_LARGE = 'attachments_total_too_large'
  *   ({@link ATTACHMENTS_TOTAL_TOO_LARGE}). Its `message` is already written for
  *   the operator, so it is shown as it stands.
  */
-export function extractErrorDetail(body: unknown): { message?: string; code?: string } {
+export function extractErrorDetail(body: unknown): {
+  message?: string
+  code?: string
+} {
   if (!body || typeof body !== 'object') return {}
   const raw = (body as { detail?: unknown }).detail
   const detail = raw ?? (body as { message?: unknown }).message
@@ -251,7 +294,9 @@ export function extractErrorDetail(body: unknown): { message?: string; code?: st
 
   if (Array.isArray(detail)) {
     const parts = detail.map(readItem).filter((part): part is string => Boolean(part))
-    return { message: parts.length > 0 ? parts.join('; ') : undefined }
+    return {
+      message: parts.length > 0 ? parts.join('; ') : undefined,
+    }
   }
 
   return {

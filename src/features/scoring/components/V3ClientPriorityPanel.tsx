@@ -7,7 +7,9 @@
  * the existing client view.
  */
 
+import { useTranslation } from 'react-i18next'
 import { V3BucketBadge } from '@/pages/OperatorWorkList/components/V3BucketBadge'
+import { uiDecimal } from '@/lib/formatters'
 import { exitReasonLabel } from '@/features/scoring/lib/exitReason'
 import {
   currentMonthStart,
@@ -32,6 +34,7 @@ export function V3ClientPriorityPanel({
   /** Ties the panel to the chip's ``aria-controls``. */
   id?: string
 }) {
+  const { t } = useTranslation('common')
   const v3UiEnabled = useV3UiEnabled()
   // The query stays enabled while collapsed: the chip above is driven by the
   // same scores, so the data is wanted either way, and fetching only on expand
@@ -53,34 +56,39 @@ export function V3ClientPriorityPanel({
   if (rows.length === 0) {
     return (
       <div id={id} className="border-border bg-card rounded-xl border border-dashed p-4">
-        <h3 className="text-foreground mb-1 text-sm font-semibold">v3 Priority</h3>
-        <p className="text-muted-foreground text-xs">
-          Not scored — this client&apos;s debts are outside the scoring model&apos;s range, so v3
-          gives them no priority.
-        </p>
+        <h3 className="text-foreground mb-1 text-sm font-semibold">
+          {t('pages.scoringV3.panel.title')}
+        </h3>
+        <p className="text-muted-foreground text-xs">{t('pages.scoringV3.panel.notScored')}</p>
       </div>
     )
   }
 
   return (
     <div id={id} className="border-border bg-card rounded-xl border p-4">
-      <h3 className="text-foreground mb-3 text-sm font-semibold">v3 Priority</h3>
+      <h3 className="text-foreground mb-3 text-sm font-semibold">
+        {t('pages.scoringV3.panel.title')}
+      </h3>
       <div className="flex flex-col gap-2">
         {rows.map((r) => (
           <div key={r.debt_id} className="flex flex-wrap items-center gap-3 text-xs">
             <V3BucketBadge bucket={r.bucket_v3} />
-            <span className="text-muted-foreground">Debt {r.debt_id}</span>
+            <span className="text-muted-foreground">
+              {t('pages.scoringV3.panel.debt', { id: r.debt_id })}
+            </span>
             {/* The pay-chance is shown for EXIT debts too. An operator told only
                 "do not call" on a debt that is plainly owed will assume the
                 system is wrong; seeing the score AND the ground makes the
                 exclusion something they can act on rather than argue with. */}
             {r.hazard != null && (
               <span className="text-muted-foreground">
-                {(r.hazard * 100).toFixed(1)}% pay chance
+                {t('pages.scoringV3.panel.payChance', {
+                  value: uiDecimal((r.hazard * 100).toFixed(1)),
+                })}
               </span>
             )}
             <span className="text-muted-foreground ml-auto">
-              Why:{' '}
+              {t('pages.scoringV3.panel.why')}{' '}
               <span className="text-foreground">
                 {r.bucket_v3 === 'EXIT' ? exitReasonLabel(r.exit_reason) : (r.rule_fired ?? '—')}
               </span>

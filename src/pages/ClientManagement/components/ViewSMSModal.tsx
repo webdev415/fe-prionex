@@ -5,6 +5,7 @@
  */
 
 import { useTranslation } from 'react-i18next'
+import { dateSeparator } from '@/lib/formatters'
 import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
@@ -50,7 +51,8 @@ const formatDateTime = (
     }).formatToParts(date)
 
     const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '00'
-    return `${get('day')}-${get('month')}-${get('year')} ${get('hour')}:${get('minute')}:${get('second')}`
+    const sep = dateSeparator()
+    return `${get('day')}${sep}${get('month')}${sep}${get('year')} ${get('hour')}:${get('minute')}:${get('second')}`
   } catch (error) {
     console.error('Error formatting datetime:', error, utcDateTimeStr)
     return utcDateTimeStr

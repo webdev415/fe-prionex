@@ -3,6 +3,8 @@
  * chart/table panels so the layout does not jump when data arrives.
  */
 
+import { useTranslation } from 'react-i18next'
+
 function Pulse({ className }: { className?: string }) {
   return <div className={`bg-muted rounded ${className ?? ''}`} />
 }
@@ -58,6 +60,7 @@ function PanelSkeleton({
 }
 
 export function ScoringV3MonitoringPageSkeleton() {
+  const { t } = useTranslation('common')
   return (
     <div
       className="flex w-full min-w-0 animate-pulse flex-col gap-4"
@@ -65,7 +68,7 @@ export function ScoringV3MonitoringPageSkeleton() {
       aria-live="polite"
       role="status"
     >
-      <span className="sr-only">Loading shadow-run report…</span>
+      <span className="sr-only">{t('pages.scoringV3.monitoring.loading')}</span>
 
       <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatTileSkeleton />

@@ -1,10 +1,11 @@
 /**
  * Deep-link на диалог: ?conversation=<id> открывает диалог по ссылке и
  * адресная строка всегда отражает активный диалог (см. conversationUrl.ts).
+ * Здесь же — маркер ?conversation=new: явный «чистый лист» в адресе.
  * Харнес — как в AiAssistantBetaPage.hydration.test.tsx.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
@@ -12,7 +13,10 @@ import { AiAssistantBetaPage } from '../AiAssistantBetaPage'
 import { DEFAULT_ASSISTANT_SETTINGS, useAiAssistantStore } from '@/stores/aiAssistantStore'
 import { useAuthStore } from '@/stores/authStore'
 import type { User } from '@/types/api'
-import type { AssistantConversationDetail } from '@/features/aiAssistant/api'
+import type {
+  AssistantConversationDetail,
+  AssistantConversationSummary,
+} from '@/features/aiAssistant/api'
 
 vi.mock('@/features/aiAssistant/api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/features/aiAssistant/api')>()
@@ -25,9 +29,24 @@ vi.mock('@/features/aiAssistant/api', async (importOriginal) => {
   }
 })
 
-import { getConversation } from '@/features/aiAssistant/api'
+import { getConversation, getConversations, sendChatMessage } from '@/features/aiAssistant/api'
 
 const mockedGetConversation = vi.mocked(getConversation)
+const mockedGetConversations = vi.mocked(getConversations)
+const mockedSendChatMessage = vi.mocked(sendChatMessage)
+
+const conversationSummary = (id: number): AssistantConversationSummary => ({
+  id,
+  user_id: 7,
+  project_id: 1,
+  channel: 'web',
+  status: 'active',
+  title: null,
+  pinned: false,
+  archived: false,
+  created_at: '2026-08-31T10:00:00Z',
+  last_message_at: '2026-08-31T10:01:00Z',
+})
 
 const conversationDetail = (id: number): AssistantConversationDetail => ({
   id,
@@ -123,7 +142,7 @@ describe('AiAssistantBetaPage: deep-link ?conversation=', () => {
     })
   })
 
-  it('«Новий чат» убирает параметр из адреса', async () => {
+  it('«Новий чат» ставит в адрес маркер нового диалога', async () => {
     useAiAssistantStore.getState().setActiveConversation('7', 42)
     mockedGetConversation.mockResolvedValue(conversationDetail(42))
 
@@ -135,9 +154,12 @@ describe('AiAssistantBetaPage: deep-link ?conversation=', () => {
     const newChatButtons = screen.getAllByText('pages.aiAssistant.historyNewChat')
     await userEvent.click(newChatButtons[0])
 
+    // Маркер, а не пустой адрес: нажатие обязано быть видно в адресной строке
+    // и при входе без параметра.
     await waitFor(() => {
-      expect(window.location.search).not.toContain('conversation')
+      expect(window.location.search).toContain('conversation=new')
     })
+    expect(useAiAssistantStore.getState().conversationIdFor('7')).toBeNull()
   })
 
   it('мусорный параметр игнорируется — страница открывается как обычно', async () => {
@@ -147,6 +169,84 @@ describe('AiAssistantBetaPage: deep-link ?conversation=', () => {
 
     await waitFor(() => {
       expect(mockedGetConversation).not.toHaveBeenCalled()
+    })
+  })
+})
+
+describe('AiAssistantBetaPage: маркер ?conversation=new', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    localStorage.clear()
+    Element.prototype.scrollIntoView = vi.fn()
+    window.history.replaceState(null, '', '/dashboard/ai-assistant')
+    useAiAssistantStore.setState({ userId: null, conversationId: null, settings: null })
+    useAuthStore.setState({ user: { id: '7' } as unknown as User, isAuthenticated: true })
+    mockedGetConversations.mockResolvedValue([])
+    mockedGetConversation.mockResolvedValue(conversationDetail(55))
+  })
+
+  it('не гидратирует сохранённый диалог даже при включённом «помнить контекст»', async () => {
+    window.history.replaceState(null, '', '/dashboard/ai-assistant?conversation=new')
+    useAiAssistantStore.getState().setActiveConversation('7', 55)
+    useAiAssistantStore.getState().saveSettings('7', {
+      ...DEFAULT_ASSISTANT_SETTINGS,
+      rememberConversationContext: true,
+    })
+
+    renderPage()
+
+    // Указатель гасится, запроса диалога нет. Ждём не «отсутствия события», а
+    // наблюдаемого следствия — снятого указателя; запрос к тому моменту уже
+    // ушёл бы (он стартует в том же коммите, что и монтирование).
+    await waitFor(() => {
+      expect(useAiAssistantStore.getState().conversationIdFor('7')).toBeNull()
+    })
+    expect(mockedGetConversation).not.toHaveBeenCalled()
+    // Маркер держится в адресе — до первой отправки диалога ещё нет.
+    expect(window.location.search).toContain('conversation=new')
+  })
+
+  it('после первой отправки адрес получает id созданного диалога', async () => {
+    window.history.replaceState(null, '', '/dashboard/ai-assistant?conversation=new')
+    mockedSendChatMessage.mockResolvedValue({
+      conversation_id: 101,
+      message_id: 5,
+      response: 'Готово',
+      coverage_flag: null,
+      tool_calls: [],
+    })
+
+    renderPage()
+
+    const textarea = screen.getByLabelText(
+      'pages.aiAssistant.inputPlaceholder'
+    ) as HTMLTextAreaElement
+    fireEvent.change(textarea, { target: { value: 'привіт' } })
+    fireEvent.keyDown(textarea, { key: 'Enter' })
+
+    await waitFor(() => expect(mockedSendChatMessage).toHaveBeenCalledTimes(1))
+    await waitFor(() => {
+      expect(window.location.search).toContain('conversation=101')
+    })
+    expect(window.location.search).not.toContain('conversation=new')
+  })
+
+  it('не мешает выбрать диалог в истории в том же монтировании', async () => {
+    window.history.replaceState(null, '', '/dashboard/ai-assistant?conversation=new')
+    useAiAssistantStore.getState().setActiveConversation('7', 55)
+    mockedGetConversations.mockResolvedValue([conversationSummary(42)])
+    mockedGetConversation.mockResolvedValue(conversationDetail(42))
+
+    renderPage()
+
+    // Гейт маркера одноразовый: он гасит стартовую гидратацию, но клик по
+    // истории после этого обязан открывать диалог как обычно.
+    fireEvent.click(await screen.findByTestId('conversation-item-42'))
+
+    expect(await screen.findByText('На сьогодні 375 домовленостей.')).toBeInTheDocument()
+    expect(mockedGetConversation).toHaveBeenCalledWith(42)
+    await waitFor(() => {
+      expect(window.location.search).toContain('conversation=42')
     })
   })
 })

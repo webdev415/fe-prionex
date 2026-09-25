@@ -223,7 +223,7 @@ export function TAChainForm({ formId, initial, onSuccess }: TAChainFormProps) {
                         {departmentNameById.get(id) ?? `#${id}`}
                         <button
                           type="button"
-                          aria-label="remove"
+                          aria-label={t('actions.remove')}
                           onClick={(ev) => {
                             ev.stopPropagation()
                             toggleDepartment(id)

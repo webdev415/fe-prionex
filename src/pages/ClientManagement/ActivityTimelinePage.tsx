@@ -31,7 +31,7 @@ import { CallDialogModal, type CallType, type CallStatus } from './components/Ca
 import { DoubleButton } from '@/components/ui/DoubleButton'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
 import { ActivityTimelinePageSkeleton } from './components/ActivityTimelinePageSkeleton'
-import { formatClientFullName, formatDate, formatDateTime } from '@/lib/formatters'
+import { formatClientFullName, formatDate, formatDateTime, withCurrency } from '@/lib/formatters'
 import { getDateStringInTimezone } from '@/lib/dateUtils'
 import { useCallStore } from '@/stores/callStore'
 import {
@@ -312,7 +312,9 @@ export function ActivityTimelinePage() {
       align: 'right',
       className: 'w-[140px] overflow-hidden whitespace-normal break-words',
       render: (activity) =>
-        activity.promisedAmount ? `${formatCurrencyWithDecimals(activity.promisedAmount)}₴` : '-',
+        activity.promisedAmount
+          ? withCurrency(formatCurrencyWithDecimals(activity.promisedAmount), 'suffix')
+          : '-',
     },
     {
       key: 'promisedDate',
@@ -439,6 +441,7 @@ export function ActivityTimelinePage() {
           <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
             <CallingWindowTooltip
               message={callingWindow.allowed ? null : callingWindow.message}
+              onBlockedAttempt={callingWindow.reportBlocked}
               className="w-full md:w-auto"
             >
               <Button

@@ -6,6 +6,10 @@
  * - Default roles: name/description are read-only (backend prevents changes)
  * - Custom roles: name/description are editable
  * - Permissions: always editable (no backend restriction)
+ * - HUB chat role (KAN-1476): shown only while the catalogue is enabled; read
+ *   only for default roles and for a value the caller may not grant (see
+ *   hubRoleLock); sent only when somebody changed it to a value the current
+ *   catalogue offers (see effectiveHubRoleValue and buildRolePayload.ts)
  */
 
 import { useState, useMemo, useEffect } from 'react'
@@ -15,6 +19,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useUpdateRole } from '../hooks/useRoleMutations'
 import { usePermissions } from '../hooks/useRoleMutations'
+import { useHubRoles } from '../hooks/useHubRoles'
 import { useDepartments } from '@/features/departments'
 import { Label } from '@/components/ui/Label'
 import { Input } from '@/components/ui/Input'
@@ -23,6 +28,10 @@ import { Alert } from '@/components/ui/Alert'
 import { Checkbox } from '@/components/ui/Checkbox'
 import type { RoleDetailResponse } from '../types'
 import { ACCESS_LEVEL_OPTIONS, DEFAULT_ACCESS_LEVEL, isTabAccessPermission } from '../accessLevels'
+import { effectiveHubRoleValue, hubRoleLock, isStaleHubCatalogueRefusal } from '../hubRoles'
+import { hubRoleUpdatePatch } from '../buildRolePayload'
+import { HubRoleSelect } from './HubRoleSelect'
+import { getErrorMessage } from '@/lib/errors'
 
 interface EditRoleFormProps {
   role: RoleDetailResponse
@@ -33,10 +42,10 @@ interface EditRoleFormProps {
 
 // Schema for editing roles - always use full schema, disable fields for default roles
 const editRoleSchema = z.object({
-  name: z.string().min(1, 'Role name is required'),
+  name: z.string().min(1, 'pages.roles.validation.nameRequired'),
   description: z.string().optional(),
   department_id: z.number().nullable().optional(),
-  permission_ids: z.array(z.number()).min(1, 'Please select at least one permission'),
+  permission_ids: z.array(z.number()).min(1, 'pages.roles.validation.permissionsRequired'),
 })
 
 // Combined type for form data
@@ -55,6 +64,25 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
   const [accessLevels, setAccessLevels] = useState<Record<number, string>>({})
 
   const isDefaultRole = role.is_default
+
+  // KAN-1476: HUB chat role; '' is "not set". The select shows the stored
+  // value until somebody picks one, and only a pick is ever sent. The stored
+  // value is read from `role` on every render, never copied at mount:
+  // EditRoleModal renders the cached detail first and its background refetch
+  // hands this form a new `role`. A copy would send the old value back with a
+  // save of permissions only, as if somebody had chosen it. The pick, in
+  // turn, holds only while the current catalogue offers it as assignable -
+  // otherwise the select shows, and the save sends, the stored value again.
+  const hubCatalog = useHubRoles(role.project_id)
+  const storedHubRole = role.hub_role ?? null
+  const [hubRolePick, setHubRolePick] = useState<string | null>(null)
+  const hubLock = hubRoleLock(hubCatalog.options, storedHubRole, isDefaultRole)
+  const hubRole = effectiveHubRoleValue({
+    options: hubCatalog.options,
+    stored: storedHubRole,
+    pick: hubRolePick,
+    lock: hubLock,
+  })
 
   // Initialize selected permissions from role
   const initialPermissions = useMemo(
@@ -150,9 +178,17 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
       name?: string
       description?: string
       department_id?: number | null
+      hub_role?: string | null
     } = {
       permission_ids: selectedPermissions,
       access_levels,
+      ...hubRoleUpdatePatch({
+        status: hubCatalog.status,
+        lock: hubLock,
+        stored: storedHubRole,
+        selected: hubRole,
+        options: hubCatalog.options,
+      }),
     }
 
     // Only include name/description/department for custom roles (backend allows this)
@@ -171,6 +207,12 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
       {
         onSuccess: () => {
           onSuccess()
+        },
+        onError: (error) => {
+          // The backend refused the HUB chat role itself: drop the pick, so the
+          // select shows the stored value a retry leaves alone, and the
+          // refusal stays said in words below.
+          if (isStaleHubCatalogueRefusal(error)) setHubRolePick(null)
         },
       }
     )
@@ -205,7 +247,7 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
             />
             {errors.name && (
               <p className="text-error-500 mt-1 text-sm">
-                {(errors.name as { message?: string })?.message}
+                {t((errors.name as { message?: string })?.message ?? '')}
               </p>
             )}
           </>
@@ -236,7 +278,9 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
         <div>
           <Label htmlFor="department_id">
             {t('pages.roles.forms.department')}
-            <span className="text-muted-foreground ml-1 text-sm font-light">(Optional)</span>
+            <span className="text-muted-foreground ml-1 text-sm font-light">
+              {t('pages.roles.forms.optional')}
+            </span>
           </Label>
           <select
             id="department_id"
@@ -269,12 +313,25 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
         </div>
       )}
 
+      {/* HUB chat role (KAN-1476) - only while the catalogue offers it */}
+      <HubRoleSelect
+        catalog={hubCatalog}
+        value={hubRole}
+        onChange={setHubRolePick}
+        stored={storedHubRole}
+        lock={hubLock}
+        disabled={updateMutation.isPending}
+      />
+
       {/* Permissions Section (Always Editable - No Backend Restriction) */}
       <div>
         <Label>
           {t('pages.roles.forms.permissions')}
           <span className="text-muted-foreground ml-2 text-sm font-light">
-            (Selected: {selectedPermissions.length} of {permissions.length} permissions)
+            {t('pages.roles.forms.selectedPermissions', {
+              selected: selectedPermissions.length,
+              total: permissions.length,
+            })}
           </span>
         </Label>
 
@@ -346,7 +403,7 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
           )}
         </div>
         {errors.permission_ids && (
-          <p className="text-error-500 mt-1 text-sm">{errors.permission_ids.message}</p>
+          <p className="text-error-500 mt-1 text-sm">{t(errors.permission_ids.message ?? '')}</p>
         )}
       </div>
 
@@ -354,7 +411,9 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
       {updateMutation.isError && (
         <Alert variant="error">
           <p className="text-sm">
-            {updateMutation.error?.message || 'Failed to update role. Please try again.'}
+            {updateMutation.error
+              ? getErrorMessage(updateMutation.error)
+              : t('pages.roles.forms.errors.failedToUpdate')}
           </p>
         </Alert>
       )}

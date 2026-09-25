@@ -4,9 +4,12 @@ import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth'
 import { useV3UiEnabled } from '@/features/scoring/hooks/useV3Scores'
 import { useAuthStore } from '@/stores/authStore'
+import { useUbkiAvailable } from '@/features/ubki/hooks/useUbkiAvailable'
 import { useSidebarStore } from '@/stores/sidebarStore'
 import { useSearchStore } from '@/stores/searchStore'
 import { usePermissionRefresh } from '@/hooks'
+import { useProjectCountry } from '@/hooks/useProjectCountry'
+import { useSmsServiceAvailable } from '@/features/sms'
 import { ImpersonationBanner } from '@/features/auth/components/ImpersonationBanner'
 import { LogoutConfirmationModal } from './LogoutConfirmationModal'
 import { Sidebar, type SidebarItem, type SidebarSubItem } from './Sidebar'
@@ -22,6 +25,7 @@ import { useHasPermission, useHasAnyPermission } from '@/hooks/usePermissions'
 import { useCreditSectionEnabled } from '@/features/credit/hooks/useCredit'
 import { SearchResults, type SearchResult } from '@/components/ui/SearchResults'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { NEW_CONVERSATION_QUERY } from '@/pages/AiAssistant/conversationUrl'
 import {
   isOnexDockSoloSurface,
   shouldStripDashboardChrome,
@@ -74,13 +78,19 @@ export function AiAssistantHeaderButton() {
   const location = useLocation()
   const { t } = useTranslation('common')
   const canUseAssistant = useHasPermission(PERMISSIONS.AI_ASSISTANT.USE)
+  const assistantSpeaksTheProjectLanguage = useProjectCountry() === 'UA'
   const { data: aiSettings } = useAiAssistantSettings()
+  // Активность пункта — по pathname: маркер живёт в query и подсветку не трогает.
   const isActive = location.pathname === '/dashboard/ai-assistant'
 
   // Entitlement + kill-switch: hide for users without use_ai_assistant and
   // for everyone while the global switch is off. Fail-open: while settings
   // are loading/unavailable the button stays (backend still enforces).
-  if (!canUseAssistant || aiSettings?.assistant_enabled === false) {
+  if (
+    !canUseAssistant ||
+    !assistantSpeaksTheProjectLanguage ||
+    aiSettings?.assistant_enabled === false
+  ) {
     return null
   }
 
@@ -88,7 +98,10 @@ export function AiAssistantHeaderButton() {
     <button
       type="button"
       aria-label={t('pages.aiAssistant.headerButtonAria')}
-      onClick={() => navigate('/dashboard/ai-assistant')}
+      // Вход из шапки — всегда чистый лист (`?conversation=new`). Без маркера
+      // при включённом «помнить контекст» кнопка возвращала бы последний диалог,
+      // а не открывала новый — см. pages/AiAssistant/conversationUrl.ts.
+      onClick={() => navigate(`/dashboard/ai-assistant?${NEW_CONVERSATION_QUERY}`)}
       className={cn(
         'hover:bg-muted relative flex h-9 w-9 items-center justify-center rounded-full transition-colors focus:outline-none',
         isActive && 'bg-muted'
@@ -357,7 +370,7 @@ function MobileHeaderMenu({ onLogoutClick }: { onLogoutClick?: () => void }) {
           <button
             type="button"
             className="bg-secondary-800 flex h-10 w-10 cursor-pointer items-center justify-center rounded-md text-white transition-colors hover:opacity-90 focus:outline-none lg:hidden"
-            aria-label="Menu"
+            aria-label={t('navigation.menu', 'Menu')}
           >
             <Icons.User02 size={20} strokeWidth={1.5} className="text-primary-500" />
           </button>
@@ -750,6 +763,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   ]
 
   const user = useAuthStore((state) => state.user)
+  const ubkiAvailable = useUbkiAvailable()
+  const smsServiceAvailable = useSmsServiceAvailable()
 
   const canViewLegalWorkplace = useMemo(
     () =>
@@ -1034,14 +1049,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             ],
             mode: 'any' as const,
           },
-          {
-            // TODO(ubki): swap to a dedicated manage_integrations permission
-            // once it exists (reusing messaging integrations for now).
-            path: '/dashboard/system-settings/integrations/ubki',
-            label: t('navigation.ubkiIntegration', 'UBKI Integration'),
-            icon: 'briefcase-01',
-            requiredPermission: PERMISSIONS.MESSAGING.MANAGE_INTEGRATIONS,
-          },
+          ...(ubkiAvailable
+            ? [
+                {
+                  // TODO(ubki): swap to a dedicated manage_integrations permission
+                  // once it exists (reusing messaging integrations for now).
+                  path: '/dashboard/system-settings/integrations/ubki',
+                  label: t('navigation.ubkiIntegration', 'UBKI Integration'),
+                  icon: 'briefcase-01',
+                  requiredPermission: PERMISSIONS.MESSAGING.MANAGE_INTEGRATIONS,
+                },
+              ]
+            : []),
           {
             path: '/dashboard/system-settings/tags',
             label: t('navigation.tags', 'Tags'),
@@ -1103,12 +1122,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             icon: 'chart-01',
             requiredPermission: PERMISSIONS.REPAYMENT_CONFIG.VIEW,
           },
-          {
-            path: '/dashboard/system-settings/sms-templates',
-            label: t('navigation.smsTemplates'),
-            icon: 'mail-send-01',
-            requiredPermission: PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
-          },
+          ...(smsServiceAvailable
+            ? [
+                {
+                  path: '/dashboard/system-settings/sms-templates',
+                  label: t('navigation.smsTemplates'),
+                  icon: 'mail-send-01',
+                  requiredPermission: PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+                },
+              ]
+            : []),
           {
             path: '/dashboard/system-settings/target-actions',
             label: t('navigation.taManagement', 'Target Actions'),
@@ -1217,6 +1240,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     i18n.language,
     legalUnprocessedCount,
     v3UiEnabled,
+    ubkiAvailable,
+    smsServiceAvailable,
     creditSectionEnabled,
   ])
 
@@ -1302,7 +1327,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     'focus:ring-primary-500 focus:ring-offset-background group border-border bg-card hover:bg-muted active:bg-muted flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border shadow-sm transition-all duration-200 hover:border-gray-300 hover:shadow-md focus:ring-2 focus:ring-offset-2 focus:outline-none active:shadow-sm disabled:cursor-not-allowed disabled:opacity-50 xl:hidden',
                     isLawyerWorkplaceRoute && 'self-center'
                   )}
-                  aria-label="Toggle menu"
+                  aria-label={t('navigation.toggleMenu', 'Toggle menu')}
                 >
                   <Icons.Menu11
                     size={20}

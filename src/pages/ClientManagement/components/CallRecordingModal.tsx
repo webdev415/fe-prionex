@@ -163,7 +163,7 @@ export const CallRecordingModal = forwardRef<CallRecordingModalHandle, CallRecor
         <button
           onClick={handleMinimize}
           className="hover:bg-muted absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-md transition-colors sm:top-4 sm:right-12"
-          aria-label="Minimize modal"
+          aria-label={t('components.modal.minimize', 'Minimize modal')}
         >
           <Icons.Remove02 size={20} className="text-foreground" strokeWidth={1.5} />
         </button>

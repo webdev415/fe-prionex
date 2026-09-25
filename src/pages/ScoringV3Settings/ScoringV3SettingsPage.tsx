@@ -24,6 +24,7 @@
  */
 
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { PermissionGuard } from '@/components/auth'
@@ -35,137 +36,60 @@ import {
   useV3Settings,
 } from '@/features/scoring/hooks/useV3Scores'
 import type { TauCapacityPoint, V3Settings } from '@/features/scoring/api/types'
+import { uiDecimal, uiLocale } from '@/lib/formatters'
 import { ScoringV3SettingsPageSkeleton } from './ScoringV3SettingsPageSkeleton'
 
 type FieldSpec = {
   key: keyof V3Settings
-  label: string
-  unit?: string
-  hint: string
   /** Computed by the model from another field — shown, never edited. */
   derived?: boolean
   step?: number
   min?: number
   max?: number
   nullable?: boolean
-  nullLabel?: string
 }
 
-const SECTIONS: { title: string; blurb: string; fields: FieldSpec[] }[] = [
+const SECTIONS: { id: 'promise' | 'contact' | 'partial' | 'limits'; fields: FieldSpec[] }[] = [
   {
-    title: 'When someone promises to pay',
-    blurb:
-      'A promise is worth acting on around the day it was made for — and worth chasing for a while after it is broken.',
+    id: 'promise',
     fields: [
-      {
-        key: 'ptp_active_window_days',
-        label: 'Promise is live for',
-        unit: '± days',
-        hint: 'They promised the 10th? From the 7th to the 13th, call them today.',
-      },
-      {
-        key: 'ptp_active_max_age_days',
-        label: 'Forget a promise after',
-        unit: 'days',
-        hint: 'An old promise stops counting as a reason to call.',
-      },
+      { key: 'ptp_active_window_days' },
+      { key: 'ptp_active_max_age_days' },
       {
         key: 'ptp_broken_min_days',
-        label: 'Start chasing a broken promise',
-        unit: 'days after',
         // Not editable: the model starts the broken window the day the promise
         // window closes, and has no separate setting for it. It was shown as a
         // normal input, so ops could change it, save it, watch it audited — and
         // the scorer ignored it. A read-only derived value is the honest form.
         derived: true,
-        hint: 'Set automatically: the day after the promise window closes.',
       },
-      {
-        key: 'ptp_broken_max_days',
-        label: 'Stop chasing it',
-        unit: 'days after',
-        hint: 'Past this, a broken promise is old news and stops driving priority.',
-      },
+      { key: 'ptp_broken_max_days' },
     ],
   },
   {
-    title: 'When someone contacts us',
-    blurb:
-      'A debtor who reaches out is the warmest lead there is. Call them back while it is still fresh.',
+    id: 'contact',
+    fields: [{ key: 'inbound_crit_max_days' }, { key: 'inbound_high_max_days' }],
+  },
+  {
+    id: 'partial',
     fields: [
-      {
-        key: 'inbound_crit_max_days',
-        label: 'Call back today if they got in touch within',
-        unit: 'days',
-        hint: 'The strongest signal in the system.',
-      },
-      {
-        key: 'inbound_high_max_days',
-        label: 'Call back this week if within',
-        unit: 'days',
-        hint: 'Still warm, but no longer urgent.',
-      },
+      { key: 'partial_avg_max_days' },
+      { key: 'partial_high_max_days' },
+      { key: 'partial_pay_expire_days', nullable: true },
     ],
   },
   {
-    title: 'When someone is paying bit by bit',
-    blurb:
-      'A part-payer has a rhythm. Leave them alone while they keep to it — chase them when they miss it.',
+    id: 'limits',
     fields: [
-      {
-        key: 'partial_avg_max_days',
-        label: 'Still on track if they paid within',
-        unit: 'days',
-        hint: 'Do not chase — they are behaving as expected.',
-      },
-      {
-        key: 'partial_high_max_days',
-        label: 'Payment is late up to',
-        unit: 'days',
-        hint: 'Follow up this week. Past this, treat it as urgent.',
-      },
-      {
-        key: 'partial_pay_expire_days',
-        label: 'Give up on a lapsed payer after',
-        unit: 'days',
-        nullable: true,
-        nullLabel: 'never',
-        hint: 'Leave empty and someone who paid once years ago stays urgent forever — that put 40% of the book in the top bucket.',
-      },
-    ],
-  },
-  {
-    title: 'Limits and safety nets',
-    blurb:
-      'One rule stops us over-contacting people. The other two stop us abandoning debtors who are actually engaging.',
-    fields: [
-      {
-        key: 'weekly_contact_cap',
-        label: 'Never contact more than',
-        unit: 'times / week',
-        hint: 'Beyond this the debt drops down the queue. Compliance protection.',
-      },
-      {
-        key: 'floor_min_real_payments',
-        label: 'Keep working anyone who has paid at least',
-        unit: 'times',
-        hint: 'A proven payer never falls to the bottom of the queue.',
-      },
-      {
-        key: 'floor_min_reached_rate',
-        label: '…or who answers us at least',
-        unit: 'of the time',
-        step: 0.05,
-        min: 0,
-        max: 1,
-        hint: '0.5 means they pick up half the time. Reachable people stay workable.',
-      },
+      { key: 'weekly_contact_cap' },
+      { key: 'floor_min_real_payments' },
+      { key: 'floor_min_reached_rate', step: 0.05, min: 0, max: 1 },
     ],
   },
 ]
 
 const pct = (n: number) => `${Math.round(n * 100)}%`
-const num = (n: number) => n.toLocaleString()
+const num = (n: number) => n.toLocaleString(uiLocale())
 
 const FIELD_INPUT =
   'rounded-lg border border-input-border bg-input text-foreground disabled:bg-muted disabled:text-muted-foreground'
@@ -198,6 +122,7 @@ function QueuePicker({
   canEdit: boolean
   onPick: (tau: number) => void
 }) {
+  const { t } = useTranslation('common')
   // "Selected" is the CLOSEST option, so a hand-typed tau still highlights the
   // row it behaves like rather than leaving every row unselected.
   const closest = guide.reduce(
@@ -214,13 +139,13 @@ function QueuePicker({
             className={`${QUEUE_GRID} text-muted-foreground border border-transparent px-3 text-xs font-medium md:px-4`}
           >
             <span className="w-4" />
-            <span>Queue size</span>
-            <span className="text-right">Debts to work</span>
+            <span>{t('pages.scoringV3.settings.queue.queueSize')}</span>
+            <span className="text-right">{t('pages.scoringV3.settings.queue.debtsToWork')}</span>
             {/* The two numbers the ticket asks for: the BENEFIT of a bigger queue
                 (more payers reached) and its COST in efficiency (each call is less
                 likely to find one). Ops trade these off against each other. */}
-            <span className="text-right">Payers reached</span>
-            <span className="text-right">Calls that pay</span>
+            <span className="text-right">{t('pages.scoringV3.settings.queue.payersReached')}</span>
+            <span className="text-right">{t('pages.scoringV3.settings.queue.callsThatPay')}</span>
           </div>
           {guide.map((p) => {
             const selected = p.tau === closest.tau
@@ -244,9 +169,11 @@ function QueuePicker({
                   {selected && <span className="bg-primary-600 h-2 w-2 rounded-full" />}
                 </span>
                 <span className="text-foreground text-sm font-medium">
-                  {pct(p.avg_share)} of debts
+                  {t('pages.scoringV3.settings.queue.ofDebts', { share: pct(p.avg_share) })}
                   {selected && (
-                    <span className="text-muted-foreground ml-2 text-xs font-normal">current</span>
+                    <span className="text-muted-foreground ml-2 text-xs font-normal">
+                      {t('pages.scoringV3.settings.queue.current')}
+                    </span>
                   )}
                 </span>
                 <span className="text-foreground text-right text-sm tabular-nums">
@@ -256,7 +183,7 @@ function QueuePicker({
                   {p.payers_captured != null ? pct(p.payers_captured) : '—'}
                 </span>
                 <span className="text-foreground text-right text-sm tabular-nums">
-                  {p.pay_lift != null ? `${p.pay_lift.toFixed(2)}×` : '—'}
+                  {p.pay_lift != null ? `${uiDecimal(p.pay_lift.toFixed(2))}×` : '—'}
                 </span>
               </button>
             )
@@ -264,20 +191,24 @@ function QueuePicker({
         </div>
       </ScrollX>
       <p className="text-muted-foreground text-xs leading-relaxed">
-        <strong className="text-foreground">Payers reached</strong> = how many of the people who
-        will pay this month end up in the queue.{' '}
-        <strong className="text-foreground">Calls that pay</strong> = how much more often a call
-        finds a payer than if you called at random. A bigger queue reaches more payers but each call
-        is worth less.{' '}
+        <strong className="text-foreground">
+          {t('pages.scoringV3.settings.queue.payersReached')}
+        </strong>{' '}
+        {t('pages.scoringV3.settings.queue.payersReachedExplain')}{' '}
+        <strong className="text-foreground">
+          {t('pages.scoringV3.settings.queue.callsThatPay')}
+        </strong>{' '}
+        {t('pages.scoringV3.settings.queue.callsThatPayExplain')}{' '}
         {measured
-          ? 'Worked out from this brand’s own scores, so these are the numbers you would actually get.'
-          : 'Generic reference values — this brand has not been scored yet, so the debt counts are unknown.'}
+          ? t('pages.scoringV3.settings.queue.measured')
+          : t('pages.scoringV3.settings.queue.generic')}
       </p>
     </div>
   )
 }
 
 export function ScoringV3SettingsPage() {
+  const { t } = useTranslation('common')
   const projectId = useActiveProjectId()
   const { data, isLoading } = useV3Settings(projectId)
   const save = useUpdateV3Settings()
@@ -318,23 +249,26 @@ export function ScoringV3SettingsPage() {
       <div className="flex w-full min-w-0 flex-col gap-4 pb-36 sm:gap-6 sm:pb-28">
         <header className="flex min-w-0 flex-col gap-2">
           <h1 className="text-foreground text-xl font-light sm:text-2xl">
-            Scoring v3 — <span className="font-semibold">settings</span>
+            {t('pages.scoringV3.titlePrefix')}{' '}
+            <span className="font-semibold">{t('pages.scoringV3.settings.titleEmphasis')}</span>
           </h1>
           <p className="text-muted-foreground max-w-3xl text-sm leading-relaxed">
-            These rules decide who your operators call first. Changes apply to the{' '}
-            <strong className="text-foreground">next scoring run</strong> — nothing already scored
-            is redone — and every change is saved in{' '}
+            {t('pages.scoringV3.settings.introBefore')}{' '}
+            <strong className="text-foreground">
+              {t('pages.scoringV3.settings.introNextRun')}
+            </strong>{' '}
+            {t('pages.scoringV3.settings.introMiddle')}{' '}
             <Link
               to="/dashboard/system-settings/scoring-configuration/history"
               className="text-information-700 underline"
             >
-              configuration history
+              {t('pages.scoringV3.settings.introLink')}
             </Link>
             .
           </p>
           {data?.source === 'default' && (
             <p className="text-muted-foreground text-sm">
-              This brand has never saved its own values — everything below is the standard setup.
+              {t('pages.scoringV3.settings.defaultSource')}
             </p>
           )}
         </header>
@@ -342,12 +276,10 @@ export function ScoringV3SettingsPage() {
         {/* ── the one decision that matters ── */}
         <section className="border-border bg-card w-full min-w-0 rounded-xl border p-4 sm:p-6">
           <h2 className="text-foreground text-base font-semibold">
-            How many debts should operators work?
+            {t('pages.scoringV3.settings.queue.title')}
           </h2>
           <p className="text-muted-foreground mt-1 mb-5 max-w-3xl text-sm leading-relaxed">
-            Every debt gets a predicted chance of paying this month. The most likely payers go into
-            the working queue; the rest are left for spare capacity. A bigger queue reaches more
-            payers but spends more calls finding each one — pick the size your team can handle.
+            {t('pages.scoringV3.settings.queue.description')}
           </p>
 
           {guide.length > 0 ? (
@@ -358,7 +290,9 @@ export function ScoringV3SettingsPage() {
               onPick={(tau) => setDraft({ ...form, tau })}
             />
           ) : (
-            <p className="text-muted-foreground text-sm">No queue-size guidance available yet.</p>
+            <p className="text-muted-foreground text-sm">
+              {t('pages.scoringV3.settings.queue.noGuidance')}
+            </p>
           )}
 
           <button
@@ -366,14 +300,18 @@ export function ScoringV3SettingsPage() {
             onClick={() => setShowAdvanced((v) => !v)}
             className="text-muted-foreground mt-4 text-xs underline"
           >
-            {showAdvanced ? 'Hide' : 'Show'} the exact cut-off value
+            {showAdvanced
+              ? t('pages.scoringV3.settings.queue.hideCutoff')
+              : t('pages.scoringV3.settings.queue.showCutoff')}
           </button>
           {showAdvanced && (
             <label className="mt-3 flex w-full max-w-xs flex-col gap-1">
               <span className="text-foreground text-sm font-medium">
-                Cut-off (tau)
+                {t('pages.scoringV3.settings.queue.cutoffLabel')}
                 {isChanged('tau') && (
-                  <span className="text-warning-700 ml-2 text-xs font-normal">changed</span>
+                  <span className="text-warning-700 ml-2 text-xs font-normal">
+                    {t('pages.scoringV3.settings.changed')}
+                  </span>
                 )}
               </span>
               <input
@@ -387,8 +325,9 @@ export function ScoringV3SettingsPage() {
                 className={`${FIELD_INPUT} w-full px-3 py-2 text-sm tabular-nums`}
               />
               <span className="text-muted-foreground text-xs leading-relaxed">
-                A debt is worked when its pay-chance reaches this number.
-                {defaults && ` Standard setup: ${defaults.tau}.`}
+                {t('pages.scoringV3.settings.queue.cutoffHint')}
+                {defaults &&
+                  ` ${t('pages.scoringV3.settings.queue.standardSetup', { value: defaults.tau })}`}
               </span>
             </label>
           )}
@@ -397,18 +336,23 @@ export function ScoringV3SettingsPage() {
         {/* ── the rules ── */}
         {SECTIONS.map((section) => (
           <section
-            key={section.title}
+            key={section.id}
             className="border-border bg-card w-full min-w-0 rounded-xl border p-4 sm:p-6"
           >
-            <h2 className="text-foreground text-base font-semibold">{section.title}</h2>
+            <h2 className="text-foreground text-base font-semibold">
+              {t(`pages.scoringV3.settings.sections.${section.id}.title`)}
+            </h2>
             <p className="text-muted-foreground mt-1 mb-5 max-w-3xl text-sm leading-relaxed">
-              {section.blurb}
+              {t(`pages.scoringV3.settings.sections.${section.id}.blurb`)}
             </p>
 
             <div className="divide-border flex flex-col divide-y">
               {section.fields.map((f) => {
                 const value = form[f.key]
                 const isEmpty = value === null || value === undefined
+                const fieldKey = `pages.scoringV3.settings.fields.${String(f.key)}`
+                const unit = t(`${fieldKey}.unit`)
+                const nullLabel = f.nullable ? t(`${fieldKey}.nullLabel`) : undefined
                 return (
                   <div
                     key={String(f.key)}
@@ -416,13 +360,15 @@ export function ScoringV3SettingsPage() {
                   >
                     <div className="flex min-w-0 flex-col gap-0.5 sm:max-w-md">
                       <span className="text-foreground text-sm font-medium">
-                        {f.label}
+                        {t(`${fieldKey}.label`)}
                         {isChanged(f.key) && (
-                          <span className="text-warning-700 ml-2 text-xs font-normal">changed</span>
+                          <span className="text-warning-700 ml-2 text-xs font-normal">
+                            {t('pages.scoringV3.settings.changed')}
+                          </span>
                         )}
                       </span>
                       <span className="text-muted-foreground text-xs leading-relaxed">
-                        {f.hint}
+                        {t(`${fieldKey}.hint`)}
                       </span>
                     </div>
                     <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto">
@@ -437,15 +383,15 @@ export function ScoringV3SettingsPage() {
                           min={f.min ?? 0}
                           max={f.max}
                           value={isEmpty ? '' : String(value)}
-                          placeholder={f.nullLabel ?? ''}
+                          placeholder={nullLabel ?? ''}
                           disabled={!canEdit}
                           onChange={(e) => setField(f.key, e.target.value, f.nullable)}
                           className={`${FIELD_INPUT} w-24 px-3 py-2 text-right text-sm tabular-nums`}
                         />
                       )}
-                      {f.unit && (
+                      {unit && (
                         <span className="text-muted-foreground min-w-0 flex-1 text-xs sm:w-24 sm:flex-none">
-                          {isEmpty && f.nullLabel ? f.nullLabel : f.unit}
+                          {isEmpty && nullLabel ? nullLabel : unit}
                         </span>
                       )}
                     </div>
@@ -460,22 +406,27 @@ export function ScoringV3SettingsPage() {
         {data?.rule_table && (
           <section className="border-border bg-card w-full min-w-0 rounded-xl border p-4 sm:p-6">
             <h2 className="text-foreground text-base font-semibold">
-              How long a call outcome counts for
+              {t('pages.scoringV3.settings.outcomes.title')}
             </h2>
             <p className="text-muted-foreground mt-1 mb-5 max-w-3xl text-sm leading-relaxed">
-              After a call, what the operator recorded decides the debt&apos;s priority for a while.
-              &ldquo;Refused to pay&rdquo; keeps them low for a month; &ldquo;payment
-              possible&rdquo; keeps them high for a week. Leave a row blank to keep the standard
-              number.
+              {t('pages.scoringV3.settings.outcomes.description')}
             </p>
             <div className="border-border max-h-[420px] overflow-auto rounded-lg border">
               <table className="text-foreground w-full min-w-[32rem] text-sm">
                 <thead className="bg-muted sticky top-0">
                   <tr className="text-muted-foreground text-left text-xs font-medium">
-                    <th className="px-3 py-2">Call outcome</th>
-                    <th className="px-3 py-2">Priority it sets</th>
-                    <th className="px-3 py-2 text-right">Standard</th>
-                    <th className="px-3 py-2 text-right">Your value</th>
+                    <th className="px-3 py-2">
+                      {t('pages.scoringV3.settings.outcomes.callOutcome')}
+                    </th>
+                    <th className="px-3 py-2">
+                      {t('pages.scoringV3.settings.outcomes.prioritySets')}
+                    </th>
+                    <th className="px-3 py-2 text-right">
+                      {t('pages.scoringV3.settings.outcomes.standard')}
+                    </th>
+                    <th className="px-3 py-2 text-right">
+                      {t('pages.scoringV3.settings.outcomes.yourValue')}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -484,7 +435,7 @@ export function ScoringV3SettingsPage() {
                       <td className="px-3 py-1.5 font-mono text-xs break-all">{code}</td>
                       <td className="px-3 py-1.5 text-xs">{spec.bucket}</td>
                       <td className="text-muted-foreground px-3 py-1.5 text-right text-xs tabular-nums">
-                        {spec.ttl_days} days
+                        {t('pages.scoringV3.settings.outcomes.days', { count: spec.ttl_days })}
                       </td>
                       <td className="px-3 py-1.5 text-right">
                         <input
@@ -515,13 +466,15 @@ export function ScoringV3SettingsPage() {
           <div className="border-border bg-card/95 fixed right-0 bottom-0 left-0 z-10 border-t px-4 py-3 backdrop-blur sm:px-8">
             <div className="mx-auto flex w-full max-w-5xl min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
               <span className="text-muted-foreground shrink-0 text-sm">
-                {dirty ? 'You have unsaved changes.' : 'Everything is saved.'}
+                {dirty
+                  ? t('pages.scoringV3.settings.save.unsaved')
+                  : t('pages.scoringV3.settings.save.allSaved')}
               </span>
               <input
                 type="text"
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                placeholder="Why are you changing this? (saved in history)"
+                placeholder={t('pages.scoringV3.settings.save.reasonPlaceholder')}
                 className={`${FIELD_INPUT} w-full min-w-0 flex-1 px-3 py-2 text-sm`}
               />
               <div className="flex w-full gap-2 sm:w-auto">
@@ -531,7 +484,7 @@ export function ScoringV3SettingsPage() {
                   onClick={() => setDraft(null)}
                   className="min-w-0 flex-1 sm:flex-none"
                 >
-                  Discard
+                  {t('pages.scoringV3.settings.save.discard')}
                 </Button>
                 <Button
                   variant="primary"
@@ -553,7 +506,7 @@ export function ScoringV3SettingsPage() {
                   }
                   className="min-w-0 flex-1 sm:flex-none"
                 >
-                  {save.isPending ? 'Saving…' : 'Save'}
+                  {save.isPending ? t('pages.scoringV3.saving') : t('common.save')}
                 </Button>
               </div>
             </div>

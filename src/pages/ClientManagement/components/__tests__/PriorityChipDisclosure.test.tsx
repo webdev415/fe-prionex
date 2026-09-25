@@ -14,6 +14,8 @@ import userEvent from '@testing-library/user-event'
 import { V3BucketBadge } from '@/pages/OperatorWorkList/components/V3BucketBadge'
 import { NotScoredBadge } from '../NotScoredBadge'
 
+vi.mock('react-i18next', async () => (await import('@/test/englishI18n')).englishReactI18nextMock())
+
 describe('priority chips', () => {
   it('render nothing extra when no trailing slot is passed', () => {
     // The list, the work list and the priority cards all render these chips as

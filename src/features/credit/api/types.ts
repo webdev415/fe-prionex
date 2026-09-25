@@ -110,6 +110,19 @@ export interface CreditDecision {
   underwriter_id: number | null
   rationale: string | null
   overrides_decision_id: string | null
+  /**
+   * Решение, которое это ЗАМЕНИЛО: модуль пересмотрел своё автоматическое
+   * решение после смены реквизитов выплаты. `null` — ничего не заменяло. Не
+   * путать с `overrides_decision_id` — там переопределил человек.
+   *
+   * В контракте поле не required; здесь required, чтобы каждая фикстура
+   * назвала значение: модуль кладёт ключ всегда (строка или `null`). Ключа нет
+   * только у модуля старше B-3 (17.09): ключ и сам пересмотр пришли одной
+   * правкой, такой модуль решений не заменяет — поэтому экран показывает
+   * отсутствие ключа как `null`, и это правда, а не незнание. У излишка иначе:
+   * события пишутся с 31.08, ключ — с 17.09.
+   */
+  supersedes_decision_id: string | null
   decided_at: string
 }
 
@@ -134,6 +147,14 @@ export interface CreditDocumentMeta {
   client_id: number | null
   debt_id: number | null
   client_document_id: string | null
+  /**
+   * Отдаст ли модуль содержимое документа по своим записям (одноимённое поле
+   * `DocumentMeta` контракта). Там оно необязательно, здесь обязательно: модуль
+   * кладёт его всегда, а необязательное фикстуры забывали бы молча. `false` —
+   * выдавать нечего, кнопка говорит это до нажатия; `true` не обещает, что файл
+   * на месте (503 `document_file_missing`).
+   */
+  content_available: boolean
   kind: string
   title?: string
   content_type?: string | null
@@ -225,6 +246,65 @@ export interface CreditOutstandingLoan {
   status: string
 }
 
+/** Признак, по которому модуль сравнивал клиентов — `ApplicantApplications.identity_keys` (openapi.yaml модуля v0.1.26). */
+export type CreditIdentityKey = 'email' | 'national_id'
+
+/** Строка другой заявки того же клиента — `ApplicantApplicationRow` (openapi.yaml модуля v0.1.26), ровно пять полей. */
+export interface CreditApplicantApplication {
+  application_id: string
+  number: string
+  status: CreditApplicationStatus | string
+  created_at: string
+  decision_outcome: CreditDecisionOutcome | null
+}
+
+/** Другие заявки того же клиента в проекте оператора — `ApplicantApplications` (openapi.yaml модуля v0.1.26). */
+export interface CreditApplicantApplications {
+  /** Все другие заявки клиента, текущая не входит; не меньше длины `items`. */
+  total: number
+  /** Последние по `created_at` (по убыванию), не больше двадцати. */
+  items: CreditApplicantApplication[]
+  /** По каким признакам текущей заявки сравнивали; `[]` — сравнивать не с чем. */
+  identity_keys: CreditIdentityKey[]
+}
+
+/** Переход статуса в строке хронологии — `InternalApplication.timeline.items.transition` (openapi.yaml модуля v0.1.26); шире `CreditTransition`: статусы строкой, актор может быть `null`. */
+export interface CreditTimelineTransition {
+  from_status: string | null
+  to_status: string
+  actor: string | null
+  at: string
+}
+
+/** Событие клиента в строке хронологии — `InternalApplication.timeline.items.client` (openapi.yaml модуля v0.1.26). */
+export interface CreditTimelineClient {
+  event: string
+  source: 'landing' | 'cabinet'
+  scope: 'application' | 'client'
+  who?: string
+  seq?: number | null
+  details?: Record<string, unknown>
+  event_ids?: string[]
+}
+
+/** Строка хронологии карточки заявки — `InternalApplication.timeline.items` (openapi.yaml модуля v0.1.26); в `required` только четыре поля. */
+export interface CreditTimelineRow {
+  track: 'client' | 'status'
+  at: string
+  last_at: string
+  count: number
+  client?: CreditTimelineClient | null
+  transition?: CreditTimelineTransition | null
+}
+
+/** Событие сайта, привязанное к заявке — `PortalEventRecord` (openapi.yaml модуля v0.1.26); объявлен минимум, который читается. */
+export interface CreditPortalEventRecord {
+  event_id: string
+  ts: string
+  source: string
+  event: string
+}
+
 /** Карточка заявки целиком (InternalApplication + анкета и документы). */
 export interface CreditApplicationDetail extends CreditApplicationSummary {
   project_id: number
@@ -255,6 +335,15 @@ export interface CreditApplicationDetail extends CreditApplicationSummary {
   paydays: string[]
   consents: CreditConsent[]
   audit: CreditTransition[]
+  /**
+   * Хронология, события сайта и другие заявки клиента — поля `InternalApplication`
+   * модуля. `?` — стенд, отстающий от контракта, их не пришлёт, и экран обязан
+   * сказать «модуль не передав», а не показать пустоту или ноль.
+   */
+  timeline?: CreditTimelineRow[]
+  portal_events?: CreditPortalEventRecord[]
+  portal_events_total?: number
+  applicant_applications?: CreditApplicantApplications | null
   draft: CreditApplicationDraft
   documents?: CreditDocumentMeta[]
   decision?: CreditDecision
@@ -525,6 +614,15 @@ export interface CreditLoanDetail {
   jurisdiction: string
   schedule_version: number
   delinquency_days: number
+  /**
+   * Сколько модуль ДОЛЖЕН ВЕРНУТЬ клиенту сверх выданного: кредит снят в
+   * карантине выдачи, клиент вернул больше тела. Значение последнего события
+   * `AdvanceRefundExcess`; `0` — излишка нет или события не было, ключ в
+   * контракте есть всегда. Обязательство перед клиентом, а не его долг: не
+   * складывать с `CreditBalances.overpayment_minor` и не показывать в
+   * разбивке долга.
+   */
+  advance_refund_excess_minor: number
   regulatory_package_version?: string
   prepayment_mode?: string
   close_reason?: string
@@ -782,6 +880,11 @@ export interface CreditApplicationsParams {
   sort?: string
   limit?: number
   cursor?: string
+  /** День `YYYY-MM-DD`; границы суток — по календарю юрисдикции заявки, включительно; считает модуль (`listInternalApplications`). */
+  created_from?: string
+  created_to?: string
+  updated_from?: string
+  updated_to?: string
 }
 
 export interface CreditLoansParams {
@@ -797,13 +900,27 @@ export interface CreditLoansParams {
   cursor?: string
 }
 
+/**
+ * Отбор журнала проводок на стороне СЕРВЕРА (`getLoanJournal`).
+ *
+ * `limit`/`cursor` здесь нет намеренно: дверь их не объявляет, а `next_cursor`
+ * журнала всегда пуст — страниц у двери нет. Объявленный параметр, который
+ * сервер игнорирует, читается вызывающим как работающий.
+ */
+export interface CreditJournalParams {
+  /** Корзина отбора; значения — только из `CREDIT_BUCKETS` (см. `creditApi.loanJournal`). */
+  bucket?: CreditBucket
+  /** Срез на `business_date`; отбор накопительный — «по состоянию на», а не «за дату». */
+  as_of?: string
+}
+
+/** Автора ручного решения модуль берёт из пропуска CRM; поле не шлётся (17-22). */
 export interface ManualDecisionPayload {
   outcome: CreditDecisionOutcome
   rationale: string
   final_amount_minor?: number
   decline_codes?: string[]
   cooldown_until?: string
-  underwriter_id?: number
 }
 
 /**

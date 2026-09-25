@@ -55,7 +55,7 @@ describe('ImpersonationBanner', () => {
         />
       )
 
-      expect(screen.getByText(/impersonation mode/i)).toBeInTheDocument()
+      expect(screen.getByText(/components\.impersonation\.mode/)).toBeInTheDocument()
     })
 
     it('should display impersonated user full name', () => {
@@ -81,7 +81,7 @@ describe('ImpersonationBanner', () => {
         />
       )
 
-      expect(screen.getByText(/viewing as/i)).toBeInTheDocument()
+      expect(screen.getByText(/components\.impersonation\.viewingAs/)).toBeInTheDocument()
     })
 
     it('should display exit button', () => {
@@ -94,7 +94,9 @@ describe('ImpersonationBanner', () => {
         />
       )
 
-      expect(screen.getByRole('button', { name: /exit impersonation/i })).toBeInTheDocument()
+      expect(
+        screen.getByRole('button', { name: /components\.impersonation\.exit\b/ })
+      ).toBeInTheDocument()
     })
 
     it('should have card background styling for visibility', () => {
@@ -107,7 +109,9 @@ describe('ImpersonationBanner', () => {
         />
       )
 
-      const banner = screen.getByText(/impersonation mode/i).closest('div')?.parentElement
+      const banner = screen
+        .getByText(/components\.impersonation\.mode/)
+        .closest('div')?.parentElement
       expect(banner).toHaveClass('bg-card')
     })
 
@@ -121,7 +125,7 @@ describe('ImpersonationBanner', () => {
         />
       )
 
-      const container = screen.getByText(/impersonation mode/i).closest('div')
+      const container = screen.getByText(/components\.impersonation\.mode/).closest('div')
         ?.parentElement?.parentElement
       expect(container).toHaveClass('w-full')
       expect(container).toHaveClass('flex')
@@ -142,7 +146,7 @@ describe('ImpersonationBanner', () => {
         />
       )
 
-      const exitButton = screen.getByRole('button', { name: /exit impersonation/i })
+      const exitButton = screen.getByRole('button', { name: /components\.impersonation\.exit\b/ })
       await user.click(exitButton)
 
       expect(mockOnExitImpersonation).toHaveBeenCalledTimes(1)
@@ -158,7 +162,7 @@ describe('ImpersonationBanner', () => {
         />
       )
 
-      const exitButton = screen.getByRole('button', { name: /exiting\.\.\./i })
+      const exitButton = screen.getByRole('button', { name: /components\.impersonation\.exiting/ })
       expect(exitButton).toBeDisabled()
     })
 
@@ -172,7 +176,7 @@ describe('ImpersonationBanner', () => {
         />
       )
 
-      expect(screen.getByText(/exiting\.\.\./i)).toBeInTheDocument()
+      expect(screen.getByText(/components\.impersonation\.exiting/)).toBeInTheDocument()
     })
   })
 
@@ -219,7 +223,7 @@ describe('ImpersonationBanner', () => {
         />
       )
 
-      expect(screen.getByText(/unknown role/i)).toBeInTheDocument()
+      expect(screen.getByText(/components\.impersonation\.unknownRole/)).toBeInTheDocument()
     })
 
     it('should display unknown project when project is not available', () => {
@@ -237,7 +241,7 @@ describe('ImpersonationBanner', () => {
         />
       )
 
-      expect(screen.getByText(/unknown project/i)).toBeInTheDocument()
+      expect(screen.getByText(/components\.impersonation\.unknownProject/)).toBeInTheDocument()
     })
   })
 
@@ -252,7 +256,7 @@ describe('ImpersonationBanner', () => {
         />
       )
 
-      expect(screen.getByText(/impersonation mode/i)).toBeInTheDocument()
+      expect(screen.getByText(/components\.impersonation\.mode/)).toBeInTheDocument()
     })
 
     it('should have clear button label', () => {
@@ -265,7 +269,7 @@ describe('ImpersonationBanner', () => {
         />
       )
 
-      const button = screen.getByRole('button', { name: /exit impersonation/i })
+      const button = screen.getByRole('button', { name: /components\.impersonation\.exit\b/ })
       expect(button).toHaveAccessibleName()
     })
 
@@ -279,7 +283,9 @@ describe('ImpersonationBanner', () => {
         />
       )
 
-      const bannerContainer = screen.getByText(/impersonation mode/i).closest('div')?.parentElement
+      const bannerContainer = screen
+        .getByText(/components\.impersonation\.mode/)
+        .closest('div')?.parentElement
       expect(bannerContainer).toHaveClass('bg-card')
     })
   })
@@ -295,7 +301,7 @@ describe('ImpersonationBanner', () => {
         />
       )
 
-      const mainContainer = screen.getByText(/impersonation mode/i).closest('div')
+      const mainContainer = screen.getByText(/components\.impersonation\.mode/).closest('div')
         ?.parentElement?.parentElement
       expect(mainContainer).toHaveClass('w-full')
       expect(mainContainer).toHaveClass('flex')
@@ -311,7 +317,9 @@ describe('ImpersonationBanner', () => {
         />
       )
 
-      const bannerCard = screen.getByText(/impersonation mode/i).closest('div')?.parentElement
+      const bannerCard = screen
+        .getByText(/components\.impersonation\.mode/)
+        .closest('div')?.parentElement
       expect(bannerCard).toHaveClass('rounded-md')
       expect(bannerCard).toHaveClass('h-[65px]')
     })

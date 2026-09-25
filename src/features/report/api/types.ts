@@ -10,7 +10,12 @@
 // ============================================================================
 
 /**
- * Trend information for KPI comparison
+ * Trend information for KPI comparison.
+ *
+ * Every KPI carries it as `KPITrend | null`: report-service answers null when
+ * it has no comparison value for the period (e.g. `payments_collected` with
+ * `DASHBOARD_TREND_PAYMENTS_AS_OF_STRICT=true` and no payment-service as-of
+ * answer, board #1448).
  */
 export interface KPITrend {
   direction: 'up' | 'down' | 'stable'
@@ -23,7 +28,7 @@ export interface KPITrend {
  */
 export interface KPIValue {
   value: number
-  trend: KPITrend
+  trend: KPITrend | null
 }
 
 /**
@@ -36,7 +41,7 @@ export interface PaymentKPIValue {
   largest_amount?: number | string
   verified_amount?: number | string
   pending_amount?: number | string
-  trend: KPITrend
+  trend: KPITrend | null
 }
 
 /**
@@ -69,7 +74,7 @@ export interface BackendTopOperator {
 export interface MessagingSentKPIValue {
   value: number
   delivery_rate: number
-  trend: KPITrend
+  trend: KPITrend | null
   delivered?: number
   failed?: number
 }
@@ -153,6 +158,25 @@ export interface BackendOperatorPerformance {
   summary: BackendOperatorSummary
   daily_breakdown: BackendDailyBreakdown[]
   comparison_to_average?: Record<string, number>
+  /**
+   * Whether report-service lets this row be crowned in dashboard rankings
+   * (board #1332 AC#2): `false` for a non-collection department, no project
+   * membership or a listed technical account; `null` when it could not be
+   * resolved (and always on an operator-filtered request). Absent on an older
+   * report-service.
+   */
+  ranking_eligible?: boolean | null
+}
+
+/**
+ * «Top collector» picked by report-service over the eligible rows only
+ * (`ranking_eligible === true`, amount above 0).
+ */
+export interface BackendTopCollector {
+  operator_id: number
+  operator_name: string
+  payments_collected: number | string
+  payments_count: number
 }
 
 /**
@@ -175,6 +199,13 @@ export interface BackendOperatorPerformanceResponse {
   date_range: DateRange
   operators: BackendOperatorPerformance[]
   team_average?: BackendTeamAverage
+  /**
+   * Board #1332 AC#2. A report-service that knows the field always sends the
+   * key: `null` = nobody eligible collected anything, eligibility could not be
+   * resolved, or the request is filtered to one operator. The key is absent
+   * only on an older report-service.
+   */
+  top_collector?: BackendTopCollector | null
   generated_at: string
 }
 
@@ -239,6 +270,12 @@ export interface BackendCallStatistics {
   calls_no_answer: number
   calls_busy: number
   calls_failed: number
+  /**
+   * Calls in none of the four buckets above (call-service /statistics
+   * `calls_other`), so the five add up to `total_calls`. Optional: an older
+   * report-service does not send it and the transformer derives it.
+   */
+  calls_other?: number
   contact_rate: number
   total_talk_time: number
   avg_call_duration: number
@@ -309,12 +346,17 @@ export interface BackendCommunicationStatisticsResponse {
 }
 
 /**
- * Hourly breakdown entry from call service
+ * Hourly breakdown entry (report-service `HourlyBreakdown` schema).
+ *
+ * The field is `calls`, not call-service's internal `calls_made`: report-service
+ * maps it and keeps `calls` as its public name (contract C2).
  */
 export interface BackendHourlyBreakdown {
   /** UTC hour (0-23) */
   hour: number
-  calls_made: number
+  calls: number
+  /** Legacy name of `calls` (call-service's internal field); read only when `calls` is absent. */
+  calls_made?: number
   calls_answered: number
   sms_sent: number
 }
@@ -345,6 +387,15 @@ export interface ExportParams {
   project_id: number
   format: ExportFormat
   period?: string
+  /** Dashboard export window start, YYYY-MM-DD in the user's profile time zone. */
+  start_date?: string
+  /** Dashboard export window end, YYYY-MM-DD in the user's profile time zone. */
+  end_date?: string
+  /**
+   * IANA time zone the dashboard export window is expressed in (contract C4).
+   * `timezone` on purpose: the report-service export router's param, unlike `user_timezone` elsewhere.
+   */
+  timezone?: string
   from_date?: string
   to_date?: string
   group_by?: string

@@ -224,6 +224,33 @@ export const TA_EXECUTOR_DIALOG_CLASS = 'ta-executor-dialog'
 /** Selector form of {@link TA_EXECUTOR_DIALOG_CLASS}. */
 export const TA_EXECUTOR_DIALOG_SELECTOR = `.${TA_EXECUTOR_DIALOG_CLASS}`
 
+/**
+ * Marks a popup that silences quick-launch for as long as it is on screen.
+ *
+ * The focus rules below cannot cover these on their own. Focus leaves a popup
+ * without it closing: a click on a heading or padding lands on something that
+ * cannot take focus, and a row that re-renders elsewhere drops the focus it
+ * held. Either way the keydown target becomes ``body``, which is not typing,
+ * and a bound key launched a template over the still-open popup. Checking for
+ * the popup itself does not depend on where focus ended up.
+ */
+export const HOTKEY_BLOCKING_ATTR = 'data-blocks-hotkeys'
+
+/**
+ * Marks a popup trigger that does not consume keys itself.
+ *
+ * ``[aria-haspopup]`` normally counts as owning its keystrokes, because a Radix
+ * Select trigger uses type-ahead even while collapsed. A plain trigger such as
+ * the assignee pencil has none, so it owns keys only while its popup is open
+ * (``aria-expanded="true"``) and passes them through once it is closed.
+ */
+export const HOTKEY_PASSTHROUGH_TRIGGER_ATTR = 'data-hotkey-passthrough-trigger'
+
+/** Whether any element carrying {@link HOTKEY_BLOCKING_ATTR} is mounted. */
+export function isHotkeyBlockingPopupOpen(root: ParentNode = document): boolean {
+  return root.querySelector(`[${HOTKEY_BLOCKING_ATTR}]`) !== null
+}
+
 /** Element names that own their keystrokes. */
 const TEXT_ENTRY_TAGS = new Set(['INPUT', 'TEXTAREA', 'SELECT'])
 
@@ -282,11 +309,17 @@ export function isTextEntryTarget(target: EventTarget | null): boolean {
 export function ownsItsKeystrokes(target: EventTarget | null): boolean {
   if (isTextEntryTarget(target)) return true
   if (!target || !(target instanceof Element)) return false
-  return (
-    target.closest(
-      '[role="combobox"], [role="listbox"], [role="option"], [role="menu"], [role="menuitem"], [aria-haspopup]'
-    ) !== null
+  const owner = target.closest(
+    '[role="combobox"], [role="listbox"], [role="option"], [role="menu"], [role="menuitem"], [aria-haspopup]'
   )
+  if (owner === null) return false
+  // A trigger that does no type-ahead of its own gives keys back while its
+  // popup is closed. Focus returns to it on close, so without this every
+  // binding stayed silent until the operator clicked somewhere else.
+  if (owner.hasAttribute(HOTKEY_PASSTHROUGH_TRIGGER_ATTR)) {
+    return owner.getAttribute('aria-expanded') === 'true'
+  }
+  return true
 }
 
 /**

@@ -69,6 +69,11 @@
     "creditApplications": "Applications",
     "creditLoans": "Loans",
     "creditSettings": "Settings",
+    "menu": "Menu",
+    "toggleMenu": "Toggle menu",
+    "scoringV3Monitoring": "v3 Shadow-Run Report",
+    "scoringV3Settings": "v3 Scoring Settings",
+    "operatorWorkList": "Priority Work List",
     "creditUnderwriting": "Manual review queue"
   },
   "dialer": {
@@ -106,7 +111,8 @@
       "statusPaused": "Paused",
       "statusNotConnected": "Not connected",
       "waitingForCall": "Connected — waiting for the next call…",
-      "joinToStart": "Join the dialer to start receiving calls."
+      "joinToStart": "Join the dialer to start receiving calls.",
+      "queueCompleted": "The queue has been fully dialed through."
     },
     "call": {
       "activeCall": "Active Call",
@@ -124,7 +130,35 @@
       "chainStepLabel": "Step {{step}} - Collection: {{label}}",
       "chainStepCreditLabel": "Step 9 - Collection: Credit *",
       "chainContinue": "Continue",
-      "chainDemoNotice": "This is a demo chain — no data was saved."
+      "chainDemoNotice": "This is a demo chain — no data was saved.",
+      "wrapUp": "Wrap-up",
+      "wrapUpIn": "Wrap-up {{s}}s",
+      "skip": "Skip",
+      "taChain": "TA Chain",
+      "loanNumber": "Number",
+      "loanCounterparty": "Counterparty",
+      "loanDateOfSale": "Date of Sale",
+      "loanBodyAmount": "Body Amount",
+      "loanTotalToReturn": "Total to Return",
+      "loanLegitimate": "Legitimate",
+      "selectTypeRequired": "Please select an interaction type",
+      "selectType": "Select type",
+      "clientName": "Client's Name",
+      "taxId": "Tax ID",
+      "interactionType": "Interaction Type",
+      "contactComment": "contact comment",
+      "enterComment": "Enter comment...",
+      "saveInteraction": "Save interaction",
+      "statusActive": "Active",
+      "statusInactive": "Inactive",
+      "totalPaid": "Total Paid",
+      "totalPayments": "Total Payments",
+      "numberOfPayments": "Number of Payments",
+      "verified": "Verified",
+      "pending": "Pending",
+      "phoneNumber": "Phone Number",
+      "incomingCall": "Incoming Call",
+      "acceptCall": "Accept call"
     },
     "accessGroup": {
       "all_groups": "All groups",
@@ -191,7 +225,17 @@
       "maxAttempts": "Attempts per number",
       "maxAttemptsHint": "Total attempts, including the first. Line failures are periodic, so a retry usually lands on another SIM.",
       "retryDelayFailed": "Retry delay (seconds)",
-      "retryDelayFailedHint": "0 disables retrying failures."
+      "retryDelayFailedHint": "0 disables retrying failures.",
+      "validation": {
+        "nameRequired": "Queue name is required",
+        "priorityNumber": "Enter a number from 1 to 5",
+        "minimumOne": "Minimum is 1",
+        "maximumFive": "Maximum is 5",
+        "enterNumber": "Enter a number",
+        "atLeastOneAttempt": "At least 1 attempt",
+        "enterSeconds": "Enter a number of seconds",
+        "notNegative": "Cannot be negative"
+      }
     },
     "numbers": {
       "inQueue": "In Queue",
@@ -244,7 +288,8 @@
       "loadError": "Failed to load clients.",
       "showingFirst": "Showing the first {{shown}} of {{total}} clients.",
       "added": "{{count}} clients added to the queue",
-      "addedWithSkipped": "{{count}} clients added ({{skipped}} skipped — no phone)"
+      "addedWithSkipped": "{{count}} clients added ({{skipped}} skipped — no phone)",
+      "selectQueue": "Select queue"
     },
     "analysis": {
       "operatorsInLine": "Operators in Line",
@@ -348,6 +393,68 @@
     "colorPicker": {
       "hexCode": "Hex Code",
       "preview": "Preview"
+    },
+    "dateSelect": {
+      "selectDate": "Select date"
+    },
+    "errorState": {
+      "tryAgain": "Try Again"
+    },
+    "routeError": {
+      "newVersionTitle": "New version available",
+      "newVersionMessage": "The application was updated. Refresh to load the latest version.",
+      "translationConflictTitle": "Browser translation conflict",
+      "translationConflictMessage": "Chrome or another extension translated this page while it was open, which breaks the UI. Turn off automatic translation for this site (Chrome address bar → translation icon → disable), then refresh. Use the language switcher inside the app instead.",
+      "unexpectedRouteError": "Unexpected route error.",
+      "unexpectedPageError": "An unexpected error occurred while loading this page.",
+      "refreshPage": "Refresh Page",
+      "goBack": "Go Back"
+    },
+    "searchableSelect": {
+      "noResults": "No results found"
+    },
+    "passwordInput": {
+      "show": "Show password",
+      "hide": "Hide password"
+    },
+    "modal": {
+      "close": "Close modal",
+      "minimize": "Minimize modal"
+    },
+    "select": {
+      "clear": "Clear"
+    },
+    "impersonation": {
+      "mode": "Impersonation mode",
+      "viewingAs": "Viewing as:",
+      "project": "Project:",
+      "exit": "Exit Impersonation",
+      "exiting": "Exiting...",
+      "unknownProject": "Unknown Project",
+      "unknownRole": "Unknown Role"
+    },
+    "callBubble": {
+      "activeCall": "Active call",
+      "expandCall": "Expand call",
+      "restoreRecording": "Restore call recording",
+      "restoreModal": "Restore call modal"
+    },
+    "searchBar": {
+      "searchType": "Search type"
+    },
+    "period": {
+      "from": "From",
+      "until": "Until"
+    },
+    "permissionRefresh": {
+      "updated": "Your permissions have been updated. Page will refresh."
+    },
+    "connection": {
+      "reconnecting": "Connection problem — reconnecting…"
+    },
+    "currencyUnit": {
+      "UAH": "UAH",
+      "EUR": "EUR"
     }
   },
   "status": {
@@ -359,7 +466,8 @@
   "language": {
     "select": "Select Language",
     "en": "English",
-    "uk": "Ukrainian"
+    "uk": "Ukrainian",
+    "es": "Spanish"
   },
   "theme": {
     "switchToLight": "Switch to light theme",
@@ -829,8 +937,11 @@
       "expertForbidden": "Expert mode is not available for your role.",
       "expertLimitReached": "The daily expert-mode limit is used up.",
       "expertUnavailable": "The external service is unavailable right now, try again later.",
-      "showReasoning": "Show reasoning",
-      "showReasoningHint": "The train of thought is shown in the «Activity» panel",
+      "showReasoning": "31B reasoning",
+      "showReasoningHint": "On — the model reasons and the train of thought goes to the «Activity» panel. Off — 31B answers straight away, faster.",
+      "thinkingUsedOn": "31B · with reasoning",
+      "thinkingUsedOff": "31B · without reasoning",
+      "thinkingUsedMismatch": "The server answered differently from the setting",
       "voiceSilenceTimeout": "Silence timeout (auto-stop)",
       "voiceMaxDuration": "Max recording length",
       "voiceSeconds": "{{count}}s",
@@ -1822,7 +1933,9 @@
           "title": "History",
           "letterCount": "Letters",
           "messageCount": "Messages in thread"
-        }
+        },
+        "openContext": "Context",
+        "close": "Close context"
       },
       "senderHistory": {
         "label": "Address history",
@@ -3901,7 +4014,8 @@
           "firstName": "Enter first name",
           "lastName": "Enter last name",
           "middleName": "Enter middle name (optional)",
-          "phone": "+1-555-0101 (optional)"
+          "phone": "+1-555-0101 (optional)",
+          "notSet": "Not set"
         },
         "errors": {
           "failedToCreate": "Failed to create user",
@@ -3912,6 +4026,21 @@
         "helpers": {
           "asteriskExtension": "3-10 digit extension number for Asterisk phone system (e.g., 1001, 1002)",
           "dialerExtension": "3-10 digit extension for the predictive dialer, allocated by the dialer admin (e.g., 9001, 9002)"
+        },
+        "edit": {
+          "noUserData": "No user data available",
+          "errorUpdating": "Error updating user",
+          "failedToUpdate": "Failed to update user",
+          "username": "Username:",
+          "usernameCannotChange": "Username cannot be changed",
+          "email": "Email:",
+          "firstName": "First Name:",
+          "lastName": "Last Name:",
+          "middleName": "Middle Name:",
+          "phone": "Phone:",
+          "language": "Language:",
+          "timezone": "Timezone:",
+          "assignProjects": "Assign Projects:"
         }
       },
       "editForm": {
@@ -3936,6 +4065,24 @@
         "confirmDeleteMessage": "\"{{name}}\" is removed from your saved filters. The filters themselves are not changed.",
         "loading": "Loading templates...",
         "loadFailed": "Could not load templates - tap to retry"
+      },
+      "validation": {
+        "passwordMinLength": "Password must be at least 8 characters",
+        "passwordUppercase": "Password must contain at least one uppercase letter",
+        "passwordLowercase": "Password must contain at least one lowercase letter",
+        "passwordNumber": "Password must contain at least one number",
+        "passwordSpecial": "Password must contain at least one special character",
+        "invalidEmail": "Invalid email address",
+        "phoneFormat": "Phone must be in E.164 format (e.g., +1-555-0101)",
+        "usernameMin": "Username must be at least 3 characters",
+        "usernameMax": "Username must be at most 50 characters",
+        "usernameChars": "Username can only contain letters, numbers, dots, underscores, and hyphens",
+        "required": "This field is required",
+        "nameMax": "Name must be at most 100 characters",
+        "selectLanguage": "Please select a language",
+        "selectTimezone": "Please select a timezone",
+        "extensionDigits": "Extension must be 3-10 digits",
+        "agentExtensionRequired": "Asterisk Extension is required for agents"
       }
     },
     "ipWhitelist": {
@@ -4141,7 +4288,8 @@
           "last90Days": "Last 90 days",
           "thisYear": "This year"
         },
-        "allClients": "All Clients"
+        "allClients": "All Clients",
+        "filtersAria": "Filters"
       },
       "detailPanel": {
         "noProject": "There is no project",
@@ -4194,7 +4342,7 @@
             "description": "Placeholder text",
             "fullCompanyName": "Enter full company name",
             "address": "Enter address",
-            "edrpouCode": "Enter EDRPOU",
+            "edrpouCode": "Enter EDRPOU or NIF",
             "website": "Enter website",
             "email": "Enter email",
             "hotlinePhone": "Enter support hotline phone",
@@ -4212,7 +4360,7 @@
             "title": "Company details",
             "fullCompanyName": "Full company name",
             "address": "Address",
-            "edrpouCode": "EDRPOU",
+            "edrpouCode": "EDRPOU / NIF",
             "website": "Website",
             "email": "Email",
             "hotlinePhone": "Support hotline phone",
@@ -4254,7 +4402,7 @@
             "description": "Placeholder text",
             "fullCompanyName": "Enter full company name",
             "address": "Enter address",
-            "edrpouCode": "Enter EDRPOU",
+            "edrpouCode": "Enter EDRPOU or NIF",
             "website": "Enter website",
             "email": "Enter email",
             "hotlinePhone": "Enter support hotline phone",
@@ -4271,7 +4419,7 @@
             "title": "Company details",
             "fullCompanyName": "Full company name",
             "address": "Address",
-            "edrpouCode": "EDRPOU",
+            "edrpouCode": "EDRPOU / NIF",
             "website": "Website",
             "email": "Email",
             "hotlinePhone": "Support hotline phone",
@@ -4291,10 +4439,21 @@
           "deleteProject": "Delete Project"
         },
         "errors": {
-          "edrpouCodeFormat": "EDRPOU must be exactly 8 digits",
+          "edrpouCodeFormat": "Enter 8 digits (EDRPOU) or 9 characters (NIF/CIF)",
           "ibanFormat": "IBAN must start with 2 uppercase letters followed by up to 32 digits (max 34 characters)",
           "hotlinePhoneFormat": "Phone number may contain digits and spaces only",
           "emailFormat": "Enter a valid email address"
+        },
+        "currency": {
+          "label": "Currency",
+          "hint": "All amounts in this project are shown in this currency.",
+          "UAH": "Hryvnia (₴)",
+          "EUR": "Euro (€)"
+        },
+        "country": {
+          "label": "Country",
+          "UA": "Ukraine",
+          "ES": "Spain"
         }
       },
       "callingWindow": {
@@ -4333,6 +4492,7 @@
         "weekdays": "Allowed days",
         "weekdaysHint": "Select none to allow every day.",
         "loadFailed": "Could not load the calling window.",
+        "refreshFailed": "Could not refresh the calling window. You are seeing the last loaded values.",
         "countryNone": "No holiday calendar"
       },
       "holidayCalendar": {
@@ -4415,7 +4575,8 @@
           "setToDefault": "Set to default:",
           "cannotArchiveUntilReassigned": "You cannot archive a role until all users are reassigned.",
           "failedToArchive": "Failed to archive role. Please try again.",
-          "roleNotFound": "Role not found"
+          "roleNotFound": "Role not found",
+          "defaultOperatorRole": "Operator"
         }
       },
       "forms": {
@@ -4432,14 +4593,45 @@
           "noDepartment": "No Department"
         },
         "errors": {
-          "failedToCreate": "Failed to create role. Please try again."
-        }
+          "failedToCreate": "Failed to create role. Please try again.",
+          "failedToUpdate": "Failed to update role. Please try again."
+        },
+        "optional": "(Optional)",
+        "selectedPermissions": "(Selected: {{selected}} of {{total}} permissions)",
+        "permissionsCount": "({{selected}} of {{total}} permissions)",
+        "type": "Type",
+        "systemDefault": "System Default",
+        "customRole": "Custom Role",
+        "notAvailableForDefault": "Not available for default roles",
+        "hubRole": "HUB chat role",
+        "hubRoleNotSet": "Not set — by role name",
+        "hubRoleHint": "Not set: HUB decides the rights by the role name; if HUB does not know the name — minimal rights (employee). Changes take effect in HUB within ~6 min without signing in again",
+        "hubRoleUnavailableOption": "{{code}} (not available for selection)",
+        "hubRoleCatalogUnavailable": "HUB catalogue unavailable",
+        "hubRoleLockedDefault": "Default role: the chat role is set by the system and cannot be changed here.",
+        "hubRoleLockedNotAssignable": "This value is not available for you to choose right now, so it cannot be changed here."
       },
       "accessLevel": {
         "my": "Only mine",
         "group": "My group",
         "department": "My department",
         "all": "Entire project"
+      },
+      "hubRole": {
+        "options": {
+          "none": "No HUB access",
+          "employee": "Employee (minimal rights)",
+          "training_workspace": "Trainer (training workspace)",
+          "quality_workspace": "Quality control (QA workspace)",
+          "lawyer": "Lawyer",
+          "operator": "Operator",
+          "supervisor": "Supervisor",
+          "admin": "HUB administrator"
+        }
+      },
+      "validation": {
+        "nameRequired": "Role name is required",
+        "permissionsRequired": "Please select at least one permission"
       }
     },
     "departments": {
@@ -4505,6 +4697,9 @@
       "status": {
         "active": "Active",
         "inactive": "Inactive"
+      },
+      "validation": {
+        "nameRequired": "Department name is required"
       }
     },
     "groups": {
@@ -4557,6 +4752,9 @@
           "failedToCreate": "Failed to create group. Please try again.",
           "failedToUpdate": "Failed to update group. Please try again."
         }
+      },
+      "validation": {
+        "nameRequired": "Group name is required"
       }
     },
     "imports": {
@@ -4672,7 +4870,8 @@
             "contractPurchaseDate": "Contract purchase date",
             "contractPurchaseDatePlaceholder": "Select contract purchase date",
             "reportingDate": "Reporting Date",
-            "reportingDatePlaceholder": "Select reporting date"
+            "reportingDatePlaceholder": "Select reporting date",
+            "previousLenderRequiredHint": "This seller has no legal name on file, so \"Who sold\" is required."
           }
         },
         "vendorSchema": "Vendor schema",
@@ -4721,7 +4920,15 @@
           "fromZip": "From ZIP bundle",
           "ready": "Ready",
           "selectSchema": "Select a vendor schema in step 1 before starting the import.",
-          "zipLoaded": "ZIP bundle loaded — {{name}} ({{size}}). All required datasets are covered."
+          "zipLoaded": "ZIP bundle loaded — {{name}} ({{size}}). All required datasets are covered.",
+          "datasets": {
+            "users": "Users",
+            "credits": "Credits",
+            "payments": "Payments",
+            "write_offs": "Write-offs",
+            "prolongations": "Prolongations",
+            "documents": "ZIP bundle"
+          }
         }
       },
       "history": {
@@ -4779,7 +4986,9 @@
           "uploadedBy": "Uploaded by",
           "allUsers": "All users",
           "importType": "Type",
-          "allTypes": "All Types"
+          "allTypes": "All Types",
+          "filtersAria": "Filters",
+          "searchAria": "Search import history"
         }
       },
       "details": {
@@ -5232,7 +5441,8 @@
           }
         }
       },
-      "cancelOwnerOnly": "Only the user who started this job can cancel it"
+      "cancelOwnerOnly": "Only the user who started this job can cancel it",
+      "uploadedByAt": "{{user}} at {{time}}"
     },
     "clients": {
       "title": "Client Management",
@@ -5252,7 +5462,8 @@
         "optInUbki": "Re-enable UBKI sending",
         "submitUbki": "Send to UBKI",
         "selectClientsFirst": "Select at least one client before starting a bulk action",
-        "limitExceeded": "The maximum allowed selection for bulk actions is 10,000 clients. Please narrow your filter and try again."
+        "limitExceeded": "The maximum allowed selection for bulk actions is 10,000 clients. Please narrow your filter and try again.",
+        "title": "Bulk Actions"
       },
       "manageTags": "Manage Tags",
       "errorLoading": "Failed to load clients",
@@ -5290,7 +5501,7 @@
         "lowPriority": "Low Priority",
         "totalDebt": "Total Debt:",
         "client": "Client:",
-        "ariaSummary": "{{count}} clients, {{debt}} UAH total debt",
+        "ariaSummary": "{{count}} clients, {{debt}} {{currency}} total debt",
         "ariaSelected": "(selected)"
       },
       "filters": {
@@ -5452,7 +5663,6 @@
           "notes": "Notes (Optional)",
           "selectEmployee": "Select employee...",
           "selectSearcher": "Select searcher...",
-          "noUsersAvailable": "No users available",
           "enterAdditionalNotes": "Enter additional notes...",
           "warningMessage": "Note: At least one assignment (Employee or Searcher) must be selected.",
           "assignClient": "Assign Client",
@@ -5581,7 +5791,10 @@
           "cancel": "Cancel",
           "close": "Close",
           "previousWriteUpLost": "The previous call was not written up — that interaction was not saved.",
-          "restore": "Return to the call"
+          "restore": "Return to the call",
+          "telephonyUnavailable": "Telephony is temporarily unavailable",
+          "manualPhoneHintSpain": "Digits only: 11 characters, starting with 34.",
+          "manualPhonePlaceholderSpain": "34XXXXXXXXX"
         },
         "callLogCard": {
           "message": "Message",
@@ -5975,7 +6188,9 @@
           "printReceipt": "Print Receipt",
           "downloadReceiptPDF": "Download Receipt PDF",
           "close": "Close",
-          "reassignEmployee": "Reassign employee"
+          "reassignEmployee": "Reassign employee",
+          "receiptNotConfigured": "Receipt download is not configured for this view yet.",
+          "receiptDownloadFailed": "Failed to download receipt. Please try again."
         },
         "reassignEmployee": {
           "title": "Reassign Employee",
@@ -6118,6 +6333,21 @@
           "selectAtLeastOneTag": "Please select at least one tag",
           "cancel": "Cancel",
           "processing": "Processing..."
+        },
+        "documentUpload": {
+          "fileSizeKb": "{{size}} KB"
+        },
+        "promiseAssign": {
+          "titlePrefix": "Assign “{{tag}}” —",
+          "description": "This tag needs a target payment date. When that date passes, a background rule automatically replaces “{{tag}}” with “Broken promise”.",
+          "dateLabel": "Promise date (date + time)",
+          "amountLabel": "Promise amount (optional)",
+          "amountPlaceholder": "e.g., 1500",
+          "dateInFuture": "The promise date must be in the future",
+          "amountPositive": "The amount must be a positive number",
+          "assignedPrefix": "“{{tag}}” assigned to",
+          "assignFailed": "Failed to assign the tag",
+          "assign": "Assign"
         }
       },
       "activity": {
@@ -6198,6 +6428,8 @@
         "taxId": "Tax ID",
         "saveSuccess": "Client updated successfully",
         "saveError": "Failed to update client",
+        "taxIdInvalid": "The tax number must be exactly 10 digits",
+        "taxIdInvalidEs": "The tax number must be a valid Spanish DNI, NIE or CIF (9 characters, e.g. 12345678Z, X1234567L, B12345678)",
         "addressCreated": "Address added successfully",
         "addressUpdated": "Address updated successfully",
         "addressDeleted": "Address removed successfully",
@@ -6472,6 +6704,8 @@
         "rrValidationPaymentDateRequired": "Payment date {{num}} is required",
         "rrValidationPaymentAmountRequired": "Payment amount {{num}} is required",
         "rrValidationSumMismatch": "Sum of payments ({{sum}}) must equal total amount ({{total}})",
+        "rrValidationAmountOutOfRange": "Total restructuring amount ({{amount}}) must be between {{lower}} and {{upper}}",
+        "rrValidationNothingToReturn": "This loan has nothing left to return, so it cannot be restructured",
         "viewDetail": "View",
         "makePayment": "Make Payment",
         "payments": "Payments",
@@ -6818,7 +7052,15 @@
           "entryCount_one": "{{count}} entry",
           "entryCount_other": "{{count}} entries",
           "pagingLimit": "Showing the {{count}} most recent entries. Set a date range to reach older activity."
-        }
+        },
+        "workExperienceMonths": "{{count}} mo.",
+        "errorOccurred": "An error occurred",
+        "noTransitionPermission": "Your role doesn't allow this transition.",
+        "rrDraftAlreadyExists": "This credit already has a draft restructuring agreement.",
+        "documentsCount_one": "{{count}} doc.",
+        "documentsCount_other": "{{count}} docs.",
+        "creditModuleTag": "own credit",
+        "creditModuleActionsHint": "Actions live in the credit module"
       },
       "debtSummary": {
         "title": "Debt Summary",
@@ -6925,7 +7167,8 @@
           "copied": "Link copied to clipboard",
           "copyFailed": "Could not copy the link",
           "unavailable": "Link unavailable. Cancel the payment and create it again."
-        }
+        },
+        "failedToLoadPayments": "Failed to load payments"
       },
       "tasks": {
         "addTask": "Add Task",
@@ -6961,6 +7204,17 @@
         "completed": "Completed",
         "completedEarly": "Completed early"
       },
+      "assignee": {
+        "searchPlaceholder": "Search employee",
+        "allEmployees": "All employees",
+        "noMatches": "No matches",
+        "unassign": "Unassign",
+        "pinned": "Pinned",
+        "pin": "Pin",
+        "unpin": "Unpin",
+        "pinFailed": "Could not pin this employee",
+        "unpinFailed": "Could not unpin this employee"
+      },
       "documents": {
         "previewFrameTitle": "Document preview"
       }
@@ -6987,7 +7241,7 @@
       "requiredByLeaf": "Required by leaf node config",
       "promiseDate": "Promise date",
       "promiseAmount": "Promise amount",
-      "promiseAmountUAH": "Promise amount (UAH)",
+      "promiseAmountUAH": "Promise amount ({{currency}})",
       "credit": "Credit",
       "creditPlaceholder": "Select a credit...",
       "notes": "Notes",
@@ -7063,7 +7317,8 @@
         "deleteConfirm": "Are you sure you want to delete this interaction? This cannot be undone.",
         "deleteSuccess": "Interaction deleted",
         "showFullNote": "Show",
-        "hideFullNote": "Hide"
+        "hideFullNote": "Hide",
+        "selfEditWindowClosed": "The five-minute window to edit your own record has closed"
       },
       "editInteraction": {
         "title": "Edit interaction",
@@ -7094,7 +7349,8 @@
       "contactStale": "(stale)",
       "noEmails": "No emails available for this source.",
       "chainExecution": "Chain execution",
-      "restoreChainExecutor": "Restore chain executor"
+      "restoreChainExecutor": "Restore chain executor",
+      "stepProgress": "Step {{current}} of {{total}}"
     },
     "chainBuilder": {
       "title": "Chain Builder",
@@ -7220,7 +7476,9 @@
         "phone": "phone: {{step}}",
         "phoneUnknown": "phone: step #{{id}}",
         "generic": "{{key}}: {{value}}",
-        "stepRef": "Step {{order}} — {{name}}"
+        "stepRef": "Step {{order}} — {{name}}",
+        "email": "Email: {{step}}",
+        "emailUnknown": "Email step #{{id}}"
       },
       "debtStatus": {
         "active": "Active",
@@ -7308,7 +7566,8 @@
       },
       "preview": "Preview",
       "saved": "Saved",
-      "maxDaysReached": "Max 10 entries"
+      "maxDaysReached": "Max 10 entries",
+      "templatePlaceholder": "{client_name} has a scheduled RR payment of {amount} due on {due_date}"
     },
     "documentGeneration": {
       "title": "Document Generation",
@@ -7473,7 +7732,7 @@
           "dueDate": "Next payment due date",
           "projectFullCompanyName": "Full company name",
           "projectAddress": "Company address",
-          "projectEdrpouCode": "EDRPOU code",
+          "projectEdrpouCode": "EDRPOU / NIF code",
           "projectWebsite": "Website",
           "projectEmail": "Contact email",
           "projectHotlinePhone": "Support hotline phone",
@@ -8011,7 +8270,8 @@
           "relatedTag": "When enabled, this tag appears on linked clients who share a phone number.",
           "mutexGroup": "Tags in the same group are mutually exclusive. Assigning one removes others.",
           "sortOrder": "Lower number = higher position in tag lists. Default is 100.",
-          "departments": "Leave empty for all departments. Otherwise only operators in selected departments see this tag in the picker."
+          "departments": "Leave empty for all departments. Otherwise only operators in selected departments see this tag in the picker.",
+          "skipWeekends": "When enabled, the TTL countdown pauses on Saturday and Sunday. For example, a 48-hour TTL assigned on Friday at 18:00 will expire on Tuesday at 18:00, not Sunday."
         },
         "notificationTemplatePlaceholder": "e.g. Tag '{tag_name}' assigned to client {client_id}",
         "codePlaceholder": "e.g. high_risk",
@@ -8038,7 +8298,8 @@
         "ttlHoursAlt": "or duration in hours",
         "departmentsHint": "No selection = visible to every department (same as today).",
         "targetActionDateNote": "Expiry is set from a date field in the Target Action that triggers this tag. Tags of this type cannot be assigned manually by operators — only via chain effects.",
-        "triggerEventPlaceholder": "e.g. client.payment_missed"
+        "triggerEventPlaceholder": "e.g. client.payment_missed",
+        "skipWeekends": "Skip weekends"
       },
       "expiryTypes": {
         "permanent": "Permanent",
@@ -8196,7 +8457,8 @@
           "nameFormat": "Only lowercase letters, numbers, underscores"
         },
         "minTagsWarning": "Select at least 2 tags to form a mutex group",
-        "mutexHint": "Only one tag from this group can be active on a client at the same time"
+        "mutexHint": "Only one tag from this group can be active on a client at the same time",
+        "descriptionExample": "e.g. Client agreement type"
       },
       "rules": {
         "name": "Name",
@@ -8437,7 +8699,12 @@
         "executions": {
           "loadFailed": "Failed to load executions",
           "title": "Rule executions",
-          "empty": "No executions yet — the rule has not fired since execution log was added."
+          "empty": "No executions yet — the rule has not fired since execution log was added.",
+          "titleNamed": "Executions of \"{{name}}\"",
+          "count_one": "{{count}} run (newest first)",
+          "count_other": "{{count}} runs (newest first)",
+          "matched": "matched",
+          "action": "action:"
         },
         "viewExecutions": "View executions",
         "valueSelectPlaceholder": "Select..."
@@ -8538,7 +8805,9 @@
         "templateCodeExists": "A template with this code already exists",
         "save": "Save",
         "unsavedChanges": "Unsaved changes",
-        "usingDefaults": "Using defaults"
+        "usingDefaults": "Using defaults",
+        "valuePlaceholder": "value (API code)",
+        "labelPlaceholder": "label"
       },
       "deleteRule": "Delete Rule",
       "deleteRuleConfirmation": "Are you sure you want to delete the rule \"{{name}}\"?",
@@ -8780,7 +9049,8 @@
         "telecom": "Telecom",
         "utilities": "Utilities",
         "other": "Other"
-      }
+      },
+      "clearSearch": "Clear search"
     },
     "profile": {
       "title": "Profile Settings",
@@ -8862,7 +9132,8 @@
         "clear": "Clear Selection",
         "saved": "Shortcut saved",
         "reassigned": "Shortcut moved from \"{{name}}\""
-      }
+      },
+      "extensionLabel": "Extension:"
     },
     "reports": {
       "title": "Reports Dashboard",
@@ -9343,19 +9614,17 @@
       },
       "filters": {
         "responsibleOperator": "Responsible Operator:",
-        "clientPhone": "Client Phone:",
         "selectEmployee": "Select employee",
-        "typePhoneNumber": "Type phone number",
-        "dateOfSale": "Date of sale:",
-        "allOperators": "All Operators"
+        "allOperators": "All Operators",
+        "period": "Period:"
       },
       "exportCsv": "Export CSV",
-      "currencySymbol": "₴",
       "estimated": "Estimated",
       "callsMadeModal": {
         "title": "Calls Made",
         "noData": "No data available",
         "total": "Total",
+        "operatorsSum": "by operators",
         "byHour": "By Hour",
         "calls": "calls",
         "byOperator": "By Operator"
@@ -9370,7 +9639,9 @@
         "answered": "Answered",
         "noAnswer": "No Answer",
         "busy": "Busy",
-        "failed": "Failed"
+        "failed": "Failed",
+        "other": "Other",
+        "notEnoughCallsToRank": "Not enough calls to compare operators"
       },
       "smsModal": {
         "title": "SMS Sent",
@@ -9421,7 +9692,8 @@
         "averagePayment": "Average Payment",
         "topCollector": "Top Collector",
         "largestPayment": "Largest Payment",
-        "noData": "No data available"
+        "noData": "No data available",
+        "noPaymentMethods": "No payment methods data"
       }
     },
     "scoringConfiguration": {
@@ -9530,7 +9802,8 @@
           "reason": "Reason",
           "changes": "Changes"
         }
-      }
+      },
+      "thresholdsSummary": "Critical ≥ {{critical}}, High ≥ {{high}}, Medium ≥ {{medium}}"
     },
     "repaymentConfiguration": {
       "title": "Repayment & Write-off Configuration",
@@ -9614,7 +9887,16 @@
         "allActions": "All Actions",
         "allUsers": "All Users",
         "applyFilters": "Apply Filters",
-        "clearAll": "Clear All"
+        "clearAll": "Clear All",
+        "allRoles": "All Roles",
+        "searchActions": "Search actions",
+        "searchEntityTypes": "Search entity types",
+        "noActionsFound": "No actions found",
+        "noEntityTypesFound": "No entity types found",
+        "actionsSelected_one": "{{count}} action selected",
+        "actionsSelected_other": "{{count}} actions selected",
+        "typesSelected_one": "{{count}} type selected",
+        "typesSelected_other": "{{count}} types selected"
       },
       "tableHeaders": {
         "status": "Status",
@@ -9657,7 +9939,10 @@
         "userAgent": "User Agent",
         "added": "Added",
         "modified": "Modified",
-        "removed": "Removed"
+        "removed": "Removed",
+        "notApplicableAsterisk": "N/A (Asterisk event)",
+        "source": "Source",
+        "asteriskSource": "Asterisk (system event — no HTTP request)"
       },
       "csvExport": {
         "title": "Export audit logs to CSV",
@@ -9681,11 +9966,20 @@
           "newValue": "New Value",
           "ipAddress": "IP Address",
           "successStatus": "Success Status"
+        },
+        "delimiters": {
+          "comma": "Comma (,)",
+          "semicolon": "Semicolon (;)",
+          "tab": "Tab"
         }
       },
       "accessDenied": {
-        "title": "Access Denied"
-      }
+        "title": "Access Denied",
+        "message": "You need the \"View audit logs\" permission to access this page. Please contact your administrator if you need access."
+      },
+      "exportSuccess": "Audit logs exported successfully",
+      "exportError": "Failed to export audit logs",
+      "loadError": "Failed to load audit logs"
     },
     "messagingCampaigns": {
       "description": "Review bulk and single-send campaigns, inspect recipient outcomes, and export delivery results.",
@@ -9713,7 +10007,9 @@
         "delivered": "delivered",
         "resultsLine": "{{delivered}}/{{total}} delivered",
         "filteredCampaigns": "{{count}} campaigns match filters",
-        "totalCost": "Total cost"
+        "totalCost": "Total cost",
+        "resultsLineSent": "{{sent}}/{{total}} sent",
+        "noDeliveryReports": "No delivery reports"
       },
       "cost": {
         "actual": "Actual",
@@ -9737,7 +10033,9 @@
         "destination": "Destination",
         "sentAt": "Sent",
         "deliveredAt": "Delivered",
-        "error": "Error"
+        "error": "Error",
+        "deliveryNotReported": "Not reported",
+        "deliveryNotReportedHint": "This provider does not send delivery reports. Check the provider cabinet for the delivery status."
       },
       "actions": {
         "viewDetails": "View details",
@@ -9841,6 +10139,15 @@
         "defaultName": "CSV {{channel}} campaign",
         "templateFailed": "Could not download template",
         "parseFailed": "Could not parse CSV file"
+      },
+      "recipientStatus": {
+        "pending": "Pending",
+        "queued": "Queued",
+        "sent": "Sent",
+        "delivered": "Delivered",
+        "failed": "Failed",
+        "bounced": "Bounced",
+        "skipped": "Skipped"
       }
     },
     "messagingDrafts": {
@@ -9878,9 +10185,9 @@
         "bodyRequired": "Message body is required.",
         "bodyTooLong": "Body exceeds the {{max}}-character limit for {{channel}}.",
         "charCount": "{{count}} / {{max}}",
-        "bodyPlaceholderSms": "Hi {{client_name}}, your payment of {{debt_amount}} UAH is due on {{due_date}}. — CRM Prionex",
-        "bodyPlaceholderViber": "Hi {{client_name}}, your payment of {{debt_amount}} UAH is due on {{due_date}}. Tap reply to confirm.",
-        "bodyPlaceholderEmail": "Dear {{client_name}},\n\nThis is a reminder that your payment of {{debt_amount}} UAH for contract {{contract_number}} is due on {{due_date}}.\n\nBest regards,\nCRM Prionex"
+        "bodyPlaceholderSms": "Hi {{client_name}}, your payment of {{debt_amount}} {{currency}} is due on {{due_date}}. — CRM Prionex",
+        "bodyPlaceholderViber": "Hi {{client_name}}, your payment of {{debt_amount}} {{currency}} is due on {{due_date}}. Tap reply to confirm.",
+        "bodyPlaceholderEmail": "Dear {{client_name}},\n\nThis is a reminder that your payment of {{debt_amount}} {{currency}} for contract {{contract_number}} is due on {{due_date}}.\n\nBest regards,\nCRM Prionex"
       },
       "view": {
         "title": "View draft",
@@ -9903,7 +10210,11 @@
         "title": "Deleted drafts"
       },
       "noReadPermission": "This role can manage drafts but not browse the list, which needs a messaging send or launch permission. Deleted drafts stay visible below and can still be restored.",
-      "createdOutOfSight": "Draft saved. It will not appear in the list below, which needs a messaging send or launch permission."
+      "createdOutOfSight": "Draft saved. It will not appear in the list below, which needs a messaging send or launch permission.",
+      "columns": {
+        "name": "Name",
+        "channel": "Channel"
+      }
     },
     "messagingIntegrations": {
       "description": "Configure provider credentials, enable channels per service, and verify connection health.",
@@ -9936,7 +10247,8 @@
         "omnicell": "OmniCell",
         "vodafone_obm": "Vodafone OBM",
         "my2_viber": "My2 Viber",
-        "intel_tele": "Intel-Tele.com"
+        "intel_tele": "Intel-Tele.com",
+        "zadarma": "Zadarma"
       },
       "credentials": {
         "turbosms": {
@@ -10006,6 +10318,18 @@
           },
           "reply_to_name": {
             "label": "Reply-to name"
+          }
+        },
+        "zadarma": {
+          "user_key": {
+            "label": "User key"
+          },
+          "secret": {
+            "label": "Secret"
+          },
+          "sender": {
+            "label": "Sender (Alpha name)",
+            "placeholder": "Approved alpha name, leave empty to use the account default"
           }
         }
       },
@@ -11165,7 +11489,9 @@
       "confirmDeleteCategory": "Delete “{{name}}” and all its values? It disappears everywhere but stays readable in Tag History.",
       "confirmDeleteValueTitle": "Delete value?",
       "confirmDeleteValue": "Delete “{{name}}”? It is removed from all contacts but stays readable in Tag History.",
-      "valueDeleted": "Value deleted"
+      "valueDeleted": "Value deleted",
+      "noValues": "No values available",
+      "valuesOf": "{{category}} — values"
     },
     "profileSettings": {
       "photo": {
@@ -11556,6 +11882,276 @@
         "showLater": "Show later sections"
       }
     },
+    "scoringV3": {
+      "buckets": {
+        "CRIT": "Call first",
+        "HIGH": "High",
+        "AVG": "Average",
+        "LOW": "Low",
+        "EXIT": "Do not call"
+      },
+      "bucketMeaning": {
+        "CRIT": "Call today",
+        "HIGH": "Call this week",
+        "AVG": "Normal cadence",
+        "LOW": "Only with spare capacity",
+        "EXIT": "Do not call"
+      },
+      "exitReasons": {
+        "deceased": "Client has died",
+        "fraud": "Marked as fraud",
+        "lawsuit": "Case is in court",
+        "paid_off": "Debt is paid off",
+        "closed": "Debt is closed",
+        "unknown": "Excluded by a compliance rule",
+        "other": "Excluded: {{reason}}"
+      },
+      "notScored": {
+        "label": "Not scored",
+        "title": "This client's debts are outside the scoring model's range, so they have no priority yet.",
+        "outsideRange": "outside the model's range"
+      },
+      "cards": {
+        "notToBeCalled": "not to be called",
+        "expected": "≈ {{amount}} {{currency}} expected"
+      },
+      "panel": {
+        "title": "v3 Priority",
+        "notScored": "Not scored — this client's debts are outside the scoring model's range, so v3 gives them no priority.",
+        "debt": "Debt {{id}}",
+        "payChance": "{{value}}% pay chance",
+        "why": "Why:"
+      },
+      "runNow": "Run now",
+      "starting": "Starting…",
+      "saving": "Saving…",
+      "month": "Month",
+      "titlePrefix": "Scoring v3 —",
+      "monitoring": {
+        "titleEmphasis": "shadow-run report",
+        "subtitle": "Review these numbers before turning v3 on for operators.",
+        "selectMonth": "Select month",
+        "statusLive": "Live — operators are seeing v3 priorities for this brand.",
+        "statusShadow": "Shadow run — scores are being calculated and stored, but operators do NOT see them yet.",
+        "hideFromOperators": "Hide from operators",
+        "enableForOperators": "Enable for operators",
+        "confirmEnableTitle": "Show v3 priorities to operators?",
+        "confirmHideTitle": "Hide v3 priorities from operators?",
+        "confirmEnableMessage": "Every operator on this brand will see v3 buckets instead of the old priority, and the Priority Work List becomes available. Do this only after the client has signed off on the report above. You can undo it here at any time.",
+        "confirmHideMessage": "Operators go back to the old priority immediately. Scoring keeps running in the background, so no data is lost.",
+        "loadError": "Could not load the report. Is the scoring service running?",
+        "nothingScored": "Nothing scored yet for this brand. The v3 job runs on the 1st of each month — once it has run, the results appear here.",
+        "neverScored": "{{month}} was never scored. Months with data: {{months}}.",
+        "noDebtsScored": "No debts scored for {{month}} yet. The job runs on the 1st of each month, or can be started manually.",
+        "stats": {
+          "debtsScored": "Debts scored",
+          "worthCalling": "Worth calling (AVG or higher)",
+          "targetHint": "target ≈ {{target}} — set by tau",
+          "excluded": "Excluded (EXIT)",
+          "excludedHint": "dead / closed / paid / legal",
+          "avgPayChance": "Average pay chance",
+          "top10Hint": "top 10% ≈ {{value}}"
+        },
+        "offTargetBefore": "The AVG share is off target. tau is the knob that moves it —",
+        "offTargetLink": "adjust it in v3 scoring settings",
+        "offTargetAfter": ". The change applies on the next scoring run.",
+        "split": {
+          "title": "How debts were split",
+          "subtitle": "Ordered by urgency. Compare the shape month to month — one bucket holding almost everything is a problem.",
+          "tooltipDebts": "{{count}} debts ({{share}})",
+          "count": "Count"
+        },
+        "table": {
+          "bucket": "Bucket",
+          "meaning": "Meaning",
+          "debts": "Debts",
+          "share": "Share",
+          "group": "Group",
+          "predicted": "Predicted",
+          "actuallyPaid": "Actually paid",
+          "rule": "Rule"
+        },
+        "calibration": {
+          "title": "Does the model actually predict payment?",
+          "subtitle": "Debts split into ten groups by predicted pay chance. The bars on the right should be taller than the bars on the left — that means the model ranks payers correctly.",
+          "notAvailable": "Not available yet. This needs the scored month to have finished so real payments can be compared against the prediction.",
+          "notMeasurable": "Not measurable for this month — no payments were recorded against these debts, so there is nothing to compare the prediction with. This says nothing about the model; pick a month with payment activity.",
+          "rankingHolds": "Ranking holds — debts predicted more likely to pay did pay more often.",
+          "rankingFails": "Ranking does NOT hold — this blocks sign-off. Investigate before cutover.",
+          "averageGap": "Average gap between predicted and actual: {{value}}."
+        },
+        "rules": {
+          "title": "Why each debt got its priority",
+          "subtitle": "Which rule decided. A healthy mix has most debts decided by the model (ml_low / ml_avg) and a minority by events."
+        },
+        "drift": {
+          "title": "Change since last month",
+          "subtitle": "Big swings without a business reason are a warning sign.",
+          "needsTwoMonths": "Needs two scored months. Available once {{previous}} and {{current}} both have data.",
+          "earlierMonth": "an earlier month"
+        },
+        "loading": "Loading shadow-run report…"
+      },
+      "settings": {
+        "titleEmphasis": "settings",
+        "introBefore": "These rules decide who your operators call first. Changes apply to the",
+        "introNextRun": "next scoring run",
+        "introMiddle": "— nothing already scored is redone — and every change is saved in",
+        "introLink": "configuration history",
+        "defaultSource": "This brand has never saved its own values — everything below is the standard setup.",
+        "queue": {
+          "title": "How many debts should operators work?",
+          "description": "Every debt gets a predicted chance of paying this month. The most likely payers go into the working queue; the rest are left for spare capacity. A bigger queue reaches more payers but spends more calls finding each one — pick the size your team can handle.",
+          "noGuidance": "No queue-size guidance available yet.",
+          "showCutoff": "Show the exact cut-off value",
+          "hideCutoff": "Hide the exact cut-off value",
+          "cutoffLabel": "Cut-off (tau)",
+          "cutoffHint": "A debt is worked when its pay-chance reaches this number.",
+          "standardSetup": "Standard setup: {{value}}.",
+          "queueSize": "Queue size",
+          "debtsToWork": "Debts to work",
+          "payersReached": "Payers reached",
+          "callsThatPay": "Calls that pay",
+          "ofDebts": "{{share}} of debts",
+          "current": "current",
+          "payersReachedExplain": "= how many of the people who will pay this month end up in the queue.",
+          "callsThatPayExplain": "= how much more often a call finds a payer than if you called at random. A bigger queue reaches more payers but each call is worth less.",
+          "measured": "Worked out from this brand’s own scores, so these are the numbers you would actually get.",
+          "generic": "Generic reference values — this brand has not been scored yet, so the debt counts are unknown."
+        },
+        "changed": "changed",
+        "sections": {
+          "promise": {
+            "title": "When someone promises to pay",
+            "blurb": "A promise is worth acting on around the day it was made for — and worth chasing for a while after it is broken."
+          },
+          "contact": {
+            "title": "When someone contacts us",
+            "blurb": "A debtor who reaches out is the warmest lead there is. Call them back while it is still fresh."
+          },
+          "partial": {
+            "title": "When someone is paying bit by bit",
+            "blurb": "A part-payer has a rhythm. Leave them alone while they keep to it — chase them when they miss it."
+          },
+          "limits": {
+            "title": "Limits and safety nets",
+            "blurb": "One rule stops us over-contacting people. The other two stop us abandoning debtors who are actually engaging."
+          }
+        },
+        "fields": {
+          "ptp_active_window_days": {
+            "label": "Promise is live for",
+            "unit": "± days",
+            "hint": "They promised the 10th? From the 7th to the 13th, call them today."
+          },
+          "ptp_active_max_age_days": {
+            "label": "Forget a promise after",
+            "unit": "days",
+            "hint": "An old promise stops counting as a reason to call."
+          },
+          "ptp_broken_min_days": {
+            "label": "Start chasing a broken promise",
+            "unit": "days after",
+            "hint": "Set automatically: the day after the promise window closes."
+          },
+          "ptp_broken_max_days": {
+            "label": "Stop chasing it",
+            "unit": "days after",
+            "hint": "Past this, a broken promise is old news and stops driving priority."
+          },
+          "inbound_crit_max_days": {
+            "label": "Call back today if they got in touch within",
+            "unit": "days",
+            "hint": "The strongest signal in the system."
+          },
+          "inbound_high_max_days": {
+            "label": "Call back this week if within",
+            "unit": "days",
+            "hint": "Still warm, but no longer urgent."
+          },
+          "partial_avg_max_days": {
+            "label": "Still on track if they paid within",
+            "unit": "days",
+            "hint": "Do not chase — they are behaving as expected."
+          },
+          "partial_high_max_days": {
+            "label": "Payment is late up to",
+            "unit": "days",
+            "hint": "Follow up this week. Past this, treat it as urgent."
+          },
+          "partial_pay_expire_days": {
+            "label": "Give up on a lapsed payer after",
+            "unit": "days",
+            "hint": "Leave empty and someone who paid once years ago stays urgent forever — that put 40% of the book in the top bucket.",
+            "nullLabel": "never"
+          },
+          "weekly_contact_cap": {
+            "label": "Never contact more than",
+            "unit": "times / week",
+            "hint": "Beyond this the debt drops down the queue. Compliance protection."
+          },
+          "floor_min_real_payments": {
+            "label": "Keep working anyone who has paid at least",
+            "unit": "times",
+            "hint": "A proven payer never falls to the bottom of the queue."
+          },
+          "floor_min_reached_rate": {
+            "label": "…or who answers us at least",
+            "unit": "of the time",
+            "hint": "0.5 means they pick up half the time. Reachable people stay workable."
+          }
+        },
+        "outcomes": {
+          "title": "How long a call outcome counts for",
+          "description": "After a call, what the operator recorded decides the debt’s priority for a while. “Refused to pay” keeps them low for a month; “payment possible” keeps them high for a week. Leave a row blank to keep the standard number.",
+          "callOutcome": "Call outcome",
+          "prioritySets": "Priority it sets",
+          "standard": "Standard",
+          "yourValue": "Your value",
+          "days_one": "{{count}} day",
+          "days_other": "{{count}} days"
+        },
+        "save": {
+          "unsaved": "You have unsaved changes.",
+          "allSaved": "Everything is saved.",
+          "reasonPlaceholder": "Why are you changing this? (saved in history)",
+          "discard": "Discard"
+        },
+        "loading": "Loading scoring v3 settings…"
+      },
+      "workList": {
+        "subtitleDebts": "Debts ranked by the v3 model — call the top of the list first. Shadow-run preview.",
+        "subtitleClients": "Clients ranked by the v3 model — call the top of the list first. Shadow-run preview.",
+        "byDebt": "By debt",
+        "byClient": "By client",
+        "priority": "Priority",
+        "debtId": "Debt ID",
+        "searchPlaceholder": "Search…",
+        "clearDebtId": "Clear debt ID",
+        "minPayChance": "Min pay-chance",
+        "filters": {
+          "ALL": "All active",
+          "EXIT": "Do-not-call"
+        },
+        "totalDebts_one": "{{formatted}} debt",
+        "totalDebts_other": "{{formatted}} debts",
+        "totalClients_one": "{{formatted}} client",
+        "totalClients_other": "{{formatted}} clients",
+        "loadError": "Could not load the work list. The scoring service may be unavailable.",
+        "emptyClients": "No scored clients for this month yet.",
+        "emptyDebtId": "No debt with ID {{id}} in this month.",
+        "emptyFiltered": "No scored debts match these filters.",
+        "priorityValue": "Priority value",
+        "payChance": "Pay chance",
+        "why": "Why",
+        "client": "Client",
+        "clientLink": "Client {{id}}",
+        "prev": "Prev",
+        "pageOf": "Page {{page}} of {{total}}",
+        "loadingWorkList": "Loading work list…",
+        "loadingPriorityWorkList": "Loading priority work list…"
+      }
+    },
     "calls": {
       "callingWindow": {
         "blocked": "Calling is not allowed right now",
@@ -11833,7 +12429,6 @@
       "finalAmount": "Final amount",
       "declineCodes": "Decline codes",
       "underwriter": "Underwriter",
-      "underwriterId": "Underwriter id",
       "rationale": "Rationale",
       "rules": "Ruleset / model",
       "decidedAt": "Decided at",
@@ -11914,7 +12509,15 @@
       "externalApplicationId": "External application ID",
       "decisionId": "Decision ID",
       "loanId": "Loan ID",
-      "loanAgeDays": "Days since disbursement"
+      "loanAgeDays": "Days since disbursement",
+      "advanceRefundExcess": "Refund excess after cancellation",
+      "supersedesDecision": "Supersedes the previous decision"
+    },
+    "decisionError": {
+      "operatorIdNotNumeric": "The decision was not saved: the user number in your CRM pass is not a whole number, so the decision's author cannot be recorded. Contact the administrator — this is a sign-in setting, not your mistake.",
+      "operatorIdAmbiguous": "The decision was not saved: your CRM pass names two different user numbers, so the decision's author cannot be determined. Contact the administrator.",
+      "underwriterNotTheCaller": "The decision was not saved: the author of a manual decision is the owner of the CRM pass, and the page sent a different number. Refresh the page and try again.",
+      "generic": "The decision was not saved. Try again; if it happens again, contact the administrator."
     },
     "tabs": {
       "form": "Application form",
@@ -11956,7 +12559,9 @@
       "title": "Credit applications",
       "total": "{{count}} total",
       "searchPlaceholder": "Application number or email",
-      "empty": "No applications match the filter"
+      "empty": "No applications match the filter",
+      "statusCountsHint": "Status counts cover the whole section and ignore search and dates.",
+      "dateRangeNotApplied": "Date filter not applied: the start date is later than the end date. The list is shown without this range."
     },
     "loans": {
       "title": "Loans",
@@ -11970,7 +12575,7 @@
       "applicant": "Applicant",
       "incomeAndLoan": "Income and loan",
       "links": "Links",
-      "clientPending": "not yet — created at contracting (C-08)",
+      "borrowerApplicationFailed": "not searched: the application was not received — the phone is unknown",
       "projectionPending": "not yet — appears with the debt projection",
       "openLoan": "open loan",
       "openApplication": "open application",
@@ -11987,6 +12592,8 @@
       "noDocuments": "No documents for this application.",
       "noSchedule": "No schedule yet.",
       "noJournal": "No ledger entries.",
+      "noJournalInBucket": "No entries in this bucket.",
+      "journalBucketReversalUnknown": "Under a bucket filter the compensating entry may be outside the selection.",
       "scheduleVersion": "Schedule, version {{version}}",
       "consents": "Consents",
       "granted": "granted",
@@ -12055,7 +12662,10 @@
       "stagesTitle": "Client path",
       "stagesHint": "the same five steps the client sees in their cabinet",
       "stageOfTotal": "step {{index}} of {{total}}",
-      "identifiers": "Identifiers"
+      "identifiers": "Identifiers",
+      "owedToClient": "Owed to the client",
+      "owedToClientHint": "After cancelling, the client returned more than they received. The module owes this amount back to the client — it is not the client's debt and not an overpayment.",
+      "owedToClientUnknown": "The module did not say whether we owe the client: the field is missing from the response. This does not mean there is no excess."
     },
     "settings": {
       "title": "Credit module settings",
@@ -12179,6 +12789,7 @@
       "overpayment": "Overpayment"
     },
     "documentKind": {
+      "agreement_draft": "Draft agreement",
       "contract": "Loan agreement",
       "schedule": "Payment schedule",
       "pcci": "Pre-contract credit information",
@@ -12195,7 +12806,8 @@
       "pad_form": "PAD authorisation",
       "pay_stub": "Pay stub",
       "utility_bill": "Utility bill",
-      "other": "Other"
+      "other": "Other",
+      "unknown": "Unknown kind ({{code}})"
     },
     "consent": {
       "terms": "Terms and conditions",
@@ -12343,7 +12955,14 @@
     },
     "filters": {
       "dpdFrom": "Days past due",
-      "any": "Any"
+      "any": "Any",
+      "anyBucket": "Any bucket",
+      "createdFrom": "Created from",
+      "createdTo": "Created to",
+      "updatedFrom": "Last activity from",
+      "updatedTo": "Last activity to",
+      "calendarHint": "Day boundaries follow the calendar of the application's province (Alberta — Edmonton time), not your local time. The Created and Last activity columns show your local time.",
+      "rangeInverted": "The start date is later than the end date — this range is not applied."
     },
     "unavailable": {
       "title": "The credit module is not deployed on this stand",
@@ -12472,11 +13091,294 @@
         "failed": "not searched: CRM did not answer"
       }
     },
+    "clientHistory": {
+      "title": "Client",
+      "otherApplications": "Other applications from this client: {{count}}",
+      "identityRule": "Same client — by e-mail or SIN; the phone is not used",
+      "none": "No other applications",
+      "notCounted": "The module did not send the client's applications — the count is unavailable, this is not zero",
+      "noIdentity": "Nothing to compare by: the application has no e-mail and no SIN",
+      "legacyNotCounted": "Applications submitted through the previous CRM are not counted here",
+      "shownOf": "Showing {{shown}} of {{total}}"
+    },
+    "timeline": {
+      "title": "Timeline",
+      "trackClient": "Client on the site",
+      "trackStatus": "Application status",
+      "scopeClient": "event of the client's address, not tied to this application",
+      "collapsed": "×{{count}}, until {{last}}",
+      "truncated": "Showing the latest {{shown}} of {{total}} site events for this application",
+      "notProvided": "The module did not send the timeline — only status transitions are shown"
+    },
+    "communications": {
+      "title": "Communications",
+      "calls": "CRM calls",
+      "sms": "CRM SMS",
+      "mail": "Site e-mails",
+      "noClient": "The module has not linked this application to a CRM client — CRM calls and SMS are not shown. A client found by phone is not used here: a matching number does not confirm it is the same person",
+      "forbidden": "No permission to view call and SMS history",
+      "failed": "CRM did not respond — the history was not received; this does not mean there were no calls or SMS",
+      "loading": "Loading…",
+      "noneCalls": "No calls found in your CRM project",
+      "noneSms": "No SMS found in your CRM project",
+      "shownOf": "Showing {{shown}} of {{total}}",
+      "openClientCard": "Everything is in the client card",
+      "mailNone": "No e-mails for this application in the timeline. The site reports e-mails to the module once 17-6g is connected; earlier e-mails are not visible here.",
+      "mailNotProvided": "The module did not send the timeline — site e-mails are unavailable; this does not mean there were none",
+      "mailLoanStage": "Loan-stage e-mails (payout, payments, closure) are not shown in the application card",
+      "gotoMissing": "GoTo calls do not reach CRM. Only calls of the CRM client the module linked to this application are shown here",
+      "smsCanadaMissing": "SMS for Canada is not connected",
+      "direction": {
+        "inbound": "inbound",
+        "outbound": "outbound"
+      }
+    },
+    "portalEvent": {
+      "unknown": "Site event: {{name}}",
+      "code_requested": "Code requested",
+      "code_verified": "Address confirmed",
+      "code_rejected": "Code rejected",
+      "application_created": "Application created",
+      "application_blocked": "Application intake refused by the site",
+      "block_saved": "Form step saved",
+      "ibv_session_opened": "Bank step opened",
+      "ibv_login": "Bank credentials entered",
+      "ibv_mfa": "Bank security question",
+      "ibv_completed": "Bank window finished",
+      "ibv_confirmed": "Bank result confirmed",
+      "ibv_rejected": "Bank step rejected",
+      "document_uploaded": "Statement uploaded",
+      "signed": "Agreement signing",
+      "quote_mismatch": "Client quote differs from the module",
+      "handoff_issued": "Handoff between site and cabinet",
+      "rate_limited": "Attempt limit reached",
+      "antibot_rejected": "Attempt blocked by anti-bot",
+      "intake_closed": "Application intake closed",
+      "signed_in": "Signed in to the cabinet",
+      "sign_in_rejected": "Cabinet sign-in rejected",
+      "signed_in_by_key": "Signed in with a one-time key",
+      "cancellation_requested": "Client cancelled the agreement",
+      "cancellation_failed": "Agreement cancellation failed",
+      "payoff_quoted": "Early payoff quote requested",
+      "prepayment_mode_changed": "Prepayment mode changed",
+      "document_opened": "Document opened",
+      "document_unavailable": "Document unavailable",
+      "continue_to_apply": "Went to complete the application",
+      "notification_mailed": "Notification e-mail sent",
+      "code_sent": "Code e-mail sent"
+    },
     "access": {
       "notAuthenticated": "The module did not accept your sign-in",
       "notAuthenticatedHint": "Your session may have expired. Sign in to CRM again; if that does not help, contact an administrator — the module verifies sign-in with CRM.",
       "noRights": "No access to the credit section",
       "noRightsHint": "Your CRM pass carries no credit-section permissions. A CRM administrator grants them — ask to be assigned the matching role."
+    },
+    "documentOpen": {
+      "unavailable": "File unavailable",
+      "unavailableHint": "According to the module's records, this document's content cannot be served: the file was not stored, or the revision was replaced without keeping its content.",
+      "errorNotFound": "The module did not find this document in this card. Refresh the page; if that does not help, contact the administrator.",
+      "errorGone": "This revision cannot be reproduced: its content was not stored. Open the current version.",
+      "errorMissing": "The document file is temporarily unavailable. Try again later.",
+      "errorDiverged": "The module did not serve the document: its content does not match the signed fingerprint. Report this to the administrator.",
+      "errorForbidden": "You do not have permission to view credit section documents.",
+      "errorGeneric": "Could not open the document (code {{status}}).",
+      "tabBlocked": "The new tab did not open, so the document was handed over as a file download."
+    }
+  },
+  "toasts": {
+    "users": {
+      "updated": "User updated successfully",
+      "created": "User created successfully",
+      "deactivated": "User deactivated successfully",
+      "reactivated": "User reactivated successfully",
+      "unlocked": "Account unlocked successfully"
+    },
+    "calls": {
+      "initiated": "Call initiated successfully",
+      "outcomeSaved": "Call outcome saved",
+      "outcomeSaveFailed": "Failed to save call outcome",
+      "ended": "Call ended",
+      "endFailed": "Failed to end call",
+      "rejected": "Call rejected",
+      "rejectFailed": "Failed to reject call",
+      "answerFailed": "Failed to answer call",
+      "holdFailed": "Failed to hold call",
+      "fallbackMode": "Using fallback mode for call updates",
+      "connected": "Connected to call service",
+      "reconnecting": "Reconnecting to call service..."
+    },
+    "clients": {
+      "created": "Client created successfully",
+      "manualPrioritySet": "Manual priority set successfully",
+      "assigned": "Client assigned successfully",
+      "spamNumberAdded": "Phone number added to spam call history",
+      "createFailed": "Failed to create client",
+      "deleteFailed": "Failed to delete client",
+      "manualPriorityFailed": "Failed to set manual priority",
+      "assignFailed": "Failed to assign client",
+      "bulkAssignFailed": "Failed to bulk assign clients",
+      "spamNumberAddFailed": "Failed to add to spam call history"
+    },
+    "tasks": {
+      "updated": "Task updated successfully",
+      "deleted": "Task deleted successfully",
+      "created": "Task created successfully",
+      "updateFailed": "Failed to update task",
+      "deleteFailed": "Failed to delete task"
+    },
+    "loans": {
+      "closed": "Loan closed successfully",
+      "reopened": "Loan reopened successfully",
+      "closureDateUpdated": "Closure date updated",
+      "closeFailed": "Failed to close loan",
+      "reopenFailed": "Failed to reopen loan",
+      "closureDateUpdateFailed": "Failed to update closure date"
+    },
+    "restructuring": {
+      "completed": "Restructuring agreement completed",
+      "statusUpdated": "Restructuring status updated",
+      "disconnected": "Restructuring disconnected",
+      "activated": "Restructuring activated",
+      "draftDeleted": "Draft restructuring deleted",
+      "overpaymentRecorded": "Overpayment recorded",
+      "completeFailed": "Failed to complete restructuring agreement",
+      "statusUpdateFailed": "Failed to update restructuring status",
+      "disconnectFailed": "Failed to disconnect restructuring",
+      "activateFailed": "Failed to activate restructuring",
+      "draftDeleteFailed": "Failed to delete draft restructuring",
+      "overpaymentFailed": "Failed to record overpayment"
+    },
+    "interactions": {
+      "recorded": "Interaction recorded successfully",
+      "updated": "Interaction updated successfully",
+      "recordFailed": "Failed to record interaction"
+    },
+    "departments": {
+      "created": "Department created successfully",
+      "updated": "Department updated successfully",
+      "archived": "Department archived successfully"
+    },
+    "imports": {
+      "started": "Import started successfully",
+      "cancelled": "Import cancelled successfully",
+      "errorsExported": "Errors exported successfully",
+      "paymentImportStarted": "Payment import job started"
+    },
+    "messaging": {
+      "channelsUpdated": "Enabled channels updated"
+    },
+    "payments": {
+      "recorded": "Payment recorded successfully",
+      "verified": "Payment verified successfully",
+      "cancelled": "Payment cancelled successfully",
+      "updated": "Payment updated successfully",
+      "assigneeReassigned": "Assigned user reassigned successfully",
+      "receiptDownloaded": "Receipt downloaded successfully",
+      "receiptGenerated": "Receipt generated successfully",
+      "exported": "Payments exported successfully",
+      "clientIdRequired": "Client ID is required"
+    },
+    "projects": {
+      "created": "Project created successfully",
+      "updated": "Project updated successfully",
+      "exported": "Projects exported successfully",
+      "archived": "Project archived successfully",
+      "restored": "Project restored successfully"
+    },
+    "reversals": {
+      "createFailed": "Failed to create reversal"
+    },
+    "roles": {
+      "created": "Role created successfully",
+      "updated": "Role updated successfully",
+      "deleted": "Role deleted successfully",
+      "archived": "Role archived successfully"
+    },
+    "sellers": {
+      "created": "Seller created successfully",
+      "updated": "Seller updated successfully",
+      "deactivated": "Seller deactivated successfully"
+    },
+    "sms": {
+      "bulkStarted": "Bulk SMS sending started",
+      "configUpdated": "SMS configuration updated successfully",
+      "sendFailed": "Failed to send SMS",
+      "bulkSendFailed": "Failed to send bulk SMS",
+      "templateCreateFailed": "Failed to create template",
+      "templateUpdateFailed": "Failed to update template",
+      "templateDeleteFailed": "Failed to delete template",
+      "templateRestoreFailed": "Failed to restore template",
+      "configUpdateFailed": "Failed to update SMS configuration"
+    },
+    "tags": {
+      "settingsSaved": "Tag settings saved",
+      "settingsReset": "Tag settings reset to defaults",
+      "created": "Tag created successfully",
+      "updated": "Tag updated successfully",
+      "deleted": "Tag deleted successfully",
+      "ruleCreated": "Rule created successfully",
+      "ruleUpdated": "Rule updated successfully",
+      "ruleDeleted": "Rule deleted successfully",
+      "segmentCreated": "Segment created successfully",
+      "segmentUpdated": "Segment updated successfully",
+      "segmentDeleted": "Segment deleted successfully",
+      "segmentRefreshed": "Segment refreshed",
+      "removalRequested": "Removal request submitted",
+      "removalApproved": "Tag removal approved",
+      "removalRejected": "Tag removal rejected",
+      "createFailed": "Failed to create tag",
+      "updateFailed": "Failed to update tag",
+      "deleteFailed": "Failed to delete tag",
+      "assignFailed": "Failed to assign tag",
+      "removeFailed": "Failed to remove tag",
+      "bulkUpdateFailed": "Failed to update tags",
+      "ruleCreateFailed": "Failed to create rule",
+      "ruleUpdateFailed": "Failed to update rule",
+      "ruleDeleteFailed": "Failed to delete rule",
+      "segmentCreateFailed": "Failed to create segment",
+      "segmentUpdateFailed": "Failed to update segment",
+      "segmentDeleteFailed": "Failed to delete segment",
+      "segmentRefreshFailed": "Failed to refresh segment",
+      "removalRequestFailed": "Failed to submit removal request",
+      "removalApproveFailed": "Failed to approve removal",
+      "removalRejectFailed": "Failed to reject removal"
+    },
+    "writeoffs": {
+      "bulkUploadFailed": "Bulk write-off upload failed.",
+      "editFailed": "Failed to edit write-off",
+      "cancelFailed": "Failed to cancel write-off",
+      "createFailed": "Failed to create write-off"
+    },
+    "documentTypes": {
+      "createFailed": "Failed to create document type",
+      "updateFailed": "Failed to update document type",
+      "visibilityUpdateFailed": "Failed to update visibility",
+      "deleteFailed": "Failed to delete document type"
+    },
+    "dialer": {
+      "joinFailed": "Failed to join the dialer",
+      "leaveFailed": "Failed to leave the dialer",
+      "queueCreateFailed": "Failed to create queue",
+      "queueUpdateFailed": "Failed to update queue",
+      "queueDeleteFailed": "Failed to delete queue",
+      "queueStatusUpdateFailed": "Failed to update queue status",
+      "numbersUploadFailed": "Failed to upload numbers",
+      "addClientsFailed": "Failed to add clients to queue"
+    },
+    "reports": {
+      "dashboardExportFailed": "Failed to export dashboard",
+      "operatorPerformanceExportFailed": "Failed to export operator performance",
+      "clientStatisticsExportFailed": "Failed to export client statistics",
+      "communicationStatisticsExportFailed": "Failed to export communication statistics"
+    },
+    "scoring": {
+      "liveEnabled": "v3 is now live for operators on this brand.",
+      "hiddenAgain": "v3 hidden from operators again. Scoring keeps running in the background.",
+      "settingChangeFailed": "Could not change the setting. Do you have permission?",
+      "started": "Scoring started — refresh in a moment to see updates.",
+      "startFailed": "Could not start scoring.",
+      "settingsSaved": "Saved. The next scoring run will use these values.",
+      "settingsSaveFailed": "Could not save. Check the values and try again."
     }
   }
 }

@@ -7,6 +7,7 @@
 
 import { useTranslation } from 'react-i18next'
 import { PriorityBadge } from './PriorityBadge'
+import { activeCurrency } from '@/lib/projectCurrency'
 import type { Priority } from '../types'
 
 interface PriorityStats {
@@ -139,7 +140,7 @@ export function PriorityCards({ priorityStats, selected = [], onToggle }: Priori
             role={isClickable ? 'button' : undefined}
             tabIndex={isClickable ? 0 : undefined}
             aria-pressed={isClickable ? isSelected : undefined}
-            aria-label={`${card.label}: ${t('pages.clients.priorityCards.ariaSummary', '{{count}} clients, {{debt}} UAH total debt', { count: card.clientCount, debt: formatCurrency(card.totalDebt) })}${isSelected ? ` ${t('pages.clients.priorityCards.ariaSelected', '(selected)')}` : ''}`}
+            aria-label={`${card.label}: ${t('pages.clients.priorityCards.ariaSummary', '{{count}} clients, {{debt}} {{currency}} total debt', { count: card.clientCount, debt: formatCurrency(card.totalDebt), currency: t(`components.currencyUnit.${activeCurrency()}`) })}${isSelected ? ` ${t('pages.clients.priorityCards.ariaSelected', '(selected)')}` : ''}`}
             onClick={() => isClickable && handleCardClick(card.priority)}
             onKeyDown={(e) => isClickable && handleKeyDown(e, card.priority)}
             className={`bg-card/50 flex flex-1 flex-col items-start gap-3 rounded-xl border-2 p-4 transition-all duration-200 sm:gap-4 sm:p-5 xl:p-6 ${colors.card} ${isClickable ? 'cursor-pointer focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:outline-none' : ''} `}
@@ -161,7 +162,7 @@ export function PriorityCards({ priorityStats, selected = [], onToggle }: Priori
                 <p
                   className={`text-xs leading-[150%] font-medium tracking-[-0.24px] sm:text-sm sm:tracking-[-0.28px] ${colors.text}`}
                 >
-                  {formatCurrency(card.totalDebt)} UAH
+                  {formatCurrency(card.totalDebt)} {activeCurrency()}
                 </p>
               </div>
               <div className="flex flex-row items-start gap-1">

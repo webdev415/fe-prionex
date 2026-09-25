@@ -13,6 +13,7 @@
  */
 
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 
 export function NotScoredBadge({
@@ -23,15 +24,16 @@ export function NotScoredBadge({
   className?: string
   trailing?: ReactNode
 }) {
+  const { t } = useTranslation('common')
   return (
     <span
-      title="This client's debts are outside the scoring model's range, so they have no priority yet."
+      title={t('pages.scoringV3.notScored.title')}
       className={cn(
         'border-border bg-muted text-muted-foreground inline-flex h-[25px] min-w-[90px] items-center justify-center gap-1 rounded-[16px] border border-dashed px-3 py-1 text-xs font-medium',
         className
       )}
     >
-      Not scored
+      {t('pages.scoringV3.notScored.label')}
       {trailing}
     </span>
   )

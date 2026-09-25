@@ -34,6 +34,16 @@ export interface TAInteraction {
   archived: boolean
   is_pinned: boolean
   pinned_at: string | null
+  // KAN-1110 — when this record's author stops being able to edit/delete it
+  // without the separate permission. Server-computed (`created_at` + 5 min) so
+  // the countdown cannot drift from the API guard.
+  // Nullable on purpose: TAInteraction is shared by the list, create, update,
+  // InteractionLog and Training endpoints, and only the TA-history handler is
+  // known to populate this. Declaring it required would assert every endpoint
+  // returns it — and would let a frontend deployed ahead of the backend
+  // type-check cleanly and then degrade silently at runtime. parseUtcTimestamp
+  // already accepts null/undefined; this makes the types agree with it.
+  self_edit_expires_at: string | null
 }
 
 export interface TAInteractionListResponse {

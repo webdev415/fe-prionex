@@ -7,6 +7,7 @@
  */
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { Link, useParams } from 'react-router-dom'
 import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
@@ -18,8 +19,9 @@ import {
   useCreditManualDecision,
   useCreditOverview,
 } from '@/features/credit/hooks/useCredit'
-import type { CreditApiError } from '@/features/credit/api/creditApi'
+import { CreditApiError } from '@/features/credit/api/creditApi'
 import { normalizeDraft } from '@/features/credit/api/draft'
+import { CREDIT_DOCUMENT_META_KINDS } from '@/features/credit/api/enums'
 import type { CreditApplicationDetail, CreditDecisionOutcome } from '@/features/credit/api/types'
 import { CreditStatusBadge } from './components/CreditStatusBadge'
 import { CreditDocumentOpenButton } from './components/CreditDocumentOpenButton'
@@ -27,7 +29,11 @@ import { CreditDraftBlocks } from './components/CreditDraftBlocks'
 import { CreditFlagList } from './components/CreditFlagList'
 import { CreditStageProgress } from './components/CreditStageProgress'
 import { CreditClientLink } from './components/CreditClientLink'
+import { CreditPriorApplications } from './components/CreditPriorApplications'
+import { CreditApplicationTimeline } from './components/CreditApplicationTimeline'
+import { CreditCommunications } from './components/CreditCommunications'
 import { collectApplicationFlags } from '@/features/credit/api/applicantFlags'
+import { hasStatusRows, hasTimeline } from '@/features/credit/api/timeline'
 import { formatIdle, idleMinutes } from '@/features/credit/api/idle'
 import { useNowTick } from '@/features/credit/hooks/useNowTick'
 import {
@@ -416,6 +422,13 @@ function ApplicationForm({ application }: { application: CreditApplicationDetail
         </Field>
       </Panel>
 
+      {/* Сколько заявок этот клиент уже подавал — счёт модуля по его правилу
+          тождества; стоит сразу за связями, потому что отвечает на тот же
+          вопрос «кто это». */}
+      <Panel title={t('credit.clientHistory.title')}>
+        <CreditPriorApplications value={application.applicant_applications} />
+      </Panel>
+
       {/* Ссылка «Відкрити кредит» отвечает на «куда нажать», но не на «что
           продиктовать»: сами идентификаторы в ней не видны. */}
       <Panel title={t('credit.card.identifiers')}>
@@ -447,7 +460,18 @@ function ApplicationForm({ application }: { application: CreditApplicationDetail
 function ApplicationDocuments({ application }: { application: CreditApplicationDetail }) {
   const { t } = useTranslation('common')
   const [failure, setFailure] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
   const documents = application.documents ?? []
+  // Плашка над таблицей одна: отказ и уведомление вытесняют друг друга, иначе
+  // запоздавший ответ одного документа лёг бы рядом с итогом другого.
+  const showFailure = (message: string | null) => {
+    setFailure(message)
+    if (message !== null) setNotice(null)
+  }
+  const showNotice = (message: string | null) => {
+    setNotice(message)
+    if (message !== null) setFailure(null)
+  }
 
   return (
     <Panel title={t('credit.tabs.documents')}>
@@ -456,6 +480,15 @@ function ApplicationDocuments({ application }: { application: CreditApplicationD
           {failure}
         </Alert>
       )}
+      {/* Живая область стоит в DOM всегда: вставленную вместе с текстом часть
+          дикторов не объявляет, а у самой плашки роли нет. */}
+      <div role="status" aria-live="polite">
+        {notice && (
+          <CreditNotice tone="info" className="mb-3">
+            {notice}
+          </CreditNotice>
+        )}
+      </div>
       {documents.length === 0 ? (
         <p className="text-muted-foreground text-sm">{t('credit.card.noDocuments')}</p>
       ) : (
@@ -471,13 +504,22 @@ function ApplicationDocuments({ application }: { application: CreditApplicationD
           <tbody>
             {documents.map((doc) => (
               <tr key={doc.document_id} className="border-border border-b last:border-0">
-                <td className="py-2">{t(`credit.documentKind.${doc.kind}`, doc.kind)}</td>
+                <td className="py-2">
+                  {CREDIT_DOCUMENT_META_KINDS.includes(doc.kind)
+                    ? t(`credit.documentKind.${doc.kind}`)
+                    : t('credit.documentKind.unknown', { code: doc.kind })}
+                </td>
                 <td className="py-2 font-mono text-xs">{doc.title ?? doc.document_id}</td>
                 <td className="text-muted-foreground py-2 text-xs">
                   {formatDateTime(doc.generated_at)}
                 </td>
                 <td className="py-2 text-right">
-                  <CreditDocumentOpenButton document={doc} onError={setFailure} />
+                  <CreditDocumentOpenButton
+                    document={doc}
+                    owner={{ kind: 'application', id: application.application_id }}
+                    onError={showFailure}
+                    onNotice={showNotice}
+                  />
                 </td>
               </tr>
             ))}
@@ -486,6 +528,30 @@ function ApplicationDocuments({ application }: { application: CreditApplicationD
       )}
     </Panel>
   )
+}
+
+/**
+ * Отказ ручного решения по машинному коду модуля. Три кода — отказы по пропуску
+ * CRM, из которого модуль берёт автора решения: `detail` модуля написан
+ * по-русски, а оператору нужен текст на его языке. Ключи — статическими
+ * литералами: страж словарей видит только их. Прочие отказы — прежним
+ * сообщением: в `validation_failed` оно называет поле, которое надо поправить.
+ * Сообщения нет (брошен не `Error` или текст пуст) — общий текст отказа: пустая
+ * плашка не говорит оператору даже того, что решение не записано.
+ */
+function manualDecisionErrorText(t: TFunction, error: unknown): string {
+  if (error instanceof CreditApiError) {
+    switch (error.code) {
+      case 'operator_id_not_numeric':
+        return t('credit.decisionError.operatorIdNotNumeric')
+      case 'operator_id_ambiguous':
+        return t('credit.decisionError.operatorIdAmbiguous')
+      case 'underwriter_not_the_caller':
+        return t('credit.decisionError.underwriterNotTheCaller')
+    }
+  }
+  const message = error instanceof Error ? error.message : ''
+  return message.trim() ? message : t('credit.decisionError.generic')
 }
 
 function ApplicationDecision({
@@ -504,7 +570,6 @@ function ApplicationDecision({
   const [amount, setAmount] = useState(String((application.requested_amount_minor ?? 0) / 100))
   const [rationale, setRationale] = useState('')
   const [codes, setCodes] = useState<string[]>([])
-  const [underwriterId, setUnderwriterId] = useState('')
 
   const snapshot = useMemo(
     () => JSON.stringify(decision?.input_snapshot ?? {}, null, 2),
@@ -517,7 +582,6 @@ function ApplicationDecision({
       rationale: rationale.trim(),
       ...(outcome === 'approved' ? { final_amount_minor: Math.round(Number(amount) * 100) } : {}),
       ...(outcome === 'declined' ? { decline_codes: codes } : {}),
-      ...(underwriterId ? { underwriter_id: Number(underwriterId) } : {}),
     })
   }
 
@@ -558,6 +622,24 @@ function ApplicationDecision({
             {decision.ruleset_version} / {decision.model_version}
           </Field>
           <Field label={t('credit.fields.decidedAt')}>{formatDateTime(decision.decided_at)}</Field>
+          {/* Указатель, а не ссылка: двери «решение по id» в модуле нет
+              (replayDecision отвечает 501), заявка несёт только действующее
+              решение, и ссылка вела бы на эту же карточку или в никуда. Id с
+              копированием — то, что оператор передаст разработчику.
+              `null` — «ничего не заменяло», поэтому строки нет вовсе, а не
+              прочерк, как у прочих идентификаторов. Ключа нет (модуль старше
+              B-3) — строки тоже нет: такой модуль решений не пересматривает. */}
+          {decision.supersedes_decision_id && (
+            <CreditIdentifierRows
+              items={[
+                {
+                  key: 'supersedes',
+                  label: t('credit.fields.supersedesDecision'),
+                  value: decision.supersedes_decision_id,
+                },
+              ]}
+            />
+          )}
         </Panel>
       )}
 
@@ -583,7 +665,7 @@ function ApplicationDecision({
         <Panel title={t('credit.card.manualDecision')}>
           {mutation.isError && (
             <Alert variant="error" className="mb-3">
-              {(mutation.error as CreditApiError).message}
+              {manualDecisionErrorText(t, mutation.error)}
             </Alert>
           )}
           {mutation.isSuccess && (
@@ -616,15 +698,6 @@ function ApplicationDecision({
                 />
               </label>
             )}
-            <label className="text-muted-foreground flex flex-col gap-1.5 text-xs">
-              {t('credit.fields.underwriterId')}
-              <Input
-                type="number"
-                min="1"
-                value={underwriterId}
-                onChange={(event) => setUnderwriterId(event.target.value)}
-              />
-            </label>
           </div>
 
           {outcome === 'declined' && (
@@ -693,29 +766,70 @@ function ApplicationDecision({
 
 function ApplicationHistory({ application }: { application: CreditApplicationDetail }) {
   const { t } = useTranslation('common')
+  const timeline = application.timeline
   return (
-    <Panel title={t('credit.tabs.history')}>
-      <ul className="text-sm">
-        {(application.audit ?? []).map((entry, index) => (
-          <li
-            key={`${entry.at}-${index}`}
-            className="border-border flex gap-3 border-b py-2 last:border-0"
-          >
-            <span className="text-muted-foreground w-40 shrink-0 font-mono text-xs">
-              {formatDateTime(entry.at)}
+    <>
+      <Panel title={t('credit.tabs.history')}>
+        {/* Хронология модуля уже несёт переходы статуса дорожкой `status`, поэтому
+            `audit` рядом не выводится — переходы не дублируются. Нет поля или лента
+            пуста (стенд отстаёт от контракта) — прежний список `audit` и честная
+            пометка. В ленте нет ни одного перехода — `audit` остаётся под ней:
+            иначе история статусов пропала бы молча. */}
+        {hasTimeline(timeline) ? (
+          <>
+            <CreditApplicationTimeline
+              timeline={timeline}
+              portalEvents={application.portal_events}
+              portalEventsTotal={application.portal_events_total}
+            />
+            {!hasStatusRows(timeline) && <AuditList application={application} />}
+          </>
+        ) : (
+          <>
+            <p className="text-muted-foreground mb-2 text-xs">{t('credit.timeline.notProvided')}</p>
+            <AuditList application={application} />
+          </>
+        )}
+        <ApplicationSignAndConsents application={application} />
+      </Panel>
+      <Panel title={t('credit.communications.title')}>
+        <CreditCommunications clientId={application.client_id} timeline={timeline} />
+      </Panel>
+    </>
+  )
+}
+
+function AuditList({ application }: { application: CreditApplicationDetail }) {
+  const { t } = useTranslation('common')
+  return (
+    <ul className="text-sm">
+      {(application.audit ?? []).map((entry, index) => (
+        <li
+          key={`${entry.at}-${index}`}
+          className="border-border flex gap-3 border-b py-2 last:border-0"
+        >
+          <span className="text-muted-foreground w-40 shrink-0 font-mono text-xs">
+            {formatDateTime(entry.at)}
+          </span>
+          <span>
+            {entry.from_status
+              ? `${t(`credit.status.${entry.from_status}`, entry.from_status)} → `
+              : ''}
+            <strong>{t(`credit.status.${entry.to_status}`, entry.to_status)}</strong>
+            <span className="text-muted-foreground ml-2 text-xs">
+              ({t(`credit.actor.${entry.actor}`, entry.actor)})
             </span>
-            <span>
-              {entry.from_status
-                ? `${t(`credit.status.${entry.from_status}`, entry.from_status)} → `
-                : ''}
-              <strong>{t(`credit.status.${entry.to_status}`, entry.to_status)}</strong>
-              <span className="text-muted-foreground ml-2 text-xs">
-                ({t(`credit.actor.${entry.actor}`, entry.actor)})
-              </span>
-            </span>
-          </li>
-        ))}
-      </ul>
+          </span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function ApplicationSignAndConsents({ application }: { application: CreditApplicationDetail }) {
+  const { t } = useTranslation('common')
+  return (
+    <>
       {application.sign_evidence && (
         <div className="mt-4">
           <div className="text-muted-foreground mb-2 text-xs">{t('credit.card.signEvidence')}</div>
@@ -764,7 +878,7 @@ function ApplicationHistory({ application }: { application: CreditApplicationDet
           </ul>
         </>
       )}
-    </Panel>
+    </>
   )
 }
 

@@ -5,6 +5,11 @@
  * Updated: 2025-12-08 - Added new fields for UI enhancements
  */
 
+export const PROJECT_CURRENCIES = ['UAH', 'EUR'] as const
+export type ProjectCurrency = (typeof PROJECT_CURRENCIES)[number]
+export const PROJECT_COUNTRIES = ['UA', 'ES'] as const
+export type ProjectCountry = (typeof PROJECT_COUNTRIES)[number]
+
 /**
  * Project from API (list view)
  */
@@ -15,6 +20,8 @@ export interface ApiProject {
   description?: string
   status: 'active' | 'inactive' | 'archived'
   is_active: boolean
+  currency?: ProjectCurrency
+  country?: ProjectCountry
 
   // Client information
   client_company?: string
@@ -133,6 +140,8 @@ export interface CreateProjectInput {
   contract_number?: string
   start_date?: string
   end_date?: string
+  currency?: ProjectCurrency
+  country?: ProjectCountry
 
   // Company legal details — all optional
   full_company_name?: string | null
@@ -160,6 +169,8 @@ export interface UpdateProjectInput {
   start_date?: string
   end_date?: string
   status?: 'active' | 'inactive'
+  currency?: ProjectCurrency
+  country?: ProjectCountry
 
   // Company legal details — all optional
   full_company_name?: string | null

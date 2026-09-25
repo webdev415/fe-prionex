@@ -12,7 +12,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { CallingWindowReason } from '../../types'
 
 vi.mock('../../api/callService')
+vi.mock('sonner', () => ({ toast: { warning: vi.fn() } }))
 
+import { act } from '@testing-library/react'
+import { toast } from 'sonner'
 import { callService } from '../../api/callService'
 import { useCallingWindow, reasonMessage } from '../useCallingWindow'
 
@@ -137,5 +140,119 @@ describe('useCallingWindow client scoping', () => {
     await waitFor(() => expect(b.result.current.isLoading).toBe(false))
     expect(a.result.current.allowed).toBe(true)
     expect(b.result.current.allowed).toBe(false)
+  })
+})
+
+describe('reportBlocked — a press on a button the window disabled', () => {
+  const CLOSED = { allowed: false, reason: 'after_window_end' as const, detail: '20:46' }
+
+  async function blockedHook(clientId: number | null = 501) {
+    mocked.getCallingWindowStatus.mockResolvedValue(CLOSED)
+    const hook = renderHook(() => useCallingWindow(clientId), { wrapper: createWrapper() })
+    await waitFor(() => expect(hook.result.current.allowed).toBe(false))
+    return hook
+  }
+
+  it('shows the reason straight away, without waiting for the server', async () => {
+    let finish: (v: unknown) => void = () => {}
+    mocked.reportBlockedCallAttempt.mockReturnValue(new Promise((r) => (finish = r)) as never)
+    const { result } = await blockedHook()
+
+    act(() => result.current.reportBlocked())
+
+    expect(toast.warning).toHaveBeenCalledWith('pages.calls.callingWindow.outsideHours')
+    finish({ recorded: true, allowed: false, reason: 'after_window_end', detail: '20:46' })
+  })
+
+  it('records the attempt against the debtor being called', async () => {
+    mocked.reportBlockedCallAttempt.mockResolvedValue({
+      recorded: true,
+      allowed: false,
+      reason: 'after_window_end',
+      detail: '20:46',
+    })
+    const { result } = await blockedHook(501)
+
+    act(() => result.current.reportBlocked())
+
+    await waitFor(() => expect(mocked.reportBlockedCallAttempt).toHaveBeenCalledWith(501))
+  })
+
+  it('writes one record per press, not a burst for a double-click', async () => {
+    // Both presses inside one act, with no render between them — the case a
+    // guard read from render state lets through.
+    let finish: (v: unknown) => void = () => {}
+    mocked.reportBlockedCallAttempt.mockReturnValue(new Promise((r) => (finish = r)) as never)
+    const { result } = await blockedHook()
+
+    act(() => {
+      result.current.reportBlocked()
+      result.current.reportBlocked()
+    })
+    // mutate() reaches the request on a later tick, so a duplicate would not
+    // show yet — give it every chance to land before counting.
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 30))
+    })
+    expect(mocked.reportBlockedCallAttempt).toHaveBeenCalledTimes(1)
+    finish({ recorded: true, allowed: false, reason: null, detail: null })
+  })
+
+  it('records the next press once the first has been answered', async () => {
+    // A guard that never reset would silently drop every later attempt.
+    mocked.reportBlockedCallAttempt.mockResolvedValue({
+      recorded: true,
+      allowed: false,
+      reason: 'after_window_end',
+      detail: '20:46',
+    })
+    const { result } = await blockedHook()
+
+    act(() => result.current.reportBlocked())
+    await waitFor(() => expect(mocked.reportBlockedCallAttempt).toHaveBeenCalledTimes(1))
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 30))
+    })
+    act(() => result.current.reportBlocked())
+
+    await waitFor(() => expect(mocked.reportBlockedCallAttempt).toHaveBeenCalledTimes(2))
+  })
+
+  it('re-checks the window when the server says it has opened', async () => {
+    // Nothing is recorded in that case; the page's refusal was stale, and the
+    // button should come back rather than keep refusing a legal call.
+    mocked.reportBlockedCallAttempt.mockResolvedValue({
+      recorded: false,
+      allowed: true,
+      reason: null,
+      detail: null,
+    })
+    const { result } = await blockedHook()
+    const before = mocked.getCallingWindowStatus.mock.calls.length
+
+    act(() => result.current.reportBlocked())
+
+    await waitFor(() =>
+      expect(mocked.getCallingWindowStatus.mock.calls.length).toBeGreaterThan(before)
+    )
+  })
+
+  it('does not let a failed report vanish', async () => {
+    // The operator is not told — they already have the refusal on screen and
+    // can do nothing about it — but the loss has to be visible to whoever
+    // runs the system.
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
+    mocked.reportBlockedCallAttempt.mockRejectedValue(new Error('gateway down'))
+    const { result } = await blockedHook()
+
+    act(() => result.current.reportBlocked())
+
+    await waitFor(() =>
+      expect(logged).toHaveBeenCalledWith(
+        'Could not record a blocked call attempt',
+        expect.any(Error)
+      )
+    )
+    logged.mockRestore()
   })
 })

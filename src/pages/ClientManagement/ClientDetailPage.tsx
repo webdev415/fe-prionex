@@ -5,6 +5,7 @@
  */
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import { spanishLocaleOr } from '@/lib/i18n'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQueries, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
@@ -12,7 +13,7 @@ import { Icons } from '@/lib/icons'
 import { DocumentsAccordion } from './components/DocumentsAccordion'
 import { DocumentUploadModal } from './components/DocumentUploadModal'
 import { LoanCalculationModal } from './components/LoanCalculationModal'
-import { LoanCard, type LoanCardAction } from './components/LoanCard'
+import { LoanCard, type LoanCardAction, type LoanCardLoan } from './components/LoanCard'
 import { LoansCardList } from './components/LoansCardList'
 import { UbkiSubmissionHistory } from './components/UbkiSubmissionHistory'
 import { SaleNotesSection } from './components/SaleNotesSection'
@@ -44,7 +45,7 @@ import { RecordPaymentModal } from './components/RecordPaymentModal'
 import { useRecordPaymentFlow } from '@/features/payments/hooks/useRecordPaymentFlow'
 // import { DeleteClientModal } from './components/DeleteClientModal'
 import { EditClientModal } from './components/EditClientModal'
-import { AssignRoleModal, type AssignRoleMode } from './components/AssignRoleModal'
+import { AssigneeDropdown, type AssigneeRole } from './components/AssigneeDropdown'
 import { PriorityBadge } from './components/PriorityBadge'
 import { V3ClientPriorityPanel } from '@/features/scoring/components/V3ClientPriorityPanel'
 import { NotScoredBadge } from './components/NotScoredBadge'
@@ -68,6 +69,7 @@ import { useReversals } from '@/features/reversals/hooks/useReversals'
 import { CallRecordingModal, type CallRecordingModalHandle } from './components/CallRecordingModal'
 import { CallTranscriptPanel } from '@/features/quality/components/CallTranscriptPanel'
 import { ViewSMSModal } from './components/ViewSMSModal'
+import { useSmsServiceAvailable } from '@/features/sms'
 import { SendSMSModal } from './components/SendSMSModal'
 import { ViewMessageModal } from './components/ViewMessageModal'
 import { SendMessageModal } from './components/SendMessageModal'
@@ -150,6 +152,7 @@ import {
   type PeriodicityType,
 } from '@/features/clients/utils/rrSchedule'
 import { buildContactPayload } from '@/features/clients/utils/contactPayload'
+import { checkRrAmount } from '@/features/clients/utils/rrAmountBounds'
 import type { RestructuringPaymentEntry } from '@/features/clients/api/types'
 import type { OverpaymentResponse, RRStatusHistoryEntry } from '@/features/clients/api/clientApi'
 import { useUpdateInteraction } from '@/features/clients/hooks/useNoteInteraction'
@@ -177,7 +180,12 @@ import { PaymentMethodCell } from '@/features/payments/components/PaymentMethodC
 import { useUserDepartment } from '@/features/users'
 import { PermissionGuard } from '@/components/auth'
 import { useHasAnyPermission, useHasPermission } from '@/hooks/usePermissions'
-import { useSubmitDebtToUbki, useBulkSubmitToUbki, ubkiKeys } from '@/features/ubki'
+import {
+  useSubmitDebtToUbki,
+  useBulkSubmitToUbki,
+  ubkiKeys,
+  useUbkiAvailable,
+} from '@/features/ubki'
 import { PERMISSIONS } from '@/constants/permissions'
 import { searchClientsByPhoneExact } from '@/api/clientSearchApi'
 import { ChainExecutor, TAInteractionHistory } from './components/taChains'
@@ -187,7 +195,7 @@ import { useTAHotkeyBindings } from '@/features/taHotkeys/hooks/useTAHotkeys'
 import { resolveRecentCallPhone } from '@/features/taHotkeys/recentCallPhone'
 import { RelatedTagsTab } from './components/RelatedTagsTab'
 import type { PhoneMeta } from '@/features/tags/hooks/useLinkedClientsRelatedTags'
-import { formatUkrainePhoneForDisplay } from '@/lib/phone'
+import { formatUkrainePhoneForDisplay, isDialablePhone } from '@/lib/phone'
 import { isAdminRole } from '@/features/tags/utils/visibility'
 import {
   ALL_MESSAGING_SEND_PERMISSIONS,
@@ -203,7 +211,12 @@ import {
 import { useOperators } from '@/features/users/hooks/useUsers'
 import { ClientCreditBlock } from '@/pages/Credit/components/ClientCreditBlock'
 import { isCreditModuleEnabled } from '@/features/credit/api/creditModuleFlag'
-import { splitDebtsByOrigin } from '@/features/clients/api/creditProjection'
+import {
+  DEBT_ORIGIN_CREDIT_MODULE,
+  isCreditProjection,
+  splitDebtsByOrigin,
+} from '@/features/clients/api/creditProjection'
+import type { DebtDetail } from '@/features/clients/api/types'
 import { piiProps } from '@/lib/openreplay/pii'
 import { PiiTooltip } from '@/components/ui/PiiTooltip'
 
@@ -245,10 +258,6 @@ type ExtendedCallItem = {
 /** Strip formatting for phone match / API lookup (backend normalizes further). */
 const stripPhoneFormat = (value: string) => value.replace(/[\s\-().]/g, '')
 
-/** True if value looks like a Ukrainian mobile/phone number (incl. 380… without +). */
-const looksLikeUkrainePhone = (value: string) =>
-  /^(\+?38)?0\d{9}$/.test(stripPhoneFormat(value)) || /^380\d{9}$/.test(stripPhoneFormat(value))
-
 /** Today at local midnight — used as max/default for closure-date pickers. */
 const getTodayAtMidnight = (): Date => {
   const now = new Date()
@@ -278,6 +287,120 @@ const ENABLE_BULK_UBKI_SUBMISSION = true
 /** Ties the priority chip's ``aria-controls`` to the panel it discloses. */
 const V3_PANEL_ID = 'v3-priority-panel'
 
+/**
+ * Купленный долг в форму строки списка «Позики».
+ *
+ * Вынесено из большого `useMemo` карточки в отдельную функцию не ради красоты:
+ * с WS-11 (14-7b) тот же маппинг нужен ВТОРОМУ списку — списку показа, куда
+ * входит и кредит модуля. Копия маппинга разошлась бы с оригиналом на первом
+ * же новом поле, и обе стороны остались бы зелёными.
+ */
+function mapCollectionDebtToRow(d: DebtDetail) {
+  return {
+    id: d.id,
+    loanNumber: d.contract_number,
+    issueDate: formatDate(d.credit_issued_date ?? undefined),
+    counterparty: d.seller_company,
+    // If the per-debt purchase_date is empty, fall back to
+    // the linked factoring agreement's contract_purchase_date.
+    saleDate: formatDate(
+      d.purchase_date ?? d.factoring_agreement?.contract_purchase_date ?? undefined
+    ),
+    // Factoring chain surfaced via the row-expansion "Info" button.
+    sellerLegalName: d.seller_legal_name ?? null,
+    factoringAgreementPreviousLender: d.factoring_agreement?.previous_lender ?? null,
+    factoringAgreementPurchaseDate: d.factoring_agreement?.contract_purchase_date
+      ? formatDate(d.factoring_agreement.contract_purchase_date)
+      : null,
+    principalAmount: Number(d.principal_amount ?? 0),
+    principalDebt: d.principal_debt != null ? Number(d.principal_debt) : null,
+    remainingDebtAmount: Number(d.remaining_debt_amount ?? 0),
+    totalToReturn: Number(d.total_to_return ?? 0),
+    // KAN-994 — closing-coefficient band, or null when no tooltip is due
+    // (no principal debt, no matching age range, no purchase date). The
+    // backend does the arithmetic and the date comparison so every viewer
+    // sees the same figures; the card renders the strings verbatim.
+    closingCoefficient: d.closing_coefficient ?? null,
+    // KAN-784 AC2: fully-returned loan that fell short of the principal
+    // guard — auto-close was blocked, so it needs operator-driven closure.
+    needsManualClosureReview: d.needs_manual_closure_review ?? false,
+    // Closure date — surfaced for closed debts so the user can see it and,
+    // with the close_client_debt permission, edit it after closure.
+    creditClosedDate: d.credit_closed_date ?? null,
+    creditReopenedDate: d.credit_reopened_date ?? null,
+    // Legacy TABLE460.f53 — eligible-for-return amount carried over from
+    // the sale. Surfaced as its own column only when at least one loan row
+    // has it and it diverges from remainingDebtAmount (see loanColumns).
+    eligibleForReturn: d.legacy_f53 != null ? Number(d.legacy_f53) : null,
+    // KAN-993 — "Debt term (days)" card field (credit_term_days already
+    // populated on the backend; surfaced on the redesigned Loans card).
+    creditTermDays: d.credit_term_days ?? null,
+    status: d.status,
+    // UBKI outbound submission state (credit bureau)
+    sentToCreditBureau: d.sent_to_credit_bureau ?? false,
+    creditBureauSentDate: d.credit_bureau_sent_date ?? null,
+  }
+}
+
+/**
+ * ПЯТНАДЦАТЬ полей формы строки, у которых для нашего кредита значения НЕТ.
+ *
+ * Они заполняются пустыми не для показа, а потому что у `LoanCardLoan` нет ни
+ * одного опционального поля из старых двадцати. Рисовать их нельзя: карточка
+ * ветвится по `origin` и эти поля пропускает (см. `LoanCard`). Ноль на экране
+ * — это ФАКТ («основного боргу нема»), который оператор произнесёт человеку
+ * вслух, а семь прочерков подряд читаются как «данные потерялись».
+ */
+const EMPTY_FACTORING_FIELDS = {
+  issueDate: '',
+  counterparty: '',
+  saleDate: '',
+  sellerLegalName: null,
+  factoringAgreementPreviousLender: null,
+  factoringAgreementPurchaseDate: null,
+  principalDebt: null,
+  totalToReturn: 0,
+  closingCoefficient: null,
+  creditClosedDate: null,
+  eligibleForReturn: null,
+  creditTermDays: null,
+  sentToCreditBureau: false,
+  creditBureauSentDate: null,
+  needsManualClosureReview: false,
+} as const
+
+/**
+ * Проекция кредитного модуля в форму строки списка.
+ *
+ * Заполняются только те поля, значение которых у проекции ЕСТЬ: номер
+ * договора, статус, две суммы — плюс три признака происхождения, по которым
+ * карточка решает, что рисовать. Суммы приходят в major-единицах и передаются
+ * как есть: делить на 100 здесь нечего.
+ */
+function mapCreditProjectionToRow(d: DebtDetail): LoanCardLoan {
+  return {
+    ...EMPTY_FACTORING_FIELDS,
+    id: d.id,
+    loanNumber: d.contract_number,
+    status: d.status,
+    // 🔴 «Сума позики» — из `principal_amount`, того же столбца, что у
+    // купленной строки (`mapCollectionDebtToRow`): модуль кладёт туда
+    // начисленное тело, то есть сумму выдачи. `original_debt_amount`
+    // client-service НЕ отдаёт вовсе — его нет ни в `DebtDetail` ответа
+    // карточки, ни в словаре, который его наполняет, — и `Number(undefined ?? 0)`
+    // печатал «Сума позики 0,00 CAD» на каждом кредите. Отсутствие — не ноль:
+    // `null` карточка печатает прочерком.
+    principalAmount: d.principal_amount != null ? Number(d.principal_amount) : null,
+    remainingDebtAmount: Number(d.remaining_debt_amount ?? 0),
+    // Значение берётся у правила, а не переписывается литералом: правило по
+    // происхождению строки живёт в одном файле, и второй его экземпляр в
+    // карточке разошёлся бы с первым молча.
+    origin: DEBT_ORIGIN_CREDIT_MODULE,
+    currency: d.currency ?? null,
+    lifecycleDetail: d.lifecycle_detail ?? null,
+  }
+}
+
 export function ClientDetailPage() {
   const { t, i18n } = useTranslation('common')
   const { isCallActive, setOpenCallModal } = useCallStore()
@@ -287,9 +410,6 @@ export function ClientDetailPage() {
 
   useClientCardOpenTracking(id, trackEvent)
 
-  // Returns true if the value looks like a Ukrainian phone number,
-  // regardless of the contact type's isPhone flag
-  const looksLikePhone = (value: string) => looksLikeUkrainePhone(value)
   const [selectedRaId, setSelectedRaId] = useState<number | null>(null)
   // KAN-335: loan whose "detailed calculation after sale" modal is open.
   const [calcLoan, setCalcLoan] = useState<{ id: number; loanNumber?: string | null } | null>(null)
@@ -417,7 +537,6 @@ export function ClientDetailPage() {
     | 'tasks'
     | 'documents'
     | 'activity'
-    | 'credit'
     | 'ta-chains'
   >('loans')
   /**
@@ -539,30 +658,56 @@ export function ClientDetailPage() {
   } = useClientProfile(clientId, isValidClientId)
   const { data: loans = [], isLoading: isLoansLoading } = useClientLoans(clientId, isValidClientId)
   /**
-   * 🔴 Скрытие из «Позики» и показ в блоке «Кредит» — ОДНО правило с двумя
-   * выходами, и живут они на одной функции. Две копии разойдутся на первом же
-   * новом значении `origin`, и тогда оператор без права потеряет долг совсем:
-   * из «Позики» строку убрали, а блок её не показал.
+   * 🔴 ОДНО разделение на весь экран, а не выборка по месту: две копии правила
+   * разошлись бы на первом же новом значении `origin`.
    *
-   * Отбор пуст при выключенном флаге — тогда строка остаётся в «Позики».
-   */
-  /**
-   * 🔴 ОДНО разделение на весь экран, а не выборка по месту.
-   *
-   * `collectionDebts` — то, что остаётся предметом взыскания: список «Позики»,
-   * реструктуризация, списание, платёж, УБКИ, сообщения, история ЦД. Кредит,
+   * `collectionDebts` — то, что остаётся предметом взыскания: реструктуризация,
+   * списание, платёж, УБКИ, сообщения, история ЦД (список «Позики» с 14-7b
+   * читает список ПОКАЗА ниже, а не этот выход). Кредит,
    * который мы выдали сами, ни одним из этих действий не ведётся — CRM им не
    * владеет, и строка, попавшая в такое действие, означала бы списание или
    * отправку в бюро по чужой записи.
    *
-   * `creditProjections` — то, что показывает блок «Кредит (наш)». Строка уходит
-   * из действий ровно тогда, когда её показывает блок: иначе долг исчезает с
-   * экрана целиком.
+   * `creditProjections` — то, что разворачивает карта кредитного модуля под
+   * строкой списка.
+   *
+   * `displayDebts` — ПОЛНЫЙ список для показа; из него и только из него
+   * собирается `displayLoans` ниже. Разделение идёт БЕЗУСЛОВНО: флаг стенда
+   * больше не параметр правила, потому что принадлежность долга от переменной
+   * сборки не зависит (прежде выключенный флаг возвращал кредит во все
+   * действия взыскания разом).
    */
-  const { collectionDebts, creditProjections } = useMemo(
-    () => splitDebtsByOrigin(loans, creditBlockEnabled),
-    [creditBlockEnabled, loans]
+  const { collectionDebts, creditProjections, displayDebts } = useMemo(
+    () => splitDebtsByOrigin(loans),
+    [loans]
   )
+  /**
+   * Строки списка «Позики» — купленные долги И наш кредит, в порядке ответа
+   * client-service.
+   *
+   * 🔴 Единственный потребитель третьего выхода правила. Ни одно действие
+   * взыскания этот список не получает: у них остаётся очищенный список, и
+   * страж P-24 запрещает передачу `displayLoans`/`displayDebts` по имени.
+   */
+  const displayLoans = useMemo<LoanCardLoan[]>(
+    () =>
+      displayDebts.map((d) =>
+        isCreditProjection(d) ? mapCreditProjectionToRow(d) : mapCollectionDebtToRow(d)
+      ),
+    [displayDebts]
+  )
+  /**
+   * Развёрнутые карты кредита — по образцу `rrExpandedIds` выше. Разворотов
+   * может быть несколько сразу: у клиента бывает не один кредит.
+   */
+  const [creditExpandedIds, setCreditExpandedIds] = useState<Set<number>>(new Set())
+  const toggleCreditExpand = (id: number) =>
+    setCreditExpandedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   // Authoritative client detail (carries server-computed ``total_debt``) — same
   // hook + query key the Debt Summary page uses, so react-query dedupes the call.
   // Powers the RecordPaymentModal's ``currentDebt`` prop with the identical value.
@@ -637,6 +782,29 @@ export function ClientDetailPage() {
         t(`${d}.rrValidationSumMismatch`, {
           sum: paymentsSum.toFixed(2),
           total: totalAmount.toFixed(2),
+        })
+      )
+      return
+    }
+
+    // KAN-1122: the total must sit inside this loan's [lower; upper] range.
+    // Advisory only — the API applies the same rule and is the authority
+    // (create_restructuring_agreement in clients.py). The bounds are the
+    // figures the loan card already shows, so an operator is judged against
+    // what they were shown. A loan whose bounds cannot be read yields
+    // 'unknown' and is left to the API rather than blocked here.
+    const selectedLoan = eligibleLoansForRr.find((loan) => String(loan.id) === connectRrForm.debtId)
+    const amountCheck = checkRrAmount(totalAmount, selectedLoan)
+    if (amountCheck.verdict === 'nothing-left') {
+      setConnectRrError(t(`${d}.rrValidationNothingToReturn`))
+      return
+    }
+    if (amountCheck.verdict === 'out-of-range') {
+      setConnectRrError(
+        t(`${d}.rrValidationAmountOutOfRange`, {
+          amount: totalAmount.toFixed(2),
+          lower: amountCheck.lower.toFixed(2),
+          upper: amountCheck.upper.toFixed(2),
         })
       )
       return
@@ -718,7 +886,9 @@ export function ClientDetailPage() {
   // --- UBKI (credit bureau) outbound submission ---
   const ubkiQueryClient = useQueryClient()
   // Client opt-out flag (backend exposes it on the client detail response).
-  const canSubmitToUbki = useHasPermission(PERMISSIONS.UBKI.SUBMIT)
+  const ubkiAvailable = useUbkiAvailable()
+  const smsServiceAvailable = useSmsServiceAvailable()
+  const canSubmitToUbki = useHasPermission(PERMISSIONS.UBKI.SUBMIT) && ubkiAvailable
   const { mutate: submitDebtToUbki, isPending: isSubmittingToUbki } = useSubmitDebtToUbki()
   const { mutate: bulkSubmitToUbki, isPending: isBulkSubmittingToUbki } = useBulkSubmitToUbki()
   const doNotSendToUbki = clientDetail?.do_not_send_to_ubki ?? false
@@ -893,7 +1063,7 @@ export function ClientDetailPage() {
     // remembered.
     const blocked = callDialogBlockedReason(callingWindow, spamOptionEnabled)
     if (blocked) {
-      toast.warning(blocked)
+      callingWindow.reportBlocked()
       return
     }
     setCallModalPreferences({ phone, initialCallType, spamOptionEnabled })
@@ -1022,8 +1192,13 @@ export function ClientDetailPage() {
   const { data: responsibleEmployeeDepartment } = useUserDepartment(
     profile?.responsible_employee_id || 0
   )
+  // Same lookup for the searcher, so that row reads "Name (Department)" too.
+  const { data: responsibleSearcherDepartment } = useUserDepartment(
+    profile?.responsible_searcher_id || 0
+  )
 
-  // Assign client mutation (used by AssignRoleModal)
+  // Assign client mutation (used by the Operators-tab assign flow; the two
+  // responsible rows drive their own copy inside AssigneeDropdown).
   const assignClientMutation = useAssignClient()
 
   // Single-client assign (Operators tab "+") — opens AssignClientModal,
@@ -1147,6 +1322,7 @@ export function ClientDetailPage() {
       department: responsibleEmployeeDepartment || '-',
       responsibleEmployee: profile.responsible_employee_name ?? '-',
       responsibleResearcher: profile.responsible_searcher_name ?? '-',
+      searcherDepartment: responsibleSearcherDepartment || '-',
       phones,
       // Personal details (nested for compatibility)
       personalDetails: {
@@ -1180,7 +1356,9 @@ export function ClientDetailPage() {
             position: profile.employment.position ?? '-',
             experience:
               profile.employment.work_experience_months != null
-                ? `${profile.employment.work_experience_months} міс.`
+                ? t('pages.clients.detail.workExperienceMonths', {
+                    count: profile.employment.work_experience_months,
+                  })
                 : '-',
             managerFullName: profile.employment.manager_full_name ?? '-',
             employmentType: profile.employment.employment_type
@@ -1261,53 +1439,12 @@ export function ClientDetailPage() {
         author: c.created_by_name ?? `User #${c.created_by}`,
       })),
       tags: clientTags ?? [],
-      // Loans mapped from DebtDetail to UI shape
-      // Строка кредитного модуля уходит отсюда ровно тогда, когда её
-      // показывает блок «Кредит (наш)» (см. `visibleDebts`).
-      loans: collectionDebts.map((d) => ({
-        id: d.id,
-        loanNumber: d.contract_number,
-        issueDate: formatDate(d.credit_issued_date ?? undefined),
-        counterparty: d.seller_company,
-        // If the per-debt purchase_date is empty, fall back to
-        // the linked factoring agreement's contract_purchase_date.
-        saleDate: formatDate(
-          d.purchase_date ?? d.factoring_agreement?.contract_purchase_date ?? undefined
-        ),
-        // Factoring chain surfaced via the row-expansion "Info" button.
-        sellerLegalName: d.seller_legal_name ?? null,
-        factoringAgreementPreviousLender: d.factoring_agreement?.previous_lender ?? null,
-        factoringAgreementPurchaseDate: d.factoring_agreement?.contract_purchase_date
-          ? formatDate(d.factoring_agreement.contract_purchase_date)
-          : null,
-        principalAmount: Number(d.principal_amount ?? 0),
-        principalDebt: d.principal_debt != null ? Number(d.principal_debt) : null,
-        remainingDebtAmount: Number(d.remaining_debt_amount ?? 0),
-        totalToReturn: Number(d.total_to_return ?? 0),
-        // KAN-994 — closing-coefficient band, or null when no tooltip is due
-        // (no principal debt, no matching age range, no purchase date). The
-        // backend does the arithmetic and the date comparison so every viewer
-        // sees the same figures; the card renders the strings verbatim.
-        closingCoefficient: d.closing_coefficient ?? null,
-        // KAN-784 AC2: fully-returned loan that fell short of the principal
-        // guard — auto-close was blocked, so it needs operator-driven closure.
-        needsManualClosureReview: d.needs_manual_closure_review ?? false,
-        // Closure date — surfaced for closed debts so the user can see it and,
-        // with the close_client_debt permission, edit it after closure.
-        creditClosedDate: d.credit_closed_date ?? null,
-        creditReopenedDate: d.credit_reopened_date ?? null,
-        // Legacy TABLE460.f53 — eligible-for-return amount carried over from
-        // the sale. Surfaced as its own column only when at least one loan row
-        // has it and it diverges from remainingDebtAmount (see loanColumns).
-        eligibleForReturn: d.legacy_f53 != null ? Number(d.legacy_f53) : null,
-        // KAN-993 — "Debt term (days)" card field (credit_term_days already
-        // populated on the backend; surfaced on the redesigned Loans card).
-        creditTermDays: d.credit_term_days ?? null,
-        status: d.status,
-        // UBKI outbound submission state (credit bureau)
-        sentToCreditBureau: d.sent_to_credit_bureau ?? false,
-        creditBureauSentDate: d.credit_bureau_sent_date ?? null,
-      })),
+      // Loans mapped from DebtDetail to UI shape (`mapCollectionDebtToRow`).
+      // 🔴 Источник здесь ОСТАЁТСЯ очищенным: этот список читают не только
+      // «Позики» — он часть большого мемо карточки, и на нём стоят действия
+      // взыскания. Список ПОКАЗА собирается отдельно (`displayLoans`), и в
+      // «Позики» уходит именно он.
+      loans: collectionDebts.map(mapCollectionDebtToRow),
       // Payments mapped from PaymentResponse to UI shape
       // Split into system payments (payment_date >= purchase_date) and
       // primary creditor payments (payment_date < purchase_date).
@@ -1488,6 +1625,7 @@ export function ClientDetailPage() {
     documents,
     activities,
     responsibleEmployeeDepartment,
+    responsibleSearcherDepartment,
     clientTags,
     t,
     userTimezone,
@@ -1556,10 +1694,10 @@ export function ClientDetailPage() {
     client.phones?.forEach((p) => add(p.number))
     // Recommenders / contacts: referrer, third-party phones, etc. (not only types 1,2,29)
     client.recommenders?.forEach((r) => {
-      if (r.isPhone || looksLikeUkrainePhone(r.contactValue)) add(r.contactValue)
+      if (r.isPhone || isDialablePhone(r.contactValue)) add(r.contactValue)
     })
     const wp = client.work?.workPhone
-    if (wp && wp !== '-' && looksLikeUkrainePhone(wp)) add(wp)
+    if (wp && wp !== '-' && isDialablePhone(wp)) add(wp)
     return Array.from(set)
   }, [client])
 
@@ -1628,7 +1766,7 @@ export function ClientDetailPage() {
       })
     )
     client.recommenders?.forEach((recommender) => {
-      if (recommender.isPhone || looksLikeUkrainePhone(recommender.contactValue)) {
+      if (recommender.isPhone || isDialablePhone(recommender.contactValue)) {
         addPhone(recommender.contactValue, {
           contactTypeId: null,
           spamAllowed: true,
@@ -1642,7 +1780,7 @@ export function ClientDetailPage() {
       }
     })
     const workPhone = client.work?.workPhone
-    if (workPhone && workPhone !== '-' && looksLikeUkrainePhone(workPhone)) {
+    if (workPhone && workPhone !== '-' && isDialablePhone(workPhone)) {
       addPhone(workPhone, {
         contactTypeId: null,
         spamAllowed: true,
@@ -1693,7 +1831,9 @@ export function ClientDetailPage() {
   const [isEditInteractionModalOpen, setIsEditInteractionModalOpen] = useState(false)
   const { mutate: updateInteraction, isPending: isUpdating } = useUpdateInteraction()
   const [editingInteraction, setEditingInteraction] = useState<InteractionResponse | null>(null)
-  const [assignRoleModalMode, setAssignRoleModalMode] = useState<AssignRoleMode | null>(null)
+  // Which responsible row has its assignee popover open, if any. One slot for
+  // both rows: each toggles independently, but two popovers never overlap.
+  const [openAssigneeRow, setOpenAssigneeRow] = useState<AssigneeRole | null>(null)
   // const userRole = useUserRole()
   // const canDelete = userRole === 'Admin' || userRole === 'Supervisor'
   const [selectedCallData, setSelectedCallData] = useState<{
@@ -2135,12 +2275,14 @@ export function ClientDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-16">
         <Icons.Warning className="text-error-500 h-8 w-8" strokeWidth={2} />
-        <p className="text-foreground font-medium">Failed to load client</p>
+        <p className="text-foreground font-medium">
+          {t('pages.clients.debtSummary.failedToLoadClient')}
+        </p>
         <p className="text-muted-foreground text-sm">
-          {profileError?.message || 'An error occurred'}
+          {profileError?.message || t('pages.clients.detail.errorOccurred')}
         </p>
         <Button variant="outline" onClick={() => navigate('/dashboard/client')} className="mt-4">
-          Back to Clients
+          {t('pages.clients.detail.backToClients')}
         </Button>
       </div>
     )
@@ -2174,6 +2316,10 @@ export function ClientDetailPage() {
     client.responsibleEmployee && client.department && client.department !== '-'
       ? `${client.responsibleEmployee} (${client.department})`
       : client.responsibleEmployee
+  const responsibleSearcherWithDepartment =
+    client.responsibleResearcher && client.searcherDepartment && client.searcherDepartment !== '-'
+      ? `${client.responsibleResearcher} (${client.searcherDepartment})`
+      : client.responsibleResearcher
   // Date of birth carries the age inline. The model keeps the raw ISO value —
   // other consumers parse it — so format for display here. `age` is computed
   // server-side per request, so it is always current.
@@ -2368,6 +2514,25 @@ export function ClientDetailPage() {
       </div>
     )
   }
+
+  /**
+   * WS-11 (14-7b) — карта класса А под строкой своего кредита.
+   *
+   * Отбор идёт по номеру договора: строк столько, сколько проекций, и каждая
+   * обязана развернуть СВОЙ кредит — дверь отдаёт все кредиты клиента разом.
+   * Выключенный флаг стенда гасит карту (ручки при нём и так нет), но НЕ
+   * трогает ни строку, ни пометку, ни исключение из действий взыскания.
+   */
+  const renderCreditPanel = (loan: LoanCardLoan) =>
+    creditBlockEnabled ? (
+      <ClientCreditBlock
+        clientId={clientId}
+        projections={creditProjections}
+        contractNumber={loan.loanNumber}
+        enabled={isValidClientId}
+        variant="row"
+      />
+    ) : undefined
 
   // KAN-339: the inline RR detail line rendered under a loan row for every
   // restructuring agreement it has (any status). Replaces the removed RR grid —
@@ -3054,6 +3219,7 @@ export function ClientDetailPage() {
             <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
               <CallingWindowTooltip
                 message={callingWindow.allowed ? null : callingWindow.message}
+                onBlockedAttempt={callingWindow.reportBlocked}
                 className="w-full flex-1 xl:w-auto xl:flex-none"
               >
                 <Button
@@ -3200,16 +3366,17 @@ export function ClientDetailPage() {
                         {responsibleEmployeeWithDepartment}
                       </p>
                     )}
-                    {/* Reassign trigger is always visible; warn-on-click happens on
-                        the modal's Submit (PERMISSIONS.CLIENTS.REASSIGN_RESPONSIBLE). */}
-                    <button
-                      onClick={() => setAssignRoleModalMode('employee')}
-                      className="text-muted-foreground hover:text-foreground shrink-0 transition-colors"
-                      title={t('pages.clients.detail.assignEmployee', 'Assign employee')}
-                      type="button"
-                    >
-                      <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
-                    </button>
+                    {/* Trigger stays visible without the permission; the popover
+                        warns on click, as the modal it replaces warned on Submit. */}
+                    <AssigneeDropdown
+                      clientId={clientId}
+                      slot="employee"
+                      currentUserId={profile?.responsible_employee_id ?? null}
+                      isOpen={openAssigneeRow === 'employee'}
+                      onOpen={() => setOpenAssigneeRow('employee')}
+                      onClose={() => setOpenAssigneeRow(null)}
+                      data-testid="assign-employee-trigger"
+                    />
                   </div>
                 </div>
                 <div className="flex min-h-8 items-center self-stretch p-0">
@@ -3219,19 +3386,20 @@ export function ClientDetailPage() {
                   <div className="ml-2 flex flex-1 items-center justify-end gap-1">
                     {profile?.responsible_searcher_id && (
                       <p className="text-foreground truncate text-right text-xs leading-[140%] font-medium tracking-[-0.24px]">
-                        {client.responsibleResearcher}
+                        {responsibleSearcherWithDepartment}
                       </p>
                     )}
-                    {/* Reassign trigger is always visible; warn-on-click happens on
-                        the modal's Submit (PERMISSIONS.CLIENTS.REASSIGN_RESPONSIBLE). */}
-                    <button
-                      onClick={() => setAssignRoleModalMode('searcher')}
-                      className="text-muted-foreground hover:text-foreground shrink-0 transition-colors"
-                      title={t('pages.clients.detail.assignSearcher', 'Assign searcher')}
-                      type="button"
-                    >
-                      <Icons.PencilEdit02 size={14} strokeWidth={1.5} />
-                    </button>
+                    {/* Same component as the employee row above — only `role`
+                        differs, so the two stay in step by construction. */}
+                    <AssigneeDropdown
+                      clientId={clientId}
+                      slot="searcher"
+                      currentUserId={profile?.responsible_searcher_id ?? null}
+                      isOpen={openAssigneeRow === 'searcher'}
+                      onOpen={() => setOpenAssigneeRow('searcher')}
+                      onClose={() => setOpenAssigneeRow(null)}
+                      data-testid="assign-searcher-trigger"
+                    />
                   </div>
                 </div>
                 {/* The UBKI opt-out toggle moved into the Edit Client form —
@@ -3459,24 +3627,26 @@ export function ClientDetailPage() {
                               )}
                             </Tooltip>
                           </PermissionGuard>
-                          <PermissionGuard permission={PERMISSIONS.COMMUNICATION.SEND_SMS}>
-                            <button
-                              disabled={isMessageBlocked(phone.blocking)}
-                              onClick={() => {
-                                setSelectedPhoneForSMS(phone.number)
-                                setIsSendSMSModalOpen(true)
-                              }}
-                              className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
-                              title={
-                                isMessageBlocked(phone.blocking)
-                                  ? messageBlockReason(phone.blocking) ||
-                                    t('pages.contactTags.smsBlocked', 'SMS blocked')
-                                  : t('pages.clients.detail.sendSms', 'Send SMS')
-                              }
-                            >
-                              <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
-                            </button>
-                          </PermissionGuard>
+                          {smsServiceAvailable && (
+                            <PermissionGuard permission={PERMISSIONS.COMMUNICATION.SEND_SMS}>
+                              <button
+                                disabled={isMessageBlocked(phone.blocking)}
+                                onClick={() => {
+                                  setSelectedPhoneForSMS(phone.number)
+                                  setIsSendSMSModalOpen(true)
+                                }}
+                                className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40 md:h-[20px] md:w-[20px]"
+                                title={
+                                  isMessageBlocked(phone.blocking)
+                                    ? messageBlockReason(phone.blocking) ||
+                                      t('pages.contactTags.smsBlocked', 'SMS blocked')
+                                    : t('pages.clients.detail.sendSms', 'Send SMS')
+                                }
+                              >
+                                <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
+                              </button>
+                            </PermissionGuard>
+                          )}
                           <PermissionGuard permissions={ALL_MESSAGING_SEND_PERMISSIONS} mode="any">
                             <button
                               disabled={isMessageBlocked(phone.blocking)}
@@ -3744,7 +3914,7 @@ export function ClientDetailPage() {
                           </span>
                           {client.work?.workPhone &&
                             client.work.workPhone !== '-' &&
-                            looksLikePhone(client.work.workPhone) &&
+                            isDialablePhone(client.work.workPhone) &&
                             renderLinkedContactBadges(client.work.workPhone, 'end')}
                         </div>
                         {client.work?.workPhone && client.work.workPhone !== '-' && (
@@ -3760,17 +3930,19 @@ export function ClientDetailPage() {
                                 <Icons.Headset size={16} className="flex-shrink-0" />
                               </button>
                             </PermissionGuard>
-                            <PermissionGuard permission={PERMISSIONS.COMMUNICATION.SEND_SMS}>
-                              <button
-                                onClick={() => {
-                                  setSelectedPhoneForSMS(client.work?.workPhone || '')
-                                  setIsSendSMSModalOpen(true)
-                                }}
-                                className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
-                              >
-                                <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
-                              </button>
-                            </PermissionGuard>
+                            {smsServiceAvailable && (
+                              <PermissionGuard permission={PERMISSIONS.COMMUNICATION.SEND_SMS}>
+                                <button
+                                  onClick={() => {
+                                    setSelectedPhoneForSMS(client.work?.workPhone || '')
+                                    setIsSendSMSModalOpen(true)
+                                  }}
+                                  className="text-primary-500 flex h-[24px] w-[24px] cursor-pointer items-center justify-center hover:opacity-80 md:h-[20px] md:w-[20px]"
+                                >
+                                  <Icons.ChatFeedback01 size={16} className="flex-shrink-0" />
+                                </button>
+                              </PermissionGuard>
+                            )}
                             <PermissionGuard
                               permissions={ALL_MESSAGING_SEND_PERMISSIONS}
                               mode="any"
@@ -4195,30 +4367,15 @@ export function ClientDetailPage() {
                       </span>
                     </button>
                   )}
-                  {/* Tab 8: Credit (own) — кредит, выданный нами. Подпись с
-                      уточнением намеренно: голое «Кредит» в этой же карточке
-                      уже означает КУПЛЕННЫЙ долг (пять ключей словаря той же
-                      страницы), и две одинаковые подписи о разных деньгах на
-                      одном экране — ровно то, от чего блок должен защитить.
-                      Иконка — `Icons.Folder`: кредитной в наборе нет вовсе. */}
-                  {creditBlockEnabled && (
-                    <button
-                      type="button"
-                      data-tab="credit"
-                      onClick={() => setActiveRightCardTab('credit')}
-                      className={cn(
-                        'hover:bg-primary-200/10 flex shrink-0 cursor-pointer items-center justify-center gap-2 border-b-2 px-3 py-4 transition-colors md:px-4',
-                        activeRightCardTab === 'credit'
-                          ? 'border-primary-300 text-primary-700 bg-primary-300/10'
-                          : 'hover:text-primary-700 text-muted-foreground border-transparent'
-                      )}
-                    >
-                      <Icons.Folder size={20} className="shrink-0 text-current" />
-                      <span className="text-xs font-medium whitespace-nowrap md:text-sm">
-                        {t('pages.clients.detail.tabs.credit')}
-                      </span>
-                    </button>
-                  )}
+                  {/* Девятой вкладки «Кредит (наш)» здесь БОЛЬШЕ НЕТ (WS-11,
+                      14-7b): кредит модуля стал строкой в «Позики» с чипом
+                      «кредит (наш)», а карта разворачивается под самой строкой.
+                      Решение владельца: операторы работают в привычном списке,
+                      вкладки не умножаются.
+                      ⚠️ Ключ `pages.clients.detail.tabs.credit` и строка в
+                      `TAB_LABEL_KEYS` НАМЕРЕННО остались: лента активности
+                      показывает уже записанные переключения на эту вкладку, и
+                      без ключа оператор увидел бы машинное слово `credit`. */}
                 </div>
               </div>
 
@@ -4239,7 +4396,7 @@ export function ClientDetailPage() {
                       </div>
                     ) : (
                       <LoansCardList
-                        loans={client.loans}
+                        loans={displayLoans}
                         renderLoan={(loan, isClosed) => {
                           const hasRr = rrDebtIds.has(loan.id)
                           // A loan can carry several agreements; the inline panel
@@ -4413,6 +4570,19 @@ export function ClientDetailPage() {
                                 setSelectedLoanId((prev) => (prev === loan.id ? null : loan.id))
                               }
                               actions={actions}
+                              creditExpanded={creditExpandedIds.has(loan.id)}
+                              // Ручки нет при выключенном флаге стенда: пометка
+                              // у строки остаётся, разворачивать нечего.
+                              onToggleCredit={
+                                creditBlockEnabled ? () => toggleCreditExpand(loan.id) : undefined
+                              }
+                              // 🔴 Панель передаётся ТОЛЬКО развёрнутой: узел,
+                              // отданный сюда свёрнутым, смонтировался бы и
+                              // отправил запрос в модуль при открытии «Позики»
+                              // у каждого клиента (гейт ленивости KAN-610).
+                              creditPanel={
+                                creditExpandedIds.has(loan.id) ? renderCreditPanel(loan) : undefined
+                              }
                             />
                           )
                         }}
@@ -4451,7 +4621,9 @@ export function ClientDetailPage() {
                           ) : undefined
                         }
                         ubkiHistory={
-                          <UbkiSubmissionHistory clientId={clientId} loans={ubkiLoans} />
+                          ubkiAvailable ? (
+                            <UbkiSubmissionHistory clientId={clientId} loans={ubkiLoans} />
+                          ) : undefined
                         }
                       />
                     )}
@@ -4725,17 +4897,19 @@ export function ClientDetailPage() {
                         >
                           {t('pages.clients.activity.calls')}
                         </button>
-                        <button
-                          onClick={() => setActiveCallSmsTab('sms')}
-                          className={cn(
-                            'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs transition-colors md:px-4 md:text-sm',
-                            activeCallSmsTab === 'sms'
-                              ? 'bg-primary/10 text-primary-700'
-                              : 'hover:text-primary-700 hover:bg-primary/20 text-muted-foreground cursor-pointer'
-                          )}
-                        >
-                          {t('pages.clients.activity.sms')}
-                        </button>
+                        {smsServiceAvailable && (
+                          <button
+                            onClick={() => setActiveCallSmsTab('sms')}
+                            className={cn(
+                              'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs transition-colors md:px-4 md:text-sm',
+                              activeCallSmsTab === 'sms'
+                                ? 'bg-primary/10 text-primary-700'
+                                : 'hover:text-primary-700 hover:bg-primary/20 text-muted-foreground cursor-pointer'
+                            )}
+                          >
+                            {t('pages.clients.activity.sms')}
+                          </button>
+                        )}
                         {canAccessMessagingHistory && (
                           <button
                             onClick={() => setActiveCallSmsTab('messaging')}
@@ -4840,7 +5014,9 @@ export function ClientDetailPage() {
                                             }
                                           ).initiated_at || item.date
                                   const locale =
-                                    i18n.language?.split('-')[0] === 'uk' ? 'uk-UA' : 'en-GB'
+                                    i18n.language?.split('-')[0] === 'uk'
+                                      ? 'uk-UA'
+                                      : spanishLocaleOr(i18n.language, 'en-GB')
                                   const date = new Date(String(timestamp)).toLocaleDateString(
                                     locale,
                                     {
@@ -4967,7 +5143,9 @@ export function ClientDetailPage() {
                                           new Date().toISOString()
                                         const dt = new Date(String(timestamp))
                                         const time = dt.toLocaleTimeString(
-                                          i18n.language?.split('-')[0] === 'uk' ? 'uk-UA' : 'en-GB',
+                                          i18n.language?.split('-')[0] === 'uk'
+                                            ? 'uk-UA'
+                                            : spanishLocaleOr(i18n.language, 'en-GB'),
                                           {
                                             hour: '2-digit',
                                             minute: '2-digit',
@@ -5141,7 +5319,9 @@ export function ClientDetailPage() {
                                         ? call.initiated_at
                                         : call.date
                                     const locale =
-                                      i18n.language?.split('-')[0] === 'uk' ? 'uk-UA' : 'en-GB'
+                                      i18n.language?.split('-')[0] === 'uk'
+                                        ? 'uk-UA'
+                                        : spanishLocaleOr(i18n.language, 'en-GB')
                                     const date = new Date(String(timestamp)).toLocaleDateString(
                                       locale,
                                       {
@@ -5303,7 +5483,9 @@ export function ClientDetailPage() {
                                     const timestamp =
                                       'sent_at' in sms && sms.sent_at ? sms.sent_at : sms.date
                                     const locale =
-                                      i18n.language?.split('-')[0] === 'uk' ? 'uk-UA' : 'en-GB'
+                                      i18n.language?.split('-')[0] === 'uk'
+                                        ? 'uk-UA'
+                                        : spanishLocaleOr(i18n.language, 'en-GB')
                                     const date = new Date(String(timestamp)).toLocaleDateString(
                                       locale,
                                       {
@@ -5406,7 +5588,9 @@ export function ClientDetailPage() {
                                         item.failed_at ||
                                         new Date().toISOString()
                                       const locale =
-                                        i18n.language?.split('-')[0] === 'uk' ? 'uk-UA' : 'en-GB'
+                                        i18n.language?.split('-')[0] === 'uk'
+                                          ? 'uk-UA'
+                                          : spanishLocaleOr(i18n.language, 'en-GB')
                                       const date = new Date(String(timestamp)).toLocaleDateString(
                                         locale,
                                         {
@@ -5445,7 +5629,7 @@ export function ClientDetailPage() {
                                             const time = dt.toLocaleTimeString(
                                               i18n.language?.split('-')[0] === 'uk'
                                                 ? 'uk-UA'
-                                                : 'en-GB',
+                                                : spanishLocaleOr(i18n.language, 'en-GB'),
                                               {
                                                 hour: '2-digit',
                                                 minute: '2-digit',
@@ -5567,21 +5751,11 @@ export function ClientDetailPage() {
                   </div>
                 )}
 
-                {/* Tab 8: Credit (own).
-
-                    Гейт данных — сам условный рендер: пока вкладка закрыта,
-                    блок не смонтирован, и его запрос не уходит вовсе (KAN-610 —
-                    открытие карточки перестало стрелять двумя десятками
-                    параллельных запросов, и восьмой без гейта вернул бы их). */}
-                {creditBlockEnabled && activeRightCardTab === 'credit' && (
-                  <div className="flex w-full flex-col gap-0">
-                    <ClientCreditBlock
-                      clientId={clientId}
-                      projections={creditProjections}
-                      enabled={isValidClientId}
-                    />
-                  </div>
-                )}
+                {/* Тела вкладки «Кредит (наш)» здесь больше нет: карта живёт
+                    под строкой списка «Позики» (`renderCreditPanel`). Гейт
+                    ленивости KAN-610 никуда не делся — он переехал на
+                    монтирование панели: пока строку не развернули, блок не
+                    смонтирован и запрос в модуль не уходит. */}
               </div>
             </div>
           </div>
@@ -5702,7 +5876,7 @@ export function ClientDetailPage() {
                   setChainExecutorInitialTemplateId(null)
                 }}
                 className="hover:bg-muted flex h-8 w-8 items-center justify-center rounded-md transition-colors"
-                aria-label="Close modal"
+                aria-label={t('components.modal.close', 'Close modal')}
               >
                 <Icons.Cancel01 size={20} className="text-foreground" strokeWidth={1.5} />
               </button>
@@ -6079,36 +6253,9 @@ export function ClientDetailPage() {
         }}
       /> */}
 
-        {/* Assign Role Modal (Employee / Searcher) */}
-        {assignRoleModalMode && (
-          <AssignRoleModal
-            open={true}
-            mode={assignRoleModalMode}
-            currentUserId={
-              assignRoleModalMode === 'employee'
-                ? (profile?.responsible_employee_id ?? null)
-                : (profile?.responsible_searcher_id ?? null)
-            }
-            onClose={() => setAssignRoleModalMode(null)}
-            onAssign={({ userId, reason }) => {
-              assignClientMutation.mutate(
-                {
-                  clientId,
-                  data: {
-                    responsible_employee_id:
-                      assignRoleModalMode === 'employee' ? parseInt(userId) : undefined,
-                    responsible_searcher_id:
-                      assignRoleModalMode === 'searcher' ? parseInt(userId) : undefined,
-                    assignment_reason: reason,
-                  },
-                },
-                {
-                  onSuccess: () => setAssignRoleModalMode(null),
-                }
-              )
-            }}
-          />
-        )}
+        {/* The per-row Assign Role modal is gone: both responsible rows now use
+            the inline AssigneeDropdown above. The "Operators +" and Bulk
+            Actions modals are separate components and keep their behaviour. */}
 
         {/* KAN-335: Detailed calculation (after sale) modal */}
         {calcLoan && (

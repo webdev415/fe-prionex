@@ -89,6 +89,17 @@ export const INTEGRATION_CREDENTIAL_FIELDS: Record<
     { key: 'reply_to_email', label: 'Reply-to email', type: 'email', required: false },
     { key: 'reply_to_name', label: 'Reply-to name', type: 'text', required: false },
   ],
+  zadarma: [
+    { key: 'user_key', label: 'User key', type: 'text', required: true },
+    { key: 'secret', label: 'Secret', type: 'password', required: true },
+    {
+      key: 'sender',
+      label: 'Sender (Alpha name)',
+      type: 'text',
+      required: false,
+      placeholder: 'Approved alpha name, leave empty to use the account default',
+    },
+  ],
 }
 
 export function getIntegrationCredentialFields(service: string): IntegrationCredentialFieldDef[] {

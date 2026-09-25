@@ -1,11 +1,19 @@
 /**
  * ProjectRoleGroupRow - Role and optional group assignment for a project.
+ *
+ * When the project's roles cannot be listed - with the project scope enforced,
+ * a caller without the right in THIS project gets PROJECT_SCOPE_DENIED - the
+ * row says why, once, beside a disabled picker, instead of looking like a
+ * project that simply has no roles. Any other failure of the list keeps the
+ * row as it was before the scope existed.
  */
 
-import { useMemo } from 'react'
+import { useId, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useProjectRoles } from '@/features/roles'
+import { isProjectScopeDenied } from '@/features/roles/projectScope'
 import { useGroups } from '@/features/groups'
+import { getErrorMessage } from '@/lib/errors'
 import {
   Select,
   SelectContent,
@@ -32,7 +40,9 @@ export function ProjectRoleGroupRow({
   onGroupChange,
 }: ProjectRoleGroupRowProps) {
   const { t } = useTranslation('common')
-  const { data: rolesData } = useProjectRoles(projectId)
+  const { data: rolesData, error: rolesError } = useProjectRoles(projectId)
+  const rolesRefused = isProjectScopeDenied(rolesError)
+  const refusalId = useId()
   const availableRoles = (rolesData?.roles || []).filter((role) => role.is_active)
 
   const selectedRole = useMemo(
@@ -58,8 +68,15 @@ export function ProjectRoleGroupRow({
     <div className="space-y-2">
       <div className="grid w-full grid-cols-1 items-center gap-2 sm:grid-cols-2 sm:gap-4">
         <span className="text-foreground text-sm font-light">{projectName}:</span>
-        <Select value={selectedRoleId?.toString() || ''} onValueChange={handleRoleChange}>
-          <SelectTrigger className="border-border text-foreground mt-1 w-full border text-sm">
+        <Select
+          value={selectedRoleId?.toString() || ''}
+          onValueChange={handleRoleChange}
+          disabled={rolesRefused}
+        >
+          <SelectTrigger
+            className="border-border text-foreground mt-1 w-full border text-sm"
+            aria-describedby={rolesRefused ? refusalId : undefined}
+          >
             <SelectValue placeholder={t('pages.users.forms.notAssigned')} />
           </SelectTrigger>
           <SelectContent>
@@ -78,6 +95,11 @@ export function ProjectRoleGroupRow({
           </SelectContent>
         </Select>
       </div>
+      {rolesRefused && (
+        <p id={refusalId} role="alert" className="text-error-500 text-sm">
+          {getErrorMessage(rolesError)}
+        </p>
+      )}
       {departmentId && (
         <div className="grid w-full grid-cols-1 items-center gap-2 sm:grid-cols-2 sm:gap-4">
           <span className="text-foreground text-sm font-light">

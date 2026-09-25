@@ -21,6 +21,7 @@ import type { ReactNode } from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { CreditLoanDetailPage } from '../CreditLoanDetailPage'
 import * as hooks from '@/features/credit/hooks/useCredit'
 import type {
@@ -131,6 +132,7 @@ const LOAN: CreditLoanDetail = {
   jurisdiction: 'CA-AB',
   schedule_version: 1,
   delinquency_days: 0,
+  advance_refund_excess_minor: 0,
   paid_minor: 0,
   disbursed_at: '2026-08-31T12:51:24.903371+00:00',
   maturity_date: '2026-10-12',
@@ -178,7 +180,16 @@ function openPassport(
   }
   return render(
     <MemoryRouter>
-      <CreditLoanDetailPage />
+      {/* Паспорт кредита ищет клиента CRM по телефону заявки — ему нужен клиент
+          запросов; `gcTime: Infinity` — без пятиминутного таймера сборки кэша,
+          который пережил бы тест. */}
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } })
+        }
+      >
+        <CreditLoanDetailPage />
+      </QueryClientProvider>
     </MemoryRouter>
   )
 }
@@ -289,6 +300,20 @@ describe('CreditLoanDetailPage → блок «Хід видачі грошей»
     openPassport({ ...SETTLED, provider_time_source: 'observed' }, { status: 'active' })
     expect(screen.getByText('credit.card.disbursementObservedTime')).toBeInTheDocument()
     expect(screen.getByText('credit.providerTimeSource.observed')).toBeInTheDocument()
+  })
+
+  it('D-1 при retry_allowed=false поле остаётся диагностикой, а не гейтом', () => {
+    // Флаг модуля `retry_allowed` не управляет ни кнопкой (её нет вовсе), ни
+    // уведомлением: уведомление говорит «модуль разрешает повтор, а команда
+    // откажет», и при `false` противоречия нет — говорить не о чем.
+    // Фикстура SETTLED — единственная в файле с `retry_allowed: false`; блок
+    // выдачи делается видимым той же подменой источника времени, что и выше.
+    openPassport({ ...SETTLED, provider_time_source: 'observed' }, { status: 'active' })
+    expect(screen.queryByText('credit.card.disbursementRetryContradiction')).not.toBeInTheDocument()
+    // Положительный контроль: «уведомления нет» сказано о НАРИСОВАННОЙ панели,
+    // а не о пустом экране, и поле-диагностика на месте.
+    expect(screen.getByText('credit.card.disbursement')).toBeInTheDocument()
+    expect(fieldValue('credit.fields.retry')).toBe('credit.disbursementRetry.settled')
   })
 
   it('у застрявшего кредита без единой попытки говорит это словами', () => {

@@ -15,7 +15,8 @@
  * unrecoverably for a chain whose steps are not flagged.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
+import { setActiveCurrency } from '@/lib/projectCurrency'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 
 const INTERACTION = {
@@ -302,5 +303,33 @@ describe('Edit Interaction — a chain with no flagged steps (KAN-1069 review)',
     expect(lastPayload().clear_promise_date).toBe(true)
     expect(lastPayload().clear_promise_amount).toBe(true)
     expect(lastPayload().promise_amount).toBeUndefined()
+  })
+})
+
+describe('Edit Interaction — the promise amount carries the project currency', () => {
+  beforeEach(() => {
+    mutateAsync.mockClear()
+    activeChain = LEGACY_CHAIN
+    activeTargetActions = LEGACY_TARGET_ACTIONS
+  })
+
+  afterEach(() => {
+    setActiveCurrency('UAH')
+  })
+
+  it('marks the standalone amount with the euro sign in a euro project', async () => {
+    setActiveCurrency('EUR')
+    setup()
+
+    await screen.findByDisplayValue('340.00')
+    expect(screen.getAllByText('€').length).toBeGreaterThan(0)
+    expect(screen.queryByText('₴')).not.toBeInTheDocument()
+  })
+
+  it('keeps the hryvnia sign in a hryvnia project', async () => {
+    setup()
+
+    await screen.findByDisplayValue('340.00')
+    expect(screen.getAllByText('₴').length).toBeGreaterThan(0)
   })
 })

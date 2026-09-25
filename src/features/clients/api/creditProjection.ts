@@ -24,26 +24,43 @@ export function isCreditProjection(debt: DebtDetail): boolean {
 }
 
 /**
- * Разделение одного списка на два: что остаётся предметом взыскания и что
- * показывает блок «Кредит (наш)».
+ * Три выхода ОДНОГО правила: что является предметом взыскания, что показывает
+ * карта кредитного модуля и что уходит в список «Позики» на показ.
  *
- * Отдаётся парой намеренно. Это ОДНО правило с двумя выходами: строка уходит
- * из действий взыскания ровно тогда, когда её показывает блок. Две независимые
- * выборки в разных местах экрана однажды разойдутся, и тогда долг либо
- * пропадёт с экрана целиком, либо попадёт в списание, которым CRM не владеет.
+ * Отдаются вместе намеренно. Две независимые выборки в разных местах экрана
+ * однажды разойдутся, и тогда долг либо пропадёт с экрана целиком, либо
+ * попадёт в списание, которым CRM не владеет.
  *
- * При выключенном блоке разделения нет вовсе: список остаётся полным, потому
- * что показать строку больше негде.
+ * `collectionDebts` — предмет взыскания: списание, бюро, реструктуризация,
+ * платёж, цепочки, SMS. Кредит модуля сюда не попадает НИКОГДА и ни при каком
+ * состоянии стенда: им владеет модуль, а переменная сборки не решает, кому
+ * принадлежит долг. Поэтому параметра `creditBlockEnabled` у правила больше
+ * нет — с ним выключенный флаг возвращал кредит во все действия взыскания
+ * разом. Флаг читают теперь только разворот строки и карта.
+ *
+ * `creditProjections` — строки модуля; их разворачивает карта класса А.
+ *
+ * 🔴 `displayDebts` — ПОЛНЫЙ список ДЛЯ ПОКАЗА, в порядке ответа client-service.
+ * Единственный законный потребитель — список «Позики» (`LoansCardList`), и
+ * читает его ровно один файл: `ClientDetailPage.tsx`, мемо `displayLoans`.
+ * Любое действие, взявшее этот выход, получит долг, которым CRM не владеет;
+ * страж P-24 (`clientCardCreditBlock.test.tsx`) запрещает такую передачу по
+ * имени пропса. Конкатенация `collectionDebts.concat(creditProjections)`
+ * запрещена: она молча переставляет строки у клиента, у которого есть и
+ * купленный долг, и наш кредит.
  */
-export function splitDebtsByOrigin(
-  debts: DebtDetail[],
-  creditBlockEnabled: boolean
-): { collectionDebts: DebtDetail[]; creditProjections: DebtDetail[] } {
-  if (!creditBlockEnabled) return { collectionDebts: debts, creditProjections: [] }
+export function splitDebtsByOrigin(debts: DebtDetail[]): {
+  collectionDebts: DebtDetail[]
+  creditProjections: DebtDetail[]
+  displayDebts: DebtDetail[]
+} {
   const collectionDebts: DebtDetail[] = []
   const creditProjections: DebtDetail[] = []
   for (const debt of debts) {
     ;(isCreditProjection(debt) ? creditProjections : collectionDebts).push(debt)
   }
-  return { collectionDebts, creditProjections }
+  // Тот же массив, а не копия: технически третий выход равен входу, и только
+  // имя с запретом стража отличает «список для показа» от «сырого списка».
+  // Копия не дала бы ничего, кроме иллюзии безопасности.
+  return { collectionDebts, creditProjections, displayDebts: debts }
 }

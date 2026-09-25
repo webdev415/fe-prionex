@@ -28,7 +28,7 @@ interface EditDepartmentModalProps {
 }
 
 const editDepartmentSchema = z.object({
-  name: z.string().min(1, 'Department name is required'),
+  name: z.string().min(1, 'pages.departments.validation.nameRequired'),
   description: z.string().optional(),
 })
 
@@ -124,7 +124,7 @@ export function EditDepartmentModal({
                   disabled={updateMutation.isPending}
                 />
                 {errors.name && (
-                  <p className="text-error-500 mt-1 text-sm">{errors.name.message}</p>
+                  <p className="text-error-500 mt-1 text-sm">{t(errors.name.message ?? '')}</p>
                 )}
               </div>
 

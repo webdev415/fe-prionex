@@ -17,6 +17,7 @@ import {
   mergeCampaignCostFields,
   messagingApi,
   messagingStatusForCallLogCard,
+  serviceReportsDelivery,
 } from '@/features/messaging'
 import type { MessagingCampaignRecipient, MessagingCampaignSummary } from '@/features/messaging'
 import { useMessagingCampaign, useMessagingCampaignRecipients } from '@/features/messaging'
@@ -46,15 +47,17 @@ function campaignStatusBadgeClasses(status: string) {
   return 'bg-muted text-muted-foreground'
 }
 
-function recipientStatusBadgeClasses(status: string) {
-  const display = messagingStatusForCallLogCard(status)
+function recipientStatusBadgeClasses(status: string, service?: string) {
+  const display = messagingStatusForCallLogCard(status, service)
   switch (display) {
     case 'Delivered':
       return 'bg-success-100 text-success-700'
     case 'Failed':
       return 'bg-error-100 text-error-700'
     case 'Sent':
-      return 'bg-information-100 text-information-700'
+      return serviceReportsDelivery(service)
+        ? 'bg-information-100 text-information-700'
+        : 'bg-muted text-muted-foreground'
     case 'Skipped':
       return 'bg-muted text-muted-foreground'
     default:
@@ -75,7 +78,7 @@ function DetailRow({ label, children }: { label: string; children: ReactNode }) 
   )
 }
 
-function MetricCard({ label, value }: { label: string; value: number }) {
+function MetricCard({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="bg-muted ring-border rounded-xl px-3 py-3 ring-1 ring-inset sm:px-4 sm:py-3.5">
       <div className="text-muted-foreground text-xs font-light tracking-wide">{label}</div>
@@ -160,6 +163,11 @@ export function CampaignDetailModal({
       t(`pages.messagingCampaigns.status.${status}`, formatStatusFallback(status)),
     [t]
   )
+  const recipientStatusLabel = useCallback(
+    (status: string) =>
+      t(`pages.messagingCampaigns.recipientStatus.${status}`, formatStatusFallback(status)),
+    [t]
+  )
   const { data: campaign, isLoading } = useMessagingCampaign(campaignId ?? 0, campaignId !== null)
   const summary = campaign ?? listCampaign
   const costSource = mergeCampaignCostFields(campaign, listCampaign) ?? summary
@@ -206,12 +214,12 @@ export function CampaignDetailModal({
         header: t('pages.messagingCampaigns.table.status', 'Status'),
         align: 'left',
         render: (recipient) => {
-          const label = statusLabel(recipient.status)
+          const label = recipientStatusLabel(recipient.status)
           return (
             <span
               className={cn(
                 'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-                recipientStatusBadgeClasses(recipient.status)
+                recipientStatusBadgeClasses(recipient.status, summary?.service)
               )}
             >
               {label}
@@ -229,7 +237,25 @@ export function CampaignDetailModal({
         key: 'delivered_at',
         header: t('pages.messagingCampaigns.table.deliveredAt', 'Delivered'),
         align: 'left',
-        render: (recipient) => formatDateTime(recipient.delivered_at ?? undefined, userTimezone),
+        render: (recipient) => {
+          if (recipient.delivered_at) {
+            return formatDateTime(recipient.delivered_at, userTimezone)
+          }
+          if (!serviceReportsDelivery(summary?.service)) {
+            return (
+              <span
+                className="text-muted-foreground text-xs"
+                title={t(
+                  'pages.messagingCampaigns.table.deliveryNotReportedHint',
+                  'This provider does not send delivery reports. Check the provider cabinet for the delivery status.'
+                )}
+              >
+                {t('pages.messagingCampaigns.table.deliveryNotReported', 'Not reported')}
+              </span>
+            )
+          }
+          return formatDateTime(undefined, userTimezone)
+        },
       },
       {
         key: 'error_message',
@@ -245,7 +271,7 @@ export function CampaignDetailModal({
           ),
       },
     ],
-    [statusLabel, t, userTimezone]
+    [recipientStatusLabel, summary?.service, t, userTimezone]
   )
 
   const handleExport = async () => {
@@ -336,7 +362,21 @@ export function CampaignDetailModal({
                 />
                 <MetricCard
                   label={t('pages.messagingCampaigns.detail.stats.delivered', 'Delivered')}
-                  value={summary.delivered_count}
+                  value={
+                    serviceReportsDelivery(summary.service) ? (
+                      summary.delivered_count
+                    ) : (
+                      <span
+                        className="text-muted-foreground text-base font-normal"
+                        title={t(
+                          'pages.messagingCampaigns.table.deliveryNotReportedHint',
+                          'This provider does not send delivery reports. Check the provider cabinet for the delivery status.'
+                        )}
+                      >
+                        {t('pages.messagingCampaigns.table.deliveryNotReported', 'Not reported')}
+                      </span>
+                    )
+                  }
                 />
                 <MetricCard
                   label={t('pages.messagingCampaigns.detail.stats.failed', 'Failed')}

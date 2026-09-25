@@ -19,6 +19,8 @@ import { ScoringV3MonitoringPage } from '../ScoringV3MonitoringPage'
 import * as useV3ScoresModule from '@/features/scoring/hooks/useV3Scores'
 import * as hooks from '@/hooks'
 
+vi.mock('react-i18next', async () => (await import('@/test/englishI18n')).englishReactI18nextMock())
+
 vi.mock('@/features/scoring/hooks/useV3Scores')
 vi.mock('@/hooks', async () => {
   const actual = await vi.importActual<typeof hooks>('@/hooks')

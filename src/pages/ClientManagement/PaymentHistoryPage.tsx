@@ -7,7 +7,12 @@
 import { useState, useEffect, useMemo, useRef, useCallback, useTransition } from 'react'
 import { useTranslation } from 'react-i18next'
 import { intlLocaleForUiLanguage } from '@/lib/i18n'
-import { convertUTCToUserTimezone, formatClientFullName, formatIsoDate } from '@/lib/formatters'
+import {
+  convertUTCToUserTimezone,
+  formatClientFullName,
+  formatIsoDate,
+  withCurrency,
+} from '@/lib/formatters'
 import { getDateStringInTimezone } from '@/lib/dateUtils'
 import { useAuthStore } from '@/stores/authStore'
 import { useTrackEvent } from '@/features/operatorAnalytics'
@@ -763,14 +768,16 @@ export function PaymentHistoryPage() {
 
   const formatCurrency = (amount: string | number) => {
     const num = typeof amount === 'string' ? parseFloat(amount) : amount
-    if (isNaN(num)) return '₴ 0'
+    if (isNaN(num)) return withCurrency('0')
     const locale = intlLocaleForUiLanguage(i18n.language)
-    return `₴ ${num
-      .toLocaleString(locale, {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      })
-      .replace(/,/g, ' ')}`
+    return withCurrency(
+      num
+        .toLocaleString(locale, {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 0,
+        })
+        .replace(/,/g, ' ')
+    )
   }
 
   const getStatusDot = (status: Payment['status']) => {
@@ -1154,7 +1161,7 @@ export function PaymentHistoryPage() {
             <span className="hidden sm:inline">
               {t('pages.clients.paymentHistory.backToClient')}
             </span>
-            <span className="sm:hidden">Back</span>
+            <span className="sm:hidden">{t('common.back')}</span>
           </Button>
           <span className="text-foreground text-center text-lg leading-tight font-light tracking-[-0.48px] sm:text-2xl">
             {/* Only the interpolated half. The screen's title has to stay
@@ -1289,6 +1296,7 @@ export function PaymentHistoryPage() {
               <PermissionGuard permission={PERMISSIONS.COMMUNICATION.MAKE_CALLS}>
                 <CallingWindowTooltip
                   message={callingWindow.allowed ? null : callingWindow.message}
+                  onBlockedAttempt={callingWindow.reportBlocked}
                 >
                   <Button
                     variant="primary"
