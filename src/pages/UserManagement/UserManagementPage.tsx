@@ -23,6 +23,12 @@ import { ResetPasswordConfirmModal } from './components/ResetPasswordConfirmModa
 import { AdminToggleTwoFactorModal } from './components/AdminToggleTwoFactorModal'
 import { UnlockAccountModal } from './components/UnlockAccountModal'
 import { GoogleAuthenticatorStatusIcon } from './components/GoogleAuthenticatorStatusIcon'
+import {
+  AdminAppLoginRevokeModal,
+  AppLoginStatusIcon,
+  isFeatureAvailable,
+  useMyAppLoginStatus,
+} from '@/features/appLogin'
 import { cn } from '@/lib/utils'
 import { UserSearchBar } from './components/UserSearchBar'
 import { UserFiltersBar } from './components/UserFiltersBar'
@@ -216,6 +222,11 @@ export function UserManagementPage() {
   const [openDropdownUserId, setOpenDropdownUserId] = useState<number | null>(null)
   const [resetPasswordUser, setResetPasswordUser] = useState<ApiUser | null>(null)
   const [toggleTwoFactorUser, setToggleTwoFactorUser] = useState<ApiUser | null>(null)
+  const [revokeAppLoginUser, setRevokeAppLoginUser] = useState<ApiUser | null>(null)
+  // Phone binding (Epic 19, #1532) is behind a server flag; the caller's own
+  // status read says whether it is on. Off or unreachable = no phone UI here.
+  const { data: myAppLogin } = useMyAppLoginStatus()
+  const appLoginAvailable = isFeatureAvailable(myAppLogin)
   const [unlockUser, setUnlockUser] = useState<ApiUser | null>(null)
   const [searchParams, setSearchParams] = useSearchParams()
   const canOpenCard = useHasPermission(PERMISSIONS.EMPLOYEE_CARD.VIEW)
@@ -609,6 +620,9 @@ export function UserManagementPage() {
         <div className="flex items-center justify-center gap-1.5">
           <EmployeeStatus status={getStatusType(user.status)} />
           <GoogleAuthenticatorStatusIcon enabled={user.two_factor_enabled} />
+          {appLoginAvailable && typeof user.app_login_enabled === 'boolean' && (
+            <AppLoginStatusIcon enabled={user.app_login_enabled} />
+          )}
         </div>
       ),
     },
@@ -688,6 +702,18 @@ export function UserManagementPage() {
                 )}
             </PermissionGuard>
 
+            <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
+              {appLoginAvailable &&
+                currentUser?.id !== String(user.id) &&
+                user.app_login_enabled !== false && (
+                  <IconAction
+                    label={t('pages.users.actions.revokeAppLogin')}
+                    icon={<Icons.Phone size={18} strokeWidth={1.5} />}
+                    onClick={() => setRevokeAppLoginUser(user)}
+                  />
+                )}
+            </PermissionGuard>
+
             <PermissionGuard permission={PERMISSIONS.USERS.IMPERSONATE}>
               {currentUser?.id !== String(user.id) && (
                 <IconAction
@@ -760,6 +786,22 @@ export function UserManagementPage() {
                             ? t('pages.users.actions.disableTwoFactor')
                             : t('pages.users.actions.reenableTwoFactor')}
                         </span>
+                      </DropdownMenuItem>
+                    )}
+                </PermissionGuard>
+                <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
+                  {appLoginAvailable &&
+                    currentUser?.id !== String(user.id) &&
+                    user.app_login_enabled !== false && (
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setOpenDropdownUserId(null)
+                          setRevokeAppLoginUser(user)
+                        }}
+                        className="text-foreground flex cursor-pointer items-center gap-2 text-sm"
+                      >
+                        <Icons.Phone size={16} strokeWidth={1.5} />
+                        <span>{t('pages.users.actions.revokeAppLogin')}</span>
                       </DropdownMenuItem>
                     )}
                 </PermissionGuard>
@@ -960,6 +1002,14 @@ export function UserManagementPage() {
             open={toggleTwoFactorUser !== null}
             user={toggleTwoFactorUser}
             onClose={() => setToggleTwoFactorUser(null)}
+          />
+        )}
+
+        {revokeAppLoginUser && (
+          <AdminAppLoginRevokeModal
+            open={revokeAppLoginUser !== null}
+            user={revokeAppLoginUser}
+            onClose={() => setRevokeAppLoginUser(null)}
           />
         )}
 
