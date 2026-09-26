@@ -42,6 +42,8 @@ vi.mock('@/features/auth', () => ({
   ChangePasswordModal: () => null,
   TwoFactorSection: () => null,
 }))
+// Phone binding has its own tests; here it only must not reach the network.
+vi.mock('@/features/appLogin', () => ({ AppLoginSection: () => null }))
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: (selector: (s: unknown) => unknown) => selector({ refreshUser: vi.fn() }),
 }))

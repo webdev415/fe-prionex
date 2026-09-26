@@ -3899,7 +3899,8 @@
         "deactivate": "Деактивувати",
         "resetPassword": "Скинути пароль",
         "disableTwoFactor": "Вимкнути 2FA",
-        "reenableTwoFactor": "Увімкнути 2FA"
+        "reenableTwoFactor": "Увімкнути 2FA",
+        "revokeAppLogin": "Відв'язати всі телефони"
       },
       "messages": {
         "nowViewingAsPrefix": "Тепер перегляд як",
@@ -3917,6 +3918,10 @@
       "twoFactorIndicator": {
         "enabled": "Google Authenticator увімкнено",
         "disabled": "Google Authenticator не увімкнено"
+      },
+      "appLoginIndicator": {
+        "enabled": "Телефон прив'язано",
+        "disabled": "Телефон не прив'язано"
       },
       "activeProject": "Активний проєкт",
       "noAssignment": "Немає призначення",
@@ -3993,6 +3998,15 @@
           "failedToUnlock": "Не вдалося розблокувати обліковий запис",
           "unlocking": "Розблокування...",
           "unlockAccountButton": "Розблокувати обліковий запис"
+        },
+        "appLoginRevoke": {
+          "title": "Відв'язати всі телефони",
+          "body": "Усі прив'язані телефони користувача буде відв'язано: вони втратять вхід без обмеження за IP-адресою, а мобільну сесію буде завершено. Дія фіксується в журналі аудиту.",
+          "loading": "Завантаження…",
+          "featureOff": "Вхід через мобільний застосунок вимкнено на цьому сервері.",
+          "success": "Усі телефони користувача відв'язано",
+          "failed": "Не вдалося відв'язати телефони",
+          "revoking": "Відв'язування..."
         }
       },
       "forms": {
