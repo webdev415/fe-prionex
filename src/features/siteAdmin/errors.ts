@@ -6,7 +6,8 @@
  *   409 site_owner_not_set           / SITE_OWNER_NOT_SET;
  *   403 site_admin_access_denied     / SITE_ADMIN_ACCESS_DENIED;
  *   403 site_owner_change_denied     / SITE_OWNER_CHANGE_DENIED     (только PUT);
- *   404 site_owner_project_not_found / SITE_OWNER_PROJECT_NOT_FOUND (только PUT).
+ *   404 site_owner_project_not_found / SITE_OWNER_PROJECT_NOT_FOUND (только PUT);
+ *   429 без кода, с `Retry-After` — выдача ключа чаще, чем пускает лимит (a r4).
  *
  * Признак — ВЕРХНИЙ `code` корня тела. `detail` для этого не годится: перехватчик
  * `lib/api.ts` (`localizeCodedDetail`) подменяет его переводом кода из
@@ -80,6 +81,9 @@ export function siteAdminErrorKind(error: unknown): SiteAdminErrorKind {
       : 'forbidden'
   }
   if (status === 409) return 'owner_not_set'
+  // Лимит выдачи ключей (a r4): кода нет, но статус однозначен — повтор
+  // поможет, только не сразу.
+  if (status === 429) return 'too_many_requests'
   if (status === 404) {
     return carries(error, SITE_OWNER_PROJECT_NOT_FOUND_CODE, SITE_OWNER_PROJECT_NOT_FOUND)
       ? 'owner_project_gone'

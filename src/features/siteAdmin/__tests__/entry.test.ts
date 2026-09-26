@@ -9,6 +9,12 @@
  *    права нет), а «нет права в проекте-владельце»;
  *  - сеанс «от имени» → не кнопка с гарантированным 403, а объяснение.
  * Запасной путь без поля — прежняя догадка по JWT.
+ *
+ * r4 (бот, раунд 1, и контракт 17-40a r4):
+ *  - «от имени» решает клиент, ДО роли: сервер, отдавший роль в таком сеансе,
+ *    не должен превращать объяснение в кнопку с 403;
+ *  - владелец выбран, но выключен (`site_owner_active: false`) → не кнопка и
+ *    не «не выбран», а «владелец выключен»; поле не пришло — владелец живой.
  */
 import { describe, expect, it } from 'vitest'
 import { siteAdminEntry, type SiteAdminEntryInput } from '../entry'
@@ -64,6 +70,55 @@ describe('siteAdminEntry — по ответу сервера', () => {
       )
     )
     expect(entry).toBe('impersonating')
+  })
+
+  it.each([
+    ['без права в JWT', false],
+    ['с правом в JWT', true],
+  ])(
+    'сеанс «от имени» при НЕПУСТОЙ роли (%s) → объяснение, не кнопка: решает клиент',
+    (_name, hasSiteRightInActiveProject) => {
+      const entry = siteAdminEntry(
+        input(
+          { current_user_site_role: 'publisher' },
+          { hasSiteRightInActiveProject, isImpersonating: true }
+        )
+      )
+      expect(entry).toBe('impersonating')
+    }
+  )
+
+  it('владелец выбран, но выключен → «владелец выключен», а не кнопка и не «не выбран»', () => {
+    const entry = siteAdminEntry(
+      input(
+        { site_owner_active: false, current_user_site_role: null },
+        { hasSiteRightInActiveProject: true }
+      )
+    )
+    expect(entry).toBe('owner_inactive')
+  })
+
+  it('владелец выключен, а сервер всё же прислал роль → всё равно не кнопка', () => {
+    // Ключ выключенному владельцу не выдаётся: кнопка обещала бы отказ.
+    const entry = siteAdminEntry(
+      input({ site_owner_active: false, current_user_site_role: 'editor' })
+    )
+    expect(entry).toBe('owner_inactive')
+  })
+
+  it('владелец выключен, у человека ни роли, ни права в JWT → ничего (как у живого)', () => {
+    expect(siteAdminEntry(input({ site_owner_active: false, current_user_site_role: null }))).toBe(
+      'hidden'
+    )
+  })
+
+  it.each([
+    ['site_owner_active: true', true],
+    ['поле не пришло (сервер старше r4)', undefined],
+  ])('контроль: %s и роль → кнопка', (_name, active) => {
+    expect(
+      siteAdminEntry(input({ site_owner_active: active, current_user_site_role: 'editor' }))
+    ).toBe('ready')
   })
 
   it('ни роли, ни права в JWT (администратор настроек) → ничего', () => {
@@ -122,6 +177,14 @@ describe('siteAdminEntry — запасной путь: сервер о роли
         { hasSiteRightInActiveProject: true, activeProjectId: String(OWNER), isImpersonating: true }
       ),
       'impersonating',
+    ],
+    [
+      'владелец выключен',
+      input(
+        { site_owner_active: false },
+        { hasSiteRightInActiveProject: true, activeProjectId: String(OWNER) }
+      ),
+      'owner_inactive',
     ],
   ]
 

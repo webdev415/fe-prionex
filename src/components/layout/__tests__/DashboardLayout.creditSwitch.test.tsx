@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
@@ -13,8 +13,18 @@ import type { ReactNode } from 'react'
  * действительно делает, и — не менее важно — что она НЕ делает этого от
  * недоступности модуля: пропавший пункт меню читается как поломка CRM, а не
  * как решение риск-менеджера.
+ *
+ * 17-40b r4: рубильник прячет подпункты МОДУЛЯ, но не «Настройки» — там
+ * вкладка «Сайт», вход в админку сайта, к кредитному разделу отношения не
+ * имеющий. Держатель права на контент сайта или `manage_settings` видит
+ * «Кредитный модуль → Настройки» и при выключенном разделе; остальные — как
+ * прежде, ничего.
  */
 const mockLocation = { pathname: '/dashboard', search: '', hash: '', state: null }
+
+// Права пользователя меню — по сцене: страж r4 различает держателя права на
+// сайт и человека с одними кредитными правами.
+const auth = vi.hoisted(() => ({ permissions: ['manage_settings'] as string[] }))
 
 vi.mock('react-router-dom', () => ({
   useNavigate: () => vi.fn(),
@@ -25,7 +35,7 @@ vi.mock('react-router-dom', () => ({
 // сломанной фильтрации.
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: (selector: (state: { user: unknown }) => unknown) =>
-    selector({ user: { id: '7', permissions: ['manage_settings'] } }),
+    selector({ user: { id: '7', permissions: auth.permissions } }),
 }))
 vi.mock('@/features/auth', () => ({
   useAuth: () => ({
@@ -59,11 +69,15 @@ vi.mock('@/api/clientSearchApi', () => ({
   searchClients: vi.fn().mockResolvedValue([]),
   mapPriorityLevel: () => 'low',
 }))
-// Меню отдаётся в Sidebar пропом — подменяем его на список путей, чтобы
-// проверять именно фильтрацию, а не вёрстку боковой панели.
+// Меню отдаётся в Sidebar пропом — подменяем его на список путей (с
+// подпунктами), чтобы проверять именно фильтрацию, а не вёрстку боковой панели.
 vi.mock('../Sidebar', () => ({
-  Sidebar: ({ items }: { items: Array<{ path: string }> }) => (
-    <nav data-testid="rail">{items.map((item) => item.path).join(' ')}</nav>
+  Sidebar: ({ items }: { items: Array<{ path: string; subItems?: Array<{ path: string }> }> }) => (
+    <nav data-testid="rail">
+      {items
+        .flatMap((item) => [item.path, ...(item.subItems ?? []).map((sub) => sub.path)])
+        .join(' ')}
+    </nav>
   ),
 }))
 vi.mock('../SearchBar', () => ({ SearchBar: () => null }))
@@ -111,7 +125,26 @@ function renderLayout() {
   )
 }
 
+const SWITCHED_OFF = {
+  data: { switches: { applications_intake: true, client_cabinet: true, crm_section: false } },
+}
+
+/** Пути меню одним списком: родитель и его подпункты. */
+function railPaths(): string[] {
+  return (screen.getByTestId('rail').textContent ?? '').split(' ').filter(Boolean)
+}
+
+const MODULE_SUB_ITEMS = [
+  '/dashboard/credit/applications',
+  '/dashboard/credit/underwriting',
+  '/dashboard/credit/loans',
+]
+
 describe('DashboardLayout — рубильник раздела кредита', () => {
+  beforeEach(() => {
+    auth.permissions = ['manage_settings']
+  })
+
   it('раздел в меню есть, пока рубильник включён', () => {
     switchesResult.mockReturnValue({
       data: { switches: { applications_intake: true, client_cabinet: true, crm_section: true } },
@@ -120,12 +153,39 @@ describe('DashboardLayout — рубильник раздела кредита',
     expect(screen.getByTestId('rail').textContent).toContain('/dashboard/credit')
   })
 
-  it('рубильник выключен — пункта нет даже у того, у кого есть права', () => {
-    switchesResult.mockReturnValue({
-      data: { switches: { applications_intake: true, client_cabinet: true, crm_section: false } },
-    })
+  it('рубильник выключен — пункта нет даже у того, у кого есть кредитные права', () => {
+    auth.permissions = ['credit.applications.read', 'credit.loans.read', 'credit.products.read']
+    switchesResult.mockReturnValue(SWITCHED_OFF)
     renderLayout()
     expect(screen.getByTestId('rail').textContent).not.toContain('/dashboard/credit')
+  })
+
+  it.each([
+    ['права на контент сайта', ['credit.applications.read', 'site.content.edit']],
+    ['права на публикацию сайта', ['credit.loans.read', 'site.content.publish']],
+    ['manage_settings', ['manage_settings']],
+  ])(
+    'рубильник выключен — у держателя %s остаются «Настройки» (вкладка «Сайт»), модуль скрыт',
+    (_name, permissions) => {
+      auth.permissions = permissions
+      switchesResult.mockReturnValue(SWITCHED_OFF)
+      renderLayout()
+      const paths = railPaths()
+      expect(paths).toContain('/dashboard/credit')
+      expect(paths).toContain('/dashboard/credit/settings')
+      for (const path of MODULE_SUB_ITEMS) expect(paths).not.toContain(path)
+    }
+  )
+
+  it('контроль: рубильник включён — подпункты модуля на месте у того же человека', () => {
+    auth.permissions = ['credit.applications.read', 'site.content.edit']
+    switchesResult.mockReturnValue({
+      data: { switches: { applications_intake: true, client_cabinet: true, crm_section: true } },
+    })
+    renderLayout()
+    const paths = railPaths()
+    expect(paths).toContain('/dashboard/credit/applications')
+    expect(paths).toContain('/dashboard/credit/settings')
   })
 
   it('модуль недоступен — раздел ОСТАЁТСЯ: это поломка связи, а не решение риск-менеджера', () => {

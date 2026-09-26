@@ -13,11 +13,19 @@
  *    `current_user_site_role` — роль в ПРОЕКТЕ-ВЛАДЕЛЬЦЕ, а не права JWT
  *    активного проекта (r2); когда входа не будет, на месте кнопки сказано
  *    почему; без поля — прежняя догадка по JWT;
- *  - нажатие просит ключ и открывает выданный адрес в новой вкладке без
- *    `opener`, после чего мутация сбрасывается (ключ не остаётся в кэше);
- *    адрес не http(s) не открывается;
- *  - 401 / 403 / 409 / 503 называются разными словами — по телам 17-40a
- *    дословно; 503 без кода «не настроено» не выдаёт;
+ *  - нажатие открывает вкладку САМО, до запроса ключа (r4: окно после ответа
+ *    браузер блокирует молча, и одноразовый ключ сгорал бы), рвёт `opener`,
+ *    просит ключ и отправляет вкладку по выданному адресу; мутация
+ *    сбрасывается (ключ не остаётся в кэше); вкладку не дали (блокировщик,
+ *    OneX) — ключ всё равно просится, и админка открывается в ЭТОЙ вкладке
+ *    (`location.assign`, r4b), сброс мутации — до перехода; адрес не http(s)
+ *    и отказ сервера закрывают вкладку, а без неё — не уходят со страницы;
+ *  - выключенный владелец (17-40a r4, `site_owner_active: false`) назван по
+ *    имени с отметкой, кнопки входа нет, причина — «владелец выключен»;
+ *  - список проектов для выбора читается только у того, кто может менять
+ *    владельца (r4), и приходит целиком, а не первой сотней;
+ *  - 401 / 403 / 409 / 429 / 503 называются разными словами — по телам
+ *    17-40a дословно; 503 без кода «не настроено» не выдаёт;
  *  - сбой ПЕРЕчитывания поверх прочитанной картины секцию не прячет (r3):
  *    кнопка и точный текст отказа остаются.
  */
@@ -27,11 +35,12 @@ import { AxiosError, type AxiosResponse } from 'axios'
 import { CreditSiteSection } from '../components/CreditSiteSection'
 import { useAuthStore } from '@/stores/authStore'
 import {
+  useOwnerProjectChoices,
   useSiteAdminHandoff,
   useSiteAdminSettings,
   useUpdateSiteAdminSettings,
 } from '@/features/siteAdmin/hooks'
-import { useProjects } from '@/features/projects/hooks/useProjects'
+import type { OwnerProjectChoice } from '@/features/siteAdmin/ownerChoices'
 import type { SiteAdminSettings, SiteRole } from '@/features/siteAdmin/types'
 
 // Мокаем хуки, а не HTTP: живой QueryClient оставляет таймеры notifyManager,
@@ -41,21 +50,30 @@ vi.mock('@/features/siteAdmin/hooks', () => ({
   useSiteAdminSettings: vi.fn(),
   useUpdateSiteAdminSettings: vi.fn(),
   useSiteAdminHandoff: vi.fn(),
-}))
-
-vi.mock('@/features/projects/hooks/useProjects', () => ({
-  projectsKeys: { all: ['projects'] },
-  useProjects: vi.fn(),
-  useProjectDetail: vi.fn(),
+  useOwnerProjectChoices: vi.fn(),
 }))
 
 const OWNER_ID = 7
 const OTHER_ID = 9
 
-const PROJECTS = [
+const PROJECTS: OwnerProjectChoice[] = [
   { id: OWNER_ID, name: 'Owner Project Alpha' },
   { id: OTHER_ID, name: 'Second Project Beta' },
 ]
+
+/**
+ * Список для выбора владельца — как у живого хука: без `enabled` данных нет
+ * (запрос не шёл). Иначе сцена «читает только тот, кто меняет» проверяла бы
+ * заглушку, а не экран.
+ */
+function mockChoices(projects: OwnerProjectChoice[] = PROJECTS, truncated = false) {
+  vi.mocked(useOwnerProjectChoices).mockImplementation(
+    (enabled: boolean) =>
+      ({
+        data: enabled ? { projects, truncated } : undefined,
+      }) as unknown as ReturnType<typeof useOwnerProjectChoices>
+  )
+}
 
 /** Ответ GET 17-40a: владелец выбран, вход настроен, роль у вызывающего — editor. */
 const SERVER_SETTINGS: SiteAdminSettings = {
@@ -117,6 +135,9 @@ function httpError(status: number, data: unknown = {}): AxiosError {
   } as AxiosResponse)
 }
 
+/** Журнал окна: порядок «вкладка → запрос ключа» — предмет сцены r4. */
+let events: string[] = []
+
 /** Ответ handoff: мутация сразу зовёт колбэк, как это сделал бы React Query. */
 function handoffAnswers(outcome: { url: string } | { error: unknown }) {
   handoffMutate.mockImplementation(
@@ -124,10 +145,24 @@ function handoffAnswers(outcome: { url: string } | { error: unknown }) {
       _vars: unknown,
       options: { onSuccess?: (data: unknown) => void; onError?: (error: unknown) => void }
     ) => {
+      events.push('request')
       if ('error' in outcome) options.onError?.(outcome.error)
       else options.onSuccess?.({ url: outcome.url, expires_in: 60 })
     }
   )
+}
+
+/**
+ * Вкладка, которую отдаёт `window.open('', '_blank')` в самом нажатии: её
+ * `opener` экран рвёт, `location.href` задаёт по ответу, `close()` зовёт на
+ * отказе. Журнал `events` держит порядок «вкладка → запрос».
+ */
+function fakeTab() {
+  return {
+    opener: {} as unknown,
+    location: { href: '' },
+    close: vi.fn(),
+  }
 }
 
 const OPEN_BUTTON = { name: 'credit.settings.site.openAdmin' }
@@ -137,14 +172,18 @@ const SAVE_FAILED = 'credit.settings.site.saveFailed'
 
 describe('CreditSiteSection', () => {
   let openSpy: MockInstance<typeof window.open>
+  let tab: ReturnType<typeof fakeTab>
 
   beforeEach(() => {
     vi.clearAllMocks()
-    openSpy = vi.spyOn(window, 'open').mockImplementation(() => null)
+    events = []
+    tab = fakeTab()
+    openSpy = vi.spyOn(window, 'open').mockImplementation(() => {
+      events.push('open')
+      return tab as unknown as Window
+    })
     mockSettings({ ...SERVER_SETTINGS })
-    vi.mocked(useProjects).mockReturnValue({
-      data: { projects: PROJECTS, pagination: {} },
-    } as unknown as ReturnType<typeof useProjects>)
+    mockChoices()
     vi.mocked(useUpdateSiteAdminSettings).mockReturnValue({
       mutate: updateMutate,
       isPending: false,
@@ -172,7 +211,8 @@ describe('CreditSiteSection', () => {
     })
 
     it('берёт имя из списка проектов, если сервер прислал только id', () => {
-      signIn(['site.content.edit'])
+      // Список читает только тот, кто может менять владельца (r4).
+      signIn(['manage_settings'])
       mockSettings({
         ...SERVER_SETTINGS,
         site_owner_project_id: OTHER_ID,
@@ -180,6 +220,44 @@ describe('CreditSiteSection', () => {
       })
       render(<CreditSiteSection />)
       expect(screen.getByTestId('site-owner-name')).toHaveTextContent('Second Project Beta')
+    })
+
+    it('без права менять и без имени от сервера — номер проекта, а не пустота', () => {
+      signIn(['site.content.edit'])
+      mockSettings({
+        ...SERVER_SETTINGS,
+        site_owner_project_id: OTHER_ID,
+        site_owner_project_name: null,
+      })
+      render(<CreditSiteSection />)
+      expect(screen.getByTestId('site-owner-name')).toHaveTextContent(`#${OTHER_ID}`)
+    })
+
+    it('выключенный владелец назван по имени и отмечен «проект выключен» (17-40a r4)', () => {
+      signIn(['manage_settings'])
+      mockSettings({
+        ...SERVER_SETTINGS,
+        site_owner_active: false,
+        current_user_site_role: null,
+      })
+      render(<CreditSiteSection />)
+      expect(screen.getByTestId('site-owner-name')).toHaveTextContent('Owner Project Alpha')
+      expect(screen.getByTestId('site-owner-inactive')).toHaveTextContent(
+        'credit.settings.site.ownerInactive'
+      )
+      // «Не выбран» — другое утверждение: владелец есть, он выключен.
+      expect(screen.queryByText('credit.settings.site.ownerNotSet')).not.toBeInTheDocument()
+    })
+
+    it.each([
+      ['site_owner_active: true', true],
+      ['поле не пришло (сервер старше r4)', undefined],
+    ])('контроль: %s — отметки «выключен» нет', (_name, active) => {
+      signIn(['manage_settings'])
+      mockSettings({ ...SERVER_SETTINGS, site_owner_active: active })
+      render(<CreditSiteSection />)
+      expect(screen.getByTestId('site-owner-name')).toBeInTheDocument()
+      expect(screen.queryByTestId('site-owner-inactive')).not.toBeInTheDocument()
     })
 
     it('говорит «не выбран» только когда владельца нет', () => {
@@ -302,6 +380,13 @@ describe('CreditSiteSection', () => {
         }),
         'credit.settings.site.errors.ownerChangeDenied',
       ],
+      [
+        // Декоратор `manage_settings` без кода: право отозвали после выдачи
+        // JWT. Это отказ в праве, а не сбой — «спробуйте ще раз» тут ложь (r4).
+        '403 без кода',
+        httpError(403, { detail: 'Permission denied' }),
+        'credit.settings.site.errors.ownerChangeDenied',
+      ],
     ])('ошибка сохранения (%s) показана своими словами', (_name, error, text) => {
       signIn(['manage_settings'])
       vi.mocked(useUpdateSiteAdminSettings).mockReturnValue({
@@ -314,6 +399,55 @@ describe('CreditSiteSection', () => {
       expect(screen.getByText(text)).toBeInTheDocument()
       // «Спробуйте ще раз» — только там, где повтор может помочь.
       expect(screen.queryAllByText(SAVE_FAILED)).toHaveLength(text === SAVE_FAILED ? 1 : 0)
+    })
+  })
+
+  describe('список проектов для выбора владельца (r4)', () => {
+    it.each([
+      ['без manage_settings', ['site.content.edit', 'site.content.publish'], false],
+      ['в сеансе «от имени» даже с manage_settings', ['manage_settings'], true],
+    ])('%s — список не читается', (_name, permissions, impersonating) => {
+      signIn(permissions, String(OWNER_ID), impersonating)
+      render(<CreditSiteSection />)
+      expect(vi.mocked(useOwnerProjectChoices)).toHaveBeenCalledWith(false)
+      expect(vi.mocked(useOwnerProjectChoices)).not.toHaveBeenCalledWith(true)
+    })
+
+    it('держатель manage_settings — список читается', () => {
+      signIn(['manage_settings'])
+      render(<CreditSiteSection />)
+      expect(vi.mocked(useOwnerProjectChoices)).toHaveBeenCalledWith(true)
+    })
+
+    it('150 активных проектов — проект со второй страницы есть в выборе и сохраняется', async () => {
+      signIn(['manage_settings'])
+      const many = Array.from({ length: 150 }, (_, index) => ({
+        id: index + 1,
+        name: `Project ${index + 1}`,
+      }))
+      mockChoices(many)
+      render(<CreditSiteSection />)
+
+      fireEvent.click(screen.getByRole('combobox', OWNER_SELECT))
+      fireEvent.click(await screen.findByRole('option', { name: 'Project 150' }))
+      fireEvent.click(screen.getByRole('button', SAVE_BUTTON))
+
+      expect(updateMutate).toHaveBeenCalledTimes(1)
+      expect(updateMutate.mock.calls[0][0]).toEqual({ site_owner_project_id: 150 })
+    })
+
+    it('список упёрся в потолок страниц — сказано вслух', () => {
+      signIn(['manage_settings'])
+      mockChoices(PROJECTS, true)
+      render(<CreditSiteSection />)
+      expect(screen.getByText('credit.settings.site.ownerListTruncated')).toBeInTheDocument()
+    })
+
+    it('контроль: список полный — строки о потолке нет', () => {
+      signIn(['manage_settings'])
+      mockChoices(PROJECTS, false)
+      render(<CreditSiteSection />)
+      expect(screen.queryByText('credit.settings.site.ownerListTruncated')).not.toBeInTheDocument()
     })
   })
 
@@ -369,6 +503,24 @@ describe('CreditSiteSection', () => {
       expect(handoffMutate).not.toHaveBeenCalled()
     })
 
+    it('владелец выключен — кнопки нет, причина «выключен», а не «не выбран»', () => {
+      signIn(['site.content.edit'])
+      mockSettings({ ...SERVER_SETTINGS, site_owner_active: false, current_user_site_role: null })
+      render(<CreditSiteSection />)
+      expect(screen.queryByRole('button', OPEN_BUTTON)).not.toBeInTheDocument()
+      expect(screen.getByText('credit.settings.site.errors.ownerInactive')).toBeInTheDocument()
+      expect(screen.queryByText('credit.settings.site.errors.ownerNotSet')).not.toBeInTheDocument()
+      expect(handoffMutate).not.toHaveBeenCalled()
+    })
+
+    it('сеанс «от имени», а сервер прислал роль — объяснение, не кнопка (r4)', () => {
+      signIn(['site.content.edit'], String(OWNER_ID), true)
+      mockSettings({ ...SERVER_SETTINGS, current_user_site_role: 'editor' })
+      render(<CreditSiteSection />)
+      expect(screen.queryByRole('button', OPEN_BUTTON)).not.toBeInTheDocument()
+      expect(screen.getByText('credit.settings.site.impersonating')).toBeInTheDocument()
+    })
+
     it('владелец не выбран — сказано сразу, кнопки нет', () => {
       signIn(['site.content.edit'], String(OTHER_ID))
       mockSettings({
@@ -416,28 +568,107 @@ describe('CreditSiteSection', () => {
   })
 
   describe('нажатие', () => {
-    it('просит ключ, открывает адрес в новой вкладке без opener и сбрасывает мутацию', () => {
+    it('вкладка — в самом нажатии и ДО запроса; без opener; по ответу — на выданный адрес', () => {
       signIn(['site.content.edit'])
       const url = 'https://cms.dev.example.test/admin/sso?t=one-time'
       handoffAnswers({ url })
       render(<CreditSiteSection />)
       fireEvent.click(screen.getByRole('button', OPEN_BUTTON))
 
-      expect(handoffMutate).toHaveBeenCalledTimes(1)
+      // Пустая вкладка без `noopener`: с ним `window.open` всегда `null`, и ни
+      // адрес задать, ни блокировку узнать было бы нельзя.
       expect(openSpy).toHaveBeenCalledTimes(1)
-      expect(openSpy).toHaveBeenCalledWith(url, '_blank', 'noopener,noreferrer')
+      expect(openSpy).toHaveBeenCalledWith('', '_blank')
+      expect(events).toEqual(['open', 'request'])
+      expect(tab.opener).toBeNull()
+      expect(tab.location.href).toBe(url)
+      expect(tab.close).not.toHaveBeenCalled()
       // Ключ лежит в `data` мутации — она сброшена сразу, а не через gcTime.
       expect(handoffReset).toHaveBeenCalledTimes(1)
       expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     })
 
-    it('адрес не http(s) не открывает, а называет отказ (и тоже сбрасывает мутацию)', () => {
+    describe('вкладку не дали (блокировщик; OneX — всегда) — админка в этой же вкладке (r4b)', () => {
+      // jsdom не умеет уходить на другой документ: `location` подменяется
+      // простым объектом, и сам переход становится проверяемым.
+      const realLocation = window.location
+      const assign = vi.fn((url: string) => {
+        events.push(`assign ${url}`)
+      })
+
+      beforeEach(() => {
+        openSpy.mockImplementation(() => {
+          events.push('open')
+          return null
+        })
+        handoffReset.mockImplementation(() => {
+          events.push('reset')
+        })
+        Object.defineProperty(window, 'location', {
+          configurable: true,
+          writable: true,
+          value: { ...realLocation, assign },
+        })
+      })
+
+      afterEach(() => {
+        Object.defineProperty(window, 'location', { configurable: true, value: realLocation })
+        handoffReset.mockReset()
+        assign.mockClear()
+      })
+
+      it('ключ запрашивается, мутация сброшена ДО перехода, переход — этой вкладкой', () => {
+        signIn(['site.content.edit'])
+        const url = 'https://cms.dev.example.test/admin/sso?t=one-time'
+        handoffAnswers({ url })
+        render(<CreditSiteSection />)
+        fireEvent.click(screen.getByRole('button', OPEN_BUTTON))
+
+        expect(handoffMutate).toHaveBeenCalledTimes(1)
+        expect(assign).toHaveBeenCalledTimes(1)
+        expect(assign).toHaveBeenCalledWith(url)
+        // Ключ не задерживается в `data` мутации: сброс — раньше ухода со страницы.
+        expect(events).toEqual(['open', 'request', 'reset', `assign ${url}`])
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+      })
+
+      it('адрес не http(s) — перехода нет, отказ назван', () => {
+        signIn(['site.content.edit'])
+        handoffAnswers({ url: 'javascript:alert(1)' })
+        render(<CreditSiteSection />)
+        fireEvent.click(screen.getByRole('button', OPEN_BUTTON))
+
+        expect(assign).not.toHaveBeenCalled()
+        expect(handoffReset).toHaveBeenCalledTimes(1)
+        expect(screen.getByText('credit.settings.site.errors.failed')).toBeInTheDocument()
+      })
+
+      it('отказ сервера — перехода нет, текст отказа', () => {
+        signIn(['site.content.edit'])
+        handoffAnswers({ error: httpError(403, { ...BODY.accessDenied }) })
+        render(<CreditSiteSection />)
+        fireEvent.click(screen.getByRole('button', OPEN_BUTTON))
+
+        expect(assign).not.toHaveBeenCalled()
+        expect(screen.getByText('credit.settings.site.errors.forbidden')).toBeInTheDocument()
+      })
+    })
+
+    it('над кнопкой сказано заранее: без новой вкладки админка откроется в этой (r4b)', () => {
+      signIn(['site.content.edit'])
+      render(<CreditSiteSection />)
+      expect(screen.getByRole('button', OPEN_BUTTON)).toBeInTheDocument()
+      expect(screen.getByText('credit.settings.site.sameTabHint')).toBeInTheDocument()
+    })
+
+    it('адрес не http(s) — вкладка закрыта, отказ назван (и мутация сброшена)', () => {
       signIn(['site.content.edit'])
       handoffAnswers({ url: 'javascript:alert(1)' })
       render(<CreditSiteSection />)
       fireEvent.click(screen.getByRole('button', OPEN_BUTTON))
 
-      expect(openSpy).not.toHaveBeenCalled()
+      expect(tab.location.href).toBe('')
+      expect(tab.close).toHaveBeenCalledTimes(1)
       expect(handoffReset).toHaveBeenCalledTimes(1)
       expect(screen.getByText('credit.settings.site.errors.failed')).toBeInTheDocument()
     })
@@ -456,9 +687,11 @@ describe('CreditSiteSection', () => {
     it.each([
       ['403', httpError(403, { ...BODY.accessDenied }), 'credit.settings.site.errors.forbidden'],
       [
+        // 409 не различает «не выбран» и «выключен»: текст называет оба, точную
+        // причину скажет перечитанная картина.
         '409 SITE_OWNER_NOT_SET',
         httpError(409, { ...BODY.ownerNotSet }),
-        'credit.settings.site.errors.ownerNotSet',
+        'credit.settings.site.errors.ownerNotSetOrInactive',
       ],
       [
         '503 SITE_ADMIN_NOT_CONFIGURED',
@@ -480,14 +713,21 @@ describe('CreditSiteSection', () => {
         httpError(401, { detail: 'Not authenticated' }),
         'credit.settings.site.errors.sessionExpired',
       ],
+      [
+        // Лимит выдачи ключей (a r4): кода нет, есть `Retry-After`.
+        '429 (лимит выдачи)',
+        httpError(429, { detail: 'Too Many Requests' }),
+        'credit.settings.site.errors.tooManyAttempts',
+      ],
       ['500', httpError(500), 'credit.settings.site.errors.failed'],
-    ])('отказ %s называется своими словами', (_name, error, text) => {
+    ])('отказ %s называется своими словами, вкладка закрыта', (_name, error, text) => {
       signIn(['site.content.edit'])
       handoffAnswers({ error })
       render(<CreditSiteSection />)
       fireEvent.click(screen.getByRole('button', OPEN_BUTTON))
 
-      expect(openSpy).not.toHaveBeenCalled()
+      expect(tab.location.href).toBe('')
+      expect(tab.close).toHaveBeenCalledTimes(1)
       expect(screen.getByText(text)).toBeInTheDocument()
     })
   })

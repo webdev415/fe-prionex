@@ -9,7 +9,10 @@
  *  - страница интеграций не рисует зелёных галочек там, где подключения нет;
  *  - вкладка «Сайт» (17-40b) есть только у того, кто меняет владельца сайта
  *    или правит его контент, а контент-менеджеру без кредитных прав она —
- *    единственная (вкладки модуля были бы ему стеной отказов).
+ *    единственная (вкладки модуля были бы ему стеной отказов);
+ *  - (r4, решение куратора) вкладку решают права JWT АКТИВНОГО проекта: право,
+ *    которое есть только в проекте-владельце, вкладку из другого проекта не
+ *    открывает, и настройки сайта у такого человека не спрашиваются.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
@@ -23,6 +26,7 @@ import {
   useCreditSectionEnabled,
 } from '@/features/credit/hooks/useCredit'
 import type { CreditOverview, CreditParameter, CreditProduct } from '@/features/credit/api/types'
+import { useSiteAdminSettings } from '@/features/siteAdmin/hooks'
 
 // Мокаем хуки, а не HTTP: живой QueryClient оставлял таймеры notifyManager,
 // которые падали уже после teardown jsdom в чужом тест-файле.
@@ -39,26 +43,26 @@ vi.mock('@/features/credit/hooks/useCredit', () => ({
 }))
 
 // Вкладка «Сайт» ходит в auth-service, не в модуль; её хуки — тоже заглушки.
+// Сервер отвечает ролью `editor`: у вызывающего право в проекте-владельце 7 —
+// так сцена r4 «право только во владельце» строится одной сменой JWT.
 vi.mock('@/features/siteAdmin/hooks', () => ({
   siteAdminKeys: { all: ['siteAdmin'], settings: () => ['siteAdmin', 'settings'] },
-  useSiteAdminSettings: () => ({
+  useSiteAdminSettings: vi.fn(() => ({
     data: {
       site_owner_project_id: 7,
       site_owner_project_name: 'Owner Project Alpha',
       configured: true,
+      site_owner_active: true,
       current_user_site_role: 'editor',
     },
     isLoading: false,
     error: null,
+  })),
+  useOwnerProjectChoices: () => ({
+    data: { projects: [{ id: 7, name: 'Owner Project Alpha' }], truncated: false },
   }),
   useUpdateSiteAdminSettings: () => ({ mutate: vi.fn(), isPending: false, isError: false }),
   useSiteAdminHandoff: () => ({ mutate: vi.fn(), reset: vi.fn(), isPending: false }),
-}))
-
-vi.mock('@/features/projects/hooks/useProjects', () => ({
-  projectsKeys: { all: ['projects'] },
-  useProjects: () => ({ data: { projects: [{ id: 7, name: 'Owner Project Alpha' }] } }),
-  useProjectDetail: vi.fn(),
 }))
 
 const PRODUCT: CreditProduct = {
@@ -104,9 +108,15 @@ function mockOverview(permissions: string[]): void {
 }
 
 /** Права CRM (JWT активного проекта) — по ним решается вкладка «Сайт». */
-function signIn(permissions: string[]): void {
+function signIn(permissions: string[], activeProjectId = '7'): void {
   useAuthStore.setState({
-    user: { id: '1', username: 'u', projects: [], active_project_id: '7', permissions } as never,
+    user: {
+      id: '1',
+      username: 'u',
+      projects: [],
+      active_project_id: activeProjectId,
+      permissions,
+    } as never,
   })
 }
 
@@ -175,6 +185,20 @@ describe('CreditSettingsPage', () => {
     renderPage()
     await screen.findByText('CA_AB_PAYDAY')
     expect(screen.queryByRole('tab', SITE_TAB)).not.toBeInTheDocument()
+  })
+
+  it('право на сайт только в проекте-владельце, активен другой проект — вкладки нет (решение r4)', async () => {
+    // Сервер ответил бы ролью `editor` (право в проекте-владельце 7), но
+    // вкладку решают права JWT активного проекта 9, а в нём права на сайт и
+    // `manage_settings` нет. Гейт по ответу сервера стоил бы GET настроек у
+    // каждого пользователя CRM — решение куратора: ограничение, а не запрос.
+    mockOverview(['credit.products.read'])
+    signIn(['credit.products.read'], '9')
+    renderPage('/dashboard/credit/settings?tab=site')
+    await screen.findByText('CA_AB_PAYDAY')
+    expect(screen.queryByRole('tab', SITE_TAB)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'credit.settings.site.openAdmin' })).toBeNull()
+    expect(vi.mocked(useSiteAdminSettings)).not.toHaveBeenCalled()
   })
 
   it('держатель manage_settings видит «Сайт» рядом с вкладками модуля', async () => {

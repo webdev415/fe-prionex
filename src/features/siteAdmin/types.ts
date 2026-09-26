@@ -10,13 +10,24 @@ export type SiteRole = 'editor' | 'publisher'
 
 /** `GET/PUT /api/v1/auth/settings/site-admin` (форма 17-40a). */
 export interface SiteAdminSettings {
-  /** Проект-владелец сайта; `null`, пока владелец не выбран (или он неживой). */
+  /**
+   * Сохранённый проект-владелец сайта; `null` — владелец не выбран или
+   * удалён (мягко). С 17-40a r4 деактивированный или архивный владелец здесь
+   * ОСТАЁТСЯ: ключ ему не выдаётся, но менять сайт по-прежнему держатель
+   * `manage_settings` в нём, и экран обязан назвать, кто владелец.
+   */
   site_owner_project_id: number | null
   /**
-   * Имя проекта-владельца. Экран умеет взять имя и из списка проектов, если
-   * сервер его не прислал.
+   * Имя проекта-владельца (и выключенного тоже). Экран умеет взять имя и из
+   * списка проектов, если сервер его не прислал.
    */
   site_owner_project_name?: string | null
+  /**
+   * `false` — владельца нет или он на паузе (деактивирован, в архиве): входа
+   * в админку сайта нет ни у кого, `current_user_site_role` тогда `null`.
+   * `undefined` — сервер старше 17-40a r4: владелец в ответе значит «живой».
+   */
+  site_owner_active?: boolean
   /**
    * `false` — у auth-service нет годного секрета ключа или адреса админки:
    * выдача ответила бы 503 `SITE_ADMIN_NOT_CONFIGURED`. Необязательно только
@@ -58,7 +69,8 @@ export interface SiteAdminHandoff {
  *   правило PUT (17-40a r2) не разрешает этому человеку сменить владельца —
  *   владелец задан, а `manage_settings` в проекте-владельце нет; владельца нет,
  *   а он не системный `Admin` выбираемого проекта; сеанс «от имени»;
- * - `owner_not_set` — 409 `SITE_OWNER_NOT_SET`: владелец сайта не выбран;
+ * - `owner_not_set` — 409 `SITE_OWNER_NOT_SET`: владелец сайта не выбран или
+ *   выключен — выдача их не различает, различает GET (`site_owner_active`);
  * - `not_configured` — 503 `SITE_ADMIN_NOT_CONFIGURED`: у CRM нет секрета
  *   или адреса админки;
  * - `unavailable` — 503 без этого кода (сервис или шлюз лежит): «не
@@ -66,6 +78,8 @@ export interface SiteAdminHandoff {
  * - `owner_project_gone` — 404 `SITE_OWNER_PROJECT_NOT_FOUND` на сохранении:
  *   выбранный проект удалён или выключен;
  * - `session_expired` — 401: сессия CRM кончилась, помогает только вход;
+ * - `too_many_requests` — 429 выдачи ключа (лимит a r4, `Retry-After`):
+ *   повтор поможет, но через минуту;
  * - `failed` — всё остальное, включая ответ без годного адреса.
  */
 export type SiteAdminErrorKind =
@@ -76,6 +90,7 @@ export type SiteAdminErrorKind =
   | 'unavailable'
   | 'owner_project_gone'
   | 'session_expired'
+  | 'too_many_requests'
   | 'failed'
 
 /**
@@ -83,8 +98,9 @@ export type SiteAdminErrorKind =
  *
  * - `hidden` — у человека нет права на контент сайта ни по серверу, ни по JWT;
  * - `ready` — кнопка;
- * - `not_configured` / `owner_not_set` — стенд или настройка, а не человек:
- *   сказать сразу, не дожидаясь 503/409 после нажатия;
+ * - `not_configured` / `owner_not_set` / `owner_inactive` — стенд или
+ *   настройка, а не человек: сказать сразу, не дожидаясь 503/409 после
+ *   нажатия; `owner_inactive` — владелец выбран, но его проект выключен;
  * - `impersonating` — сеанс «от имени»: сервер такой вход не выдаёт никогда;
  * - `no_right_in_owner` — права в проекте-владельце нет (сервер так сказал);
  * - `switch_project` — только запасной путь без ответа сервера о роли: право
@@ -95,6 +111,7 @@ export type SiteAdminEntry =
   | 'ready'
   | 'not_configured'
   | 'owner_not_set'
+  | 'owner_inactive'
   | 'impersonating'
   | 'no_right_in_owner'
   | 'switch_project'

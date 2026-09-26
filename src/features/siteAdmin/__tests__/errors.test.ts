@@ -133,6 +133,17 @@ describe('siteAdminErrorKind', () => {
     expect(siteAdminErrorKind(httpError(404, { detail: 'Not Found' }))).toBe('failed')
   })
 
+  it('429 без кода, с Retry-After (лимит выдачи ключей, a r4) — «слишком много попыток»', () => {
+    const error = new AxiosError('request failed', 'ERR_BAD_REQUEST', undefined, undefined, {
+      status: 429,
+      data: { detail: 'Too Many Requests' },
+      statusText: '',
+      headers: { 'retry-after': '60' },
+      config: {},
+    } as unknown as AxiosResponse)
+    expect(siteAdminErrorKind(error)).toBe('too_many_requests')
+  })
+
   it('401 — сессия CRM кончилась: повтор не поможет, нужен вход', () => {
     expect(siteAdminErrorKind(httpError(401, { detail: 'Not authenticated' }))).toBe(
       'session_expired'
