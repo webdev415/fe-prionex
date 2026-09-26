@@ -109,3 +109,73 @@ describe('fetchOwnerProjectChoices', () => {
     expect(choices.projects).toEqual([{ id: 1, name: 'Project 1' }])
   })
 })
+
+describe('fetchOwnerProjectChoices — сбой страницы (r5, раунд 2 бота)', () => {
+  /** Сервер, у которого страница `failing` отвечает отказом. */
+  function serverFailingOn(failing: number, total = 350) {
+    const healthy = serverWith(total)
+    return vi.fn(async (params: ProjectListParams): Promise<ProjectListResponse> => {
+      if ((params.page ?? 1) === failing) throw new Error(`page ${failing} failed`)
+      return healthy(params)
+    })
+  }
+
+  it('упала третья страница — прочитанные две отдаются, список помечен неполным', async () => {
+    // r4 бросал весь обход на одной сбойной странице: выбор оставался пустым,
+    // хотя 200 проектов уже были прочитаны.
+    const getPage = serverFailingOn(3)
+    const choices = await fetchOwnerProjectChoices(getPage)
+
+    expect(getPage).toHaveBeenCalledTimes(3)
+    expect(choices.projects).toHaveLength(200)
+    expect(choices.projects).toContainEqual({ id: 200, name: 'Project 200' })
+    expect(choices.truncated).toBe(true)
+  })
+
+  it('упала первая страница — показать нечего, это отказ, а не пустой список', async () => {
+    const getPage = serverFailingOn(1)
+    await expect(fetchOwnerProjectChoices(getPage)).rejects.toThrow('page 1 failed')
+    expect(getPage).toHaveBeenCalledTimes(1)
+  })
+
+  it('сигнал отмены React Query доходит до КАЖДОЙ страницы', async () => {
+    const getPage = serverWith(150)
+    const controller = new AbortController()
+    await fetchOwnerProjectChoices(getPage, controller.signal)
+
+    expect(getPage).toHaveBeenCalledTimes(2)
+    for (const pageNo of [1, 2]) {
+      expect(getPage).toHaveBeenNthCalledWith(pageNo, expect.objectContaining({ page: pageNo }), {
+        signal: controller.signal,
+      })
+    }
+  })
+
+  it('отмена посреди обхода — следующая страница не просится, итог — отказ', async () => {
+    // Вкладку закрыли, пока шёл обход: оставшиеся страницы — лишний трафик.
+    const controller = new AbortController()
+    const healthy = serverWith(350)
+    const getPage = vi.fn(async (params: ProjectListParams): Promise<ProjectListResponse> => {
+      const response = await healthy(params)
+      if (params.page === 1) controller.abort()
+      return response
+    })
+
+    await expect(fetchOwnerProjectChoices(getPage, controller.signal)).rejects.toBeDefined()
+    expect(getPage).toHaveBeenCalledTimes(1)
+  })
+
+  it('страница упала ИЗ-ЗА отмены — это отказ, а не «неполный список»', async () => {
+    const controller = new AbortController()
+    const healthy = serverWith(350)
+    const getPage = vi.fn(async (params: ProjectListParams): Promise<ProjectListResponse> => {
+      if (params.page === 2) {
+        controller.abort()
+        throw new Error('canceled')
+      }
+      return healthy(params)
+    })
+
+    await expect(fetchOwnerProjectChoices(getPage, controller.signal)).rejects.toThrow('canceled')
+  })
+})

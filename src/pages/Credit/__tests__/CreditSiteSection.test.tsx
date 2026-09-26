@@ -18,7 +18,7 @@
  *    просит ключ и отправляет вкладку по выданному адресу; мутация
  *    сбрасывается (ключ не остаётся в кэше); вкладку не дали (блокировщик,
  *    OneX) — ключ всё равно просится, и админка открывается в ЭТОЙ вкладке
- *    (`location.assign`, r4b), сброс мутации — до перехода; адрес не http(s)
+ *    (r4b; с r5 — ссылкой `noreferrer`), сброс мутации — до перехода; адрес не http(s)
  *    и отказ сервера закрывают вкладку, а без неё — не уходят со страницы;
  *  - выключенный владелец (17-40a r4, `site_owner_active: false`) назван по
  *    имени с отметкой, кнопки входа нет, причина — «владелец выключен»;
@@ -27,7 +27,13 @@
  *  - 401 / 403 / 409 / 429 / 503 называются разными словами — по телам
  *    17-40a дословно; 503 без кода «не настроено» не выдаёт;
  *  - сбой ПЕРЕчитывания поверх прочитанной картины секцию не прячет (r3):
- *    кнопка и точный текст отказа остаются.
+ *    кнопка и точный текст отказа остаются;
+ *  - список проектов для выбора не молчит (r5): пока читается — подсказка, не
+ *    прочитан — предупреждение, и в обоих случаях сохранить нельзя;
+ *  - переход на выданный адрес — без Referer (r5): ссылкой `rel="noreferrer"`
+ *    в документе той вкладки, которая уходит, а не `location` из окна CRM;
+ *    вкладку, закрытую до ответа (человеком или блокировщиком), не трогаем —
+ *    админка открывается в этой, как при заблокированной.
  */
 import { describe, it, expect, vi, beforeEach, afterEach, type MockInstance } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
@@ -71,6 +77,24 @@ function mockChoices(projects: OwnerProjectChoice[] = PROJECTS, truncated = fals
     (enabled: boolean) =>
       ({
         data: enabled ? { projects, truncated } : undefined,
+        isLoading: false,
+        isError: false,
+      }) as unknown as ReturnType<typeof useOwnerProjectChoices>
+  )
+}
+
+/**
+ * Список ещё читается (`loading`) или не прочитан (`error`) — как у живого
+ * хука: без `enabled` запроса нет, и ни загрузки, ни ошибки тоже.
+ */
+function mockChoicesState(state: 'loading' | 'error') {
+  vi.mocked(useOwnerProjectChoices).mockImplementation(
+    (enabled: boolean) =>
+      ({
+        data: undefined,
+        isLoading: enabled && state === 'loading',
+        isError: enabled && state === 'error',
+        error: enabled && state === 'error' ? httpError(503) : null,
       }) as unknown as ReturnType<typeof useOwnerProjectChoices>
   )
 }
@@ -154,16 +178,30 @@ function handoffAnswers(outcome: { url: string } | { error: unknown }) {
 
 /**
  * Вкладка, которую отдаёт `window.open('', '_blank')` в самом нажатии: её
- * `opener` экран рвёт, `location.href` задаёт по ответу, `close()` зовёт на
- * отказе. Журнал `events` держит порядок «вкладка → запрос».
+ * `opener` экран рвёт, по ответу уводит её ссылкой в ЕЁ документе (r5: без
+ * Referer), `close()` зовёт на отказе. `closed` — вкладку закрыли до ответа.
+ * `location.href` остаётся пустым: прямое присваивание — это переход с
+ * Referer страницы CRM. Журнал `events` держит порядок «вкладка → запрос».
  */
 function fakeTab() {
   return {
     opener: {} as unknown,
+    closed: false,
+    document: document.implementation.createHTMLDocument(''),
     location: { href: '' },
     close: vi.fn(),
   }
 }
+
+/** Переход ссылкой: куда, с каким `rel`, из какого документа, была ли в нём. */
+interface LinkNavigation {
+  href: string
+  rel: string
+  document: Document
+  connected: boolean
+}
+
+let links: LinkNavigation[] = []
 
 const OPEN_BUTTON = { name: 'credit.settings.site.openAdmin' }
 const OWNER_SELECT = { name: 'credit.settings.site.ownerSelect' }
@@ -172,12 +210,27 @@ const SAVE_FAILED = 'credit.settings.site.saveFailed'
 
 describe('CreditSiteSection', () => {
   let openSpy: MockInstance<typeof window.open>
+  let clickSpy: MockInstance<HTMLAnchorElement['click']>
   let tab: ReturnType<typeof fakeTab>
 
   beforeEach(() => {
     vi.clearAllMocks()
     events = []
+    links = []
     tab = fakeTab()
+    // jsdom не уходит на другой документ: нажатие ссылки записывается, а не
+    // исполняется — сам переход и его `rel` становятся проверяемыми.
+    clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+      this: HTMLAnchorElement
+    ) {
+      events.push(`link ${this.href}`)
+      links.push({
+        href: this.href,
+        rel: this.rel,
+        document: this.ownerDocument,
+        connected: this.isConnected,
+      })
+    })
     openSpy = vi.spyOn(window, 'open').mockImplementation(() => {
       events.push('open')
       return tab as unknown as Window
@@ -199,6 +252,7 @@ describe('CreditSiteSection', () => {
 
   afterEach(() => {
     openSpy.mockRestore()
+    clickSpy.mockRestore()
     useAuthStore.setState({ user: null, isImpersonating: false })
   })
 
@@ -449,6 +503,56 @@ describe('CreditSiteSection', () => {
       render(<CreditSiteSection />)
       expect(screen.queryByText('credit.settings.site.ownerListTruncated')).not.toBeInTheDocument()
     })
+
+    it('список не прочитан — сказано вслух, а не пустой выбор без объяснения (r5)', () => {
+      // r4 молчал: выбор с одним текущим владельцем (или пустой) выглядел как
+      // «других проектов нет».
+      signIn(['manage_settings'])
+      mockChoicesState('error')
+      render(<CreditSiteSection />)
+      expect(screen.getByText('credit.settings.site.ownerListFailed')).toBeInTheDocument()
+      expect(screen.getByRole('button', SAVE_BUTTON)).toBeDisabled()
+      expect(screen.queryByText('credit.settings.site.ownerListLoading')).not.toBeInTheDocument()
+    })
+
+    it('список ещё читается — подсказка вместо тихого пустого выбора (r5)', () => {
+      signIn(['manage_settings'])
+      mockChoicesState('loading')
+      render(<CreditSiteSection />)
+      expect(screen.getByText('credit.settings.site.ownerListLoading')).toBeInTheDocument()
+      expect(screen.getByRole('button', SAVE_BUTTON)).toBeDisabled()
+      expect(screen.queryByText('credit.settings.site.ownerListFailed')).not.toBeInTheDocument()
+    })
+
+    it('выбор сделан, а список стал негодным — сохранить нельзя (r5)', async () => {
+      signIn(['manage_settings'])
+      const { rerender } = render(<CreditSiteSection />)
+      fireEvent.click(screen.getByRole('combobox', OWNER_SELECT))
+      fireEvent.click(await screen.findByRole('option', { name: 'Second Project Beta' }))
+      expect(screen.getByRole('button', SAVE_BUTTON)).toBeEnabled()
+
+      mockChoicesState('error')
+      rerender(<CreditSiteSection />)
+      const save = screen.getByRole('button', SAVE_BUTTON)
+      expect(save).toBeDisabled()
+      fireEvent.click(save)
+      expect(updateMutate).not.toHaveBeenCalled()
+    })
+
+    it.each([
+      ['список прочитан', ['manage_settings'], () => mockChoices()],
+      [
+        'без права менять — запроса нет, говорить не о чем',
+        ['site.content.edit'],
+        () => mockChoicesState('error'),
+      ],
+    ])('контроль: %s — ни подсказки загрузки, ни предупреждения', (_name, permissions, arrange) => {
+      signIn(permissions)
+      arrange()
+      render(<CreditSiteSection />)
+      expect(screen.queryByText('credit.settings.site.ownerListFailed')).not.toBeInTheDocument()
+      expect(screen.queryByText('credit.settings.site.ownerListLoading')).not.toBeInTheDocument()
+    })
   })
 
   describe('кнопка «Открыть админку сайта» — по ответу сервера', () => {
@@ -579,18 +683,67 @@ describe('CreditSiteSection', () => {
       // адрес задать, ни блокировку узнать было бы нельзя.
       expect(openSpy).toHaveBeenCalledTimes(1)
       expect(openSpy).toHaveBeenCalledWith('', '_blank')
-      expect(events).toEqual(['open', 'request'])
+      expect(events).toEqual(['open', 'request', `link ${url}`])
       expect(tab.opener).toBeNull()
-      expect(tab.location.href).toBe(url)
       expect(tab.close).not.toHaveBeenCalled()
       // Ключ лежит в `data` мутации — она сброшена сразу, а не через gcTime.
       expect(handoffReset).toHaveBeenCalledTimes(1)
       expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     })
 
+    it('вкладка уходит без Referer: ссылкой `noreferrer` в ЕЁ документе, не `location` из CRM (r5)', () => {
+      // До r4 это давал `window.open(url, '_blank', 'noopener,noreferrer')`;
+      // пустая вкладка в самом нажатии потеряла `noreferrer`, и адрес страницы
+      // CRM уходил админке сайта заголовком Referer.
+      signIn(['site.content.edit'])
+      const url = 'https://cms.dev.example.test/admin/sso?t=one-time'
+      handoffAnswers({ url })
+      render(<CreditSiteSection />)
+      fireEvent.click(screen.getByRole('button', OPEN_BUTTON))
+
+      expect(links).toHaveLength(1)
+      expect(links[0].href).toBe(url)
+      expect(links[0].rel.split(/\s+/)).toContain('noreferrer')
+      // Ссылка — в документе самой вкладки: переход начинает она, а не окно CRM.
+      expect(links[0].document).toBe(tab.document)
+      expect(links[0].connected).toBe(true)
+      // И ссылка за собой убрана.
+      expect(tab.document.querySelectorAll('a')).toHaveLength(0)
+      expect(tab.location.href).toBe('')
+    })
+
+    it.each([
+      ['блокировщик вернул уже закрытое окно', 'before'],
+      ['человек закрыл пустую вкладку, пока шёл запрос', 'during'],
+    ])('%s — закрытую вкладку не трогаем, админка открывается в этой (r5)', (_name, when) => {
+      // r4 присваивал адрес закрытому окну: переход не случался, ключ сгорал,
+      // и экран молчал — тот же тихий сбой, что закрывал P1.
+      signIn(['site.content.edit'])
+      const url = 'https://cms.dev.example.test/admin/sso?t=one-time'
+      if (when === 'before') tab.closed = true
+      handoffMutate.mockImplementation(
+        (_vars: unknown, options: { onSuccess?: (data: unknown) => void }) => {
+          events.push('request')
+          if (when === 'during') tab.closed = true
+          options.onSuccess?.({ url, expires_in: 60 })
+        }
+      )
+      render(<CreditSiteSection />)
+      fireEvent.click(screen.getByRole('button', OPEN_BUTTON))
+
+      expect(tab.location.href).toBe('')
+      expect(links).toHaveLength(1)
+      expect(links[0].document).toBe(document)
+      expect(links[0].href).toBe(url)
+      expect(links[0].rel.split(/\s+/)).toContain('noreferrer')
+      expect(handoffReset).toHaveBeenCalledTimes(1)
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    })
+
     describe('вкладку не дали (блокировщик; OneX — всегда) — админка в этой же вкладке (r4b)', () => {
-      // jsdom не умеет уходить на другой документ: `location` подменяется
-      // простым объектом, и сам переход становится проверяемым.
+      // Переход этой вкладки — ссылкой `noreferrer` в документе CRM (r5), а не
+      // `location.assign`: тот ушёл бы с Referer. `location` подменён, чтобы
+      // проверить, что прямого перехода нет.
       const realLocation = window.location
       const assign = vi.fn((url: string) => {
         events.push(`assign ${url}`)
@@ -625,11 +778,27 @@ describe('CreditSiteSection', () => {
         fireEvent.click(screen.getByRole('button', OPEN_BUTTON))
 
         expect(handoffMutate).toHaveBeenCalledTimes(1)
-        expect(assign).toHaveBeenCalledTimes(1)
-        expect(assign).toHaveBeenCalledWith(url)
         // Ключ не задерживается в `data` мутации: сброс — раньше ухода со страницы.
-        expect(events).toEqual(['open', 'request', 'reset', `assign ${url}`])
+        expect(events).toEqual(['open', 'request', 'reset', `link ${url}`])
+        expect(links).toHaveLength(1)
+        expect(links[0].href).toBe(url)
+        expect(links[0].document).toBe(document)
         expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+      })
+
+      it('переход этой вкладкой — без Referer: ссылка `noreferrer`, не `location.assign` (r5)', () => {
+        signIn(['site.content.edit'])
+        const url = 'https://cms.dev.example.test/admin/sso?t=one-time'
+        handoffAnswers({ url })
+        render(<CreditSiteSection />)
+        fireEvent.click(screen.getByRole('button', OPEN_BUTTON))
+
+        expect(assign).not.toHaveBeenCalled()
+        expect(links).toHaveLength(1)
+        expect(links[0].rel.split(/\s+/)).toContain('noreferrer')
+        expect(links[0].connected).toBe(true)
+        // Ссылка за собой убрана — в разметке CRM её не остаётся.
+        expect(document.querySelectorAll(`a[href="${url}"]`)).toHaveLength(0)
       })
 
       it('адрес не http(s) — перехода нет, отказ назван', () => {
@@ -639,6 +808,7 @@ describe('CreditSiteSection', () => {
         fireEvent.click(screen.getByRole('button', OPEN_BUTTON))
 
         expect(assign).not.toHaveBeenCalled()
+        expect(links).toHaveLength(0)
         expect(handoffReset).toHaveBeenCalledTimes(1)
         expect(screen.getByText('credit.settings.site.errors.failed')).toBeInTheDocument()
       })
@@ -650,6 +820,7 @@ describe('CreditSiteSection', () => {
         fireEvent.click(screen.getByRole('button', OPEN_BUTTON))
 
         expect(assign).not.toHaveBeenCalled()
+        expect(links).toHaveLength(0)
         expect(screen.getByText('credit.settings.site.errors.forbidden')).toBeInTheDocument()
       })
     })
@@ -668,6 +839,7 @@ describe('CreditSiteSection', () => {
       fireEvent.click(screen.getByRole('button', OPEN_BUTTON))
 
       expect(tab.location.href).toBe('')
+      expect(links).toHaveLength(0)
       expect(tab.close).toHaveBeenCalledTimes(1)
       expect(handoffReset).toHaveBeenCalledTimes(1)
       expect(screen.getByText('credit.settings.site.errors.failed')).toBeInTheDocument()
