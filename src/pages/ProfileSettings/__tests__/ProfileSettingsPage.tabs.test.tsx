@@ -36,6 +36,8 @@ vi.mock('@/features/auth', () => ({
   ChangePasswordModal: () => null,
   TwoFactorSection: () => <div>Two-Factor</div>,
 }))
+// Phone binding has its own tests; here it only must not reach the network.
+vi.mock('@/features/appLogin', () => ({ AppLoginSection: () => null }))
 vi.mock('@/features/auth/api/authApi', () => ({ authApi: { changePassword: vi.fn() } }))
 // The store object is built once, not per call: the page selects `refreshUser`
 // and depends on it in an effect, so a fresh function each render would loop.
