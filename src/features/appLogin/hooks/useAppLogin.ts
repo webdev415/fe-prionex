@@ -1,5 +1,8 @@
+import { useCallback } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { usersKeys } from '@/features/users/hooks/useUsers'
 import { appLoginApi } from '../api/appLoginApi'
+import { retryStatusRead } from '../lib/pairing'
 import type { AppLoginDisableRequest, AppLoginEnableRequest } from '../types'
 
 export const appLoginKeys = {
@@ -23,7 +26,8 @@ interface MyStatusOptions {
 
 /**
  * The caller's own phone-binding status. A 404 (feature flag off) is not
- * retried: it is an answer, not a failure.
+ * retried: it is an answer, not a failure. A network error or a 5xx is retried
+ * a couple of times before the section shows its error line (`retryStatusRead`).
  */
 export function useMyAppLoginStatus({
   enabled = true,
@@ -34,7 +38,7 @@ export function useMyAppLoginStatus({
     queryKey: appLoginKeys.me(),
     queryFn: appLoginApi.myStatus,
     enabled,
-    retry: false,
+    retry: retryStatusRead,
     staleTime: 30_000,
     // A function, so it is re-read before every tick and stops at `pollUntil`
     // without the component having to re-render at that moment.
@@ -42,6 +46,16 @@ export function useMyAppLoginStatus({
       pollMs && (pollUntil === undefined || Date.now() < pollUntil) ? pollMs : false,
     refetchIntervalInBackground: false,
   })
+}
+
+/**
+ * Re-read the caller's status now. The profile calls it when the pairing panel
+ * is closed: the poll stops with the panel, and a phone that enrolled in the
+ * last seconds must still show up in the list.
+ */
+export function useInvalidateMyAppLoginStatus() {
+  const qc = useQueryClient()
+  return useCallback(() => qc.invalidateQueries({ queryKey: appLoginKeys.me() }), [qc])
 }
 
 export function useEnableAppLogin() {
@@ -81,8 +95,9 @@ export function useAdminRevokeAllAppLogin() {
     mutationFn: (userId: number) => appLoginApi.adminRevokeAll(userId),
     onSuccess: (_, userId) => {
       qc.invalidateQueries({ queryKey: appLoginKeys.admin(userId) })
-      // The users table may carry the binding badge.
-      qc.invalidateQueries({ queryKey: ['users'] })
+      // The users table and the user's card carry the binding badge.
+      qc.invalidateQueries({ queryKey: usersKeys.lists() })
+      qc.invalidateQueries({ queryKey: usersKeys.detail(userId) })
     },
   })
 }

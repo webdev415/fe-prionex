@@ -705,7 +705,7 @@ export function UserManagementPage() {
             <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
               {appLoginAvailable &&
                 currentUser?.id !== String(user.id) &&
-                user.app_login_enabled !== false && (
+                user.app_login_enabled === true && (
                   <IconAction
                     label={t('pages.users.actions.revokeAppLogin')}
                     icon={<Icons.Phone size={18} strokeWidth={1.5} />}
@@ -792,7 +792,7 @@ export function UserManagementPage() {
                 <PermissionGuard permission={PERMISSIONS.USERS.EDIT}>
                   {appLoginAvailable &&
                     currentUser?.id !== String(user.id) &&
-                    user.app_login_enabled !== false && (
+                    user.app_login_enabled === true && (
                       <DropdownMenuItem
                         onClick={() => {
                           setOpenDropdownUserId(null)
