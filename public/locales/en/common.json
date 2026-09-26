@@ -12454,7 +12454,6 @@
       "finalAmount": "Final amount",
       "declineCodes": "Decline codes",
       "underwriter": "Underwriter",
-      "underwriterId": "Underwriter id",
       "rationale": "Rationale",
       "rules": "Ruleset / model",
       "decidedAt": "Decided at",
@@ -12539,6 +12538,12 @@
       "advanceRefundExcess": "Refund excess after cancellation",
       "supersedesDecision": "Supersedes the previous decision"
     },
+    "decisionError": {
+      "operatorIdNotNumeric": "The decision was not saved: the user number in your CRM pass is not a whole number, so the decision's author cannot be recorded. Contact the administrator — this is a sign-in setting, not your mistake.",
+      "operatorIdAmbiguous": "The decision was not saved: your CRM pass names two different user numbers, so the decision's author cannot be determined. Contact the administrator.",
+      "underwriterNotTheCaller": "The decision was not saved: the author of a manual decision is the owner of the CRM pass, and the page sent a different number. Refresh the page and try again.",
+      "generic": "The decision was not saved. Try again; if it happens again, contact the administrator."
+    },
     "tabs": {
       "form": "Application form",
       "documents": "Documents",
@@ -12595,7 +12600,7 @@
       "applicant": "Applicant",
       "incomeAndLoan": "Income and loan",
       "links": "Links",
-      "clientPending": "not yet — created at contracting (C-08)",
+      "borrowerApplicationFailed": "not searched: the application was not received — the phone is unknown",
       "projectionPending": "not yet — appears with the debt projection",
       "openLoan": "open loan",
       "openApplication": "open application",
@@ -12809,6 +12814,7 @@
       "overpayment": "Overpayment"
     },
     "documentKind": {
+      "agreement_draft": "Draft agreement",
       "contract": "Loan agreement",
       "schedule": "Payment schedule",
       "pcci": "Pre-contract credit information",
@@ -12825,7 +12831,8 @@
       "pad_form": "PAD authorisation",
       "pay_stub": "Pay stub",
       "utility_bill": "Utility bill",
-      "other": "Other"
+      "other": "Other",
+      "unknown": "Unknown kind ({{code}})"
     },
     "consent": {
       "terms": "Terms and conditions",
@@ -13108,6 +13115,82 @@
         "loading": "searching…",
         "failed": "not searched: CRM did not answer"
       }
+    },
+    "clientHistory": {
+      "title": "Client",
+      "otherApplications": "Other applications from this client: {{count}}",
+      "identityRule": "Same client — by e-mail or SIN; the phone is not used",
+      "none": "No other applications",
+      "notCounted": "The module did not send the client's applications — the count is unavailable, this is not zero",
+      "noIdentity": "Nothing to compare by: the application has no e-mail and no SIN",
+      "legacyNotCounted": "Applications submitted through the previous CRM are not counted here",
+      "shownOf": "Showing {{shown}} of {{total}}"
+    },
+    "timeline": {
+      "title": "Timeline",
+      "trackClient": "Client on the site",
+      "trackStatus": "Application status",
+      "scopeClient": "event of the client's address, not tied to this application",
+      "collapsed": "×{{count}}, until {{last}}",
+      "truncated": "Showing the latest {{shown}} of {{total}} site events for this application",
+      "notProvided": "The module did not send the timeline — only status transitions are shown"
+    },
+    "communications": {
+      "title": "Communications",
+      "calls": "CRM calls",
+      "sms": "CRM SMS",
+      "mail": "Site e-mails",
+      "noClient": "The module has not linked this application to a CRM client — CRM calls and SMS are not shown. A client found by phone is not used here: a matching number does not confirm it is the same person",
+      "forbidden": "No permission to view call and SMS history",
+      "failed": "CRM did not respond — the history was not received; this does not mean there were no calls or SMS",
+      "loading": "Loading…",
+      "noneCalls": "No calls found in your CRM project",
+      "noneSms": "No SMS found in your CRM project",
+      "shownOf": "Showing {{shown}} of {{total}}",
+      "openClientCard": "Everything is in the client card",
+      "mailNone": "No e-mails for this application in the timeline. The site reports e-mails to the module once 17-6g is connected; earlier e-mails are not visible here.",
+      "mailNotProvided": "The module did not send the timeline — site e-mails are unavailable; this does not mean there were none",
+      "mailLoanStage": "Loan-stage e-mails (payout, payments, closure) are not shown in the application card",
+      "gotoMissing": "GoTo calls do not reach CRM. Only calls of the CRM client the module linked to this application are shown here",
+      "smsCanadaMissing": "SMS for Canada is not connected",
+      "direction": {
+        "inbound": "inbound",
+        "outbound": "outbound"
+      }
+    },
+    "portalEvent": {
+      "unknown": "Site event: {{name}}",
+      "code_requested": "Code requested",
+      "code_verified": "Address confirmed",
+      "code_rejected": "Code rejected",
+      "application_created": "Application created",
+      "application_blocked": "Application intake refused by the site",
+      "block_saved": "Form step saved",
+      "ibv_session_opened": "Bank step opened",
+      "ibv_login": "Bank credentials entered",
+      "ibv_mfa": "Bank security question",
+      "ibv_completed": "Bank window finished",
+      "ibv_confirmed": "Bank result confirmed",
+      "ibv_rejected": "Bank step rejected",
+      "document_uploaded": "Statement uploaded",
+      "signed": "Agreement signing",
+      "quote_mismatch": "Client quote differs from the module",
+      "handoff_issued": "Handoff between site and cabinet",
+      "rate_limited": "Attempt limit reached",
+      "antibot_rejected": "Attempt blocked by anti-bot",
+      "intake_closed": "Application intake closed",
+      "signed_in": "Signed in to the cabinet",
+      "sign_in_rejected": "Cabinet sign-in rejected",
+      "signed_in_by_key": "Signed in with a one-time key",
+      "cancellation_requested": "Client cancelled the agreement",
+      "cancellation_failed": "Agreement cancellation failed",
+      "payoff_quoted": "Early payoff quote requested",
+      "prepayment_mode_changed": "Prepayment mode changed",
+      "document_opened": "Document opened",
+      "document_unavailable": "Document unavailable",
+      "continue_to_apply": "Went to complete the application",
+      "notification_mailed": "Notification e-mail sent",
+      "code_sent": "Code e-mail sent"
     },
     "access": {
       "notAuthenticated": "The module did not accept your sign-in",
