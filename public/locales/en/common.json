@@ -3902,7 +3902,8 @@
         "deactivate": "Deactivate",
         "resetPassword": "Reset Password",
         "disableTwoFactor": "Disable 2FA",
-        "reenableTwoFactor": "Re-enable 2FA"
+        "reenableTwoFactor": "Re-enable 2FA",
+        "revokeAppLogin": "Unbind all phones"
       },
       "messages": {
         "nowViewingAsPrefix": "Now viewing as",
@@ -3920,6 +3921,10 @@
       "twoFactorIndicator": {
         "enabled": "Google Authenticator enabled",
         "disabled": "Google Authenticator not enabled"
+      },
+      "appLoginIndicator": {
+        "enabled": "Phone bound",
+        "disabled": "No phone bound"
       },
       "activeProject": "Active Project",
       "noAssignment": "No assignment",
@@ -3996,6 +4001,15 @@
           "failedToUnlock": "Failed to unlock the account",
           "unlocking": "Unlocking...",
           "unlockAccountButton": "Unlock Account"
+        },
+        "appLoginRevoke": {
+          "title": "Unbind all phones",
+          "body": "All of the user's bound phones will be unbound: they lose sign-in without the IP address restriction and their mobile session is ended. This action is recorded in the audit log.",
+          "loading": "Loading…",
+          "featureOff": "Sign-in through the mobile app is turned off on this server.",
+          "success": "All of the user's phones are unbound",
+          "failed": "Could not unbind the phones",
+          "revoking": "Unbinding..."
         }
       },
       "forms": {

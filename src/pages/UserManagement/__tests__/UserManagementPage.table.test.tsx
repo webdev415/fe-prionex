@@ -39,6 +39,14 @@ vi.mock('@/features/departments', () => ({
   useDepartments: () => ({ data: { departments: [] } }),
 }))
 vi.mock('@/features/groups', () => ({ useGroups: () => ({ data: { groups: [] } }) }))
+// Phone binding (#1532) reads its own status over the network; here the
+// feature is off, so the table keeps its pre-#1532 shape. Its UI has its own tests.
+vi.mock('@/features/appLogin', () => ({
+  AdminAppLoginRevokeModal: () => null,
+  AppLoginStatusIcon: () => null,
+  isFeatureAvailable: () => false,
+  useMyAppLoginStatus: () => ({ data: undefined }),
+}))
 const cardPermission = vi.hoisted(() => ({ granted: true }))
 
 vi.mock('@/hooks/usePermissions', async (importOriginal) => {

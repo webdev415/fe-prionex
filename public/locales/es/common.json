@@ -3910,7 +3910,8 @@
         "deactivate": "Desactivar",
         "resetPassword": "Restablecer contraseña",
         "disableTwoFactor": "Desactivar 2FA",
-        "reenableTwoFactor": "Reactivar 2FA"
+        "reenableTwoFactor": "Reactivar 2FA",
+        "revokeAppLogin": "Desvincular todos los teléfonos"
       },
       "messages": {
         "nowViewingAsPrefix": "Viendo ahora como",
@@ -3928,6 +3929,10 @@
       "twoFactorIndicator": {
         "enabled": "Google Authenticator activado",
         "disabled": "Google Authenticator no activado"
+      },
+      "appLoginIndicator": {
+        "enabled": "Teléfono vinculado",
+        "disabled": "Sin teléfono vinculado"
       },
       "activeProject": "Proyecto activo",
       "noAssignment": "Sin asignación",
@@ -4004,6 +4009,15 @@
           "failedToUnlock": "No se ha podido desbloquear la cuenta",
           "unlocking": "Desbloqueando...",
           "unlockAccountButton": "Desbloquear cuenta"
+        },
+        "appLoginRevoke": {
+          "title": "Desvincular todos los teléfonos",
+          "body": "Se desvincularán todos los teléfonos del usuario: perderán el inicio de sesión sin la restricción por dirección IP y su sesión móvil se cerrará. Esta acción queda registrada en el registro de auditoría.",
+          "loading": "Cargando…",
+          "featureOff": "El inicio de sesión con la aplicación móvil está desactivado en este servidor.",
+          "success": "Todos los teléfonos del usuario se han desvinculado",
+          "failed": "No se han podido desvincular los teléfonos",
+          "revoking": "Desvinculando..."
         }
       },
       "forms": {
