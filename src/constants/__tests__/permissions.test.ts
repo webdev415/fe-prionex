@@ -41,3 +41,22 @@ describe('Call QA listening-rules permission', () => {
     expect((PERMISSION_DESCRIPTIONS as Record<string, string>).manage_qa_rules).toBeTruthy()
   })
 })
+
+describe('Site content permissions (17-40)', () => {
+  // Verbatim names of the 17-40a auth migration: the handoff endpoint derives
+  // the site-admin role from exactly these strings, and a typo here would hide
+  // the «open the site admin» button from everyone who holds the right.
+  it('exposes the verbatim backend names', () => {
+    expect(PERMISSIONS.SITE.CONTENT_EDIT).toBe('site.content.edit')
+    expect(PERMISSIONS.SITE.CONTENT_PUBLISH).toBe('site.content.publish')
+  })
+
+  it('registers and describes both for the role-management UI', () => {
+    const all = getAllPermissions() as string[]
+    const descriptions = PERMISSION_DESCRIPTIONS as Record<string, string>
+    for (const permission of ['site.content.edit', 'site.content.publish']) {
+      expect(all).toContain(permission)
+      expect(descriptions[permission]).toBeTruthy()
+    }
+  })
+})
