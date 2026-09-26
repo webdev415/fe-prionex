@@ -17,16 +17,23 @@
  *    а не «спробуйте ще раз»: в bootstrap ответ зависит от выбираемого
  *    проекта, и поля «может ли менять» в GET нет. Список проектов для выбора
  *    читается только у того, кто может менять, и целиком — постранично
- *    (`useOwnerProjectChoices`), а не первой сотней.
+ *    (`useOwnerProjectChoices`), а не первой сотней. Пока он читается, под
+ *    выбором сказано «завантажуємо»; не прочитался — предупреждение (r5), и в
+ *    обоих случаях сохранить нельзя: пустой выбор без слов выглядел бы как
+ *    «других проектов нет».
  * 2. **Вход в админку сайта.** Своих учёток у админки больше нет: кнопка
  *    просит у auth-service одноразовый ключ (`POST /site-admin/handoff`, живёт
  *    ≤ 60 с) и отправляет по выданному адресу вкладку, открытую В САМОМ
  *    НАЖАТИИ, до запроса (r4, как `CreditDocumentOpenButton`): окно, открытое
  *    после ответа сервера, браузер блокирует молча, и одноразовый ключ сгорал
  *    бы без следа. Вкладку не дали (блокировщик; OneX — всегда: его политика
- *    окон отклоняет пустой адрес) — адмінка открывается В ЭТОЙ ЖЕ вкладке
- *    (`window.location.assign`, r4b): переход текущей вкладки не блокируется,
- *    поэтому ключ не сгорает молча, а вернуться в CRM можно кнопкой «Назад».
+ *    окон отклоняет пустой адрес) или её закрыли до ответа (человек; блокировщик,
+ *    отдающий уже закрытое окно, — r5) — адмінка открывается В ЭТОЙ ЖЕ вкладке
+ *    (r4b): переход текущей вкладки не блокируется, поэтому ключ не сгорает
+ *    молча, а вернуться в CRM можно кнопкой «Назад». Переход — без Referer
+ *    (r5, `navigateWithoutReferrer`): `noreferrer` пропал вместе с
+ *    `window.open(url, …, 'noopener,noreferrer')`, и адрес страницы CRM иначе
+ *    уходил бы админке сайта.
  *    Ключ нигде не хранится и не показывается: мутация сбрасывается сразу
  *    после `safeHttpUrl`, до перехода, — и на годном адресе, и на негодном; на
  *    отказе и негодном адресе новая вкладка закрывается, а без неё перехода нет.
@@ -61,6 +68,7 @@ import {
 } from '@/components/ui/Select'
 import { PERMISSIONS } from '@/constants/permissions'
 import { useHasAnyPermission, useHasPermission } from '@/hooks/usePermissions'
+import { navigateWithoutReferrer } from '@/lib/navigateWithoutReferrer'
 import { safeHttpUrl } from '@/lib/safeUrl'
 import { useAuthStore } from '@/stores/authStore'
 import {
@@ -195,6 +203,12 @@ export function CreditSiteSection() {
     options.unshift({ id: ownerId, name: ownerName })
   }
 
+  // Список нужен, а его нет: читается или не прочитался (r5). Выбор тогда
+  // держит только текущего владельца — сохранять из него нечего и незачем.
+  const ownerListUnusable = canChangeOwner && !choices.data
+  const ownerListLoading = ownerListUnusable && choices.isLoading
+  const ownerListFailed = ownerListUnusable && choices.isError
+
   const current = ownerId !== null ? String(ownerId) : ''
   const selected = draft ?? current
   const changed = draft !== null && draft !== current
@@ -207,7 +221,7 @@ export function CreditSiteSection() {
   })
 
   const save = () => {
-    if (!canChangeOwner || !changed || draft === null) return
+    if (!canChangeOwner || !changed || draft === null || ownerListUnusable) return
     update.mutate({ site_owner_project_id: Number(draft) }, { onSuccess: () => setDraft(null) })
   }
 
@@ -216,7 +230,8 @@ export function CreditSiteSection() {
     // Вкладка — в самом нажатии, ДО запроса: окно, открытое после ответа,
     // браузер считает открытым без участия человека и блокирует. `noopener`
     // здесь не годится — с ним открытие всегда возвращает `null`, и ни задать
-    // адрес, ни узнать о блокировке было бы нельзя. Связь с окном CRM рвём сами.
+    // адрес, ни узнать о блокировке было бы нельзя. Связь с окном CRM рвём сами,
+    // а Referer снимает переход ссылкой `noreferrer` (ниже).
     const tab = window.open('', '_blank')
     if (tab) tab.opener = null
     handoff.mutate(undefined, {
@@ -231,14 +246,12 @@ export function CreditSiteSection() {
           setHandoffError('failed')
           return
         }
-        if (tab) {
-          tab.location.href = url
-          return
-        }
         // Вкладку не дали (блокировщик; OneX — всегда: пустой адрес его
-        // политика окон отклоняет). Переход ЭТОЙ вкладки не блокируется, и
-        // ключ не сгорает молча; вернуться в CRM — кнопкой «Назад» (r4b).
-        window.location.assign(url)
+        // политика окон отклоняет) или её закрыли, пока шёл запрос (человек;
+        // блокировщик, отдающий уже закрытое окно, — r5): адрес закрытому окну
+        // ничего не даёт, и ключ сгорел бы молча. Переход ЭТОЙ вкладки не
+        // блокируется; вернуться в CRM — кнопкой «Назад» (r4b).
+        navigateWithoutReferrer(tab && !tab.closed ? tab : window, url)
       },
       onError: (error) => {
         tab?.close()
@@ -295,12 +308,21 @@ export function CreditSiteSection() {
             <Button
               size="sm"
               onClick={save}
-              disabled={!canChangeOwner || !changed || update.isPending}
+              disabled={!canChangeOwner || !changed || update.isPending || ownerListUnusable}
             >
               {t('credit.settings.site.save')}
             </Button>
           )}
         </div>
+
+        {ownerListLoading && (
+          <p className="text-muted-foreground text-xs">
+            {t('credit.settings.site.ownerListLoading')}
+          </p>
+        )}
+        {ownerListFailed && (
+          <Alert variant="warning">{t('credit.settings.site.ownerListFailed')}</Alert>
+        )}
 
         {canChangeOwner && choices.data?.truncated && (
           <p className="text-muted-foreground text-xs">
