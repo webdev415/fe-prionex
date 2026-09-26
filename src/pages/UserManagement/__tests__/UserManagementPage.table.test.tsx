@@ -39,12 +39,13 @@ vi.mock('@/features/departments', () => ({
   useDepartments: () => ({ data: { departments: [] } }),
 }))
 vi.mock('@/features/groups', () => ({ useGroups: () => ({ data: { groups: [] } }) }))
-// Phone binding (#1532) reads its own status over the network; here the
+// Phone binding (#1532) reads its own status over the network; by default the
 // feature is off, so the table keeps its pre-#1532 shape. Its UI has its own tests.
+const appLogin = vi.hoisted(() => ({ available: false }))
 vi.mock('@/features/appLogin', () => ({
   AdminAppLoginRevokeModal: () => null,
   AppLoginStatusIcon: () => null,
-  isFeatureAvailable: () => false,
+  isFeatureAvailable: () => appLogin.available,
   useMyAppLoginStatus: () => ({ data: undefined }),
 }))
 const cardPermission = vi.hoisted(() => ({ granted: true }))
@@ -245,5 +246,54 @@ describe('a reader who cannot open the employee card', () => {
 
     const dialog = await screen.findByRole('dialog')
     expect(within(dialog).getByText('pages.users.modals.view.title')).toBeInTheDocument()
+  })
+})
+
+describe('the admin «unbind phones» action (#1532)', () => {
+  beforeEach(() => {
+    appLogin.available = true
+  })
+
+  afterEach(() => {
+    appLogin.available = false
+  })
+
+  const REVOKE = { name: 'pages.users.actions.revokeAppLogin' }
+  const rowOf = (name: string) => screen.getByText(name).closest('tr') as HTMLElement
+
+  it('is offered only for an employee the API reports with a bound phone', () => {
+    rows.value = [
+      employee({ id: 1, first_name: 'Olena', last_name: 'Kovalchuk', app_login_enabled: true }),
+      employee({
+        id: 2,
+        username: 'ipetrenko',
+        first_name: 'Ivan',
+        last_name: 'Petrenko',
+        full_name: 'Petrenko Ivan',
+        app_login_enabled: false,
+      }),
+      employee({
+        id: 3,
+        username: 'mshevchenko',
+        first_name: 'Maria',
+        last_name: 'Shevchenko',
+        full_name: 'Shevchenko Maria',
+        app_login_enabled: undefined,
+      }),
+    ]
+    renderPage()
+
+    expect(within(rowOf('Olena Kovalchuk')).getByRole('button', REVOKE)).toBeInTheDocument()
+    expect(within(rowOf('Ivan Petrenko')).queryByRole('button', REVOKE)).not.toBeInTheDocument()
+    // An API that does not send the field says nothing about a phone: no action.
+    expect(within(rowOf('Maria Shevchenko')).queryByRole('button', REVOKE)).not.toBeInTheDocument()
+  })
+
+  it('is not offered at all while the feature is off', () => {
+    appLogin.available = false
+    rows.value = [employee({ app_login_enabled: true })]
+    renderPage()
+
+    expect(within(rowOf('Olena Kovalchuk')).queryByRole('button', REVOKE)).not.toBeInTheDocument()
   })
 })

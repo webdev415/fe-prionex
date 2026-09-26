@@ -1,4 +1,5 @@
 import axios from 'axios'
+import type { TFunction } from 'i18next'
 import { getErrorMessage, getErrorStatus, translateErrorCode } from '@/lib/errors'
 import type { AppLoginDevice, AppLoginStatus } from '../types'
 
@@ -7,6 +8,21 @@ export const PAIRING_URL_SCHEME = 'prionexhub://app-login/pair'
 
 /** Default device cap from the design (`AUTH_APP_LOGIN_MAX_DEVICES=3`). */
 export const DEFAULT_MAX_DEVICES = 3
+
+/** Pairing code lifetime from the design, used when the API does not send a usable one. */
+export const DEFAULT_PAIRING_TTL_S = 300
+
+/**
+ * The code's lifetime in seconds as the screen can count with it. A missing,
+ * non-numeric, zero or negative `expires_in` would turn the countdown into
+ * `NaN:NaN` and the poll deadline into `NaN` (no poll at all), so it falls back
+ * to the design value; the server still enforces the real TTL.
+ */
+export function pairingTtlSeconds(expiresIn: unknown): number {
+  return typeof expiresIn === 'number' && Number.isFinite(expiresIn) && expiresIn > 0
+    ? expiresIn
+    : DEFAULT_PAIRING_TTL_S
+}
 
 /**
  * `ABCDEFGH` → `ABCD-EFGH`. The code is 8 Crockford characters; anything that
@@ -53,6 +69,21 @@ export function isFeatureAvailable(status: AppLoginStatus | undefined): boolean 
   return status?.feature_available === true
 }
 
+/** Extra attempts for a status read that failed for a reason worth retrying. */
+export const STATUS_READ_RETRIES = 2
+
+/**
+ * react-query `retry` for the status read. A 404 is the answer «the feature is
+ * off», and any other 4xx (a refusal, 429) would only be refused again, so
+ * neither is retried; a network failure or a 5xx is retried a couple of times
+ * before the section shows its error line.
+ */
+export function retryStatusRead(failureCount: number, error: unknown): boolean {
+  const status = getErrorStatus(error)
+  if (status !== null && status >= 400 && status < 500) return false
+  return failureCount < STATUS_READ_RETRIES
+}
+
 export function activeDevices(status: AppLoginStatus | undefined): AppLoginDevice[] {
   return status?.devices ?? []
 }
@@ -73,6 +104,16 @@ export function platformLabel(platform: string): string {
   if (platform === 'ios') return 'iOS'
   if (platform === 'android') return 'Android'
   return platform
+}
+
+/**
+ * The one name a bound phone goes by everywhere — the device list, the
+ * «connected» banner, the unbind question and its toast: the label the phone
+ * reported, or «Phone» when it reported none.
+ */
+export function deviceLabel(device: Pick<AppLoginDevice, 'label'>, t: TFunction<'auth'>): string {
+  const label = typeof device.label === 'string' ? device.label.trim() : ''
+  return label || t('appLogin.devices.unnamed')
 }
 
 /** The machine code of an auth-service refusal (`{detail: {code}}` or `{code}`), if any. */

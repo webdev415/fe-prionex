@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import { formatDateTime } from '@/lib/formatters'
-import { platformLabel } from '../lib/pairing'
+import { deviceLabel, platformLabel } from '../lib/pairing'
 import type { AppLoginDevice } from '../types'
 
 interface AppLoginDeviceListProps {
@@ -31,7 +31,7 @@ export function AppLoginDeviceList({ devices, onUnbind, unbindingId }: AppLoginD
             <Icons.Phone size={20} className="text-muted-foreground shrink-0" strokeWidth={1.5} />
             <div className="flex min-w-0 flex-col">
               <span className="text-foreground truncate text-sm font-medium">
-                {device.label || t('appLogin.devices.unnamed')}
+                {deviceLabel(device, t)}
                 <span className="text-muted-foreground font-normal">
                   {' · '}
                   {platformLabel(device.platform)}
