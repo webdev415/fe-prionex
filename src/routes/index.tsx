@@ -419,6 +419,10 @@ export const router = createBrowserRouter([
               PERMISSIONS.CREDIT.PRODUCTS_VIEW,
               PERMISSIONS.CREDIT.APPLICATIONS_VIEW,
               PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+              // 17-40b: вход в админку сайта живёт на вкладке «Сайт» этих
+              // настроек — контент-менеджер без кредитных прав обязан дойти.
+              PERMISSIONS.SITE.CONTENT_EDIT,
+              PERMISSIONS.SITE.CONTENT_PUBLISH,
             ]}
             mode="any"
           >

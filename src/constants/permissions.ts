@@ -451,6 +451,18 @@ export const PERMISSIONS = {
   AI_ASSISTANT: {
     USE: 'use_ai_assistant',
   },
+
+  /**
+   * Site Category (17-40; seeded by the 17-40a auth migration, modelled on 082)
+   * Content of the credit product's public site (web-credit apps/admin).
+   * Counted in the site-owner project (`auth_settings.site_owner_project_id`),
+   * not in whichever project is active: the handoff endpoint derives the admin
+   * role from them — PUBLISH → `publisher`, otherwise EDIT → `editor`, else 403.
+   */
+  SITE: {
+    CONTENT_EDIT: 'site.content.edit',
+    CONTENT_PUBLISH: 'site.content.publish',
+  },
 } as const
 
 /**
@@ -512,6 +524,7 @@ export const PERMISSION_CATEGORIES = {
   UBKI: 'UBKI',
   REVERSALS: 'Reversals',
   AI_ASSISTANT: 'AI Assistant',
+  SITE: 'Site',
 } as const
 
 export const DRAFT_READ_PERMISSIONS = [
@@ -758,4 +771,8 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   // AI Assistant
   use_ai_assistant: 'Use the operator AI assistant (chat, history, feedback, voice)',
   manage_ai_settings: 'Manage global AI settings (assistant kill-switch)',
+
+  // Site (17-40) — counted in the site-owner project
+  'site.content.edit': 'Site: edit texts in the site admin (opened from CRM)',
+  'site.content.publish': 'Site: publish edited texts on the site',
 }

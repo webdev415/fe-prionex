@@ -50,12 +50,13 @@ export const creditKeys = {
 }
 
 /** Доступность модуля и права роли; молчит об ошибке — раздел просто пуст. */
-export function useCreditOverview() {
+export function useCreditOverview(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: creditKeys.overview(),
     queryFn: () => creditApi.overview(),
     staleTime: 60_000,
     retry: false,
+    enabled: options?.enabled ?? true,
   })
 }
 

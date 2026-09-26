@@ -12739,7 +12739,8 @@
         "products": "Productos de crédito",
         "parameters": "Configuración del módulo",
         "integrations": "Integraciones",
-        "switches": "Interruptores de emergencia"
+        "switches": "Interruptores de emergencia",
+        "site": "Sitio"
       },
       "needRiskManager": "Esta sección está disponible para el gestor de riesgos: contiene los umbrales y la configuración de los productos.",
       "mutationDisabled": "La edición requiere un segundo aprobador (UW-04) — disponible cuando lleguen los roles del CRM (WS-20).",
@@ -12800,7 +12801,39 @@
         }
       },
       "demoModeNotice": "El entorno de pruebas funciona en modo demo: no se llama a proveedores externos, los pagos y el COB se activan manualmente.",
-      "integrationsFootnote": "Los estados reflejan lo que está fijado en el contrato y la documentación del módulo — aún no existen comprobaciones de estado de los proveedores. Las rutas son relativas al repositorio credit-module."
+      "integrationsFootnote": "Los estados reflejan lo que está fijado en el contrato y la documentación del módulo — aún no existen comprobaciones de estado de los proveedores. Las rutas son relativas al repositorio credit-module.",
+      "site": {
+        "ownerLabel": "El sitio pertenece al proyecto:",
+        "ownerNotSet": "Aún no se ha elegido el proyecto propietario del sitio: hasta entonces nadie puede abrir la administración del sitio.",
+        "ownerInactive": "proyecto desactivado",
+        "ownerSelect": "Proyecto propietario del sitio",
+        "ownerPlaceholder": "Elija un proyecto",
+        "ownerListTruncated": "Solo se muestran los primeros {{limit}} proyectos activos: el resto no cabe en la lista. Si falta el proyecto que necesita, contacte con el administrador del CRM.",
+        "save": "Guardar",
+        "ownerReadOnly": "Solo quien tiene el permiso «Gestionar la configuración» en el proyecto propietario actual puede cambiar el propietario del sitio, incluso mientras ese proyecto está desactivado temporalmente. Cuando no hay propietario en absoluto (no elegido o eliminado), lo elige el administrador del sistema (el rol del sistema «Admin») del proyecto que vaya a ser el propietario.",
+        "ownerImpersonating": "Mientras actúa en nombre de otro usuario no se puede cambiar el propietario del sitio: el servidor lo rechaza a cualquiera. Vuelva a su propia cuenta.",
+        "saveFailed": "No se pudo guardar el propietario del sitio. Inténtelo de nuevo.",
+        "loadFailed": "No se pudo leer a quién pertenece el sitio. No mostramos el propietario para no inducirle a error.",
+        "refreshFailed": "No se pudieron actualizar los datos del sitio: se muestran los leídos antes, que pueden estar desactualizados.",
+        "adminHint": "La administración del sitio se abrirá en una pestaña nueva con su nombre y rol del CRM. El enlace de acceso es de un solo uso y vale un minuto.",
+        "sameTabHint": "Si no se puede abrir una pestaña nueva, la administración del sitio se abrirá en esta; vuelva al CRM con el botón «Atrás» del navegador.",
+        "openAdmin": "Abrir la administración del sitio",
+        "switchToOwnerProject": "Los permisos sobre el contenido del sitio valen en el proyecto propietario. Cambie a ese proyecto para abrir la administración del sitio.",
+        "impersonating": "Mientras actúa en nombre de otro usuario no se puede abrir la administración del sitio: el acceso se emite solo a su propio nombre. Vuelva a su propia cuenta.",
+        "errors": {
+          "forbidden": "No tiene permiso sobre el contenido del sitio en el proyecto propietario. Pida a un administrador que se lo conceda allí.",
+          "ownerChangeDenied": "El servidor no le ha permitido cambiar el propietario del sitio. Cuando ya hay propietario (aunque esté desactivado temporalmente), solo lo cambia quien tiene «Gestionar la configuración» en el proyecto propietario actual; cuando no lo hay en absoluto, solo el administrador del sistema (el rol del sistema «Admin») del proyecto que se elige. Mientras se actúa en nombre de otro usuario, nadie puede cambiar el propietario.",
+          "ownerNotSet": "Aún no se ha elegido el proyecto propietario del sitio. Solo el administrador del sistema (el rol del sistema «Admin») del proyecto que vaya a ser el propietario puede elegirlo más arriba en esta pestaña.",
+          "ownerInactive": "El proyecto propietario del sitio está desactivado temporalmente, así que ahora nadie puede abrir la administración del sitio. Reactive el proyecto o traslade el sitio a otro proyecto: puede trasladarlo quien tiene «Gestionar la configuración» en el proyecto propietario actual.",
+          "ownerNotSetOrInactive": "El proyecto propietario del sitio no está elegido o está desactivado temporalmente. Si está desactivado, reactívelo o traslade el sitio: puede hacerlo quien tiene «Gestionar la configuración» en él. Si no hay propietario en absoluto, solo el administrador del sistema (el rol del sistema «Admin») del proyecto que vaya a ser el propietario puede elegirlo más arriba en esta pestaña.",
+          "notConfigured": "El acceso a la administración del sitio no está configurado en el CRM (falta la clave o la dirección de la administración). Avise al administrador.",
+          "unavailable": "El servicio de acceso no está disponible temporalmente. Inténtelo de nuevo en un minuto.",
+          "failed": "No se pudo abrir la administración del sitio. Inténtelo de nuevo.",
+          "sessionExpired": "Su sesión del CRM ha terminado. Inicie sesión de nuevo y vuelva a intentarlo.",
+          "tooManyAttempts": "Demasiados intentos de acceso a la administración del sitio. Espere un minuto y vuelva a intentarlo.",
+          "ownerProjectGone": "El proyecto elegido se ha eliminado o desactivado, así que no puede ser propietario del sitio. Elija otro proyecto."
+        }
+      }
     },
     "employment": {
       "employment_full_time": "Empleo a tiempo completo",
