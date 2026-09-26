@@ -12,6 +12,8 @@
  * without them.
  */
 
+import type { LoginResponse } from '@/types/api'
+
 export type AppLoginPlatform = 'ios' | 'android'
 
 export interface AppLoginDevice {
@@ -90,4 +92,51 @@ export interface AppLoginPairing {
 
 export interface AppLoginDisableRequest {
   password: string
+}
+
+// ─── Sign-in confirmed on the bound phone (Epic 19 API-3, story 19-5) ──────
+// Contract: api-prionex `docs/auth-app-login-device-binding.md`, «Login approval».
+
+/** Which site asks; the phone shows «CRM» or «Prionex Hub» from it. */
+export type AppApprovalClient = 'crm_web' | 'hub_web'
+
+/** `GET /api/v1/auth/app-login/config` (no auth) — which buttons this stand offers. */
+export interface AppApprovalConfig {
+  /** Show «Увійти через підтвердження в Prionex» on the password form. */
+  passwordless: boolean
+  /** The 2FA step may offer the phone (when `/login` lists `'app'`). */
+  second_factor: boolean
+  /** Seconds a request lives. */
+  request_ttl: number
+  poll_interval_ms: number
+}
+
+/** `POST …/start` — exactly one of the two modes. */
+export type AppApprovalStartRequest =
+  | { username: string; client: AppApprovalClient }
+  | { two_factor_token: string; client: AppApprovalClient }
+
+/** `202` of `…/start`. `browser_secret` is kept in memory only. */
+export interface AppApprovalStart {
+  request_id: string
+  browser_secret: string
+  /** 10..99 — the person types it into Prionex Hub. */
+  number: number
+  expires_in: number
+  poll_interval_ms: number
+}
+
+/** Body of `…/poll` and `…/cancel`. */
+export interface AppApprovalPollRequest {
+  request_id: string
+  browser_secret: string
+}
+
+export type AppApprovalStatus = 'pending' | 'approved' | 'denied' | 'expired'
+
+/** `…/poll`: `approved` carries the same `LoginResponse` as `/login`. */
+export interface AppApprovalPoll {
+  status: AppApprovalStatus
+  expires_in?: number | null
+  login?: LoginResponse | null
 }

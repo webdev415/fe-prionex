@@ -186,6 +186,13 @@ export interface LoginResponse {
   two_factor_required?: boolean
   /** Short-lived challenge token to replay to /login/verify-two-factor. */
   two_factor_token?: string
+  /**
+   * With `two_factor_required`: the ways this person can pass the second step.
+   * `'app'` = confirm on the bound phone (Epic 19), `'totp'` = the Google
+   * Authenticator / backup code. Absent while the stand has the phone
+   * confirmation switched off — the TOTP step is then the only one.
+   */
+  two_factor_methods?: string[]
 }
 
 export interface VerifyTwoFactorRequest {

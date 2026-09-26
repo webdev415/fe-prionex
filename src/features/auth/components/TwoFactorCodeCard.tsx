@@ -10,6 +10,11 @@ interface TwoFactorCodeCardProps {
   onCancel: () => void
   isLoading?: boolean
   error?: string | null
+  /**
+   * Set when `/login` listed `'app'` in `two_factor_methods`: offers going back
+   * to the confirmation on the bound phone (Epic 19).
+   */
+  onUseApp?: () => void
 }
 
 /**
@@ -23,6 +28,7 @@ export function TwoFactorCodeCard({
   onCancel,
   isLoading = false,
   error,
+  onUseApp,
 }: TwoFactorCodeCardProps) {
   const { t } = useTranslation('auth')
   const [code, setCode] = useState('')
@@ -131,6 +137,19 @@ export function TwoFactorCodeCard({
         >
           {useBackupCode ? t('twoFactor.useAuthenticatorApp') : t('twoFactor.useBackupCode')}
         </Button>
+
+        {onUseApp && (
+          <Button
+            type="button"
+            variant="light"
+            size="xl"
+            className="w-full text-sm sm:text-base"
+            onClick={onUseApp}
+            disabled={isLoading}
+          >
+            {t('appLogin.approval.useApp')}
+          </Button>
+        )}
 
         <button
           type="button"
