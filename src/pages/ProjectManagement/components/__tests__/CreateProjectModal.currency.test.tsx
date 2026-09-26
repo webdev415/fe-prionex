@@ -41,4 +41,29 @@ describe('CreateProjectModal currency', () => {
       expect(mutateAsync.mock.calls.at(-1)?.[0]).toMatchObject({ currency: 'EUR' })
     )
   })
+
+  it('creates a project in Canadian dollars in Canada when both are chosen', async () => {
+    render(<CreateProjectModal open onClose={vi.fn()} onSuccess={vi.fn()} />)
+    fillRequiredFields()
+    fireEvent.click(screen.getByRole('radio', { name: 'pages.projects.modals.currency.CAD' }))
+    fireEvent.click(screen.getByRole('radio', { name: 'pages.projects.modals.country.CA' }))
+    submit()
+
+    await waitFor(() =>
+      expect(mutateAsync.mock.calls.at(-1)?.[0]).toMatchObject({ currency: 'CAD', country: 'CA' })
+    )
+  })
+
+  it('lets both choice groups wrap a third option onto the next row', () => {
+    render(<CreateProjectModal open onClose={vi.fn()} onSuccess={vi.fn()} />)
+    const groups = screen.getAllByRole('radiogroup')
+
+    expect(groups).toHaveLength(2)
+    groups.forEach((group, index) => {
+      expect(
+        group,
+        `radio group ${index} has no flex-wrap: a third option does not wrap`
+      ).toHaveClass('flex-wrap')
+    })
+  })
 })

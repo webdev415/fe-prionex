@@ -354,7 +354,7 @@
 
 import jsPDF from 'jspdf'
 import { loadNotoSansFont } from './loadNotoFont'
-import { isEuroCurrency } from './projectCurrency'
+import { activeCurrency, currencySymbol, isEuroCurrency } from './projectCurrency'
 
 export interface PaymentReceiptData {
   receiptNumber: string
@@ -394,6 +394,15 @@ const formatCurrency = (amount: string | number): string => {
       maximumFractionDigits: 2,
     })
     return `${euros} €`
+  }
+  if (activeCurrency() === 'CAD') {
+    // The receipt speaks English, so Canadian dollars take the English form.
+    const dollars = isNaN(num) ? 0 : num
+    const formatted = Math.abs(dollars).toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
+    return `${dollars < 0 ? '-' : ''}${currencySymbol('CAD')}${formatted}`
   }
   if (isNaN(num)) return '₴ 0,00'
   const isNegative = num < 0

@@ -142,6 +142,11 @@
     "SITE_OWNER_NOT_SET": "The site owner project is not chosen or is temporarily deactivated. If deactivated, reactivate it or move the site: a holder of «Manage settings» in it can do that. If not chosen, only the system administrator (the «Admin» role) of the project that is to become the owner can choose it in the credit module settings, «Site» tab.",
     "SITE_ADMIN_ACCESS_DENIED": "You have no site content permission in the site owner project.",
     "SITE_OWNER_CHANGE_DENIED": "You may not change the site owner project. Once there is an owner (even a temporarily deactivated one), only a holder of «Manage settings» in the current owner project changes it; when there is none at all, only the system administrator (the «Admin» role) of the project being chosen. While acting as another user, nobody.",
-    "SITE_OWNER_PROJECT_NOT_FOUND": "There is no such project, or it was deleted or switched off, so it cannot own the site."
+    "SITE_OWNER_PROJECT_NOT_FOUND": "There is no such project, or it was deleted or switched off, so it cannot own the site.",
+    "CLIENT_HAS_CONTACT_RESTRICTIONS": "This client has contact restrictions in force and cannot be deleted: deleting the client would drop them and reopen the client's addresses to messages. The client can be deleted only after the restrictions are lifted.",
+    "CONTACT_RESTRICTION_ALREADY_LIFTED": "This contact restriction has already been lifted.",
+    "CONTACT_RESTRICTION_NOT_LIFTED": "This contact restriction is in force: there is no lift to undo.",
+    "CONTACT_RESTRICTION_ALREADY_REINSTATED": "This lift has already been undone: the restriction was put back in force earlier.",
+    "PROJECT_CANADA_DISABLED": "Projects in Canadian dollars or in Canada are not available here yet. Choose a different currency or country."
   }
 }

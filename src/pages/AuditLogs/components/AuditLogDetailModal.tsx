@@ -11,11 +11,11 @@ import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
 import type { AuditLog, AuditLogChange } from '../AuditLogsPage'
 import { formatCurrency } from '@/lib/formatters'
-import { isEuroCurrency } from '@/lib/projectCurrency'
+import { activeCurrency } from '@/lib/projectCurrency'
 import { cn } from '@/lib/utils'
 
 function uahSuffix(): string {
-  return isEuroCurrency() ? '' : ' UAH'
+  return activeCurrency() === 'UAH' ? ' UAH' : ''
 }
 
 interface AuditLogDetailModalProps {
