@@ -12639,7 +12639,8 @@
         "products": "Credit products",
         "parameters": "Module settings",
         "integrations": "Integrations",
-        "switches": "Kill switches"
+        "switches": "Kill switches",
+        "site": "Site"
       },
       "needRiskManager": "This section is available to the risk manager: it holds the thresholds and the product configuration.",
       "mutationDisabled": "Editing requires a second approver (UW-04) — available once CRM roles land (WS-20).",
@@ -12700,7 +12701,41 @@
         }
       },
       "demoModeNotice": "The stand runs in demo mode: external providers are not called, payments and COB are triggered manually.",
-      "integrationsFootnote": "Statuses reflect what is fixed in the module contract and docs — no provider health checks exist yet. Paths are relative to the credit-module repository."
+      "integrationsFootnote": "Statuses reflect what is fixed in the module contract and docs — no provider health checks exist yet. Paths are relative to the credit-module repository.",
+      "site": {
+        "ownerLabel": "The site belongs to project:",
+        "ownerNotSet": "The site owner project is not chosen yet: until it is, nobody can open the site admin.",
+        "ownerInactive": "project deactivated",
+        "ownerSelect": "Site owner project",
+        "ownerPlaceholder": "Choose a project",
+        "ownerListTruncated": "Only {{limit}} active projects are listed — the list is incomplete. If the project you need is missing, reopen this tab later or contact the CRM administrator.",
+        "ownerListLoading": "Loading the list of projects…",
+        "ownerListFailed": "Could not read the list of projects, so another owner cannot be chosen right now. Reopen this tab later; if it keeps failing, contact the CRM administrator.",
+        "save": "Save",
+        "ownerReadOnly": "Only a holder of the «Manage settings» permission in the current site owner project can change the site owner — even while that project is temporarily deactivated. When there is no owner at all (not chosen or deleted), it is chosen by the system administrator (the system «Admin» role) of the project that is to become the owner.",
+        "ownerImpersonating": "While acting as another user the site owner cannot be changed: the server refuses this to anyone. Return to your own account.",
+        "saveFailed": "Could not save the site owner. Try again.",
+        "loadFailed": "Could not read who owns the site. The owner is not shown so as not to mislead you.",
+        "refreshFailed": "Could not refresh the site data — showing what was read earlier; it may be out of date.",
+        "adminHint": "The site admin opens in a new tab under your CRM name and role. The sign-in link works once and for one minute.",
+        "sameTabHint": "If a new tab cannot be opened, the site admin opens in this one; return to CRM with the browser's «Back» button.",
+        "openAdmin": "Open the site admin",
+        "switchToOwnerProject": "Site content permissions count in the site owner project. Switch to that project to open the site admin.",
+        "impersonating": "While acting as another user the site admin cannot be opened: sign-in is issued only under your own name. Return to your own account.",
+        "errors": {
+          "forbidden": "You have no site content permission in the site owner project. Ask an administrator to grant it to you there.",
+          "ownerChangeDenied": "The server did not let you change the site owner. Once there is an owner (even a temporarily deactivated one), only a holder of «Manage settings» in the current owner project can change it; when there is none at all, only the system administrator (the system «Admin» role) of the project being chosen. While acting as another user nobody can change the owner.",
+          "ownerNotSet": "The site owner project is not chosen yet. Only the system administrator (the system «Admin» role) of the project that is to become the owner can choose it above on this tab.",
+          "ownerInactive": "The site owner project is temporarily deactivated, so nobody can open the site admin now. Bring the project back into work or move the site to another project — a holder of «Manage settings» in the current owner project can move it.",
+          "ownerNotSetOrInactive": "The site owner project is not chosen or is temporarily deactivated. If it is deactivated, reactivate it or move the site: a holder of «Manage settings» in it can do that. If there is no owner at all, only the system administrator (the system «Admin» role) of the project that is to become the owner can choose it above on this tab.",
+          "notConfigured": "Sign-in to the site admin is not configured on the CRM side (no key or no admin address). Tell the administrator.",
+          "unavailable": "The sign-in service is temporarily unavailable. Try again in a minute.",
+          "failed": "Could not open the site admin. Try again.",
+          "sessionExpired": "Your CRM session has ended. Sign in again and retry.",
+          "tooManyAttempts": "Too many sign-in attempts to the site admin. Wait a minute and try again.",
+          "ownerProjectGone": "The chosen project was deleted or switched off, so it cannot own the site. Choose another project."
+        }
+      }
     },
     "employment": {
       "employment_full_time": "Full-time employment",

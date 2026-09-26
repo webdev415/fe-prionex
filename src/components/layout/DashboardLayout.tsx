@@ -952,6 +952,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               PERMISSIONS.CREDIT.PRODUCTS_VIEW,
               PERMISSIONS.CREDIT.APPLICATIONS_VIEW,
               PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+              // 17-40b: там вкладка «Сайт» — вход в админку сайта.
+              PERMISSIONS.SITE.CONTENT_EDIT,
+              PERMISSIONS.SITE.CONTENT_PUBLISH,
             ],
             mode: 'any' as const,
           },
@@ -1199,16 +1202,35 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         // Filter sub-items first based on permissions
         if (item.subItems) {
           const filteredSubItems = filterSidebarSubItems(item.subItems, hasPermission)
+          // Раздел выключен риск-менеджером — подпунктов модуля в меню нет, и у
+          // того, у кого права есть. Остаются только «Настройки» (17-40b) у
+          // держателя права на контент сайта или `manage_settings`: там вкладка
+          // «Сайт», а рубильник модуля к сайту отношения не имеет; и сама
+          // страница настроек калиткой не закрыта (иначе рубильник односторонний).
+          // Без подпунктов родитель пропадает ниже, как раньше.
+          if (item.path === '/dashboard/credit' && !creditSectionEnabled) {
+            const keepsSiteEntry = hasPermission(
+              undefined,
+              [
+                PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
+                PERMISSIONS.SITE.CONTENT_EDIT,
+                PERMISSIONS.SITE.CONTENT_PUBLISH,
+              ],
+              'any'
+            )
+            return {
+              ...item,
+              subItems: keepsSiteEntry
+                ? filteredSubItems.filter((sub) => sub.path === '/dashboard/credit/settings')
+                : [],
+            }
+          }
           return { ...item, subItems: filteredSubItems }
         }
         return item
       })
       .filter((item) => {
         if (item.disabled) return true
-
-        // Раздел выключен риск-менеджером — пункта в меню нет. Проверка стоит
-        // ДО прав: выключенный раздел скрыт и от того, у кого права есть.
-        if (item.path === '/dashboard/credit' && !creditSectionEnabled) return false
 
         // If item has sub-items, show parent when at least one sub-item is visible
         if (item.subItems) {

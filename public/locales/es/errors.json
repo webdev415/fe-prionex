@@ -137,6 +137,11 @@
     "HUB_ADMIN_ASSIGNMENT_REQUIRES_HUB_ADMIN": "Este rol da permisos de administrador de HUB — solo un administrador de HUB de este proyecto puede asignarle personas.",
     "HUB_ROLE_DEFAULT_LOCKED": "El rol en el chat (HUB) de un rol predeterminado no se puede cambiar.",
     "HUB_ROLE_FORBIDDEN_WHILE_IMPERSONATING": "Mientras actúa como otro usuario no puede cambiar roles del chat (HUB) ni asignar personas a roles de administrador de HUB.",
-    "PROJECT_SCOPE_DENIED": "No tiene permiso para esta acción en este proyecto."
+    "PROJECT_SCOPE_DENIED": "No tiene permiso para esta acción en este proyecto.",
+    "SITE_ADMIN_NOT_CONFIGURED": "El acceso a la administración del sitio no está configurado en el CRM (falta la clave o la dirección de la administración). Avise al administrador.",
+    "SITE_OWNER_NOT_SET": "El proyecto propietario del sitio no está elegido o está desactivado temporalmente. Si está desactivado, reactívelo o traslade el sitio: puede hacerlo quien tiene «Gestionar la configuración» en él. Si no está elegido, solo el administrador del sistema (el rol «Admin») del proyecto que vaya a ser el propietario puede elegirlo en la configuración del módulo de crédito, pestaña «Sitio».",
+    "SITE_ADMIN_ACCESS_DENIED": "No tiene permiso sobre el contenido del sitio en el proyecto propietario del sitio.",
+    "SITE_OWNER_CHANGE_DENIED": "No se le permite cambiar el proyecto propietario del sitio. Cuando ya hay propietario (aunque esté desactivado temporalmente), solo lo cambia quien tiene «Gestionar la configuración» en el proyecto propietario actual; cuando no lo hay en absoluto, solo el administrador del sistema (el rol «Admin») del proyecto que se elige. Mientras se actúa en nombre de otro usuario, nadie.",
+    "SITE_OWNER_PROJECT_NOT_FOUND": "Ese proyecto no existe o se ha eliminado o desactivado, así que no puede ser propietario del sitio."
   }
 }
