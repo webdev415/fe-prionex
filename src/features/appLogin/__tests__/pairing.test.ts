@@ -1,15 +1,21 @@
 import { describe, expect, it } from 'vitest'
 import { AxiosError, AxiosHeaders } from 'axios'
+import type { TFunction } from 'i18next'
 import {
+  DEFAULT_PAIRING_TTL_S,
+  STATUS_READ_RETRIES,
   appLoginErrorMessage,
+  deviceLabel,
   findNewDevice,
   formatCountdown,
   formatPairingCode,
   isFeatureAvailable,
   isFeatureOffError,
+  pairingTtlSeconds,
   passwordRefusalMessage,
   platformLabel,
   refusalCode,
+  retryStatusRead,
   safePairingUrl,
 } from '../lib/pairing'
 import type { AppLoginDevice } from '../types'
@@ -167,5 +173,60 @@ describe('app-login refusal codes (the API answers {detail: {code, message}})', 
       detail: { code: 'DEVICE_NOT_FOUND', message: 'Phone not found' },
     })
     expect(appLoginErrorMessage(notFound, 'fallback')).toBe('Phone not found')
+  })
+})
+
+describe('pairingTtlSeconds', () => {
+  it('keeps a real lifetime from the API', () => {
+    expect(pairingTtlSeconds(120)).toBe(120)
+    expect(pairingTtlSeconds(0.5)).toBe(0.5)
+  })
+
+  it.each([
+    ['missing', undefined],
+    ['null', null],
+    ['a string', '120'],
+    ['NaN', Number.NaN],
+    ['Infinity', Number.POSITIVE_INFINITY],
+    ['zero', 0],
+    ['negative', -5],
+  ])('falls back to the design value when it is %s', (_case, value) => {
+    expect(pairingTtlSeconds(value)).toBe(DEFAULT_PAIRING_TTL_S)
+    expect(DEFAULT_PAIRING_TTL_S).toBe(300)
+  })
+})
+
+describe('retryStatusRead (react-query retry of the status read)', () => {
+  it('never retries a 404: the feature is off, that is the answer', () => {
+    expect(retryStatusRead(0, httpError(404))).toBe(false)
+  })
+
+  it('never retries another refusal (4xx), a 429 least of all', () => {
+    expect(retryStatusRead(0, httpError(403))).toBe(false)
+    expect(retryStatusRead(0, httpError(429))).toBe(false)
+  })
+
+  it('retries a 5xx and a network failure a couple of times, then gives up', () => {
+    for (const error of [httpError(503), httpError(500), new Error('Network Error')]) {
+      expect(retryStatusRead(0, error)).toBe(true)
+      expect(retryStatusRead(STATUS_READ_RETRIES - 1, error)).toBe(true)
+      expect(retryStatusRead(STATUS_READ_RETRIES, error)).toBe(false)
+    }
+  })
+})
+
+describe('deviceLabel', () => {
+  const t = ((key: string) =>
+    key === 'appLogin.devices.unnamed' ? 'Phone' : key) as unknown as TFunction<'auth'>
+
+  it('is the name the phone reported', () => {
+    expect(deviceLabel({ label: 'iPhone 15' }, t)).toBe('iPhone 15')
+    expect(deviceLabel({ label: '  Pixel 8 ' }, t)).toBe('Pixel 8')
+  })
+
+  it('is «Phone» when the phone reported none', () => {
+    expect(deviceLabel({ label: '' }, t)).toBe('Phone')
+    expect(deviceLabel({ label: '   ' }, t)).toBe('Phone')
+    expect(deviceLabel({ label: null as unknown as string }, t)).toBe('Phone')
   })
 })

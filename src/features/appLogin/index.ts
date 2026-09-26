@@ -4,6 +4,7 @@ export { AppLoginStatusIcon } from './components/AppLoginStatusIcon'
 export {
   appLoginKeys,
   useMyAppLoginStatus,
+  useInvalidateMyAppLoginStatus,
   useEnableAppLogin,
   useDisableAppLogin,
   useRevokeMyAppLoginDevice,

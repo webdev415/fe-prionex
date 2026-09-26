@@ -46,12 +46,14 @@ export function AppLoginDisableModal({ open, onClose, onDisabled }: AppLoginDisa
       const status = getErrorStatus(err)
       setErrors({
         api:
-          status === 400 || status === 401 || status === 403
-            ? passwordRefusalMessage(err, t('appLogin.enable.errors.wrongCredentials'), {
-                INVALID_CREDENTIALS: t('appLogin.enable.errors.wrongPassword'),
-                APP_LOGIN_IMPERSONATION_FORBIDDEN: t('appLogin.enable.errors.impersonation'),
-              })
-            : t('appLogin.disable.failed'),
+          status === 429
+            ? t('appLogin.enable.errors.rateLimited')
+            : status === 400 || status === 401 || status === 403
+              ? passwordRefusalMessage(err, t('appLogin.enable.errors.wrongCredentials'), {
+                  INVALID_CREDENTIALS: t('appLogin.enable.errors.wrongPassword'),
+                  APP_LOGIN_IMPERSONATION_FORBIDDEN: t('appLogin.enable.errors.impersonation'),
+                })
+              : t('appLogin.disable.failed'),
       })
     } finally {
       inFlightRef.current = false
