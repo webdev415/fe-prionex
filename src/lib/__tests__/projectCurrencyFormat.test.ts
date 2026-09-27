@@ -106,3 +106,79 @@ describe('withCurrency', () => {
     expect(withCurrency('10', 'prefix', 'EUR')).toBe('€10')
   })
 })
+
+describe('money in a Canadian-dollar project', () => {
+  it.each([
+    ['en', 'CA$12,346'],
+    ['uk', '12 346 CA$'],
+    ['es', '12.346 CA$'],
+  ])(
+    'formatCurrency writes an explicit CAD amount in %s as %s while hryvnia is active',
+    (language, expected) => {
+      mutableI18n.language = language
+
+      expect(plainSpaces(formatCurrency(12345.6, 'CAD'))).toBe(expected)
+    }
+  )
+
+  it('formatCurrency takes CAD from the active project when none is given', () => {
+    setActiveCurrency('CAD')
+
+    expect(formatCurrency(12345)).toBe('CA$12,345')
+  })
+
+  it.each([
+    ['en', 'CA$12,345.60', 'CA$0.00'],
+    ['uk', '12 345,60 CA$', '0,00 CA$'],
+    ['es', '12.345,60 CA$', '0,00 CA$'],
+  ])('writes two-decimal CAD amounts in %s as %s', (language, amount, zero) => {
+    setActiveCurrency('CAD')
+    mutableI18n.language = language
+
+    expect(plainSpaces(formatMoneyUAHTwoDecimals('12345.6'))).toBe(amount)
+    expect(plainSpaces(formatMoneyUAHTwoDecimals(null))).toBe(zero)
+  })
+
+  it.each([
+    ['en', 'CA$5000.00', '-CA$5000.00', 'CA$0.00'],
+    ['es', '5000,00 CA$', '-5000,00 CA$', '0,00 CA$'],
+  ])('keeps the tight CAD format without grouping in %s', (language, positive, negative, empty) => {
+    setActiveCurrency('CAD')
+    mutableI18n.language = language
+
+    expect(plainSpaces(formatMoneyKopeckTight(5000))).toBe(positive)
+    expect(plainSpaces(formatMoneyKopeckTight(-5000))).toBe(negative)
+    expect(plainSpaces(formatMoneyKopeckTight(''))).toBe(empty)
+  })
+
+  it('puts CA$ first in English, after a minus', () => {
+    setActiveCurrency('CAD')
+
+    expect(withCurrency('1,000.50', 'suffix')).toBe('CA$1,000.50')
+    expect(withCurrency('-5.00')).toBe('-CA$5.00')
+  })
+
+  it('puts CA$ after the amount in Ukrainian', () => {
+    setActiveCurrency('CAD')
+    mutableI18n.language = 'uk'
+
+    expect(withCurrency('1 000,50')).toBe('1 000,50 CA$')
+  })
+
+  it('puts CA$ after the amount in Spanish', () => {
+    setActiveCurrency('CAD')
+    mutableI18n.language = 'es'
+
+    expect(withCurrency('1.000,50', 'tight')).toBe('1.000,50 CA$')
+  })
+
+  it('follows an explicit CAD over the active hryvnia', () => {
+    expect(withCurrency('10', 'prefix', 'CAD')).toBe('CA$10')
+  })
+
+  it('follows an explicit euro over the active CAD', () => {
+    setActiveCurrency('CAD')
+
+    expect(withCurrency('10', 'prefix', 'EUR')).toBe('€10')
+  })
+})
