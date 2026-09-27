@@ -13342,13 +13342,28 @@
       "openClientCard": "Todo está en la ficha del cliente",
       "mailNone": "No hay correos de esta solicitud en la cronología. El sitio informa de los correos al módulo desde la conexión de 17-6g; los correos anteriores no se ven aquí.",
       "mailNotProvided": "El módulo no envió la cronología: los correos del sitio no están disponibles; esto no significa que no los hubiera",
-      "mailLoanStage": "Los correos de la etapa del préstamo (desembolso, pagos, cierre) no se muestran en la ficha de la solicitud",
+      "mailLoanStage": "Los correos de la etapa del préstamo (desembolso, pagos, mora, cierre) están en la ficha del préstamo, bloque «Correos del sitio»",
       "gotoMissing": "Las llamadas de GoTo no llegan a CRM. Aquí solo se muestran las llamadas del cliente de CRM que el módulo vinculó a esta solicitud",
       "smsCanadaMissing": "SMS para Canadá no está conectado",
       "direction": {
         "inbound": "entrante",
         "outbound": "saliente"
       }
+    },
+    "loanMail": {
+      "none": "No hay correos de este préstamo en el registro del sitio. El sitio informa de los correos al módulo desde la conexión de 17-6g; los correos anteriores no se ven aquí.",
+      "notProvided": "El módulo no envió el registro de eventos del sitio de este préstamo: los correos no están disponibles; esto no significa que no los hubiera",
+      "truncated": "El módulo envió los últimos {{shown}} de {{total}} eventos del sitio de este préstamo: los correos de eventos anteriores no se ven aquí",
+      "footer": "El sitio envía el correo de notificación cuando el cliente abre su área personal. «Enviado» significa que el servidor de correo aceptó el mensaje; no es «entregado» ni «leído». Los correos de la solicitud están en la ficha de la solicitud, pestaña «Historial».",
+      "kind": {
+        "issued": "préstamo emitido",
+        "disbursementReversed": "desembolso devuelto",
+        "paymentAllocated": "pago aplicado",
+        "delinquencyChanged": "cambió el estado de mora",
+        "closed": "préstamo cerrado"
+      },
+      "kindUnknown": "evento del módulo: {{type}}",
+      "kindMissing": "evento no indicado"
     },
     "portalEvent": {
       "unknown": "Evento del sitio: {{name}}",

@@ -13297,13 +13297,28 @@
       "openClientCard": "Everything is in the client card",
       "mailNone": "No e-mails for this application in the timeline. The site reports e-mails to the module once 17-6g is connected; earlier e-mails are not visible here.",
       "mailNotProvided": "The module did not send the timeline — site e-mails are unavailable; this does not mean there were none",
-      "mailLoanStage": "Loan-stage e-mails (payout, payments, closure) are not shown in the application card",
+      "mailLoanStage": "Loan-stage e-mails (payout, payments, delinquency, closure) are in the loan card, «Site e-mails» block",
       "gotoMissing": "GoTo calls do not reach CRM. Only calls of the CRM client the module linked to this application are shown here",
       "smsCanadaMissing": "SMS for Canada is not connected",
       "direction": {
         "inbound": "inbound",
         "outbound": "outbound"
       }
+    },
+    "loanMail": {
+      "none": "No e-mails for this loan in the site feed. The site reports e-mails to the module once 17-6g is connected; earlier e-mails are not visible here.",
+      "notProvided": "The module did not send the site event feed for this loan — e-mails are unavailable; this does not mean there were none",
+      "truncated": "The module sent the latest {{shown}} of {{total}} site events for this loan — e-mails among earlier events are not visible here",
+      "footer": "The site sends a notification e-mail when the client opens the cabinet. «Sent» means the mail server accepted the e-mail; it is not «delivered» or «read». Application e-mails are in the application card, «History» tab.",
+      "kind": {
+        "issued": "loan issued",
+        "disbursementReversed": "payout returned",
+        "paymentAllocated": "payment applied",
+        "delinquencyChanged": "delinquency status changed",
+        "closed": "loan closed"
+      },
+      "kindUnknown": "module event: {{type}}",
+      "kindMissing": "event not named"
     },
     "portalEvent": {
       "unknown": "Site event: {{name}}",
