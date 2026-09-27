@@ -13075,10 +13075,165 @@
       "interac": "Interac e-Transfer",
       "eft": "EFT: transferencia a cuenta"
     },
-    "disbursementFailure": {
+    "railFailure": {
+      "anr_probe_failed": "Detuvimos el desembolso: la comprobación de disponibilidad de Zūm (sonda ANR) no dio una respuesta legible; no se creó ninguna operación en el proveedor",
+      "invalid_amount": "El módulo no envió la operación: el importe no es válido",
+      "no_token": "El módulo no pudo autenticarse en Zūm",
+      "no_transaction_id": "Zūm no devolvió el identificador de la operación en su respuesta",
+      "no_user_id": "El módulo no recibió de Zūm el perfil del cliente: la operación no se creó",
       "payout_refused_pending_review": "Detuvimos nosotros el desembolso hasta la revisión",
       "provider_never_created": "El proveedor nunca creó la operación",
+      "rail_limit_exceeded": "El módulo no envió la operación: el importe supera el límite de la cuenta de Zūm",
+      "transport_error": "El módulo no obtuvo respuesta de Zūm por un fallo de conexión",
+      "EftFailedAccountClosed": "El banco lo rechazó: la cuenta está cerrada",
+      "EftFailedAgreementRevoked": "El banco lo rechazó: el cliente revocó la autorización de cargo",
+      "EftFailedCannotLocateAccount": "El banco lo rechazó: no se encuentra la cuenta",
+      "EftFailedCurrencyAccountMismatch": "El banco lo rechazó: la divisa de la cuenta no coincide",
+      "EftFailedCustomerInitiatedReturnCreditOnly": "El banco lo rechazó: devolución a petición del cliente, la cuenta solo admite abonos",
+      "EftFailedDefaultByAFinancialInstitution": "El banco lo rechazó: incumplimiento de una entidad financiera",
+      "EftFailedErrorPayorPayeeName": "El banco lo rechazó: el nombre del titular no coincide",
+      "EftFailedFrozenAccount": "El banco lo rechazó: la cuenta está congelada",
+      "EftFailedFundsNotFree": "El banco lo rechazó: los fondos aún no están disponibles",
+      "EftFailedInsufficientFunds": "El banco lo rechazó: fondos insuficientes",
+      "EftFailedInvalidErrorAccountNumber": "El banco lo rechazó: número de cuenta no válido",
+      "EftFailedNoDebitAllowed": "El banco lo rechazó: la cuenta no admite cargos",
+      "EftFailedNoPrenotificationP1": "El banco lo rechazó: no se avisó al cliente del cargo con antelación",
+      "EftFailedNoPrenotificationP2": "El banco lo rechazó: no se avisó al cliente del cargo con antelación",
+      "EftFailedNotInAccountAgreementE": "El banco lo rechazó: el cargo no se ajusta al acuerdo con el cliente",
+      "EftFailedNotInAccountAgreementP": "El banco lo rechazó: el cargo no se ajusta al acuerdo con el cliente",
+      "EftFailedPayorPayeeDeceased": "El banco lo rechazó: el titular de la cuenta ha fallecido",
+      "EftFailedRefusedNoAgreement": "El banco lo rechazó: no hay autorización de cargo del cliente",
+      "EftFailedStopPayment": "El banco lo rechazó: el cliente detuvo el pago",
+      "EftFailedTransactionLimitExceeded": "El banco lo rechazó: se superó el límite de operaciones de la cuenta",
+      "EftFailedTransactionNotAllowed": "El banco lo rechazó: la operación no está permitida",
+      "EftFailedValidationRejection": "El banco lo rechazó: la operación no superó la validación del banco",
+      "InteracFailedANRNotSupported": "Interac: el banco del destinatario no admite el depósito directo",
+      "InteracFailedAPICancellation": "Interac: la transferencia se canceló a petición nuestra",
+      "InteracFailedAmountGreaterThanMax": "Interac: el importe supera el máximo de la transferencia",
+      "InteracFailedAuthentication": "Interac: el destinatario no superó la autenticación",
+      "InteracFailedAutoDeposit": "Interac: el depósito automático falló",
+      "InteracFailedBannedAccount": "Interac: la cuenta está bloqueada en Interac",
+      "InteracFailedDebtorRejected": "Interac: el pagador rechazó la solicitud",
+      "InteracFailedFundsDepositFailed": "Interac: no se pudieron depositar los fondos",
+      "InteracFailedGenericError": "Interac: error genérico de la transferencia",
+      "InteracFailedInvalidEmailFormat": "Interac: formato de correo del destinatario no válido",
+      "InteracFailedInvalidPhoneNumber": "Interac: número de teléfono del destinatario no válido",
+      "InteracFailedNameMismatch": "Interac: el nombre del destinatario no coincide",
+      "InteracFailedNotificationDeliveryFailure": "Interac: no se entregó la notificación al destinatario",
+      "InteracFailedReachedCancellationCutOff": "Interac: la transferencia caducó",
+      "InteracFailedRecipientContactInfoMissing": "Interac: faltan los datos de contacto del destinatario",
+      "InteracFailedRecipientRejected": "Interac: el destinatario rechazó la transferencia",
+      "InteracFailedRequestBlockedByUser": "Interac: el cliente bloqueó las solicitudes",
+      "InteracFailedRevoked": "Interac: la transferencia fue revocada",
+      "InteracFailedSameProfileConflict": "Interac: conflicto: el remitente y el destinatario comparten perfil",
+      "InteracFailedSecurityQuestionNeededForProvidedEmail": "Interac: se requiere una pregunta de seguridad para este correo",
+      "InteracFraudAlertResponded": "Interac: respuesta a una alerta de fraude",
+      "InteracFundsHeldForValidation": "Interac: fondos retenidos para validación",
       "NSF": "El banco lo rechazó: fondos insuficientes"
+    },
+    "zumStatus": {
+      "Cancelled": "Zūm: transferencia cancelada",
+      "Completed": "Zūm: transferencia completada",
+      "Failed": "Zūm: la transferencia falló",
+      "InProgress": "Zūm está procesando la transferencia",
+      "InReview": "Zūm: en revisión (Interac)",
+      "Pending Cancellation": "Zūm: cancelación pendiente",
+      "Scheduled": "Zūm: transferencia programada"
+    },
+    "zumEvent": {
+      "Started": "Transferencia iniciada",
+      "Succeeded": "Transferencia realizada",
+      "WalletFunded": "Monedero de Zūm: fondos abonados en nuestro monedero",
+      "WalletWithdrawn": "Monedero de Zūm: fondos retirados de nuestro monedero",
+      "NotEnoughBalanceInWalletError": "Monedero de Zūm: a nuestro monedero le faltan fondos para la transferencia",
+      "EFTFileCreated": "EFT: se creó el archivo para el banco",
+      "EFTFileUploaded": "EFT: el archivo se envió al banco",
+      "EFTAnswerReceived": "EFT: el banco envió su respuesta",
+      "EFTAnswerProcessed": "EFT: se procesó la respuesta del banco",
+      "InteracSent": "Interac: transferencia enviada",
+      "InteracAcknowledgedCredit": "Interac: abono confirmado",
+      "InteracAcknowledgedDebit": "Interac: cargo confirmado",
+      "InteracWaitingSettlementIntoWallet": "Interac: esperando la liquidación en el monedero de Zūm",
+      "InteracSettledIntoWallet": "Interac: liquidado en el monedero de Zūm",
+      "InteracCreditorExternalFinancialInfo": "Interac: el banco del destinatario comunicó los datos de la cuenta"
+    },
+    "railModuleStatus": {
+      "NotFound": "Zūm no tiene registro de esta operación"
+    },
+    "railOperationState": {
+      "pending": "En curso",
+      "settled": "Completada",
+      "failed": "Fallida",
+      "cancelled": "Cancelada",
+      "reversed": "Revertida",
+      "unknown": "Resultado desconocido"
+    },
+    "railOps": {
+      "title": "Operaciones de Zūm",
+      "footer": "Cada intento de transferencia tiene su propia fila, incluidos los que fallaron y no generaron pago. Horas en la zona {{zone}}.",
+      "columns": {
+        "operation": "Operación",
+        "submitted": "Enviada a Zūm",
+        "callback": "Callback",
+        "events": "Pasos de Zūm",
+        "meaning": "Qué significa",
+        "payment": "Pago"
+      },
+      "direction": {
+        "disburse": "Desembolso al cliente",
+        "collect": "Cargo al cliente"
+      },
+      "submission": {
+        "notAcknowledged": "Zūm no confirmó la recepción",
+        "notRecorded": "Enviada; la hora no se registró",
+        "notSent": "No se envió: se detuvo antes de enviarla",
+        "notYet": "Aún no enviada",
+        "unknown": "Se desconoce si se envió"
+      },
+      "callback": {
+        "none": "Sin callback: el módulo estableció el estado sin él",
+        "noneObserved": "Sin callback: el módulo estableció el estado sin él, por última vez el {{when}}",
+        "waiting": "Esperando a Zūm",
+        "awaitingReconciliation": "Sin respuesta de Zūm: el resultado se está conciliando",
+        "signatureMismatch": "la firma no coincide: no se aplicó",
+        "notProcessed": "aún no procesado",
+        "matchedByKey": "vinculado por nuestra clave de operación"
+      },
+      "callbacksTruncated": "Se muestran {{shown}} de {{total}} callbacks",
+      "code": {
+        "zum": "código de Zūm: {{code}}",
+        "module": "código del módulo: {{code}}",
+        "stand": "código del entorno de pruebas: {{code}}",
+        "unknown": "Código desconocido: {{code}}",
+        "transportHttp": "Zūm respondió con el error HTTP {{status}}"
+      },
+      "status": {
+        "label": "estado de Zūm: {{status}}",
+        "moduleLabel": "marca del módulo: {{status}}",
+        "unknown": "Estado desconocido: {{status}}",
+        "empty": "Zūm no indicó el estado"
+      },
+      "payment": {
+        "notFound": "Pago no encontrado en la lista",
+        "noneFailedCollect": "Sin pago: el cargo no se realizó",
+        "reversed": "revertido"
+      },
+      "paymentMark": {
+        "sent": "Zūm: enviada {{when}}",
+        "linked": "Zūm: operación en la tabla de abajo"
+      },
+      "event": {
+        "label": "evento de Zūm: {{event}}",
+        "unknown": "Evento desconocido ({{event}})",
+        "noTime": "sin hora indicada"
+      },
+      "events": {
+        "none": "Zūm no envió el historial de pasos",
+        "dropped": "Pasos de Zūm no mostrados: {{n}} (no se pudo leer el nombre)"
+      },
+      "empty": "Aún no hay operaciones de Zūm para este préstamo.",
+      "unavailable": "El módulo no devuelve el historial de operaciones de Zūm para este préstamo: lo más probable es que el módulo de este entorno sea anterior a esta función.",
+      "truncated": "Se muestran {{shown}} de {{total}} operaciones"
     },
     "disbursementRetry": {
       "available": "Posible: analista de crédito o gestor de riesgos",
