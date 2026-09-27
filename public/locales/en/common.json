@@ -6376,6 +6376,7 @@
         "calls": "Calls",
         "sms": "SMS",
         "messaging": "Messaging",
+        "email": "E-mail",
         "notes": "Notes",
         "all": "All",
         "dateRange": "Date range",
@@ -6404,6 +6405,23 @@
           "comment": "Comment",
           "employee": "Employee"
         }
+      },
+      "email": {
+        "none": "No e-mail correspondence with the client yet",
+        "notConfigured": "The project mailbox is not connected — e-mails are unavailable",
+        "incoming": "from the client",
+        "outgoing": "to the client",
+        "system": "system",
+        "write": "Write an e-mail",
+        "reply": "Reply",
+        "subject": "Subject",
+        "body": "Message",
+        "send": "Send",
+        "sent": "E-mail sent",
+        "attachments": "Attachments: {{count}}",
+        "viewTitle": "E-mail",
+        "quarantined": "The e-mail is quarantined — its text is not shown",
+        "derivedFromHtml": "Text taken from the HTML version of the e-mail: tables and images are not shown"
       },
       "editModal": {
         "title": "Edit Client",
@@ -6863,6 +6881,7 @@
         "latestSms": "Latest SMS",
         "latestCallsAndSms": "Latest Calls and SMS",
         "latestMessages": "Latest messages",
+        "latestEmails": "Latest e-mails",
         "sendMessage": "Send message",
         "totalMessages": "Total messages",
         "noMessagingHistory": "No messaging history is available for this client yet",
