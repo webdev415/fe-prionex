@@ -24,6 +24,7 @@ import type {
   CreditJournalEntry,
   CreditJournalParams,
   CreditLoanDetail,
+  CreditLoanRailOperations,
   CreditLoanState,
   CreditLoanSummary,
   CreditLoansParams,
@@ -432,6 +433,15 @@ export const creditApi = {
    */
   loanJournal: (loanId: string, params?: CreditJournalParams) =>
     get<CreditPage<CreditJournalEntry>>(`/loans/${loanId}/journal`, journalQuery(params)),
+
+  /**
+   * Операции рельса кредита — `listLoanRailOperations` (17-6c): выплаты и
+   * списания, включая остановленные модулем и неудавшиеся, с колбэками и шагами
+   * Zūm. Параметров нет: дверь отдаёт все операции кредита одной страницей, и
+   * объявленный здесь `limit` сервер молча проигнорировал бы.
+   */
+  loanRailOperations: (loanId: string) =>
+    get<CreditLoanRailOperations>(`/loans/${loanId}/rail-operations`),
 
   loanDocuments: (loanId: string) =>
     get<CreditPage<CreditDocumentMeta>>(`/loans/${loanId}/documents`),

@@ -13073,10 +13073,165 @@
       "interac": "Interac e-Transfer",
       "eft": "EFT — переказ на рахунок"
     },
-    "disbursementFailure": {
+    "railFailure": {
+      "anr_probe_failed": "Ми зупинили виплату: перевірка доступності Zūm (проба ANR) не дала читабельної відповіді; операцію у провайдера не створювали",
+      "invalid_amount": "Модуль не відправив операцію: неприпустима сума",
+      "no_token": "Модуль не зміг авторизуватися в Zūm",
+      "no_transaction_id": "Zūm не повернув номер операції у відповіді",
+      "no_user_id": "Модуль не отримав від Zūm картку клієнта — операцію не створено",
       "payout_refused_pending_review": "Ми самі зупинили виплату до розбору",
       "provider_never_created": "Провайдер так і не створив операцію",
+      "rail_limit_exceeded": "Модуль не відправив операцію: сума вища за ліміт рахунку Zūm",
+      "transport_error": "Модуль не отримав відповіді Zūm через збій зв'язку",
+      "EftFailedAccountClosed": "Банк відхилив: рахунок закрито",
+      "EftFailedAgreementRevoked": "Банк відхилив: клієнт відкликав згоду на списання",
+      "EftFailedCannotLocateAccount": "Банк відхилив: рахунок не знайдено",
+      "EftFailedCurrencyAccountMismatch": "Банк відхилив: валюта рахунку не збігається",
+      "EftFailedCustomerInitiatedReturnCreditOnly": "Банк відхилив: повернення на вимогу клієнта, рахунок лише для зарахувань",
+      "EftFailedDefaultByAFinancialInstitution": "Банк відхилив: збій фінансової установи",
+      "EftFailedErrorPayorPayeeName": "Банк відхилив: ім'я власника рахунку не збігається",
+      "EftFailedFrozenAccount": "Банк відхилив: рахунок заморожено",
+      "EftFailedFundsNotFree": "Банк відхилив: кошти на рахунку ще недоступні",
+      "EftFailedInsufficientFunds": "Банк відхилив: недостатньо коштів",
+      "EftFailedInvalidErrorAccountNumber": "Банк відхилив: неправильний номер рахунку",
+      "EftFailedNoDebitAllowed": "Банк відхилив: списання з цього рахунку заборонені",
+      "EftFailedNoPrenotificationP1": "Банк відхилив: клієнта не повідомили заздалегідь про списання",
+      "EftFailedNoPrenotificationP2": "Банк відхилив: клієнта не повідомили заздалегідь про списання",
+      "EftFailedNotInAccountAgreementE": "Банк відхилив: списання не відповідає угоді з клієнтом",
+      "EftFailedNotInAccountAgreementP": "Банк відхилив: списання не відповідає угоді з клієнтом",
+      "EftFailedPayorPayeeDeceased": "Банк відхилив: власник рахунку помер",
+      "EftFailedRefusedNoAgreement": "Банк відхилив: немає згоди клієнта на списання",
+      "EftFailedStopPayment": "Банк відхилив: клієнт зупинив платіж",
+      "EftFailedTransactionLimitExceeded": "Банк відхилив: перевищено ліміт операцій рахунку",
+      "EftFailedTransactionNotAllowed": "Банк відхилив: операцію не дозволено",
+      "EftFailedValidationRejection": "Банк відхилив: операція не пройшла перевірку банку",
+      "InteracFailedANRNotSupported": "Interac: банк отримувача не підтримує пряме зарахування",
+      "InteracFailedAPICancellation": "Interac: переказ скасовано на наш запит",
+      "InteracFailedAmountGreaterThanMax": "Interac: сума більша за максимум переказу",
+      "InteracFailedAuthentication": "Interac: отримувач не пройшов перевірку",
+      "InteracFailedAutoDeposit": "Interac: автоматичне зарахування не вдалося",
+      "InteracFailedBannedAccount": "Interac: рахунок заблоковано в Interac",
+      "InteracFailedDebtorRejected": "Interac: платник відхилив запит",
+      "InteracFailedFundsDepositFailed": "Interac: кошти не вдалося зарахувати",
+      "InteracFailedGenericError": "Interac: загальна помилка переказу",
+      "InteracFailedInvalidEmailFormat": "Interac: неправильний формат e-mail отримувача",
+      "InteracFailedInvalidPhoneNumber": "Interac: неправильний номер телефону отримувача",
+      "InteracFailedNameMismatch": "Interac: ім'я отримувача не збігається",
+      "InteracFailedNotificationDeliveryFailure": "Interac: повідомлення отримувачу не доставлено",
+      "InteracFailedReachedCancellationCutOff": "Interac: строк переказу минув",
+      "InteracFailedRecipientContactInfoMissing": "Interac: немає контактів отримувача",
+      "InteracFailedRecipientRejected": "Interac: отримувач відхилив переказ",
+      "InteracFailedRequestBlockedByUser": "Interac: клієнт заблокував запити",
+      "InteracFailedRevoked": "Interac: переказ відкликано",
+      "InteracFailedSameProfileConflict": "Interac: конфлікт — відправник і отримувач мають один профіль",
+      "InteracFailedSecurityQuestionNeededForProvidedEmail": "Interac: для цього e-mail потрібне секретне питання",
+      "InteracFraudAlertResponded": "Interac: відповідь на фрод-алерт",
+      "InteracFundsHeldForValidation": "Interac: кошти затримано на перевірці",
       "NSF": "Банк відхилив: недостатньо коштів"
+    },
+    "zumStatus": {
+      "Cancelled": "Zūm: переказ скасовано",
+      "Completed": "Zūm: переказ завершено",
+      "Failed": "Zūm: переказ не пройшов",
+      "InProgress": "Zūm обробляє переказ",
+      "InReview": "Zūm: на перевірці (Interac)",
+      "Pending Cancellation": "Zūm: очікує скасування",
+      "Scheduled": "Zūm: переказ заплановано"
+    },
+    "zumEvent": {
+      "Started": "Переказ розпочато",
+      "Succeeded": "Переказ виконано",
+      "WalletFunded": "Гаманець Zūm: кошти зараховано на наш гаманець",
+      "WalletWithdrawn": "Гаманець Zūm: кошти списано з нашого гаманця",
+      "NotEnoughBalanceInWalletError": "Гаманець Zūm: на нашому гаманці бракує коштів для переказу",
+      "EFTFileCreated": "EFT: файл для банку сформовано",
+      "EFTFileUploaded": "EFT: файл передано в банк",
+      "EFTAnswerReceived": "EFT: банк надіслав відповідь",
+      "EFTAnswerProcessed": "EFT: відповідь банку оброблено",
+      "InteracSent": "Interac: переказ надіслано",
+      "InteracAcknowledgedCredit": "Interac: зарахування підтверджено",
+      "InteracAcknowledgedDebit": "Interac: списання підтверджено",
+      "InteracWaitingSettlementIntoWallet": "Interac: чекаємо зарахування на гаманець Zūm",
+      "InteracSettledIntoWallet": "Interac: кошти зараховано на гаманець Zūm",
+      "InteracCreditorExternalFinancialInfo": "Interac: банк отримувача повідомив реквізити"
+    },
+    "railModuleStatus": {
+      "NotFound": "Zūm не знає цієї операції"
+    },
+    "railOperationState": {
+      "pending": "В обробці",
+      "settled": "Проведена",
+      "failed": "Не пройшла",
+      "cancelled": "Скасована",
+      "reversed": "Сторнована",
+      "unknown": "Результат невідомий"
+    },
+    "railOps": {
+      "title": "Операції Zūm",
+      "footer": "Кожна спроба переказу — окремим рядком, зокрема ті, що не пройшли й платежу не дали. Час — за поясом {{zone}}.",
+      "columns": {
+        "operation": "Операція",
+        "submitted": "Передано в Zūm",
+        "callback": "Колбек",
+        "events": "Кроки Zūm",
+        "meaning": "Розшифровка",
+        "payment": "Платіж"
+      },
+      "direction": {
+        "disburse": "Виплата клієнту",
+        "collect": "Списання з клієнта"
+      },
+      "submission": {
+        "notAcknowledged": "Zūm не підтвердив прийом",
+        "notRecorded": "Передано, час не записано",
+        "notSent": "Не відправлялась — зупинено до передачі",
+        "notYet": "Ще не передано",
+        "unknown": "Невідомо, чи передано"
+      },
+      "callback": {
+        "none": "Колбеку не було — стан модуль з'ясував без нього",
+        "noneObserved": "Колбеку не було — стан модуль з'ясував без нього, востаннє {{when}}",
+        "waiting": "Чекаємо відповідь Zūm",
+        "awaitingReconciliation": "Відповіді Zūm немає — результат з'ясовує звірка",
+        "signatureMismatch": "підпис не збігся — не враховано",
+        "notProcessed": "ще не оброблено",
+        "matchedByKey": "зв'язано за нашим ключем операції"
+      },
+      "callbacksTruncated": "Показано {{shown}} з {{total}} колбеків",
+      "code": {
+        "zum": "код Zūm: {{code}}",
+        "module": "код модуля: {{code}}",
+        "stand": "код стенду: {{code}}",
+        "unknown": "Невідомий код: {{code}}",
+        "transportHttp": "Zūm відповів помилкою HTTP {{status}}"
+      },
+      "status": {
+        "label": "статус Zūm: {{status}}",
+        "moduleLabel": "позначка модуля: {{status}}",
+        "unknown": "Невідомий статус: {{status}}",
+        "empty": "Zūm не назвав статус"
+      },
+      "payment": {
+        "notFound": "Платіж не знайдено у списку",
+        "noneFailedCollect": "Платежу немає: списання не пройшло",
+        "reversed": "сторновано"
+      },
+      "paymentMark": {
+        "sent": "Zūm: передано {{when}}",
+        "linked": "Zūm: операція в таблиці нижче"
+      },
+      "event": {
+        "label": "подія Zūm: {{event}}",
+        "unknown": "Невідома подія ({{event}})",
+        "noTime": "час не названо"
+      },
+      "events": {
+        "none": "Zūm не надсилав історію кроків",
+        "dropped": "Не показано кроків Zūm: {{n}} (назву не прочитано)"
+      },
+      "empty": "Операцій Zūm по цьому кредиту ще не було.",
+      "unavailable": "Модуль не віддає історію операцій Zūm для цього кредиту — найімовірніше, модуль на стенді старший за цю функцію.",
+      "truncated": "Показано {{shown}} з {{total}} операцій"
     },
     "disbursementRetry": {
       "available": "Можлива — андеррайтер або ризик-менеджер",

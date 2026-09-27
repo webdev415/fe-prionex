@@ -167,18 +167,151 @@ export const CREDIT_PROVIDER_TIME_SOURCES = [
   'observed',
 ] as const satisfies readonly NonNullable<CreditDisbursement['provider_time_source']>[]
 
-/**
- * Коды исхода выплаты, которые мы умеем назвать словами.
+/*
+ * ─── Словари операций рельса (Zūm) ─────────────────────────────────────────
  *
- * Список ЗАВЕДОМО неполон и полным быть не может: `failure_code` приходит от
- * провайдера, чей словарь нам не принадлежит. Поэтому это не enum контракта,
- * а перечень «что мы уже видели и перевели»; всё остальное карточка честно
- * показывает как чужой код, а не как отсутствующий перевод.
+ * Перечни ниже — копия перечней контракта модуля (`contracts/openapi.yaml`,
+ * схемы `Rail*`), а не наш список «что уже видели». Сам контракт держит поля
+ * открытыми строками: провайдер расширяет словарь без нашего релиза, и
+ * незнакомое значение приходит дословно. Поэтому экран называет незнакомое
+ * нейтрально («Невідомий код», «Невідомий статус»), а не выдаёт за чужое.
+ *
+ * Равенство каждого перечня снимку контракта держит страж
+ * `src/constants/__tests__/creditRailCodes.test.ts` (снимок —
+ * `src/constants/__tests__/vendored/credit-rail-codes.json`). Правится перечень
+ * только пересъёмкой снимка: список, переписанный руками из документации,
+ * стареет молча.
  */
-export const CREDIT_DISBURSEMENT_FAILURE_CODES = [
+
+/** Коды отказа Zūm (`RailProviderFailureCode.x-known-values`, 44). */
+export const CREDIT_ZUM_FAILURE_CODES = [
+  'EftFailedAccountClosed',
+  'EftFailedAgreementRevoked',
+  'EftFailedCannotLocateAccount',
+  'EftFailedCurrencyAccountMismatch',
+  'EftFailedCustomerInitiatedReturnCreditOnly',
+  'EftFailedDefaultByAFinancialInstitution',
+  'EftFailedErrorPayorPayeeName',
+  'EftFailedFrozenAccount',
+  'EftFailedFundsNotFree',
+  'EftFailedInsufficientFunds',
+  'EftFailedInvalidErrorAccountNumber',
+  'EftFailedNoDebitAllowed',
+  'EftFailedNoPrenotificationP1',
+  'EftFailedNoPrenotificationP2',
+  'EftFailedNotInAccountAgreementE',
+  'EftFailedNotInAccountAgreementP',
+  'EftFailedPayorPayeeDeceased',
+  'EftFailedRefusedNoAgreement',
+  'EftFailedStopPayment',
+  'EftFailedTransactionLimitExceeded',
+  'EftFailedTransactionNotAllowed',
+  'EftFailedValidationRejection',
+  'InteracFailedANRNotSupported',
+  'InteracFailedAPICancellation',
+  'InteracFailedAmountGreaterThanMax',
+  'InteracFailedAuthentication',
+  'InteracFailedAutoDeposit',
+  'InteracFailedBannedAccount',
+  'InteracFailedDebtorRejected',
+  'InteracFailedFundsDepositFailed',
+  'InteracFailedGenericError',
+  'InteracFailedInvalidEmailFormat',
+  'InteracFailedInvalidPhoneNumber',
+  'InteracFailedNameMismatch',
+  'InteracFailedNotificationDeliveryFailure',
+  'InteracFailedReachedCancellationCutOff',
+  'InteracFailedRecipientContactInfoMissing',
+  'InteracFailedRecipientRejected',
+  'InteracFailedRequestBlockedByUser',
+  'InteracFailedRevoked',
+  'InteracFailedSameProfileConflict',
+  'InteracFailedSecurityQuestionNeededForProvidedEmail',
+  'InteracFraudAlertResponded',
+  'InteracFundsHeldForValidation',
+] as const
+
+/**
+ * Коды отказа, которые пишет сам модуль (`RailModuleFailureCode.x-known-values`, 9):
+ * наша остановка выплаты, «провайдер операцию не знает» у сверки, ошибки
+ * адаптера рельса. Это НАШ отказ, и экран подписывает его «код модуля».
+ */
+export const CREDIT_MODULE_RAIL_FAILURE_CODES = [
+  'anr_probe_failed',
+  'invalid_amount',
+  'no_token',
+  'no_transaction_id',
+  'no_user_id',
   'payout_refused_pending_review',
   'provider_never_created',
-  'NSF',
+  'rail_limit_exceeded',
+  'transport_error',
+] as const
+
+/**
+ * Семейства кодов модуля, которые перечнем не закрыть
+ * (`RailModuleFailureCode.x-known-patterns`): Zūm ответил ошибкой HTTP.
+ * Распознаётся шаблоном целиком — `zum_http_50` семейству не принадлежит.
+ */
+export const CREDIT_MODULE_RAIL_FAILURE_PATTERNS = ['^zum_http_[0-9]{3}$'] as const
+
+/**
+ * Слово e2e-харнесса стенда (`NSF`), а не код Zūm: у Zūm этот смысл носят
+ * `EftFailedInsufficientFunds` и `EftFailedFundsNotFree`. Оставлено известным
+ * словом (решение куратора В-2 story 17-6f) с подписью «код стенду».
+ */
+export const CREDIT_RAIL_STAND_FAILURE_CODES = ['NSF'] as const
+
+/**
+ * Все коды, у которых есть текст в `credit.railFailure`: модуля, Zūm и стенда.
+ * Один словарь на раздел — панель выплаты и список операций называют код одним
+ * текстом.
+ */
+export const CREDIT_RAIL_FAILURE_CODES: readonly string[] = [
+  ...CREDIT_MODULE_RAIL_FAILURE_CODES,
+  ...CREDIT_ZUM_FAILURE_CODES,
+  ...CREDIT_RAIL_STAND_FAILURE_CODES,
+]
+
+/** Статусы операции словами Zūm (`RailProviderStatus.x-known-values`, 7). */
+export const CREDIT_ZUM_STATUSES = [
+  'Cancelled',
+  'Completed',
+  'Failed',
+  'InProgress',
+  'InReview',
+  // Пробел — часть слова Zūm. Ключ словаря тот же: разделитель ключей — точка.
+  'Pending Cancellation',
+  'Scheduled',
+] as const
+
+/**
+ * Слова модуля в графе статуса провайдера (`RailModuleStatus.x-known-values`):
+ * `NotFound` пишет сверка, а не Zūm, — за слово провайдера его не выдаём.
+ */
+export const CREDIT_RAIL_MODULE_STATUSES = ['NotFound'] as const
+
+/**
+ * Шаги истории операции Zūm (`EventHistory`), 15 имён из описания
+ * `RailOperationEvent.event`. События отказа носят имена кодов Zūm и живут в
+ * `CREDIT_ZUM_FAILURE_CODES` — у одного кода один текст.
+ */
+export const CREDIT_ZUM_EVENTS = [
+  'Started',
+  'Succeeded',
+  'WalletFunded',
+  'WalletWithdrawn',
+  'NotEnoughBalanceInWalletError',
+  'EFTFileCreated',
+  'EFTFileUploaded',
+  'EFTAnswerReceived',
+  'EFTAnswerProcessed',
+  'InteracSent',
+  'InteracAcknowledgedCredit',
+  'InteracAcknowledgedDebit',
+  'InteracWaitingSettlementIntoWallet',
+  'InteracSettledIntoWallet',
+  'InteracCreditorExternalFinancialInfo',
 ] as const
 
 /**
@@ -333,7 +466,15 @@ export const CREDIT_DYNAMIC_NAMESPACES: Record<string, readonly string[]> = {
   status: CREDIT_ALL_APPLICATION_STATUSES,
   disbursementState: CREDIT_DISBURSEMENT_STATES,
   disbursementMethod: CREDIT_DISBURSEMENT_METHODS,
-  disbursementFailure: CREDIT_DISBURSEMENT_FAILURE_CODES,
+  // Операции рельса: коды, статусы и шаги Zūm — чужие перечни (снимок контракта
+  // модуля, страж `creditRailCodes.test.ts`); состояние операции — свой словарь
+  // на те же шесть значений, что у выплаты: тексты выплаты («Не відправлено»)
+  // рядом с «Передано в Zūm» противоречили бы соседней ячейке.
+  railFailure: CREDIT_RAIL_FAILURE_CODES,
+  zumStatus: CREDIT_ZUM_STATUSES,
+  railModuleStatus: CREDIT_RAIL_MODULE_STATUSES,
+  zumEvent: CREDIT_ZUM_EVENTS,
+  railOperationState: CREDIT_DISBURSEMENT_STATES,
   disbursementRetry: CREDIT_DISBURSEMENT_RETRY_VERDICTS,
   providerTimeSource: CREDIT_PROVIDER_TIME_SOURCES,
   queueStatus: CREDIT_QUEUE_STATUSES,
