@@ -27,6 +27,7 @@ import type {
   CreditLoanDetail,
   CreditLoanState,
   CreditPayment,
+  CreditPortalEventRecord,
   CreditRailOperation,
 } from '@/features/credit/api/types'
 // Словари — статическим импортом, как в i18nKeys.test.ts: сцена «занятые
@@ -1292,4 +1293,220 @@ describe('CreditLoanDetailPage → операции Zūm на вкладке «�
       view.unmount()
     }
   })
+})
+
+/**
+ * Паспорт кредита → «Листи сайту»: какие письма и когда сайт отправил клиенту
+ * по этому кредиту (лента `portal_events` ответа паспорта).
+ *
+ * Кредит подставляется переопределением `useCreditLoan` ПОСЛЕ `mockHooks`: тот
+ * зашивает `LOAN` без ленты, и сцена с лентой иначе проверяла бы пустоту. Панель
+ * ищется по заголовку, утверждения — внутри неё. Поля событий вне объявленного
+ * минимума (`who`, `received_at`, `loan_id`) лежат как в ответе модуля —
+ * приведением типа. Все значения синтетические: нули с номером.
+ */
+describe('CreditLoanDetailPage → листи сайту', () => {
+  const WHO = '0000000000000001'
+  const NOTICE = '00000000-0000-4000-8000-000000000501'
+  const EDMONTON = 'America/Edmonton'
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockHooks(PAYMENTS)
+  })
+
+  function feedEvent(n: number, event: string, over: Record<string, unknown> = {}) {
+    return {
+      event_id: `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`,
+      ts: new Date(Date.UTC(2026, 8, 20, 12, 0, n)).toISOString(),
+      received_at: new Date(Date.UTC(2026, 8, 20, 13, 0, n)).toISOString(),
+      source: 'cabinet',
+      event,
+      who: WHO,
+      application_id: null,
+      external_application_id: null,
+      loan_id: LOAN.loan_id,
+      details: {},
+      seq: n,
+      ...over,
+    }
+  }
+
+  const letter = (n: number, type: string, over: Record<string, unknown> = {}) =>
+    feedEvent(n, 'notification_mailed', { details: { type, notice_event_id: NOTICE }, ...over })
+
+  const others = (count: number) =>
+    Array.from({ length: count }, (_, i) => feedEvent(100 + i, 'document_opened'))
+
+  const withFeed = (events: unknown[], total: number) =>
+    ({
+      ...LOAN,
+      portal_events: events as unknown as CreditPortalEventRecord[],
+      portal_events_total: total,
+    }) as unknown as CreditLoanDetail
+
+  function openLoan(loan: CreditLoanDetail) {
+    vi.mocked(hooks.useCreditLoan).mockReturnValue({
+      ...idle,
+      data: loan,
+    } as unknown as ReturnType<typeof hooks.useCreditLoan>)
+    render(<MemoryRouter>{withQuery(<CreditLoanDetailPage />)}</MemoryRouter>)
+  }
+
+  function panel(): HTMLElement {
+    const section = screen.getByText('credit.communications.mail').closest('section')
+    expect(section, 'the «Site e-mails» panel is a section of the passport').not.toBeNull()
+    return section as HTMLElement
+  }
+
+  const rows = () => [...panel().querySelectorAll('li')].map((li) => li.textContent ?? '')
+
+  it('K-1: два письма из трёх событий — в порядке ленты, с видом письма; прочего события нет; подпись панели', () => {
+    openLoan(
+      withFeed(
+        [
+          feedEvent(1, 'document_opened'),
+          letter(2, 'loan.issued'),
+          letter(3, 'loan.payment.allocated'),
+        ],
+        3
+      )
+    )
+    const lines = rows()
+    expect(lines).toHaveLength(2)
+    expect(lines[0]).toContain('credit.portalEvent.notification_mailed')
+    expect(lines[0]).toContain('credit.loanMail.kind.issued')
+    expect(lines[1]).toContain('credit.portalEvent.notification_mailed')
+    expect(lines[1]).toContain('credit.loanMail.kind.paymentAllocated')
+    expect(panel().textContent).not.toContain('credit.portalEvent.document_opened')
+    expect(panel().textContent).toContain('credit.loanMail.footer')
+  })
+
+  it('K-2: пустая лента — «листів немає», а не «модуль не передав»; подпись панели на месте', () => {
+    openLoan(withFeed([], 0))
+    const text = panel().textContent
+    expect(text).toContain('credit.loanMail.none')
+    expect(text).not.toContain('credit.loanMail.notProvided')
+    expect(text).not.toContain('credit.loanMail.truncated')
+    expect(text).toContain('credit.loanMail.footer')
+  })
+
+  it('K-3: ленты в ответе нет — «модуль не передав», без «листів немає» и без усечения', () => {
+    // Контроль фикстуры: у кредита базы поля ленты нет — иначе сцена о другом.
+    expect('portal_events' in LOAN).toBe(false)
+    openLoan(LOAN)
+    const text = panel().textContent
+    expect(text).toContain('credit.loanMail.notProvided')
+    expect(text).not.toContain('credit.loanMail.none')
+    expect(text).not.toContain('credit.loanMail.truncated')
+    expect(text).toContain('credit.loanMail.footer')
+  })
+
+  it('K-3b: число событий есть, а ленты нет — «модуль не передав», без «показано 0 з 3»', () => {
+    openLoan({ ...LOAN, portal_events_total: 3 })
+    const text = panel().textContent
+    expect(text).toContain('credit.loanMail.notProvided')
+    expect(text).not.toContain('credit.loanMail.truncated')
+  })
+
+  it('K-4: лента из одних прочих событий — «листів немає», а не «модуль не передав»; событий в панели нет', () => {
+    openLoan(withFeed([feedEvent(1, 'document_opened'), feedEvent(2, 'payoff_quoted')], 2))
+    const text = panel().textContent
+    expect(text).toContain('credit.loanMail.none')
+    expect(text).not.toContain('credit.loanMail.notProvided')
+    expect(text).not.toContain('credit.portalEvent.document_opened')
+    expect(text).not.toContain('credit.portalEvent.payoff_quoted')
+  })
+
+  it('K-5: 199 прочих событий и одно письмо, всего 250 — «останні 200 з 250» по событиям, одна строка письма', () => {
+    openLoan(withFeed([...others(199), letter(1, 'loan.issued')], 250))
+    expect(rows()).toHaveLength(1)
+    expect(panel().textContent).toContain('credit.loanMail.truncated shown=200 total=250')
+  })
+
+  it('K-5: те же 200 событий, всего 200 — строки об усечении нет', () => {
+    openLoan(withFeed([...others(199), letter(1, 'loan.issued')], 200))
+    expect(rows()).toHaveLength(1)
+    expect(panel().textContent).not.toContain('credit.loanMail.truncated')
+  })
+
+  it('K-6: 200 событий без писем, всего 250 — «листів немає» И «останні 200 з 250»', () => {
+    openLoan(withFeed(others(200), 250))
+    const text = panel().textContent
+    expect(text).toContain('credit.loanMail.none')
+    expect(text).toContain('credit.loanMail.truncated shown=200 total=250')
+  })
+
+  it('K-7: время письма — в поясе юрисдикции кредита (CA-AB), другие сутки, чем в UTC', () => {
+    const ts = '2026-09-25T02:30:00Z'
+    const local = formatDateTime(ts, EDMONTON)
+    // Контроль: пояса дают разные сутки — иначе сцена ничего не различает.
+    expect(local).not.toBe(formatDateTime(ts, 'UTC'))
+    expect(LOAN.jurisdiction).toBe('CA-AB')
+    openLoan(withFeed([letter(1, 'loan.issued', { ts })], 1))
+    expect(rows()[0]).toContain(local)
+    expect(rows()[0]).not.toContain(formatDateTime(ts, 'UTC'))
+  })
+
+  it('K-8: время — источника (ts), а не приёма модулем (received_at)', () => {
+    const ts = '2026-09-25T02:30:00Z'
+    const receivedAt = '2026-09-25T05:00:00Z'
+    // Контроль: два момента на экране различимы.
+    expect(formatDateTime(receivedAt, EDMONTON)).not.toBe(formatDateTime(ts, EDMONTON))
+    openLoan(withFeed([letter(1, 'loan.issued', { ts, received_at: receivedAt })], 1))
+    expect(rows()[0]).toContain(formatDateTime(ts, EDMONTON))
+    expect(panel().textContent).not.toContain(formatDateTime(receivedAt, EDMONTON))
+  })
+
+  it('K-9: псевдоним клиента и ключ повода в панели не показываются', () => {
+    const event = letter(1, 'loan.issued')
+    // Контроль фикстуры: оба значения в событии есть.
+    expect(event.who).toBe(WHO)
+    expect((event.details as { notice_event_id: string }).notice_event_id).toBe(NOTICE)
+    openLoan(withFeed([event], 1))
+    expect(rows()).toHaveLength(1)
+    expect(panel().textContent).not.toContain(WHO)
+    expect(panel().textContent).not.toContain(NOTICE)
+  })
+
+  it('K-10: порядок строк — модуля: позднее письмо, отданное первым, остаётся первым', () => {
+    openLoan(
+      withFeed(
+        [
+          letter(1, 'loan.closed', { ts: '2026-09-25T18:00:00Z' }),
+          letter(2, 'loan.issued', { ts: '2026-09-24T18:00:00Z' }),
+        ],
+        2
+      )
+    )
+    const lines = rows()
+    expect(lines).toHaveLength(2)
+    expect(lines[0]).toContain('credit.loanMail.kind.closed')
+    expect(lines[1]).toContain('credit.loanMail.kind.issued')
+  })
+
+  it('K-11: панель — только в паспорте: на вкладке «Баланс» её нет', () => {
+    openLoan(withFeed([letter(1, 'loan.issued')], 1))
+    // Контроль: в паспорте панель есть — иначе пустота ниже ничего не значит.
+    expect(screen.getByText('credit.communications.mail')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('tab', { name: 'credit.tabs.balances' }))
+    expect(screen.queryByText('credit.communications.mail')).toBeNull()
+  })
+
+  it.each([
+    ['uk', uk, ['картці кредиту', 'Листи сайту'], 'не показуються'],
+    ['en', en, ['loan card', 'Site e-mails'], 'not shown'],
+    ['es', es, ['ficha del préstamo', 'Correos del sitio'], 'no se muestran'],
+  ] as const)(
+    'K-12: %s — маркер карточки заявки называет карточку кредита и блок «Листи сайту»',
+    (_lang, dictionary, phrases, stale) => {
+      const marker = dictionary.credit.communications.mailLoanStage
+      for (const phrase of phrases) expect(marker).toContain(phrase)
+      // Название блока — из словаря того же языка, не литералом.
+      const block = dictionary.credit.communications.mail
+      expect(block.trim()).not.toBe('')
+      expect(marker).toContain(block)
+      expect(marker).not.toContain(stale)
+    }
+  )
 })
