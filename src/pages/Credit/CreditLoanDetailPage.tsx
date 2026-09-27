@@ -25,6 +25,7 @@ import {
   useCreditLoan,
   useCreditLoanDocuments,
   useCreditLoanJournal,
+  useCreditLoanRailOperations,
   useCreditLoanSchedule,
   useCreditLoanScheduleVersions,
   useCreditLoanState,
@@ -40,14 +41,21 @@ import type {
   CreditLoanDetail as LoanDetail,
   CreditLoanState,
   CreditPayment,
+  CreditRailOperation,
   CreditScheduleVersion,
 } from '@/features/credit/api/types'
 import {
   CREDIT_BUCKETS,
-  CREDIT_DISBURSEMENT_FAILURE_CODES,
   CREDIT_DOCUMENT_META_KINDS,
   CREDIT_RAIL_REVIEW_REASONS,
 } from '@/features/credit/api/enums'
+import { DEFAULT_TIME_ZONE } from '@/features/credit/api/clientBlockRules'
+import {
+  paymentMarkOf,
+  railFailureText,
+  railOperationAnchor,
+  submissionOf,
+} from '@/features/credit/api/railOperations'
 import { CreditStatusBadge } from './components/CreditStatusBadge'
 import { CreditDocumentOpenButton } from './components/CreditDocumentOpenButton'
 import { CreditClientLink } from './components/CreditClientLink'
@@ -59,6 +67,8 @@ import {
 } from './components/CreditCardHeader'
 import { Pii } from '@/lib/openreplay/pii'
 import { CreditIdentifierRows } from './components/CreditIdentifiers'
+import { AsyncPanel, CreditRailStateBadge, Panel } from './components/CreditPanel'
+import { CreditRailOperations } from './components/CreditRailOperations'
 import { loanAgeDays, todayInTimezone } from '@/features/credit/api/loanAge'
 import { useNowTick } from '@/features/credit/hooks/useNowTick'
 
@@ -78,87 +88,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <span className="text-muted-foreground w-56 shrink-0">{label}</span>
       <span className="min-w-0 break-words">{children}</span>
     </div>
-  )
-}
-
-function Panel({
-  title,
-  children,
-  footer,
-}: {
-  title: string
-  children: React.ReactNode
-  footer?: React.ReactNode
-}) {
-  return (
-    <section className="border-border bg-card mb-4 rounded-xl border shadow-sm">
-      <h2 className="border-border flex min-h-[49px] items-center border-b px-4 text-sm font-semibold">
-        {title}
-      </h2>
-      <div className="p-4">{children}</div>
-      {footer && (
-        <div className="border-border text-muted-foreground border-t px-4 py-2 text-xs">
-          {footer}
-        </div>
-      )}
-    </section>
-  )
-}
-
-/**
- * Загрузка / ошибка / пусто — три РАЗНЫХ состояния.
- * Смешивать ошибку с пустотой нельзя: это не «данных нет», это «мы не знаем».
- */
-function AsyncPanel({
-  title,
-  isLoading,
-  error,
-  isEmpty,
-  emptyText,
-  onRetry,
-  children,
-  footer,
-}: {
-  title: string
-  isLoading: boolean
-  error: unknown
-  isEmpty: boolean
-  emptyText: string
-  onRetry: () => void
-  children: React.ReactNode
-  footer?: React.ReactNode
-}) {
-  const { t } = useTranslation('common')
-  if (isLoading) {
-    return (
-      <Panel title={title}>
-        <TableSkeleton columns={5} rows={4} />
-      </Panel>
-    )
-  }
-  if (error) {
-    return (
-      <Panel title={title}>
-        <Alert variant="error" className="mb-3">
-          {(error as Error).message || t('credit.card.loadFailed')}
-        </Alert>
-        <Button size="sm" variant="white-secondary" onClick={onRetry}>
-          {t('credit.actions.retry')}
-        </Button>
-      </Panel>
-    )
-  }
-  if (isEmpty) {
-    return (
-      <Panel title={title}>
-        <p className="text-muted-foreground text-sm">{emptyText}</p>
-      </Panel>
-    )
-  }
-  return (
-    <Panel title={title} footer={footer}>
-      {children}
-    </Panel>
   )
 }
 
@@ -365,12 +294,13 @@ export function CreditLoanDetailPage() {
           />
         )}
         {tab === 'payments' && (
-          <LoanPayments
-            currency={loan.currency}
-            payments={state?.payments ?? []}
-            isLoading={stateQuery.isLoading}
-            error={stateQuery.error}
-            onRetry={() => void stateQuery.refetch()}
+          <LoanPaymentsTab
+            loanId={loanId}
+            loan={loan}
+            state={state}
+            stateLoading={stateQuery.isLoading}
+            stateError={stateQuery.error}
+            onStateRetry={() => void stateQuery.refetch()}
           />
         )}
         {tab === 'documents' && (
@@ -405,18 +335,6 @@ export function CreditLoanDetailPage() {
  * а у застрявшего — это и есть ответ на вопрос «почему клиент без денег».
  */
 const AWAITING_MONEY = new Set(['pending_disbursement', 'disbursement_failed', 'funding_exception'])
-
-/** Тона выплаты — своим словарём, а не через `CreditStatusBadge`.
- *  Там `cancelled` уже занят статусом кредита и покрашен красным, а отозванная
- *  выплата — предупреждение: общий словарь дал бы одному слову два смысла. */
-const DISBURSEMENT_TONE: Record<CreditDisbursement['state'], string> = {
-  pending: 'bg-muted text-muted-foreground',
-  settled: 'bg-success-100 text-success-700',
-  failed: 'bg-error-100 text-error-700',
-  reversed: 'bg-error-100 text-error-700',
-  cancelled: 'bg-warning-100 text-warning-800',
-  unknown: 'bg-error-100 text-error-700',
-}
 
 type RetryVerdict =
   | 'available'
@@ -528,14 +446,11 @@ function LoanDisbursement({
   if (isRoutineDisbursement(disbursement)) return null
 
   const verdict = retryVerdict(disbursement)
-  // Код провайдера, которого мы не знаем, — это не пропущенный перевод, а
-  // чужой словарь. Показываем его как чужое слово, а не как голое имя ключа.
+  // Текст кода — тот же, что в строке операции на вкладке «Платежі»: один код —
+  // один текст в одной карточке. Незнакомый код — «Невідомий код: X», без
+  // приписки владельца: он бывает и нашим, не только словом провайдера.
   const failureText =
-    disbursement.failure_code === null
-      ? '—'
-      : (CREDIT_DISBURSEMENT_FAILURE_CODES as readonly string[]).includes(disbursement.failure_code)
-        ? t(`credit.disbursementFailure.${disbursement.failure_code}`)
-        : t('credit.card.disbursementUnknownCode', { code: disbursement.failure_code })
+    disbursement.failure_code === null ? '—' : railFailureText(t, disbursement.failure_code)
   const reviewText =
     disbursement.review_reason === null
       ? null
@@ -549,12 +464,9 @@ function LoanDisbursement({
       footer={t('credit.card.disbursementNoRetryButton')}
     >
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <span
-          className={`inline-flex h-7 items-center gap-1.5 rounded-full px-3 text-xs font-medium ${DISBURSEMENT_TONE[disbursement.state]}`}
-        >
-          <span className="h-2 w-2 rounded-full bg-current opacity-70" />
+        <CreditRailStateBadge state={disbursement.state}>
           {t(`credit.disbursementState.${disbursement.state}`)}
-        </span>
+        </CreditRailStateBadge>
         <span className="text-muted-foreground text-sm">
           {t('credit.card.disbursementUpdated', {
             when: formatDateTime(disbursement.updated_at, timezone),
@@ -1119,18 +1031,76 @@ function LoanSchedule({
   )
 }
 
+/**
+ * Вкладка «Платежі»: таблица платежей и под ней операции рельса (17-6f).
+ *
+ * Хук операций зовётся ТОЛЬКО здесь, один раз на обе таблицы: запрос уходит,
+ * когда оператор открыл вкладку, а не с открытием карточки. Пояс считается
+ * тоже здесь и один на обе таблицы. Юрисдикция вне карты страницы получает
+ * умолчание раздела, а не пояс браузера: футер панели называет выбранный пояс,
+ * и время читается правдиво при любом умолчании.
+ */
+function LoanPaymentsTab({
+  loanId,
+  loan,
+  state,
+  stateLoading,
+  stateError,
+  onStateRetry,
+}: {
+  loanId: string | undefined
+  loan: LoanDetail
+  state?: CreditLoanState
+  stateLoading: boolean
+  stateError: unknown
+  onStateRetry: () => void
+}) {
+  const railQuery = useCreditLoanRailOperations(loanId)
+  const zone = JURISDICTION_TIMEZONE[loan.jurisdiction] ?? DEFAULT_TIME_ZONE
+  const payments = state?.payments ?? []
+  return (
+    <>
+      <LoanPayments
+        currency={loan.currency}
+        payments={payments}
+        isLoading={stateLoading}
+        error={stateError}
+        onRetry={onStateRetry}
+        // Метка — только по пришедшему ответу: при отказе двери строка платежа
+        // та же, что без неё, а сам отказ называет панель прямо под таблицей.
+        railOperations={railQuery.error ? undefined : railQuery.data?.items}
+        zone={zone}
+      />
+      <CreditRailOperations
+        page={railQuery.data}
+        isLoading={railQuery.isLoading}
+        error={railQuery.error}
+        onRetry={() => void railQuery.refetch()}
+        zone={zone}
+        payments={payments}
+        paymentsReady={!stateLoading && !stateError}
+      />
+    </>
+  )
+}
+
 function LoanPayments({
   currency,
   payments,
   isLoading,
   error,
   onRetry,
+  railOperations,
+  zone,
 }: {
   currency: string
   payments: CreditPayment[]
   isLoading: boolean
   error: unknown
   onRetry: () => void
+  /** Операции рельса кредита — для метки «Zūm: передано» в строке платежа. */
+  railOperations?: readonly CreditRailOperation[]
+  zone?: string
 }) {
   const { t } = useTranslation('common')
   return (
@@ -1157,9 +1127,30 @@ function LoanPayments({
             // модуля, который должен быть виден, а не тихо приравнен к
             // обычному платежу.
             const reversed = payment.state === 'reversed'
+            // Операция платежа — только по `payment_id`: по сумме и дате два
+            // одинаковых взноса неразличимы. Нет операции — нет метки: платёж
+            // без рельса бывает законно (ручной, `demo`).
+            const operation = paymentMarkOf(payment, railOperations)
+            const submission = operation ? submissionOf(operation) : null
             return (
               <tr key={payment.payment_id} className="border-border border-b last:border-0">
-                <td className="py-2">{formatDate(payment.effective_date)}</td>
+                <td className="py-2">
+                  {formatDate(payment.effective_date)}
+                  {operation && submission && (
+                    <a
+                      href={`#${railOperationAnchor(operation)}`}
+                      className="text-information-600 mt-0.5 block text-xs whitespace-nowrap underline"
+                    >
+                      {/* Время — только то, что модуль записал как начало
+                          вызова; которого нет, того не пишем. */}
+                      {submission.kind === 'sent'
+                        ? t('credit.railOps.paymentMark.sent', {
+                            when: formatDateTime(submission.at, zone),
+                          })
+                        : t('credit.railOps.paymentMark.linked')}
+                    </a>
+                  )}
+                </td>
                 <td className="py-2 pr-6 text-right tabular-nums">
                   {/* Зачёркивание и подпись — не только цвет: иначе разницу
                       не увидят ни в чёрно-белой печати, ни при дальтонизме,

@@ -39,6 +39,8 @@ export const creditKeys = {
    */
   loanJournal: (id: string, params?: CreditJournalParams) =>
     [...creditKeys.loans(), 'journal', id, params ?? {}] as const,
+  /** Операции рельса кредита. Под `loans()`: инвалидация кредитов достаёт и их. */
+  loanRailOperations: (id: string) => [...creditKeys.loans(), 'railOperations', id] as const,
   /**
    * Кредиты одного клиента CRM. Корень — `credit`, а не `clients`: владелец
    * данных модуль, а у клиентов ключ `loans` УЖЕ занят купленными долгами
@@ -200,6 +202,26 @@ export function useCreditLoanJournal(loanId: string | undefined, params?: Credit
   return useQuery({
     queryKey: creditKeys.loanJournal(loanId ?? '', params),
     queryFn: () => creditApi.loanJournal(loanId as string, params),
+    enabled: Boolean(loanId),
+    retry: false,
+  })
+}
+
+/**
+ * Операции рельса кредита — вкладка «Платежі» (17-6f).
+ *
+ * Зовётся одним местом — вкладкой платежей карточки, поэтому запрос уходит,
+ * когда оператор её открыл, а не с открытием карточки.
+ *
+ * `retry: false` — по доводу `useClientCreditLoans`: `CreditApiError` без
+ * `response`, глобальное правило считает повторяемым любой отказ, а ключ с
+ * `loanId` заводит свою цепочку повторов на каждый кредит. Модуль старше двери
+ * отвечает 404, и повторять его бессмысленно.
+ */
+export function useCreditLoanRailOperations(loanId: string | undefined) {
+  return useQuery({
+    queryKey: creditKeys.loanRailOperations(loanId ?? ''),
+    queryFn: () => creditApi.loanRailOperations(loanId as string),
     enabled: Boolean(loanId),
     retry: false,
   })

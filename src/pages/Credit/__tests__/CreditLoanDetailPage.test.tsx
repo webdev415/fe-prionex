@@ -10,7 +10,7 @@
  */
 import type { ReactNode } from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AxiosError, type AxiosResponse } from 'axios'
@@ -18,10 +18,17 @@ import { CreditLoanDetailPage } from '../CreditLoanDetailPage'
 import { searchClientsByPhoneExact } from '@/api/clientSearchApi'
 import { callSmsApi } from '@/features/clients/api/callSmsApi'
 import * as hooks from '@/features/credit/hooks/useCredit'
+import { CreditApiError } from '@/features/credit/api/creditApi'
+import { formatDate, formatDateTime } from '@/lib/formatters'
 // Словарь корзин импортируется, а не переписывается списком: переписанный
 // повторил бы опечатку кода и зеленел бы вместе с ней (сцена J-1).
 import { CREDIT_BUCKETS } from '@/features/credit/api/enums'
-import type { CreditLoanDetail, CreditLoanState, CreditPayment } from '@/features/credit/api/types'
+import type {
+  CreditLoanDetail,
+  CreditLoanState,
+  CreditPayment,
+  CreditRailOperation,
+} from '@/features/credit/api/types'
 // Словари — статическим импортом, как в i18nKeys.test.ts: сцена «занятые
 // слова» сверяет новые подписи с теми, что уже значат другое, по живым
 // значениям словаря, а не по переписанным литералам.
@@ -207,6 +214,10 @@ function mockHooks(payments: CreditPayment[]) {
     hooks.useCreditLoanScheduleVersions,
     hooks.useCreditLoanDocuments,
     hooks.useCreditApplication,
+    // Операции рельса (17-6f): без записи автомок вернул бы `undefined`, и
+    // вкладка «Платежі» упала бы не своими словами. `idle` — операций нет,
+    // метки нет, таблица платежей как без операций.
+    hooks.useCreditLoanRailOperations,
   ]) {
     vi.mocked(hook).mockReturnValue(idle as never)
   }
@@ -1077,4 +1088,208 @@ describe('CreditLoanDetailPage → связь с клиентом CRM', () => {
       expect(String(control).trim()).not.toBe('')
     }
   )
+})
+
+/**
+ * Вкладка «Платежі» → операции Zūm (story 17-6f).
+ *
+ * Здесь — то, что видно только на странице: где зовётся хук операций, что отказ
+ * двери не ломает таблицу платежей, пояс вкладки от юрисдикции кредита и метка
+ * «Zūm: передано» в строке платежа со ссылкой на строку операции. Правила ячеек
+ * панели — в `CreditRailOperations.test.tsx`. Все данные синтетические.
+ */
+describe('CreditLoanDetailPage → операции Zūm на вкладке «Платежі»', () => {
+  const EDMONTON = 'America/Edmonton'
+
+  /** Полная операция со всеми 30 ключами контракта: пропущенный ключ — ошибка типа. */
+  function railOp(overrides: Partial<CreditRailOperation> = {}): CreditRailOperation {
+    return {
+      client_transaction_id: 'collect:rail-test-0002:1',
+      provider: 'zum',
+      direction: 'disburse',
+      method: 'eft',
+      amount_minor: 11_400,
+      currency: 'CAD',
+      installment_seq: null,
+      state: 'settled',
+      provider_status: null,
+      failure_code: null,
+      provider_tx_id: 'zum-test-0002',
+      provider_accepted: true,
+      // Три момента в разные минуты: подмена одного другим видна по строке.
+      rail_call_started_at: '2026-09-24T14:07:00Z',
+      rail_call_returned_at: '2026-09-24T14:09:00Z',
+      submission: 'rail_called',
+      created_at: '2026-09-24T14:05:00Z',
+      observed_at: null,
+      updated_at: '2026-09-24T14:30:00Z',
+      settled_at: null,
+      failed_at: null,
+      provider_effective_at: null,
+      provider_time_source: null,
+      review_reason: null,
+      review_raised_at: null,
+      payment_id: null,
+      status_evidence: null,
+      callbacks: [],
+      callbacks_total: 0,
+      events: [],
+      events_dropped: 0,
+      ...overrides,
+    }
+  }
+
+  const page = (items: CreditRailOperation[]) => ({ items, total: items.length, next_cursor: null })
+
+  function withRail(value: Record<string, unknown>) {
+    vi.mocked(hooks.useCreditLoanRailOperations).mockReturnValue({ ...idle, ...value } as never)
+  }
+
+  function renderPage() {
+    return render(<MemoryRouter>{withQuery(<CreditLoanDetailPage />)}</MemoryRouter>)
+  }
+
+  /** Строки ТАБЛИЦЫ ПЛАТЕЖЕЙ — не панели операций под ней. */
+  function paymentRows(): HTMLElement[] {
+    const section = screen.getByText('credit.card.payments').closest('section')
+    if (!section) throw new Error('панели платежей нет')
+    return [...section.querySelectorAll<HTMLElement>('tbody tr')]
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockHooks(PAYMENTS)
+  })
+
+  it('AC-2 п. 2 хук операций зовётся только на вкладке «Платежі» — с id кредита', () => {
+    renderPage()
+    // Открыт паспорт: запроса операций с открытием карточки быть не должно.
+    expect(screen.getByText('credit.card.passport')).toBeInTheDocument()
+    expect(hooks.useCreditLoanRailOperations).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('tab', { name: /Платеж|Платіж|Payment/i }))
+    expect(hooks.useCreditLoanRailOperations).toHaveBeenCalledWith(LOAN.loan_id)
+  })
+
+  it('AC-2 п. 3 404 not_found — «модуль старший», без повтора; таблица платежей на месте', () => {
+    withRail({ error: new CreditApiError('Not found', 404, 'not_found') })
+    openPayments()
+    expect(screen.getByText('credit.railOps.unavailable')).toBeInTheDocument()
+    expect(screen.queryByText('credit.actions.retry')).not.toBeInTheDocument()
+    // Таблица платежей — та же, что без двери: все строки и подпись сторно.
+    expect(paymentRows()).toHaveLength(PAYMENTS.length)
+    expect(screen.getByText(/paymentReversedOn date=02-10-2026/)).toBeInTheDocument()
+  })
+
+  it('AC-6a п. 1 метка «Zūm: передано» — во второй из двух одинаковых строк, со ссылкой на операцию', () => {
+    const twin = (id: string): CreditPayment => ({
+      payment_id: id,
+      effective_date: '2026-09-24',
+      amount_minor: 11_400,
+      state: 'accepted',
+      reversed_on: null,
+    })
+    mockHooks([twin('p-test-0001'), twin('p-test-0002')])
+    const op = railOp({ direction: 'collect', payment_id: 'p-test-0002' })
+    withRail({ data: page([op]) })
+    openPayments()
+    const [firstRow, secondRow] = paymentRows()
+    const when = formatDateTime('2026-09-24T14:07:00Z', EDMONTON)
+    const mark = within(secondRow).getByText(`credit.railOps.paymentMark.sent when=${when}`)
+    const anchor = `rail-op-${encodeURIComponent(op.client_transaction_id)}`
+    expect(mark.closest('a')?.getAttribute('href')).toBe(`#${anchor}`)
+    expect(
+      document.getElementById(anchor),
+      'ссылка ведёт на строку, которой в панели нет'
+    ).not.toBeNull()
+    expect(firstRow.textContent).not.toContain('credit.railOps.paymentMark')
+  })
+
+  it('AC-6a п. 2 момента вызова нет — «операція в таблиці нижче», без выдуманного времени', () => {
+    const op = railOp({
+      direction: 'collect',
+      payment_id: PAYMENTS[1].payment_id,
+      submission: 'not_recorded',
+      rail_call_started_at: null,
+    })
+    withRail({ data: page([op]) })
+    openPayments()
+    expect(
+      within(paymentRows()[1]).getByText('credit.railOps.paymentMark.linked')
+    ).toBeInTheDocument()
+    const text = document.body.textContent ?? ''
+    expect(text, 'created_at выдан за время отправки').not.toContain(
+      formatDateTime('2026-09-24T14:05:00Z', EDMONTON)
+    )
+    expect(text, 'rail_call_returned_at выдан за время отправки').not.toContain(
+      formatDateTime('2026-09-24T14:09:00Z', EDMONTON)
+    )
+  })
+
+  it('AC-6a п. 3 отказ двери — ни одной метки, ячейки дат как без операций; повтор — хуком операций', () => {
+    const linked = railOp({ direction: 'collect', payment_id: PAYMENTS[1].payment_id })
+    const expected = PAYMENTS.map((payment) => formatDate(payment.effective_date))
+    for (const error of [
+      new CreditApiError('Service unavailable', 503),
+      new CreditApiError('Not found', 404, 'not_found'),
+    ]) {
+      // Данные в кэше при этом есть: метку гасит отказ, а не пустота.
+      const refetch = vi.fn()
+      withRail({ data: page([linked]), error, refetch })
+      const view = renderPage()
+      fireEvent.click(screen.getByRole('tab', { name: /Платеж|Платіж|Payment/i }))
+      expect(screen.queryByText(/credit\.railOps\.paymentMark/)).not.toBeInTheDocument()
+      expect(paymentRows().map((row) => row.querySelector('td')?.textContent)).toEqual(expected)
+      if (error.status === 503) {
+        // Повтор панели зовёт повтор ИМЕННО двери операций, ровно раз: таблица
+        // платежей над ней загружена, и её повтора на экране нет.
+        fireEvent.click(screen.getByText('credit.actions.retry'))
+        expect(refetch, 'кнопка «Повторити» не дошла до хука операций').toHaveBeenCalledTimes(1)
+      }
+      view.unmount()
+    }
+  })
+
+  it('AC-6a п. 4 платежи ещё грузятся — ячейка «Платіж» не говорит «не знайдено»', () => {
+    vi.mocked(hooks.useCreditLoanState).mockReturnValue({ ...idle, isLoading: true } as never)
+    const op = railOp({ direction: 'collect', payment_id: PAYMENTS[1].payment_id })
+    withRail({ data: page([op]) })
+    openPayments()
+    // Положительный контроль: строка операции нарисована — сцена не пустая.
+    expect(
+      document.getElementById(`rail-op-${encodeURIComponent(op.client_transaction_id)}`)
+    ).not.toBeNull()
+    expect(screen.queryByText('credit.railOps.payment.notFound')).not.toBeInTheDocument()
+  })
+
+  it('AC-6 п. 5–6 пояс вкладки — от юрисдикции кредита; вне карты страницы — умолчание раздела', () => {
+    const at = '2026-09-25T02:30:00Z'
+    const op = railOp({
+      callbacks: [
+        {
+          received_at: at,
+          status: 'Completed',
+          failure_code: null,
+          signature_ok: true,
+          processed_at: at,
+          matched_by: 'provider_tx_id',
+        },
+      ],
+      callbacks_total: 1,
+    })
+    for (const [jurisdiction, zone] of [
+      ['CA-ON', 'America/Toronto'],
+      ['CA-QC', 'Europe/Kyiv'],
+    ] as const) {
+      vi.mocked(hooks.useCreditLoan).mockReturnValue({
+        ...idle,
+        data: { ...LOAN, jurisdiction },
+      } as never)
+      withRail({ data: page([op]) })
+      const view = renderPage()
+      fireEvent.click(screen.getByRole('tab', { name: /Платеж|Платіж|Payment/i }))
+      expect(screen.getByText(`credit.railOps.footer zone=${zone}`)).toBeInTheDocument()
+      expect(screen.getByText(formatDateTime(at, zone))).toBeInTheDocument()
+      view.unmount()
+    }
+  })
 })

@@ -134,6 +134,8 @@ const CALLS: Array<{ name: string; invoke: () => Promise<unknown> }> = [
       return creditApi.loanJournal('l1', { bucket: 'principal', as_of: '2026-09-01' })
     },
   },
+  // 17-6f: операции рельса кредита — та же дверь под пропуском
+  { name: 'loanRailOperations', invoke: () => creditApi.loanRailOperations('l1') },
   { name: 'loanDocuments', invoke: () => creditApi.loanDocuments('l1') },
   {
     name: 'applicationDocumentContent',
