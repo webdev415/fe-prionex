@@ -9,6 +9,8 @@ export const appLoginKeys = {
   all: ['auth', 'app-login'] as const,
   me: () => [...appLoginKeys.all, 'me'] as const,
   admin: (userId: number) => [...appLoginKeys.all, 'admin', userId] as const,
+  /** `GET /api/v1/auth/app-login/config` — the login screen's buttons. */
+  config: () => [...appLoginKeys.all, 'config'] as const,
 }
 
 interface MyStatusOptions {
