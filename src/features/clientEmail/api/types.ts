@@ -68,8 +68,12 @@ export interface ClientEmailMessage {
   counterparty: string | null
   /** Our mailbox the letter went through; `null` for a system letter. */
   mailbox_email: string | null
-  /** `sent_at` of an outbound letter, `received_at` of an incoming one (ISO, UTC). */
-  at: string
+  /**
+   * `sent_at` of an outbound letter, `received_at` of an incoming one (ISO, UTC).
+   * Optional in the api schema: a row without a timestamp shows «—», never a date
+   * made up from `null` (`new Date(null)` is 1970, not «invalid»).
+   */
+  at: string | null
   attachment_count: number
   link_source: ClientEmailLinkSource | null
 }
@@ -87,10 +91,11 @@ export interface ClientEmailMessageList {
   offset: number
 }
 
+/** `content_type` and `size` are optional in the api schema and do arrive as `null`. */
 export interface ClientEmailAttachment {
   filename: string
-  content_type: string
-  size: number
+  content_type: string | null
+  size: number | null
 }
 
 /**
@@ -146,6 +151,11 @@ type Includes<Union, V extends string> = V extends Union ? true : false
 
 /** Sub-tab visibility: without `enabled` the tab would show on a channel that is off. */
 export type _capabilities_has_enabled = Assert<Has<ClientEmailCapabilities, 'enabled'>>
+/**
+ * Sub-tab visibility and the list request: the right the email-service door will
+ * check is the one in the token, and only the server can say what the token holds.
+ */
+export type _capabilities_has_can_read = Assert<Has<ClientEmailCapabilities, 'can_read'>>
 /** «Написати листа» is gated on it; losing it would offer sending to everyone. */
 export type _capabilities_has_can_send = Assert<Has<ClientEmailCapabilities, 'can_send'>>
 /** Only this value opens the list — anything else is the «not connected» notice. */

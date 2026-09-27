@@ -3,11 +3,12 @@
  *
  * Every call goes through the shared CRM client: the caller's JWT is what the
  * server scopes by (active project, rights), so there is nothing to add here.
- * Errors are handed back untouched — the coded refusals (`{detail, code,
- * params}`) are translated where they are shown.
+ * Errors are handed back untouched; `clientEmailFailureText` turns one into the
+ * sentence the operator reads where it is shown.
  */
 import axios from 'axios'
 import api from '@/lib/api'
+import { getErrorMessage } from '@/lib/errors'
 import {
   CLIENT_EMAIL_DISABLED,
   type ClientEmailCapabilities,
@@ -74,4 +75,30 @@ export const clientEmailApi = {
   listClientMessages,
   getClientMessage,
   sendClientMessage,
+}
+
+/**
+ * The sentence an operator reads when one of these doors fails.
+ *
+ * A coded refusal (`{detail, code, params}`) is translated by its code. A failure
+ * WITHOUT a code carries text meant for developers, in English: the gateway's
+ * `404 Not Found` once the channel is switched off while the card still holds the
+ * old answer, the door's own `404 Message not found`, FastAPI's `422`, a `403`
+ * naming the permission slug. Those get the sentence for the HTTP status instead —
+ * the same `http.*` dictionary and the same code path the rest of the CRM uses,
+ * reached by handing `getErrorMessage` the status without the body.
+ */
+export function clientEmailFailureText(error: unknown): string {
+  if (axios.isAxiosError(error) && error.response) {
+    const data: unknown = error.response.data
+    const code = data && typeof data === 'object' ? (data as { code?: unknown }).code : undefined
+    if (typeof code !== 'string' || code === '') {
+      return getErrorMessage({
+        isAxiosError: true,
+        message: '',
+        response: { status: error.response.status, data: undefined },
+      })
+    }
+  }
+  return getErrorMessage(error)
 }

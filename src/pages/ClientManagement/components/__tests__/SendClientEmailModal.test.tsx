@@ -63,10 +63,11 @@ const doors = vi.hoisted(() => ({
   sendClientMessage: vi.fn(),
 }))
 
-vi.mock('@/features/clientEmail/api/clientEmailApi', () => ({
-  clientEmailApi: doors,
-  ...doors,
-}))
+/** The doors are stubbed; how a failure is read (`clientEmailFailureText`) stays real. */
+vi.mock('@/features/clientEmail/api/clientEmailApi', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/features/clientEmail/api/clientEmailApi')>()
+  return { ...actual, clientEmailApi: doors, ...doors }
+})
 
 type Dictionary = Record<string, unknown>
 type Codes = { codes: Record<string, string> }
@@ -74,6 +75,10 @@ type Codes = { codes: Record<string, string> }
 const EMAIL = (ukCommon as { pages: { clients: { email: Record<string, string> } } }).pages.clients
   .email
 const UK_CODES = (ukErrors as Codes).codes
+const UK_HTTP = (ukErrors as { http: Record<string, string> }).http
+/** The × of the shared modal, by its Ukrainian label. */
+const CLOSE_LABEL = (ukCommon as { components: { modal: { close: string } } }).components.modal
+  .close
 
 /**
  * The eleven refusals of the client e-mail doors — copied from the api registry
@@ -125,10 +130,14 @@ function httpError(status: number, data: Dictionary) {
 }
 
 function speakUkrainianErrors() {
-  vi.spyOn(i18n, 't').mockImplementation(((key: string, options?: Dictionary) =>
-    options?.ns === 'errors' && key.startsWith('codes.')
-      ? (UK_CODES[key.slice('codes.'.length)] ?? (options?.defaultValue as string) ?? key)
-      : ((options?.defaultValue as string) ?? key)) as unknown as typeof i18n.t)
+  vi.spyOn(i18n, 't').mockImplementation(((key: string, options?: Dictionary) => {
+    if (options?.ns === 'errors') {
+      const [section, name] = key.split('.')
+      const table = section === 'codes' ? UK_CODES : section === 'http' ? UK_HTTP : undefined
+      if (table && name in table) return table[name]
+    }
+    return (options?.defaultValue as string) ?? key
+  }) as unknown as typeof i18n.t)
 }
 
 function deferred<T>() {
@@ -250,6 +259,73 @@ describe('SendClientEmailModal — one click, one letter (AC-B-2 п. 7)', () => 
   })
 })
 
+/**
+ * Closing the modal mid-request would drop the answer (a refusal nobody reads)
+ * and the draft, and opening it again would start a second request beside the
+ * first. Each way out is its own scene, so each can go red on its own.
+ */
+describe('SendClientEmailModal — stays open while the letter is on its way', () => {
+  async function startSending() {
+    const user = userEvent.setup()
+    const pending = deferred<typeof SENT>()
+    doors.sendClientMessage.mockReturnValue(pending.promise)
+    const rendered = renderModal()
+    await user.type(screen.getByLabelText(EMAIL.subject), 'Subject')
+    await user.type(screen.getByLabelText(EMAIL.body), 'Body')
+    return { user, pending, ...rendered }
+  }
+
+  it('Escape closes an idle modal, but not one whose letter is on its way', async () => {
+    const { user, pending, onClose } = await startSending()
+
+    // Positive control: Escape does reach the modal and close it when nothing is sent.
+    await user.keyboard('{Escape}')
+    expect(onClose).toHaveBeenCalledTimes(1)
+    onClose.mockClear()
+
+    const send = screen.getByRole('button', { name: EMAIL.send })
+    await user.click(send)
+    await waitFor(() => expect(send).toBeDisabled())
+    await user.keyboard('{Escape}')
+    expect(onClose).not.toHaveBeenCalled()
+    expect(screen.getByLabelText(EMAIL.body)).toHaveValue('Body')
+
+    pending.resolve(SENT)
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
+    expect(doors.sendClientMessage).toHaveBeenCalledTimes(1)
+  })
+
+  it('«Скасувати» is disabled while the letter is on its way, and the draft stays', async () => {
+    const { user, pending, onClose } = await startSending()
+    const cancel = screen.getByRole('button', { name: 'Скасувати' })
+    expect(cancel).toBeEnabled()
+
+    await user.click(screen.getByRole('button', { name: EMAIL.send }))
+    await waitFor(() => expect(cancel).toBeDisabled())
+    await user.click(cancel)
+    expect(onClose).not.toHaveBeenCalled()
+    expect(screen.getByLabelText(EMAIL.body)).toHaveValue('Body')
+
+    pending.resolve(SENT)
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
+  })
+
+  it('the × is gone while the letter is on its way and back once the answer arrives', async () => {
+    const { user, pending, onClose } = await startSending()
+    expect(screen.getByRole('button', { name: CLOSE_LABEL })).toBeInTheDocument()
+
+    const send = screen.getByRole('button', { name: EMAIL.send })
+    await user.click(send)
+    await waitFor(() => expect(send).toBeDisabled())
+    expect(screen.queryByRole('button', { name: CLOSE_LABEL })).not.toBeInTheDocument()
+    expect(onClose).not.toHaveBeenCalled()
+
+    pending.resolve(SENT)
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
+    expect(await screen.findByRole('button', { name: CLOSE_LABEL })).toBeInTheDocument()
+  })
+})
+
 describe('SendClientEmailModal — success', () => {
   it('says «Лист надіслано», closes, and makes the client list read again', async () => {
     const user = userEvent.setup()
@@ -307,6 +383,25 @@ describe('SendClientEmailModal — refusals in the operator’s words', () => {
     const alert = await screen.findByRole('alert')
     expect(alert).toHaveTextContent(UK_CODES[code])
     expect(alert).not.toHaveTextContent('English server text')
+  })
+
+  it('a refusal WITHOUT a code reads as the sentence of its status, not the framework’s English', async () => {
+    const user = userEvent.setup()
+    speakUkrainianErrors()
+    doors.sendClientMessage.mockRejectedValue(
+      httpError(422, {
+        detail: [{ type: 'string_too_long', loc: ['body', 'subject'], msg: 'String too long' }],
+      })
+    )
+    renderModal()
+
+    await user.type(screen.getByLabelText(EMAIL.subject), 'Subject')
+    await user.type(screen.getByLabelText(EMAIL.body), 'Body')
+    await user.click(screen.getByRole('button', { name: EMAIL.send }))
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent(UK_HTTP.validation)
+    expect(alert).not.toHaveTextContent('String too long')
   })
 })
 

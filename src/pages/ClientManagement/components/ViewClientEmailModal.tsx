@@ -14,11 +14,10 @@ import { useTranslation } from 'react-i18next'
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
-import { getErrorMessage } from '@/lib/errors'
 import { formatDateTime } from '@/lib/localeFormat'
 import { piiProps } from '@/lib/openreplay/pii'
 import { useAuthStore } from '@/stores/authStore'
-import { useClientEmailMessage } from '@/features/clientEmail'
+import { clientEmailFailureText, useClientEmailMessage } from '@/features/clientEmail'
 import type { ClientEmailReplyTarget } from './SendClientEmailModal'
 
 export interface ViewClientEmailModalProps {
@@ -62,13 +61,13 @@ export function ViewClientEmailModal({
             <p className="text-muted-foreground text-sm">{t('common.loading')}</p>
           ) : error ? (
             <p role="alert" className="text-error-500 text-sm">
-              {getErrorMessage(error)}
+              {clientEmailFailureText(error)}
             </p>
           ) : letter ? (
             <div className="flex flex-col gap-4">
               <div className="flex flex-wrap items-center gap-2 text-sm">
                 <span className="text-foreground font-medium">
-                  {formatDateTime(letter.at, i18n.language, timezone)}
+                  {letter.at ? formatDateTime(letter.at, i18n.language, timezone) : '—'}
                 </span>
                 <span className="bg-muted text-foreground rounded-full px-2 py-0.5 text-xs">
                   {letter.direction === 'incoming'

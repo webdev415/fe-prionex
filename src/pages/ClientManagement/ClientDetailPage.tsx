@@ -944,6 +944,12 @@ export function ClientDetailPage() {
   const clientEmailTab = useClientEmailTab(
     isValidClientId && activeRightCardTab === 'call-sms-history'
   )
+  // «Пошта» can disappear under the operator (the channel is switched off, the
+  // project changes): fall back to «Усі» instead of a selected tab that is gone,
+  // «Останні листи» over it and an empty panel.
+  useEffect(() => {
+    if (activeCallSmsTab === 'email' && !clientEmailTab.visible) setActiveCallSmsTab('all')
+  }, [activeCallSmsTab, clientEmailTab.visible])
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
 
   // v3 priority for the card header (KAN-791): the header badge is the "stub"

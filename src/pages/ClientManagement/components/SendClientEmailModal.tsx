@@ -14,9 +14,12 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { Icons } from '@/lib/icons'
-import { getErrorMessage } from '@/lib/errors'
 import { piiProps } from '@/lib/openreplay/pii'
-import { useSendClientEmail, type SendClientEmailRequest } from '@/features/clientEmail'
+import {
+  clientEmailFailureText,
+  useSendClientEmail,
+  type SendClientEmailRequest,
+} from '@/features/clientEmail'
 
 /** Limits of the send door; the server refuses anything longer. */
 const SUBJECT_MAX_LENGTH = 998
@@ -73,14 +76,27 @@ export function SendClientEmailModal({
       toast.success(t('pages.clients.email.sent'))
       onClose()
     } catch (error) {
-      setRefusal(getErrorMessage(error))
+      setRefusal(clientEmailFailureText(error))
     } finally {
       inFlight.current = false
     }
   }
 
+  /*
+   * While the letter is on its way the modal stays: no ×, no Escape, no click
+   * outside, «Скасувати» disabled. Closing it mid-request would drop the answer
+   * (a refusal nobody reads) and the draft, and opening it again would start a
+   * second request beside the first.
+   */
   return (
-    <Modal open={open} onClose={onClose} maxWidth="xl" className="p-4 sm:p-6">
+    <Modal
+      open={open}
+      onClose={onClose}
+      preventOutsideClose={sendEmail.isPending}
+      showCloseButton={!sendEmail.isPending}
+      maxWidth="xl"
+      className="p-4 sm:p-6"
+    >
       <div className="flex flex-col gap-4 sm:gap-6">
         <ModalHeader
           icon={
@@ -115,7 +131,13 @@ export function SendClientEmailModal({
           )}
         </ModalContent>
         <ModalFooter className="flex-col gap-2 sm:flex-row sm:gap-3">
-          <Button variant="cancel" size="sm" onClick={onClose} className="w-full rounded-md">
+          <Button
+            variant="cancel"
+            size="sm"
+            onClick={onClose}
+            disabled={sendEmail.isPending}
+            className="w-full rounded-md"
+          >
             {t('actions.cancel')}
           </Button>
           <Button

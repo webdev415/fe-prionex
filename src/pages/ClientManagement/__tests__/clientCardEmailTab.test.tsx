@@ -12,7 +12,7 @@
  * All addresses, subjects and bodies are synthetic (`@example.ca`).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -357,9 +357,12 @@ describe('«Пошта» sub-tab of the client card (T-B4)', () => {
   })
 
   it('is not there when the server answers «enabled: false»', async () => {
+    // email-service answers `can_*: false` while its flag is off. The scene gives
+    // `can_read: true` on purpose: the flag alone has to hide the tab — with the
+    // right missing as well, the scene could not tell the two rules apart.
     transport.capabilities = {
       status: 200,
-      data: { enabled: false, project_mailbox: null, can_read: false, can_send: false },
+      data: { enabled: false, project_mailbox: null, can_read: true, can_send: true },
     }
     const { container, client } = renderCard()
     await openCallSmsTab(container)
@@ -376,6 +379,20 @@ describe('«Пошта» sub-tab of the client card (T-B4)', () => {
     await capabilitiesSettled(client)
     expect(emailTabButton(container)).toBeNull()
     expect(capabilitiesQuery(client)?.state.data).toMatchObject({ enabled: false })
+  })
+
+  it('is not there when the server says the token may not read — even with the right in the role', async () => {
+    // `/me` already carries the right (the role got it), the token does not yet:
+    // the door checks the token and would answer 403 to every read.
+    transport.capabilities = enabledCapabilities({ can_read: false })
+    const { container, client } = renderCard()
+    await openCallSmsTab(container)
+
+    await capabilitiesSettled(client)
+    expect(emailTabButton(container)).toBeNull()
+    expect(transport.requested).not.toContain(MESSAGES_URL)
+    // Positive control: the local right did let the question through.
+    expect(emailRequests()).toContain(CAPABILITIES_URL)
   })
 
   it('leaves the other sub-tabs where they were', async () => {
@@ -402,6 +419,32 @@ describe('«Пошта» sub-tab of the client card (T-B4)', () => {
 
     expect(await screen.findByText('Останні листи')).toBeInTheDocument()
     expect(screen.queryByText('Останні дзвінки та SMS')).not.toBeInTheDocument()
+  })
+
+  it('falls back to «Усі» when «Пошта» disappears under the operator', async () => {
+    const { container, client } = renderCard()
+    const { user } = await openCallSmsTab(container)
+    const button = await waitFor(() => {
+      const found = emailTabButton(container)
+      expect(found).toBeTruthy()
+      return found as HTMLElement
+    })
+    await user.click(button)
+    expect(await screen.findByText('Останні листи')).toBeInTheDocument()
+
+    // The channel is switched off; the card learns it on its next question.
+    transport.capabilities = {
+      status: 200,
+      data: { enabled: false, project_mailbox: null, can_read: false, can_send: false },
+    }
+    await act(async () => {
+      await client.invalidateQueries({ queryKey: ['clientEmail', 'capabilities'] })
+    })
+
+    const header = await screen.findByText('Останні дзвінки та SMS')
+    expect(screen.queryByText('Останні листи')).not.toBeInTheDocument()
+    expect(emailTabButton(container)).toBeNull()
+    expect(within(subTabBar(header)).getByText('Всі')).toHaveClass('bg-primary/10')
   })
 
   it('reads a letter as text: no markup rendered, nothing asked of the lawyers’ doors', async () => {

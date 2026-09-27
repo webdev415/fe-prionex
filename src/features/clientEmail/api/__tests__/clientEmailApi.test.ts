@@ -7,7 +7,9 @@
  * adds only the host and a missing `/api/v1` prefix 404s against the real
  * gateway, never here.
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import i18n from '@/lib/i18n'
+import ukErrors from '@/../public/locales/uk/errors.json'
 
 const mockApi = vi.hoisted(() => ({
   get: vi.fn(),
@@ -19,9 +21,34 @@ vi.mock('@/lib/api', () => ({
   default: mockApi,
 }))
 
-const { clientEmailApi, getCapabilities, listClientMessages, getClientMessage, sendClientMessage } =
-  await import('../clientEmailApi')
+const {
+  clientEmailApi,
+  clientEmailFailureText,
+  getCapabilities,
+  listClientMessages,
+  getClientMessage,
+  sendClientMessage,
+} = await import('../clientEmailApi')
 const { CLIENT_EMAIL_DISABLED } = await import('../types')
+
+type Errors = { codes: Record<string, string>; http: Record<string, string> }
+const UK = ukErrors as Errors
+
+/** i18next answers `errors` keys from the Ukrainian file — codes and HTTP statuses alike. */
+function speakUkrainianErrors() {
+  vi.spyOn(i18n, 't').mockImplementation(((key: string, options?: Record<string, unknown>) => {
+    if (options?.ns === 'errors') {
+      const [section, name] = key.split('.')
+      const table = section === 'codes' ? UK.codes : section === 'http' ? UK.http : undefined
+      if (table && name in table) return table[name]
+    }
+    return (options?.defaultValue as string) ?? key
+  }) as unknown as typeof i18n.t)
+}
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
 
 /** An axios-shaped failure, as `axios.isAxiosError` recognises it. */
 function httpError(status: number, data?: Record<string, unknown>) {
@@ -155,5 +182,69 @@ describe('client letters', () => {
       'listClientMessages',
       'sendClientMessage',
     ])
+  })
+})
+
+describe('clientEmailFailureText — what the operator reads', () => {
+  it('a coded refusal reads as the sentence of its code', () => {
+    speakUkrainianErrors()
+    const refusal = httpError(409, {
+      detail: 'Contact with the client by e-mail is restricted',
+      code: 'EMAIL_CONTACT_RESTRICTED',
+    })
+
+    expect(clientEmailFailureText(refusal)).toBe(UK.codes.EMAIL_CONTACT_RESTRICTED)
+  })
+
+  it('404 without a code — the gateway after the channel went off — reads as «not found»', () => {
+    speakUkrainianErrors()
+
+    const text = clientEmailFailureText(httpError(404, { detail: 'Not Found' }))
+
+    expect(text).toBe(UK.http.notFound)
+    expect(text).not.toContain('Not Found')
+  })
+
+  it('403 without a code does not show the permission slug of the door', () => {
+    speakUkrainianErrors()
+    const failure = httpError(403, {
+      detail: 'Insufficient permissions. Requires: email.client.read',
+    })
+
+    const text = clientEmailFailureText(failure)
+
+    expect(text).toBe(UK.http.forbidden)
+    expect(text).not.toContain('email.client.read')
+  })
+
+  it('422 of the framework reads as the validation sentence, not its field list', () => {
+    speakUkrainianErrors()
+    const failure = httpError(422, {
+      detail: [{ type: 'missing', loc: ['body', 'subject'], msg: 'Field required' }],
+    })
+
+    const text = clientEmailFailureText(failure)
+
+    expect(text).toBe(UK.http.validation)
+    expect(text).not.toContain('Field required')
+  })
+
+  it('a status without a sentence of its own reads as the generic one, not axios English', () => {
+    speakUkrainianErrors()
+
+    const text = clientEmailFailureText(httpError(503, { detail: 'Service Unavailable' }))
+
+    expect(text).toBe(UK.http.generic)
+    expect(text).not.toContain('status code')
+  })
+
+  it('a network failure without a response keeps the network sentence', () => {
+    speakUkrainianErrors()
+    const failure = Object.assign(new Error('Network Error'), {
+      isAxiosError: true,
+      code: 'ERR_NETWORK',
+    })
+
+    expect(clientEmailFailureText(failure)).toBe(UK.http.network)
   })
 })

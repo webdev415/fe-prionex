@@ -42,10 +42,18 @@ export interface ClientEmailTab {
 /**
  * Whether the client card shows «Пошта».
  *
- * Both halves are required: the caller's right to read client e-mail AND the
- * server saying the channel is on. The right alone would show a tab on an api
- * whose channel is off (or on an older api that does not have it at all); the
- * server alone would show correspondence to someone without the right.
+ * Three answers are required: the caller's right to read client e-mail, the
+ * server saying the channel is on, AND the server saying the caller may read.
+ * The right alone would show a tab on an api whose channel is off (or on an older
+ * api that does not have it at all); the server alone would show correspondence
+ * to someone without the right.
+ *
+ * Why the local right is not enough on its own: it comes from `/me`, which reads
+ * the role in the database and is refreshed every few minutes, while the
+ * email-service door checks the claims of the TOKEN, which live until the next
+ * sign-in. A right granted in the middle of the day would open the tab minutes
+ * later and every read would answer 403 for hours. `can_read` is the door's own
+ * view of the same token.
  *
  * `active` is the lazy gate of the card (the call/SMS tab is open): nobody pays
  * for the question until it matters, and a caller without the right never asks.
@@ -53,7 +61,10 @@ export interface ClientEmailTab {
 export function useClientEmailTab(active: boolean): ClientEmailTab {
   const canRead = useHasPermission(PERMISSIONS.EMAIL.CLIENT_READ)
   const { data } = useClientEmailCapabilities(active && canRead)
-  return { visible: canRead && data?.enabled === true, capabilities: data }
+  return {
+    visible: canRead && data?.enabled === true && data?.can_read === true,
+    capabilities: data,
+  }
 }
 
 export function useClientEmailMessages(

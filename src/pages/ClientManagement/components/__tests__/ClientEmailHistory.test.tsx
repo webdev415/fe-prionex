@@ -68,15 +68,17 @@ const doors = vi.hoisted(() => ({
   sendClientMessage: vi.fn(),
 }))
 
-vi.mock('@/features/clientEmail/api/clientEmailApi', () => ({
-  clientEmailApi: doors,
-  ...doors,
-}))
+/** The doors are stubbed; how a failure is read (`clientEmailFailureText`) stays real. */
+vi.mock('@/features/clientEmail/api/clientEmailApi', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/features/clientEmail/api/clientEmailApi')>()
+  return { ...actual, clientEmailApi: doors, ...doors }
+})
 
 type Dictionary = Record<string, unknown>
 const EMAIL = (ukCommon as { pages: { clients: { email: Record<string, string> } } }).pages.clients
   .email
 const CODES = (ukErrors as { codes: Record<string, string> }).codes
+const HTTP = (ukErrors as { http: Record<string, string> }).http
 
 const CLIENT_ID = 42
 
@@ -128,12 +130,16 @@ function httpError(status: number, data: Dictionary) {
   })
 }
 
-/** `translateErrorCode` reads `codes.*` through i18next — answer from the Ukrainian file. */
+/** `lib/errors` reads `codes.*` and `http.*` through i18next — answer from the Ukrainian file. */
 function speakUkrainianErrors() {
-  vi.spyOn(i18n, 't').mockImplementation(((key: string, options?: Dictionary) =>
-    options?.ns === 'errors' && key.startsWith('codes.')
-      ? (CODES[key.slice('codes.'.length)] ?? (options?.defaultValue as string) ?? key)
-      : ((options?.defaultValue as string) ?? key)) as unknown as typeof i18n.t)
+  vi.spyOn(i18n, 't').mockImplementation(((key: string, options?: Dictionary) => {
+    if (options?.ns === 'errors') {
+      const [section, name] = key.split('.')
+      const table = section === 'codes' ? CODES : section === 'http' ? HTTP : undefined
+      if (table && name in table) return table[name]
+    }
+    return (options?.defaultValue as string) ?? key
+  }) as unknown as typeof i18n.t)
 }
 
 beforeEach(() => {
@@ -190,6 +196,33 @@ describe('ClientEmailHistory — states (AC-B-2 п. 3–6)', () => {
     expect(alert).toHaveTextContent(CODES.EMAIL_CHECK_UNAVAILABLE)
     expect(alert).not.toHaveTextContent('Could not verify the client')
     expect(screen.queryByText(EMAIL.none)).not.toBeInTheDocument()
+  })
+
+  it('a failed load WITHOUT a code shows the sentence of its status, not the server’s English', async () => {
+    // The gateway's answer once the channel is switched off while the card still
+    // holds an earlier «enabled: true».
+    speakUkrainianErrors()
+    doors.listClientMessages.mockRejectedValue(httpError(404, { detail: 'Not Found' }))
+    renderHistory()
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent(HTTP.notFound)
+    expect(alert).not.toHaveTextContent('Not Found')
+    expect(screen.queryByText(EMAIL.none)).not.toBeInTheDocument()
+  })
+
+  it('the server says the token may not read — the list is not asked and nothing is claimed', async () => {
+    // A fresh right in the role, an old token: `/me` already says yes, the door
+    // would still answer 403.
+    doors.getCapabilities.mockResolvedValue(capabilities({ can_read: false }))
+    renderHistory()
+
+    // Positive control: the answer about the channel has arrived and been drawn.
+    expect(await screen.findByRole('button', { name: EMAIL.write })).toBeInTheDocument()
+    expect(doors.listClientMessages).not.toHaveBeenCalled()
+    expect(screen.queryByText(EMAIL.none)).not.toBeInTheDocument()
+    expect(screen.queryByText(EMAIL.notConfigured)).not.toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 })
 
@@ -260,19 +293,33 @@ describe('ClientEmailHistory — rows (AC-B-2 п. 5, 7, 8)', () => {
   })
 
   it('obscures the correspondent and the subject for the session recording, not the time', async () => {
+    const at = '2026-09-26T08:30:00Z'
     const row = letter({
       id: 'pii-1',
       subject: 'About my loan',
       counterparty: 'client.1741@example.ca',
-      at: '2026-09-26T08:30:00Z',
+      at,
     })
     doors.listClientMessages.mockResolvedValue(page([row]))
     renderHistory()
 
     expectObscured(await screen.findByText('client.1741@example.ca'))
     expectObscured(screen.getByText('About my loan'))
-    expectNotObscured(screen.getByText(formatDateTime(row.at, 'uk')))
+    expectNotObscured(screen.getByText(formatDateTime(at, 'uk')))
     expectNotObscured(screen.getByText(EMAIL.incoming))
+  })
+
+  it('a row without a timestamp shows «—», not a date made up from null', async () => {
+    doors.listClientMessages.mockResolvedValue(
+      page([letter({ id: 'no-at', subject: 'Undated letter', at: null })])
+    )
+    const { container } = renderHistory()
+
+    await screen.findByText('Undated letter')
+    const row = container.querySelector('[data-email-row="no-at"]') as HTMLElement
+    expect(within(row).getByText('—')).toBeInTheDocument()
+    // `new Date(null)` is 1 January 1970 — a real, wrong date.
+    expect(row).not.toHaveTextContent('1970')
   })
 
   it('offers «Написати листа» when the server says the caller may send', async () => {
@@ -325,5 +372,21 @@ describe('ClientEmailHistory — reading and answering a letter from the list', 
         in_reply_to_message_id: 'in-7',
       })
     )
+  })
+
+  it('a letter that is gone answers in the operator’s words, not the door’s English', async () => {
+    const user = userEvent.setup()
+    speakUkrainianErrors()
+    doors.listClientMessages.mockResolvedValue(
+      page([letter({ id: 'gone-1', subject: 'Old letter' })])
+    )
+    doors.getClientMessage.mockRejectedValue(httpError(404, { detail: 'Message not found' }))
+    renderHistory()
+
+    await user.click(await screen.findByText('Old letter'))
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent(HTTP.notFound)
+    expect(alert).not.toHaveTextContent('Message not found')
   })
 })

@@ -14,11 +14,14 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
-import { getErrorMessage } from '@/lib/errors'
 import { formatDateTime } from '@/lib/localeFormat'
 import { piiProps } from '@/lib/openreplay/pii'
 import { useAuthStore } from '@/stores/authStore'
-import { useClientEmailCapabilities, useClientEmailMessages } from '@/features/clientEmail'
+import {
+  clientEmailFailureText,
+  useClientEmailCapabilities,
+  useClientEmailMessages,
+} from '@/features/clientEmail'
 import { MessagingHistorySkeleton } from './MessagingHistorySkeleton'
 import { SendClientEmailModal, type ClientEmailReplyTarget } from './SendClientEmailModal'
 import { ViewClientEmailModal } from './ViewClientEmailModal'
@@ -37,15 +40,17 @@ export function ClientEmailHistory({ clientId }: ClientEmailHistoryProps) {
   const timezone = useAuthStore((s) => s.user?.timezone)
   const { data: capabilities, isLoading: isCapabilitiesLoading } = useClientEmailCapabilities()
   const connected = capabilities?.project_mailbox === 'connected'
+  // The token's own right, as the door sees it — see `useClientEmailTab`.
+  const canRead = capabilities?.can_read === true
   const canSend = connected && capabilities?.can_send === true
-  const messages = useClientEmailMessages(clientId, LIST_PARAMS, connected)
+  const messages = useClientEmailMessages(clientId, LIST_PARAMS, connected && canRead)
   const [openMessageId, setOpenMessageId] = useState<string | null>(null)
   const [compose, setCompose] = useState<Compose | null>(null)
 
   const items = messages.data?.items ?? []
 
   let content
-  if (isCapabilitiesLoading || (connected && messages.isLoading)) {
+  if (isCapabilitiesLoading || (connected && canRead && messages.isLoading)) {
     content = <MessagingHistorySkeleton dateGroups={1} cardsPerGroup={2} />
   } else if (!connected) {
     content = (
@@ -53,10 +58,13 @@ export function ClientEmailHistory({ clientId }: ClientEmailHistoryProps) {
         {t('pages.clients.email.notConfigured')}
       </p>
     )
+  } else if (!canRead) {
+    // Nothing was read, so nothing is claimed — neither «no letters» nor an error.
+    content = null
   } else if (messages.isError) {
     content = (
       <p role="alert" className="text-error-500 text-sm">
-        {getErrorMessage(messages.error)}
+        {clientEmailFailureText(messages.error)}
       </p>
     )
   } else if (items.length === 0) {
@@ -80,7 +88,7 @@ export function ClientEmailHistory({ clientId }: ClientEmailHistoryProps) {
             >
               <span className="flex flex-wrap items-center gap-2 text-xs">
                 <span className="text-foreground font-medium">
-                  {formatDateTime(message.at, i18n.language, timezone)}
+                  {message.at ? formatDateTime(message.at, i18n.language, timezone) : '—'}
                 </span>
                 <span className="bg-muted text-foreground rounded-full px-2 py-0.5">
                   {message.direction === 'incoming'
