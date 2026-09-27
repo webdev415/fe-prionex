@@ -82,6 +82,19 @@ describe('payment receipt amounts', () => {
     expect(text).not.toContain('UAH')
   })
 
+  it('writes Canadian dollars the English way for a CAD project', () => {
+    setActiveCurrency('CAD')
+
+    generatePaymentReceiptPDF(receipt)
+
+    const text = written.join('\n').replace(/\s/g, ' ')
+    expect(text).toContain('CA$1,234.50')
+    expect(text).toContain('-CA$1,234.50')
+    expect(text).not.toContain('₴')
+    expect(text).not.toContain('UAH')
+    expect(text).not.toContain('€')
+  })
+
   it('keeps hryvnia for a hryvnia project', () => {
     generatePaymentReceiptPDF(receipt)
 
