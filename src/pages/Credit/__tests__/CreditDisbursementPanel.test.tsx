@@ -251,9 +251,7 @@ describe('CreditLoanDetailPage → блок «Хід видачі грошей»
       contract_number: 'FB-000007',
       status: 'pending_disbursement',
     })
-    expect(
-      screen.getByText('credit.disbursementFailure.payout_refused_pending_review')
-    ).toBeInTheDocument()
+    expect(screen.getByText('credit.railFailure.payout_refused_pending_review')).toBeInTheDocument()
     // Причина разбора уходит в строку уже ПЕРЕВЕДЁННОЙ: в подстановке стоит
     // ключ словаря, а не сырой `payout_account_not_pinned`.
     expect(
