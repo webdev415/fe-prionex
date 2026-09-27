@@ -142,6 +142,11 @@
     "SITE_OWNER_NOT_SET": "El proyecto propietario del sitio no está elegido o está desactivado temporalmente. Si está desactivado, reactívelo o traslade el sitio: puede hacerlo quien tiene «Gestionar la configuración» en él. Si no está elegido, solo el administrador del sistema (el rol «Admin») del proyecto que vaya a ser el propietario puede elegirlo en la configuración del módulo de crédito, pestaña «Sitio».",
     "SITE_ADMIN_ACCESS_DENIED": "No tiene permiso sobre el contenido del sitio en el proyecto propietario del sitio.",
     "SITE_OWNER_CHANGE_DENIED": "No se le permite cambiar el proyecto propietario del sitio. Cuando ya hay propietario (aunque esté desactivado temporalmente), solo lo cambia quien tiene «Gestionar la configuración» en el proyecto propietario actual; cuando no lo hay en absoluto, solo el administrador del sistema (el rol «Admin») del proyecto que se elige. Mientras se actúa en nombre de otro usuario, nadie.",
-    "SITE_OWNER_PROJECT_NOT_FOUND": "Ese proyecto no existe o se ha eliminado o desactivado, así que no puede ser propietario del sitio."
+    "SITE_OWNER_PROJECT_NOT_FOUND": "Ese proyecto no existe o se ha eliminado o desactivado, así que no puede ser propietario del sitio.",
+    "CLIENT_HAS_CONTACT_RESTRICTIONS": "El cliente tiene restricciones de contacto vigentes y no se puede eliminar: al eliminarlo se perderían y sus direcciones volverían a quedar abiertas a los mensajes. Solo se puede eliminar después de levantar las restricciones.",
+    "CONTACT_RESTRICTION_ALREADY_LIFTED": "Esta restricción de contacto ya se ha levantado.",
+    "CONTACT_RESTRICTION_NOT_LIFTED": "Esta restricción de contacto está vigente: no hay ningún levantamiento que deshacer.",
+    "CONTACT_RESTRICTION_ALREADY_REINSTATED": "Este levantamiento ya se ha deshecho: la restricción ya se volvió a poner en vigor.",
+    "PROJECT_CANADA_DISABLED": "Los proyectos en dólares canadienses o en Canadá todavía no están disponibles aquí. Elija otra moneda u otro país."
   }
 }

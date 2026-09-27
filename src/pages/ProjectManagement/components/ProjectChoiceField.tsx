@@ -23,7 +23,12 @@ export function ProjectChoiceField({
   return (
     <div>
       <Label className="mb-2 block text-sm font-light">{label}</Label>
-      <RadioGroup value={value} onValueChange={onChange} disabled={disabled} className="flex gap-6">
+      <RadioGroup
+        value={value}
+        onValueChange={onChange}
+        disabled={disabled}
+        className="flex flex-wrap gap-x-6 gap-y-2"
+      >
         {options.map((option) => (
           <div key={option.value} className="flex items-center gap-2">
             <RadioItem value={option.value} id={`${name}-${option.value}`} />

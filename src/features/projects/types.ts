@@ -5,9 +5,9 @@
  * Updated: 2025-12-08 - Added new fields for UI enhancements
  */
 
-export const PROJECT_CURRENCIES = ['UAH', 'EUR'] as const
+export const PROJECT_CURRENCIES = ['UAH', 'EUR', 'CAD'] as const
 export type ProjectCurrency = (typeof PROJECT_CURRENCIES)[number]
-export const PROJECT_COUNTRIES = ['UA', 'ES'] as const
+export const PROJECT_COUNTRIES = ['UA', 'ES', 'CA'] as const
 export type ProjectCountry = (typeof PROJECT_COUNTRIES)[number]
 
 /**

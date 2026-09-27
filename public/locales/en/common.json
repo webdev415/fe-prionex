@@ -463,7 +463,8 @@
     },
     "currencyUnit": {
       "UAH": "UAH",
-      "EUR": "EUR"
+      "EUR": "EUR",
+      "CAD": "CAD"
     }
   },
   "status": {
@@ -4478,12 +4479,14 @@
           "label": "Currency",
           "hint": "All amounts in this project are shown in this currency.",
           "UAH": "Hryvnia (₴)",
-          "EUR": "Euro (€)"
+          "EUR": "Euro (€)",
+          "CAD": "Canadian dollar (CA$)"
         },
         "country": {
           "label": "Country",
           "UA": "Ukraine",
-          "ES": "Spain"
+          "ES": "Spain",
+          "CA": "Canada"
         }
       },
       "callingWindow": {
