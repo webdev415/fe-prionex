@@ -56,6 +56,7 @@ import {
   railOperationAnchor,
   submissionOf,
 } from '@/features/credit/api/railOperations'
+import { loanMailKind, loanSiteMailState, portalEventLabel } from '@/features/credit/api/timeline'
 import { CreditStatusBadge } from './components/CreditStatusBadge'
 import { CreditDocumentOpenButton } from './components/CreditDocumentOpenButton'
 import { CreditClientLink } from './components/CreditClientLink'
@@ -590,6 +591,58 @@ function LoanOwedToClient({ loan }: { loan: LoanDetail }) {
   )
 }
 
+/**
+ * Письма, которые сайт отправил клиенту по этому кредиту.
+ *
+ * Лента приходит в ответе паспорта, поэтому своей загрузки и ошибки у панели
+ * нет. «Модуль не передав» и «листів немає» — разные состояния: у кредита без
+ * событий сайта лента законно пуста. Время — источника (`ts`: письмо принял
+ * транспорт), а не приёма модулем, и в поясе паспорта: в одной вкладке — одни
+ * сутки. Псевдоним клиента и ключ повода оператору ничего не говорят и не
+ * рисуются. Подпись панели называет правило отправки, а не вывод: отсутствие
+ * письма не доказывает, что клиент не открывал кабинет.
+ */
+function LoanSiteMail({ loan, timezone }: { loan: LoanDetail; timezone?: string }) {
+  const { t } = useTranslation('common')
+  const mail = loanSiteMailState(loan.portal_events, loan.portal_events_total)
+  const truncated = mail.kind === 'notProvided' ? null : mail.truncated
+
+  return (
+    <Panel title={t('credit.communications.mail')} footer={t('credit.loanMail.footer')}>
+      {truncated && (
+        <p className="text-warning-800 mb-2 text-xs">
+          {t('credit.loanMail.truncated', { shown: truncated.shown, total: truncated.total })}
+        </p>
+      )}
+      {mail.kind === 'notProvided' ? (
+        <p className="text-muted-foreground text-sm">{t('credit.loanMail.notProvided')}</p>
+      ) : mail.kind === 'none' ? (
+        <p className="text-muted-foreground text-sm">{t('credit.loanMail.none')}</p>
+      ) : (
+        <ul className="text-sm">
+          {mail.rows.map((record, index) => {
+            const kind = loanMailKind(t, record)
+            return (
+              <li
+                key={record.event_id || index}
+                className="border-border flex gap-3 border-b py-1.5 last:border-0"
+              >
+                <span className="text-muted-foreground w-40 shrink-0 font-mono text-xs">
+                  {formatDateTime(record.ts, timezone)}
+                </span>
+                <span>
+                  {portalEventLabel(t, record.event)}
+                  {kind && <span className="text-muted-foreground"> · {kind}</span>}
+                </span>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </Panel>
+  )
+}
+
 function LoanPassport({
   loan,
   state,
@@ -750,6 +803,8 @@ function LoanPassport({
           )}
         </Field>
       </Panel>
+
+      <LoanSiteMail loan={loan} timezone={timezone} />
     </>
   )
 }

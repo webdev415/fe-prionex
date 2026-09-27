@@ -35,6 +35,7 @@ import type {
   CreditLoanRailOperations,
   CreditLoanStatus,
   CreditPayment,
+  CreditPortalEventRecord,
   CreditRailCallback,
   CreditRailEvent,
   CreditRailOperation,
@@ -199,6 +200,16 @@ export type _timeline_row_last_at_required = Assert<IsRequired<CreditTimelineRow
 export type _loan_client_id_nullable = Assert<
   null extends CreditLoanDetail['client_id'] ? true : false
 >
+
+/* ─── Письма сайта в паспорте кредита ──────────────────────────────────
+   Панель «Листи сайту» читает ленту кредита, полное число её событий и вид
+   письма из `details`. Что сломается, если поле пропадёт из типа: панель
+   перестанет его читать и скажет «модуль не передав» о ленте, которую модуль
+   отдаёт, промолчит об усечении или назовёт каждое письмо «привід не названо» —
+   без единого слова компилятора. */
+export type _loan_has_portal_events = Assert<Has<CreditLoanDetail, 'portal_events'>>
+export type _loan_has_portal_events_total = Assert<Has<CreditLoanDetail, 'portal_events_total'>>
+export type _portal_event_has_details = Assert<Has<CreditPortalEventRecord, 'details'>>
 
 /* Переход в хронологии: `null` у актора рисуется «—», у прежнего статуса — без
    стрелки. Сузят поля до `string` — код начнёт звать `credit.actor.null` и
