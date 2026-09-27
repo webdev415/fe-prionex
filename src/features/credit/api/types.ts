@@ -297,12 +297,18 @@ export interface CreditTimelineRow {
   transition?: CreditTimelineTransition | null
 }
 
-/** Событие сайта, привязанное к заявке — `PortalEventRecord` (openapi.yaml модуля v0.1.26); объявлен минимум, который читается. */
+/** Событие сайта, привязанное к заявке или кредиту — `PortalEventRecord` (openapi.yaml модуля v0.1.26); объявлен минимум, который читается. */
 export interface CreditPortalEventRecord {
   event_id: string
   ts: string
   source: string
   event: string
+  /**
+   * Дополнительные поля события — плоский словарь скаляров (`PortalEvent.details`).
+   * Читается вид письма-уведомления: `details.type` — код повода модуля. `?` — в
+   * `required` контракта поля нет.
+   */
+  details?: Record<string, unknown>
 }
 
 /** Карточка заявки целиком (InternalApplication + анкета и документы). */
@@ -630,6 +636,16 @@ export interface CreditLoanDetail {
   disbursed_at: string
   maturity_date: string
   next_payment?: { due_date: string; amount_minor: number }
+  /**
+   * События сайта, привязанные к этому кредиту, и их полное число — поля
+   * `InternalLoan` модуля. Лента ограничена потолком модуля: последние события
+   * по времени источника, от старых к новым; число считает все события кредита.
+   * `?` — в `required` контракта их нет, и стенд, отстающий от контракта, их не
+   * пришлёт: экран обязан сказать «модуль не передав». Пустой массив — законное
+   * «событий не было», а не отсутствие ленты.
+   */
+  portal_events?: CreditPortalEventRecord[]
+  portal_events_total?: number
 }
 
 export interface CreditScheduleItem {
