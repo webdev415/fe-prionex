@@ -6385,6 +6385,7 @@
         "calls": "Llamadas",
         "sms": "SMS",
         "messaging": "Mensajería",
+        "email": "Correo",
         "notes": "Notas",
         "all": "Todos",
         "dateRange": "Intervalo de fechas",
@@ -6413,6 +6414,23 @@
           "comment": "Comentario",
           "employee": "Empleado"
         }
+      },
+      "email": {
+        "none": "Aún no hay correspondencia por correo con el cliente",
+        "notConfigured": "El buzón del proyecto no está conectado: los correos no están disponibles",
+        "incoming": "del cliente",
+        "outgoing": "al cliente",
+        "system": "del sistema",
+        "write": "Escribir un correo",
+        "reply": "Responder",
+        "subject": "Asunto",
+        "body": "Mensaje",
+        "send": "Enviar",
+        "sent": "Correo enviado",
+        "attachments": "Adjuntos: {{count}}",
+        "viewTitle": "Correo",
+        "quarantined": "El correo está en cuarentena: su texto no se muestra",
+        "derivedFromHtml": "Texto tomado de la versión HTML del correo: no se muestran tablas ni imágenes"
       },
       "editModal": {
         "title": "Editar cliente",
@@ -6873,6 +6891,7 @@
         "latestSms": "Últimos SMS",
         "latestCallsAndSms": "Últimas llamadas y SMS",
         "latestMessages": "Últimos mensajes",
+        "latestEmails": "Últimos correos",
         "sendMessage": "Enviar mensaje",
         "totalMessages": "Total de mensajes",
         "noMessagingHistory": "Todavía no hay historial de mensajería disponible para este cliente",

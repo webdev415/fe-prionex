@@ -73,6 +73,8 @@ import { useSmsServiceAvailable } from '@/features/sms'
 import { SendSMSModal } from './components/SendSMSModal'
 import { ViewMessageModal } from './components/ViewMessageModal'
 import { SendMessageModal } from './components/SendMessageModal'
+import { ClientEmailHistory } from './components/ClientEmailHistory'
+import { useClientEmailTab } from '@/features/clientEmail'
 import {
   MessagingHistorySkeleton,
   MessagingTabSkeleton,
@@ -546,9 +548,9 @@ export function ClientDetailPage() {
    * убрали», то есть долг пропадает с экрана целиком.
    */
   const creditBlockEnabled = isCreditModuleEnabled()
-  const [activeCallSmsTab, setActiveCallSmsTab] = useState<'all' | 'calls' | 'sms' | 'messaging'>(
-    'all'
-  )
+  const [activeCallSmsTab, setActiveCallSmsTab] = useState<
+    'all' | 'calls' | 'sms' | 'messaging' | 'email'
+  >('all')
   const [isChainExecutorOpen, setIsChainExecutorOpen] = useState(false)
   // Context for the chain executor when opened from a phone row. null/null
   // means "general entry point" (header Log Interaction button) — no chain
@@ -939,6 +941,15 @@ export function ClientDetailPage() {
       { limit: 100, offset: 0 },
       isValidClientId && canAccessMessagingHistory && activeRightCardTab === 'call-sms-history'
     )
+  const clientEmailTab = useClientEmailTab(
+    isValidClientId && activeRightCardTab === 'call-sms-history'
+  )
+  // «Пошта» can disappear under the operator (the channel is switched off, the
+  // project changes): fall back to «Усі» instead of a selected tab that is gone,
+  // «Останні листи» over it and an empty panel.
+  useEffect(() => {
+    if (activeCallSmsTab === 'email' && !clientEmailTab.visible) setActiveCallSmsTab('all')
+  }, [activeCallSmsTab, clientEmailTab.visible])
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
 
   // v3 priority for the card header (KAN-791): the header badge is the "stub"
@@ -4871,7 +4882,9 @@ export function ClientDetailPage() {
                               ? t('pages.clients.detail.latestSms')
                               : activeCallSmsTab === 'messaging'
                                 ? t('pages.clients.detail.latestMessages', 'Latest messages')
-                                : t('pages.clients.detail.latestCallsAndSms')}
+                                : activeCallSmsTab === 'email'
+                                  ? t('pages.clients.detail.latestEmails')
+                                  : t('pages.clients.detail.latestCallsAndSms')}
                         </span>
                       </div>
                       <div className="bg-card/50 flex w-full flex-1 items-center justify-between gap-1 rounded-lg p-1 shadow-sm md:w-auto">
@@ -4923,6 +4936,21 @@ export function ClientDetailPage() {
                             {t('pages.clients.activity.messaging', 'Messaging')}
                           </button>
                         )}
+                        {clientEmailTab.visible && (
+                          <button
+                            type="button"
+                            data-call-sms-tab="email"
+                            onClick={() => setActiveCallSmsTab('email')}
+                            className={cn(
+                              'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs transition-colors md:px-4 md:text-sm',
+                              activeCallSmsTab === 'email'
+                                ? 'bg-primary/10 text-primary-700'
+                                : 'hover:text-primary-700 hover:bg-primary/20 text-muted-foreground cursor-pointer'
+                            )}
+                          >
+                            {t('pages.clients.activity.email')}
+                          </button>
+                        )}
                       </div>
                       <div className="flex w-full flex-1 flex-col items-start gap-2.5 md:w-auto md:flex-col md:items-end">
                         <div className="flex w-full flex-col gap-2 md:w-auto">
@@ -4952,10 +4980,12 @@ export function ClientDetailPage() {
                         </div>
                       </div>
                     </div>
-                    {isCallSmsLoading ||
-                    (canAccessMessagingHistory &&
-                      isMessagingHistoryLoading &&
-                      (activeCallSmsTab === 'messaging' || activeCallSmsTab === 'all')) ? (
+                    {activeCallSmsTab === 'email' && clientEmailTab.visible ? (
+                      <ClientEmailHistory clientId={clientId} />
+                    ) : isCallSmsLoading ||
+                      (canAccessMessagingHistory &&
+                        isMessagingHistoryLoading &&
+                        (activeCallSmsTab === 'messaging' || activeCallSmsTab === 'all')) ? (
                       activeCallSmsTab === 'messaging' ? (
                         <MessagingTabSkeleton />
                       ) : (
