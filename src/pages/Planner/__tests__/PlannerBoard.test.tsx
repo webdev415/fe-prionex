@@ -1,7 +1,7 @@
 /**
  * Board, task creation and status change in the CRM (planner story 1.10).
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -37,6 +37,14 @@ vi.mock('@/api/planner/plannerApi', async (importOriginal) => {
 })
 
 import { plannerRoute } from '@/routes/plannerRoutes'
+
+// The section is lazy-loaded. On a loaded CI runner the first render spent more
+// than the 5 s query timeout on transforming the chunk and the test saw only the
+// loading fallback. The chunk is imported once here, so every test renders the
+// page itself.
+beforeAll(async () => {
+  await import('@/pages/Planner')
+}, 120_000)
 import { makeBoard, makeCard, makeMeta, makeTask } from './plannerFixtures'
 
 function renderAt(path: string) {
