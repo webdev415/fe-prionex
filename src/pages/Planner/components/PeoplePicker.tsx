@@ -1,16 +1,19 @@
 /**
  * People picker of the task form (planner story 1.10; UX «Выбор людей»):
  * search by name in the CRM org mirror (`GET /people`, active people only),
- * the line carries the name and department, up to 10 assignees.
+ * the line carries the name and department, up to 10 assignees. The search waits
+ * for a pause in typing (300 ms) instead of asking on every key.
  */
 import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Input } from '@/components/ui/Input'
+import { useDebounce } from '@/hooks/useDebounce'
 import { piiProps } from '@/lib/openreplay/pii'
 import { usePlannerPeople } from '@/api/planner/plannerQueries'
 import type { PlannerPerson } from '@/api/planner/plannerApi'
 
 export const MAX_ASSIGNEES = 10
+const PEOPLE_SEARCH_DEBOUNCE_MS = 300
 
 interface PeoplePickerProps {
   value: PlannerPerson[]
@@ -21,7 +24,8 @@ export function PeoplePicker({ value, onChange }: PeoplePickerProps) {
   const { t } = useTranslation('planner')
   const [query, setQuery] = useState('')
   const listId = useId()
-  const people = usePlannerPeople(query)
+  const debouncedQuery = useDebounce(query, PEOPLE_SEARCH_DEBOUNCE_MS)
+  const people = usePlannerPeople(debouncedQuery)
   const chosen = new Set(value.map((person) => person.user_id))
   const full = value.length >= MAX_ASSIGNEES
   const results = (people.data?.items ?? []).filter((person) => !chosen.has(person.user_id))
@@ -37,7 +41,7 @@ export function PeoplePicker({ value, onChange }: PeoplePickerProps) {
         onChange={(event) => setQuery(event.target.value)}
       />
       <div className="text-muted-foreground text-xs">
-        {t('create.assigneesCount', { count: value.length })}
+        {t('create.assigneesCount', { count: value.length, max: MAX_ASSIGNEES })}
       </div>
 
       {value.length > 0 && (

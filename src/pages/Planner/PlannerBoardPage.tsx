@@ -77,7 +77,12 @@ export function PlannerBoardPage() {
                 <p className="text-muted-foreground px-1 text-xs">{t('board.emptyColumn')}</p>
               )}
               {column.map((task) => (
-                <TaskCardView key={task.id} task={task} onOpen={openTask} />
+                <TaskCardView
+                  key={task.id}
+                  task={task}
+                  onOpen={openTask}
+                  timeZone={board.data.tzid}
+                />
               ))}
             </section>
           )

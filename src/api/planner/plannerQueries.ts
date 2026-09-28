@@ -5,7 +5,7 @@
  * open lists, the board and the task panel poll at least every 30 s and on
  * return to the tab.
  */
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useHasPermission } from '@/hooks/usePermissions'
 import { PERMISSIONS } from '@/constants/permissions'
 import {
@@ -17,7 +17,9 @@ import {
   resolveTask,
   searchPeople,
   type PlannerMeta,
+  type PlannerPeopleList,
 } from './plannerApi'
+import { readPlannerError } from './plannerErrors'
 
 export const PLANNER_POLL_MS = 30_000
 
@@ -89,12 +91,23 @@ export function usePlannerBoards(enabled = true) {
   })
 }
 
-export function usePlannerBoard(code: string | undefined, enabled = true) {
+/**
+ * `GET /boards/{code}`. `poll: false` is for observers that only need the
+ * board's configuration at hand (the status chip loads it up front so its menu
+ * is never empty on the first click) — a list of fifty chips must not add fifty
+ * pollers; the board screen itself keeps polling.
+ */
+export function usePlannerBoard(
+  code: string | undefined,
+  enabled = true,
+  { poll = true }: { poll?: boolean } = {}
+) {
   return useQuery({
     queryKey: plannerKeys.board(code ?? ''),
     queryFn: () => getBoard(code as string),
     enabled: enabled && Boolean(code),
     ...live,
+    ...(poll ? {} : { refetchInterval: false as const, staleTime: PLANNER_POLL_MS }),
   })
 }
 
@@ -122,10 +135,26 @@ export function usePlannerTask(key: string | null) {
     enabled: Boolean(key),
     retry: false,
     ...live,
+    // A task that is gone or hidden (404) will not come back by itself: stop
+    // polling it, focus still asks again. Any other failure — no network, a 503,
+    // a 500 — is passing, and the poll keeps going so the panel recovers alone.
+    refetchInterval: (query) =>
+      query.state.status === 'error' && readPlannerError(query.state.error).status === 404
+        ? false
+        : PLANNER_POLL_MS,
   })
 }
 
-/** People search needs at least two characters (contract `minLength: 2`). */
+/**
+ * People search needs at least two characters (contract `minLength: 2`). The
+ * caller debounces the text. While the next answer loads, the previous one is
+ * kept only when the new text is itself a search (two characters or more) and
+ * one text is a prefix of the other — the list does not blink while a name is
+ * typed or corrected. A shorter text (the field cleared after a pick, or its
+ * first letter) keeps nothing. The next name can briefly show the last
+ * search's people only while one text still continues the other, and those
+ * people match the new text too.
+ */
 export function usePlannerPeople(q: string) {
   const query = q.trim()
   return useQuery({
@@ -133,5 +162,13 @@ export function usePlannerPeople(q: string) {
     queryFn: () => searchPeople(query),
     enabled: query.length >= 2,
     staleTime: 60_000,
+    placeholderData: (previous: PlannerPeopleList | undefined, previousQuery) => {
+      const before = previousQuery?.queryKey[2]
+      const refining =
+        query.length >= 2 &&
+        typeof before === 'string' &&
+        (query.startsWith(before) || before.startsWith(query))
+      return refining ? keepPreviousData(previous) : undefined
+    },
   })
 }

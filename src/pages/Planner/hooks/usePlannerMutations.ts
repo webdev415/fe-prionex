@@ -46,7 +46,23 @@ export function toastPlannerError(t: TFunction, error: unknown): void {
     toast.error(t('toast.unavailable'))
     return
   }
+  if (status === 409 || code === 'conflict') {
+    toast.error(t('toast.conflict'))
+    return
+  }
   toast.error(t('toast.failed'))
+}
+
+/**
+ * 409 `idempotency_key_reused` on create: this form's key already created a
+ * task with a different body — typically the first «Створити» reached the
+ * server but its answer was lost, and the form was edited before the retry.
+ * The key is spent: the form that holds it closes (`CreateTaskDialog`), since
+ * every further «Створити» with it would get the same 409.
+ */
+export function isIdempotencyReplayConflict(error: unknown): boolean {
+  const { status, code, details } = readPlannerError(error)
+  return (status === 409 || code === 'conflict') && details.reason === 'idempotency_key_reused'
 }
 
 /** Every list the task can appear in, plus the task itself. */
@@ -120,6 +136,17 @@ export function useCreatePlannerTask() {
       void queryClient.invalidateQueries({ queryKey: plannerKeys.boardTasks(input.boardCode) })
       void queryClient.invalidateQueries({ queryKey: plannerKeys.myTasks() })
     },
-    onError: (error) => toastPlannerError(t, error),
+    onError: (error, input) => {
+      if (isIdempotencyReplayConflict(error)) {
+        // The task probably exists: show the board as it is now instead of
+        // inviting a second attempt that would create a duplicate. The dialog
+        // closes itself on this error (its key cannot be used again).
+        void queryClient.invalidateQueries({ queryKey: plannerKeys.boardTasks(input.boardCode) })
+        void queryClient.invalidateQueries({ queryKey: plannerKeys.myTasks() })
+        toast.info(t('toast.maybeCreated'))
+        return
+      }
+      toastPlannerError(t, error)
+    },
   })
 }

@@ -41,6 +41,23 @@ export const PLANNER_BASE = '/api/v1/planner'
 /** Value of `X-Planner-Client` for every CRM call. */
 export const PLANNER_CLIENT = 'crm'
 
+/**
+ * Text limits of the contract, in runes after trimming the edges (planner
+ * `internal/work/domain/task.go`: `MaxTitleRunes`, `MaxDescriptionRunes`,
+ * `MaxReasonRunes`). The form reports an overflow; it never cuts the text.
+ */
+export const PLANNER_TITLE_MAX = 300
+export const PLANNER_DESCRIPTION_MAX = 20_000
+export const PLANNER_REASON_MAX = 1000
+
+/**
+ * Length the way the planner counts it — Unicode code points (Go runes), not
+ * UTF-16 units: an emoji is one character, where `String.length` says two.
+ */
+export function plannerTextLength(text: string): number {
+  return Array.from(text).length
+}
+
 /** A path of the contract, prefixed with the route-group base. */
 type PlannerPath = keyof paths
 const url = (path: PlannerPath, params: Record<string, string> = {}): string =>
@@ -63,9 +80,24 @@ export function ifMatch(version: number): string {
   return `"${version}"`
 }
 
-/** New `Idempotency-Key` for one user action (a form, not a request). */
+/**
+ * New `Idempotency-Key` for one user action (a form, not a request). The
+ * contract requires a UUID. `crypto.randomUUID` exists only in a secure context
+ * (HTTPS or localhost), so a stand opened over plain HTTP gets a v4 UUID built
+ * from `crypto.getRandomValues`, which has no such restriction.
+ */
 export function newIdempotencyKey(): string {
-  return crypto.randomUUID()
+  if (typeof crypto.randomUUID === 'function') return crypto.randomUUID()
+  return uuidV4FromRandomValues()
+}
+
+/** RFC 4122 version 4 UUID from 16 random bytes (exported for the test). */
+export function uuidV4FromRandomValues(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(16))
+  bytes[6] = (bytes[6] & 0x0f) | 0x40 // version 4
+  bytes[8] = (bytes[8] & 0x3f) | 0x80 // variant 10xx
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
 }
 
 // ─── meta ──────────────────────────────────────────────────────────────────

@@ -2,7 +2,7 @@
  * Board, task creation and status change in the CRM (planner story 1.10).
  */
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createMemoryRouter, Outlet, RouterProvider } from 'react-router-dom'
@@ -37,6 +37,8 @@ vi.mock('@/api/planner/plannerApi', async (importOriginal) => {
 })
 
 import { plannerRoute } from '@/routes/plannerRoutes'
+import { plannerKeys } from '@/api/planner/plannerQueries'
+import { makeBoard, makeCard, makeMeta, makeTask } from './plannerFixtures'
 
 // The section is lazy-loaded. On a loaded CI runner the first render spent more
 // than the 5 s query timeout on transforming the chunk and the test saw only the
@@ -45,12 +47,15 @@ import { plannerRoute } from '@/routes/plannerRoutes'
 beforeAll(async () => {
   await import('@/pages/Planner')
 }, 120_000)
-import { makeBoard, makeCard, makeMeta, makeTask } from './plannerFixtures'
+
+/** The client of the last `renderAt`, for tests that drive a query directly. */
+let currentClient: QueryClient
 
 function renderAt(path: string) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
+  currentClient = queryClient
   const router = createMemoryRouter(
     [{ path: '/dashboard', element: <Outlet />, children: [plannerRoute] }],
     { initialEntries: [path] }
@@ -136,9 +141,10 @@ describe('Доска, создание задачи и смена статуса
     expect(body).toMatchObject({
       title: 'Нова поставка',
       description: 'Прийняти палети',
-      assignee_ids: [],
       due_date: null,
     })
+    // Nobody picked: no key, so the board's default assignee applies.
+    expect(body).not.toHaveProperty('assignee_ids')
     expect(key).toMatch(/^[0-9a-f-]{36}$/)
     const [text, options] = toast.success.mock.calls[0]
     expect(text).toBe('Створено SKL-4')
@@ -169,12 +175,115 @@ describe('Доска, создание задачи и смена статуса
     await user.type(screen.getByLabelText('Термін'), '2026-10-05')
     await user.click(screen.getByRole('button', { name: 'Створити' }))
     await waitFor(() => expect(api.createTask).toHaveBeenCalledTimes(1))
-    expect(api.createTask.mock.calls[0][1]).toMatchObject({
+    const body = api.createTask.mock.calls[0][1]
+    expect(body).toMatchObject({
       title: 'Інвентаризація',
       assignee_ids: ['u-olena'],
       due_date: '2026-10-05',
-      description: null,
     })
+    // No description typed: no key, so the board's description template applies.
+    expect(body).not.toHaveProperty('description')
+  })
+
+  it('нетронутые описание и исполнители — ключей нет в теле (дефолты доски работают)', async () => {
+    api.createTask.mockResolvedValue(makeTask({ key: 'SKL-6' }))
+    renderAt('/dashboard/planning/tasks/boards/SKL')
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: '+ Задача' }))
+    await user.type(screen.getByLabelText('Назва'), 'Порожня')
+    // Whitespace only is «nothing typed», not an empty description.
+    await user.type(screen.getByLabelText('Опис'), '   ')
+    await user.click(screen.getByRole('button', { name: 'Створити' }))
+    await waitFor(() => expect(api.createTask).toHaveBeenCalledTimes(1))
+    const body = api.createTask.mock.calls[0][1]
+    expect(Object.keys(body).sort()).toEqual(['due_date', 'title'])
+  })
+
+  it('поиск людей — после паузы в наборе, а не на каждую букву', async () => {
+    api.searchPeople.mockResolvedValue({ items: [] })
+    renderAt('/dashboard/planning/tasks/boards/SKL')
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: '+ Задача' }))
+    await user.type(screen.getByLabelText('Виконавці'), 'Олена')
+    expect(await screen.findByText('Нікого не знайдено')).toBeInTheDocument()
+    expect(api.searchPeople).toHaveBeenCalledTimes(1)
+    expect(api.searchPeople).toHaveBeenCalledWith('Олена')
+  })
+
+  it('описание длиннее 20 000 — ошибка у поля, вставка не обрезается, запроса нет', async () => {
+    renderAt('/dashboard/planning/tasks/boards/SKL')
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: '+ Задача' }))
+    await user.type(screen.getByLabelText('Назва'), 'Довгий опис')
+    const description = screen.getByLabelText('Опис') as HTMLTextAreaElement
+    // jsdom does not apply `maxlength` to a programmatic change, so the value
+    // alone proves nothing: the attribute itself must be absent (a browser
+    // would cut the paste).
+    expect(description).not.toHaveAttribute('maxlength')
+    expect(screen.getByLabelText('Назва')).not.toHaveAttribute('maxlength')
+    fireEvent.change(description, { target: { value: 'x'.repeat(20_001) } })
+    expect(description.value).toHaveLength(20_001)
+    await user.click(screen.getByRole('button', { name: 'Створити' }))
+    expect(await screen.findByText(/^Опис — не довше 20\s000 символів$/)).toBeInTheDocument()
+    expect(api.createTask).not.toHaveBeenCalled()
+  })
+
+  it('длина — в символах Unicode, как руны планера: 300 эмодзи проходят, 301 — ошибка', async () => {
+    api.createTask.mockResolvedValue(makeTask({ key: 'SKL-9' }))
+    renderAt('/dashboard/planning/tasks/boards/SKL')
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: '+ Задача' }))
+    const title = screen.getByLabelText('Назва')
+    // 301 code points, 602 UTF-16 units: over the limit by one character.
+    fireEvent.change(title, { target: { value: '😀'.repeat(301) } })
+    await user.click(screen.getByRole('button', { name: 'Створити' }))
+    expect(await screen.findByText(/^Назва — не довше 300 символів$/)).toBeInTheDocument()
+    expect(api.createTask).not.toHaveBeenCalled()
+
+    // 300 emoji is 600 in `String.length`, but exactly the limit for the planner.
+    fireEvent.change(title, { target: { value: '😀'.repeat(300) } })
+    fireEvent.change(screen.getByLabelText('Опис'), { target: { value: '😀'.repeat(20_000) } })
+    await user.click(screen.getByRole('button', { name: 'Створити' }))
+    await waitFor(() => expect(api.createTask).toHaveBeenCalledTimes(1))
+    expect(api.createTask.mock.calls[0][1].title).toBe('😀'.repeat(300))
+  })
+
+  it('409 idempotency_key_reused — «задачу, можливо, вже створено» и список доски перечитан', async () => {
+    api.createTask.mockRejectedValueOnce(
+      plannerError(409, 'conflict', { reason: 'idempotency_key_reused' })
+    )
+    renderAt('/dashboard/planning/tasks/boards/SKL')
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: '+ Задача' }))
+    await user.type(screen.getByLabelText('Назва'), 'Повтор')
+    const before = api.listBoardTasks.mock.calls.length
+    await user.click(screen.getByRole('button', { name: 'Створити' }))
+    await waitFor(() =>
+      expect(toast.info).toHaveBeenCalledWith(
+        'Задачу, можливо, вже створено. Список дошки оновлено'
+      )
+    )
+    await waitFor(() => expect(api.listBoardTasks.mock.calls.length).toBeGreaterThan(before))
+    expect(toast.error).not.toHaveBeenCalled()
+    // The key is spent: the dialog closes instead of offering a «Створити»
+    // that would get the same 409 again.
+    await waitFor(() => expect(screen.queryByLabelText('Назва')).toBeNull())
+
+    // Any other 409 is a plain conflict, not «could not save»; the form stays.
+    api.createTask.mockRejectedValueOnce(
+      plannerError(409, 'conflict', { reason: 'board_archived' })
+    )
+    await user.click(screen.getByRole('button', { name: '+ Задача' }))
+    await user.type(screen.getByLabelText('Назва'), 'Повтор')
+    await user.click(screen.getByRole('button', { name: 'Створити' }))
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        'Хтось змінив це одночасно з вами. Оновіть і повторіть'
+      )
+    )
+    expect(screen.getByLabelText('Назва')).toBeInTheDocument()
+    // A new form, a new key.
+    expect(api.createTask.mock.calls[1][2]).not.toBe(api.createTask.mock.calls[0][2])
   })
 
   it('без create_task в allowed_actions доски кнопки «+ Задача» нет', async () => {
@@ -240,6 +349,158 @@ describe('Доска, создание задачи и смена статуса
         reason: 'дубль SKL-1',
       })
     )
+  })
+
+  it('причина длиннее 1000 символов — ошибка в диалоге, не обрезка; 1000 эмодзи проходят', async () => {
+    api.patchTask.mockResolvedValue({ task: makeTask(), etag: '"4"' })
+    renderAt('/dashboard/planning/tasks/boards/SKL')
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: 'Змінити статус: Нова' }))
+    await user.click(await screen.findByRole('menuitem', { name: 'Відхилено' }))
+    const reason = (await screen.findByLabelText('Причина*')) as HTMLTextAreaElement
+    expect(reason).not.toHaveAttribute('maxlength')
+    fireEvent.change(reason, { target: { value: '😀'.repeat(1001) } })
+    expect(reason.value).toBe('😀'.repeat(1001))
+    await user.click(screen.getByRole('button', { name: 'Змінити статус' }))
+    expect(await screen.findByText(/^Причина — не довше 1\s000 символів$/)).toBeInTheDocument()
+    expect(api.patchTask).not.toHaveBeenCalled()
+    expect(screen.getByLabelText('Причина*')).toBeInTheDocument()
+
+    fireEvent.change(reason, { target: { value: '😀'.repeat(1000) } })
+    await user.click(screen.getByRole('button', { name: 'Змінити статус' }))
+    await waitFor(() =>
+      expect(api.patchTask).toHaveBeenCalledWith('0190a0a0-0000-7000-8000-000000000002', 3, {
+        status_id: 's-rej',
+        reason: '😀'.repeat(1000),
+      })
+    )
+  })
+
+  it('чип: доска была, её повторное чтение упало — старые статусы и тихий «Повторити», без ошибки', async () => {
+    renderAt('/dashboard/planning/tasks')
+    const chip = await screen.findByRole('button', { name: 'Змінити статус: Нова' })
+    await waitFor(() => expect(api.getBoard).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(currentClient.getQueryData(plannerKeys.board('SKL'))).toBeDefined())
+    api.getBoard.mockRejectedValue(plannerError(503, 'unavailable'))
+    await act(async () => {
+      await currentClient.refetchQueries({ queryKey: plannerKeys.board('SKL') })
+    })
+    expect(currentClient.getQueryState(plannerKeys.board('SKL'))?.status).toBe('error')
+
+    const user = userEvent.setup()
+    await user.click(chip)
+    expect(await screen.findByRole('menuitem', { name: 'В роботі' })).toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: 'Не вдалося завантажити статуси' })).toBeNull()
+    expect(screen.queryByRole('menuitem', { name: 'Завантаження статусів…' })).toBeNull()
+    const calls = api.getBoard.mock.calls.length
+    api.getBoard.mockResolvedValue(makeBoard())
+    await user.click(screen.getByRole('menuitem', { name: 'Повторити' }))
+    await waitFor(() => expect(api.getBoard.mock.calls.length).toBe(calls + 1))
+    await waitFor(() => expect(screen.queryByRole('menuitem', { name: 'Повторити' })).toBeNull())
+    expect(screen.getByRole('menuitem', { name: 'В роботі' })).toBeInTheDocument()
+  })
+
+  it('чип на «Мої задачі»: доска грузится заранее; пока грузится и при ошибке меню это говорит', async () => {
+    let resolveBoard: (board: unknown) => void = () => {}
+    api.getBoard.mockImplementationOnce(() => new Promise((resolve) => (resolveBoard = resolve)))
+    renderAt('/dashboard/planning/tasks')
+    const chip = await screen.findByRole('button', { name: 'Змінити статус: Нова' })
+    // Loaded before any click: the first click never meets an empty menu.
+    await waitFor(() => expect(api.getBoard).toHaveBeenCalledWith('SKL'))
+    const user = userEvent.setup()
+    await user.click(chip)
+    expect(
+      await screen.findByRole('menuitem', { name: 'Завантаження статусів…' })
+    ).toBeInTheDocument()
+    resolveBoard(makeBoard())
+    expect(await screen.findByRole('menuitem', { name: 'В роботі' })).toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: 'Завантаження статусів…' })).toBeNull()
+  })
+
+  it('чип: GET /boards/{code} упал — меню говорит об ошибке и даёт повторить', async () => {
+    // Down for the preload AND for the retry that opening the menu makes.
+    api.getBoard.mockRejectedValue(plannerError(503, 'unavailable'))
+    renderAt('/dashboard/planning/tasks')
+    const user = userEvent.setup()
+    await waitFor(() => expect(api.getBoard).toHaveBeenCalledTimes(1))
+    await user.click(await screen.findByRole('button', { name: 'Змінити статус: Нова' }))
+    expect(
+      await screen.findByRole('menuitem', { name: 'Не вдалося завантажити статуси' })
+    ).toBeInTheDocument()
+    expect(api.getBoard).toHaveBeenCalledTimes(2)
+    api.getBoard.mockResolvedValue(makeBoard())
+    await user.click(screen.getByRole('menuitem', { name: 'Повторити' }))
+    expect(await screen.findByRole('menuitem', { name: 'Готово' })).toBeInTheDocument()
+    expect(screen.queryByRole('menuitem', { name: 'Не вдалося завантажити статуси' })).toBeNull()
+  })
+
+  it('имена исполнителей замаскированы для записи сессии (карточка, «Мої задачі», панель)', async () => {
+    api.resolveTask.mockResolvedValue(makeTask())
+    renderAt('/dashboard/planning/tasks?task=SKL-2')
+    const panel = await screen.findByRole('complementary', { name: 'Задача SKL-2' })
+    const inPanel = await within(panel).findByText('Олена Коваль')
+    expect(inPanel).toHaveAttribute('data-openreplay-obscured')
+    const rows = await screen.findAllByText('Олена Коваль')
+    for (const row of rows) expect(row).toHaveAttribute('data-openreplay-obscured')
+    expect(rows.length).toBeGreaterThan(1)
+  })
+
+  it('срок-момент показан в поясе доски (tzid), а не браузера', async () => {
+    api.getBoard.mockResolvedValue(makeBoard({ tzid: 'Asia/Tokyo' }))
+    api.resolveTask.mockResolvedValue(makeTask({ due_date: null, due_at: '2026-10-02T15:30:00Z' }))
+    renderAt('/dashboard/planning/tasks?task=SKL-2')
+    const panel = await screen.findByRole('complementary', { name: 'Задача SKL-2' })
+    // 15:30 UTC is 00:30 of the next day in Tokyo (UTC+9); the test run is UTC.
+    expect(await within(panel).findByText(/03\.10\.2026.*00:30/)).toBeInTheDocument()
+  })
+
+  it('Esc в диалоге причины закрывает диалог, а не панель под ним', async () => {
+    api.resolveTask.mockResolvedValue(makeTask())
+    renderAt('/dashboard/planning/tasks?task=SKL-2')
+    const panel = await screen.findByRole('complementary', { name: 'Задача SKL-2' })
+    await within(panel).findByText('Звірити склад із таблицею')
+    const user = userEvent.setup()
+    await user.click(within(panel).getByRole('button', { name: 'Змінити статус: Нова' }))
+    await user.click(await screen.findByRole('menuitem', { name: 'Відхилено' }))
+    const reason = await screen.findByLabelText('Причина*')
+    await user.click(reason)
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByLabelText('Причина*')).toBeNull())
+    expect(screen.getByRole('complementary', { name: 'Задача SKL-2' })).toBeInTheDocument()
+    // With nothing above it, Esc closes the panel.
+    await user.keyboard('{Escape}')
+    await waitFor(() =>
+      expect(screen.queryByRole('complementary', { name: 'Задача SKL-2' })).toBeNull()
+    )
+  })
+
+  it('панель: 503 — «Планер тимчасово недоступний», а не «не знайдено»', async () => {
+    api.resolveTask.mockRejectedValueOnce(plannerError(503, 'unavailable'))
+    renderAt('/dashboard/planning/tasks?task=SKL-7')
+    expect(
+      await screen.findByText('Планер тимчасово недоступний. Решта CRM працює', {
+        selector: 'aside p',
+      })
+    ).toBeInTheDocument()
+  })
+
+  it('панель: обрыв сети (ответа нет) — тоже недоступность', async () => {
+    api.resolveTask.mockRejectedValueOnce(new AxiosError('Network Error', 'ERR_NETWORK'))
+    renderAt('/dashboard/planning/tasks?task=SKL-7')
+    expect(
+      await screen.findByText('Планер тимчасово недоступний. Решта CRM працює', {
+        selector: 'aside p',
+      })
+    ).toBeInTheDocument()
+  })
+
+  it('панель: 500 — общая ошибка загрузки, не «не знайдено»', async () => {
+    api.resolveTask.mockRejectedValueOnce(plannerError(500, 'internal'))
+    renderAt('/dashboard/planning/tasks?task=SKL-8')
+    expect(
+      await screen.findByText('Не вдалося завантажити задачу. Повторіть ще раз')
+    ).toBeInTheDocument()
+    expect(screen.queryByText('Задачу не знайдено або у вас немає до неї доступу')).toBeNull()
   })
 
   it('?task=SKL-2 открывает панель задачи; невидимая задача — «Задачу не знайдено…»', async () => {

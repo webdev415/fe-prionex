@@ -6,9 +6,21 @@
  * text — no dead control. The list is the board's statuses with the current one
  * on top; the change goes out as `PATCH /tasks/{id}` under `If-Match`.
  * A status marked `requires_reason` asks for the reason first (UX «Диалог причины»).
+ *
+ * The board (its statuses) is loaded as soon as the chip is a button, not when
+ * the menu opens: otherwise the first click on «Мої задачі» or in the task panel
+ * opens an empty menu. While it loads, or when it failed, the menu says so and
+ * offers a retry — a menu with no items is never shown. When only a re-read
+ * failed, the statuses already loaded stay usable and a quiet «Повторити» sits
+ * under them; the error text is for a menu that has nothing else to offer.
+ *
+ * The reason is limited as the contract says (1–1000 characters after trimming,
+ * counted in code points like the planner's runes). An overflow is reported in
+ * the dialog, never cut off by `maxLength`.
  */
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { formatNumber } from '@/lib/localeFormat'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,7 +32,12 @@ import { Button } from '@/components/ui/Button'
 import { Textarea } from '@/components/ui/Textarea'
 import { cn } from '@/lib/utils'
 import { usePlannerBoard } from '@/api/planner/plannerQueries'
-import type { PlannerBoardStatus, PlannerTaskCard } from '@/api/planner/plannerApi'
+import {
+  PLANNER_REASON_MAX,
+  plannerTextLength,
+  type PlannerBoardStatus,
+  type PlannerTaskCard,
+} from '@/api/planner/plannerApi'
 import { useChangeTaskStatus } from '../hooks/usePlannerMutations'
 
 type Category = PlannerTaskCard['status']['category']
@@ -46,13 +63,21 @@ function ChipFace({ name, category }: { name: string; category: Category }) {
 }
 
 export function StatusChip({ task }: { task: ChipTask }) {
-  const { t } = useTranslation('planner')
+  const { t, i18n } = useTranslation('planner')
   const [open, setOpen] = useState(false)
   const [reasonFor, setReasonFor] = useState<PlannerBoardStatus | null>(null)
   const [reason, setReason] = useState('')
+  const [reasonError, setReasonError] = useState<string | undefined>()
   const canChange = task.allowed_actions.includes('change_status')
-  const board = usePlannerBoard(task.board.code, canChange && open)
+  const board = usePlannerBoard(task.board.code, canChange, { poll: false })
   const change = useChangeTaskStatus()
+
+  const onOpenChange = (next: boolean) => {
+    setOpen(next)
+    // The chip does not poll the board; opening the menu is when a stale
+    // configuration (a status renamed or added meanwhile) matters.
+    if (next && board.isStale && !board.isFetching) void board.refetch()
+  }
 
   const chipClass =
     'border-border bg-card text-foreground inline-flex max-w-[12rem] items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs'
@@ -65,8 +90,28 @@ export function StatusChip({ task }: { task: ChipTask }) {
     )
   }
 
+  // A failed re-read keeps the last good board in `data` (status `error`):
+  // those statuses are still the right menu.
+  const loaded = board.data !== undefined
+  // A retry after an error keeps the query in `error` while it fetches.
+  const boardLoading = !loaded && (board.isPending || (board.isError && board.isFetching))
+  const boardFailed = !loaded && board.isError && !board.isFetching
+  const refreshFailed = loaded && board.isError && !board.isFetching
   const statuses = [...(board.data?.config.statuses ?? [])].sort((a, b) => a.position - b.position)
   const others = statuses.filter((s) => s.id !== task.status.id)
+
+  const retryItem = (className: string) => (
+    <DropdownMenuItem
+      className={className}
+      onSelect={(event) => {
+        // Keep the menu open: the statuses appear in it once loaded.
+        event.preventDefault()
+        void board.refetch()
+      }}
+    >
+      {t('status.retry')}
+    </DropdownMenuItem>
+  )
 
   const send = (status: PlannerBoardStatus, withReason?: string) =>
     change.mutate({
@@ -81,6 +126,7 @@ export function StatusChip({ task }: { task: ChipTask }) {
   const pick = (status: PlannerBoardStatus) => {
     if (status.requires_reason) {
       setReason('')
+      setReasonError(undefined)
       setReasonFor(status)
       return
     }
@@ -89,7 +135,7 @@ export function StatusChip({ task }: { task: ChipTask }) {
 
   return (
     <>
-      <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenu open={open} onOpenChange={onOpenChange}>
         <DropdownMenuTrigger asChild>
           <button
             type="button"
@@ -106,6 +152,19 @@ export function StatusChip({ task }: { task: ChipTask }) {
           <DropdownMenuItem disabled className="flex items-center gap-1.5 text-xs">
             <ChipFace name={task.status.name} category={task.status.category} />
           </DropdownMenuItem>
+          {boardLoading && (
+            <DropdownMenuItem disabled className="text-muted-foreground text-xs">
+              {t('status.loading')}
+            </DropdownMenuItem>
+          )}
+          {boardFailed && (
+            <>
+              <DropdownMenuItem disabled className="text-xs">
+                {t('status.error')}
+              </DropdownMenuItem>
+              {retryItem('cursor-pointer text-xs')}
+            </>
+          )}
           {others.map((status) => (
             <DropdownMenuItem
               key={status.id}
@@ -115,6 +174,7 @@ export function StatusChip({ task }: { task: ChipTask }) {
               <ChipFace name={status.name} category={status.category} />
             </DropdownMenuItem>
           ))}
+          {refreshFailed && retryItem('text-muted-foreground cursor-pointer text-xs')}
         </DropdownMenuContent>
       </DropdownMenu>
 
@@ -124,7 +184,7 @@ export function StatusChip({ task }: { task: ChipTask }) {
           <Textarea
             label={t('reasonDialog.label')}
             value={reason}
-            maxLength={500}
+            error={reasonError}
             onChange={(event) => setReason(event.target.value)}
           />
         </ModalContent>
@@ -136,7 +196,16 @@ export function StatusChip({ task }: { task: ChipTask }) {
             size="sm"
             disabled={reason.trim() === ''}
             onClick={() => {
-              if (reasonFor) send(reasonFor, reason.trim())
+              const trimmed = reason.trim()
+              if (plannerTextLength(trimmed) > PLANNER_REASON_MAX) {
+                setReasonError(
+                  t('reasonDialog.tooLong', {
+                    max: formatNumber(PLANNER_REASON_MAX, i18n.language ?? 'uk'),
+                  })
+                )
+                return
+              }
+              if (reasonFor) send(reasonFor, trimmed)
               setReasonFor(null)
             }}
           >

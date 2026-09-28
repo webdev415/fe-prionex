@@ -58,13 +58,18 @@
     }
   },
   "status": {
-    "change": "Change status: {{status}}"
+    "change": "Change status: {{status}}",
+    "loading": "Loading the statuses…",
+    "error": "Could not load the statuses",
+    "retry": "Try again"
   },
   "panel": {
     "label": "Task {{key}}",
     "close": "Close",
     "notFound": "The task was not found or you have no access to it",
-    "loading": "Loading the task…"
+    "loading": "Loading the task…",
+    "unavailable": "The Planner is temporarily unavailable. The rest of the CRM works",
+    "error": "Could not load the task. Please try again"
   },
   "create": {
     "title": "New task",
@@ -77,14 +82,14 @@
       "due": "Due date"
     },
     "noPeople": "Nobody found",
-    "assigneesCount": "{{count}} / 10",
+    "assigneesCount": "{{count}} / {{max}}",
     "remove": "Remove {{name}}",
     "submit": "Create",
     "cancel": "Cancel",
     "validation": {
       "titleRequired": "Enter the task title",
-      "titleTooLong": "The title is at most 300 characters",
-      "descriptionTooLong": "The description is at most 20,000 characters"
+      "titleTooLong": "The title is at most {{max}} characters",
+      "descriptionTooLong": "The description is at most {{max}} characters"
     }
   },
   "toast": {
@@ -95,6 +100,8 @@
     "forbiddenGeneric": "You are not allowed to do this",
     "validation": "The field «{{field}}» is empty or invalid",
     "unavailable": "The Planner is temporarily unavailable. The rest of the CRM works",
+    "conflict": "Someone changed this at the same time. Refresh and try again",
+    "maybeCreated": "The task may already have been created. The board list has been refreshed",
     "failed": "Could not save. Please try again"
   },
   "reasons": {
@@ -102,6 +109,7 @@
   },
   "reasonDialog": {
     "label": "Reason*",
-    "confirm": "Change status"
+    "confirm": "Change status",
+    "tooLong": "The reason is at most {{max}} characters"
   }
 }

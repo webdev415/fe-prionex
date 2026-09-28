@@ -36,6 +36,7 @@ vi.mock('@/api/planner/plannerApi', async (importOriginal) => {
 })
 
 import { plannerRoute } from '@/routes/plannerRoutes'
+import { makeBoard, makeCard, makeMeta, makeTask } from './plannerFixtures'
 
 // The section is lazy-loaded. On a loaded CI runner the first render spent more
 // than the 5 s query timeout on transforming the chunk and the test saw only the
@@ -44,7 +45,6 @@ import { plannerRoute } from '@/routes/plannerRoutes'
 beforeAll(async () => {
   await import('@/pages/Planner')
 }, 120_000)
-import { makeCard, makeMeta, makeTask } from './plannerFixtures'
 
 function renderAt(path: string) {
   const queryClient = new QueryClient({
@@ -81,6 +81,8 @@ describe('Планування — раздел CRM (1.9)', () => {
       ],
     })
     api.listMyTasks.mockResolvedValue({ items: [makeCard()], has_more: false })
+    // The status chip loads its board up front (1.10, bot round 2).
+    api.getBoard.mockResolvedValue(makeBoard())
   })
 
   it('без planner.access прямой адрес показывает «Немає доступу…», а планер не спрашивают', async () => {

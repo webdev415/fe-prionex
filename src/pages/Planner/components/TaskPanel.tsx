@@ -2,14 +2,38 @@
  * Task panel over any screen of the section, opened by `?task=KEY`
  * (planner story 1.10, AC5; UX «Панель задачи»): title, status, assignees,
  * due date, description. The screen behind stays usable; `Esc` and `✕` close.
- * A task the person cannot see and a task that does not exist read the same.
+ * A task the person cannot see and a task that does not exist read the same
+ * (the server answers 404 to both); a planner that is down or unreachable, and
+ * any other failure, say so instead of claiming the task is gone.
  */
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { piiProps } from '@/lib/openreplay/pii'
 import { usePlannerTask } from '@/api/planner/plannerQueries'
+import { readPlannerError } from '@/api/planner/plannerErrors'
 import { StatusChip } from './StatusChip'
 import { AssigneeNames, DuePill } from './TaskMeta'
+
+/**
+ * An `Esc` meant for a layer opened above the panel — the reason dialog, the
+ * status menu (both Radix, portalled, holding focus) — must close that layer
+ * only. Radix handles it on `document` and does not stop the event, so the
+ * panel's own listener would close the panel from under the dialog.
+ */
+function isInsideOverlay(target: EventTarget | null): boolean {
+  return (
+    target instanceof Element &&
+    target.closest('[role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"]') !==
+      null
+  )
+}
+
+function errorTextKey(error: unknown): string {
+  const { status, code, unreachable } = readPlannerError(error)
+  if (status === 404) return 'panel.notFound'
+  if (status === 503 || code === 'feature_disabled' || unreachable) return 'panel.unavailable'
+  return 'panel.error'
+}
 
 interface TaskPanelProps {
   taskKey: string
@@ -22,7 +46,9 @@ export function TaskPanel({ taskKey, onClose }: TaskPanelProps) {
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
+      if (event.key !== 'Escape' || event.defaultPrevented) return
+      if (isInsideOverlay(event.target)) return
+      onClose()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -47,7 +73,7 @@ export function TaskPanel({ taskKey, onClose }: TaskPanelProps) {
 
       <div className="flex-1 space-y-4 overflow-auto p-4">
         {task.isPending && <p className="text-muted-foreground text-sm">{t('panel.loading')}</p>}
-        {task.isError && <p className="text-foreground text-sm">{t('panel.notFound')}</p>}
+        {task.isError && <p className="text-foreground text-sm">{t(errorTextKey(task.error))}</p>}
         {task.data && (
           <>
             <h2 className="text-foreground text-lg font-semibold break-words" {...piiProps}>

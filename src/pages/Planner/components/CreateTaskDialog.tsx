@@ -4,7 +4,21 @@
  * One `Idempotency-Key` per form: it is minted when the form mounts and sent
  * with every «Створити» of this form, so a double click (or a network retry)
  * replays the first 201 instead of creating a second task. The dialog is
- * unmounted on close, so the next form gets a new key.
+ * unmounted on close, so the next form gets a new key. A 409
+ * `idempotency_key_reused` means the key is spent (the task was most likely
+ * created by an earlier attempt): the dialog closes, the board is re-read and a
+ * toast says so — staying open would answer every next «Створити» with 409.
+ *
+ * Only what the person filled in is sent. The contract reads a missing key as
+ * «use the board's default»: no `description` — the board's description
+ * template; no `assignee_ids` — the board's (or the type's) default assignee.
+ * Sending `null` / `[]` for an untouched field would silently switch both
+ * defaults off.
+ *
+ * Lengths are checked on submit, not by `maxLength`: a pasted text over the
+ * limit must be reported, not cut off without a word. They are counted in
+ * Unicode code points, as the planner counts runes (`MaxTitleRunes`,
+ * `MaxDescriptionRunes`): an emoji is one character, not two UTF-16 units.
  */
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -14,12 +28,17 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { piiProps } from '@/lib/openreplay/pii'
-import { newIdempotencyKey, type PlannerPerson } from '@/api/planner/plannerApi'
-import { useCreatePlannerTask } from '../hooks/usePlannerMutations'
+import { formatNumber } from '@/lib/localeFormat'
+import {
+  newIdempotencyKey,
+  PLANNER_DESCRIPTION_MAX,
+  PLANNER_TITLE_MAX,
+  plannerTextLength,
+  type PlannerPerson,
+  type PlannerTaskCreate,
+} from '@/api/planner/plannerApi'
+import { isIdempotencyReplayConflict, useCreatePlannerTask } from '../hooks/usePlannerMutations'
 import { PeoplePicker } from './PeoplePicker'
-
-const TITLE_MAX = 300
-const DESCRIPTION_MAX = 20_000
 
 interface CreateTaskDialogProps {
   boardCode: string
@@ -29,13 +48,15 @@ interface CreateTaskDialogProps {
 }
 
 export function CreateTaskDialog({ boardCode, onClose, onOpenTask }: CreateTaskDialogProps) {
-  const { t } = useTranslation('planner')
+  const { t, i18n } = useTranslation('planner')
+  const formatCount = (value: number) => formatNumber(value, i18n.language ?? 'uk')
   const [idempotencyKey] = useState(newIdempotencyKey)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [assignees, setAssignees] = useState<PlannerPerson[]>([])
   const [dueDate, setDueDate] = useState('')
   const [titleError, setTitleError] = useState<string | undefined>()
+  const [descriptionError, setDescriptionError] = useState<string | undefined>()
   const create = useCreatePlannerTask()
   // The button is disabled while the request is in flight, but a second click
   // in the same tick lands before React re-renders it. The ref closes that gap;
@@ -45,33 +66,35 @@ export function CreateTaskDialog({ boardCode, onClose, onOpenTask }: CreateTaskD
   const submit = () => {
     if (inFlight.current) return
     const trimmed = title.trim()
-    if (!trimmed) {
-      setTitleError(t('create.validation.titleRequired'))
-      return
-    }
-    if (trimmed.length > TITLE_MAX) {
-      setTitleError(t('create.validation.titleTooLong'))
-      return
-    }
-    setTitleError(undefined)
+    const nextTitleError = !trimmed
+      ? t('create.validation.titleRequired')
+      : plannerTextLength(trimmed) > PLANNER_TITLE_MAX
+        ? t('create.validation.titleTooLong', { max: formatCount(PLANNER_TITLE_MAX) })
+        : undefined
+    const nextDescriptionError =
+      plannerTextLength(description.trim()) > PLANNER_DESCRIPTION_MAX
+        ? t('create.validation.descriptionTooLong', { max: formatCount(PLANNER_DESCRIPTION_MAX) })
+        : undefined
+    setTitleError(nextTitleError)
+    setDescriptionError(nextDescriptionError)
+    if (nextTitleError || nextDescriptionError) return
+
+    const body: PlannerTaskCreate = { title: trimmed, due_date: dueDate || null }
+    if (description.trim()) body.description = description
+    if (assignees.length > 0) body.assignee_ids = assignees.map((person) => person.user_id)
     inFlight.current = true
     create.mutate(
-      {
-        boardCode,
-        idempotencyKey,
-        body: {
-          title: trimmed,
-          description: description.trim() ? description : null,
-          assignee_ids: assignees.map((person) => person.user_id),
-          due_date: dueDate || null,
-        },
-      },
+      { boardCode, idempotencyKey, body },
       {
         onSuccess: (task) => {
           toast.success(t('toast.created', { key: task.key }), {
             action: { label: t('toast.open'), onClick: () => onOpenTask(task.key) },
           })
           onClose()
+        },
+        onError: (error) => {
+          // The hook has re-read the board and said «maybe created».
+          if (isIdempotencyReplayConflict(error)) onClose()
         },
         onSettled: () => {
           inFlight.current = false
@@ -88,7 +111,6 @@ export function CreateTaskDialog({ boardCode, onClose, onOpenTask }: CreateTaskD
         <Input
           label={t('create.fields.title')}
           value={title}
-          maxLength={TITLE_MAX}
           error={titleError}
           onChange={(event) => setTitle(event.target.value)}
           {...piiProps}
@@ -96,7 +118,7 @@ export function CreateTaskDialog({ boardCode, onClose, onOpenTask }: CreateTaskD
         <Textarea
           label={t('create.fields.description')}
           value={description}
-          maxLength={DESCRIPTION_MAX}
+          error={descriptionError}
           onChange={(event) => setDescription(event.target.value)}
           {...piiProps}
         />

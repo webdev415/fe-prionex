@@ -15,7 +15,12 @@ interface TaskItemProps {
   onOpen: (key: string) => void
 }
 
-export function TaskCardView({ task, onOpen }: TaskItemProps) {
+interface TaskCardViewProps extends TaskItemProps {
+  /** The board's `tzid`, already at hand on the board screen. */
+  timeZone?: string
+}
+
+export function TaskCardView({ task, onOpen, timeZone }: TaskCardViewProps) {
   return (
     <article className="border-border bg-card space-y-2 rounded-lg border p-3 shadow-sm">
       <button type="button" className="block w-full text-left" onClick={() => onOpen(task.key)}>
@@ -27,7 +32,7 @@ export function TaskCardView({ task, onOpen }: TaskItemProps) {
       <AssigneeNames people={task.assignees} />
       <div className="flex flex-wrap items-center gap-2">
         <StatusChip task={task} />
-        <DuePill task={task} />
+        <DuePill task={task} timeZone={timeZone} />
       </div>
     </article>
   )
