@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AuthLayout } from '@/components/layout'
 import type { LoginFormData } from '@/components/forms'
@@ -19,7 +19,12 @@ import { AppApprovalEntry } from '@/features/appLogin/components/AppApprovalEntr
 import { AppApprovalRequestCard } from '@/features/appLogin/components/AppApprovalRequestCard'
 import { AppQrLoginCard } from '@/features/appLogin/components/AppQrLoginCard'
 import { useAppApprovalConfig, useLoginApproval } from '@/features/appLogin/hooks/useLoginApproval'
-import { hasAppSecondFactor } from '@/features/appLogin/lib/approval'
+import {
+  QR_RESTART_COOLDOWN_MS,
+  hasAppSecondFactor,
+  qrRestartAt,
+} from '@/features/appLogin/lib/approval'
+import type { LoginApprovalPhase } from '@/features/appLogin/lib/approvalSession'
 import { useAuthStore } from '@/stores/authStore'
 
 /** The 2FA challenge the store holds right now, when it offers the phone. */
@@ -69,6 +74,16 @@ export default function LoginPage() {
   /** `/qr` answered as a missing route after all: no tab until the page reloads. */
   const [qrWithdrawn, setQrWithdrawn] = useState(false)
   const qrOffered = approvalConfig.data?.qr === true && !qrWithdrawn
+  /**
+   * No QR request before this `Date.now()`: at most one per 5 s (board #1580 AC3),
+   * however it is asked for — «Новий код» or opening the tab again. Kept here,
+   * not in the card, because leaving the tab unmounts the card.
+   */
+  const [qrNotBefore, setQrNotBefore] = useState(0)
+  /** A 429 of `/qr` kept across a tab switch: coming back shows it instead of asking again. */
+  const [qrHeld, setQrHeld] = useState<LoginApprovalPhase | null>(null)
+  /** The tab reopened within the 5 s: its request starts when they are over. */
+  const qrDeferredRef = useRef<number | null>(null)
 
   const approval = useLoginApproval({
     client: 'crm_web',
@@ -80,10 +95,10 @@ export default function LoginPage() {
       setMethod('password')
       failAppLogin(refusal)
     },
-    onUnavailable: () => {
+    onUnavailable: (reset) => {
       if (method === 'qr') {
         // The stand switched the QR mode off: back to the password form, no tab.
-        approval.cancel()
+        reset()
         setQrWithdrawn(true)
         setMethod('password')
         return
@@ -94,13 +109,57 @@ export default function LoginPage() {
     },
   })
 
+  const clearDeferredQr = () => {
+    if (qrDeferredRef.current !== null) {
+      window.clearTimeout(qrDeferredRef.current)
+      qrDeferredRef.current = null
+    }
+  }
+
+  useEffect(() => {
+    const deferred = qrDeferredRef
+    return () => {
+      if (deferred.current !== null) window.clearTimeout(deferred.current)
+    }
+  }, [])
+
+  /** Every QR request goes through here, and so through the 5-second limit. */
+  const openQr = () => {
+    clearDeferredQr()
+    setQrHeld(null)
+    setQrNotBefore(Date.now() + QR_RESTART_COOLDOWN_MS)
+    approval.start({ qr: true })
+  }
+
+  /** The phase the QR tab draws: a held 429 while nothing new was asked. */
+  const qrPhase = approval.phase.kind === 'idle' && qrHeld ? qrHeld : approval.phase
+
+  /** «Новий код» / «Спробувати ще раз» — the card also waits, this is the page's own check. */
+  const restartQr = () => {
+    if (Date.now() < qrRestartAt(qrNotBefore, qrPhase)) return
+    openQr()
+  }
+
   /** A tab switch comes from a click; opening the QR tab is what asks for a QR. */
   const selectMethod = (next: LoginMethod) => {
     if (next === method) return
+    if (method === 'qr' && (qrPhase.kind === 'rateLimited' || qrPhase.kind === 'blocked')) {
+      setQrHeld(qrPhase)
+    }
+    clearDeferredQr()
     approval.cancel()
     clearError()
     setMethod(next)
-    if (next === 'qr') approval.start({ qr: true })
+    if (next !== 'qr') return
+    const now = Date.now()
+    // A 429 still running: show it again, a request would only earn another one.
+    if (qrHeld && now < qrRestartAt(0, qrHeld)) return
+    setQrHeld(null)
+    if (now < qrNotBefore) {
+      qrDeferredRef.current = window.setTimeout(openQr, qrNotBefore - now)
+      return
+    }
+    openQr()
   }
 
   /** Every start comes from a click; the phone is asked as soon as `/login` offers it. */
@@ -247,7 +306,7 @@ export default function LoginPage() {
           aria-labelledby={segmentedTabId(METHOD_TABS_ID, method)}
         >
           {method === 'qr' ? (
-            <AppQrLoginCard phase={approval.phase} onRestart={() => approval.start({ qr: true })} />
+            <AppQrLoginCard phase={qrPhase} onRestart={restartQr} notBefore={qrNotBefore} />
           ) : (
             loginCard
           )}

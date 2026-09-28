@@ -215,7 +215,7 @@ describe('LoginPage — «QR-код» tab (story 19.17)', () => {
     expect(qrTab()).toHaveAttribute('aria-selected', 'true')
     expect(screen.getByRole('img', { name: 'QR code for signing in to CRM' })).toBeInTheDocument()
     expect(screen.getByText('Scan the code in the HUB app → Security')).toBeInTheDocument()
-    expect(screen.getByText('The code is valid for another 2:00')).toBeInTheDocument()
+    expect(screen.getByText('The request is valid for another 2:00')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Login' })).not.toBeInTheDocument()
 
     await flush(2000)
@@ -256,6 +256,64 @@ describe('LoginPage — «QR-код» tab (story 19.17)', () => {
     await flush(60_000)
     expect(approvalApi.poll).not.toHaveBeenCalled()
     expect(approvalApi.refreshQr).not.toHaveBeenCalled()
+  })
+
+  it('Password/QR/Password/QR at speed: one /qr per 5 s, however the tab is reopened', async () => {
+    await openQrTab()
+    expect(approvalApi.startQr).toHaveBeenCalledTimes(1)
+
+    for (let i = 0; i < 3; i++) {
+      fireEvent.click(passwordTab())
+      fireEvent.click(qrTab()!)
+      await flush()
+    }
+    expect(approvalApi.startQr).toHaveBeenCalledTimes(1)
+    // Each departure retired the code on the server; the tab waits instead of asking again.
+    expect(approvalApi.cancel).toHaveBeenCalledTimes(1)
+    expect(qrTab()).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('status')).toHaveTextContent('Preparing the QR code…')
+
+    // The 5 s since the first request are over: the open tab asks once, by itself.
+    await flush(5000)
+    expect(approvalApi.startQr).toHaveBeenCalledTimes(2)
+    expect(screen.getByRole('img', { name: 'QR code for signing in to CRM' })).toBeInTheDocument()
+  })
+
+  it('leaving the tab while it waits for the 5 s asks for nothing', async () => {
+    await openQrTab()
+    fireEvent.click(passwordTab())
+    fireEvent.click(qrTab()!)
+    fireEvent.click(passwordTab())
+    await flush(30_000)
+    expect(approvalApi.startQr).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('button', { name: 'Login' })).toBeInTheDocument()
+  })
+
+  it('429 on /qr: the tab keeps the wait across a switch, and «Новий код» only after it', async () => {
+    approvalApi.startQr.mockRejectedValueOnce(
+      http(429, { code: 'APP_LOGIN_RATE_LIMITED', message: 'x', retry_after: 240 })
+    )
+    await openQrTab()
+    const text =
+      'Too many QR codes from this network. Try again in 4 min or sign in with your password.'
+    expect(screen.getByRole('alert')).toHaveTextContent(text)
+
+    await flush(10_000)
+    fireEvent.click(passwordTab())
+    fireEvent.click(qrTab()!)
+    await flush()
+    expect(approvalApi.startQr).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('alert')).toHaveTextContent(text)
+    expect(screen.getByRole('button', { name: 'New code' })).toBeDisabled()
+
+    await flush(229_000)
+    expect(screen.getByRole('button', { name: 'New code' })).toBeDisabled()
+    await flush(2000)
+    expect(screen.getByRole('button', { name: 'New code' })).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: 'New code' }))
+    await flush()
+    expect(approvalApi.startQr).toHaveBeenCalledTimes(2)
+    expect(screen.getByRole('img', { name: 'QR code for signing in to CRM' })).toBeInTheDocument()
   })
 
   it('denied: a clear text, and «Новий код» asks for a new QR no sooner than 5 s', async () => {

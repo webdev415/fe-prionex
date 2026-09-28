@@ -220,14 +220,22 @@ describe('runApprovalSession', () => {
     )
     const limited = run()
     await advance(0)
-    expect(limited.last()).toEqual({ kind: 'rateLimited', minutes: 5 })
+    expect(limited.last()).toEqual({
+      kind: 'rateLimited',
+      minutes: 5,
+      retryAt: Date.now() + 5 * 60_000,
+    })
 
     api.start.mockRejectedValueOnce(
       http(429, { code: 'APP_LOGIN_BLOCKED', message: 'x', retry_after: 3600 })
     )
     const blocked = run({ two_factor_token: 'challenge' })
     await advance(0)
-    expect(blocked.last()).toEqual({ kind: 'blocked', minutes: 60 })
+    expect(blocked.last()).toEqual({
+      kind: 'blocked',
+      minutes: 60,
+      retryAt: Date.now() + 3_600_000,
+    })
     expect(api.start).toHaveBeenLastCalledWith({ two_factor_token: 'challenge', client: 'crm_web' })
   })
 
@@ -302,9 +310,26 @@ describe('runApprovalSession — QR (story 19.17)', () => {
     expect(last()).toMatchObject({ kind: 'qr', payload: 'prionex-app-login-qr/v1|dev|first' })
     const phase = last()
     expect(phase.kind === 'qr' && phase.expiresAt - phase.startedAt).toBe(120_000)
+    // The code itself lives `qr_expires_in`, the request `expires_in`.
+    expect(phase.kind === 'qr' && phase.codeExpiresAt - phase.startedAt).toBe(60_000)
 
     await advance(2000)
     expect(api.poll).toHaveBeenCalledWith(QR_PAIR)
+  })
+
+  it('each new code carries its own qr_expires_in', async () => {
+    api.refreshQr.mockResolvedValueOnce({
+      qr_payload: 'next',
+      qr_expires_in: 45,
+      qr_refresh_in: 30,
+    })
+    const { last } = run({ qr: true })
+    await advance(0)
+    await advance(30_000)
+    const phase = last()
+    expect(phase.kind === 'qr' && phase.payload).toBe('next')
+    expect(phase.kind === 'qr' && phase.codeExpiresAt - Date.now()).toBe(45_000)
+    expect(phase.kind === 'qr' && phase.expiresAt - phase.startedAt).toBe(120_000)
   })
 
   it('asks for the next QR every qr_refresh_in seconds while nobody scans it', async () => {
@@ -398,10 +423,26 @@ describe('runApprovalSession — QR (story 19.17)', () => {
     expect(api.refreshQr).toHaveBeenCalledTimes(2)
     await advance(10_000)
     expect(api.refreshQr).toHaveBeenCalledTimes(3)
-    // 409: no more refreshes; the code on screen and the poll carry on.
-    await advance(40_000)
+    // 409: no more refreshes; the code on screen and the poll carry on while it lives…
+    await advance(11_000)
     expect(api.refreshQr).toHaveBeenCalledTimes(3)
     expect(qrPayloadOf(last())).toBe('prionex-app-login-qr/v1|dev|first')
+    // …and one poll interval after its 60 s the screen stops promising it.
+    await advance(1000)
+    expect(last()).toEqual({ kind: 'expired' })
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('a failing refresh chain keeps retrying past the code’s end, without ending the request', async () => {
+    api.refreshQr.mockRejectedValue(new AxiosError('Network Error', 'ERR_NETWORK'))
+    const { last } = run({ qr: true })
+    await advance(0)
+    await advance(80_000)
+    const phase = last()
+    // Still the first code, now past its own end: the card shows «getting a new one».
+    expect(phase.kind).toBe('qr')
+    expect(phase.kind === 'qr' && Date.now() >= phase.codeExpiresAt).toBe(true)
+    expect(api.refreshQr.mock.calls.length).toBeGreaterThan(4)
   })
 
   it('ends expired at the request lifetime when nobody scans', async () => {
@@ -440,7 +481,12 @@ describe('runApprovalSession — QR (story 19.17)', () => {
     )
     const limited = run({ qr: true })
     await advance(0)
-    expect(limited.last()).toEqual({ kind: 'rateLimited', minutes: 4 })
+    // No new request before the minutes it shows: another one would only earn a 429.
+    expect(limited.last()).toEqual({
+      kind: 'rateLimited',
+      minutes: 4,
+      retryAt: Date.now() + 4 * 60_000,
+    })
   })
 
   it('a network error or 5xx at the start shows failed — no retry loop', async () => {

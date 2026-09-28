@@ -74,9 +74,16 @@ function dataCodewords(version: number): number {
   )
 }
 
-function alignmentPositions(version: number, size: number): number[] {
+/**
+ * Centres of the alignment patterns along one axis (ISO/IEC 18004 Table E.1).
+ * Exported for the test that pins all 40 versions against the reference table.
+ */
+export function alignmentPositions(version: number, size: number): number[] {
   if (version === 1) return []
   const numAlign = Math.floor(version / 7) + 2
+  // The form of Nayuki's current generator. The older `ceil((size - 13) / (2n - 2)) * 2`
+  // gives 28 instead of 26 at version 32 and needs a special case there; this one
+  // matches Table E.1 for every version 1–40 (pinned in `qrCode.test.ts`).
   const step = Math.floor((version * 8 + numAlign * 3 + 5) / (numAlign * 4 - 4)) * 2
   const result = [6]
   for (let pos = size - 7; result.length < numAlign; pos -= step) result.splice(1, 0, pos)
@@ -384,9 +391,13 @@ function finderLikeCount(history: readonly number[]): number {
 /**
  * The smallest version (1–10) that holds the text at level M. `mask` forces a
  * mask pattern (0–7) — for the tests; by default the lowest penalty wins.
- * Throws a `RangeError` when the text is too long.
+ * Throws a `RangeError` when the text is too long or the mask is not 0–7.
  */
 export function encodeQr(text: string, options: { mask?: number } = {}): QrMatrix {
+  const forced = options.mask
+  if (forced !== undefined && !(Number.isInteger(forced) && forced >= 0 && forced <= 7)) {
+    throw new RangeError(`QR mask must be an integer 0–7, got ${forced}`)
+  }
   const bytes = new TextEncoder().encode(text)
   let version = 1
   // 4 bits of mode + the character count (8 bits up to version 9, then 16).

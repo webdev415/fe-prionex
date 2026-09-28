@@ -14,6 +14,7 @@ import {
   isTransientRefusal,
   minutesToWait,
   pollIntervalMs,
+  qrCodeTtlMs,
   qrRefreshDelayMs,
   requestTtlSeconds,
   type ApprovalRefusal,
@@ -42,9 +43,10 @@ export type LoginApprovalPhase =
     }
   /**
    * QR mode: the code to scan, replaced every `qr_refresh_in` s while nobody
-   * scanned it; `expiresAt` is the end of the request, not of one code.
+   * scanned it. `expiresAt` is the end of the request; `codeExpiresAt` is the
+   * end of this very code (`qr_expires_in`) — past it the code is not shown.
    */
-  | { kind: 'qr'; payload: string; startedAt: number; expiresAt: number }
+  | { kind: 'qr'; payload: string; startedAt: number; expiresAt: number; codeExpiresAt: number }
   /** QR mode: a phone scanned the code — the person confirms on it. */
   | { kind: 'scanned'; startedAt: number; expiresAt: number }
   /** Approved on the phone; the session is being persisted. */
@@ -53,10 +55,14 @@ export type LoginApprovalPhase =
   | { kind: 'expired' }
   /** Anything that is not the person's own refusal — shown with one generic text. */
   | { kind: 'failed' }
-  /** `429 APP_LOGIN_RATE_LIMITED`: too many requests from this address or person. */
-  | { kind: 'rateLimited'; minutes: number }
+  /**
+   * `429 APP_LOGIN_RATE_LIMITED`: too many requests from this address or person.
+   * `retryAt` (`Date.now()`) is when the `minutes` shown have passed: no new
+   * request before it — it would only earn another 429.
+   */
+  | { kind: 'rateLimited'; minutes: number; retryAt: number }
   /** `429 APP_LOGIN_BLOCKED` (2FA): «Це не я» blocked the method for a while. */
-  | { kind: 'blocked'; minutes: number }
+  | { kind: 'blocked'; minutes: number; retryAt: number }
 
 export interface ApprovalSessionHandlers {
   client: AppApprovalClient
@@ -151,6 +157,15 @@ export function runApprovalSession(
     if (active && qrShown) refreshTimer = setTimeout(() => void refreshQr(), delay)
   }
 
+  /**
+   * No next code will come and the one on screen has died without the poll
+   * telling an outcome: stop promising it — `expired`, with «Новий код».
+   */
+  const endQr = () => {
+    refreshTimer = null
+    if (active && qrShown) finish({ kind: 'expired' })
+  }
+
   /** The next QR; the previous one stays valid until its own end, so a failure costs nothing yet. */
   const refreshQr = async () => {
     refreshTimer = null
@@ -159,20 +174,38 @@ export function runApprovalSession(
     try {
       const next = await loginApprovalApi.refreshQr(current)
       if (!active || !qrShown) return
-      qrShown = { ...qrShown, payload: next.qr_payload }
+      qrShown = {
+        ...qrShown,
+        payload: next.qr_payload,
+        codeExpiresAt: Date.now() + qrCodeTtlMs(next.qr_expires_in),
+      }
       handlers.onPhase(qrShown)
       scheduleRefresh(qrRefreshDelayMs(next.qr_refresh_in))
     } catch (error) {
       if (!active || !qrShown) return
       const refusal = approvalRefusalOf(error)
       if (refusal.status === 429 || isTransientRefusal(refusal)) {
+        // The card hides the code once `codeExpiresAt` passes and waits for this retry.
         scheduleRefresh(Math.max(QR_REFRESH_RETRY_MS, (refusal.retryAfterSeconds ?? 0) * 1000))
+        return
       }
-      // 409 (scanned or ended), 410 (expired), 404: the poll tells the outcome.
+      // 409 (scanned or ended), 410 (expired), 404: no next code. The poll tells the
+      // outcome; if it has not one interval after the code on screen died, `expired`.
+      clearRefresh()
+      refreshTimer = setTimeout(endQr, Math.max(0, qrShown.codeExpiresAt - Date.now()) + interval)
     }
   }
 
-  /** A phone claimed the QR: the scan restarts the decision window once. */
+  /**
+   * A phone claimed the QR: the scan restarts the decision window once.
+   *
+   * One way by the API-6 contract: `scanned` is `pending` + `scanned_at`, and
+   * api-prionex sets `scanned_at` only in `LoginApproval.claim` and never clears
+   * it (`services/auth/app/domain/login_approval.py`: `claimable` refuses a
+   * request with `scanned_at`, `browser_status` answers `scanned` for a pending
+   * one with it). So no `pending` follows a `scanned`; a phone that backs out
+   * leaves the request to «Відхилити» or its expiry, and the QR is not shown again.
+   */
   const showScanned = (expiresIn: number | null | undefined) => {
     clearRefresh()
     qrShown = null
@@ -272,7 +305,13 @@ export function runApprovalSession(
       const expiresAt = startedAt + requestTtlSeconds(started.expires_in) * 1000
       deadline = expiresAt + interval
       if (opened.qr) {
-        qrShown = { kind: 'qr', payload: opened.started.qr_payload, startedAt, expiresAt }
+        qrShown = {
+          kind: 'qr',
+          payload: opened.started.qr_payload,
+          startedAt,
+          expiresAt,
+          codeExpiresAt: startedAt + qrCodeTtlMs(opened.started.qr_expires_in),
+        }
         handlers.onPhase(qrShown)
         scheduleRefresh(qrRefreshDelayMs(opened.started.qr_refresh_in))
       } else {
@@ -284,10 +323,11 @@ export function runApprovalSession(
       const refusal = approvalRefusalOf(error)
       if (refusal.status === 429) {
         const minutes = minutesToWait(refusal.retryAfterSeconds)
+        const retryAt = Date.now() + minutes * 60_000
         finish(
           refusal.code === 'APP_LOGIN_BLOCKED'
-            ? { kind: 'blocked', minutes }
-            : { kind: 'rateLimited', minutes }
+            ? { kind: 'blocked', minutes, retryAt }
+            : { kind: 'rateLimited', minutes, retryAt }
         )
       } else if (isLoginRefusal(refusal)) {
         refuse(refusal)

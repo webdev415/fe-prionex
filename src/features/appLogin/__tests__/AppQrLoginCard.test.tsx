@@ -11,13 +11,14 @@ const T0 = new Date('2026-09-28T20:00:00Z').getTime()
 const PAYLOAD =
   'prionex-app-login-qr/v1|dev|AbCdEfGhIjKlMnOpQrStUv|0123456789abcdefghijklmnopqrstuvwxyzABCDEFG'
 
-function qr(payload = PAYLOAD): LoginApprovalPhase {
-  return { kind: 'qr', payload, startedAt: T0, expiresAt: T0 + 120_000 }
+function qr(payload = PAYLOAD, codeExpiresAt = T0 + 60_000): LoginApprovalPhase {
+  return { kind: 'qr', payload, startedAt: T0, expiresAt: T0 + 120_000, codeExpiresAt }
 }
 
-function renderCard(phase: LoginApprovalPhase) {
+/** `notBefore` is the login page's 5-second limit; by default it is already over. */
+function renderCard(phase: LoginApprovalPhase, notBefore = T0) {
   const onRestart = vi.fn()
-  const view = render(<AppQrLoginCard phase={phase} onRestart={onRestart} />)
+  const view = render(<AppQrLoginCard phase={phase} onRestart={onRestart} notBefore={notBefore} />)
   return { ...view, onRestart }
 }
 
@@ -44,10 +45,42 @@ describe('AppQrLoginCard', () => {
     expect(screen.getByText('Scan the code in the HUB app → Security')).toBeInTheDocument()
     const image = screen.getByRole('img', { name: 'QR code for signing in to CRM' })
     expect(image.querySelector('path')?.getAttribute('d')).toMatch(/^M\d+ \d+h\d+v1h-\d+z/)
-    expect(screen.getByText('The code is valid for another 2:00')).toBeInTheDocument()
+    // The clock is the request's, and the text says so (each code is replaced long before its end).
+    expect(screen.getByText('The request is valid for another 2:00')).toBeInTheDocument()
 
     tick(15_000)
-    expect(screen.getByText('The code is valid for another 1:45')).toBeInTheDocument()
+    expect(screen.getByText('The request is valid for another 1:45')).toBeInTheDocument()
+  })
+
+  it('stops showing a code past its own qr_expires_in until a new one arrives', () => {
+    const { rerender } = renderCard(qr())
+    tick(59_000)
+    expect(screen.getByRole('img')).toBeInTheDocument()
+
+    tick(1000)
+    expect(screen.queryByRole('img')).not.toBeInTheDocument()
+    expect(screen.queryByText(/The request is valid/)).not.toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('The code has expired. Getting a new one…')
+
+    rerender(
+      <AppQrLoginCard
+        phase={qr(`${PAYLOAD.slice(0, -1)}H`, T0 + 120_000)}
+        onRestart={vi.fn()}
+        notBefore={T0}
+      />
+    )
+    expect(screen.getByRole('img')).toBeInTheDocument()
+  })
+
+  it('a code the encoder cannot hold: the failure and «Спробувати ще раз», not an empty panel', () => {
+    const { onRestart } = renderCard(qr(`prionex-app-login-qr/v1|dev|${'x'.repeat(300)}`))
+
+    expect(screen.queryByRole('img')).not.toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Could not get a QR code. Check the connection and try again.'
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(onRestart).toHaveBeenCalledTimes(1)
   })
 
   it('never puts the payload in text or an attribute, and hides the code from session replay', () => {
@@ -79,7 +112,9 @@ describe('AppQrLoginCard', () => {
   it('redraws when the payload rotates', () => {
     const { rerender } = renderCard(qr())
     const before = screen.getByRole('img').querySelector('path')?.getAttribute('d')
-    rerender(<AppQrLoginCard phase={qr(`${PAYLOAD.slice(0, -1)}H`)} onRestart={vi.fn()} />)
+    rerender(
+      <AppQrLoginCard phase={qr(`${PAYLOAD.slice(0, -1)}H`)} onRestart={vi.fn()} notBefore={T0} />
+    )
     expect(screen.getByRole('img').querySelector('path')?.getAttribute('d')).not.toBe(before)
   })
 
@@ -108,8 +143,13 @@ describe('AppQrLoginCard', () => {
     [{ kind: 'denied' } as const, 'The sign-in was declined on the phone.', 'New code'],
     [{ kind: 'expired' } as const, 'The QR code has expired.', 'New code'],
     [
-      { kind: 'rateLimited', minutes: 4 } as const,
+      { kind: 'rateLimited', minutes: 4, retryAt: T0 + 240_000 } as const,
       'Too many QR codes from this network. Try again in 4 min or sign in with your password.',
+      'New code',
+    ],
+    [
+      { kind: 'blocked', minutes: 30, retryAt: T0 + 1_800_000 } as const,
+      'Sign-in with the app is blocked for now. Try again in 30 min or sign in with your password.',
       'New code',
     ],
     [
@@ -123,29 +163,41 @@ describe('AppQrLoginCard', () => {
     expect(screen.getByRole('button', { name: button })).toBeInTheDocument()
   })
 
-  it('opens a new code at most once per 5 seconds', () => {
-    const { onRestart } = renderCard({ kind: 'failed' })
+  it('keeps the button off until the page’s 5-second limit is over', () => {
+    const { onRestart } = renderCard({ kind: 'failed' }, T0 + 5000)
     const button = () => screen.getByRole('button', { name: 'Try again' })
 
-    // The tab opened a request as the card mounted: the first 5 s are cooling down.
     expect(button()).toBeDisabled()
     fireEvent.click(button())
     expect(onRestart).not.toHaveBeenCalled()
 
-    tick(5000)
-    expect(button()).toBeEnabled()
-    fireEvent.click(button())
-    expect(onRestart).toHaveBeenCalledTimes(1)
-    expect(button()).toBeDisabled()
-    fireEvent.click(button())
-    expect(onRestart).toHaveBeenCalledTimes(1)
-
     tick(4000)
     expect(button()).toBeDisabled()
     tick(1000)
+    expect(button()).toBeEnabled()
     fireEvent.click(button())
-    expect(onRestart).toHaveBeenCalledTimes(2)
+    expect(onRestart).toHaveBeenCalledTimes(1)
   })
+
+  it.each(['rateLimited', 'blocked'] as const)(
+    '%s: «Новий код» stays off for the minutes the text names — a press would only earn a 429',
+    (kind) => {
+      const { onRestart } = renderCard({ kind, minutes: 4, retryAt: T0 + 240_000 })
+      const button = () => screen.getByRole('button', { name: 'New code' })
+
+      tick(5000)
+      expect(button()).toBeDisabled()
+      fireEvent.click(button())
+      tick(234_000)
+      expect(button()).toBeDisabled()
+      expect(onRestart).not.toHaveBeenCalled()
+
+      tick(1000)
+      expect(button()).toBeEnabled()
+      fireEvent.click(button())
+      expect(onRestart).toHaveBeenCalledTimes(1)
+    }
+  )
 
   it('stops its timer when it unmounts', () => {
     const { unmount } = renderCard(qr())
