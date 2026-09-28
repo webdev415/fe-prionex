@@ -109,6 +109,11 @@ export interface AppApprovalConfig {
   /** Seconds a request lives. */
   request_ttl: number
   poll_interval_ms: number
+  /**
+   * Offer the «QR-код» tab (API-6, story 19.17). The key is absent while the
+   * stand has the QR mode off, so only `true` shows the tab.
+   */
+  qr?: boolean
 }
 
 /** `POST …/start` — exactly one of the two modes. */
@@ -132,11 +137,33 @@ export interface AppApprovalPollRequest {
   browser_secret: string
 }
 
-export type AppApprovalStatus = 'pending' | 'approved' | 'denied' | 'expired'
+/** `scanned` only for a QR request: a phone claimed it and the person is confirming. */
+export type AppApprovalStatus = 'pending' | 'scanned' | 'approved' | 'denied' | 'expired'
 
 /** `…/poll`: `approved` carries the same `LoginResponse` as `/login`. */
 export interface AppApprovalPoll {
   status: AppApprovalStatus
   expires_in?: number | null
   login?: LoginResponse | null
+}
+
+// ─── QR sign-in (Epic 19 API-6, story 19.17) ────────────────────────────────
+// Contract: api-prionex `docs/auth-app-login-device-binding.md`, «QR sign-in (API-6)».
+
+/**
+ * A QR to draw: `qr_payload` is `prionex-app-login-qr/v1|<env>|<request_id>|<qr_secret>`,
+ * drawn as is and never logged; accepted `qr_expires_in` s, replaced after `qr_refresh_in` s.
+ */
+export interface AppApprovalQrPayload {
+  qr_payload: string
+  qr_expires_in: number
+  qr_refresh_in: number
+}
+
+/** `202` of `POST …/qr`: poll with `request_id` + `browser_secret`, kept in memory only. */
+export interface AppApprovalQrStart extends AppApprovalQrPayload {
+  request_id: string
+  browser_secret: string
+  expires_in: number
+  poll_interval_ms: number
 }

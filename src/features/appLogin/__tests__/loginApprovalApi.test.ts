@@ -69,4 +69,33 @@ describe('loginApprovalApi', () => {
       expect(String(url)).not.toContain('secret-abc')
     }
   })
+
+  it('opens a QR request and refreshes its QR with the secret in the body only', async () => {
+    const qr = {
+      request_id: 'req-q',
+      browser_secret: 'secret-q',
+      qr_payload: 'prionex-app-login-qr/v1|dev|r|s',
+      qr_expires_in: 60,
+      qr_refresh_in: 30,
+      expires_in: 120,
+      poll_interval_ms: 2000,
+    }
+    post.mockResolvedValueOnce({ data: qr })
+    await expect(loginApprovalApi.startQr({ client: 'crm_web' })).resolves.toEqual(qr)
+    expect(post).toHaveBeenLastCalledWith('/api/v1/auth/app-login/qr', { client: 'crm_web' })
+
+    const next = {
+      qr_payload: 'prionex-app-login-qr/v1|dev|r|t',
+      qr_expires_in: 60,
+      qr_refresh_in: 30,
+    }
+    post.mockResolvedValueOnce({ data: next })
+    const pair = { request_id: 'req-q', browser_secret: 'secret-q' }
+    await expect(loginApprovalApi.refreshQr(pair)).resolves.toEqual(next)
+    expect(post).toHaveBeenLastCalledWith('/api/v1/auth/app-login/qr/refresh', pair)
+    for (const [url] of post.mock.calls) {
+      expect(String(url)).not.toContain('secret-q')
+      expect(String(url)).not.toContain('prionex-app-login-qr')
+    }
+  })
 })
