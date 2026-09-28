@@ -14,12 +14,6 @@ export interface ChainInstanceLite {
   status: string
   /** null ⇒ system/trigger-launched; a user id ⇒ started by hand. */
   started_by: number | null
-  /**
-   * Visibility = "System (hidden)" on the instance's chain (KAN-1045).
-   * Optional: a response from a server without that field omits it, which
-   * degrades to the previous behaviour rather than to a panel that never opens.
-   */
-  is_system_hidden?: boolean
 }
 
 export interface ChainAutoOpenDecision {
@@ -39,13 +33,6 @@ const NO_OP: ChainAutoOpenDecision = { open: false, disarm: false }
  * (`started_by == null`), and brand new — its id was NOT present when the
  * status change was made (`seenIds`), so a stale/unrelated chain can't pop.
  *
- * A System (hidden) chain is excluded even though it fits that description
- * exactly — it is active and system-started, because a trigger launched it
- * (KAN-1045). KAN-318 says such a chain must never be surfaced to a user, and
- * the damage is not only the stray modal: this search stops at the first
- * match and disarms, so a hidden instance appearing inside the wait window
- * would consume the pop that the operator's own debt-status chain was owed.
- *
  * Retry-until-shown: when the launched chain is found but the executor isn't
  * open yet, we return `{ open: true, disarm: false }` — open it but STAY armed.
  * We only disarm once the executor is actually open. So if a click elsewhere in
@@ -62,11 +49,7 @@ export function decideChainAutoOpen(params: {
   if (!armed || !instances) return NO_OP
 
   const launched = instances.find(
-    (inst) =>
-      inst.status === 'active' &&
-      inst.started_by == null &&
-      !inst.is_system_hidden &&
-      !seenIds.has(inst.id)
+    (inst) => inst.status === 'active' && inst.started_by == null && !seenIds.has(inst.id)
   )
   if (!launched) return NO_OP
 

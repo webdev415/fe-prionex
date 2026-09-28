@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 
+import { hasExplicitTimeZoneOffset } from '@/lib/formatters'
+
 import type { TAInteraction } from '../api/types'
 
 /**
@@ -17,8 +19,11 @@ import type { TAInteraction } from '../api/types'
  *
  * Appending `Z` is the convention the rest of the app already uses for these
  * timestamps (see `formatDateTime` in `@/lib/formatters`, which documents the
- * same DB convention). A value that DOES carry `Z` or an explicit ±HH:MM offset
- * is left alone, so this stays correct if the API ever starts sending one.
+ * same DB convention). Whether a value ALREADY carries a zone is decided by
+ * `hasExplicitTimeZoneOffset` rather than a local regex: it also recognises a
+ * lowercase `z` and the colon-less `+0000` form, either of which a local check
+ * would miss and then corrupt by appending `Z` — producing an unparseable
+ * string and so a permanently closed window.
  *
  * Returns `NaN` for anything unparseable, which every caller already treats as
  * "no window".
@@ -26,8 +31,7 @@ import type { TAInteraction } from '../api/types'
 export function parseUtcTimestamp(value: string | null | undefined): number {
   if (!value) return NaN
   const normalized = value.replace(' ', 'T')
-  const hasZone = normalized.endsWith('Z') || /[-+]\d{2}:\d{2}$/.test(normalized)
-  return Date.parse(hasZone ? normalized : `${normalized}Z`)
+  return Date.parse(hasExplicitTimeZoneOffset(normalized) ? normalized : `${normalized}Z`)
 }
 
 /**
@@ -79,15 +83,36 @@ export function canMutateInteraction(
 export function useNowUntil(deadline: number, intervalMs = 1000): number {
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
-    // A deadline already past needs no timer: the `now` we hold is already
-    // beyond it, so every window reads as closed.
-    if (!Number.isFinite(deadline) || Date.now() >= deadline) return
+    // Resync the clock. `now` is seeded once at mount and otherwise only
+    // advanced by the interval, so without this it stays frozen at mount time
+    // for as long as no timer runs — and a frozen `now` reads an already-closed
+    // window as open.
+    //
+    // The way that bites: sit on a client card with no rows of your own (no
+    // timer starts), record an interaction in another tab while this one is
+    // unfocused (the 8s poll is paused), come back twenty minutes later. The
+    // refetch delivers your row, `now` is still twenty minutes stale, so
+    // `now < expiry` holds and Edit/Delete render — and because the deadline
+    // has passed, the early return below means no timer ever takes them away.
+    // The server refuses the click, but the screen has lied.
+    //
+    // Scheduled rather than called straight from the effect body: setState
+    // there cascades renders (`react-hooks/set-state-in-effect`). A timer
+    // callback is an external system, which is what an effect is for, and
+    // setting the same value bails out of the render anyway.
+    const resync = window.setTimeout(() => setNow(Date.now()), 0)
+    if (!Number.isFinite(deadline) || Date.now() >= deadline) {
+      return () => window.clearTimeout(resync)
+    }
     const id = window.setInterval(() => {
       const tick = Date.now()
       setNow(tick)
       if (tick >= deadline) window.clearInterval(id)
     }, intervalMs)
-    return () => window.clearInterval(id)
+    return () => {
+      window.clearTimeout(resync)
+      window.clearInterval(id)
+    }
   }, [deadline, intervalMs])
   return now
 }

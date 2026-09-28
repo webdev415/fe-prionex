@@ -1,7 +1,7 @@
-import type { RefObject } from 'react'
+import { useRef } from 'react'
 
 import { OPERATOR_PHONE_CONFIGURED, OPERATOR_PHONE_URL } from '../constants'
-import type { PhoneStatus } from '../protocol'
+import { useOperatorPhone } from '../hooks/useOperatorPhone'
 import { OperatorPhoneStatus } from './OperatorPhoneStatus'
 import { piiProps } from '@/lib/openreplay/pii'
 
@@ -17,19 +17,12 @@ import { piiProps } from '@/lib/openreplay/pii'
  *
  * Renders nothing when no phone origin is configured (a deployed build without
  * VITE_OPERATOR_PHONE_URL). Framing a guessed origin would be worse than
- * absent: the operator's phone JWT is posted to that origin.
- *
- * Presentational: `useOperatorPhone` is owned by the operator view, because the
- * call control it exposes (answer, auto-answer, the routed call itself) drives
- * the view's own surfaces, not this hidden frame.
+ * absent: the hook posts the operator's phone JWT to it.
  */
-export interface OperatorPhonePanelProps {
-  iframeRef: RefObject<HTMLIFrameElement | null>
-  status: PhoneStatus
-  aor: string | null
-}
+export function OperatorPhonePanel() {
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+  const { status, aor } = useOperatorPhone(iframeRef)
 
-export function OperatorPhonePanel({ iframeRef, status, aor }: OperatorPhonePanelProps) {
   if (!OPERATOR_PHONE_CONFIGURED) return null
 
   return (

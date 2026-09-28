@@ -306,7 +306,7 @@ const TASK_SERVICE_WALL_TIMEZONE = 'Europe/Kyiv'
  * True if the string encodes an absolute instant (Z or numeric UTC offset at end).
  * Naive ISO strings from the task API (no suffix) must return false.
  */
-function hasExplicitTimeZoneOffset(isoDate: string): boolean {
+export function hasExplicitTimeZoneOffset(isoDate: string): boolean {
   const s = isoDate.trim()
   if (/[zZ]$/.test(s)) return true
   // RFC 3339 offset: ...+03:00, ...-05:00, or ...+0000 (after T, last occurrence)

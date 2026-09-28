@@ -3,9 +3,9 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import type { RoutedCall } from '@/features/dialer'
 import { Icons } from '@/lib/icons'
-import { piiProps } from '@/lib/openreplay/pii'
 
 import { ToggleChip } from './ToggleChip'
+import { piiProps } from '@/lib/openreplay/pii'
 
 interface IncomingCallPromptProps {
   routedCall: RoutedCall
@@ -13,8 +13,6 @@ interface IncomingCallPromptProps {
   autoConnect: boolean
   onToggleAutoConnect: (value: boolean) => void
   onAccept: () => void
-  /** The Accept is sent and the phone has not confirmed yet. */
-  accepting?: boolean
   onLeave: () => void
   leaving?: boolean
 }
@@ -25,7 +23,6 @@ export function IncomingCallPrompt({
   autoConnect,
   onToggleAutoConnect,
   onAccept,
-  accepting = false,
   onLeave,
   leaving,
 }: IncomingCallPromptProps) {
@@ -68,21 +65,14 @@ export function IncomingCallPrompt({
             <Icons.Phone size={30} strokeWidth={1.5} />
           </div>
           <p className="text-foreground text-lg font-semibold" {...piiProps}>
-            {routedCall.client_name || t('dialer.call.unknownClient', 'Unknown contact')}
+            {routedCall.client_name}
           </p>
           <p className="text-muted-foreground text-sm">{routedCall.phone}</p>
           <span className="bg-muted text-muted-foreground rounded px-2 py-0.5 text-xs font-semibold">
             {lineLabel}
           </span>
         </div>
-        <Button
-          variant="primary"
-          size="lg"
-          leftIcon={<Icons.Phone size={18} />}
-          onClick={onAccept}
-          disabled={accepting}
-          isLoading={accepting}
-        >
+        <Button variant="primary" size="lg" leftIcon={<Icons.Phone size={18} />} onClick={onAccept}>
           {t('dialer.call.acceptCall', 'Accept call')}
         </Button>
       </div>

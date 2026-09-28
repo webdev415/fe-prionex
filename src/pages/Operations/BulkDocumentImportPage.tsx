@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import { Button } from '@/components/ui/Button'
+import { DocumentTypePill } from '@/components/DocumentTypePill'
 import { Label } from '@/components/ui/Label'
 import {
   Select,
@@ -25,7 +26,7 @@ import {
   SelectValue,
 } from '@/components/ui/Select'
 import { Icons } from '@/lib/icons'
-import { useDocumentImportReadiness } from '@/features/documentImportRules'
+import { useDocumentTypes } from '@/features/documentTypes'
 import {
   documentImportApi,
   useDownloadExampleArchive,
@@ -43,13 +44,7 @@ export function BulkDocumentImportPage() {
   const { data: agreementsPage, isLoading: isLoadingAgreements } = useFactoringAgreements({
     page_size: 200,
   })
-  // Readiness, not a type picker: the rules decide each file's type, and the
-  // upload cannot start while a folder has no default to fall back to.
-  const {
-    data: readiness,
-    isLoading: isLoadingReadiness,
-    refetch: refetchReadiness,
-  } = useDocumentImportReadiness()
+  const { data: documentTypes = [], isLoading: isLoadingDocTypes } = useDocumentTypes()
   const downloadExample = useDownloadExampleArchive()
   const { uploadFile, cancelUpload, startImport, uploading, starting, progress } =
     useUploadDocumentArchive()
@@ -57,6 +52,7 @@ export function BulkDocumentImportPage() {
   const agreements = useMemo(() => agreementsPage?.items ?? [], [agreementsPage])
 
   const [agreementId, setAgreementId] = useState<string>('')
+  const [documentTypeId, setDocumentTypeId] = useState<string>('')
   const [zipFile, setZipFile] = useState<File | null>(null)
   const [uploadId, setUploadId] = useState<string | null>(null)
   const [jobId, setJobId] = useState<number | null>(null)
@@ -77,11 +73,9 @@ export function BulkDocumentImportPage() {
   )
 
   // The ZIP is uploaded + staged on selection; Start Import only runs once the
-  // upload has finished (uploadId set), an agreement is chosen, and the
-  // project's type rules are complete — the backend refuses the start
-  // otherwise, and a button that looks ready is worse than one that explains.
-  const rulesReady = readiness?.ready ?? false
-  const canSubmit = agreementId !== '' && uploadId !== null && rulesReady && !uploading && !starting
+  // upload has finished (uploadId set) and an agreement + type are chosen.
+  const canSubmit =
+    agreementId !== '' && documentTypeId !== '' && uploadId !== null && !uploading && !starting
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -107,19 +101,13 @@ export function BulkDocumentImportPage() {
   }
 
   const handleSubmit = async () => {
-    if (!uploadId || agreementId === '') return
+    if (!uploadId || agreementId === '' || documentTypeId === '') return
     try {
-      const result = await startImport(uploadId, Number(agreementId))
+      const result = await startImport(uploadId, Number(agreementId), Number(documentTypeId))
       // Hand off to the progress card, which polls the job to completion.
       setJobId(result.job_id)
-    } catch (error) {
-      // The hook toasts the message either way. A 409 means the rules changed
-      // since this page loaded — an admin cleared a default — so re-read
-      // readiness: the notice above and the button below must agree with the
-      // answer that just refused the start.
-      if ((error as { response?: { status?: number } })?.response?.status === 409) {
-        void refetchReadiness()
-      }
+    } catch {
+      // error toast already shown by the hook
     }
   }
 
@@ -128,6 +116,7 @@ export function BulkDocumentImportPage() {
     setZipFile(null)
     setUploadId(null)
     setAgreementId('')
+    setDocumentTypeId('')
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
@@ -237,28 +226,41 @@ export function BulkDocumentImportPage() {
             </dl>
           )}
 
-          {/* No document-type picker: the project's rules type each file on
-              their own. What the operator needs here is whether those rules
-              are complete, and a way to reach them if they are not. */}
-          {!isLoadingReadiness && !rulesReady && (
-            <div
-              role="status"
-              className="border-warning-300 bg-warning-50 text-warning-800 flex items-start gap-2 rounded-lg border p-3 text-sm"
+          {/* Document type */}
+          <div>
+            <Label htmlFor="doc-import-type" required className="mb-1.5 block">
+              {t('pages.imports.documents.documentType', 'Document type')}
+            </Label>
+            <Select
+              value={documentTypeId}
+              onValueChange={setDocumentTypeId}
+              disabled={isLoadingDocTypes || documentTypes.length === 0}
             >
-              <Icons.Warning size={18} strokeWidth={2} className="mt-0.5 shrink-0" />
-              <span>
-                {t(
-                  'pages.imports.documents.rulesNotReady',
-                  'Bulk upload is unavailable until a default document type is set for {{folders}} under Settings → Document Generation → Bulk Upload Rules.',
-                  {
-                    folders: (readiness?.missing_defaults ?? ['credits', 'users'])
-                      .map((folder) => `${folder}/`)
-                      .join(', '),
+              <SelectTrigger className="w-full" id="doc-import-type">
+                <SelectValue
+                  placeholder={
+                    isLoadingDocTypes
+                      ? t('common.loading', 'Loading…')
+                      : t('pages.imports.documents.selectDocumentType', 'Select a document type')
                   }
-                )}
-              </span>
-            </div>
-          )}
+                >
+                  {(() => {
+                    const selected = documentTypes.find((dt) => String(dt.id) === documentTypeId)
+                    return selected ? (
+                      <DocumentTypePill name={selected.name} hex={selected.color} />
+                    ) : null
+                  })()}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {documentTypes.map((dt) => (
+                  <SelectItem key={dt.id} value={String(dt.id)}>
+                    <DocumentTypePill name={dt.name} hex={dt.color} />
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           {/* ZIP upload (single .zip only) */}
           <div>

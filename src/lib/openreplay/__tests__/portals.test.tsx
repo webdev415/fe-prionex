@@ -90,14 +90,11 @@ describe('react-datepicker (step 5.4)', () => {
     // inheritance covers it. This test is what makes that a fact with an expiry
     // date rather than a sentence in a document — the day somebody adds
     // `withPortal`, it fails and phase 5 gets revisited.
-    const modules = import.meta.glob<string>('/src/**/*.tsx', {
-      query: '?raw',
-      import: 'default',
-      eager: true,
-    })
+    const modules = import.meta.glob('/src/**/*.tsx', { query: '?raw', import: 'default' })
     const offenders: string[] = []
-    for (const [path, text] of Object.entries(modules)) {
+    for (const [path, load] of Object.entries(modules)) {
       if (path.includes('__tests__') || /\.(test|spec)\.tsx$/.test(path)) continue
+      const text = (await load()) as string
       if (/\bwithPortal\b|\bportalId\b/.test(text)) offenders.push(path)
     }
     expect(

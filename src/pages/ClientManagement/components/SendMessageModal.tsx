@@ -336,7 +336,7 @@ export function SendMessageModal({
   const handleChannelChange = (nextChannel: MessagingChannel) => {
     const spec = CHANNEL_SPECS[nextChannel]
     const integrationsForChannel = integrations.filter((integration) =>
-      isMessagingIntegrationUsable(integration, nextChannel)
+      isMessagingIntegrationUsable(integration, nextChannel, projectCountry)
     )
 
     setChannel(nextChannel)

@@ -132,10 +132,6 @@ const bulkSubmitToUbki = vi.hoisted(() => vi.fn())
 vi.mock('@/features/ubki', () => ({
   useSubmitDebtToUbki: () => ({ mutate: vi.fn(), isPending: false }),
   useBulkSubmitToUbki: () => ({ mutate: bulkSubmitToUbki, isPending: false }),
-  // True, because this scene IS about the UBKI entry points: the P-24 cases
-  // below assert that a module-owned credit is left OUT of the bureau
-  // submission, which only means anything while those buttons are reachable.
-  // The real hook returns country === 'UA'.
   useUbkiAvailable: () => true,
   ubkiKeys: { all: ['ubki'] },
 }))

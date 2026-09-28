@@ -23,16 +23,29 @@ import type Tracker from '@openreplay/tracker'
  * replay would be usable by anyone with access to it, and would survive in the
  * replay backend's backups.
  *
- * ⚠️ Read this before relying on it: as of 18.0.6 the tracker does NOT capture
- * that socket. Its network capture is `@openreplay/network-proxy`, which exports
- * `BeaconProxy`, `FetchProxy` and `XHRProxy` and nothing for WebSocket — which is
- * also why the package offers a manual `trackWs()` at all. So this list closes no
- * leak that exists right now; it is here so that the day a token appears in a
- * fetch or XHR URL, or the day the proxy grows WebSocket support, the value is
- * already redacted instead of being discovered in a recording afterwards.
+ * ⚠️ Read this before relying on it for `token`: as of 18.0.6 the tracker does
+ * NOT capture that socket. Its network capture is `@openreplay/network-proxy`,
+ * which exports `BeaconProxy`, `FetchProxy` and `XHRProxy` and nothing for
+ * WebSocket — which is also why the package offers a manual `trackWs()` at all.
+ * So the credential half of this list is precautionary: it is here so that the
+ * day a token appears in a fetch or XHR URL, or the day the proxy grows
+ * WebSocket support, the value is already redacted rather than discovered in a
+ * recording afterwards.
+ *
+ * `phone` and `tin` are NOT precautionary. Both travel in ordinary GET query
+ * strings that FetchProxy captures today — `calls/last-by-phone?phone=` on every
+ * open of the creditor-comment panel (KAN-1212) and `clients/search/tin?tin=` —
+ * and URLs are recorded independently of `capturePayload`, which only gates
+ * bodies. Without them the panel writes a third-party's number into the
+ * recording in cleartext, which is the very exposure the empty `data-phone`
+ * marker was introduced to close, reached by a different channel.
+ *
+ * Note what this list is for: a name here means the VALUE is PII or a
+ * credential, not that the parameter is unusual. The URL itself stays readable,
+ * so recordings remain navigable.
  */
 const SENSITIVE_QUERY_PARAMS =
-  /([?&](?:access_token|api_key|apikey|auth|jwt|key|password|secret|sig|signature|token)=)[^&#]*/gi
+  /([?&](?:access_token|api_key|apikey|auth|jwt|key|password|phone|secret|sig|signature|tin|token)=)[^&#]*/gi
 
 /** Replace the value of every sensitive query parameter, leaving the URL readable. */
 export function redactSensitiveQueryParams(url: string): string {

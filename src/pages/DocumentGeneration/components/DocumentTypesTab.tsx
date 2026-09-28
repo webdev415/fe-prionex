@@ -7,11 +7,9 @@
  * shape: DataTable rows + create/edit/hide/delete actions + a form
  * modal.
  *
- * Delete is disabled while ``doc_count > 0`` or ``rule_count > 0`` — the BE
- * rejects with 409 in either case; disabling the button surfaces the
- * constraint before the user tries. The two are separate sentences because
- * the remedy differs: documents are history and the type can only be hidden,
- * while a rule is a setting the admin can point elsewhere.
+ * Delete is disabled while ``doc_count > 0`` — the BE rejects with 409
+ * in that case; disabling the button surfaces the constraint before
+ * the user tries.
  */
 
 import { useMemo, useState } from 'react'
@@ -78,7 +76,7 @@ export function DocumentTypesTab() {
   }
 
   const handleDelete = async (row: DocumentType) => {
-    if (row.doc_count > 0 || row.rule_count > 0) return
+    if (row.doc_count > 0) return
     const ok = await confirm({
       title: t('pages.documentGeneration.types.confirmDeleteTitle', "Delete '{{name}}'?", {
         name: row.name,
@@ -172,7 +170,7 @@ export function DocumentTypesTab() {
             >
               <Icons.Eye size={16} strokeWidth={2} />
             </Button>
-            {row.doc_count > 0 || row.rule_count > 0 ? (
+            {row.doc_count > 0 ? (
               <TooltipProvider>
                 <Tooltip delayDuration={200}>
                   <TooltipTrigger asChild>
@@ -193,17 +191,11 @@ export function DocumentTypesTab() {
                     </span>
                   </TooltipTrigger>
                   <TooltipContent>
-                    {row.doc_count > 0
-                      ? t(
-                          'pages.documentGeneration.types.deleteBlockedMessage',
-                          'This type is used by {{formattedCount}} documents. Hide it instead of deleting.',
-                          { formattedCount: row.doc_count.toLocaleString() }
-                        )
-                      : t(
-                          'pages.documentGeneration.types.deleteBlockedByRules',
-                          'This type is used by {{count}} bulk-upload rule(s). Change those rules first, or hide the type instead.',
-                          { count: row.rule_count }
-                        )}
+                    {t(
+                      'pages.documentGeneration.types.deleteBlockedMessage',
+                      'This type is used by {{formattedCount}} documents. Hide it instead of deleting.',
+                      { formattedCount: row.doc_count.toLocaleString() }
+                    )}
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>

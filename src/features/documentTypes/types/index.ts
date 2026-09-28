@@ -5,8 +5,6 @@ export interface DocumentType {
   color: string
   is_hidden: boolean
   doc_count: number
-  /** Bulk-upload rules and folder defaults pointing at this type. */
-  rule_count: number
   created_at: string
   updated_at: string
 }

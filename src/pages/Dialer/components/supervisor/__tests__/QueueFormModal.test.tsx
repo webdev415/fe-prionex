@@ -74,14 +74,6 @@ describe('QueueFormModal — dialing settings', () => {
     expect(screen.getByText('dialer.queueForm.immutable')).toBeTruthy()
   })
 
-  it('offers answer mode, so a queue can be set to let operators accept', () => {
-    // Without this the queue is stuck on the 'auto' default: the gateway bridges
-    // the customer straight through and the operator never gets an accept
-    // window, so a manual workflow cannot be configured at all.
-    render(<QueueFormModal open onClose={() => {}} />)
-    expect(screen.getByLabelText('dialer.queueForm.answerMode')).toBeTruthy()
-  })
-
   it('exposes the upstream-validated settings that used to be uneditable', () => {
     render(<QueueFormModal open queue={makeQueue()} onClose={() => {}} />)
     expect(screen.getByLabelText('dialer.queueForm.priority')).toHaveValue(3)
@@ -128,7 +120,6 @@ describe('QueueFormModal — dialing settings', () => {
     expect(payload).toMatchObject({
       name: 'Smoke queue',
       telephony_type: 'white',
-      answer_mode: 'auto',
       priority: 3,
       sim_card_limit: 4,
       // Never the dial-once value the gateway would otherwise apply.

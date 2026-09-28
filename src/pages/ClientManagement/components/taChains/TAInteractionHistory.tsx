@@ -3,7 +3,7 @@
  * Shows full dictionary path, filters by date/chain/notes, pagination.
  */
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { creditIdsFromCreditSteps, extractPhones } from './taFieldMapping'
@@ -283,7 +283,18 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
   //
   // `user.id` is a string on the auth store; the API returns `recorded_by` as
   // a number, so compare parsed values or every row looks like someone else's.
-  const currentUserId = user?.id != null ? Number(user.id) : null
+  // Number('') is 0, which would match a row whose recorded_by is 0; Number of
+  // anything non-numeric is NaN, which compares false everywhere. Only a real
+  // positive id counts as "me".
+  const parsedUserId = Number(user?.id)
+  const currentUserId = Number.isInteger(parsedUserId) && parsedUserId > 0 ? parsedUserId : null
+
+  // The window only decides anything for a user who LACKS the permission —
+  // canMutateInteraction short-circuits on hasPermission. Someone holding both
+  // gets no benefit from the clock, so do not start one for them: it would
+  // re-render the whole table once a second for five minutes after they record
+  // anything.
+  const needsSelfEditWindow = !canEditInteractions || !canDeleteInteractions
   // The last moment any of MY rows is still editable. Deliberately computed
   // without reading the clock: doing that during render is impure (the value
   // changes on every re-render), so the comparison lives inside useNowUntil,
@@ -295,14 +306,52 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
   // never starts a timer and the buttons never re-render away.
   const lastOwnSelfEditExpiry = useMemo(
     () =>
-      items.reduce((latest, i) => {
-        if (i.recorded_by !== currentUserId) return latest
-        const expiresAt = parseUtcTimestamp(i.self_edit_expires_at)
-        return Number.isNaN(expiresAt) ? latest : Math.max(latest, expiresAt)
-      }, 0),
-    [items, currentUserId]
+      !needsSelfEditWindow
+        ? 0
+        : items.reduce((latest, i) => {
+            if (i.recorded_by !== currentUserId) return latest
+            const expiresAt = parseUtcTimestamp(i.self_edit_expires_at)
+            return Number.isNaN(expiresAt) ? latest : Math.max(latest, expiresAt)
+          }, 0),
+    [items, currentUserId, needsSelfEditWindow]
   )
   const now = useNowUntil(lastOwnSelfEditExpiry)
+  // The buttons are gated by canEditRow/canDeleteRow, but an OPEN dialog is
+  // not: an operator who opens the editor at 4m50s and types for a minute used
+  // to get a generic save error with nothing explaining that the five-minute
+  // window had simply run out.
+  //
+  // DERIVED, not synchronised. Closing it from an effect would mean calling
+  // setState in an effect body — a cascading render, and what
+  // `react-hooks/set-state-in-effect` exists to stop. Whether the dialog may be
+  // open is a function of the row and the clock, so it is computed here and the
+  // `open` prop follows it. `editingId` is left alone; it is overwritten the
+  // next time a row is opened, and nothing else reads it while the dialog is
+  // shut.
+  const stillMutable = (id: number | null, hasPermission: boolean) => {
+    if (id === null) return true
+    if (hasPermission) return true
+    const row = items.find((i) => i.id === id)
+    return row ? canMutateInteraction(row, currentUserId, false, now) : false
+  }
+  const mayStillEdit = stillMutable(editingId, canEditInteractions)
+  const mayStillDelete = stillMutable(deletingId, canDeleteInteractions)
+
+  // A toast IS the kind of external-system side effect an effect is for, and
+  // this one sets no state. The ref keeps it to one notice per closure rather
+  // than one per render while the dialog is on screen.
+  const windowClosedNotified = useRef(false)
+  useEffect(() => {
+    const closedUnderfoot =
+      (editingId !== null && !mayStillEdit) || (deletingId !== null && !mayStillDelete)
+    if (closedUnderfoot && !windowClosedNotified.current) {
+      windowClosedNotified.current = true
+      toast.info(t('pages.clientChains.history.selfEditWindowClosed'))
+    } else if (!closedUnderfoot) {
+      windowClosedNotified.current = false
+    }
+  }, [editingId, deletingId, mayStillEdit, mayStillDelete, t])
+
   const canEditRow = (row: TAInteraction) =>
     canMutateInteraction(row, currentUserId, canEditInteractions, now)
   const canDeleteRow = (row: TAInteraction) =>
@@ -814,13 +863,17 @@ export function TAInteractionHistory({ clientId, debts = [] }: Props) {
       )}
 
       <EditTAInteractionModal
-        open={editingId !== null}
+        open={editingId !== null && mayStillEdit}
         interactionId={editingId}
         onClose={() => setEditingId(null)}
         debts={debts}
       />
 
-      <Modal open={deletingId !== null} onClose={() => setDeletingId(null)} maxWidth="sm">
+      <Modal
+        open={deletingId !== null && mayStillDelete}
+        onClose={() => setDeletingId(null)}
+        maxWidth="sm"
+      >
         <div className="flex flex-col items-center gap-4 py-2 text-center">
           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-100">
             <Icons.Delete size={26} className="text-red-600" strokeWidth={1.8} />

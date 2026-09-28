@@ -37,7 +37,13 @@ export interface TAInteraction {
   // KAN-1110 — when this record's author stops being able to edit/delete it
   // without the separate permission. Server-computed (`created_at` + 5 min) so
   // the countdown cannot drift from the API guard.
-  self_edit_expires_at: string
+  // Nullable on purpose: TAInteraction is shared by the list, create, update,
+  // InteractionLog and Training endpoints, and only the TA-history handler is
+  // known to populate this. Declaring it required would assert every endpoint
+  // returns it — and would let a frontend deployed ahead of the backend
+  // type-check cleanly and then degrade silently at runtime. parseUtcTimestamp
+  // already accepts null/undefined; this makes the types agree with it.
+  self_edit_expires_at: string | null
 }
 
 export interface TAInteractionListResponse {
@@ -113,15 +119,6 @@ export interface ChainInstance {
   id: number
   chain_id: number
   chain_name: string | null
-  /**
-   * The chain's own two settings, travelling with the instance (KAN-1045).
-   * `is_system_hidden` is Visibility = "System (hidden)" from KAN-318: such a
-   * chain is launched by its trigger and must never be shown to an operator,
-   * so the client card needs to know that without a second chain fetch.
-   * Optional because a response from a server older than KAN-1045 omits them.
-   */
-  chain_type?: 'manual' | 'automatic' | null
-  is_system_hidden?: boolean
   client_id: number
   status: 'active' | 'completed' | 'cancelled'
   current_step_order: number | null

@@ -18,6 +18,7 @@ import { LoansCardList } from './components/LoansCardList'
 import { UbkiSubmissionHistory } from './components/UbkiSubmissionHistory'
 import { SaleNotesSection } from './components/SaleNotesSection'
 import { toDigits, type PhoneHighlightState } from '@/features/clients/utils/phoneHighlight'
+import { commentCallDecision } from './commentPhoneCallGate'
 import {
   formatClientFullName,
   formatDate,
@@ -178,7 +179,6 @@ import { callDialogBlockedReason } from './callDialogGate'
 import { CallingWindowTooltip } from '@/features/calls/components/CallingWindowTooltip'
 import { useCallOrigination } from '@/features/calls/hooks/useCallOrigination'
 import { useAuthStore } from '@/stores/authStore'
-import { useChainExecutorStore } from '@/stores/chainExecutorStore'
 import { backendToFrontendPaymentMethod } from '@/features/payments/utils'
 import { PaymentMethodCell } from '@/features/payments/components/PaymentMethodCell'
 import { useUserDepartment } from '@/features/users'
@@ -580,45 +580,6 @@ export function ClientDetailPage() {
     number | null
   >(null)
   const chainExecutorMinimizeRef = useRef<(() => void) | null>(null)
-  // KAN-1112 — ChainExecutor owns the active instance, so the abandon has to
-  // reach into it. Mirrors chainExecutorMinimizeRef.
-  const chainExecutorDiscardRef = useRef<(() => void) | null>(null)
-  const clearMinimizedChainExecutor = useChainExecutorStore((s) => s.clear)
-
-  /** Forget which template/phone this open was launched with. */
-  const resetChainExecutorLaunchArgs = useCallback(() => {
-    setIsChainExecutorOpen(false)
-    setChainExecutorContactSource(null)
-    setChainExecutorPrefilledPhone(null)
-    setChainExecutorPrefilledPhoneSource(null)
-    setChainExecutorInitialTemplateId(null)
-  }, [])
-
-  /**
-   * Abandon the TA fill-in outright — ESC and the × button (KAN-1112).
-   *
-   * Distinct from minimizing, which deliberately KEEPS the entered steps so the
-   * operator can come back to them. Abandoning must leave nothing behind: a
-   * surviving minimized session is not merely stale state, it actively blocks
-   * the next hotkey — ``decideHotkeyLaunch`` refuses to launch while one exists
-   * (``blocked: 'minimized'``).
-   *
-   * That is the flow the ticket is about: wrong hotkey → ESC → correct hotkey.
-   * Without the clear, the second press is swallowed and the operator is stuck
-   * with a template they never wanted.
-   *
-   * No confirmation prompt, per the ticket — ESC is expected to be instant.
-   */
-  const discardChainExecutor = useCallback(() => {
-    // Cancel the chain instance this opening created, THEN close. Clearing the
-    // local snapshot alone is not enough: a hotkey launch has already started
-    // an instance server-side, and decideHotkeyAutoStart refuses to start a
-    // template while one is active — so the operator's next hotkey opened an
-    // empty step instead of the result they pressed.
-    chainExecutorDiscardRef.current?.()
-    clearMinimizedChainExecutor()
-    resetChainExecutorLaunchArgs()
-  }, [clearMinimizedChainExecutor, resetChainExecutorLaunchArgs])
 
   // Call origination hook (provides user, call state, handlers)
   const userTimezone = useAuthStore((state) => state.user?.timezone)
@@ -1137,6 +1098,10 @@ export function ClientDetailPage() {
 
   const canCreateTasks = useHasPermission(PERMISSIONS.CLIENTS.CREATE_TASKS)
   const canEditClient = useHasPermission(PERMISSIONS.CLIENTS.EDIT)
+  // KAN-1212 review M1 — the comment panel's Call item needs the same gate the
+  // phone strip and the Recommenders tab get from <PermissionGuard>, which a
+  // portal-rendered panel cannot inherit.
+  const canMakeCalls = useHasPermission(PERMISSIONS.COMMUNICATION.MAKE_CALLS)
   // KAN-993 — close/reopen/edit-closure live in the per-card "..." dropdown now,
   // so we need the permission as a boolean (was a <PermissionGuard> wrapper).
   const canCloseDebt = useHasPermission(PERMISSIONS.CLIENTS.CLOSE_DEBT)
@@ -2094,6 +2059,33 @@ export function ClientDetailPage() {
    * a number read out of a comment is no more exempt from them than one on a
    * contact card.
    */
+  /** EVERY contact row holding this number. Digits on both sides — contacts are
+   *  stored bare, with a leading +, and with punctuation, while the comment side
+   *  is always bare.
+   *
+   *  NOT filtered to phone-typed rows, and that is the point: the comment
+   *  colours a number green on ANY contact type, so a number whose only rows are
+   *  «Рекомендувач» / «Верифікована 3-я особа» matched nothing here — no call
+   *  line, no spam flag and, once the gate arrived, no blocking check either.
+   *  The type filter belongs at the call-line choice below, where it means
+   *  something. */
+  const findCommentPhoneContacts = (phone: string) => {
+    const digits = toDigits(phone)
+    return (client?.recommenders ?? []).filter(
+      (candidate) => toDigits(candidate.contactValue) === digits
+    )
+  }
+
+  /** Why the panel must render Call disabled, or null. Same decision the click
+   *  handler makes, asked earlier so the operator sees the refusal instead of
+   *  discovering it. */
+  const commentPhoneCallBlockReason = (phone: string): string | null => {
+    const decision = commentCallDecision(findCommentPhoneContacts(phone))
+    return decision.allowed
+      ? null
+      : decision.reason || t('pages.contactTags.callsBlocked', 'Calls blocked')
+  }
+
   const handleCommentPhoneCall = (phone: string, state: PhoneHighlightState) => {
     if (state === 'new') {
       // Not a contact: manual entry, Gray Line, digits pre-filled (AC25).
@@ -2101,13 +2093,22 @@ export function ClientDetailPage() {
       return
     }
     // Known: the call type is the CONTACT's default, so the contact has to be
-    // found again. Digits on both sides — contacts are stored bare, with a
-    // leading +, and with punctuation, while the comment side is always bare.
-    const digits = toDigits(phone)
-    const contact = client?.recommenders?.find(
-      (candidate) => candidate.isPhone && toDigits(candidate.contactValue) === digits
-    )
-    openOutboundCall(phone, contact?.contactTypeId ?? null)
+    // found again. A phone-typed row first — its type carries the call line —
+    // while the gate below weighs every row that holds the number.
+    const contacts = findCommentPhoneContacts(phone)
+    const contact = contacts.find((candidate) => candidate.isPhone) ?? contacts[0]
+
+    // Review H1 — the contact's blocking tags, which openOutboundCall does NOT
+    // check (its own guard is the calling window). Both other call entry points
+    // check them before dialling; this one skipped it, so a number tagged
+    // "Do Not Call" was dialable from the comment while the rest of the page
+    // locked it.
+    const decision = commentCallDecision(contacts)
+    if (!decision.allowed) {
+      toast.warning(decision.reason || t('pages.contactTags.callsBlocked', 'Calls blocked'))
+      return
+    }
+    openOutboundCall(phone, contact?.contactTypeId ?? null, decision.spamOverride)
   }
 
   /**
@@ -5985,9 +5986,13 @@ export function ClientDetailPage() {
           {/* Chain Executor Modal */}
           <Modal
             open={isChainExecutorOpen}
-            /* ESC lands here (Radix onEscapeKeyDown -> onOpenChange). KAN-1112:
-               it must reset, not preserve — same as the × button below. */
-            onClose={discardChainExecutor}
+            onClose={() => {
+              setIsChainExecutorOpen(false)
+              setChainExecutorContactSource(null)
+              setChainExecutorPrefilledPhone(null)
+              setChainExecutorPrefilledPhoneSource(null)
+              setChainExecutorInitialTemplateId(null)
+            }}
             maxWidth="xl"
             showCloseButton={false}
             /* Marks this dialog as the TA executor's own so a hotkey pressed
@@ -6005,7 +6010,13 @@ export function ClientDetailPage() {
                 <Icons.Remove02 size={20} className="text-foreground" strokeWidth={1.5} />
               </button>
               <button
-                onClick={discardChainExecutor}
+                onClick={() => {
+                  setIsChainExecutorOpen(false)
+                  setChainExecutorContactSource(null)
+                  setChainExecutorPrefilledPhone(null)
+                  setChainExecutorPrefilledPhoneSource(null)
+                  setChainExecutorInitialTemplateId(null)
+                }}
                 className="hover:bg-muted flex h-8 w-8 items-center justify-center rounded-md transition-colors"
                 aria-label={t('components.modal.close', 'Close modal')}
               >
@@ -6022,13 +6033,21 @@ export function ClientDetailPage() {
                 prefilledPhone={chainExecutorPrefilledPhone}
                 prefilledPhoneSource={chainExecutorPrefilledPhoneSource}
                 initialTemplateId={chainExecutorInitialTemplateId}
-                onSave={resetChainExecutorLaunchArgs}
-                /* NOT discardChainExecutor: minimizing exists precisely to keep
-                   the entered steps, and ChainExecutor has just written them to
-                   the store. */
-                onMinimize={resetChainExecutorLaunchArgs}
+                onSave={() => {
+                  setIsChainExecutorOpen(false)
+                  setChainExecutorContactSource(null)
+                  setChainExecutorPrefilledPhone(null)
+                  setChainExecutorPrefilledPhoneSource(null)
+                  setChainExecutorInitialTemplateId(null)
+                }}
+                onMinimize={() => {
+                  setIsChainExecutorOpen(false)
+                  setChainExecutorContactSource(null)
+                  setChainExecutorPrefilledPhone(null)
+                  setChainExecutorPrefilledPhoneSource(null)
+                  setChainExecutorInitialTemplateId(null)
+                }}
                 onMinimizeRef={chainExecutorMinimizeRef}
-                onDiscardRef={chainExecutorDiscardRef}
               />
             </ModalContent>
           </Modal>
@@ -6086,6 +6105,10 @@ export function ClientDetailPage() {
               phoneContacts={client.recommenders}
               onPhoneCall={handleCommentPhoneCall}
               onPhoneAddContact={handleCommentPhoneAddContact}
+              getCallBlockReason={commentPhoneCallBlockReason}
+              canCall={canMakeCalls}
+              canDial={Boolean(user?.is_agent && user?.asterisk_extension)}
+              canAddContact={canEditClient}
             />
           )}
 
