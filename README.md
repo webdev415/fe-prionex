@@ -27,7 +27,7 @@ Modern React-based frontend application for the Prionex CRM system, built with T
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/CRM-Prionex/fe-prionex.git
+   git clone ssh://git@git.crm-prionex.com:2222/CRM/fe-prionex.git
    cd fe-prionex
    ```
 
