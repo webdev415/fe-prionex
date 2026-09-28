@@ -287,10 +287,22 @@ jobs:
           MAX_HOLDER_AGE_HOURS: "24"   # A holder that finished over a day ago is not "a deploy that
                                        # just ended"; it is debris (M15's own tradeoff, Story 4.4).
           MAX_CANDIDATES: "50"        # Code review L11: a blast-radius ceiling, not a tuning knob —
-                                       # a routine weekly cycle produces at most a handful of
-                                       # candidates on either side; a count this high means the
-                                       # enumeration itself has widened, and the correct response is
-                                       # to refuse and report, not to act at unexpected scale.
+                                       # a count this high means the enumeration itself has widened,
+                                       # and the correct response is to refuse and report, not to act
+                                       # at unexpected scale. Since 2026-09-28 it guards the
+                                       # LOCK-HOLDER half only; images have their own ceiling below.
+          MAX_IMAGE_REMOVALS: "150"   # 🔴 2026-09-28, runs 1814 and its rerun: the image ceiling used
+                                       # to be MAX_CANDIDATES applied to EVERY untagged image, before
+                                       # the age and reference filters. "A handful per week" was
+                                       # wrong: every dev deploy pulls by digest and leaves one
+                                       # untagged image — measured on the hub on 2026-09-28: 79
+                                       # untagged, 14.09–28.09, i.e. ~40–47 per week; only 32 of them
+                                       # were >=168h and 0 referenced. So the raw count sat above 50
+                                       # every week while the actual removal set was well under it.
+                                       # Now the ceiling applies to the REMOVAL SET (after age +
+                                       # reference filtering) and is sized like MAX_DISCARDED: ~3
+                                       # weeks of measured volume, so a missed run or two still
+                                       # passes and a widened enumeration still refuses.
         run: |
           set -euo pipefail
           # Code review M8: `|| true` on BOTH ends of this purely diagnostic command — it must
@@ -345,13 +357,13 @@ jobs:
           NOW_EPOCH="$(date -u +%s)"
           if [ -n "$IMAGE_LINES" ]; then
             IMAGE_CANDIDATE_COUNT="$(printf '%s\n' "$IMAGE_LINES" | grep -c . || true)"
-            if [ "$IMAGE_CANDIDATE_COUNT" -gt "$MAX_CANDIDATES" ]; then
-              echo "FAIL: ${IMAGE_CANDIDATE_COUNT} untagged ${IMAGE_REPO} images found, over the"\
-                   "${MAX_CANDIDATES}-candidate blast-radius ceiling (code review L11). This is"\
-                   "far more than a routine weekly cycle should ever produce — refusing to act at"\
-                   "this scale. Investigate the enumeration and the host before raising the ceiling."
-              exit 1
-            fi
+            echo "${IMAGE_CANDIDATE_COUNT} untagged ${IMAGE_REPO} image(s) listed; classifying before any removal."
+            # 🔴 2026-09-28: two passes. Pass 1 (this loop) only CLASSIFIES — every KEEP reason is
+            # printed here, and what survives the age and reference filters is collected into
+            # TO_REMOVE. The blast-radius ceiling is then checked against TO_REMOVE, i.e. against
+            # what would actually be removed, and only pass 2 calls `docker rmi`. A refusal
+            # therefore still removes nothing, same as before.
+            TO_REMOVE=""
             while IFS='|' read -r IMG_ID IMG_CREATED; do
               [ -z "$IMG_ID" ] && continue
               # `docker images ... CreatedAt` renders as e.g. "2026-08-14 15:34:50 +0200 CEST" or
@@ -418,6 +430,18 @@ jobs:
                 KEPT_IMAGES=$((KEPT_IMAGES + 1))
                 continue
               fi
+              TO_REMOVE="${TO_REMOVE}${IMG_ID}|${AGE_HOURS}"$'\n'
+            done <<< "$IMAGE_LINES"
+            REMOVAL_COUNT="$(printf '%s' "$TO_REMOVE" | grep -c . || true)"
+            if [ "$REMOVAL_COUNT" -gt "$MAX_IMAGE_REMOVALS" ]; then
+              echo "FAIL: ${REMOVAL_COUNT} untagged, unreferenced, >=${MAX_IMAGE_AGE_HOURS}h"\
+                   "${IMAGE_REPO} images would be removed, over the ${MAX_IMAGE_REMOVALS}-image"\
+                   "blast-radius ceiling (code review L11, re-scoped 2026-09-28). Nothing was"\
+                   "removed. Investigate the enumeration and the host before raising the ceiling."
+              exit 1
+            fi
+            while IFS='|' read -r IMG_ID AGE_HOURS; do
+              [ -z "$IMG_ID" ] && continue
               # Task 5.1: remove by explicit image id, ONE AT A TIME, tolerate individual failures
               # (never `xargs`, per AC4's own prohibition list) — a failure on one image must not
               # abort the sweep for the rest.
@@ -432,7 +456,7 @@ jobs:
                      "stated reason: ${RMI_ERR}"
                 KEPT_IMAGES=$((KEPT_IMAGES + 1))
               fi
-            done <<< "$IMAGE_LINES"
+            done <<< "$TO_REMOVE"
           else
             echo "No untagged ${IMAGE_REPO} images found."
           fi
