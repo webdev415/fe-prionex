@@ -18,6 +18,7 @@ import {
   type TaHistoryBarState,
 } from '../lib/taHistoryUrlState'
 import { useScopedUserIds } from '../lib/scope'
+import { resolveTaHistoryUsers, taHistoryRecordedBy } from '../lib/taHistoryUsers'
 import { TaHistoryFiltersBar } from './TaHistoryFiltersBar'
 import { TaHistoryTable } from './TaHistoryTable'
 
@@ -58,28 +59,15 @@ export function TaHistoryTab() {
 
   const scoped = useScopedUserIds(operators)
 
-  const recordedByIn = useMemo<number[] | undefined>(() => {
-    // Tab-level Department picker still refines within scope when scope=all.
-    if (barState.departmentId != null) {
-      const ids = operators
-        .filter((o) => o.department_id === barState.departmentId)
-        .map((o) => o.id)
-      const intersected =
-        scoped.userIds == null ? ids : ids.filter((id) => scoped.userIds!.includes(id))
-      return intersected.length ? intersected : undefined
-    }
-    if (barState.employeeIds.length > 0) {
-      if (scoped.userIds == null) return barState.employeeIds
-      const scopeSet = new Set(scoped.userIds)
-      const intersected = barState.employeeIds.filter((id) => scopeSet.has(id))
-      return intersected.length ? intersected : undefined
-    }
-    return scoped.userIds && scoped.userIds.length > 0 ? scoped.userIds : undefined
-  }, [barState.departmentId, barState.employeeIds, operators, scoped.userIds])
+  const resolvedUsers = useMemo(
+    () => resolveTaHistoryUsers(barState, operators, scoped.userIds),
+    [barState, operators, scoped.userIds]
+  )
+  const recordedByIn = taHistoryRecordedBy(resolvedUsers)
 
-  const isDeptEmpty =
-    (barState.departmentId != null || scoped.isEmptyResolution) &&
-    (recordedByIn == null || recordedByIn.length === 0)
+  // "Nobody" — the scope and the pickers select disjoint sets. Distinct from
+  // "no restriction", which is what an absent filter means to the API.
+  const showsNothing = resolvedUsers.kind === 'empty'
 
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
@@ -95,7 +83,7 @@ export function TaHistoryTab() {
 
   const queryEnabled =
     (barState.period !== 'custom' || !!(barState.customFromDate && barState.customToDate)) &&
-    !isDeptEmpty
+    !showsNothing
 
   const { data, error, isPending } = useTaHistory(queryFilters, queryEnabled)
 
@@ -126,8 +114,8 @@ export function TaHistoryTab() {
     setPage(1)
   }
 
-  const items = isDeptEmpty ? [] : (data?.items ?? [])
-  const total = isDeptEmpty ? 0 : (data?.total_count ?? 0)
+  const items = showsNothing ? [] : (data?.items ?? [])
+  const total = showsNothing ? 0 : (data?.total_count ?? 0)
   const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
   return (
@@ -148,12 +136,17 @@ export function TaHistoryTab() {
         {t('pages.actionAnalysis.summary.totalInteractions', 'interactions')}
       </div>
 
-      {isDeptEmpty ? (
+      {showsNothing ? (
         <div className="border-border bg-muted text-foreground rounded-md border p-3 text-sm">
-          {t(
-            'pages.actionAnalysis.errors.departmentNoOperators',
-            'No operators in this department for the current project.'
-          )}
+          {barState.departmentId != null
+            ? t(
+                'pages.actionAnalysis.errors.departmentNoOperators',
+                'No operators in this department for the current project.'
+              )
+            : t(
+                'pages.actionAnalysis.errors.scopeExcludesFilter',
+                "The selected employee is outside this tab's scope, so there is nothing to show."
+              )}
         </div>
       ) : error ? (
         <div className="border-error-200 bg-error-100 text-error-700 rounded-md border p-3 text-sm">
