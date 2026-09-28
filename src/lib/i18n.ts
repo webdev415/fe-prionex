@@ -37,7 +37,7 @@ i18n
     fallbackLng: 'en',
     supportedLngs: SUPPORTED_LANGUAGES,
     defaultNS: 'common',
-    ns: ['common', 'auth', 'errors', 'payments'],
+    ns: ['common', 'auth', 'errors', 'payments', 'planner'],
 
     interpolation: {
       escapeValue: false,

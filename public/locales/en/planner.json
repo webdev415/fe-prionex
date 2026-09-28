@@ -1,0 +1,107 @@
+{
+  "menu": "Planning",
+  "section": {
+    "title": "Planning"
+  },
+  "tabs": {
+    "ariaLabel": "Planning sections",
+    "tasks": "Tasks",
+    "calendar": "Calendar"
+  },
+  "tasksNav": {
+    "ariaLabel": "Task views",
+    "mine": "My tasks",
+    "board": "Board",
+    "chooseBoard": "Choose a board",
+    "noBoards": "You are not a member of any board yet",
+    "boardsError": "Could not load the boards",
+    "groups": {
+      "department": "Departments",
+      "team": "Teams",
+      "personal": "Personal"
+    }
+  },
+  "gate": {
+    "noAccess": "No access to the Planner. Contact your manager or the CRM administrator",
+    "unavailable": "The Planner is temporarily unavailable. The rest of the CRM works",
+    "loading": "Loading the Planner…"
+  },
+  "prepBanner": "Preparation mode: the section is visible only to the Planner administrator, department heads and the launch team",
+  "calendar": {
+    "empty": "The calendar is coming soon"
+  },
+  "myTasks": {
+    "title": "Assigned to me",
+    "empty": "No open tasks are assigned to you yet",
+    "error": "Could not load the tasks",
+    "hasMore": "Not all tasks are shown"
+  },
+  "board": {
+    "newTask": "+ Task",
+    "notFound": "The board was not found or you have no access to it",
+    "error": "Could not load the board",
+    "emptyColumn": "No tasks",
+    "hasMore": "Not all tasks of the board are shown"
+  },
+  "task": {
+    "noAssignees": "No assignee",
+    "assignees": "Assignees",
+    "due": "Due",
+    "noDue": "No due date",
+    "status": "Status",
+    "description": "Description",
+    "noDescription": "No description",
+    "inactive": "inactive",
+    "dueState": {
+      "overdue": "Overdue",
+      "soon": "Due soon"
+    }
+  },
+  "status": {
+    "change": "Change status: {{status}}"
+  },
+  "panel": {
+    "label": "Task {{key}}",
+    "close": "Close",
+    "notFound": "The task was not found or you have no access to it",
+    "loading": "Loading the task…"
+  },
+  "create": {
+    "title": "New task",
+    "board": "Board {{code}}",
+    "fields": {
+      "title": "Title",
+      "description": "Description",
+      "assignees": "Assignees",
+      "assigneesPlaceholder": "Start typing a name",
+      "due": "Due date"
+    },
+    "noPeople": "Nobody found",
+    "assigneesCount": "{{count}} / 10",
+    "remove": "Remove {{name}}",
+    "submit": "Create",
+    "cancel": "Cancel",
+    "validation": {
+      "titleRequired": "Enter the task title",
+      "titleTooLong": "The title is at most 300 characters",
+      "descriptionTooLong": "The description is at most 20,000 characters"
+    }
+  },
+  "toast": {
+    "created": "Created {{key}}",
+    "open": "Open",
+    "stale": "The task was just changed. Showing the fresh version.",
+    "forbidden": "Not allowed: {{reason}}",
+    "forbiddenGeneric": "You are not allowed to do this",
+    "validation": "The field «{{field}}» is empty or invalid",
+    "unavailable": "The Planner is temporarily unavailable. The rest of the CRM works",
+    "failed": "Could not save. Please try again"
+  },
+  "reasons": {
+    "view_as_not_supported": "«View as» mode is not supported"
+  },
+  "reasonDialog": {
+    "label": "Reason*",
+    "confirm": "Change status"
+  }
+}

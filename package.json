@@ -19,7 +19,8 @@
     "typecheck": "tsc -b",
     "prepare": "husky",
     "pii-audit": "node scripts/pii-audit.mjs",
-    "ledger:prod": "node scripts/gen-prod-ledger.mjs"
+    "ledger:prod": "node scripts/gen-prod-ledger.mjs",
+    "planner:types": "node scripts/gen-planner-types.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -87,6 +88,7 @@
     "globals": "^16.5.0",
     "husky": "^9.1.7",
     "jsdom": "^27.2.0",
+    "openapi-typescript": "~7.13.0",
     "postcss": "^8.5.6",
     "prettier": "^3.7.3",
     "prettier-plugin-tailwindcss": "^0.7.2",
