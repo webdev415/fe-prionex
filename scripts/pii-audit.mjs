@@ -365,7 +365,16 @@ function expressionNames(node, names) {
 
     if (ts.isPropertyAccessExpression(current)) {
       const tail = current.name.getText()
-      if (NON_VALUE_TAILS.has(tail)) return
+      if (NON_VALUE_TAILS.has(tail)) {
+        // …but a CALL before the tail produced the value, and its arguments may
+        // render one: `people.map((p) => personName(p)).join(', ')` puts every
+        // name on the screen, yet stopping at `.join` never reached the
+        // callback (fe-prionex#337, TaskMeta `AssigneeNames`). Only a call is
+        // descended into — `addresses.length` and `firstName.trim()` still read
+        // a count and a method, not a value.
+        if (ts.isCallExpression(current.expression)) visit(current.expression)
+        return
+      }
       if (!NON_VALUE_SHAPE.test(tail)) names.add(current.getText())
       // The object half is NOT visited: `address` in `address.is_primary` is
       // the container, not a rendered value, and adding it made every boolean

@@ -161,6 +161,23 @@ describe('pii-audit — what counts as a render site', () => {
     expect(rendered).toHaveLength(0)
   })
 
+  it('sees a name rendered by the callback of a chain that ends in a method', () => {
+    // fe-prionex#337: `.join` is a non-value tail, and stopping there never
+    // reached the `.map` callback that renders every assignee's name.
+    const { rendered } = audit(`
+      export const C = () => (
+        <span>{people.map((person) => personName(person)).join(', ')}</span>
+      )
+    `)
+    expect(rendered.map((f) => f.identifier)).toEqual(['personName'])
+    const marked = audit(`
+      export const C = () => (
+        <span {...piiProps}>{people.map((p) => p.full_name).join(', ')}</span>
+      )
+    `)
+    expect(marked.rendered).toHaveLength(0)
+  })
+
   it('does not report flags and handlers', () => {
     const { rendered } = audit(`
       export const C = () => (

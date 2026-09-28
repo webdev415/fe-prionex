@@ -14,6 +14,7 @@ import { V3CutoverRoute } from '@/features/scoring/components/V3CutoverRoute'
 // Импорт точечный, не через бочку `@/pages/Credit`: та тянет все страницы
 // раздела в главный чанк и убила бы их ленивую загрузку.
 import { CreditSectionGate } from '@/pages/Credit/components/CreditSectionGate'
+import { plannerRoute } from './plannerRoutes'
 import { DRAFT_PAGE_PERMISSIONS, PERMISSIONS } from '@/constants/permissions'
 import { BulkOperatorAssignmentPageSkeleton } from '@/pages/Operations/BulkOperatorAssignmentPageSkeleton'
 import { BulkTagAssignmentPageSkeleton } from '@/pages/Operations/BulkTagAssignmentPageSkeleton'
@@ -331,6 +332,8 @@ export const router = createBrowserRouter([
           </PermissionRoute>
         ),
       },
+      // Планер (CRM/planner, истории 1.9–1.10): раздел «Планування».
+      plannerRoute,
       // Кредитный модуль — отдельный сервис (credit-service) за собственным
       // API. Права credit.* появятся в auth-service вместе с ролями WS-20;
       // до тех пор раздел доступен и по системному праву, иначе его не увидит
