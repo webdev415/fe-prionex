@@ -16,6 +16,21 @@ export const DEFAULT_REQUEST_TTL_S = 120
 /** Design §12.1: in the 2FA step «Надіслати ще раз» becomes active after 30 s. */
 export const SECOND_FACTOR_RESEND_AFTER_S = 30
 
+/** QR mode (API-6): a new QR every 30 s by default; the server refuses a refresh within 10 s. */
+export const DEFAULT_QR_REFRESH_S = 30
+export const MIN_QR_REFRESH_S = 10
+/** After a refresh failed (network, 5xx, too fast) the next try waits this long — no tight loop. */
+export const QR_REFRESH_RETRY_MS = 10_000
+/** «Новий код» / «Спробувати ще раз» open a new QR request at most this often (board #1580 AC3). */
+export const QR_RESTART_COOLDOWN_MS = 5000
+
+/** `qr_refresh_in` in milliseconds: the default when missing, never under the server's minimum. */
+export function qrRefreshDelayMs(value: unknown): number {
+  const seconds =
+    typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : DEFAULT_QR_REFRESH_S
+  return Math.max(MIN_QR_REFRESH_S, seconds) * 1000
+}
+
 /** `poll_interval_ms` as the loop can use it: a finite number within the bounds above. */
 export function pollIntervalMs(value: unknown): number {
   if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {

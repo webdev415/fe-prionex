@@ -1,19 +1,32 @@
 import type { LoginResponse } from '@/types/api'
 import { loginApprovalApi } from '../api/loginApprovalApi'
-import type { AppApprovalClient, AppApprovalPollRequest } from '../types'
+import type {
+  AppApprovalClient,
+  AppApprovalPollRequest,
+  AppApprovalQrStart,
+  AppApprovalStart,
+} from '../types'
 import {
+  QR_REFRESH_RETRY_MS,
   approvalRefusalOf,
   isLoginRefusal,
   isModeUnavailable,
   isTransientRefusal,
   minutesToWait,
   pollIntervalMs,
+  qrRefreshDelayMs,
   requestTtlSeconds,
   type ApprovalRefusal,
 } from './approval'
 
-/** What the browser sends to ask the phone: a login, or the 2FA challenge of `/login`. */
-export type LoginApprovalStartBody = { username: string } | { two_factor_token: string }
+/**
+ * What the browser sends to ask the phone: a login, the 2FA challenge of
+ * `/login`, or nothing at all — a QR the phone scans (API-6, story 19.17).
+ */
+export type LoginApprovalStartBody =
+  | { username: string }
+  | { two_factor_token: string }
+  | { qr: true }
 
 /** Where one confirmation request stands, as the approval card draws it. */
 export type LoginApprovalPhase =
@@ -27,6 +40,13 @@ export type LoginApprovalPhase =
       /** `Date.now()` when the server lets it expire. */
       expiresAt: number
     }
+  /**
+   * QR mode: the code to scan, replaced every `qr_refresh_in` s while nobody
+   * scanned it; `expiresAt` is the end of the request, not of one code.
+   */
+  | { kind: 'qr'; payload: string; startedAt: number; expiresAt: number }
+  /** QR mode: a phone scanned the code — the person confirms on it. */
+  | { kind: 'scanned'; startedAt: number; expiresAt: number }
   /** Approved on the phone; the session is being persisted. */
   | { kind: 'completing' }
   | { kind: 'denied' }
@@ -60,10 +80,13 @@ export interface ApprovalSession {
 
 /**
  * One request from `start` to its outcome. Kept outside React so the loop has
- * one owner of its timer: `stop()` clears it, and every async answer that
+ * one owner of its timers: `stop()` clears them, and every async answer that
  * lands after a stop is dropped instead of scheduling another poll.
  *
- * The `browser_secret` lives in this closure only.
+ * A QR request (`{ qr: true }`) runs the same poll; on top of it a second
+ * timer asks for the next QR every `qr_refresh_in` s until a phone scans it.
+ *
+ * The `browser_secret` and the QR payload live in this closure only.
  */
 export function runApprovalSession(
   body: LoginApprovalStartBody,
@@ -75,6 +98,10 @@ export function runApprovalSession(
   let interval = pollIntervalMs(undefined)
   /** Past this moment no poll is sent; the server has had a full interval to say `expired`. */
   let deadline = 0
+  /** QR mode: the code on screen while nobody scanned it; `null` once scanned or ended. */
+  let qrShown: Extract<LoginApprovalPhase, { kind: 'qr' }> | null = null
+  let refreshTimer: ReturnType<typeof setTimeout> | null = null
+  let scanned = false
 
   const clearTimer = () => {
     if (timer !== null) {
@@ -83,9 +110,18 @@ export function runApprovalSession(
     }
   }
 
+  const clearRefresh = () => {
+    if (refreshTimer !== null) {
+      clearTimeout(refreshTimer)
+      refreshTimer = null
+    }
+  }
+
   const halt = () => {
     active = false
     clearTimer()
+    clearRefresh()
+    qrShown = null
     request = null
   }
 
@@ -110,6 +146,47 @@ export function runApprovalSession(
     if (active) timer = setTimeout(() => void tick(), delay)
   }
 
+  const scheduleRefresh = (delay: number) => {
+    clearRefresh()
+    if (active && qrShown) refreshTimer = setTimeout(() => void refreshQr(), delay)
+  }
+
+  /** The next QR; the previous one stays valid until its own end, so a failure costs nothing yet. */
+  const refreshQr = async () => {
+    refreshTimer = null
+    const current = request
+    if (!active || current === null || !qrShown) return
+    try {
+      const next = await loginApprovalApi.refreshQr(current)
+      if (!active || !qrShown) return
+      qrShown = { ...qrShown, payload: next.qr_payload }
+      handlers.onPhase(qrShown)
+      scheduleRefresh(qrRefreshDelayMs(next.qr_refresh_in))
+    } catch (error) {
+      if (!active || !qrShown) return
+      const refusal = approvalRefusalOf(error)
+      if (refusal.status === 429 || isTransientRefusal(refusal)) {
+        scheduleRefresh(Math.max(QR_REFRESH_RETRY_MS, (refusal.retryAfterSeconds ?? 0) * 1000))
+      }
+      // 409 (scanned or ended), 410 (expired), 404: the poll tells the outcome.
+    }
+  }
+
+  /** A phone claimed the QR: the scan restarts the decision window once. */
+  const showScanned = (expiresIn: number | null | undefined) => {
+    clearRefresh()
+    qrShown = null
+    const now = Date.now()
+    if (!scanned) {
+      scanned = true
+      const expiresAt = now + requestTtlSeconds(expiresIn) * 1000
+      deadline = expiresAt + interval
+      handlers.onPhase({ kind: 'scanned', startedAt: now, expiresAt })
+    } else if (typeof expiresIn === 'number' && Number.isFinite(expiresIn)) {
+      deadline = Math.min(deadline, now + expiresIn * 1000 + interval)
+    }
+  }
+
   const tick = async () => {
     timer = null
     const current = request
@@ -128,6 +205,11 @@ export function runApprovalSession(
         if (typeof answer.expires_in === 'number' && Number.isFinite(answer.expires_in)) {
           deadline = Math.min(deadline, Date.now() + answer.expires_in * 1000 + interval)
         }
+        schedule(interval)
+        return
+      }
+      if (answer.status === 'scanned') {
+        showScanned(answer.expires_in)
         schedule(interval)
         return
       }
@@ -162,10 +244,19 @@ export function runApprovalSession(
     }
   }
 
+  /** The start call of the mode; the QR one sends no login at all. */
+  const open = async (): Promise<
+    { qr: true; started: AppApprovalQrStart } | { qr: false; started: AppApprovalStart }
+  > =>
+    'qr' in body
+      ? { qr: true, started: await loginApprovalApi.startQr({ client: handlers.client }) }
+      : { qr: false, started: await loginApprovalApi.start({ ...body, client: handlers.client }) }
+
   const begin = async () => {
     handlers.onPhase({ kind: 'starting' })
     try {
-      const started = await loginApprovalApi.start({ ...body, client: handlers.client })
+      const opened = await open()
+      const { started } = opened
       const accepted = {
         request_id: started.request_id,
         browser_secret: started.browser_secret,
@@ -180,7 +271,13 @@ export function runApprovalSession(
       const startedAt = Date.now()
       const expiresAt = startedAt + requestTtlSeconds(started.expires_in) * 1000
       deadline = expiresAt + interval
-      handlers.onPhase({ kind: 'waiting', number: started.number, startedAt, expiresAt })
+      if (opened.qr) {
+        qrShown = { kind: 'qr', payload: opened.started.qr_payload, startedAt, expiresAt }
+        handlers.onPhase(qrShown)
+        scheduleRefresh(qrRefreshDelayMs(opened.started.qr_refresh_in))
+      } else {
+        handlers.onPhase({ kind: 'waiting', number: opened.started.number, startedAt, expiresAt })
+      }
       schedule(interval)
     } catch (error) {
       if (!active) return
