@@ -1,6 +1,6 @@
 import i18n, { intlLocaleForUiLanguage } from './i18n'
 import { isRealCalendarDate } from './calendarDate'
-import { activeCurrency, isEuroCurrency } from './projectCurrency'
+import { activeCurrency, currencySymbol, knownCurrency, type Currency } from './projectCurrency'
 
 /**
  * Formatting utilities for display
@@ -27,15 +27,33 @@ function amountOrZero(amount: string | number | null | undefined): number {
   return Number.isNaN(num) ? 0 : num
 }
 
-function formatEuro(num: number, fractionDigits: number, useGrouping = true): string {
+type ForeignCurrency = Exclude<Currency, 'UAH'>
+
+/** The euro or the Canadian dollar; null leaves the amount to the hryvnia formats. */
+function foreignCurrency(currency: string | null | undefined): ForeignCurrency | null {
+  const known = knownCurrency(currency)
+  return known === 'UAH' ? null : known
+}
+
+// Intl lays the number out for the UI language, but the sign comes from `currencySymbol`:
+// ICU writes the Canadian dollar as `CAD` in uk/es and as a bare `$` with `narrowSymbol`.
+function formatForeign(
+  num: number,
+  fractionDigits: number,
+  currency: ForeignCurrency,
+  useGrouping = true
+): string {
   return new Intl.NumberFormat(intlLocaleForUiLanguage(i18n.language), {
     style: 'currency',
-    currency: 'EUR',
+    currency,
     currencyDisplay: 'narrowSymbol',
     minimumFractionDigits: fractionDigits,
     maximumFractionDigits: fractionDigits,
     useGrouping,
-  }).format(num)
+  })
+    .formatToParts(num)
+    .map((part) => (part.type === 'currency' ? currencySymbol(currency) : part.value))
+    .join('')
 }
 
 export function withCurrency(
@@ -43,10 +61,12 @@ export function withCurrency(
   uahStyle: 'prefix' | 'suffix' | 'tight' = 'prefix',
   currency: string | null | undefined = activeCurrency()
 ): string {
-  if (isEuroCurrency(currency)) {
-    if (intlLocaleForUiLanguage(i18n.language) !== 'en-US') return `${amountText} €`
+  const foreign = foreignCurrency(currency)
+  if (foreign) {
+    const symbol = currencySymbol(foreign)
+    if (intlLocaleForUiLanguage(i18n.language) !== 'en-US') return `${amountText} ${symbol}`
     const sign = amountText.startsWith('-') ? '-' : ''
-    return `${sign}€${amountText.slice(sign.length).trim()}`
+    return `${sign}${symbol}${amountText.slice(sign.length).trim()}`
   }
   if (uahStyle === 'suffix') return `${amountText} ₴`
   if (uahStyle === 'tight') return `₴${amountText}`
@@ -110,7 +130,8 @@ export function formatCurrency(amount?: string | number | null, currency?: strin
   const num = typeof amount === 'string' ? parseFloat(amount) : amount
   if (isNaN(num)) return '—'
 
-  if (isEuroCurrency(currency ?? activeCurrency())) return formatEuro(num, 0)
+  const foreign = foreignCurrency(currency ?? activeCurrency())
+  if (foreign) return formatForeign(num, 0, foreign)
 
   const locale = intlLocaleForUiLanguage(i18n.language)
 
@@ -131,7 +152,8 @@ export function formatCurrency(amount?: string | number | null, currency?: strin
  * spec is `₴5000.00` exactly.
  */
 export function formatMoneyKopeckTight(amount: string | number | null | undefined): string {
-  if (isEuroCurrency()) return formatEuro(amountOrZero(amount), 2, false)
+  const foreign = foreignCurrency(activeCurrency())
+  if (foreign) return formatForeign(amountOrZero(amount), 2, foreign, false)
   if (amount === undefined || amount === null || amount === '') return '₴0.00'
   const num = typeof amount === 'string' ? parseFloat(amount) : Number(amount)
   if (Number.isNaN(num)) return '₴0.00'
@@ -150,7 +172,8 @@ export function formatMoneyKopeckTight(amount: string | number | null | undefine
  * Examples: 50 → "₴ 50.00", 50.5 → "₴ 50.50", 50.559 → "₴ 50.56"
  */
 export function formatMoneyUAHTwoDecimals(amount: string | number | null | undefined): string {
-  if (isEuroCurrency()) return formatEuro(amountOrZero(amount), 2)
+  const foreign = foreignCurrency(activeCurrency())
+  if (foreign) return formatForeign(amountOrZero(amount), 2, foreign)
   if (amount === undefined || amount === null || amount === '') {
     return '₴ 0.00'
   }

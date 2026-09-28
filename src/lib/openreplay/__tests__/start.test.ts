@@ -301,10 +301,30 @@ describe('redactSensitiveQueryParams', () => {
     ['https://x.dev/a?access_token=abc&b=1', 'https://x.dev/a?access_token=[REDACTED]&b=1'],
     ['https://x.dev/a?b=1&api_key=abc#frag', 'https://x.dev/a?b=1&api_key=[REDACTED]#frag'],
     ['https://x.dev/a?TOKEN=abc', 'https://x.dev/a?TOKEN=[REDACTED]'],
+    // Real URLs, captured today: FetchProxy records the URL even though
+    // capturePayload is false, and both carry a third party's PII.
+    [
+      'https://x.dev/api/v1/calls/last-by-phone?phone=380978170286',
+      'https://x.dev/api/v1/calls/last-by-phone?phone=[REDACTED]',
+    ],
+    [
+      'https://x.dev/api/v1/clients/search/tin?tin=1234567890',
+      'https://x.dev/api/v1/clients/search/tin?tin=[REDACTED]',
+    ],
   ])('redacts %j', async (input, expected) => {
     const { redactSensitiveQueryParams } = await import('../index')
 
     expect(redactSensitiveQueryParams(input)).toBe(expected)
+  })
+
+  it('does not redact a parameter that merely ends in one of the names', async () => {
+    // The names are anchored to ?/&, so a longer parameter keeps its value —
+    // otherwise `sorting`, `latin` or `headphone` would be redacted for the
+    // sake of `tin` and `phone`.
+    const { redactSensitiveQueryParams } = await import('../index')
+    const url = 'https://x.dev/a?latin=1&headphone=2&sorting=3'
+
+    expect(redactSensitiveQueryParams(url)).toBe(url)
   })
 
   it('leaves a URL without credentials untouched', async () => {

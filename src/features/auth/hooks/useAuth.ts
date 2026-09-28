@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '@/stores/authStore'
 import { buildLoginUrlWithReturn } from '@/features/auth/utils/safeReturnUrl'
-import type { LoginRequest } from '@/types/api'
+import type { LoginRequest, LoginResponse } from '@/types/api'
 
 export function useAuth() {
   const navigate = useNavigate()
@@ -19,6 +19,7 @@ export function useAuth() {
     // 2FA challenge state
     twoFactorToken,
     twoFactorUsername,
+    twoFactorMethods,
     // Impersonation state
     isImpersonating,
     impersonatedUser,
@@ -29,6 +30,8 @@ export function useAuth() {
     forceLogin: storeForceLogin,
     verifyTwoFactor: storeVerifyTwoFactor,
     cancelTwoFactor: storeCancelTwoFactor,
+    completeAppLogin: storeCompleteAppLogin,
+    failAppLogin,
     checkAuth,
     refreshUser,
     updateCurrentUser,
@@ -101,6 +104,21 @@ export function useAuth() {
     [storeVerifyTwoFactor, navigateAfterLogin]
   )
 
+  /**
+   * A phone-confirmed sign-in (Epic 19) is persisted and routed exactly like a
+   * `/login` one. A failure propagates: the approval card shows its generic
+   * outcome instead of a half-signed-in screen.
+   */
+  const completeAppLogin = useCallback(
+    async (response: LoginResponse) => {
+      await storeCompleteAppLogin(response)
+      if (useAuthStore.getState().isAuthenticated) {
+        navigateAfterLogin()
+      }
+    },
+    [storeCompleteAppLogin, navigateAfterLogin]
+  )
+
   const startImpersonation = useCallback(
     async (userId: number) => {
       await storeStartImpersonation(userId)
@@ -123,6 +141,7 @@ export function useAuth() {
     // 2FA challenge state
     twoFactorToken,
     twoFactorUsername,
+    twoFactorMethods,
     // Impersonation state
     isImpersonating,
     impersonatedUser,
@@ -133,6 +152,8 @@ export function useAuth() {
     forceLogin,
     verifyTwoFactor,
     cancelTwoFactor: storeCancelTwoFactor,
+    completeAppLogin,
+    failAppLogin,
     checkAuth,
     refreshUser,
     updateCurrentUser,

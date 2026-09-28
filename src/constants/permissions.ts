@@ -451,6 +451,30 @@ export const PERMISSIONS = {
   AI_ASSISTANT: {
     USE: 'use_ai_assistant',
   },
+
+  /**
+   * Site Category (17-40; seeded by the 17-40a auth migration, modelled on 082)
+   * Content of the credit product's public site (web-credit apps/admin).
+   * Counted in the site-owner project (`auth_settings.site_owner_project_id`),
+   * not in whichever project is active: the handoff endpoint derives the admin
+   * role from them — PUBLISH → `publisher`, otherwise EDIT → `editor`, else 403.
+   */
+  SITE: {
+    CONTENT_EDIT: 'site.content.edit',
+    CONTENT_PUBLISH: 'site.content.publish',
+  },
+
+  /**
+   * Email Category (17-41; seeded by the 17-41a1 auth migration)
+   * The client e-mail channel of email-service: correspondence with the client in
+   * the card. Granted like the SMS rights — READ to roles that see the call
+   * history, SEND to roles that may send SMS. Not the lawyers' workplace rights:
+   * their inbox stays theirs, and these never open it.
+   */
+  EMAIL: {
+    CLIENT_READ: 'email.client.read',
+    CLIENT_SEND: 'email.client.send',
+  },
 } as const
 
 /**
@@ -512,6 +536,8 @@ export const PERMISSION_CATEGORIES = {
   UBKI: 'UBKI',
   REVERSALS: 'Reversals',
   AI_ASSISTANT: 'AI Assistant',
+  SITE: 'Site',
+  EMAIL: 'Email',
 } as const
 
 export const DRAFT_READ_PERMISSIONS = [
@@ -758,4 +784,12 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   // AI Assistant
   use_ai_assistant: 'Use the operator AI assistant (chat, history, feedback, voice)',
   manage_ai_settings: 'Manage global AI settings (assistant kill-switch)',
+
+  // Site (17-40) — counted in the site-owner project
+  'site.content.edit': 'Site: edit texts in the site admin (opened from CRM)',
+  'site.content.publish': 'Site: publish edited texts on the site',
+
+  // Email (17-41) — the client e-mail channel of the card
+  'email.client.read': 'Client e-mail: view the correspondence in the client card',
+  'email.client.send': 'Client e-mail: send an e-mail from the client card',
 }

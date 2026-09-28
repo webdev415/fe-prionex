@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { ProfilePhotoField } from './ProfilePhotoField'
 import { useAuth, useUpdateMyProfile, ChangePasswordModal, TwoFactorSection } from '@/features/auth'
+import { AppLoginSection } from '@/features/appLogin'
 import {
   useMyPersonalInformation,
   useUpdateMyPersonalInformation,
@@ -517,6 +518,8 @@ export function ProfileSettingsPage() {
               {t('pages.profile.accountSecurity')}
             </span>
             <TwoFactorSection />
+            {/* Phone binding (Epic 19, #1532): renders nothing while the flag is off. */}
+            <AppLoginSection />
           </div>
         </div>
 

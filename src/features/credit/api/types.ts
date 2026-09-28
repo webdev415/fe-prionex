@@ -297,12 +297,18 @@ export interface CreditTimelineRow {
   transition?: CreditTimelineTransition | null
 }
 
-/** Событие сайта, привязанное к заявке — `PortalEventRecord` (openapi.yaml модуля v0.1.26); объявлен минимум, который читается. */
+/** Событие сайта, привязанное к заявке или кредиту — `PortalEventRecord` (openapi.yaml модуля v0.1.26); объявлен минимум, который читается. */
 export interface CreditPortalEventRecord {
   event_id: string
   ts: string
   source: string
   event: string
+  /**
+   * Дополнительные поля события — плоский словарь скаляров (`PortalEvent.details`).
+   * Читается вид письма-уведомления: `details.type` — код повода модуля. `?` — в
+   * `required` контракта поля нет.
+   */
+  details?: Record<string, unknown>
 }
 
 /** Карточка заявки целиком (InternalApplication + анкета и документы). */
@@ -630,6 +636,16 @@ export interface CreditLoanDetail {
   disbursed_at: string
   maturity_date: string
   next_payment?: { due_date: string; amount_minor: number }
+  /**
+   * События сайта, привязанные к этому кредиту, и их полное число — поля
+   * `InternalLoan` модуля. Лента ограничена потолком модуля: последние события
+   * по времени источника, от старых к новым; число считает все события кредита.
+   * `?` — в `required` контракта их нет, и стенд, отстающий от контракта, их не
+   * пришлёт: экран обязан сказать «модуль не передав». Пустой массив — законное
+   * «событий не было», а не отсутствие ленты.
+   */
+  portal_events?: CreditPortalEventRecord[]
+  portal_events_total?: number
 }
 
 export interface CreditScheduleItem {
@@ -796,6 +812,107 @@ export interface CreditDisbursement {
   provider_time_source: 'provider' | 'observed' | null
   created_at: string
   updated_at: string
+}
+
+/* ─── Операции рельса кредита (`listLoanRailOperations`) ─────────────────── */
+
+/**
+ * Все операции рельса кредита одной страницей (`LoanRailOperations`).
+ *
+ * Типы этого блока написаны РУКАМИ по контракту модуля на `d643378e`
+ * (`contracts/openapi.yaml:8515-8962`, дверь влита 17-6c `f7f263d`). Ключи
+ * сверяются с живым ответом DEV приёмкой единицы 17-6f (п. (б)): поле, которого
+ * нет в ответе, на экране дало бы тихий «—», и заметить это можно только там.
+ * Все ключи модуль отдаёт всегда, неизвестное — явным `null`, поэтому `| null`,
+ * а не `?`. Тело колбэка, сырой ответ провайдера, реквизиты и суммы провайдера
+ * дверь не отдаёт — и типы их не объявляют.
+ */
+export interface CreditLoanRailOperations {
+  items: CreditRailOperation[]
+  /** Число операций кредита; по контракту всегда равно длине `items`. */
+  total: number
+  /** Курсора нет: все операции кредита приходят одной страницей. */
+  next_cursor: null
+}
+
+/** Операция рельса — строка журнала модуля глазами оператора (`RailOperation`). */
+export interface CreditRailOperation {
+  /** Наш ключ операции — живёт вечно; ключ строки на экране и якорь метки платежа. */
+  client_transaction_id: string
+  /** `zum`, `mock` (стенд) или `demo` — открытая строка контракта. */
+  provider: string
+  direction: 'disburse' | 'collect'
+  /** В контракте открытая строка (`interac` / `eft`). */
+  method: string
+  amount_minor: number
+  /**
+   * В контракте `Currency` — закрытый перечень, но здесь `string`, как у
+   * `CreditJournalEntry.currency`: экран валюту только печатает.
+   */
+  currency: string
+  installment_seq: number | null
+  /** Тот же словарь, что у выплаты (`Disbursement.state`). */
+  state: CreditDisbursement['state']
+  /** Слово Zūm дословно либо слово модуля (`NotFound`); открытый список. */
+  provider_status: string | null
+  /** Код Zūm, код модуля или семейство `zum_http_<статус>`; открытый список. */
+  failure_code: string | null
+  provider_tx_id: string | null
+  /** Единственный признак того, что Zūm принял и назвал операцию. */
+  provider_accepted: boolean
+  /** Начало вызова рельса по часам модуля — время «передано в Zūm». */
+  rail_call_started_at: string | null
+  /** Вызов вернулся без ошибки — верхняя граница приёма, не время отправки. */
+  rail_call_returned_at: string | null
+  /**
+   * Передал ли модуль операцию рельсу. Правило считает модуль:
+   * `stopped_before_send` — даже при заданном моменте вызова.
+   */
+  submission: 'stopped_before_send' | 'rail_called' | 'not_recorded'
+  /** Заведение строки журнала — ДО проверок отказа; временем отправки не является. */
+  created_at: string
+  /** Когда модуль в последний раз узнал исход — ответом, колбэком или сверкой. */
+  observed_at: string | null
+  updated_at: string
+  settled_at: string | null
+  failed_at: string | null
+  provider_effective_at: string | null
+  provider_time_source: 'provider' | 'observed' | null
+  review_reason: string | null
+  review_raised_at: string | null
+  /** Платёж модуля, который породило списание; у выплаты всегда `null`. */
+  payment_id: string | null
+  status_evidence: 'callback' | 'no_callback' | null
+  /** Колбэки Zūm в порядке прихода — экран порядок не меняет. */
+  callbacks: CreditRailCallback[]
+  /** По контракту равно длине `callbacks`; больше — экран говорит об обрезке. */
+  callbacks_total: number
+  /** Шаги истории операции Zūm в порядке модуля. */
+  events: CreditRailEvent[]
+  /** Сколько шагов отброшено модулем: имя не прочитано. */
+  events_dropped: number
+}
+
+/** Колбэк Zūm по операции (`RailCallback`). */
+export interface CreditRailCallback {
+  received_at: string
+  /** Слово Zūm; `null` — не назвал. Живая дверь отдаёт и `""` — разбирается так же. */
+  status: string | null
+  failure_code: string | null
+  /** `false` — колбэк к деньгам не применён. */
+  signature_ok: boolean
+  /** `null` — модуль колбэк ещё не применил. */
+  processed_at: string | null
+  /** Чем связан с операцией: парой «провайдер + id» или нашим ключом операции. */
+  matched_by: 'provider_tx_id' | 'client_transaction_id'
+}
+
+/** Шаг истории операции Zūm (`RailOperationEvent`): только имя и момент. */
+export interface CreditRailEvent {
+  /** Имя шага словами Zūm; открытый список. */
+  event: string
+  /** Момент по часам Zūm; `null` — читаемого момента нет. */
+  occurred_at: string | null
 }
 
 /**

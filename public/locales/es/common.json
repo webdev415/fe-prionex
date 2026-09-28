@@ -454,7 +454,8 @@
     },
     "currencyUnit": {
       "UAH": "UAH",
-      "EUR": "€"
+      "EUR": "€",
+      "CAD": "CAD"
     }
   },
   "status": {
@@ -3894,7 +3895,8 @@
         "deactivate": "Desactivar",
         "resetPassword": "Restablecer contraseña",
         "disableTwoFactor": "Desactivar 2FA",
-        "reenableTwoFactor": "Reactivar 2FA"
+        "reenableTwoFactor": "Reactivar 2FA",
+        "revokeAppLogin": "Desvincular todos los teléfonos"
       },
       "messages": {
         "nowViewingAsPrefix": "Viendo ahora como",
@@ -3912,6 +3914,10 @@
       "twoFactorIndicator": {
         "enabled": "Google Authenticator activado",
         "disabled": "Google Authenticator no activado"
+      },
+      "appLoginIndicator": {
+        "enabled": "Teléfono vinculado",
+        "disabled": "Sin teléfono vinculado"
       },
       "activeProject": "Proyecto activo",
       "noAssignment": "Sin asignación",
@@ -3988,6 +3994,15 @@
           "failedToUnlock": "No se ha podido desbloquear la cuenta",
           "unlocking": "Desbloqueando...",
           "unlockAccountButton": "Desbloquear cuenta"
+        },
+        "appLoginRevoke": {
+          "title": "Desvincular todos los teléfonos",
+          "body": "Se desvincularán todos los teléfonos del usuario: perderán el inicio de sesión sin la restricción por dirección IP y su sesión móvil se cerrará. Esta acción queda registrada en el registro de auditoría.",
+          "loading": "Cargando…",
+          "featureOff": "El inicio de sesión con la aplicación móvil está desactivado en este servidor.",
+          "success": "Todos los teléfonos del usuario se han desvinculado",
+          "failed": "No se han podido desvincular los teléfonos",
+          "revoking": "Desvinculando..."
         }
       },
       "forms": {
@@ -4456,12 +4471,14 @@
           "label": "Moneda",
           "hint": "Todos los importes de este proyecto se muestran en esta moneda.",
           "UAH": "Grivna (₴)",
-          "EUR": "Euro (€)"
+          "EUR": "Euro (€)",
+          "CAD": "Dólar canadiense (CA$)"
         },
         "country": {
           "label": "País",
           "UA": "Ucrania",
-          "ES": "España"
+          "ES": "España",
+          "CA": "Canadá"
         }
       },
       "callingWindow": {
@@ -6370,6 +6387,7 @@
         "calls": "Llamadas",
         "sms": "SMS",
         "messaging": "Mensajería",
+        "email": "Correo",
         "notes": "Notas",
         "all": "Todos",
         "dateRange": "Intervalo de fechas",
@@ -6398,6 +6416,23 @@
           "comment": "Comentario",
           "employee": "Empleado"
         }
+      },
+      "email": {
+        "none": "Aún no hay correspondencia por correo con el cliente",
+        "notConfigured": "El buzón del proyecto no está conectado: los correos no están disponibles",
+        "incoming": "del cliente",
+        "outgoing": "al cliente",
+        "system": "del sistema",
+        "write": "Escribir un correo",
+        "reply": "Responder",
+        "subject": "Asunto",
+        "body": "Mensaje",
+        "send": "Enviar",
+        "sent": "Correo enviado",
+        "attachments": "Adjuntos: {{count}}",
+        "viewTitle": "Correo",
+        "quarantined": "El correo está en cuarentena: su texto no se muestra",
+        "derivedFromHtml": "Texto tomado de la versión HTML del correo: no se muestran tablas ni imágenes"
       },
       "editModal": {
         "title": "Editar cliente",
@@ -6858,6 +6893,7 @@
         "latestSms": "Últimos SMS",
         "latestCallsAndSms": "Últimas llamadas y SMS",
         "latestMessages": "Últimos mensajes",
+        "latestEmails": "Últimos correos",
         "sendMessage": "Enviar mensaje",
         "totalMessages": "Total de mensajes",
         "noMessagingHistory": "Todavía no hay historial de mensajería disponible para este cliente",
@@ -11470,6 +11506,17 @@
       }
     },
     "client": {
+      "commentPhones": {
+        "copied": "Número de teléfono copiado",
+        "copyFailed": "No se ha podido copiar el número",
+        "copyPhone": "Copiar teléfono",
+        "lastCall": "Última llamada",
+        "loadFailed": "No se ha podido cargar",
+        "never": "Nunca",
+        "notContact": "No es un contacto",
+        "panelAria": "Acciones del número de teléfono",
+        "savedContact": "Contacto guardado"
+      },
       "saleNotes": {
         "addedBy": "Añadido por",
         "collapse": "Contraer",
@@ -12720,7 +12767,8 @@
         "products": "Productos de crédito",
         "parameters": "Configuración del módulo",
         "integrations": "Integraciones",
-        "switches": "Interruptores de emergencia"
+        "switches": "Interruptores de emergencia",
+        "site": "Sitio"
       },
       "needRiskManager": "Esta sección está disponible para el gestor de riesgos: contiene los umbrales y la configuración de los productos.",
       "mutationDisabled": "La edición requiere un segundo aprobador (UW-04) — disponible cuando lleguen los roles del CRM (WS-20).",
@@ -12781,7 +12829,41 @@
         }
       },
       "demoModeNotice": "El entorno de pruebas funciona en modo demo: no se llama a proveedores externos, los pagos y el COB se activan manualmente.",
-      "integrationsFootnote": "Los estados reflejan lo que está fijado en el contrato y la documentación del módulo — aún no existen comprobaciones de estado de los proveedores. Las rutas son relativas al repositorio credit-module."
+      "integrationsFootnote": "Los estados reflejan lo que está fijado en el contrato y la documentación del módulo — aún no existen comprobaciones de estado de los proveedores. Las rutas son relativas al repositorio credit-module.",
+      "site": {
+        "ownerLabel": "El sitio pertenece al proyecto:",
+        "ownerNotSet": "Aún no se ha elegido el proyecto propietario del sitio: hasta entonces nadie puede abrir la administración del sitio.",
+        "ownerInactive": "proyecto desactivado",
+        "ownerSelect": "Proyecto propietario del sitio",
+        "ownerPlaceholder": "Elija un proyecto",
+        "ownerListTruncated": "Solo se muestran {{limit}} proyectos activos: la lista está incompleta. Si falta el proyecto que necesita, vuelva a abrir esta pestaña más tarde o contacte con el administrador del CRM.",
+        "ownerListLoading": "Cargando la lista de proyectos…",
+        "ownerListFailed": "No se pudo leer la lista de proyectos, así que ahora no se puede elegir otro propietario. Vuelva a abrir esta pestaña más tarde; si sigue fallando, contacte con el administrador del CRM.",
+        "save": "Guardar",
+        "ownerReadOnly": "Solo quien tiene el permiso «Gestionar la configuración» en el proyecto propietario actual puede cambiar el propietario del sitio, incluso mientras ese proyecto está desactivado temporalmente. Cuando no hay propietario en absoluto (no elegido o eliminado), lo elige el administrador del sistema (el rol del sistema «Admin») del proyecto que vaya a ser el propietario.",
+        "ownerImpersonating": "Mientras actúa en nombre de otro usuario no se puede cambiar el propietario del sitio: el servidor lo rechaza a cualquiera. Vuelva a su propia cuenta.",
+        "saveFailed": "No se pudo guardar el propietario del sitio. Inténtelo de nuevo.",
+        "loadFailed": "No se pudo leer a quién pertenece el sitio. No mostramos el propietario para no inducirle a error.",
+        "refreshFailed": "No se pudieron actualizar los datos del sitio: se muestran los leídos antes, que pueden estar desactualizados.",
+        "adminHint": "La administración del sitio se abrirá en una pestaña nueva con su nombre y rol del CRM. El enlace de acceso es de un solo uso y vale un minuto.",
+        "sameTabHint": "Si no se puede abrir una pestaña nueva, la administración del sitio se abrirá en esta; vuelva al CRM con el botón «Atrás» del navegador.",
+        "openAdmin": "Abrir la administración del sitio",
+        "switchToOwnerProject": "Los permisos sobre el contenido del sitio valen en el proyecto propietario. Cambie a ese proyecto para abrir la administración del sitio.",
+        "impersonating": "Mientras actúa en nombre de otro usuario no se puede abrir la administración del sitio: el acceso se emite solo a su propio nombre. Vuelva a su propia cuenta.",
+        "errors": {
+          "forbidden": "No tiene permiso sobre el contenido del sitio en el proyecto propietario. Pida a un administrador que se lo conceda allí.",
+          "ownerChangeDenied": "El servidor no le ha permitido cambiar el propietario del sitio. Cuando ya hay propietario (aunque esté desactivado temporalmente), solo lo cambia quien tiene «Gestionar la configuración» en el proyecto propietario actual; cuando no lo hay en absoluto, solo el administrador del sistema (el rol del sistema «Admin») del proyecto que se elige. Mientras se actúa en nombre de otro usuario, nadie puede cambiar el propietario.",
+          "ownerNotSet": "Aún no se ha elegido el proyecto propietario del sitio. Solo el administrador del sistema (el rol del sistema «Admin») del proyecto que vaya a ser el propietario puede elegirlo más arriba en esta pestaña.",
+          "ownerInactive": "El proyecto propietario del sitio está desactivado temporalmente, así que ahora nadie puede abrir la administración del sitio. Reactive el proyecto o traslade el sitio a otro proyecto: puede trasladarlo quien tiene «Gestionar la configuración» en el proyecto propietario actual.",
+          "ownerNotSetOrInactive": "El proyecto propietario del sitio no está elegido o está desactivado temporalmente. Si está desactivado, reactívelo o traslade el sitio: puede hacerlo quien tiene «Gestionar la configuración» en él. Si no hay propietario en absoluto, solo el administrador del sistema (el rol del sistema «Admin») del proyecto que vaya a ser el propietario puede elegirlo más arriba en esta pestaña.",
+          "notConfigured": "El acceso a la administración del sitio no está configurado en el CRM (falta la clave o la dirección de la administración). Avise al administrador.",
+          "unavailable": "El servicio de acceso no está disponible temporalmente. Inténtelo de nuevo en un minuto.",
+          "failed": "No se pudo abrir la administración del sitio. Inténtelo de nuevo.",
+          "sessionExpired": "Su sesión del CRM ha terminado. Inicie sesión de nuevo y vuelva a intentarlo.",
+          "tooManyAttempts": "Demasiados intentos de acceso a la administración del sitio. Espere un minuto y vuelva a intentarlo.",
+          "ownerProjectGone": "El proyecto elegido se ha eliminado o desactivado, así que no puede ser propietario del sitio. Elija otro proyecto."
+        }
+      }
     },
     "employment": {
       "employment_full_time": "Empleo a tiempo completo",
@@ -13062,10 +13144,165 @@
       "interac": "Interac e-Transfer",
       "eft": "EFT: transferencia a cuenta"
     },
-    "disbursementFailure": {
+    "railFailure": {
+      "anr_probe_failed": "Detuvimos el desembolso: la comprobación de disponibilidad de Zūm (sonda ANR) no dio una respuesta legible; no se creó ninguna operación en el proveedor",
+      "invalid_amount": "El módulo no envió la operación: el importe no es válido",
+      "no_token": "El módulo no pudo autenticarse en Zūm",
+      "no_transaction_id": "Zūm no devolvió el identificador de la operación en su respuesta",
+      "no_user_id": "El módulo no recibió de Zūm el perfil del cliente: la operación no se creó",
       "payout_refused_pending_review": "Detuvimos nosotros el desembolso hasta la revisión",
       "provider_never_created": "El proveedor nunca creó la operación",
+      "rail_limit_exceeded": "El módulo no envió la operación: el importe supera el límite de la cuenta de Zūm",
+      "transport_error": "El módulo no obtuvo respuesta de Zūm por un fallo de conexión",
+      "EftFailedAccountClosed": "El banco lo rechazó: la cuenta está cerrada",
+      "EftFailedAgreementRevoked": "El banco lo rechazó: el cliente revocó la autorización de cargo",
+      "EftFailedCannotLocateAccount": "El banco lo rechazó: no se encuentra la cuenta",
+      "EftFailedCurrencyAccountMismatch": "El banco lo rechazó: la divisa de la cuenta no coincide",
+      "EftFailedCustomerInitiatedReturnCreditOnly": "El banco lo rechazó: devolución a petición del cliente, la cuenta solo admite abonos",
+      "EftFailedDefaultByAFinancialInstitution": "El banco lo rechazó: incumplimiento de una entidad financiera",
+      "EftFailedErrorPayorPayeeName": "El banco lo rechazó: el nombre del titular no coincide",
+      "EftFailedFrozenAccount": "El banco lo rechazó: la cuenta está congelada",
+      "EftFailedFundsNotFree": "El banco lo rechazó: los fondos aún no están disponibles",
+      "EftFailedInsufficientFunds": "El banco lo rechazó: fondos insuficientes",
+      "EftFailedInvalidErrorAccountNumber": "El banco lo rechazó: número de cuenta no válido",
+      "EftFailedNoDebitAllowed": "El banco lo rechazó: la cuenta no admite cargos",
+      "EftFailedNoPrenotificationP1": "El banco lo rechazó: no se avisó al cliente del cargo con antelación",
+      "EftFailedNoPrenotificationP2": "El banco lo rechazó: no se avisó al cliente del cargo con antelación",
+      "EftFailedNotInAccountAgreementE": "El banco lo rechazó: el cargo no se ajusta al acuerdo con el cliente",
+      "EftFailedNotInAccountAgreementP": "El banco lo rechazó: el cargo no se ajusta al acuerdo con el cliente",
+      "EftFailedPayorPayeeDeceased": "El banco lo rechazó: el titular de la cuenta ha fallecido",
+      "EftFailedRefusedNoAgreement": "El banco lo rechazó: no hay autorización de cargo del cliente",
+      "EftFailedStopPayment": "El banco lo rechazó: el cliente detuvo el pago",
+      "EftFailedTransactionLimitExceeded": "El banco lo rechazó: se superó el límite de operaciones de la cuenta",
+      "EftFailedTransactionNotAllowed": "El banco lo rechazó: la operación no está permitida",
+      "EftFailedValidationRejection": "El banco lo rechazó: la operación no superó la validación del banco",
+      "InteracFailedANRNotSupported": "Interac: el banco del destinatario no admite el depósito directo",
+      "InteracFailedAPICancellation": "Interac: la transferencia se canceló a petición nuestra",
+      "InteracFailedAmountGreaterThanMax": "Interac: el importe supera el máximo de la transferencia",
+      "InteracFailedAuthentication": "Interac: el destinatario no superó la autenticación",
+      "InteracFailedAutoDeposit": "Interac: el depósito automático falló",
+      "InteracFailedBannedAccount": "Interac: la cuenta está bloqueada en Interac",
+      "InteracFailedDebtorRejected": "Interac: el pagador rechazó la solicitud",
+      "InteracFailedFundsDepositFailed": "Interac: no se pudieron depositar los fondos",
+      "InteracFailedGenericError": "Interac: error genérico de la transferencia",
+      "InteracFailedInvalidEmailFormat": "Interac: formato de correo del destinatario no válido",
+      "InteracFailedInvalidPhoneNumber": "Interac: número de teléfono del destinatario no válido",
+      "InteracFailedNameMismatch": "Interac: el nombre del destinatario no coincide",
+      "InteracFailedNotificationDeliveryFailure": "Interac: no se entregó la notificación al destinatario",
+      "InteracFailedReachedCancellationCutOff": "Interac: la transferencia caducó",
+      "InteracFailedRecipientContactInfoMissing": "Interac: faltan los datos de contacto del destinatario",
+      "InteracFailedRecipientRejected": "Interac: el destinatario rechazó la transferencia",
+      "InteracFailedRequestBlockedByUser": "Interac: el cliente bloqueó las solicitudes",
+      "InteracFailedRevoked": "Interac: la transferencia fue revocada",
+      "InteracFailedSameProfileConflict": "Interac: conflicto: el remitente y el destinatario comparten perfil",
+      "InteracFailedSecurityQuestionNeededForProvidedEmail": "Interac: se requiere una pregunta de seguridad para este correo",
+      "InteracFraudAlertResponded": "Interac: respuesta a una alerta de fraude",
+      "InteracFundsHeldForValidation": "Interac: fondos retenidos para validación",
       "NSF": "El banco lo rechazó: fondos insuficientes"
+    },
+    "zumStatus": {
+      "Cancelled": "Zūm: transferencia cancelada",
+      "Completed": "Zūm: transferencia completada",
+      "Failed": "Zūm: la transferencia falló",
+      "InProgress": "Zūm está procesando la transferencia",
+      "InReview": "Zūm: en revisión (Interac)",
+      "Pending Cancellation": "Zūm: cancelación pendiente",
+      "Scheduled": "Zūm: transferencia programada"
+    },
+    "zumEvent": {
+      "Started": "Transferencia iniciada",
+      "Succeeded": "Transferencia realizada",
+      "WalletFunded": "Monedero de Zūm: fondos abonados en nuestro monedero",
+      "WalletWithdrawn": "Monedero de Zūm: fondos retirados de nuestro monedero",
+      "NotEnoughBalanceInWalletError": "Monedero de Zūm: a nuestro monedero le faltan fondos para la transferencia",
+      "EFTFileCreated": "EFT: se creó el archivo para el banco",
+      "EFTFileUploaded": "EFT: el archivo se envió al banco",
+      "EFTAnswerReceived": "EFT: el banco envió su respuesta",
+      "EFTAnswerProcessed": "EFT: se procesó la respuesta del banco",
+      "InteracSent": "Interac: transferencia enviada",
+      "InteracAcknowledgedCredit": "Interac: abono confirmado",
+      "InteracAcknowledgedDebit": "Interac: cargo confirmado",
+      "InteracWaitingSettlementIntoWallet": "Interac: esperando la liquidación en el monedero de Zūm",
+      "InteracSettledIntoWallet": "Interac: liquidado en el monedero de Zūm",
+      "InteracCreditorExternalFinancialInfo": "Interac: el banco del destinatario comunicó los datos de la cuenta"
+    },
+    "railModuleStatus": {
+      "NotFound": "Zūm no tiene registro de esta operación"
+    },
+    "railOperationState": {
+      "pending": "En curso",
+      "settled": "Completada",
+      "failed": "Fallida",
+      "cancelled": "Cancelada",
+      "reversed": "Revertida",
+      "unknown": "Resultado desconocido"
+    },
+    "railOps": {
+      "title": "Operaciones de Zūm",
+      "footer": "Cada intento de transferencia tiene su propia fila, incluidos los que fallaron y no generaron pago. Horas en la zona {{zone}}.",
+      "columns": {
+        "operation": "Operación",
+        "submitted": "Enviada a Zūm",
+        "callback": "Callback",
+        "events": "Pasos de Zūm",
+        "meaning": "Qué significa",
+        "payment": "Pago"
+      },
+      "direction": {
+        "disburse": "Desembolso al cliente",
+        "collect": "Cargo al cliente"
+      },
+      "submission": {
+        "notAcknowledged": "Zūm no confirmó la recepción",
+        "notRecorded": "Enviada; la hora no se registró",
+        "notSent": "No se envió: se detuvo antes de enviarla",
+        "notYet": "Aún no enviada",
+        "unknown": "Se desconoce si se envió"
+      },
+      "callback": {
+        "none": "Sin callback: el módulo estableció el estado sin él",
+        "noneObserved": "Sin callback: el módulo estableció el estado sin él, por última vez el {{when}}",
+        "waiting": "Esperando a Zūm",
+        "awaitingReconciliation": "Sin respuesta de Zūm: el resultado se está conciliando",
+        "signatureMismatch": "la firma no coincide: no se aplicó",
+        "notProcessed": "aún no procesado",
+        "matchedByKey": "vinculado por nuestra clave de operación"
+      },
+      "callbacksTruncated": "Se muestran {{shown}} de {{total}} callbacks",
+      "code": {
+        "zum": "código de Zūm: {{code}}",
+        "module": "código del módulo: {{code}}",
+        "stand": "código del entorno de pruebas: {{code}}",
+        "unknown": "Código desconocido: {{code}}",
+        "transportHttp": "Zūm respondió con el error HTTP {{status}}"
+      },
+      "status": {
+        "label": "estado de Zūm: {{status}}",
+        "moduleLabel": "marca del módulo: {{status}}",
+        "unknown": "Estado desconocido: {{status}}",
+        "empty": "Zūm no indicó el estado"
+      },
+      "payment": {
+        "notFound": "Pago no encontrado en la lista",
+        "noneFailedCollect": "Sin pago: el cargo no se realizó",
+        "reversed": "revertido"
+      },
+      "paymentMark": {
+        "sent": "Zūm: enviada {{when}}",
+        "linked": "Zūm: operación en la tabla de abajo"
+      },
+      "event": {
+        "label": "evento de Zūm: {{event}}",
+        "unknown": "Evento desconocido ({{event}})",
+        "noTime": "sin hora indicada"
+      },
+      "events": {
+        "none": "Zūm no envió el historial de pasos",
+        "dropped": "Pasos de Zūm no mostrados: {{n}} (no se pudo leer el nombre)"
+      },
+      "empty": "Aún no hay operaciones de Zūm para este préstamo.",
+      "unavailable": "El módulo no devuelve el historial de operaciones de Zūm para este préstamo: lo más probable es que el módulo de este entorno sea anterior a esta función.",
+      "truncated": "Se muestran {{shown}} de {{total}} operaciones"
     },
     "disbursementRetry": {
       "available": "Posible: analista de crédito o gestor de riesgos",
@@ -13171,13 +13408,28 @@
       "openClientCard": "Todo está en la ficha del cliente",
       "mailNone": "No hay correos de esta solicitud en la cronología. El sitio informa de los correos al módulo desde la conexión de 17-6g; los correos anteriores no se ven aquí.",
       "mailNotProvided": "El módulo no envió la cronología: los correos del sitio no están disponibles; esto no significa que no los hubiera",
-      "mailLoanStage": "Los correos de la etapa del préstamo (desembolso, pagos, cierre) no se muestran en la ficha de la solicitud",
+      "mailLoanStage": "Los correos de la etapa del préstamo (desembolso, pagos, mora, cierre) están en la ficha del préstamo, bloque «Correos del sitio»",
       "gotoMissing": "Las llamadas de GoTo no llegan a CRM. Aquí solo se muestran las llamadas del cliente de CRM que el módulo vinculó a esta solicitud",
       "smsCanadaMissing": "SMS para Canadá no está conectado",
       "direction": {
         "inbound": "entrante",
         "outbound": "saliente"
       }
+    },
+    "loanMail": {
+      "none": "No hay correos de este préstamo en el registro del sitio. El sitio informa de los correos al módulo desde la conexión de 17-6g; los correos anteriores no se ven aquí.",
+      "notProvided": "El módulo no envió el registro de eventos del sitio de este préstamo: los correos no están disponibles; esto no significa que no los hubiera",
+      "truncated": "El módulo envió los últimos {{shown}} de {{total}} eventos del sitio de este préstamo: los correos de eventos anteriores no se ven aquí",
+      "footer": "El sitio envía el correo de notificación cuando el cliente abre su área personal. «Enviado» significa que el servidor de correo aceptó el mensaje; no es «entregado» ni «leído». Los correos de la solicitud están en la ficha de la solicitud, pestaña «Historial».",
+      "kind": {
+        "issued": "préstamo emitido",
+        "disbursementReversed": "desembolso devuelto",
+        "paymentAllocated": "pago aplicado",
+        "delinquencyChanged": "cambió el estado de mora",
+        "closed": "préstamo cerrado"
+      },
+      "kindUnknown": "evento del módulo: {{type}}",
+      "kindMissing": "evento no indicado"
     },
     "portalEvent": {
       "unknown": "Evento del sitio: {{name}}",

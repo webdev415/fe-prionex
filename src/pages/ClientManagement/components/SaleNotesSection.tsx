@@ -1,23 +1,63 @@
-import { useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import { Icons } from '@/lib/icons'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { useDeleteSaleNote, useSaleNotesList } from '@/features/clients/hooks/useSaleNotes'
+import { useCommentPhoneHighlight } from '@/features/clients/hooks/useCommentPhoneHighlight'
+import { useLastCallByPhone } from '@/features/calls/hooks/useLastCallByPhone'
 import { useHasPermission } from '@/hooks/usePermissions'
 import { PERMISSIONS } from '@/constants/permissions'
 import { SaleNoteCard } from './SaleNoteCard'
+import { PhoneActionsDropdown } from './PhoneActionsDropdown'
+import type {
+  PhoneHighlightState,
+  PhoneLookupContact,
+} from '@/features/clients/utils/phoneHighlight'
 
 interface Props {
   clientId: number
+  /**
+   * The client's contacts, for deciding which numbers in the comment are
+   * already callable. Optional so the section still renders standalone (and in
+   * its own tests) with every number simply reading as new.
+   */
+  phoneContacts?: readonly PhoneLookupContact[] | null
+  /** Dial a number from the comment. The page owns the guards, not this. */
+  onPhoneCall?: (phone: string, state: PhoneHighlightState) => void
+  /** Open the Recommenders add-contact form with the number prefilled. */
+  onPhoneAddContact?: (phone: string) => void
+  /** Why calls to this number are refused, or null. Asked per open panel so the
+   *  Call item can render disabled rather than refusing after the click. */
+  getCallBlockReason?: (phone: string) => string | null
+  /** Permission to place calls; false hides the panel's Call item. */
+  canCall?: boolean
+  /** Agent with an extension; false disables it instead. */
+  canDial?: boolean
+  /** Permission to edit contacts; false hides Add contact. */
+  canAddContact?: boolean
 }
 
-export function SaleNotesSection({ clientId }: Props) {
+export function SaleNotesSection({
+  clientId,
+  phoneContacts,
+  onPhoneCall,
+  onPhoneAddContact,
+  getCallBlockReason,
+  canCall,
+  canDial,
+  canAddContact,
+}: Props) {
   const { t } = useTranslation('common')
   const [expanded, setExpanded] = useState(false)
   const [deletingId, setDeletingId] = useState<number | null>(null)
   const { data: notes, isLoading, error, refetch } = useSaleNotesList(clientId)
   const deleteMutation = useDeleteSaleNote()
+
+  // A callback ref rather than useRef: the highlighter's effect must re-run
+  // once the node actually exists, and a mutable ref would not notify it.
+  const [commentsRoot, setCommentsRoot] = useState<HTMLElement | null>(null)
 
   // Permission gating — only operators with manage_primary_creditor_comments
   // can see and use the trash icon (per KAN-617 spec). Uses the shared
@@ -25,7 +65,9 @@ export function SaleNotesSection({ clientId }: Props) {
   // + the PERMISSIONS catalog for typo-safe constant lookup.
   const canDelete = useHasPermission(PERMISSIONS.SALE_NOTES.MANAGE)
 
-  const handleDeleteClick = (noteId: number) => setDeletingId(noteId)
+  // Stable: SaleNoteCard is memoised, and a fresh function each render
+  // would defeat that and let every re-render wipe the highlighter's spans.
+  const handleDeleteClick = useCallback((noteId: number) => setDeletingId(noteId), [])
   const handleCancelDelete = () => setDeletingId(null)
   const handleConfirmDelete = () => {
     if (deletingId !== null) {
@@ -34,6 +76,52 @@ export function SaleNotesSection({ clientId }: Props) {
         { onSuccess: () => setDeletingId(null) }
       )
     }
+  }
+
+  // Collapsed default (Q4 + Q7): show only the LATEST card. Operators with
+  // multiple comments see a `View All (N)` button to expand. Single-comment
+  // clients never see the toggle — nothing to expand to.
+  //
+  // Memoised because the highlighter's signature derives from it: a fresh
+  // array every render would make that memo recompute on each pass for a value
+  // that almost never changes.
+  const visibleNotes = useMemo(
+    () => (expanded ? (notes ?? []) : (notes ?? []).slice(0, 1)),
+    [notes, expanded]
+  )
+  const hasMore = (notes?.length ?? 0) > 1
+
+  // What the highlighter watches: which cards are on screen. Expanding reveals
+  // comment bodies that were never walked, and a new note replaces the HTML
+  // React injected — both have to re-run the walk.
+  const signature = useMemo(
+    () => visibleNotes.map((note) => `${note.id}:${note.content.length}`).join('|'),
+    [visibleNotes]
+  )
+
+  const { selected, clear } = useCommentPhoneHighlight({
+    container: commentsRoot,
+    contacts: phoneContacts,
+    signature,
+  })
+
+  const {
+    lastCallAt,
+    isLoading: isLoadingLastCall,
+    isError: lastCallFailed,
+  } = useLastCallByPhone(selected?.phone ?? null)
+
+  const handleCopy = async () => {
+    if (!selected) return
+    try {
+      await navigator.clipboard.writeText(selected.phone)
+      toast.success(t('pages.client.commentPhones.copied', 'Phone number copied'))
+    } catch {
+      // Clipboard access can be refused (permissions, insecure origin). Saying
+      // nothing would leave the operator believing the number was copied.
+      toast.error(t('pages.client.commentPhones.copyFailed', 'Could not copy the number'))
+    }
+    clear()
   }
 
   if (isLoading) {
@@ -74,15 +162,9 @@ export function SaleNotesSection({ clientId }: Props) {
     )
   }
 
-  // Collapsed default (Q4 + Q7): show only the LATEST card. Operators with
-  // multiple comments see a `View All (N)` button to expand. Single-comment
-  // clients never see the toggle — nothing to expand to.
-  const visibleNotes = expanded ? notes : notes.slice(0, 1)
-  const hasMore = notes.length > 1
-
   return (
     <div className="w-full p-4">
-      <div className="space-y-3">
+      <div className="space-y-3" ref={setCommentsRoot}>
         {visibleNotes.map((note, idx) => (
           <SaleNoteCard
             key={note.id}
@@ -93,6 +175,32 @@ export function SaleNotesSection({ clientId }: Props) {
           />
         ))}
       </div>
+
+      {selected && (
+        <PhoneActionsDropdown
+          phone={selected.phone}
+          state={selected.state}
+          anchor={selected.anchor}
+          lastCallAt={lastCallAt}
+          isLoadingLastCall={isLoadingLastCall}
+          lastCallFailed={lastCallFailed}
+          callBlockedReason={getCallBlockReason?.(selected.phone) ?? null}
+          canCall={canCall}
+          canDial={canDial}
+          canAddContact={canAddContact}
+          onCall={() => {
+            onPhoneCall?.(selected.phone, selected.state)
+            clear()
+          }}
+          onAddContact={() => {
+            onPhoneAddContact?.(selected.phone)
+            clear()
+          }}
+          onCopy={handleCopy}
+          onClose={clear}
+        />
+      )}
+
       {hasMore && (
         <div className="mt-4 flex justify-center">
           <button

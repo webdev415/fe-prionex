@@ -17,6 +17,8 @@ import { LoanCard, type LoanCardAction, type LoanCardLoan } from './components/L
 import { LoansCardList } from './components/LoansCardList'
 import { UbkiSubmissionHistory } from './components/UbkiSubmissionHistory'
 import { SaleNotesSection } from './components/SaleNotesSection'
+import { toDigits, type PhoneHighlightState } from '@/features/clients/utils/phoneHighlight'
+import { commentCallDecision } from './commentPhoneCallGate'
 import {
   formatClientFullName,
   formatDate,
@@ -73,6 +75,8 @@ import { useSmsServiceAvailable } from '@/features/sms'
 import { SendSMSModal } from './components/SendSMSModal'
 import { ViewMessageModal } from './components/ViewMessageModal'
 import { SendMessageModal } from './components/SendMessageModal'
+import { ClientEmailHistory } from './components/ClientEmailHistory'
+import { useClientEmailTab } from '@/features/clientEmail'
 import {
   MessagingHistorySkeleton,
   MessagingTabSkeleton,
@@ -546,9 +550,9 @@ export function ClientDetailPage() {
    * убрали», то есть долг пропадает с экрана целиком.
    */
   const creditBlockEnabled = isCreditModuleEnabled()
-  const [activeCallSmsTab, setActiveCallSmsTab] = useState<'all' | 'calls' | 'sms' | 'messaging'>(
-    'all'
-  )
+  const [activeCallSmsTab, setActiveCallSmsTab] = useState<
+    'all' | 'calls' | 'sms' | 'messaging' | 'email'
+  >('all')
   const [isChainExecutorOpen, setIsChainExecutorOpen] = useState(false)
   // Context for the chain executor when opened from a phone row. null/null
   // means "general entry point" (header Log Interaction button) — no chain
@@ -939,6 +943,15 @@ export function ClientDetailPage() {
       { limit: 100, offset: 0 },
       isValidClientId && canAccessMessagingHistory && activeRightCardTab === 'call-sms-history'
     )
+  const clientEmailTab = useClientEmailTab(
+    isValidClientId && activeRightCardTab === 'call-sms-history'
+  )
+  // «Пошта» can disappear under the operator (the channel is switched off, the
+  // project changes): fall back to «Усі» instead of a selected tab that is gone,
+  // «Останні листи» over it and an empty panel.
+  useEffect(() => {
+    if (activeCallSmsTab === 'email' && !clientEmailTab.visible) setActiveCallSmsTab('all')
+  }, [activeCallSmsTab, clientEmailTab.visible])
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
 
   // v3 priority for the card header (KAN-791): the header badge is the "stub"
@@ -1041,7 +1054,12 @@ export function ClientDetailPage() {
   const openOutboundCall = (
     rawPhone: string | null | undefined,
     contactTypeId?: number | null,
-    spamAllowedOverride?: boolean
+    spamAllowedOverride?: boolean,
+    // KAN-1212: the number came out of the creditor's comment and is not a
+    // contact. One flag rather than two, because for such a number the two
+    // halves of the rule are never independent — manual entry and Gray Line
+    // always travel together.
+    manualEntry?: boolean
   ) => {
     const phone = (rawPhone ?? '').trim()
     if (!phone) return
@@ -1054,7 +1072,7 @@ export function ClientDetailPage() {
     }
     const meta = contactTypeId != null ? contactTypesById.get(contactTypeId) : undefined
     const initialCallType: CallType =
-      meta?.default_call_line === 'gray' ? 'gray-line' : 'white-line'
+      manualEntry || meta?.default_call_line === 'gray' ? 'gray-line' : 'white-line'
     const spamOptionEnabled =
       spamAllowedOverride !== undefined ? spamAllowedOverride : meta?.spam_allowed !== false
 
@@ -1066,13 +1084,24 @@ export function ClientDetailPage() {
       callingWindow.reportBlocked()
       return
     }
-    setCallModalPreferences({ phone, initialCallType, spamOptionEnabled })
+    setCallModalPreferences({
+      phone,
+      initialCallType,
+      spamOptionEnabled,
+      // Only stamped for the comment path; every other caller leaves the
+      // modal's own defaults alone.
+      ...(manualEntry ? { manualPhoneEnabled: true, manualPhoneDigits: phone } : {}),
+    })
     setOpenCallModal('call-dialog')
     setIsCallModalOpen(true)
   }
 
   const canCreateTasks = useHasPermission(PERMISSIONS.CLIENTS.CREATE_TASKS)
   const canEditClient = useHasPermission(PERMISSIONS.CLIENTS.EDIT)
+  // KAN-1212 review M1 — the comment panel's Call item needs the same gate the
+  // phone strip and the Recommenders tab get from <PermissionGuard>, which a
+  // portal-rendered panel cannot inherit.
+  const canMakeCalls = useHasPermission(PERMISSIONS.COMMUNICATION.MAKE_CALLS)
   // KAN-993 — close/reopen/edit-closure live in the per-card "..." dropdown now,
   // so we need the permission as a boolean (was a <PermissionGuard> wrapper).
   const canCloseDebt = useHasPermission(PERMISSIONS.CLIENTS.CLOSE_DEBT)
@@ -1902,6 +1931,11 @@ export function ClientDetailPage() {
     phone: string
     initialCallType: CallType
     spamOptionEnabled: boolean
+    // KAN-1212: a number read out of the creditor's comment is not a contact,
+    // so the modal opens in manual-entry mode with the digits already typed in.
+    // Absent for every other caller, which keeps the modal's own defaults.
+    manualPhoneEnabled?: boolean
+    manualPhoneDigits?: string
   } | null>(null)
   const [contactEditorMode, setContactEditorMode] = useState<'add' | 'edit' | null>(null)
   const [contactEditorIsPhone, setContactEditorIsPhone] = useState<boolean | null>(null)
@@ -1987,7 +2021,10 @@ export function ClientDetailPage() {
     })
   }
 
-  const handleStartAddContact = async (isPhone: boolean) => {
+  // ``prefillValue`` seeds the contact_value field; empty for the section's own
+  // "+" button, which is why it is optional rather than required — that call
+  // site passes one argument and stays unchanged (KAN-1212).
+  const handleStartAddContact = async (isPhone: boolean, prefillValue = '') => {
     setContactError(null)
     setEditingContactId(null)
     setContactEditorMode('add')
@@ -1995,10 +2032,96 @@ export function ClientDetailPage() {
     const { data: freshTypes } = await refetchContactTypes()
     const types = freshTypes ?? contactTypes
     setContactFormData({
-      contact_value: '',
+      contact_value: prefillValue,
       contact_type_id: pickDefaultActiveContactTypeIdForSection(types, isPhone),
       comment: '',
     })
+  }
+
+  // KAN-1212 — the Recommenders tab has to be showing before the Phones
+  // subsection can be scrolled to, and it is not mounted on the same tick the
+  // tab is switched. Set here, acted on by the effect below.
+  const [pendingPhonesScroll, setPendingPhonesScroll] = useState(false)
+
+  useEffect(() => {
+    if (!pendingPhonesScroll || activeRightCardTab !== 'recommenders') return
+    document
+      .querySelector('[data-testid="recommenders-phones-section"]')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    setPendingPhonesScroll(false)
+  }, [pendingPhonesScroll, activeRightCardTab])
+
+  /**
+   * Dial a number clicked in the primary creditor's comment.
+   *
+   * Routed through ``openOutboundCall`` rather than setting the modal state
+   * directly, so the call-in-progress and calling-window guards still apply —
+   * a number read out of a comment is no more exempt from them than one on a
+   * contact card.
+   */
+  /** EVERY contact row holding this number. Digits on both sides — contacts are
+   *  stored bare, with a leading +, and with punctuation, while the comment side
+   *  is always bare.
+   *
+   *  NOT filtered to phone-typed rows, and that is the point: the comment
+   *  colours a number green on ANY contact type, so a number whose only rows are
+   *  «Рекомендувач» / «Верифікована 3-я особа» matched nothing here — no call
+   *  line, no spam flag and, once the gate arrived, no blocking check either.
+   *  The type filter belongs at the call-line choice below, where it means
+   *  something. */
+  const findCommentPhoneContacts = (phone: string) => {
+    const digits = toDigits(phone)
+    return (client?.recommenders ?? []).filter(
+      (candidate) => toDigits(candidate.contactValue) === digits
+    )
+  }
+
+  /** Why the panel must render Call disabled, or null. Same decision the click
+   *  handler makes, asked earlier so the operator sees the refusal instead of
+   *  discovering it. */
+  const commentPhoneCallBlockReason = (phone: string): string | null => {
+    const decision = commentCallDecision(findCommentPhoneContacts(phone))
+    return decision.allowed
+      ? null
+      : decision.reason || t('pages.contactTags.callsBlocked', 'Calls blocked')
+  }
+
+  const handleCommentPhoneCall = (phone: string, state: PhoneHighlightState) => {
+    if (state === 'new') {
+      // Not a contact: manual entry, Gray Line, digits pre-filled (AC25).
+      openOutboundCall(phone, null, undefined, true)
+      return
+    }
+    // Known: the call type is the CONTACT's default, so the contact has to be
+    // found again. A phone-typed row first — its type carries the call line —
+    // while the gate below weighs every row that holds the number.
+    const contacts = findCommentPhoneContacts(phone)
+    const contact = contacts.find((candidate) => candidate.isPhone) ?? contacts[0]
+
+    // Review H1 — the contact's blocking tags, which openOutboundCall does NOT
+    // check (its own guard is the calling window). Both other call entry points
+    // check them before dialling; this one skipped it, so a number tagged
+    // "Do Not Call" was dialable from the comment while the rest of the page
+    // locked it.
+    const decision = commentCallDecision(contacts)
+    if (!decision.allowed) {
+      toast.warning(decision.reason || t('pages.contactTags.callsBlocked', 'Calls blocked'))
+      return
+    }
+    openOutboundCall(phone, contact?.contactTypeId ?? null, decision.spamOverride)
+  }
+
+  /**
+   * Add a comment number as a contact (AC 28-30).
+   *
+   * ``activeCommentTab`` and ``activeRightCardTab`` are independent tab groups,
+   * so switching to Recommenders leaves the comment tab open — which is exactly
+   * what the AC asks for, and why no "was it open?" check is needed first.
+   */
+  const handleCommentPhoneAddContact = (phone: string) => {
+    setActiveRightCardTab('recommenders')
+    void handleStartAddContact(true, phone)
+    setPendingPhonesScroll(true)
   }
 
   const handleStartEditContact = (contact: {
@@ -4871,7 +4994,9 @@ export function ClientDetailPage() {
                               ? t('pages.clients.detail.latestSms')
                               : activeCallSmsTab === 'messaging'
                                 ? t('pages.clients.detail.latestMessages', 'Latest messages')
-                                : t('pages.clients.detail.latestCallsAndSms')}
+                                : activeCallSmsTab === 'email'
+                                  ? t('pages.clients.detail.latestEmails')
+                                  : t('pages.clients.detail.latestCallsAndSms')}
                         </span>
                       </div>
                       <div className="bg-card/50 flex w-full flex-1 items-center justify-between gap-1 rounded-lg p-1 shadow-sm md:w-auto">
@@ -4923,6 +5048,21 @@ export function ClientDetailPage() {
                             {t('pages.clients.activity.messaging', 'Messaging')}
                           </button>
                         )}
+                        {clientEmailTab.visible && (
+                          <button
+                            type="button"
+                            data-call-sms-tab="email"
+                            onClick={() => setActiveCallSmsTab('email')}
+                            className={cn(
+                              'flex max-w-[120px] flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-xs transition-colors md:px-4 md:text-sm',
+                              activeCallSmsTab === 'email'
+                                ? 'bg-primary/10 text-primary-700'
+                                : 'hover:text-primary-700 hover:bg-primary/20 text-muted-foreground cursor-pointer'
+                            )}
+                          >
+                            {t('pages.clients.activity.email')}
+                          </button>
+                        )}
                       </div>
                       <div className="flex w-full flex-1 flex-col items-start gap-2.5 md:w-auto md:flex-col md:items-end">
                         <div className="flex w-full flex-col gap-2 md:w-auto">
@@ -4952,10 +5092,12 @@ export function ClientDetailPage() {
                         </div>
                       </div>
                     </div>
-                    {isCallSmsLoading ||
-                    (canAccessMessagingHistory &&
-                      isMessagingHistoryLoading &&
-                      (activeCallSmsTab === 'messaging' || activeCallSmsTab === 'all')) ? (
+                    {activeCallSmsTab === 'email' && clientEmailTab.visible ? (
+                      <ClientEmailHistory clientId={clientId} />
+                    ) : isCallSmsLoading ||
+                      (canAccessMessagingHistory &&
+                        isMessagingHistoryLoading &&
+                        (activeCallSmsTab === 'messaging' || activeCallSmsTab === 'all')) ? (
                       activeCallSmsTab === 'messaging' ? (
                         <MessagingTabSkeleton />
                       ) : (
@@ -5954,7 +6096,21 @@ export function ClientDetailPage() {
               </div>
             ))}
 
-          {activeCommentTab === 'primary' && <SaleNotesSection clientId={clientId} />}
+          {activeCommentTab === 'primary' && (
+            <SaleNotesSection
+              clientId={clientId}
+              // The same source the Recommenders tab renders from, so the
+              // comment's green/orange cannot disagree with the tab about
+              // whether a number is already a contact.
+              phoneContacts={client.recommenders}
+              onPhoneCall={handleCommentPhoneCall}
+              onPhoneAddContact={handleCommentPhoneAddContact}
+              getCallBlockReason={commentPhoneCallBlockReason}
+              canCall={canMakeCalls}
+              canDial={Boolean(user?.is_agent && user?.asterisk_extension)}
+              canAddContact={canEditClient}
+            />
+          )}
 
           {activeCommentTab === 'searcher' &&
             (isActivitiesLoading ? (
@@ -6082,6 +6238,8 @@ export function ClientDetailPage() {
           callId={currentCallId}
           initialCallType={callModalPreferences?.initialCallType ?? 'white-line'}
           spamOptionEnabled={callModalPreferences?.spamOptionEnabled ?? true}
+          initialManualPhoneEnabled={callModalPreferences?.manualPhoneEnabled ?? false}
+          initialManualPhoneDigits={callModalPreferences?.manualPhoneDigits ?? ''}
           initialState="initial"
           error={callError}
           isLoading={isOriginatingCall}

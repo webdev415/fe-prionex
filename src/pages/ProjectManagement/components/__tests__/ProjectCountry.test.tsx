@@ -65,6 +65,21 @@ describe('project country', () => {
     expect(createProject.mock.calls[0][0]).toMatchObject({ country: 'ES' })
   })
 
+  it('creates a project in Canada when Canada is chosen', async () => {
+    render(<CreateProjectModal open onClose={vi.fn()} onSuccess={vi.fn()} />)
+    fireEvent.change(screen.getByLabelText('pages.projects.modals.create.projectName'), {
+      target: { value: 'FinBoost legacy' },
+    })
+    fireEvent.change(screen.getByLabelText('pages.projects.modals.create.projectCode'), {
+      target: { value: 'FBLEG' },
+    })
+    fireEvent.click(screen.getByRole('radio', { name: 'pages.projects.modals.country.CA' }))
+    fireEvent.submit(document.getElementById('create-project-form') as HTMLFormElement)
+
+    await waitFor(() => expect(createProject).toHaveBeenCalled())
+    expect(createProject.mock.calls[0][0]).toMatchObject({ country: 'CA' })
+  })
+
   it('sends a changed country when editing', async () => {
     render(<EditProjectModal project={project} open onClose={vi.fn()} onSuccess={vi.fn()} />)
     fireEvent.click(spain())
@@ -83,6 +98,30 @@ describe('project country', () => {
 
     await waitFor(() => expect(updateProject).toHaveBeenCalled())
     expect(updateProject.mock.calls[0][0].data).not.toHaveProperty('country')
+  })
+
+  it('shows a Canadian project as Canada in Canadian dollars and keeps both on a rename', async () => {
+    render(
+      <EditProjectModal
+        project={{ ...project, currency: 'CAD', country: 'CA' }}
+        open
+        onClose={vi.fn()}
+        onSuccess={vi.fn()}
+      />
+    )
+
+    expect(screen.getByRole('radio', { name: 'pages.projects.modals.currency.CAD' })).toBeChecked()
+    expect(screen.getByRole('radio', { name: 'pages.projects.modals.country.CA' })).toBeChecked()
+
+    fireEvent.change(screen.getByDisplayValue('Cartera Madrid'), {
+      target: { value: 'FinBoost legacy' },
+    })
+    fireEvent.submit(document.getElementById('edit-project-form') as HTMLFormElement)
+
+    await waitFor(() => expect(updateProject).toHaveBeenCalled())
+    const data = updateProject.mock.calls[0][0].data
+    expect(data).not.toHaveProperty('currency')
+    expect(data).not.toHaveProperty('country')
   })
 
   it('sends an edited Spanish tax code in capitals', async () => {
