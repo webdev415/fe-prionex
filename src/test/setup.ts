@@ -57,6 +57,23 @@ if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = function scrollIntoView() {}
 }
 
+/**
+ * Pointer capture, for the same reason and the same component.
+ *
+ * jsdom implements no part of the Pointer Capture API, and Radix's Select
+ * trigger calls `hasPointerCapture` on pointer-down. Without these a test that
+ * merely opens a dropdown dies with `target.hasPointerCapture is not a
+ * function` — thrown from Radix's own handler, so it surfaces as an unhandled
+ * error that fails the whole file rather than the assertion that was running.
+ */
+if (typeof Element !== 'undefined' && !Element.prototype.hasPointerCapture) {
+  Element.prototype.hasPointerCapture = function hasPointerCapture() {
+    return false
+  }
+  Element.prototype.setPointerCapture = function setPointerCapture() {}
+  Element.prototype.releasePointerCapture = function releasePointerCapture() {}
+}
+
 // Testing Library's own async budget, which `testTimeout` does NOT cover:
 // every `findBy*` and bare `waitFor` gives up after 1s regardless of the 20s
 // per-test limit in vitest.config.ts. That second is the tightest deadline in

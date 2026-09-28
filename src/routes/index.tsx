@@ -788,6 +788,10 @@ export const router = createBrowserRouter([
               PERMISSIONS.DOCUMENT_GENERATION.VIEW_TEMPLATES,
               PERMISSIONS.DOCUMENT_GENERATION.CREATE_EDIT_TEMPLATES,
               PERMISSIONS.DOCUMENT_GENERATION.DELETE_TEMPLATES,
+              // The bulk-upload rules tab lives on this page and is the one
+              // part of it manage_settings alone opens — the same permission
+              // that already governs Document Types beside it.
+              PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
             ]}
             mode="any"
           >
