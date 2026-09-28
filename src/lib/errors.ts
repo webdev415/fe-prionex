@@ -150,6 +150,15 @@ export function getErrorMessage(error: unknown): string {
             ? messages.join('. ')
             : httpMessage('validationOccurred', 'Validation error occurred')
         }
+        // A single object carrying its own sentence: the shape endpoints use
+        // when the message travels with something the caller needs alongside
+        // it — the field a rule was refused over, the folders a bulk upload is
+        // still missing a default for. Without this the sentence the backend
+        // wrote is dropped and the reader gets a status-code platitude.
+        if (typeof data.detail === 'object' && data.detail !== null) {
+          const message = (data.detail as { message?: unknown }).message
+          if (typeof message === 'string' && message.trim()) return message
+        }
       }
 
       if (typeof data.message === 'string' && data.message) return data.message
@@ -264,6 +273,10 @@ export function hasResponseDetail(error: unknown): boolean {
         : typeof (item as { msg?: unknown } | null)?.msg === 'string' &&
           (item as { msg: string }).msg.trim() !== ''
     )
+  }
+  if (detail && typeof detail === 'object') {
+    const message = (detail as { message?: unknown }).message
+    if (typeof message === 'string' && message.trim() !== '') return true
   }
   return typeof record.message === 'string' && record.message.trim() !== ''
 }

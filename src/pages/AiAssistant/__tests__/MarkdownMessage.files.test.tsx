@@ -198,6 +198,37 @@ describe('MarkdownMessage — выгрузки показываются карт
       )
     )
     await waitFor(() => expect(downloadBlob).toHaveBeenCalledWith(blob, 'export.csv'))
+    // Итог — строка из словаря, а не сырой ключ i18n.
+    expect(await screen.findByTestId('assistant-file-downloaded')).toHaveTextContent(
+      'Sent to browser ✓'
+    )
+  })
+
+  it('другой файл на месте карточки не наследует «Передано» и сторож повтора', async () => {
+    mockGet.mockResolvedValue({ data: new Blob(['id,sum'], { type: 'text/csv' }) })
+    const { rerender } = render(
+      <MarkdownMessage>{`[Виписка](/api/files/${TOKEN}/export.csv)`}</MarkdownMessage>
+    )
+    fireEvent.click(screen.getByTestId('assistant-file-card'))
+    await waitFor(() =>
+      expect(screen.getByTestId('assistant-file-card')).toHaveAttribute(
+        'data-download-state',
+        'downloaded'
+      )
+    )
+
+    // Перегенерированный ответ: на том же месте дерева — ссылка на другой файл.
+    rerender(<MarkdownMessage>{`[Виписка](/api/files/${TOKEN}/export_v2.csv)`}</MarkdownMessage>)
+
+    const card = screen.getByTestId('assistant-file-card')
+    expect(card).not.toHaveAttribute('data-download-state')
+    // Сразу же (в окне 15 с) клик качает новый файл, а не показывает «уже передано».
+    fireEvent.click(card)
+    await waitFor(() =>
+      expect(downloadBlob).toHaveBeenLastCalledWith(expect.any(Blob), 'export_v2.csv')
+    )
+    expect(screen.queryByTestId('assistant-file-repeat-hint')).not.toBeInTheDocument()
+    expect(mockGet).toHaveBeenCalledTimes(2)
   })
 
   it('сорванное скачивание сообщает об ошибке в самой карточке', async () => {

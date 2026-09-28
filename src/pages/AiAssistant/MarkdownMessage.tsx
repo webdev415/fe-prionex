@@ -536,7 +536,10 @@ function ImageRenderer({ src, alt }: ComponentPropsWithoutRef<'img'>) {
       return resolved.kind === 'image' ? (
         <AssistantImage url={resolved.url} name={resolved.name} alt={alt} />
       ) : (
+        // key: «Передано браузеру» и сторож повтора принадлежат одному файлу —
+        // другой url на том же месте дерева монтирует чистую карточку.
         <AssistantFileCard
+          key={resolved.url}
           url={resolved.url}
           name={resolved.name}
           kind={resolved.kind}
@@ -567,6 +570,7 @@ function LinkRenderer({ href, children }: ComponentPropsWithoutRef<'a'>) {
     case 'internal':
       return (
         <AssistantFileCard
+          key={resolved.url}
           url={resolved.url}
           name={resolved.name}
           kind={resolved.kind}
