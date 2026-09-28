@@ -475,6 +475,21 @@ export const PERMISSIONS = {
     CLIENT_READ: 'email.client.read',
     CLIENT_SEND: 'email.client.send',
   },
+
+  /**
+   * Planner Category (planner story 1.3; seeded by the auth migration
+   * `planner_perm_001`, granted only to the Admin role of project TECHNO).
+   * The planner service (CRM/planner) checks them in the caller's JWT:
+   * ACCESS opens the section, the rest open single entries. What a person sees
+   * inside the planner is decided by the planner's own AccessPolicy, never here.
+   */
+  PLANNER: {
+    ACCESS: 'planner.access',
+    BOARDS_CREATE: 'planner.boards.create',
+    TEMPLATES_MANAGE: 'planner.templates.manage',
+    OVERVIEW_READ: 'planner.overview.read',
+    ADMIN: 'planner.admin',
+  },
 } as const
 
 /**
@@ -538,6 +553,7 @@ export const PERMISSION_CATEGORIES = {
   AI_ASSISTANT: 'AI Assistant',
   SITE: 'Site',
   EMAIL: 'Email',
+  PLANNER: 'Planner',
 } as const
 
 export const DRAFT_READ_PERMISSIONS = [
@@ -792,4 +808,11 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   // Email (17-41) — the client e-mail channel of the card
   'email.client.read': 'Client e-mail: view the correspondence in the client card',
   'email.client.send': 'Client e-mail: send an e-mail from the client card',
+
+  // Planner (planner story 1.3) — checked by the planner service in the JWT
+  'planner.access': 'Planner: access to the «Planning» section',
+  'planner.boards.create': 'Planner: create team boards',
+  'planner.templates.manage': 'Planner: manage board templates',
+  'planner.overview.read': 'Planner: view the company «Overview»',
+  'planner.admin': 'Planner: administration (switch, preparation list, org snapshot)',
 }

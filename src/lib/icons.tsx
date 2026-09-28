@@ -106,6 +106,7 @@ import {
   UserMultiple02Icon,
   UserMultipleIcon,
   Calendar03Icon,
+  CalendarCheckIn01Icon,
   MoneyRemove01Icon,
   MoneyNotFound04Icon,
   CancelCircleIcon,
@@ -359,6 +360,9 @@ export const Icons = {
   UserMultiple02: (props: Omit<IconProps, 'icon'>) => <Icon icon={UserMultiple02Icon} {...props} />,
   UserMultiple: (props: Omit<IconProps, 'icon'>) => <Icon icon={UserMultipleIcon} {...props} />,
   Calendar03: (props: Omit<IconProps, 'icon'>) => <Icon icon={Calendar03Icon} {...props} />,
+  CalendarCheckIn01: (props: Omit<IconProps, 'icon'>) => (
+    <Icon icon={CalendarCheckIn01Icon} {...props} />
+  ),
   MoneyRemove01: (props: Omit<IconProps, 'icon'>) => <Icon icon={MoneyRemove01Icon} {...props} />,
   MoneyNotFound04: (props: Omit<IconProps, 'icon'>) => (
     <Icon icon={MoneyNotFound04Icon} {...props} />
