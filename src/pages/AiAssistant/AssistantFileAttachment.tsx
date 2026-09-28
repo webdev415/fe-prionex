@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import * as DialogPrimitive from '@radix-ui/react-dialog'
 import { api } from '@/lib/api'
@@ -210,44 +210,105 @@ type AssistantFileCardProps = {
 }
 
 /**
+ * A click this soon after a successful download is read as "I did not see it
+ * happen", not as "I want a second copy" (fb28: 17 clicks in 10 s, each one a
+ * 200 and a fresh file). Instead of pulling the file again silently, the card
+ * points at the browser's downloads and offers an explicit "download again".
+ */
+export const FILE_REPEAT_GUARD_MS = 15_000
+
+/**
  * A generated export (CSV/XLSX/PDF/…) shown as a card rather than a bare URL.
  * PDFs open in the preview modal; everything else downloads through the
  * authenticated client, because the browser cannot fetch these paths on its own.
+ *
+ * The browser's own "saved" signal is easy to miss (a closed downloads bubble,
+ * a download manager, a policy), so after a successful hand-off the card keeps
+ * saying so itself, together with where to look. It says "sent to the browser",
+ * not "downloaded": the page only knows the save link was clicked, not that the
+ * file reached the disk (an extension, antivirus, policy or OneX's
+ * `downloadMode: 'block'` can still drop it).
+ *
+ * The card's state belongs to one `url`: callers mount it with `key={url}`.
  */
 export function AssistantFileCard({ url, name, kind, label }: AssistantFileCardProps) {
   const { t } = useTranslation('common')
   const [previewOpen, setPreviewOpen] = useState(false)
   const [downloading, setDownloading] = useState(false)
   const [failure, setFailure] = useState<{ code?: AssistantFileErrorCode } | null>(null)
+  /** `Date.now()` of the last successful save; null until the first one. */
+  const [downloadedAt, setDownloadedAt] = useState<number | null>(null)
+  const [repeatHint, setRepeatHint] = useState(false)
+  const cardRef = useRef<HTMLButtonElement>(null)
   const previewable = isPreviewable(kind)
+  const downloaded = downloadedAt !== null
   // The icon states what the click does, which is the only thing that differs
   // between kinds here: look at it in place, or pull it down.
   const Icon = previewable ? Icons.File : Icons.FileDownload
   const title = label?.trim() || name
 
-  const handleClick = useCallback(async () => {
-    if (previewable) {
-      setPreviewOpen(true)
-      return
-    }
+  const download = useCallback(async () => {
     setFailure(null)
+    setRepeatHint(false)
     setDownloading(true)
     try {
       const response = await api.get<Blob>(url, { responseType: 'blob' })
       downloadBlob(response.data, name)
+      setDownloadedAt(Date.now())
     } catch (error) {
+      setDownloadedAt(null)
       setFailure({ code: await readAssistantFileErrorCode(error) })
     } finally {
       setDownloading(false)
     }
-  }, [previewable, url, name])
+  }, [url, name])
+
+  const handleClick = useCallback(() => {
+    if (previewable) {
+      setPreviewOpen(true)
+      return
+    }
+    if (downloadedAt !== null && Date.now() - downloadedAt < FILE_REPEAT_GUARD_MS) {
+      setRepeatHint(true)
+      return
+    }
+    void download()
+  }, [previewable, downloadedAt, download])
+
+  // "Download again" unmounts together with the hint it lives in, so without
+  // this a keyboard or screen-reader user drops to <body> and loses their place
+  // in the chat. Focus goes to the card now, and back to it once the download
+  // settles unless the user has moved on (a browser may blur the card while it
+  // is disabled for the request).
+  const downloadAgain = useCallback(() => {
+    cardRef.current?.focus()
+    void download().then(() => {
+      const active = document.activeElement
+      if (!active || active === document.body) cardRef.current?.focus()
+    })
+  }, [download])
+
+  // One live region that is always in the DOM: screen readers often skip a
+  // region that appears already filled, and text inside the focused button is
+  // not re-read when it changes. Empty while a request runs, so a second
+  // successful save announces again. A failure keeps its old in-card text only.
+  const announcement =
+    downloading || failure
+      ? ''
+      : repeatHint
+        ? t('pages.aiAssistant.filePreview.alreadyDownloaded')
+        : downloaded
+          ? t('pages.aiAssistant.filePreview.downloaded')
+          : ''
 
   return (
     <>
       <button
+        ref={cardRef}
         type="button"
         data-testid="assistant-file-card"
         data-file-kind={kind}
+        data-download-state={downloaded ? 'downloaded' : undefined}
         onClick={handleClick}
         disabled={downloading}
         className={cn(
@@ -257,20 +318,66 @@ export function AssistantFileCard({ url, name, kind, label }: AssistantFileCardP
       >
         {downloading ? (
           <Icons.Spinner className="h-4 w-4 shrink-0" />
+        ) : downloaded ? (
+          <Icons.Success
+            size={16}
+            strokeWidth={1.5}
+            aria-hidden
+            className="text-success-600 shrink-0"
+          />
         ) : (
           <Icon size={16} strokeWidth={1.5} className="text-primary-600 shrink-0" />
         )}
         <span className="min-w-0">
           <span className="text-foreground block truncate text-[13px] font-medium">{title}</span>
-          <span className="text-muted-foreground block text-[11px]">
-            {failure
-              ? t(errorKey(failure.code, 'pages.aiAssistant.filePreview.downloadFailed'))
-              : previewable
+          {failure ? (
+            <span className="text-muted-foreground block text-[11px]">
+              {t(errorKey(failure.code, 'pages.aiAssistant.filePreview.downloadFailed'))}
+            </span>
+          ) : downloaded ? (
+            <>
+              <span
+                data-testid="assistant-file-downloaded"
+                className="text-success-700 block text-[11px] font-medium"
+              >
+                {t('pages.aiAssistant.filePreview.downloaded')}
+              </span>
+              <span className="text-muted-foreground block text-[11px]">
+                {t('pages.aiAssistant.filePreview.downloadedHint')}
+              </span>
+            </>
+          ) : (
+            <span className="text-muted-foreground block text-[11px]">
+              {previewable
                 ? t('pages.aiAssistant.filePreview.openPreview')
                 : t('pages.aiAssistant.filePreview.download')}
-          </span>
+            </span>
+          )}
         </span>
       </button>
+      <span role="status" data-testid="assistant-file-live" className="sr-only">
+        {announcement}
+      </span>
+      {repeatHint && (
+        // A sibling of the card, not a child: a button cannot hold a button.
+        // A `span`, because the card sits inside a markdown paragraph. Not a
+        // live region itself: the region above announces it.
+        <span
+          data-testid="assistant-file-repeat-hint"
+          className="bg-muted/40 text-muted-foreground my-1 flex max-w-full flex-wrap items-center gap-2 rounded-lg border px-3 py-2 text-[11px]"
+        >
+          <span className="min-w-0">{t('pages.aiAssistant.filePreview.alreadyDownloaded')}</span>
+          <button
+            type="button"
+            data-testid="assistant-file-download-again"
+            onClick={downloadAgain}
+            className="text-primary-600 hover:text-primary-700 inline-flex shrink-0 items-center gap-1 font-medium underline underline-offset-2"
+          >
+            <Icons.Download size={12} strokeWidth={1.5} aria-hidden />
+            {t('pages.aiAssistant.filePreview.downloadAgain')}
+          </button>
+        </span>
+      )}
       {previewOpen && (
         <AssistantFilePreviewModal
           onClose={() => setPreviewOpen(false)}

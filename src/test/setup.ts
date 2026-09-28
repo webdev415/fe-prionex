@@ -617,6 +617,12 @@ vi.mock('react-i18next', () => ({
         'pages.aiAssistant.filePreview.close': 'Close',
         'pages.aiAssistant.filePreview.download': 'Download',
         'pages.aiAssistant.filePreview.downloadFailed': 'Download failed — try again',
+        'pages.aiAssistant.filePreview.downloaded': 'Sent to browser ✓',
+        'pages.aiAssistant.filePreview.downloadedHint':
+          'If the file is missing, check your browser downloads (Ctrl+J) or the Downloads folder',
+        'pages.aiAssistant.filePreview.alreadyDownloaded':
+          'The file was already sent to the browser. If it is missing, check your browser downloads (Ctrl+J) or the Downloads folder',
+        'pages.aiAssistant.filePreview.downloadAgain': 'Download again',
         'pages.aiAssistant.filePreview.openPreview': 'Open preview',
         'pages.aiAssistant.filePreview.externalLink': 'external link',
         'pages.aiAssistant.filePreview.blocked': 'Attachment not shown',
