@@ -35,6 +35,7 @@ import {
 import { activityLogQueryKey } from '@/features/clients/hooks/useClientActivityLog'
 import { pickerDayEndUtcIso, pickerDayStartUtcIso } from '@/lib/dateUtils'
 import { useAuthStore } from '@/stores/authStore'
+import { piiProps } from '@/lib/openreplay/pii'
 
 interface ClientActivityLogTabProps {
   clientId: number | null
@@ -175,6 +176,9 @@ const TAB_LABEL_KEYS: Record<string, string> = {
   tasks: 'pages.clients.detail.tabs.tasks',
   documents: 'pages.clients.detail.tabs.docs',
   activity: 'pages.clients.detail.tabs.activity',
+  // Переключение вкладки пишется в ЭТУ ЖЕ ленту (`client_card_section_open`),
+  // поэтому незамапленное имя отрисовалось бы оператору сырым словом `credit`.
+  credit: 'pages.clients.detail.tabs.credit',
   // Personal-details sub-tabs
   personal: 'pages.clients.detail.tabs.personal',
   related: 'pages.clients.detail.tabs.relatedTags',
@@ -507,7 +511,7 @@ function ClientActivityLogTabBody({
               </span>
 
               {entry.operator_name && (
-                <span className="text-muted-foreground text-xs whitespace-nowrap">
+                <span className="text-muted-foreground text-xs whitespace-nowrap" {...piiProps}>
                   {entry.operator_name}
                 </span>
               )}

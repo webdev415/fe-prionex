@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { LoginForm, type LoginFormData } from '@/components/forms'
 
@@ -5,9 +6,11 @@ interface LoginCardProps {
   onSubmit: (data: LoginFormData) => Promise<void>
   isLoading?: boolean
   error?: string | null
+  /** Rendered under the form — the «Увійти через підтвердження в Prionex» entry. */
+  footer?: ReactNode
 }
 
-export function LoginCard({ onSubmit, isLoading, error }: LoginCardProps) {
+export function LoginCard({ onSubmit, isLoading, error, footer }: LoginCardProps) {
   const { t } = useTranslation('auth')
 
   return (
@@ -22,6 +25,7 @@ export function LoginCard({ onSubmit, isLoading, error }: LoginCardProps) {
         </p>
       </div>
       <LoginForm onSubmit={onSubmit} isLoading={isLoading} error={error} />
+      {footer}
     </div>
   )
 }

@@ -64,6 +64,34 @@ export interface CreditApplicationSummary {
   decision_outcome: CreditDecisionOutcome | null
   decision_mode: CreditDecisionMode | null
   final_amount_minor: number | null
+  /**
+   * Шаг анкеты, на котором стоит клиент. Без него очередь — тысяча с лишним
+   * неразличимых «Заповнюється»: видно, что заявка не дошла, и не видно, где
+   * именно она встала.
+   *
+   * ⚠️ Необязательное по той же причине, что и `client_standing`: поле
+   * добавлено в сводку модуля коммитом 452cc71 и на стенде ещё не развёрнуто.
+   * Колонка появляется, только когда поле реально приходит (см. список заявок).
+   */
+  resume_step?: string | null
+  /**
+   * Время входа в текущий шаг — «клиент стоит здесь N часов», в отличие от
+   * `updated_at` («строку N часов не трогали»).
+   *
+   * ⚠️ НЕ ПОКАЗЫВАЕМ, пока модуль не отдаёт признак, что значение — это
+   * подстановка `created_at` для заявок старше ленты переходов. Без признака
+   * старая заявка покажет «стоит 40 днів», хотя правда — «мы не знаем»;
+   * догадка под видом факта хуже пустого места. Поле объявлено, чтобы связь
+   * была видна в типах, и включится вместе с признаком.
+   */
+  step_entered_at?: string | null
+  /**
+   * Откуда взято `step_entered_at`: `step` — измерено по ленте переходов,
+   * `created` — подставлено время создания заявки, потому что лента её не
+   * застала. Признак обязателен для честной подписи: без него «стоит 40 днів»
+   * читается как измерение, хотя это «мы не знаем».
+   */
+  step_entered_at_source?: 'step' | 'created'
 }
 
 export interface CreditDecision {
@@ -82,6 +110,19 @@ export interface CreditDecision {
   underwriter_id: number | null
   rationale: string | null
   overrides_decision_id: string | null
+  /**
+   * Решение, которое это ЗАМЕНИЛО: модуль пересмотрел своё автоматическое
+   * решение после смены реквизитов выплаты. `null` — ничего не заменяло. Не
+   * путать с `overrides_decision_id` — там переопределил человек.
+   *
+   * В контракте поле не required; здесь required, чтобы каждая фикстура
+   * назвала значение: модуль кладёт ключ всегда (строка или `null`). Ключа нет
+   * только у модуля старше B-3 (17.09): ключ и сам пересмотр пришли одной
+   * правкой, такой модуль решений не заменяет — поэтому экран показывает
+   * отсутствие ключа как `null`, и это правда, а не незнание. У излишка иначе:
+   * события пишутся с 31.08, ключ — с 17.09.
+   */
+  supersedes_decision_id: string | null
   decided_at: string
 }
 
@@ -106,6 +147,14 @@ export interface CreditDocumentMeta {
   client_id: number | null
   debt_id: number | null
   client_document_id: string | null
+  /**
+   * Отдаст ли модуль содержимое документа по своим записям (одноимённое поле
+   * `DocumentMeta` контракта). Там оно необязательно, здесь обязательно: модуль
+   * кладёт его всегда, а необязательное фикстуры забывали бы молча. `false` —
+   * выдавать нечего, кнопка говорит это до нажатия; `true` не обещает, что файл
+   * на месте (503 `document_file_missing`).
+   */
+  content_available: boolean
   kind: string
   title?: string
   content_type?: string | null
@@ -169,6 +218,99 @@ export interface CreditApplicationDraft {
   [block: string]: unknown
 }
 
+/**
+ * Положение клиента — ровно те факты, на которых машина отказывает.
+ *
+ * `outstanding_loans` — непогашенные займы того же клиента (правило «один
+ * активный заём»), `cooldown_until` — остывание после предыдущего отказа
+ * (30 дней, код отказа RC-08). Оператор решает на этом же экране, поэтому
+ * основания машинного отказа должны лежать здесь, а не в соседней системе.
+ *
+ * ⚠️ Поле НЕОБЯЗАТЕЛЬНОЕ, и это не перестраховка: в `main` модуля его нет —
+ * оно живёт в ветке `ws06/n1-refund-overpayment-obligation`, а на dev развёрнут
+ * третий образ (`fix/review4-quarantine-blockers`), где оно есть. Переразвернут
+ * стенд из `main` — поле исчезнет, и обязательное объявление сделало бы карточку
+ * лживой, а не сломанной. Станет частью `main` — снять `?` и завести утверждение
+ * в `contractAssumptions.ts`.
+ */
+export interface CreditClientStanding {
+  /** Непогашенные займы. Показываем номер договора и статус. */
+  outstanding_loans: CreditOutstandingLoan[]
+  /** Дата окончания остывания после отказа; `null` — остывания нет. */
+  cooldown_until: string | null
+}
+
+/** Строка непогашенного займа в положении клиента. */
+export interface CreditOutstandingLoan {
+  contract_number: string
+  status: string
+}
+
+/** Признак, по которому модуль сравнивал клиентов — `ApplicantApplications.identity_keys` (openapi.yaml модуля v0.1.26). */
+export type CreditIdentityKey = 'email' | 'national_id'
+
+/** Строка другой заявки того же клиента — `ApplicantApplicationRow` (openapi.yaml модуля v0.1.26), ровно пять полей. */
+export interface CreditApplicantApplication {
+  application_id: string
+  number: string
+  status: CreditApplicationStatus | string
+  created_at: string
+  decision_outcome: CreditDecisionOutcome | null
+}
+
+/** Другие заявки того же клиента в проекте оператора — `ApplicantApplications` (openapi.yaml модуля v0.1.26). */
+export interface CreditApplicantApplications {
+  /** Все другие заявки клиента, текущая не входит; не меньше длины `items`. */
+  total: number
+  /** Последние по `created_at` (по убыванию), не больше двадцати. */
+  items: CreditApplicantApplication[]
+  /** По каким признакам текущей заявки сравнивали; `[]` — сравнивать не с чем. */
+  identity_keys: CreditIdentityKey[]
+}
+
+/** Переход статуса в строке хронологии — `InternalApplication.timeline.items.transition` (openapi.yaml модуля v0.1.26); шире `CreditTransition`: статусы строкой, актор может быть `null`. */
+export interface CreditTimelineTransition {
+  from_status: string | null
+  to_status: string
+  actor: string | null
+  at: string
+}
+
+/** Событие клиента в строке хронологии — `InternalApplication.timeline.items.client` (openapi.yaml модуля v0.1.26). */
+export interface CreditTimelineClient {
+  event: string
+  source: 'landing' | 'cabinet'
+  scope: 'application' | 'client'
+  who?: string
+  seq?: number | null
+  details?: Record<string, unknown>
+  event_ids?: string[]
+}
+
+/** Строка хронологии карточки заявки — `InternalApplication.timeline.items` (openapi.yaml модуля v0.1.26); в `required` только четыре поля. */
+export interface CreditTimelineRow {
+  track: 'client' | 'status'
+  at: string
+  last_at: string
+  count: number
+  client?: CreditTimelineClient | null
+  transition?: CreditTimelineTransition | null
+}
+
+/** Событие сайта, привязанное к заявке или кредиту — `PortalEventRecord` (openapi.yaml модуля v0.1.26); объявлен минимум, который читается. */
+export interface CreditPortalEventRecord {
+  event_id: string
+  ts: string
+  source: string
+  event: string
+  /**
+   * Дополнительные поля события — плоский словарь скаляров (`PortalEvent.details`).
+   * Читается вид письма-уведомления: `details.type` — код повода модуля. `?` — в
+   * `required` контракта поля нет.
+   */
+  details?: Record<string, unknown>
+}
+
 /** Карточка заявки целиком (InternalApplication + анкета и документы). */
 export interface CreditApplicationDetail extends CreditApplicationSummary {
   project_id: number
@@ -180,10 +322,34 @@ export interface CreditApplicationDetail extends CreditApplicationSummary {
   loan_id: string | null
   resume_step?: string
   missing_fields?: string[]
+  /**
+   * ЭТАП ПУТИ — ответ модуля, а не расчёт CRM: `getInternalApplication` →
+   * `InternalApplication` (`openapi.yaml:7236`) = `allOf Application` (`:5671`),
+   * поля `:5680`/`:5690`/`:5699`. `?` — ни одно не в `required`
+   * (`ApplicationRef.required = [application_id, status]`, `:5659`): стенд,
+   * отстающий от контракта, их не пришлёт. `| null` — как у соседних полей
+   * этого же интерфейса (`client_standing`, `expires_at`): модуль вправе
+   * прислать `null`, и разбор в `creditApplicationStageView` на него рассчитан.
+   * `stage` типизирован `string`, а не `CreditApplicationStage` (union закрыт,
+   * `applicationStages.ts`): сужение делается рантаймом, через `includes(...)`.
+   */
+  stage?: string | null
+  stage_index?: number | null
+  stage_total?: number | null
+  client_standing?: CreditClientStanding | null
   expires_at?: string | null
   paydays: string[]
   consents: CreditConsent[]
   audit: CreditTransition[]
+  /**
+   * Хронология, события сайта и другие заявки клиента — поля `InternalApplication`
+   * модуля. `?` — стенд, отстающий от контракта, их не пришлёт, и экран обязан
+   * сказать «модуль не передав», а не показать пустоту или ноль.
+   */
+  timeline?: CreditTimelineRow[]
+  portal_events?: CreditPortalEventRecord[]
+  portal_events_total?: number
+  applicant_applications?: CreditApplicantApplications | null
   draft: CreditApplicationDraft
   documents?: CreditDocumentMeta[]
   decision?: CreditDecision
@@ -338,6 +504,94 @@ export interface CreditLoanSummary {
   application_id: string
 }
 
+/**
+ * Строка блока «Кредит (наш)» карточки клиента CRM — `ClientLoanCard`
+ * (`listClientLoans`, дверь CM-L3 / 14-18).
+ *
+ * КЛАСС А границы видимости и ничего сверх (решение CEO 21.09.2026,
+ * `docs/11-credit-vs-collection-boundary.md` §7 п. 2): договор и статус,
+ * деньги, просрочка, даты, ссылка в модуль. График, журнал проводок, бакеты
+ * балансов, детали выдачи, лента действий клиента — класс Б, они видны ПО
+ * ССЫЛКЕ в модуле; анкета, IBV, решение и доказательства подписи — класс В,
+ * в CRM не уезжают вовсе.
+ *
+ * Почему не `CreditLoanSummary` и не `CreditLoanDetail`. Первый — строка
+ * портфельного списка: балансов и просроченной части в ней нет, зато есть
+ * `client_email` и `application_id`, которым в карточке должника делать
+ * нечего. Второй несёт класс Б целиком.
+ *
+ * ⚠️ Ни одного `?`: контракт объявляет все двадцать четыре ключа в `required`,
+ * и отсутствие значения выражается `null`. Поле, приходящее только иногда,
+ * потребитель читает как «эта версия его не отдаёт» и пишет обход
+ * ([[field-that-appears-only-sometimes]]).
+ */
+export interface ClientLoanCard {
+  loan_id: string
+  contract_number: string
+  product_code: string
+  status: CreditLoanStatus
+  /** Валюта строки: суммы форматируются по ней, а не по умолчанию карточки. */
+  currency: string
+  jurisdiction: string
+  /** Выдано, минорные единицы. */
+  principal_minor: number
+  /** Остаток к оплате на `as_of`. */
+  balance_total_minor: number
+  /** Сумма всех разнесённых платежей. */
+  paid_minor: number
+  /** Просроченная часть долга на `as_of`. */
+  overdue_minor: number
+  /** DPD из ядра. */
+  delinquency_days: number
+  /** Недоимка: пропущено не менее двух платежей. */
+  arrears_flag: boolean
+  /** Двадцать восемь дней без контакта с клиентом. */
+  no_contact_flag: boolean
+  default_reported_at: string | null
+  /** Момент ФАКТИЧЕСКОГО зачисления, а не подписи договора. */
+  disbursed_at: string | null
+  maturity_date: string
+  /** Ближайший НЕОПЛАЧЕННЫЙ взнос, включая уже просроченный. */
+  next_payment: { due_date: string; amount_minor: number } | null
+  closed_at: string | null
+  close_reason: CreditLoanCloseReason | null
+  /** Момент, когда отказ от договора состоялся или был запрошен. */
+  cancelled_at: string | null
+  /**
+   * Деньги по состоявшемуся отказу ещё НЕ вернулись. Едет рядом с нулевым
+   * балансом намеренно: при отказе начисления сторнированы, и ноль значит
+   * «долга по договору нет», а не «человек ничего не должен».
+   */
+  return_pending: boolean
+  /** День, НА КОТОРЫЙ посчитана строка; один на весь ответ. */
+  as_of: string
+  /** День, ПО КОТОРЫЙ доведено закрытие дня по этому кредиту; `null` — прогонов не было. */
+  closed_through: string | null
+  /** ОТНОСИТЕЛЬНЫЙ путь внутри CRM: `/dashboard/credit/loans/{loan_id}`. */
+  module_url: string | null
+}
+
+/** Причины закрытия кредита — словарь `credit.closeReason.*`. */
+export type CreditLoanCloseReason = 'repaid' | 'early_settled' | 'cancelled' | 'sold'
+
+/**
+ * Обёртка ответа двери. `next_cursor` контракт объявляет, но он ВСЕГДА `null`:
+ * у одного человека кредитов единицы, пагинации у двери нет (Р-7 CM-L3).
+ */
+export interface ClientLoanCardPage {
+  items: ClientLoanCard[]
+  next_cursor: string | null
+}
+
+/**
+ * Отбор строк блока. `status` — ОДНО значение, а не массив: повторённый
+ * параметр дверь отвергает `422 multiple_values`, неизвестное — `422
+ * unknown_value`.
+ */
+export interface ClientLoanCardParams {
+  status?: CreditLoanStatus
+}
+
 /** Паспорт кредита (InternalLoan). */
 export interface CreditLoanDetail {
   loan_id: string
@@ -347,7 +601,16 @@ export interface CreditLoanDetail {
   status: CreditLoanStatus
   currency: string
   principal_minor: number
-  balance_total_minor: number
+  /**
+   * ⚠️ Живой модуль отдаёт здесь `null` — проверено на кредите FB-000088
+   * (01.09). Тип объявлял `number` и врал: код, поверивший объявлению
+   * (`balance_total_minor.toFixed()`), упал бы на любом кредите.
+   *
+   * Деньги оператору берутся НЕ отсюда, а из `balances.total_due_minor`
+   * состояния ядра — того же среза, по которому считает модуль. Это поле
+   * оставлено как есть только потому, что контракт его объявляет.
+   */
+  balance_total_minor: number | null
   project_id: number
   /** null до этапа 2 (C-08): связь с CRM появляется при выдаче. */
   client_id: number | null
@@ -357,6 +620,15 @@ export interface CreditLoanDetail {
   jurisdiction: string
   schedule_version: number
   delinquency_days: number
+  /**
+   * Сколько модуль ДОЛЖЕН ВЕРНУТЬ клиенту сверх выданного: кредит снят в
+   * карантине выдачи, клиент вернул больше тела. Значение последнего события
+   * `AdvanceRefundExcess`; `0` — излишка нет или события не было, ключ в
+   * контракте есть всегда. Обязательство перед клиентом, а не его долг: не
+   * складывать с `CreditBalances.overpayment_minor` и не показывать в
+   * разбивке долга.
+   */
+  advance_refund_excess_minor: number
   regulatory_package_version?: string
   prepayment_mode?: string
   close_reason?: string
@@ -364,6 +636,16 @@ export interface CreditLoanDetail {
   disbursed_at: string
   maturity_date: string
   next_payment?: { due_date: string; amount_minor: number }
+  /**
+   * События сайта, привязанные к этому кредиту, и их полное число — поля
+   * `InternalLoan` модуля. Лента ограничена потолком модуля: последние события
+   * по времени источника, от старых к новым; число считает все события кредита.
+   * `?` — в `required` контракта их нет, и стенд, отстающий от контракта, их не
+   * пришлёт: экран обязан сказать «модуль не передав». Пустой массив — законное
+   * «событий не было», а не отсутствие ленты.
+   */
+  portal_events?: CreditPortalEventRecord[]
+  portal_events_total?: number
 }
 
 export interface CreditScheduleItem {
@@ -470,6 +752,170 @@ export interface CreditPayment {
 }
 
 /**
+ * Ход выдачи денег — последняя попытка отправки по рельсу выплаты.
+ *
+ * Форма снята с живого ответа dev-стенда 31.08.2026 (`GET /loans/{id}/state`,
+ * 74 кредита — единственный набор ключей на все 74). Модуль отдаёт отсутствие
+ * значения ЯВНЫМ `null`, а не пропуском ключа, и это его сознательное
+ * решение: пропущенный ключ потребитель читает как «эта версия модуля его не
+ * отдаёт» и пишет обход, а `null` говорит то, что есть. Поэтому здесь
+ * `| null`, а не `?`.
+ *
+ * Сам блок опционален: до первой попытки отправки его в ответе нет вовсе.
+ */
+export interface CreditDisbursement {
+  /**
+   * Что стало с деньгами. Отдельная шкала от статуса кредита и склейке не
+   * подлежит: статус отвечает «должен ли клиент», выплата — «где деньги».
+   * Словарь закрытый: `pending` + исходы рельса (`OUTCOME_STATES`) + `unknown`.
+   */
+  state: 'pending' | 'settled' | 'failed' | 'cancelled' | 'reversed' | 'unknown'
+  /** Канал выплаты. `pad` бывает только у списаний, у выдачи — нет. */
+  method: 'interac' | 'eft'
+  settled_at: string | null
+  failed_at: string | null
+  /**
+   * Код исхода. Словарь ОТКРЫТЫЙ: сюда попадают и коды провайдера (`NSF`), и
+   * наш собственный отказ (`payout_refused_pending_review`). Перевод есть не
+   * у каждого — значит, `string`, а не union: union здесь был бы обещанием
+   * полноты, которого модуль не даёт.
+   */
+  failure_code: string | null
+  provider: string
+  /** Ключ провайдера — живёт час; по нему ищут операцию в поддержке рельса. */
+  provider_tx_id: string | null
+  /** Слово провайдера как есть. Переводу не подлежит — это чужой словарь. */
+  provider_status: string | null
+  /** Наш ключ операции — живёт вечно, поэтому именно он идёт в переписку. */
+  client_transaction_id: string
+  amount_minor: number
+  currency: string
+  /**
+   * Ответ МОДУЛЯ на «можно ли повторить»: `state ∈ {failed, cancelled,
+   * reversed}` (`app/loans.py:229,281`). Гейтом кнопки быть НЕ МОЖЕТ —
+   * команда возобновления принимает только `failed` и только с закрытым
+   * разбором, то есть флаг шире условия команды (см. `retryVerdict`).
+   */
+  retry_allowed: boolean
+  /**
+   * Ждёт ли операция человека и почему. Измерение, независимое от `state`:
+   * операция бывает зачислена и одновременно ждать разбора.
+   */
+  review_reason: string | null
+  review_raised_at: string | null
+  /**
+   * Узнали мы дату зачисления или ВЫВЕЛИ её из момента наблюдения. От даты
+   * выдачи считается двухдневное окно отказа CA s.124.4, и разница между
+   * «известна» и «выведена» — это разница между «срок клиента посчитан» и
+   * «срок клиента оценён».
+   */
+  provider_time_source: 'provider' | 'observed' | null
+  created_at: string
+  updated_at: string
+}
+
+/* ─── Операции рельса кредита (`listLoanRailOperations`) ─────────────────── */
+
+/**
+ * Все операции рельса кредита одной страницей (`LoanRailOperations`).
+ *
+ * Типы этого блока написаны РУКАМИ по контракту модуля на `d643378e`
+ * (`contracts/openapi.yaml:8515-8962`, дверь влита 17-6c `f7f263d`). Ключи
+ * сверяются с живым ответом DEV приёмкой единицы 17-6f (п. (б)): поле, которого
+ * нет в ответе, на экране дало бы тихий «—», и заметить это можно только там.
+ * Все ключи модуль отдаёт всегда, неизвестное — явным `null`, поэтому `| null`,
+ * а не `?`. Тело колбэка, сырой ответ провайдера, реквизиты и суммы провайдера
+ * дверь не отдаёт — и типы их не объявляют.
+ */
+export interface CreditLoanRailOperations {
+  items: CreditRailOperation[]
+  /** Число операций кредита; по контракту всегда равно длине `items`. */
+  total: number
+  /** Курсора нет: все операции кредита приходят одной страницей. */
+  next_cursor: null
+}
+
+/** Операция рельса — строка журнала модуля глазами оператора (`RailOperation`). */
+export interface CreditRailOperation {
+  /** Наш ключ операции — живёт вечно; ключ строки на экране и якорь метки платежа. */
+  client_transaction_id: string
+  /** `zum`, `mock` (стенд) или `demo` — открытая строка контракта. */
+  provider: string
+  direction: 'disburse' | 'collect'
+  /** В контракте открытая строка (`interac` / `eft`). */
+  method: string
+  amount_minor: number
+  /**
+   * В контракте `Currency` — закрытый перечень, но здесь `string`, как у
+   * `CreditJournalEntry.currency`: экран валюту только печатает.
+   */
+  currency: string
+  installment_seq: number | null
+  /** Тот же словарь, что у выплаты (`Disbursement.state`). */
+  state: CreditDisbursement['state']
+  /** Слово Zūm дословно либо слово модуля (`NotFound`); открытый список. */
+  provider_status: string | null
+  /** Код Zūm, код модуля или семейство `zum_http_<статус>`; открытый список. */
+  failure_code: string | null
+  provider_tx_id: string | null
+  /** Единственный признак того, что Zūm принял и назвал операцию. */
+  provider_accepted: boolean
+  /** Начало вызова рельса по часам модуля — время «передано в Zūm». */
+  rail_call_started_at: string | null
+  /** Вызов вернулся без ошибки — верхняя граница приёма, не время отправки. */
+  rail_call_returned_at: string | null
+  /**
+   * Передал ли модуль операцию рельсу. Правило считает модуль:
+   * `stopped_before_send` — даже при заданном моменте вызова.
+   */
+  submission: 'stopped_before_send' | 'rail_called' | 'not_recorded'
+  /** Заведение строки журнала — ДО проверок отказа; временем отправки не является. */
+  created_at: string
+  /** Когда модуль в последний раз узнал исход — ответом, колбэком или сверкой. */
+  observed_at: string | null
+  updated_at: string
+  settled_at: string | null
+  failed_at: string | null
+  provider_effective_at: string | null
+  provider_time_source: 'provider' | 'observed' | null
+  review_reason: string | null
+  review_raised_at: string | null
+  /** Платёж модуля, который породило списание; у выплаты всегда `null`. */
+  payment_id: string | null
+  status_evidence: 'callback' | 'no_callback' | null
+  /** Колбэки Zūm в порядке прихода — экран порядок не меняет. */
+  callbacks: CreditRailCallback[]
+  /** По контракту равно длине `callbacks`; больше — экран говорит об обрезке. */
+  callbacks_total: number
+  /** Шаги истории операции Zūm в порядке модуля. */
+  events: CreditRailEvent[]
+  /** Сколько шагов отброшено модулем: имя не прочитано. */
+  events_dropped: number
+}
+
+/** Колбэк Zūm по операции (`RailCallback`). */
+export interface CreditRailCallback {
+  received_at: string
+  /** Слово Zūm; `null` — не назвал. Живая дверь отдаёт и `""` — разбирается так же. */
+  status: string | null
+  failure_code: string | null
+  /** `false` — колбэк к деньгам не применён. */
+  signature_ok: boolean
+  /** `null` — модуль колбэк ещё не применил. */
+  processed_at: string | null
+  /** Чем связан с операцией: парой «провайдер + id» или нашим ключом операции. */
+  matched_by: 'provider_tx_id' | 'client_transaction_id'
+}
+
+/** Шаг истории операции Zūm (`RailOperationEvent`): только имя и момент. */
+export interface CreditRailEvent {
+  /** Имя шага словами Zūm; открытый список. */
+  event: string
+  /** Момент по часам Zūm; `null` — читаемого момента нет. */
+  occurred_at: string | null
+}
+
+/**
  * Состояние кредита на срез as_of — истина ядра (совпадает с replay).
  * Надмножество паспорта: те же паспортные поля плюс балансы и проверки.
  */
@@ -483,7 +929,16 @@ export interface CreditLoanState {
   currency: string
   as_of: string
   principal_minor: number
-  balance_total_minor: number
+  /**
+   * ⚠️ Живой модуль отдаёт здесь `null` — проверено на кредите FB-000088
+   * (01.09). Тип объявлял `number` и врал: код, поверивший объявлению
+   * (`balance_total_minor.toFixed()`), упал бы на любом кредите.
+   *
+   * Деньги оператору берутся НЕ отсюда, а из `balances.total_due_minor`
+   * состояния ядра — того же среза, по которому считает модуль. Это поле
+   * оставлено как есть только потому, что контракт его объявляет.
+   */
+  balance_total_minor: number | null
   paid_minor: number
   maturity_date: string
   disbursed_at: string
@@ -503,13 +958,24 @@ export interface CreditLoanState {
   flags?: { validation_valid: boolean; delinquency_bucket: string }
   schedule?: CreditScheduleVersion
   payments?: CreditPayment[]
+  /** Ход выдачи денег. Отсутствует, пока не было ни одной попытки отправки. */
+  disbursement?: CreditDisbursement
 }
+
+/**
+ * Статус позиции очереди ручного разбора.
+ *
+ * Вынесен из `CreditQueueItem` отдельным типом: тем же перечнем ограничен
+ * единственный серверный фильтр очереди, и общий тип не даёт им разойтись —
+ * значение вне перечня модуль встречает 422, а не молчаливым «показал всё».
+ */
+export type CreditQueueStatus = 'pending' | 'in_review' | 'done'
 
 /** Позиция очереди ручного разбора (UnderwritingQueueItem). */
 export interface CreditQueueItem {
   application_id: string
   decision_id?: string
-  status: 'pending' | 'in_review' | 'done'
+  status: CreditQueueStatus
   assigned_to: number | null
   referred_at: string
   requested_amount_minor?: number
@@ -531,6 +997,11 @@ export interface CreditApplicationsParams {
   sort?: string
   limit?: number
   cursor?: string
+  /** День `YYYY-MM-DD`; границы суток — по календарю юрисдикции заявки, включительно; считает модуль (`listInternalApplications`). */
+  created_from?: string
+  created_to?: string
+  updated_from?: string
+  updated_to?: string
 }
 
 export interface CreditLoansParams {
@@ -546,20 +1017,44 @@ export interface CreditLoansParams {
   cursor?: string
 }
 
+/**
+ * Отбор журнала проводок на стороне СЕРВЕРА (`getLoanJournal`).
+ *
+ * `limit`/`cursor` здесь нет намеренно: дверь их не объявляет, а `next_cursor`
+ * журнала всегда пуст — страниц у двери нет. Объявленный параметр, который
+ * сервер игнорирует, читается вызывающим как работающий.
+ */
+export interface CreditJournalParams {
+  /** Корзина отбора; значения — только из `CREDIT_BUCKETS` (см. `creditApi.loanJournal`). */
+  bucket?: CreditBucket
+  /** Срез на `business_date`; отбор накопительный — «по состоянию на», а не «за дату». */
+  as_of?: string
+}
+
+/** Автора ручного решения модуль берёт из пропуска CRM; поле не шлётся (17-22). */
 export interface ManualDecisionPayload {
   outcome: CreditDecisionOutcome
   rationale: string
   final_amount_minor?: number
   decline_codes?: string[]
   cooldown_until?: string
-  underwriter_id?: number
 }
 
-/** Сводка стенда: счётчики и права текущей роли (демо-контур этапа 1). */
+/**
+ * Шапка рабочего места: счётчики и ЭФФЕКТИВНЫЕ права предъявленного пропуска.
+ *
+ * Тип объявляет то, что фронт ЧИТАЕТ, а не всё, что шлёт модуль: `user_id` и
+ * `switches` контракт отдаёт, но здесь их намеренно нет — переключатели берутся
+ * отдельной ручкой `GET /admin/switches`. Не «дополнять» тип по контракту.
+ */
 export interface CreditOverview {
-  role: string
+  /**
+   * Локализованное имя роли CRM как есть. `null` — роли в пропуске нет;
+   * умолчания у модуля нет намеренно (контракт 0.1.26, `OperatorOverview.role`:
+   * `type: [string, 'null']`). Поле НЕ основание что-либо прятать на экране.
+   */
+  role: string | null
   permissions: string[]
-  roles_available: string[]
   applications: Record<string, number>
   loans: Record<string, number>
   application_statuses: CreditApplicationStatus[]
@@ -592,4 +1087,45 @@ export interface CreditParameter {
   value: unknown
   description: string | null
   updated_at: string
+}
+
+/* ─── Рубильники продукта ──────────────────────────────────────────────── */
+
+/**
+ * Три независимых рубильника модуля.
+ *
+ * Доменное правило одно и оно денежное: **выключение = запрет НОВОГО**.
+ * Обслуживание выданных кредитов не останавливается никогда — платежи
+ * принимаются, график и документы отдаются, двухдневное право на отказ
+ * действует. Иначе клиента наказывают за наш рубильник: платить он не может,
+ * а проценты идут.
+ *
+ * `crm_section` модуль ХРАНИТ И ОТДАЁТ, но сам по нему ничего не запрещает:
+ * раздел в CRM — витрина оператора, а оператор обслуживает выданные кредиты.
+ * Скрывает раздел та сторона, которой он принадлежит, — то есть мы.
+ */
+export type CreditSwitchName = 'applications_intake' | 'client_cabinet' | 'crm_section'
+
+export type CreditSwitches = Record<CreditSwitchName, boolean>
+
+/** Строка истории переключений. Она же аудит: отдельного журнала нет намеренно. */
+export interface CreditSwitchChange {
+  switch: CreditSwitchName
+  enabled: boolean
+  /** Роль оператора из его пропуска CRM; идентификатор появится с WS-20. */
+  actor: string
+  reason: string | null
+  occurred_at: string
+}
+
+export interface CreditSwitchState {
+  switches: CreditSwitches
+  /** Новые сверху. */
+  history: CreditSwitchChange[]
+}
+
+/** Тело переключения. `reason` не обязателен контрактом, но обязателен по делу. */
+export interface CreditSwitchPayload {
+  enabled: boolean
+  reason?: string | null
 }

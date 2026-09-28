@@ -14,6 +14,7 @@
 import type { AxiosError } from 'axios'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import i18n from '@/lib/i18n'
 
 import { writeoffsApi } from '../api/writeoffsApi'
 import type {
@@ -111,7 +112,11 @@ export function useCreateWriteoffs(
       const fallback =
         (error?.response?.data as { detail?: string } | undefined)?.detail ??
         'Failed to create write-off'
-      toast.error(typeof fallback === 'string' ? fallback : 'Failed to create write-off')
+      toast.error(
+        typeof fallback === 'string'
+          ? fallback
+          : i18n.t('toasts.writeoffs.createFailed', { defaultValue: 'Failed to create write-off' })
+      )
     },
   })
 }
@@ -140,7 +145,9 @@ export function useEditWriteoff(
         options.onValidationErrors(structured)
         return
       }
-      toast.error('Failed to edit write-off')
+      toast.error(
+        i18n.t('toasts.writeoffs.editFailed', { defaultValue: 'Failed to edit write-off' })
+      )
     },
   })
 }
@@ -172,7 +179,9 @@ export function useCancelWriteoff(
         options.onValidationErrors(structured)
         return
       }
-      toast.error('Failed to cancel write-off')
+      toast.error(
+        i18n.t('toasts.writeoffs.cancelFailed', { defaultValue: 'Failed to cancel write-off' })
+      )
     },
   })
 }

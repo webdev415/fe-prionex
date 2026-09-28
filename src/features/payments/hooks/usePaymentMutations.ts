@@ -5,6 +5,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import i18n from '@/lib/i18n'
 import { useAuthStore } from '@/stores/authStore'
 import { formatClientFullName } from '@/lib/formatters'
 import {
@@ -78,7 +79,9 @@ export function useRecordPayment() {
       })
       queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
 
-      toast.success('Payment recorded successfully')
+      toast.success(
+        i18n.t('toasts.payments.recorded', { defaultValue: 'Payment recorded successfully' })
+      )
     },
     onError: (error: unknown) => {
       toast.error(extractErrorMessage(error, 'Failed to record payment'))
@@ -117,7 +120,9 @@ export function useVerifyPayment() {
       })
       queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
 
-      toast.success('Payment verified successfully')
+      toast.success(
+        i18n.t('toasts.payments.verified', { defaultValue: 'Payment verified successfully' })
+      )
     },
     onError: (error: unknown) => {
       toast.error(extractErrorMessage(error, 'Failed to verify payment'))
@@ -156,7 +161,9 @@ export function useCancelPayment() {
       })
       queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
 
-      toast.success('Payment cancelled successfully')
+      toast.success(
+        i18n.t('toasts.payments.cancelled', { defaultValue: 'Payment cancelled successfully' })
+      )
     },
     onError: (error: unknown) => {
       toast.error(extractErrorMessage(error, 'Failed to cancel payment'))
@@ -190,7 +197,9 @@ export function useEditPayment() {
       })
       queryClient.invalidateQueries({ queryKey: clientKeys.lists() })
 
-      toast.success('Payment updated successfully')
+      toast.success(
+        i18n.t('toasts.payments.updated', { defaultValue: 'Payment updated successfully' })
+      )
     },
     onError: (error: unknown) => {
       toast.error(extractErrorMessage(error, 'Failed to update payment'))
@@ -219,7 +228,11 @@ export function useReassignPaymentAssignedUser() {
       queryClient.invalidateQueries({ queryKey: ['client-all-verified-payments'] })
       queryClient.invalidateQueries({ queryKey: ['payment-stats'] })
 
-      toast.success('Assigned user reassigned successfully')
+      toast.success(
+        i18n.t('toasts.payments.assigneeReassigned', {
+          defaultValue: 'Assigned user reassigned successfully',
+        })
+      )
     },
     onError: (error: unknown) => {
       toast.error(extractErrorMessage(error, 'Failed to reassign assigned user'))
@@ -411,9 +424,17 @@ export function useGenerateReceipt() {
     },
     onSuccess: (_data, variables) => {
       if (variables.format === 'pdf') {
-        toast.success('Receipt downloaded successfully')
+        toast.success(
+          i18n.t('toasts.payments.receiptDownloaded', {
+            defaultValue: 'Receipt downloaded successfully',
+          })
+        )
       } else {
-        toast.success('Receipt generated successfully')
+        toast.success(
+          i18n.t('toasts.payments.receiptGenerated', {
+            defaultValue: 'Receipt generated successfully',
+          })
+        )
       }
     },
     onError: (error: unknown) => {
@@ -439,7 +460,9 @@ export function useExportPaymentsCSV() {
       document.body.removeChild(link)
       window.URL.revokeObjectURL(url)
 
-      toast.success('Payments exported successfully')
+      toast.success(
+        i18n.t('toasts.payments.exported', { defaultValue: 'Payments exported successfully' })
+      )
     },
     onError: (error: unknown) => {
       toast.error(extractErrorMessage(error, 'Failed to export payments'))

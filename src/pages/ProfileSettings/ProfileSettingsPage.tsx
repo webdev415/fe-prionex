@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { Icons } from '@/lib/icons'
 import { ProfilePhotoField } from './ProfilePhotoField'
 import { useAuth, useUpdateMyProfile, ChangePasswordModal, TwoFactorSection } from '@/features/auth'
+import { AppLoginSection } from '@/features/appLogin'
 import {
   useMyPersonalInformation,
   useUpdateMyPersonalInformation,
@@ -26,7 +27,12 @@ import { Label } from '@/components/ui/Label'
 import { Button } from '@/components/ui/Button'
 import { DoubleButton } from '@/components/ui/DoubleButton'
 import { formatPickerDateAsYMD, parsePickerYMD } from '@/lib/dateUtils'
-import { LANGUAGE_NAMES, SUPPORTED_LANGUAGES, normalizeBackendLanguage } from '@/lib/i18n'
+import {
+  LANGUAGE_NAMES,
+  SUPPORTED_LANGUAGES,
+  normalizeBackendLanguage,
+  type SupportedLanguage,
+} from '@/lib/i18n'
 import type { MyPersonalInformationInput, UpdateMyProfileInput } from '@/types/api'
 import { AppearanceSettings } from './AppearanceSettings'
 import { KeyboardShortcutsSettings } from '@/features/taHotkeys/components/KeyboardShortcutsSettings'
@@ -70,7 +76,7 @@ export function ProfileSettingsPage() {
   // Local form state initialized from store user
   const initialForm = useMemo(() => {
     const fromI18n = normalizeBackendLanguage(i18n.language)
-    const currentLanguage: 'en' | 'uk' = user?.language
+    const currentLanguage: SupportedLanguage = user?.language
       ? normalizeBackendLanguage(user.language)
       : fromI18n
     return {
@@ -175,7 +181,7 @@ export function ProfileSettingsPage() {
       workFormatTouched: touched,
     } = latest.current
     const serverLanguage = user.language
-      ? (normalizeBackendLanguage(user.language) as 'en' | 'uk')
+      ? (normalizeBackendLanguage(user.language) as SupportedLanguage)
       : undefined
 
     const edited = {
@@ -281,7 +287,7 @@ export function ProfileSettingsPage() {
   // Sync when i18n changes externally only (e.g. header switcher). Do not depend on form.language —
   // i18n.changeLanguage is async; including form.language would revert the profile dropdown immediately.
   useEffect(() => {
-    const currentLanguage: 'en' | 'uk' = normalizeBackendLanguage(i18n.language)
+    const currentLanguage: SupportedLanguage = normalizeBackendLanguage(i18n.language)
     // Defer to a microtask so the effect body itself doesn't call setState
     // synchronously (lint: react-hooks/set-state-in-effect).
     queueMicrotask(() => {
@@ -455,7 +461,7 @@ export function ProfileSettingsPage() {
               )}
               {user?.asterisk_extension && (
                 <div className="text-muted-foreground text-xs">
-                  Extension: {user.asterisk_extension}
+                  {t('pages.profile.extensionLabel')} {user.asterisk_extension}
                 </div>
               )}
               {user?.dialer_extension && (
@@ -512,6 +518,8 @@ export function ProfileSettingsPage() {
               {t('pages.profile.accountSecurity')}
             </span>
             <TwoFactorSection />
+            {/* Phone binding (Epic 19, #1532): renders nothing while the flag is off. */}
+            <AppLoginSection />
           </div>
         </div>
 

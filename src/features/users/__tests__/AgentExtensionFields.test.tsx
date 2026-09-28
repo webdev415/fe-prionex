@@ -143,7 +143,7 @@ describe('Is Agent governs the extension fields', () => {
     fireEvent.change(asterisk(), { target: { value: '' } })
     save()
 
-    await waitFor(() => expect(screen.getByText(/required for agents/i)).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText(/agentExtensionRequired/)).toBeInTheDocument())
     expect(mutate).not.toHaveBeenCalled()
   })
 

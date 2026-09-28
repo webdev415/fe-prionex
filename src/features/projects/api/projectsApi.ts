@@ -14,10 +14,19 @@ import type {
 } from '../types'
 
 /**
- * Fetch paginated list of projects
+ * Fetch paginated list of projects.
+ *
+ * `signal` — the React Query cancellation signal, for callers that walk
+ * several pages: an unmounted screen then stops the walk instead of finishing it.
  */
-export async function getProjects(params: ProjectListParams = {}): Promise<ProjectListResponse> {
-  const response = await api.get<ProjectListResponse>('/api/v1/projects', { params })
+export async function getProjects(
+  params: ProjectListParams = {},
+  { signal }: { signal?: AbortSignal } = {}
+): Promise<ProjectListResponse> {
+  const response = await api.get<ProjectListResponse>(
+    '/api/v1/projects',
+    signal ? { params, signal } : { params }
+  )
   return response.data
 }
 

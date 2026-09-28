@@ -1,5 +1,6 @@
 import * as React from 'react'
 import * as SelectPrimitive from '@radix-ui/react-select'
+import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
 import { Icons } from '@/lib/icons'
 
@@ -62,6 +63,7 @@ const SelectTrigger = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Trigger>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>
 >(({ className, children, style, ...props }, ref) => {
+  const { t } = useTranslation('common')
   const { onClear, hasValue } = React.useContext(SelectClearContext)
   const showClear = !!onClear && hasValue && !props.disabled
 
@@ -81,7 +83,7 @@ const SelectTrigger = React.forwardRef<
         {showClear && (
           <span
             role="button"
-            aria-label="Clear"
+            aria-label={t('components.select.clear', 'Clear')}
             tabIndex={-1}
             // Stop pointerdown so Radix doesn't open the menu on the same click.
             onPointerDown={(e) => {

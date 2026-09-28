@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import i18n from '@/lib/i18n'
 import { getAccessToken } from '@/lib/api'
 import { CALL_STATE_CHANGED_EVENT } from '../types'
 import type { CallStateEvent, ConnectionStatus } from '../types'
@@ -43,7 +44,9 @@ export function useCallWebSocket(agentExtension: string | null) {
       reconnecting: false,
       serviceUnavailable: true,
     }))
-    toast.warning('Using fallback mode for call updates')
+    toast.warning(
+      i18n.t('toasts.calls.fallbackMode', { defaultValue: 'Using fallback mode for call updates' })
+    )
   }, [])
 
   const disablePollingFallback = useCallback(() => {
@@ -95,7 +98,9 @@ export function useCallWebSocket(agentExtension: string | null) {
 
       // Show success notification if reconnected after failure
       if (statusRef.current.reconnecting || statusRef.current.usingPollingFallback) {
-        toast.success('Connected to call service')
+        toast.success(
+          i18n.t('toasts.calls.connected', { defaultValue: 'Connected to call service' })
+        )
         disablePollingFallback()
       }
     })
@@ -135,7 +140,9 @@ export function useCallWebSocket(agentExtension: string | null) {
 
       // Show reconnecting notification after 3 failed attempts
       if (attemptNumber === 3) {
-        toast.info('Reconnecting to call service...')
+        toast.info(
+          i18n.t('toasts.calls.reconnecting', { defaultValue: 'Reconnecting to call service...' })
+        )
       }
 
       // If max attempts reached, switch to polling fallback
@@ -155,7 +162,7 @@ export function useCallWebSocket(agentExtension: string | null) {
         reconnecting: false,
         serviceUnavailable: false,
       }))
-      toast.success('Connected to call service')
+      toast.success(i18n.t('toasts.calls.connected', { defaultValue: 'Connected to call service' }))
     })
 
     // Reconnection error

@@ -10,6 +10,7 @@ import type { LegalDocumentRow } from '../../documents/types'
 import { DOCUMENT_TYPE_I18N_KEYS, getDocumentDisplayName } from './constants'
 import { DocumentDetailField } from './DocumentDetailField'
 import { DocumentTypeBadge } from './DocumentTypeBadge'
+import { piiProps } from '@/lib/openreplay/pii'
 
 interface DocumentDetailDrawerProps {
   document: LegalDocumentRow | null
@@ -130,7 +131,9 @@ export function DocumentDetailDrawer({ document, onClose }: DocumentDetailDrawer
                   'Client - Contract'
                 )}
               >
-                <p className="font-medium">{document.clientName}</p>
+                <p className="font-medium" {...piiProps}>
+                  {document.clientName}
+                </p>
                 <p className="text-muted-foreground text-[12px]">{document.contractId}</p>
               </DocumentDetailField>
 

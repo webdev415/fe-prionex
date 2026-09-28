@@ -20,8 +20,14 @@ import { taskApi } from '@/features/clients/api/taskApi'
 import { useTransitionCorrectionTask } from '@/features/training'
 import { toast } from 'sonner'
 import { useAuthStore } from '@/stores/authStore'
-import { formatTaskDueDateForDisplay } from '@/lib/formatters'
+import {
+  dateSeparator,
+  formatTaskDueDateForDisplay,
+  uiLocale,
+  withCurrency,
+} from '@/lib/formatters'
 import { cn } from '@/lib/utils'
+import { piiProps } from '@/lib/openreplay/pii'
 
 function formatDateTime(isoDate: string, timezone?: string): string {
   try {
@@ -40,7 +46,8 @@ function formatDateTime(isoDate: string, timezone?: string): string {
       timeZone: tz,
     }).formatToParts(new Date(dateStr))
     const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '00'
-    return `${get('day')}-${get('month')}-${get('year')} ${get('hour')}:${get('minute')}`
+    const sep = dateSeparator()
+    return `${get('day')}${sep}${get('month')}${sep}${get('year')} ${get('hour')}:${get('minute')}`
   } catch {
     return isoDate
   }
@@ -188,7 +195,7 @@ export function TaskBell() {
                       className="flex min-w-0 flex-1 flex-col gap-1.5 px-4 py-3 text-left disabled:cursor-default"
                     >
                       <div className="flex flex-wrap items-center gap-1.5 pr-5">
-                        <p className="line-clamp-1 text-xs font-semibold text-black">
+                        <p className="line-clamp-1 text-xs font-semibold text-black" {...piiProps}>
                           {payment.client_name ?? `Client #${payment.client_id}`}
                           <span className="ml-1 font-normal text-black">
                             (ID: {payment.client_id})
@@ -205,10 +212,11 @@ export function TaskBell() {
                         </span>
                       </div>
                       <p className="w-full min-w-0 truncate text-xs text-black">
-                        ₴{' '}
-                        {Number(payment.amount).toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                        })}
+                        {withCurrency(
+                          Number(payment.amount).toLocaleString(uiLocale(), {
+                            minimumFractionDigits: 2,
+                          })
+                        )}
                         <span className="ml-2 uppercase">{payment.payment_method}</span>
                       </p>
                       <div className="flex items-center gap-1 text-black">
@@ -245,7 +253,7 @@ export function TaskBell() {
                     >
                       {/* Client name + ID + Priority + Status on same line */}
                       <div className="flex flex-wrap items-center gap-1.5 pr-5">
-                        <p className="line-clamp-1 text-xs font-semibold text-black">
+                        <p className="line-clamp-1 text-xs font-semibold text-black" {...piiProps}>
                           {task.client_name ?? `Client #${task.client_id}`}
                           {task.client_id && (
                             <span className="ml-1 font-normal text-black">

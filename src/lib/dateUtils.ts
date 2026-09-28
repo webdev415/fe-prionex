@@ -11,7 +11,9 @@
  */
 
 import { format as formatFns, isValid as isValidFns, parse as parseFns } from 'date-fns'
+import { es as spanishDateLocale } from 'date-fns/locale/es'
 import type { Period } from '@/features/report/types'
+import { normalizeBackendLanguage } from '@/lib/i18n'
 
 // ---------------------------------------------------------------------------
 // Manual date/time entry (DD.MM.YYYY HH:MM)
@@ -27,6 +29,25 @@ export const DATETIME_DISPLAY_FORMAT = 'dd.MM.yyyy HH:mm'
  * Display + manual-entry format for date-only filter fields (no time).
  */
 export const DATE_DISPLAY_FORMAT = 'dd.MM.yyyy'
+
+const NUMERIC_DATE_PATTERN = /^(?:dd[./-]MM[./-]yyyy|MM[./-]dd[./-]yyyy|yyyy[./-]MM[./-]dd)(.*)$/
+
+export function isSpanishLanguage(language: string | null | undefined): boolean {
+  return normalizeBackendLanguage(language) === 'es'
+}
+
+export function pickerLocaleForLanguage(language: string | null | undefined) {
+  return isSpanishLanguage(language) ? spanishDateLocale : undefined
+}
+
+export function displayFormatForLanguage(
+  format: string,
+  language: string | null | undefined
+): string {
+  if (!isSpanishLanguage(language)) return format
+  const match = NUMERIC_DATE_PATTERN.exec(format)
+  return match ? `dd/MM/yyyy${match[1]}` : format
+}
 
 type MaskSegment = {
   len: number
@@ -110,11 +131,11 @@ function smartDateTimeDigits(raw: string): string {
  * input is preserved — typing ``1506`` yields ``15.06`` and ``9`` (an
  * impossible day start) yields ``09``.
  */
-export function maskDateTimeInput(raw: string): string {
+export function maskDateTimeInput(raw: string, separator = '.'): string {
   const d = smartDateTimeDigits(raw)
   let out = d.slice(0, 2)
-  if (d.length > 2) out += '.' + d.slice(2, 4)
-  if (d.length > 4) out += '.' + d.slice(4, 8)
+  if (d.length > 2) out += separator + d.slice(2, 4)
+  if (d.length > 4) out += separator + d.slice(4, 8)
   if (d.length > 8) out += ' ' + d.slice(8, 10)
   if (d.length > 10) out += ':' + d.slice(10, 12)
   return out
@@ -162,12 +183,12 @@ export function applyDefaultTimeToDate(
  * 25:00``) return ``null`` so the caller can flag them. The round-trip
  * format check rejects any value date-fns would silently normalise.
  */
-export function parseManualDateTime(masked: string): Date | null {
+export function parseManualDateTime(masked: string, format = DATETIME_DISPLAY_FORMAT): Date | null {
   const digits = masked.replace(/\D/g, '')
   if (digits.length !== 12) return null
-  const parsed = parseFns(masked, DATETIME_DISPLAY_FORMAT, new Date())
+  const parsed = parseFns(masked, format, new Date())
   if (!isValidFns(parsed)) return null
-  if (formatFns(parsed, DATETIME_DISPLAY_FORMAT) !== masked) return null
+  if (formatFns(parsed, format) !== masked) return null
   return parsed
 }
 
@@ -176,11 +197,11 @@ export function parseManualDateTime(masked: string): Date | null {
  * out-of-range day/month values (days ≤ 31, months ≤ 12). Same DD/MM rules as
  * ``maskDateTimeInput``.
  */
-export function maskDateInput(raw: string): string {
+export function maskDateInput(raw: string, separator = '.'): string {
   const d = smartDateDigits(raw)
   let out = d.slice(0, 2)
-  if (d.length > 2) out += '.' + d.slice(2, 4)
-  if (d.length > 4) out += '.' + d.slice(4, 8)
+  if (d.length > 2) out += separator + d.slice(2, 4)
+  if (d.length > 4) out += separator + d.slice(4, 8)
   return out
 }
 
@@ -189,12 +210,12 @@ export function maskDateInput(raw: string): string {
  * is **complete** (8 digits) and **valid** — incomplete input (``01.06``) and
  * impossible calendar dates (``31.02.2026``) return ``null``.
  */
-export function parseManualDate(masked: string): Date | null {
+export function parseManualDate(masked: string, format = DATE_DISPLAY_FORMAT): Date | null {
   const digits = masked.replace(/\D/g, '')
   if (digits.length !== 8) return null
-  const parsed = parseFns(masked, DATE_DISPLAY_FORMAT, new Date())
+  const parsed = parseFns(masked, format, new Date())
   if (!isValidFns(parsed)) return null
-  if (formatFns(parsed, DATE_DISPLAY_FORMAT) !== masked) return null
+  if (formatFns(parsed, format) !== masked) return null
   return parsed
 }
 

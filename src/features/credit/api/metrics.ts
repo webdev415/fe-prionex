@@ -1,10 +1,10 @@
 /**
  * Метрики разделов «Заявки» и «Кредиты».
  *
- * ЭТАП 1: считаются на фронте — из счётчиков `/admin/overview` и текущей
+ * СЕГОДНЯ: считаются на фронте — из счётчиков `/admin/overview` и текущей
  * страницы списка. Это осознанный компромисс: агрегатов в контракте пока нет.
  *
- * ЭТАП 2: WS-05 заводит `getApplicationsSummary` / `getLoansSummary`, и тогда
+ * ДАЛЬШЕ: WS-05 заводит `getApplicationsSummary` / `getLoansSummary`, и тогда
  * заменяется ТОЛЬКО тело функций ниже — страницы их не заметят. Ради этого
  * агрегация вынесена сюда и нигде больше не дублируется.
  */
@@ -50,26 +50,35 @@ export function formatMinorTotal(minor: number, currency?: string): string {
 }
 
 /**
- * Карточки над списком заявок: сколько в каком статусе + деньги и конверсия
- * по загруженной странице.
+ * Счёт «таблетки» статуса над списком заявок — из сводки модуля.
+ *
+ * Сводки нет (грузится или отказала) — числа нет вовсе: неизвестное не
+ * выдаётся за ноль. Какие статусы сводка считает, говорит она сама
+ * (`application_statuses`): статус вне этого перечня сводкой не агрегируется,
+ * и его ноль был бы выдумкой — числа нет так же, как без сводки. Статус из
+ * перечня без ключа в счётчиках — это ноль в проекте (`group by` модуля), и
+ * ноль показывается.
+ */
+export function applicationStatusCount(
+  overview: CreditOverview | undefined,
+  status: CreditApplicationStatus
+): string | null {
+  if (!overview) return null
+  if (!overview.application_statuses.includes(status)) return null
+  return formatCount(overview.applications[status] ?? 0)
+}
+
+/**
+ * Карточки над списком заявок: деньги по загруженной странице и конверсия.
+ * Счёт статусов — `applicationStatusCount`, в «таблетках» фильтра: карточка
+ * статуса была вторым рядом того же фильтра.
  */
 export function buildApplicationMetrics(
   overview: CreditOverview | undefined,
-  page: CreditApplicationSummary[],
-  visibleStatuses: CreditApplicationStatus[]
+  page: CreditApplicationSummary[]
 ): CreditMetric[] {
   const counts = overview?.applications ?? {}
-  const statuses = (
-    visibleStatuses.length ? visibleStatuses : (overview?.application_statuses ?? [])
-  ).filter((status) => (counts[status] ?? 0) > 0)
-
-  const metrics: CreditMetric[] = statuses.map((status) => ({
-    key: `status:${status}`,
-    labelKey: `credit.status.${status}`,
-    value: formatCount(counts[status] ?? 0),
-    status,
-    tone: STATUS_TONE[status] ?? 'default',
-  }))
+  const metrics: CreditMetric[] = []
 
   if (page.length) {
     const currency = page[0]?.currency

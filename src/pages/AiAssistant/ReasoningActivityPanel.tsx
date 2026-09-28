@@ -19,6 +19,7 @@ import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { clampReasoningPanelWidth, REASONING_PANEL_RESIZE_STEP } from './reasoningPanelConfig'
 import { stripDataEnvelope } from './stripDataEnvelope'
+import { piiProps } from '@/lib/openreplay/pii'
 
 /** Lifecycle of one tool invocation shown in the activity panel. */
 export type ToolStepStatus = 'running' | 'ok' | 'error'
@@ -758,7 +759,17 @@ export function ReasoningActivityPanel({
         </header>
 
         {open && (
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 pt-2 pb-6">
+          // 🔴 Everything in this body is model output ABOUT CLIENTS (KAN-KB-54):
+          // the reasoning text, the tool-step result previews, the SQL the
+          // assistant ran (`WHERE full_name = '…'`) and the raw result rows it
+          // cites. The panel is mounted as a sibling of the chat, so the bubble
+          // markup does not reach it; one attribute here covers the whole body.
+          // The header above stays readable — it is the panel's title and the
+          // close button, and it is what tells a replay this panel was open.
+          <div
+            className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain px-4 pt-2 pb-6"
+            {...piiProps}
+          >
             {hasSteps && (
               <section className="pb-2">
                 <p className="text-muted-foreground py-2 text-[10.5px] font-semibold tracking-[0.1em] uppercase">

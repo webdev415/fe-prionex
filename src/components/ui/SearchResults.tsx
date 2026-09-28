@@ -6,6 +6,7 @@
 
 import { useTranslation } from 'react-i18next'
 import { intlLocaleForUiLanguage } from '@/lib/i18n'
+import { withCurrency } from '@/lib/formatters'
 import { cn } from '@/lib/utils'
 import { Icons } from '@/lib/icons'
 import { ContactSourceFilterIcon } from '@/features/clients/utils/contactTypeVisual'
@@ -58,8 +59,6 @@ export function SearchResults({
     if (isNaN(num)) return '0'
     const locale = intlLocaleForUiLanguage(i18n.language)
     return new Intl.NumberFormat(locale, {
-      style: 'currency',
-      currency: 'UAH',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
       useGrouping: true,
@@ -170,7 +169,7 @@ export function SearchResults({
                 </div>
                 <div className="space-y-0.5 text-xs text-gray-600 sm:space-y-1">
                   <div className="truncate">
-                    {t('search.debt')}: {formatCurrency(result.debt)} ₴
+                    {t('search.debt')}: {withCurrency(formatCurrency(result.debt), 'suffix')}
                   </div>
                   <div className="break-words">
                     {t('search.phone')}: {result.phone}

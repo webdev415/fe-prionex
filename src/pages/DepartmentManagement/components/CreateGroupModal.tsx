@@ -23,7 +23,7 @@ interface CreateGroupModalProps {
 }
 
 const schema = z.object({
-  name: z.string().min(1, 'Group name is required'),
+  name: z.string().min(1, 'pages.groups.validation.nameRequired'),
   description: z.string().optional(),
 })
 
@@ -93,7 +93,9 @@ export function CreateGroupModal({
                 placeholder={t('pages.groups.forms.placeholders.name')}
                 disabled={createMutation.isPending}
               />
-              {errors.name && <p className="text-error-500 mt-1 text-sm">{errors.name.message}</p>}
+              {errors.name && (
+                <p className="text-error-500 mt-1 text-sm">{t(errors.name.message ?? '')}</p>
+              )}
             </div>
             <div>
               <Label htmlFor="group-description">{t('pages.groups.forms.description')}</Label>

@@ -3,6 +3,8 @@
  * rule sections, and TTL table so the layout does not jump when data arrives.
  */
 
+import { useTranslation } from 'react-i18next'
+
 function Pulse({ className }: { className?: string }) {
   return <div className={`bg-muted rounded ${className ?? ''}`} />
 }
@@ -49,6 +51,7 @@ function SectionSkeleton({ fields = 3 }: { fields?: number }) {
 }
 
 export function ScoringV3SettingsPageSkeleton() {
+  const { t } = useTranslation('common')
   return (
     <div
       className="flex w-full min-w-0 animate-pulse flex-col gap-6 pb-28"
@@ -56,7 +59,7 @@ export function ScoringV3SettingsPageSkeleton() {
       aria-live="polite"
       role="status"
     >
-      <span className="sr-only">Loading scoring v3 settings…</span>
+      <span className="sr-only">{t('pages.scoringV3.settings.loading')}</span>
 
       <header className="flex flex-col gap-2">
         <Pulse className="h-7 w-64 max-w-full sm:h-8 sm:w-80" />

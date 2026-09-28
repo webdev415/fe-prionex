@@ -12,6 +12,7 @@
 
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { spanishLocaleOr } from '@/lib/i18n'
 
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { formatMoneyUAHTwoDecimals } from '@/lib/formatters'
@@ -47,7 +48,7 @@ export function ClientReversalsTable({
   const { t, i18n } = useTranslation('common')
   const { data, isLoading, error } = useReversals({ client_id: clientId }, enabled)
 
-  const dateLocale = i18n.language === 'uk' ? 'uk-UA' : 'en-US'
+  const dateLocale = i18n.language === 'uk' ? 'uk-UA' : spanishLocaleOr(i18n.language, 'en-US')
 
   const rows: Row[] = useMemo(
     () => (data?.items ?? []).map((r) => ({ ...r, id: r.reversal_group_id })),
@@ -94,6 +95,7 @@ export function ClientReversalsTable({
         key: 'clientFullName',
         header: t('pages.clients.detail.reversalsTable.clientFullName'),
         align: 'left',
+        obscured: true,
         render: (r) => r.client_full_name ?? clientFullName ?? '-',
       },
       {
@@ -106,6 +108,7 @@ export function ClientReversalsTable({
         key: 'user',
         header: t('pages.clients.detail.reversalsTable.user'),
         align: 'left',
+        obscured: true,
         render: (r) =>
           r.user_full_name ??
           resolveUserName?.(r.user_id) ??

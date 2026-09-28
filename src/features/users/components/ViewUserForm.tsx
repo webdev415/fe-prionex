@@ -6,6 +6,7 @@
  */
 
 import { useTranslation } from 'react-i18next'
+import { piiProps } from '@/lib/openreplay/pii'
 import type { UserDetailResponse } from '../types'
 
 interface ViewUserFormProps {
@@ -69,7 +70,7 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
             <span className="text-muted-foreground text-sm font-light">
               {t('pages.users.forms.firstName')}
             </span>
-            <span className="text-foreground text-sm font-semibold break-words">
+            <span className="text-foreground text-sm font-semibold break-words" {...piiProps}>
               {user.first_name || '—'}
             </span>
           </div>
@@ -78,7 +79,7 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
             <span className="text-muted-foreground text-sm font-light">
               {t('pages.users.forms.lastName')}
             </span>
-            <span className="text-foreground text-sm font-semibold break-words">
+            <span className="text-foreground text-sm font-semibold break-words" {...piiProps}>
               {user.last_name || '—'}
             </span>
           </div>
@@ -89,7 +90,7 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
             <span className="text-muted-foreground text-sm font-light">
               {t('pages.users.forms.middleName')}
             </span>
-            <span className="text-foreground text-sm font-semibold break-words">
+            <span className="text-foreground text-sm font-semibold break-words" {...piiProps}>
               {user.middle_name || '—'}
             </span>
           </div>
@@ -132,7 +133,9 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
       <div className="space-y-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-            <span className="text-muted-foreground text-sm font-light">Asterisk Extension:</span>
+            <span className="text-muted-foreground text-sm font-light">
+              {t('pages.users.forms.asteriskExtension')}:
+            </span>
             <span className="text-foreground text-sm font-semibold break-words">
               {user.asterisk_extension || '—'}
             </span>
@@ -148,9 +151,11 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
           </div>
 
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-            <span className="text-muted-foreground text-sm font-light">Is Agent:</span>
+            <span className="text-muted-foreground text-sm font-light">
+              {t('pages.users.forms.isAgent')}:
+            </span>
             <span className="text-foreground text-sm font-semibold break-words">
-              {user.is_agent ? 'Yes' : 'No'}
+              {user.is_agent ? t('common.yes') : t('common.no')}
             </span>
           </div>
         </div>
@@ -158,7 +163,9 @@ export function ViewUserForm({ user }: ViewUserFormProps) {
         {user.is_agent && (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-              <span className="text-muted-foreground text-sm font-light">Agent Status:</span>
+              <span className="text-muted-foreground text-sm font-light">
+                {t('pages.users.forms.agentStatus')}:
+              </span>
               <div className="flex items-center gap-2">
                 <span
                   className={`h-2 w-2 rounded-full ${

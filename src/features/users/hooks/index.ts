@@ -16,6 +16,12 @@ export { useAdminUnlockAccount } from './useAdminUnlockAccount'
 export { useAdminDisableTwoFactor, useAdminReenableTwoFactor } from './useAdminToggleTwoFactor'
 export { useUserDepartment } from './useUserDepartment'
 export {
+  useOperatorPins,
+  usePinOperator,
+  useUnpinOperator,
+  operatorPinKeys,
+} from './useOperatorPins'
+export {
   useIpWhitelistSettings,
   useUpdateIpWhitelistSettings,
   ipWhitelistSettingsKey,

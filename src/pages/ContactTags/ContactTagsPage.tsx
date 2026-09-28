@@ -370,7 +370,9 @@ export function ContactTagsPage() {
       {categories.map((cat) =>
         cat.values.length > 0 ? (
           <div key={`values-${cat.id}`} className="border-border bg-card rounded-xl border p-3">
-            <div className="text-foreground mb-2 text-sm font-medium">{cat.name} — values</div>
+            <div className="text-foreground mb-2 text-sm font-medium">
+              {t('pages.contactTags.valuesOf', { category: cat.name })}
+            </div>
             <div className="flex flex-wrap gap-2">
               {cat.values.map((v) => (
                 <span

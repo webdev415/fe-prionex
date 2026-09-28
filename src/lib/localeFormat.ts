@@ -160,5 +160,8 @@ export function formatTimeShort(value: DateInput, language: string): string {
  * en → MM/dd/yyyy HH:mm, uk → dd.MM.yyyy HH:mm.
  */
 export function dateTimeInputPattern(language: string): string {
-  return intlLocaleForUiLanguage(language) === 'uk-UA' ? 'dd.MM.yyyy HH:mm' : 'MM/dd/yyyy HH:mm'
+  const locale = intlLocaleForUiLanguage(language)
+  if (locale === 'uk-UA') return 'dd.MM.yyyy HH:mm'
+  if (locale === 'es-ES') return 'dd/MM/yyyy HH:mm'
+  return 'MM/dd/yyyy HH:mm'
 }

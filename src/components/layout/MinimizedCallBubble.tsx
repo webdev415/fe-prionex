@@ -25,6 +25,7 @@ import { cn } from '@/lib/utils'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/Tooltip'
 import { CallDialogModal } from '@/pages/ClientManagement/components/CallDialogModal'
 import { CallRecordingModal } from '@/pages/ClientManagement/components/CallRecordingModal'
+import { piiProps } from '@/lib/openreplay/pii'
 
 /**
  * Consecutive not-found polls before a call window is discarded. The poll runs
@@ -305,7 +306,10 @@ export function MinimizedCallBubble() {
               <Icons.Headset size={20} className="text-white" strokeWidth={1.5} />
             </div>
             <div className="flex min-w-0 flex-1 flex-col">
-              <div className="text-foreground truncate text-sm font-semibold">
+              {/* The phone below stays readable — it is digits, which the
+                  tracker masks on its own, and it is what keeps the bubble
+                  identifiable in a replay. */}
+              <div className="text-foreground truncate text-sm font-semibold" {...piiProps}>
                 {minimizedCall.clientName}
               </div>
               <div className="text-muted-foreground text-xs">
@@ -354,7 +358,7 @@ export function MinimizedCallBubble() {
               <Icons.Voice size={20} className="text-white" strokeWidth={1.5} />
             </div>
             <div className="flex min-w-0 flex-1 flex-col">
-              <div className="text-foreground truncate text-sm font-semibold">
+              <div className="text-foreground truncate text-sm font-semibold" {...piiProps}>
                 {minimizedCall.callData?.clientName || minimizedCall.clientName}
               </div>
               <div className="text-muted-foreground text-xs">
@@ -425,7 +429,7 @@ export function MinimizedCallBubble() {
         'animate-in fade-in-0 slide-in-from-top-1 bg-secondary-800 hidden h-10 items-center gap-2 rounded-md pr-1 pl-3 text-white shadow-sm lg:flex'
       )}
       role="group"
-      aria-label="Active call"
+      aria-label={t('components.callBubble.activeCall', 'Active call')}
     >
       <span className={cn('h-2 w-2 shrink-0 rounded-full', getStatusColor())} />
       <span className="text-xs font-medium whitespace-nowrap">{getStatusText()}</span>
@@ -470,8 +474,8 @@ export function MinimizedCallBubble() {
         type="button"
         onClick={handleRestore}
         className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-white/10"
-        aria-label="Expand call"
-        title="Expand"
+        aria-label={t('components.callBubble.expandCall', 'Expand call')}
+        title={t('actions.expand', 'Expand')}
       >
         <Icons.HeadsetConnected size={16} strokeWidth={1.5} />
       </button>
@@ -484,7 +488,7 @@ export function MinimizedCallBubble() {
         type="button"
         onClick={handleRestore}
         className="bg-secondary-800 animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2 relative flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-md transition-all duration-200 hover:scale-105 hover:opacity-90"
-        aria-label="Restore call recording"
+        aria-label={t('components.callBubble.restoreRecording', 'Restore call recording')}
       >
         <Icons.Voice size={20} className="text-white" strokeWidth={1.5} />
       </button>
@@ -503,7 +507,7 @@ export function MinimizedCallBubble() {
               className={`bg-secondary-800 animate-in fade-in-0 zoom-in-95 slide-in-from-bottom-2 relative flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-md transition-all duration-200 duration-500 hover:scale-105 hover:opacity-90 ${
                 isActiveCall ? 'animate-pulse' : 'animate-[pulse_3s_ease-in-out_infinite]'
               }`}
-              aria-label="Restore call modal"
+              aria-label={t('components.callBubble.restoreModal', 'Restore call modal')}
             >
               <Icons.HeadsetConnected
                 size={20}

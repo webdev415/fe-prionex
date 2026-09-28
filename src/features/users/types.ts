@@ -40,7 +40,7 @@ export interface ApiUser {
   full_name: string
   middle_name?: string
   phone?: string
-  language: 'uk' | 'en'
+  language: 'uk' | 'en' | 'es'
   timezone: string
   status: 'active' | 'inactive' | 'suspended'
   must_change_password: boolean
@@ -57,6 +57,12 @@ export interface ApiUser {
   two_factor_enabled: boolean
   // True when the user has previously enrolled — admin can re-enable without re-enrollment.
   two_factor_has_secret: boolean
+  /**
+   * At least one phone is bound for mobile-app sign-in (Epic 19, #1532).
+   * Absent while the API does not send it (feature off or an older API) —
+   * the table then shows no phone badge at all.
+   */
+  app_login_enabled?: boolean
   avatar_url?: string | null
   work_format?: 'office' | 'remote'
 }
@@ -119,7 +125,7 @@ export interface CreateUserInput {
   last_name: string
   middle_name?: string
   phone?: string
-  language: 'uk' | 'en'
+  language: 'uk' | 'en' | 'es'
   timezone: string
   must_change_password: boolean
   project_assignments: ProjectRoleAssignment[]
@@ -137,7 +143,7 @@ export interface UpdateUserInput {
   last_name?: string
   middle_name?: string
   phone?: string
-  language?: 'uk' | 'en'
+  language?: 'uk' | 'en' | 'es'
   timezone?: string
   status?: 'active' | 'inactive' | 'suspended'
   project_assignments?: ProjectRoleAssignment[]

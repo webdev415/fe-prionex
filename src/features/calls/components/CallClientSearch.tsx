@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/Input'
 import { Icons } from '@/lib/icons'
 import { searchClients, type EnhancedSearchResult } from '@/api/clientSearchApi'
 import { formatMoneyUAHTwoDecimals } from '@/lib/formatters'
+import { piiProps } from '@/lib/openreplay/pii'
 
 /** Below this the search matches too much to be useful and costs a round trip. */
 const MIN_QUERY_LENGTH = 3
@@ -89,7 +90,9 @@ export function CallClientSearch({ onSelect }: CallClientSearchProps) {
         >
           <Icons.User size={16} className="text-muted-foreground shrink-0" aria-hidden />
           <span className="flex min-w-0 flex-1 flex-col">
-            <span className="text-foreground truncate text-sm font-medium">{result.full_name}</span>
+            <span className="text-foreground truncate text-sm font-medium" {...piiProps}>
+              {result.full_name}
+            </span>
             <span className="text-muted-foreground truncate text-xs">
               {result.phones[0] ?? result.tax_id}
             </span>

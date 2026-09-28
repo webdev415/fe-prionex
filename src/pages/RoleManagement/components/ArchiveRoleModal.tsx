@@ -23,6 +23,7 @@ import { Checkbox } from '@/components/ui/Checkbox'
 import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { Icons } from '@/lib/icons'
+import { piiProps } from '@/lib/openreplay/pii'
 
 interface ArchiveRoleModalProps {
   open: boolean
@@ -142,7 +143,10 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
                   {users.map((user) => (
                     <div key={user.id} className="flex items-center gap-3">
                       <Checkbox checked={true} disabled />
-                      <span className="text-foreground text-sm font-light">
+                      {/* The login and the name arrive as one string. The login
+                          is not personal data, but splitting the two to keep it
+                          readable would be a logic change in a markup PR. */}
+                      <span className="text-foreground text-sm font-light" {...piiProps}>
                         {user.username}
                         {user.full_name ? ` (${user.full_name})` : ''}
                       </span>
@@ -260,7 +264,8 @@ export function ArchiveRoleModal({ open, roleId, onClose, onSuccess }: ArchiveRo
                         {t('pages.roles.modals.archive.setToDefault')}
                       </span>
                       <span className="text-foreground w-1/2 text-sm font-light">
-                        {defaultOperatorRole?.name || 'Operator'}
+                        {defaultOperatorRole?.name ||
+                          t('pages.roles.modals.archive.defaultOperatorRole')}
                       </span>
                     </div>
                   </div>

@@ -17,6 +17,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { DataTable, type Column } from '@/components/ui/DataTable'
@@ -37,16 +38,17 @@ import type { V3Bucket, V3ClientRollup, V3ScoreResult } from '@/features/scoring
 import { V3BucketBadge } from './components/V3BucketBadge'
 import { exitReasonLabel } from '@/features/scoring/lib/exitReason'
 import { OperatorWorkListTableSkeleton } from './OperatorWorkListPageSkeleton'
+import { uiDecimal, uiLocale } from '@/lib/formatters'
 
 const PAGE_SIZE = 50
 
-const BUCKET_FILTERS: { value: 'ALL' | V3Bucket; label: string }[] = [
-  { value: 'ALL', label: 'All active' },
-  { value: 'CRIT', label: 'Call first' },
-  { value: 'HIGH', label: 'High' },
-  { value: 'AVG', label: 'Average' },
-  { value: 'LOW', label: 'Low' },
-  { value: 'EXIT', label: 'Do-not-call' },
+const BUCKET_FILTERS: { value: 'ALL' | V3Bucket; labelKey: string }[] = [
+  { value: 'ALL', labelKey: 'pages.scoringV3.workList.filters.ALL' },
+  { value: 'CRIT', labelKey: 'pages.scoringV3.buckets.CRIT' },
+  { value: 'HIGH', labelKey: 'pages.scoringV3.buckets.HIGH' },
+  { value: 'AVG', labelKey: 'pages.scoringV3.buckets.AVG' },
+  { value: 'LOW', labelKey: 'pages.scoringV3.buckets.LOW' },
+  { value: 'EXIT', labelKey: 'pages.scoringV3.workList.filters.EXIT' },
 ]
 
 type Row = V3ScoreResult & { id: number }
@@ -72,11 +74,11 @@ function useDebounced<T>(value: T, delay = 400): T {
 }
 
 function fmtMoney(v: number | null): string {
-  return v == null ? '—' : Math.round(v).toLocaleString()
+  return v == null ? '—' : Math.round(v).toLocaleString(uiLocale())
 }
 
 function fmtPct(v: number | null): string {
-  return v == null ? '—' : `${(v * 100).toFixed(2)}%`
+  return v == null ? '—' : `${uiDecimal((v * 100).toFixed(2))}%`
 }
 
 function FilterField({
@@ -99,6 +101,7 @@ function FilterField({
 }
 
 export function OperatorWorkListPage() {
+  const { t } = useTranslation('common')
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
   const projectId = activeProjectId ? Number(activeProjectId) : undefined
 
@@ -154,25 +157,25 @@ export function OperatorWorkListPage() {
   const columns: Column<Row>[] = [
     {
       key: 'bucket_v3',
-      header: 'Priority',
+      header: t('pages.scoringV3.workList.priority'),
       render: (r) => <V3BucketBadge bucket={r.bucket_v3} />,
     },
-    { key: 'debt_id', header: 'Debt ID' },
+    { key: 'debt_id', header: t('pages.scoringV3.workList.debtId') },
     {
       key: 'priority_dollar',
-      header: 'Priority value',
+      header: t('pages.scoringV3.workList.priorityValue'),
       align: 'right',
       render: (r) => fmtMoney(r.priority_dollar),
     },
     {
       key: 'hazard',
-      header: 'Pay chance',
+      header: t('pages.scoringV3.workList.payChance'),
       align: 'right',
       render: (r) => fmtPct(r.hazard),
     },
     {
       key: 'rule_fired',
-      header: 'Why',
+      header: t('pages.scoringV3.workList.why'),
       // EXIT rows get the compliance ground, not the generic "terminal".
       render: (r) => (
         <span className="text-muted-foreground">
@@ -185,24 +188,24 @@ export function OperatorWorkListPage() {
   const clientColumns: Column<V3ClientRollup & { id: number }>[] = [
     {
       key: 'bucket_v3',
-      header: 'Priority',
+      header: t('pages.scoringV3.workList.priority'),
       render: (r) => <V3BucketBadge bucket={r.bucket_v3} />,
     },
     {
       key: 'client_id',
-      header: 'Client',
+      header: t('pages.scoringV3.workList.client'),
       render: (r) => (
         <Link
           to={`/dashboard/clients/${r.client_id}`}
           className="text-information-700 hover:underline"
         >
-          Client {r.client_id}
+          {t('pages.scoringV3.workList.clientLink', { id: r.client_id })}
         </Link>
       ),
     },
     {
       key: 'priority_dollar',
-      header: 'Priority value',
+      header: t('pages.scoringV3.workList.priorityValue'),
       align: 'right',
       render: (r) => fmtMoney(r.priority_dollar),
     },
@@ -217,10 +220,13 @@ export function OperatorWorkListPage() {
     <div className="flex w-full min-w-0 flex-col gap-4 p-4 md:p-6">
       <div className="flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 flex-col gap-1">
-          <h1 className="text-foreground text-lg font-semibold sm:text-xl">Priority Work List</h1>
+          <h1 className="text-foreground text-lg font-semibold sm:text-xl">
+            {t('navigation.operatorWorkList')}
+          </h1>
           <p className="text-muted-foreground text-xs leading-relaxed">
-            {view === 'client' ? 'Clients' : 'Debts'} ranked by the v3 model — call the top of the
-            list first. Shadow-run preview.
+            {view === 'client'
+              ? t('pages.scoringV3.workList.subtitleClients')
+              : t('pages.scoringV3.workList.subtitleDebts')}
           </p>
         </div>
         <button
@@ -229,7 +235,7 @@ export function OperatorWorkListPage() {
           disabled={!projectId || trigger.isPending}
           className="bg-primary-600 text-primary-foreground hover:bg-primary-700 w-full shrink-0 rounded-md px-4 py-2 text-xs font-medium disabled:opacity-50 sm:w-auto"
         >
-          {trigger.isPending ? 'Starting…' : 'Run now'}
+          {trigger.isPending ? t('pages.scoringV3.starting') : t('pages.scoringV3.runNow')}
         </button>
       </div>
 
@@ -250,12 +256,14 @@ export function OperatorWorkListPage() {
                   : 'text-muted-foreground hover:bg-muted min-w-0 flex-1 rounded-md px-3 py-1.5 sm:flex-none'
               }
             >
-              {v === 'debt' ? 'By debt' : 'By client'}
+              {v === 'debt'
+                ? t('pages.scoringV3.workList.byDebt')
+                : t('pages.scoringV3.workList.byClient')}
             </button>
           ))}
         </div>
 
-        <FilterField label="Month" className="w-full sm:w-auto">
+        <FilterField label={t('pages.scoringV3.month')} className="w-full sm:w-auto">
           <div className="w-full min-w-0 sm:w-[190px]">
             <DateSelect
               showMonthYearPicker
@@ -273,7 +281,10 @@ export function OperatorWorkListPage() {
 
         {view === 'debt' && (
           <>
-            <FilterField label="Priority" className="w-full sm:w-auto">
+            <FilterField
+              label={t('pages.scoringV3.workList.priority')}
+              className="w-full sm:w-auto"
+            >
               <div className="w-full min-w-0 sm:w-[160px]">
                 <Select
                   value={bucket}
@@ -288,7 +299,7 @@ export function OperatorWorkListPage() {
                   <SelectContent>
                     {BUCKET_FILTERS.map((b) => (
                       <SelectItem key={b.value} value={b.value}>
-                        {b.label}
+                        {t(b.labelKey)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -296,12 +307,12 @@ export function OperatorWorkListPage() {
               </div>
             </FilterField>
 
-            <FilterField label="Debt ID" className="w-full sm:w-auto">
+            <FilterField label={t('pages.scoringV3.workList.debtId')} className="w-full sm:w-auto">
               <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
                 <input
                   type="text"
                   inputMode="numeric"
-                  placeholder="Search…"
+                  placeholder={t('pages.scoringV3.workList.searchPlaceholder')}
                   value={debtId}
                   onChange={(e) => {
                     setDebtId(e.target.value.replace(/[^0-9]/g, ''))
@@ -317,7 +328,7 @@ export function OperatorWorkListPage() {
                       resetPage()
                     }}
                     className="text-muted-foreground hover:text-foreground shrink-0"
-                    aria-label="Clear debt ID"
+                    aria-label={t('pages.scoringV3.workList.clearDebtId')}
                   >
                     ✕
                   </button>
@@ -325,7 +336,10 @@ export function OperatorWorkListPage() {
               </div>
             </FilterField>
 
-            <FilterField label="Min pay-chance" className="w-full sm:w-auto">
+            <FilterField
+              label={t('pages.scoringV3.workList.minPayChance')}
+              className="w-full sm:w-auto"
+            >
               <div className="flex w-full items-center gap-1 sm:w-auto">
                 <input
                   type="text"
@@ -345,13 +359,21 @@ export function OperatorWorkListPage() {
         )}
 
         <span className="text-muted-foreground w-full text-xs sm:ml-auto sm:w-auto sm:text-right">
-          {total.toLocaleString()} {view === 'client' ? 'clients' : 'debts'}
+          {t(
+            view === 'client'
+              ? 'pages.scoringV3.workList.totalClients'
+              : 'pages.scoringV3.workList.totalDebts',
+            {
+              count: total,
+              formatted: total.toLocaleString(uiLocale()),
+            }
+          )}
         </span>
       </div>
 
       {isError ? (
         <div className="border-error-600 bg-error-50 text-error-700 w-full min-w-0 rounded-xl border px-4 py-3 text-xs leading-relaxed">
-          Could not load the work list. The scoring service may be unavailable.
+          {t('pages.scoringV3.workList.loadError')}
         </div>
       ) : isLoading ? (
         <OperatorWorkListTableSkeleton columns={view === 'client' ? 3 : 5} />
@@ -360,7 +382,7 @@ export function OperatorWorkListPage() {
           <DataTable
             columns={clientColumns}
             data={clientRows}
-            emptyMessage="No scored clients for this month yet."
+            emptyMessage={t('pages.scoringV3.workList.emptyClients')}
           />
         </div>
       ) : (
@@ -370,8 +392,8 @@ export function OperatorWorkListPage() {
             data={rows}
             emptyMessage={
               debtIdNum
-                ? `No debt with ID ${debtIdNum} in this month.`
-                : 'No scored debts match these filters.'
+                ? t('pages.scoringV3.workList.emptyDebtId', { id: debtIdNum })
+                : t('pages.scoringV3.workList.emptyFiltered')
             }
           />
         </div>
@@ -385,10 +407,10 @@ export function OperatorWorkListPage() {
           disabled={page === 0 || isLoading}
           className="border-border text-foreground hover:bg-muted min-w-0 flex-1 rounded-md border px-3 py-2 disabled:opacity-40 sm:flex-none sm:py-1"
         >
-          Prev
+          {t('pages.scoringV3.workList.prev')}
         </button>
         <span className="text-muted-foreground shrink-0 px-1 tabular-nums">
-          Page {page + 1} of {pageCount}
+          {t('pages.scoringV3.workList.pageOf', { page: page + 1, total: pageCount })}
         </span>
         <button
           type="button"
@@ -396,7 +418,7 @@ export function OperatorWorkListPage() {
           disabled={page + 1 >= pageCount || isLoading}
           className="border-border text-foreground hover:bg-muted min-w-0 flex-1 rounded-md border px-3 py-2 disabled:opacity-40 sm:flex-none sm:py-1"
         >
-          Next
+          {t('common.next')}
         </button>
       </div>
     </div>

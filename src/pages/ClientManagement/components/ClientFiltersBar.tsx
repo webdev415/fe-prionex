@@ -6,6 +6,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import i18n, { spanishLocaleOr } from '@/lib/i18n'
 import { Input } from '@/components/ui/Input'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { CheckboxMultiSelect } from '@/components/ui/CheckboxMultiSelect'
@@ -40,6 +41,7 @@ import { useOperatorFilterOptions } from '../hooks/useOperatorFilterOptions'
 import { useAuthStore } from '@/stores/authStore'
 import { formatPickerDateAsYMD } from '@/lib/dateUtils'
 import type { ClientFilters } from '../ClientManagementPage'
+import { currencySymbol } from '@/lib/projectCurrency'
 
 // Debounced number input component to avoid re-rendering on every keystroke
 function DebouncedNumberInput({
@@ -85,7 +87,9 @@ function DebouncedNumberInput({
   const displayValue = isFocused
     ? localValue
     : localValue && formatWithCommas
-      ? new Intl.NumberFormat('uk-UA').format(Number(localValue.replace(/,/g, '')))
+      ? new Intl.NumberFormat(spanishLocaleOr(i18n.language, 'uk-UA')).format(
+          Number(localValue.replace(/,/g, ''))
+        )
       : localValue
 
   // × is opt-in (onClear) and only meaningful when there is a value to clear.
@@ -297,7 +301,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
               </label>
               <div className="flex w-full items-center gap-2 sm:flex-1">
                 <span className="text-muted-foreground text-sm leading-[155%] font-medium tracking-[-0.28px] sm:text-base sm:tracking-[-0.32px]">
-                  ₴
+                  {currencySymbol()}
                 </span>
                 <DebouncedNumberInput
                   value={filters.debtRangeFrom}
@@ -379,7 +383,7 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
               </label>
               <div className="flex w-full items-center gap-2 sm:flex-1">
                 <span className="text-muted-foreground text-sm leading-[155%] font-medium tracking-[-0.28px] sm:text-base sm:tracking-[-0.32px]">
-                  ₴
+                  {currencySymbol()}
                 </span>
                 <DebouncedNumberInput
                   value={filters.principalRangeFrom}
@@ -805,6 +809,20 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
                     </label>
                   )
                 })}
+                {/* Opt-in ×, like the inputs and dropdowns above: shown only
+                    when there is a selection to clear. These are bare
+                    checkboxes with no control to host it, so the button sits
+                    after the last one rather than inside a trigger. */}
+                {selectedRrStatusIds.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => onFilterChange({ ...filters, rrStatusIds: [] })}
+                    aria-label={t('pages.clients.filters.clearRrStatus', 'Clear RR status')}
+                    className="text-muted-foreground hover:text-foreground flex items-center self-center"
+                  >
+                    <Icons.Cancel01 size={14} />
+                  </button>
+                )}
               </div>
             </div>
             <div className="hidden sm:flex sm:min-w-[220px] sm:flex-1" />

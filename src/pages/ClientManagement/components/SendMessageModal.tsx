@@ -47,12 +47,14 @@ import {
   type MessagingTemplateFocusField,
 } from '@/features/messaging'
 import type { MessagingChannel, MessagingDraft } from '@/features/messaging'
+import { useProjectCountry } from '@/hooks/useProjectCountry'
 import { CHANNEL_SPECS } from '@/pages/MessagingDrafts/draftModalShared'
 import {
   blockingVariables,
   unresolvedVariables,
 } from '@/features/messaging/utils/unresolvedVariables'
 import { SendMessageModalSkeleton } from './SendMessageModalSkeleton'
+import { Pii, piiProps } from '@/lib/openreplay/pii'
 
 const formatClientNameInitials = (fullName: string): string => {
   const parts = fullName.trim().split(/\s+/)
@@ -122,6 +124,7 @@ export function SendMessageModal({
   onSent,
 }: SendMessageModalProps) {
   const { t } = useTranslation('common')
+  const projectCountry = useProjectCountry()
   const { user } = useAuthStore()
   const canSendSms = useHasPermission(sendPermissionForChannel('sms'))
   const canSendViber = useHasPermission(sendPermissionForChannel('viber'))
@@ -209,14 +212,19 @@ export function SendMessageModal({
           (item === 'viber' && canSendViber) ||
           (item === 'email' && canSendEmail)
         if (!allowed) return false
-        return integrations.some((integration) => isMessagingIntegrationUsable(integration, item))
+        return integrations.some((integration) =>
+          isMessagingIntegrationUsable(integration, item, projectCountry)
+        )
       }),
-    [canSendEmail, canSendSms, canSendViber, integrations]
+    [canSendEmail, canSendSms, canSendViber, integrations, projectCountry]
   )
 
   const availableIntegrations = useMemo(
-    () => integrations.filter((integration) => isMessagingIntegrationUsable(integration, channel)),
-    [channel, integrations]
+    () =>
+      integrations.filter((integration) =>
+        isMessagingIntegrationUsable(integration, channel, projectCountry)
+      ),
+    [channel, integrations, projectCountry]
   )
 
   const clientDisplayName = useMemo(() => formatClientNameInitials(clientName), [clientName])
@@ -328,7 +336,7 @@ export function SendMessageModal({
   const handleChannelChange = (nextChannel: MessagingChannel) => {
     const spec = CHANNEL_SPECS[nextChannel]
     const integrationsForChannel = integrations.filter((integration) =>
-      isMessagingIntegrationUsable(integration, nextChannel)
+      isMessagingIntegrationUsable(integration, nextChannel, projectCountry)
     )
 
     setChannel(nextChannel)
@@ -468,10 +476,15 @@ export function SendMessageModal({
             <Icons.Message01 size={18} className="text-primary-foreground" strokeWidth={1.5} />
           </div>
         }
-        title={t('pages.clients.modals.sendMessage.title', {
-          clientName,
-          defaultValue: `Send message to ${clientName}`,
-        })}
+        title={
+          /* `ModalHeader.title` is a ReactNode rendered as a text node, so the
+             name CAN be masked here — but only if it is a node of its own. The
+             key now holds the static half, punctuation included. */
+          <>
+            {t('pages.clients.modals.sendMessage.titlePrefix', 'Send message to')}{' '}
+            <Pii>{clientName}</Pii>
+          </>
+        }
       />
       <ModalContent>
         {isFormLoading ? (
@@ -797,14 +810,24 @@ export function SendMessageModal({
                     <span className="text-foreground font-medium">
                       {t('pages.clients.modals.sendMessage.previewSubject', 'Subject')}:
                     </span>{' '}
-                    <span className="text-muted-foreground">{previewSubject || '—'}</span>
+                    <span className="text-muted-foreground" {...piiProps}>
+                      {previewSubject || '—'}
+                    </span>
                   </div>
                 )}
                 <div>
                   <span className="text-foreground font-medium">
                     {t('pages.clients.modals.sendMessage.previewBody', 'Message')}:
                   </span>
-                  <pre className="text-foreground bg-card mt-1 overflow-auto rounded-lg p-3 text-xs whitespace-pre-wrap">
+                  {/* The RESOLVED template: variables are already substituted, so
+                      this text routinely opens with the client's full name. No
+                      field-name dictionary can see it — the identifier is
+                      `previewBody` — which is why rendered client-facing text is
+                      its own class in `docs/openreplay-pii-markup.md`. */}
+                  <pre
+                    className="text-foreground bg-card mt-1 overflow-auto rounded-lg p-3 text-xs whitespace-pre-wrap"
+                    {...piiProps}
+                  >
                     {previewBody.trim() || '—'}
                   </pre>
                 </div>

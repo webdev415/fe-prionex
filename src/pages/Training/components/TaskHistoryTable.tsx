@@ -89,6 +89,7 @@ export function TaskHistoryTable({ data, userTimezone, sort, onSortChange }: Pro
     {
       key: 'author',
       header: t('pages.training.columns.author', 'Author'),
+      obscured: true,
       render: (r) => <span className="text-sm text-gray-700">{r.created_by_name ?? '—'}</span>,
     },
     {

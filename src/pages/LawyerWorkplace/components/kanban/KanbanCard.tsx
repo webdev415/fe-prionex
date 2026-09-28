@@ -21,6 +21,7 @@ import { KanbanClientChip } from './KanbanClientChip'
 import { KanbanPriorityIcon } from './KanbanPriorityOption'
 import { KanbanTaskActionsMenuItems, buildKanbanAssigneeOptions } from './KanbanTaskEditMenus'
 import { KanbanTypeBadge } from './KanbanTypeBadge'
+import { piiProps } from '@/lib/openreplay/pii'
 
 interface KanbanCardProps {
   task: KanbanTask
@@ -208,7 +209,7 @@ export function KanbanCard({
             >
               <KanbanClientChip code={clientCode} />
               {clientName ? (
-                <span className="text-muted-foreground min-w-0 truncate text-[11px]">
+                <span className="text-muted-foreground min-w-0 truncate text-[11px]" {...piiProps}>
                   {clientName}
                 </span>
               ) : null}
@@ -217,7 +218,7 @@ export function KanbanCard({
             <>
               <KanbanClientChip code={clientCode} />
               {clientName ? (
-                <span className="text-muted-foreground min-w-0 truncate text-[11px]">
+                <span className="text-muted-foreground min-w-0 truncate text-[11px]" {...piiProps}>
                   {clientName}
                 </span>
               ) : null}

@@ -31,6 +31,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from './DropdownMenu'
+import { piiProps } from '@/lib/openreplay/pii'
 
 export interface Column<T> {
   key: string
@@ -45,6 +46,20 @@ export interface Column<T> {
   className?: string
   sortable?: boolean
   sortKey?: string // Optional different key for sorting (e.g., 'name' column might sort by 'name' field)
+  /**
+   * Mark this column's BODY cells with `data-openreplay-obscured`, so OpenReplay
+   * records their text as asterisks (KAN-KB-54).
+   *
+   * Set it on every column that renders a client name, an address or free-text
+   * operator notes. The attribute inherits down the subtree, so it covers
+   * whatever `render` puts in the cell.
+   *
+   * 🔴 Per COLUMN, never per row: a row also carries statuses, dates and amounts
+   * that have to stay readable — a replay in which nothing can be told apart is
+   * `privateMode` by another route. The header `<th>` is never marked either:
+   * a column title is not personal data.
+   */
+  obscured?: boolean
 }
 
 export type SortOrder = 'asc' | 'desc'
@@ -98,6 +113,16 @@ export interface DataTableProps<T> {
   renderExpanded?: (item: T) => ReactNode
   /** Set of row IDs currently expanded. Controlled prop — parent owns the state. */
   expandedIds?: Set<number | string>
+  /**
+   * Mark the expansion row's cell with `data-openreplay-obscured` (KAN-KB-54).
+   *
+   * A separate flag rather than `Column.obscured`, because the expansion row has
+   * no column: it is one full-width `<td>` holding whatever `renderExpanded`
+   * returns. When that panel shows a client's details, its contents are not
+   * covered by any column flag — inheritance runs down the DOM, and this cell is
+   * not inside a marked one.
+   */
+  expandedObscured?: boolean
 }
 
 export function DataTable<T extends { id: number | string }>({
@@ -129,6 +154,7 @@ export function DataTable<T extends { id: number | string }>({
   rowClassName,
   renderExpanded,
   expandedIds,
+  expandedObscured,
 }: DataTableProps<T>) {
   const { t } = useTranslation('common')
   const handleSort = (column: Column<T>) => {
@@ -479,6 +505,7 @@ export function DataTable<T extends { id: number | string }>({
                                 ? 'text-right'
                                 : 'text-left'
                           } ${colIndex < columns.length - 1 ? 'border-border border-r' : ''} ${column.className || ''}`}
+                          {...(column.obscured ? piiProps : {})}
                         >
                           {column.render
                             ? column.render(item)
@@ -491,6 +518,7 @@ export function DataTable<T extends { id: number | string }>({
                         <td
                           colSpan={columns.length + (enableBulkSelection ? 1 : 0)}
                           className="px-4 py-3"
+                          {...(expandedObscured ? piiProps : {})}
                         >
                           {renderExpanded!(item)}
                         </td>

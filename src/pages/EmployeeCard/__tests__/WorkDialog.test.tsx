@@ -6,6 +6,7 @@ import type { EmployeeCard } from '@/features/employeeCard/types.card'
 const state = vi.hoisted(() => ({
   saved: vi.fn(),
   rejectWith: null as unknown,
+  groupQueries: [] as Array<{ filters: Record<string, unknown>; enabled: boolean }>,
 }))
 
 vi.mock('@/features/employeeCard/hooks/useEmployeeCard', () => ({
@@ -41,6 +42,26 @@ vi.mock('@/features/roles', () => ({
       ],
     },
   }),
+}))
+
+/*
+ * Answers the way the endpoint does: the groups of the department asked for,
+ * and nothing at all while the query is switched off.
+ */
+vi.mock('@/features/groups', () => ({
+  useGroups: (filters: Record<string, unknown>, enabled: boolean) => {
+    state.groupQueries.push({ filters, enabled })
+    const all = [
+      { id: 20, name: 'Morning shift', department_id: 1 },
+      { id: 21, name: 'Evening shift', department_id: 1 },
+      { id: 22, name: 'Reports', department_id: 2 },
+    ]
+    return {
+      data: enabled
+        ? { groups: all.filter((group) => group.department_id === filters.department_id) }
+        : undefined,
+    }
+  },
 }))
 
 vi.mock('@/features/users/hooks/useUsers', () => ({
@@ -87,6 +108,8 @@ function card(overrides: Partial<EmployeeCard> = {}): EmployeeCard {
       project_name: 'Technofinance',
       department: 'Collections',
       department_id: 1,
+      group: null,
+      group_id: null,
       position: 'Operator',
       role_id: 10,
       manager: null,
@@ -107,6 +130,14 @@ function card(overrides: Partial<EmployeeCard> = {}): EmployeeCard {
   }
 }
 
+/** Somebody already in the morning shift. */
+function grouped(): EmployeeCard {
+  return card({ work: { ...card().work, group: 'Morning shift', group_id: 20 } })
+}
+
+/* Department, position, then group - the group select only exists with a department. */
+const groupSelect = () => screen.getAllByRole('combobox')[2]
+
 beforeAll(() => {
   if (!Element.prototype.hasPointerCapture) {
     Element.prototype.hasPointerCapture = vi.fn(() => false)
@@ -118,6 +149,7 @@ describe('WorkDialog', () => {
   beforeEach(() => {
     state.saved.mockReset()
     state.rejectWith = null
+    state.groupQueries = []
   })
 
   it('offers only the positions that belong to the chosen department', async () => {
@@ -319,5 +351,187 @@ describe('WorkDialog', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent('different department')
     expect(onClose).not.toHaveBeenCalled()
+  })
+})
+
+describe('WorkDialog: the group', () => {
+  beforeEach(() => {
+    state.saved.mockReset()
+    state.rejectWith = null
+    state.groupQueries = []
+  })
+
+  it('asks for the active groups of the chosen department', () => {
+    render(<WorkDialog card={card()} projectId={3} open onClose={vi.fn()} />)
+
+    expect(state.groupQueries.at(-1)).toEqual({
+      filters: expect.objectContaining({ department_id: 1, is_active: true }),
+      enabled: true,
+    })
+  })
+
+  it('offers only the groups of the chosen department', async () => {
+    render(<WorkDialog card={card()} projectId={3} open onClose={vi.fn()} />)
+
+    await userEvent.click(groupSelect())
+
+    expect(screen.getByRole('option', { name: 'Morning shift' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Evening shift' })).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: 'Reports' })).not.toBeInTheDocument()
+  })
+
+  it('keeps leaving a group at the top of the list', async () => {
+    render(<WorkDialog card={card()} projectId={3} open onClose={vi.fn()} />)
+
+    await userEvent.click(groupSelect())
+
+    expect(screen.getAllByRole('option')[0]).toHaveTextContent('pages.employeeCard.dialogs.noGroup')
+  })
+
+  it('opens on the group already recorded', () => {
+    render(<WorkDialog card={grouped()} projectId={3} open onClose={vi.fn()} />)
+
+    expect(groupSelect()).toHaveTextContent('Morning shift')
+  })
+
+  /*
+   * A deactivated group is not in the active list, but it is still where the
+   * person sits. Without it the field would open empty.
+   */
+  it('still opens on a group that is no longer offered', () => {
+    render(
+      <WorkDialog
+        card={card({ work: { ...card().work, group: 'Dormant shift', group_id: 99 } })}
+        projectId={3}
+        open
+        onClose={vi.fn()}
+      />
+    )
+
+    expect(groupSelect()).toHaveTextContent('Dormant shift')
+  })
+
+  it('sends the group chosen', async () => {
+    render(<WorkDialog card={grouped()} projectId={3} open onClose={vi.fn()} />)
+
+    await userEvent.click(groupSelect())
+    await userEvent.click(screen.getByRole('option', { name: 'Evening shift' }))
+    await userEvent.click(screen.getByRole('button', { name: 'actions.save' }))
+
+    expect(state.saved).toHaveBeenCalledWith(expect.objectContaining({ role_id: 10, group_id: 21 }))
+  })
+
+  /*
+   * Every save sends the position, and the server compares position and
+   * group as a pair - so the group has to travel with it or it is lost.
+   */
+  it('sends the group back unchanged when only something else was edited', async () => {
+    render(<WorkDialog card={grouped()} projectId={3} open onClose={vi.fn()} />)
+
+    await userEvent.click(screen.getByRole('checkbox'))
+    await userEvent.click(screen.getByRole('button', { name: 'actions.save' }))
+
+    expect(state.saved).toHaveBeenCalledWith(expect.objectContaining({ group_id: 20 }))
+  })
+
+  it('sends "no group" as null, so it is removed rather than kept', async () => {
+    render(<WorkDialog card={grouped()} projectId={3} open onClose={vi.fn()} />)
+
+    await userEvent.click(groupSelect())
+    await userEvent.click(
+      screen.getByRole('option', { name: 'pages.employeeCard.dialogs.noGroup' })
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'actions.save' }))
+
+    expect(state.saved).toHaveBeenCalledWith(expect.objectContaining({ group_id: null }))
+  })
+
+  it('clears the group when the department changes under it', async () => {
+    render(<WorkDialog card={grouped()} projectId={3} open onClose={vi.fn()} />)
+
+    await userEvent.click(screen.getAllByRole('combobox')[0])
+    await userEvent.click(screen.getByRole('option', { name: 'Analytics' }))
+    await userEvent.click(screen.getAllByRole('combobox')[1])
+    await userEvent.click(screen.getByRole('option', { name: 'Analyst' }))
+    await userEvent.click(screen.getByRole('button', { name: 'actions.save' }))
+
+    expect(state.saved).toHaveBeenCalledWith(
+      expect.objectContaining({ role_id: 12, group_id: null })
+    )
+  })
+
+  it('offers no group without a department', async () => {
+    render(<WorkDialog card={card()} projectId={3} open onClose={vi.fn()} />)
+
+    await userEvent.click(screen.getAllByRole('combobox')[0])
+    await userEvent.click(
+      screen.getByRole('option', { name: 'pages.employeeCard.dialogs.noDepartment' })
+    )
+
+    expect(screen.queryByText('pages.employeeCard.fields.group')).not.toBeInTheDocument()
+    expect(state.groupQueries.at(-1)?.enabled).toBe(false)
+  })
+
+  it('sends no group without a position to hold it', async () => {
+    render(<WorkDialog card={grouped()} projectId={3} open onClose={vi.fn()} />)
+
+    await userEvent.click(screen.getAllByRole('combobox')[0])
+    await userEvent.click(screen.getByRole('option', { name: 'Analytics' }))
+    await userEvent.click(screen.getByRole('button', { name: 'actions.save' }))
+
+    expect(Object.keys(state.saved.mock.calls[0][0])).not.toContain('group_id')
+  })
+
+  /*
+   * A department change clears the position, and a group picked before a new
+   * position is chosen would not be sent. So the field waits for one.
+   */
+  it('hides the group after a department change until a position is chosen', async () => {
+    render(<WorkDialog card={grouped()} projectId={3} open onClose={vi.fn()} />)
+
+    await userEvent.click(screen.getAllByRole('combobox')[0])
+    await userEvent.click(screen.getByRole('option', { name: 'Analytics' }))
+
+    expect(screen.queryByText('pages.employeeCard.fields.group')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getAllByRole('combobox')[1])
+    await userEvent.click(screen.getByRole('option', { name: 'Analyst' }))
+
+    expect(screen.getByText('pages.employeeCard.fields.group')).toBeInTheDocument()
+    expect(groupSelect()).toHaveTextContent('pages.employeeCard.dialogs.noGroup')
+  })
+
+  /*
+   * A group never sits outside a department. A card that somehow carries one
+   * without a department opens on "no group" rather than holding a value
+   * behind a field it does not show.
+   */
+  it('sends no stale group for a position with no department', async () => {
+    render(
+      <WorkDialog
+        card={card({
+          work: {
+            ...card().work,
+            department: null,
+            department_id: null,
+            position: 'Admin',
+            role_id: 13,
+            group: 'Morning shift',
+            group_id: 20,
+          },
+        })}
+        projectId={3}
+        open
+        onClose={vi.fn()}
+      />
+    )
+
+    expect(screen.queryByText('pages.employeeCard.fields.group')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'actions.save' }))
+
+    expect(state.saved).toHaveBeenCalledWith(
+      expect.objectContaining({ role_id: 13, group_id: null })
+    )
   })
 })

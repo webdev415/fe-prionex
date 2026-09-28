@@ -8,7 +8,7 @@
  * Данные — API кредитного модуля (`/api/v1/credit/*`). Прямых обращений в
  * credit_db нет и быть не может (правило 28).
  */
-import { useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { DataTable, type Column, type SortOrder } from '@/components/ui/DataTable'
@@ -27,7 +27,7 @@ import {
   totalPagesOf,
 } from '@/features/credit/api/pagination'
 import { useCreditApplications, useCreditOverview } from '@/features/credit/hooks/useCredit'
-import { buildApplicationMetrics } from '@/features/credit/api/metrics'
+import { applicationStatusCount, buildApplicationMetrics } from '@/features/credit/api/metrics'
 import { formatCreditMoney } from '@/features/credit/api/money'
 import {
   CREDIT_APPLICATION_STATUSES,
@@ -36,14 +36,78 @@ import {
 } from '@/features/credit/api/types'
 import { CreditStatusBadge } from './components/CreditStatusBadge'
 import { CreditMetricCards } from './components/CreditMetricCards'
-import { CreditStandBanner } from './components/CreditStandBanner'
 import { CreditModuleUnavailable } from './components/CreditModuleUnavailable'
 import { formatDateTime } from '@/lib/formatters'
+import { formatIdle, idleMinutes } from '@/features/credit/api/idle'
+import { useNowTick } from '@/features/credit/hooks/useNowTick'
 
 /** Строка таблицы = строка контракта + `id`, которого требует DataTable. */
 type ApplicationRow = CreditApplicationSummary & { id: string }
 
 const formatMoney = formatCreditMoney
+
+const DAY = /^\d{4}-\d{2}-\d{2}$/
+
+/**
+ * День фильтра — только вида `YYYY-MM-DD`, иначе `''`: мусор из вручную
+ * правленой ссылки (`?created_from=31.08.2026`) в запрос не уходит. Это форма
+ * запроса, а не календарная проверка — «31 февраля» рассудит модуль.
+ */
+function dayOrEmpty(value: string): string {
+  return DAY.test(value) ? value : ''
+}
+
+interface DayRange {
+  from?: string
+  to?: string
+  inverted: boolean
+}
+
+/**
+ * Пара дней для запроса. Перевёрнутая пара («з» позже «по») не уходит целиком:
+ * модуль ответил бы 422, и страница показала бы его технический текст над
+ * прежними строками. Равные границы — законный «один день». Строки
+ * `YYYY-MM-DD` сравниваются как дни. Границы суток здесь не считаются: их по
+ * календарю юрисдикции заявки режет модуль.
+ */
+function dayRange(from: string, to: string): DayRange {
+  if (from && to && from > to) return { inverted: true }
+  return { from: from || undefined, to: to || undefined, inverted: false }
+}
+
+/** Поле дня фильтра: подпись, календарь и пометка перевёрнутой пары. */
+function DayField({
+  label,
+  value,
+  min,
+  max,
+  inverted,
+  describedBy,
+  onDay,
+}: {
+  label: string
+  value: string
+  min?: string
+  max?: string
+  inverted: boolean
+  describedBy: string
+  onDay: (day: string) => void
+}) {
+  return (
+    <label className="text-muted-foreground flex flex-col gap-1.5 text-xs">
+      {label}
+      <Input
+        type="date"
+        value={value}
+        min={min || undefined}
+        max={max || undefined}
+        aria-invalid={inverted}
+        aria-describedby={inverted ? describedBy : undefined}
+        onChange={(event) => onDay(event.target.value)}
+      />
+    </label>
+  )
+}
 
 export function CreditApplicationsPage() {
   const { t } = useTranslation('common')
@@ -57,6 +121,12 @@ export function CreditApplicationsPage() {
   const [pageParam, setPageParam] = useURLState<string>('page', '1')
   const [pageSizeParam, setPageSizeParam] = useURLState<string>('pageSize', '')
   const [sortParam, setSortParam] = useURLState<string>('sort', '')
+  // Имена параметров URL = имена параметров модуля: у понятия одно имя.
+  const [createdFrom, setCreatedFrom] = useURLState<string>('created_from', '')
+  const [createdTo, setCreatedTo] = useURLState<string>('created_to', '')
+  const [updatedFrom, setUpdatedFrom] = useURLState<string>('updated_from', '')
+  const [updatedTo, setUpdatedTo] = useURLState<string>('updated_to', '')
+  const rangeHintId = useId()
   const page = parsePage(pageParam)
   const pageSize = parsePageSize(pageSizeParam)
 
@@ -67,6 +137,47 @@ export function CreditApplicationsPage() {
         : ([] as CreditApplicationStatus[]),
     [statusParam]
   )
+
+  const createdFromDay = dayOrEmpty(createdFrom)
+  const createdToDay = dayOrEmpty(createdTo)
+  const updatedFromDay = dayOrEmpty(updatedFrom)
+  const updatedToDay = dayOrEmpty(updatedTo)
+  const created = dayRange(createdFromDay, createdToDay)
+  const updated = dayRange(updatedFromDay, updatedToDay)
+  // Счётчики «таблеток» — по всему разделу (сводка), а список сужают поиск и
+  // даты: тогда числа и «усього N» расходятся по построению, и это подписано.
+  const countsNarrowed = Boolean(query || created.from || created.to || updated.from || updated.to)
+  // Выбор дня применяет и набранный поиск: иначе на экране в поле один поиск,
+  // а в запросе — прежний, и оператор читает список не по тому, что видит.
+  const pickDay = (setDay: (day: string) => void, day: string) => {
+    setDay(day)
+    setQuery(searchDraft.trim())
+    setPageParam('1')
+  }
+
+  // Мусор вместо дня (вручную правленая ссылка) поле не показывает и в запрос не
+  // шлёт — значит, и в ссылке ему не место: пересланная коллеге, она несла бы
+  // фильтр, которого нет. Запись заменяет текущую (`replace` у useURLState), а
+  // не добавляет шаг истории.
+  useEffect(() => {
+    if (createdFrom && !createdFromDay) setCreatedFrom('')
+    if (createdTo && !createdToDay) setCreatedTo('')
+    if (updatedFrom && !updatedFromDay) setUpdatedFrom('')
+    if (updatedTo && !updatedToDay) setUpdatedTo('')
+  }, [
+    createdFrom,
+    createdFromDay,
+    createdTo,
+    createdToDay,
+    updatedFrom,
+    updatedFromDay,
+    updatedTo,
+    updatedToDay,
+    setCreatedFrom,
+    setCreatedTo,
+    setUpdatedFrom,
+    setUpdatedTo,
+  ])
 
   const { data: overview, error: overviewError } = useCreditOverview()
   const {
@@ -79,16 +190,17 @@ export function CreditApplicationsPage() {
     sort: sortParam || undefined,
     limit: pageSize,
     cursor: cursorForPage(page, pageSize),
+    created_from: created.from,
+    created_to: created.to,
+    updated_from: updated.from,
+    updated_to: updated.to,
   })
 
   // Мемоизуем сам массив: `page?.items ?? []` создаёт новую ссылку на каждый
   // рендер и заставляет метрики пересчитываться вхолостую.
   const items = useMemo(() => pageData?.items ?? [], [pageData])
   const page_total = pageData?.total
-  const metrics = useMemo(
-    () => buildApplicationMetrics(overview, items, statuses),
-    [overview, items, statuses]
-  )
+  const metrics = useMemo(() => buildApplicationMetrics(overview, items), [overview, items])
 
   const toggleStatus = (status: string) => {
     const next = new Set(statuses as string[])
@@ -101,10 +213,23 @@ export function CreditApplicationsPage() {
   // DataTable требует у строки поле `id` (на нём держится выделение и ключи).
   // У модуля идентификатор называется application_id — добавляем алиас, а не
   // переименовываем поле контракта.
+  // Тик минуты: список держат открытым — без него простой замрёт.
+  const now = useNowTick()
+
   const rows: ApplicationRow[] = useMemo(
     () => items.map((row) => ({ ...row, id: row.application_id })),
     [items]
   )
+
+  // Колонку «Крок» показываем, только когда модуль реально отдаёт шаг:
+  // столбец из одних прочерков хуже отсутствующего. Поле приезжает вместе с
+  // лентой переходов (коммит модуля 452cc71) и на стенде пока не развёрнуто —
+  // колонка включится сама, без правки кода, как только данные придут.
+  const hasStep = rows.some((row) => Boolean(row.resume_step))
+  // Время на шаге показываем отдельно от «останнього руху» и НЕ вместо него:
+  // «клиент стоит здесь» и «строку не трогали» — разные факты, и оператор,
+  // привыкший к первому, молча прочитал бы второе как первое.
+  const hasStepTime = rows.some((row) => Boolean(row.step_entered_at))
 
   const columns: Column<ApplicationRow>[] = [
     {
@@ -141,6 +266,50 @@ export function CreditApplicationsPage() {
       header: t('credit.columns.client'),
       render: (row) => row.client_email ?? '—',
     },
+    ...(hasStep
+      ? [
+          {
+            // Лекарство от очереди из неразличимых «Заповнюється»: статус
+            // говорит, что заявка не дошла, шаг — где именно она встала.
+            // Несортируемая осознанно: `step_entered_at` в сортировке модуля
+            // нет (APPLICATION_SORT_FIELDS — created_at, updated_at,
+            // requested_amount_minor), а сортировка на клиенте соврала бы
+            // порядком в пределах страницы.
+            key: 'step',
+            header: t('credit.columns.step'),
+            render: (row: ApplicationRow) =>
+              row.resume_step ? (
+                t(`credit.blocks.${row.resume_step}`, row.resume_step)
+              ) : (
+                <span className="text-muted-foreground">—</span>
+              ),
+          } as Column<ApplicationRow>,
+        ]
+      : []),
+    ...(hasStepTime
+      ? [
+          {
+            key: 'onStep',
+            sortable: true,
+            sortKey: 'step_entered_at',
+            header: t('credit.columns.onStep'),
+            render: (row: ApplicationRow) => {
+              const minutes = idleMinutes(row.step_entered_at ?? undefined, now)
+              if (minutes === null) return <span className="text-muted-foreground text-xs">—</span>
+              // Подстановка времени создания — не измерение. Подписываем её
+              // прямо в ячейке: без подписи «40 дн» читается как «клиент стоит
+              // сорок дней», хотя правда — «ленты переходов тогда не было».
+              const guessed = row.step_entered_at_source === 'created'
+              return (
+                <span className="text-muted-foreground text-xs">
+                  {formatIdle(minutes, t)}
+                  {guessed && <> ({t('credit.idle.sinceCreated')})</>}
+                </span>
+              )
+            },
+          } as Column<ApplicationRow>,
+        ]
+      : []),
     {
       key: 'decision',
       header: t('credit.columns.decision'),
@@ -165,12 +334,41 @@ export function CreditApplicationsPage() {
         <span className="text-muted-foreground text-xs">{formatDateTime(row.created_at)}</span>
       ),
     },
+    {
+      // «Кто висит дольше всех» — вопрос очереди, а не отдельной карточки.
+      // Сортировка серверная: `updated_at` есть в APPLICATION_SORT_FIELDS
+      // модуля, иначе колонка врала бы порядком в пределах страницы.
+      key: 'idle',
+      sortable: true,
+      sortKey: 'updated_at',
+      header: t('credit.columns.lastActivity'),
+      render: (row) => {
+        const minutes = idleMinutes(row.updated_at, now)
+        return (
+          <span className="text-muted-foreground text-xs" title={formatDateTime(row.updated_at)}>
+            {minutes === null ? '—' : formatIdle(minutes, t)}
+          </span>
+        )
+      },
+    },
   ]
 
-  // Сводка не ответила — модуля на этом стенде нет: списки строить не из
-  // чего, а текст Kong («Request failed with status code 404») оператору
-  // ничего не объясняет.
-  if (overviewError) return <CreditModuleUnavailable error={overviewError} />
+  // Полноэкранная подмена — ТОЛЬКО когда показывать нечего. «Нечего» — это не
+  // «запрос отказал», а «данных на экране нет»: у списка стоит
+  // `placeholderData`, и прежний успешный ответ переживает упавший рефетч,
+  // поэтому состояние «строки есть И ошибка есть» штатное. Подменить экран в
+  // нём значило бы стереть видимые строки — ровно то, что правило запрещает.
+  //
+  // Сцена подмены: «модуля на стенде нет» (Kong 404), «пропуск не принят»
+  // (401), «прав не хватило» (403). Её разбирает CreditModuleUnavailable по
+  // статусу ошибки, и она сохраняется.
+  //
+  // Отказ ОДНОГО обзора страницу не трогает. Шапка при этом деградирует
+  // частично: «таблетки» статусов остаются, но без чисел (`applicationStatusCount`
+  // без сводки числа не выдумывает), а денежные карточки по загруженной
+  // странице остаются — они посчитаны по своим строкам и к обзору отношения
+  // не имеют. CreditMetricCards исчезает целиком только на пустом списке.
+  if (overviewError && error && !pageData) return <CreditModuleUnavailable error={overviewError} />
 
   return (
     <div className="p-6">
@@ -181,12 +379,11 @@ export function CreditApplicationsPage() {
         </span>
       </div>
 
-      <CreditStandBanner overview={overview} />
-
       <div className="border-border bg-card mb-4 rounded-xl border p-4 shadow-sm">
         <div className="mb-3 flex flex-wrap gap-2">
           {CREDIT_APPLICATION_STATUSES.map((status) => {
             const active = statuses.includes(status)
+            const count = applicationStatusCount(overview, status)
             return (
               <button
                 key={status}
@@ -200,12 +397,27 @@ export function CreditApplicationsPage() {
                 }`}
               >
                 {t(`credit.status.${status}`, status)}
+                {count !== null && (
+                  <>
+                    {' '}
+                    <span className="tabular-nums">{count}</span>
+                  </>
+                )}
               </button>
             )
           })}
         </div>
+        {countsNarrowed && (
+          <p className="text-muted-foreground mb-3 text-xs">
+            {t('credit.applications.statusCountsHint')}
+          </p>
+        )}
+        {/* noValidate: min/max полей дат — подсказка календарю, а не запрет. С
+            проверкой браузера перевёрнутая пара блокировала бы «Пошук» молча;
+            её судит страница (строка под полями и плашка над таблицей). */}
         <form
           className="flex flex-wrap items-end gap-2"
+          noValidate
           onSubmit={(event) => {
             event.preventDefault()
             setQuery(searchDraft.trim())
@@ -219,6 +431,38 @@ export function CreditApplicationsPage() {
               placeholder={t('credit.applications.searchPlaceholder')}
             />
           </div>
+          <DayField
+            label={t('credit.filters.createdFrom')}
+            value={createdFromDay}
+            max={createdToDay}
+            inverted={created.inverted}
+            describedBy={rangeHintId}
+            onDay={(day) => pickDay(setCreatedFrom, day)}
+          />
+          <DayField
+            label={t('credit.filters.createdTo')}
+            value={createdToDay}
+            min={createdFromDay}
+            inverted={created.inverted}
+            describedBy={rangeHintId}
+            onDay={(day) => pickDay(setCreatedTo, day)}
+          />
+          <DayField
+            label={t('credit.filters.updatedFrom')}
+            value={updatedFromDay}
+            max={updatedToDay}
+            inverted={updated.inverted}
+            describedBy={rangeHintId}
+            onDay={(day) => pickDay(setUpdatedFrom, day)}
+          />
+          <DayField
+            label={t('credit.filters.updatedTo')}
+            value={updatedToDay}
+            min={updatedFromDay}
+            inverted={updated.inverted}
+            describedBy={rangeHintId}
+            onDay={(day) => pickDay(setUpdatedTo, day)}
+          />
           <Button type="submit" variant="white-secondary">
             {t('credit.actions.search')}
           </Button>
@@ -230,19 +474,33 @@ export function CreditApplicationsPage() {
               setQuery('')
               setStatusParam('')
               setSortParam('')
+              setCreatedFrom('')
+              setCreatedTo('')
+              setUpdatedFrom('')
+              setUpdatedTo('')
               setPageParam('1')
             }}
           >
             {t('credit.actions.reset')}
           </Button>
         </form>
+        {(created.inverted || updated.inverted) && (
+          <p id={rangeHintId} className="text-error-500 mt-2 text-xs">
+            {t('credit.filters.rangeInverted')}
+          </p>
+        )}
+        <p className="text-muted-foreground mt-2 text-xs">{t('credit.filters.calendarHint')}</p>
       </div>
 
-      <CreditMetricCards
-        metrics={metrics}
-        activeStatuses={statuses}
-        onToggleStatus={toggleStatus}
-      />
+      <CreditMetricCards metrics={metrics} />
+
+      {/* Перевёрнутая пара в запрос не ушла, и список шире, чем выбрано полями:
+          это громко, над таблицей, а не только строкой под полями. */}
+      {(created.inverted || updated.inverted) && (
+        <Alert variant="error" className="mb-4">
+          {t('credit.applications.dateRangeNotApplied')}
+        </Alert>
+      )}
 
       {error && (
         <Alert variant="error" className="mb-4">

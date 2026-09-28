@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useProjectCountry } from '@/hooks/useProjectCountry'
 import i18n, { intlLocaleForUiLanguage } from '@/lib/i18n'
 import { toast } from 'sonner'
 import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
@@ -39,6 +40,7 @@ import {
 import type { MessagingChannel, MessagingDraft } from '@/features/messaging'
 import { CHANNEL_SPECS } from '@/pages/MessagingDrafts/draftModalShared'
 import { BulkSendMessageModalSkeleton } from './BulkSendMessageModalSkeleton'
+import { piiProps } from '@/lib/openreplay/pii'
 
 const NO_DRAFT_VALUE = 'none'
 
@@ -110,6 +112,7 @@ export function BulkSendMessageModal({
   onLaunched,
 }: BulkSendMessageModalProps) {
   const { t } = useTranslation('common')
+  const projectCountry = useProjectCountry()
   const canLaunchSms = useHasPermission(launchPermissionForChannel('sms'))
   const canLaunchViber = useHasPermission(launchPermissionForChannel('viber'))
   const canLaunchEmail = useHasPermission(launchPermissionForChannel('email'))
@@ -151,14 +154,19 @@ export function BulkSendMessageModal({
           (item === 'viber' && canLaunchViber) ||
           (item === 'email' && canLaunchEmail)
         if (!allowed) return false
-        return integrations.some((integration) => isMessagingIntegrationUsable(integration, item))
+        return integrations.some((integration) =>
+          isMessagingIntegrationUsable(integration, item, projectCountry)
+        )
       }),
-    [canLaunchEmail, canLaunchSms, canLaunchViber, integrations]
+    [canLaunchEmail, canLaunchSms, canLaunchViber, integrations, projectCountry]
   )
 
   const availableIntegrations = useMemo(
-    () => integrations.filter((integration) => isMessagingIntegrationUsable(integration, channel)),
-    [channel, integrations]
+    () =>
+      integrations.filter((integration) =>
+        isMessagingIntegrationUsable(integration, channel, projectCountry)
+      ),
+    [channel, integrations, projectCountry]
   )
 
   const selectedDraft = useMemo(
@@ -447,7 +455,7 @@ export function BulkSendMessageModal({
                   key={client.id}
                   className="flex flex-col gap-1 md:flex-row md:items-center md:gap-3"
                 >
-                  <span className="text-foreground font-medium">
+                  <span className="text-foreground font-medium" {...piiProps}>
                     {client.fullName} (#{client.id})
                   </span>
                   <span>{client.priority}</span>

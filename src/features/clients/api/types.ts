@@ -38,6 +38,25 @@ export interface DebtDetail {
   debt_close_date?: string | null
   days_past_due?: number | null
   status: string
+
+  /**
+   * Проекция кредитного модуля (ревизия 176 client-service, API-L1 / 14-2).
+   *
+   * Пять полей объявлены `?`-опциональными намеренно, в отличие от
+   * `ClientLoanCard`: их отдаёт client-service, который на стенде может стоять
+   * ДО мержа API-L1 — тогда ключей в теле нет вовсе, и обязательный тип соврал
+   * бы компилятору. Умолчание читателя — `origin ?? 'factoring'`, ровно то
+   * значение, которое чужая сторона объявила `server_default`.
+   *
+   * ⚠️ `origin` сравнивается только с умолчанием: молчаливое `undefined` в
+   * сравнении дало бы верный ответ по случайности, а не по правилу.
+   */
+  origin?: string
+  loan_id?: string | null
+  currency?: string | null
+  lifecycle_detail?: string | null
+  lifecycle_updated_at?: string | null
+
   total_paid?: string | null
   last_payment_date?: string | null
   last_payment_amount?: string | null
@@ -208,7 +227,17 @@ export interface LoanCalculation {
 export interface Client {
   id: number
   project_id: number
-  tax_id: string // Ukrainian TIN - MANDATORY
+  /**
+   * Больше НЕ обязателен (ревизия 176 client-service): клиента, опознанного по
+   * подтверждённому в кабинете e-mail, ИНН не имеет вовсе. Объявление `string`
+   * заставляло компилятор ручаться за значение, которого в теле нет.
+   */
+  tax_id: string | null
+  /**
+   * Каким подтверждённым признаком опознан клиент. `?`, потому что старый
+   * client-service поля не отдаёт; умолчание читателя — `?? 'tin'`.
+   */
+  identity_key?: 'tin' | 'email'
   phone_primary?: string | null
   first_name: string
   last_name: string
@@ -496,8 +525,16 @@ export interface PaginatedClientResponse {
 
 // Assignment request/response types
 export interface AssignClientRequest {
-  responsible_employee_id?: number
-  responsible_searcher_id?: number
+  /**
+   * Omit the field to leave the slot alone; send `null` to clear it.
+   *
+   * The two are different requests, and the backend keys on which fields were
+   * sent rather than on their values — so `undefined` (dropped by JSON
+   * serialisation) and `null` must stay distinguishable here too. Typing these
+   * as `?: number` alone made unassignment inexpressible.
+   */
+  responsible_employee_id?: number | null
+  responsible_searcher_id?: number | null
   assignment_reason?: string
 }
 
@@ -526,7 +563,10 @@ export interface ClientProfileResponse {
   last_name: string
   middle_name?: string | null
   email?: string | null
-  tax_id: string
+  /** Ревизия 176: клиент, опознанный по e-mail кабинета, ИНН не имеет. */
+  tax_id: string | null
+  /** 'tin' | 'email' — каким подтверждённым признаком опознан клиент. */
+  identity_key?: 'tin' | 'email'
   phone_primary?: string | null
   date_of_birth?: string | null
   age?: number | null

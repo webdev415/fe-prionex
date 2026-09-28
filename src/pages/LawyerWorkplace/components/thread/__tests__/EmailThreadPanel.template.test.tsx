@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { LetterDetail } from '@/pages/LawyerWorkplace/types'
+import { projectsApi } from '@/features/projects/api/projectsApi'
 import { EmailThreadPanel } from '../EmailThreadPanel'
 
 // Radix DropdownMenu relies on pointer-capture APIs jsdom doesn't implement.
@@ -24,6 +25,24 @@ vi.mock('react-i18next', async (importOriginal) => {
         typeof fallback === 'string' ? fallback : key,
       i18n: { language: 'uk' },
     }),
+  }
+})
+
+const letterProject = vi.hoisted(() => ({
+  current: { id: 1, country: 'UA', full_company_name: null, hotline_phone: null } as Record<
+    string,
+    unknown
+  >,
+}))
+
+vi.mock('@/features/projects/api/projectsApi', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/features/projects/api/projectsApi')>()
+  return {
+    ...actual,
+    projectsApi: {
+      ...actual.projectsApi,
+      getProject: vi.fn(() => Promise.resolve(letterProject.current)),
+    },
   }
 })
 
@@ -187,5 +206,27 @@ describe('EmailThreadPanel — selecting a reply template prefills the composer'
         'Шановний Test Client! Відправник: Client Sender. Вих. № {{outNo}}. ТОВ «ФК «ТЕХНОФІНАНС». Реф: {{incomingRef}}.'
       )
     })
+  })
+
+  it('signs with the company of the letter project', async () => {
+    letterProject.current = {
+      id: 1,
+      country: 'ES',
+      full_company_name: 'Recobros Ibéricos, S.L.',
+      hotline_phone: null,
+    }
+    const user = userEvent.setup()
+    renderPanel()
+    await waitFor(() => expect(projectsApi.getProject).toHaveBeenCalledWith(1))
+
+    await user.click(screen.getByRole('button', { name: 'Template' }))
+    await user.click(await screen.findByText('Standard reply'))
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('Write your reply...')).toHaveValue(
+        'Шановний Test Client! Відправник: Client Sender. Вих. № {{outNo}}. Recobros Ibéricos, S.L.. Реф: {{incomingRef}}.'
+      )
+    })
+    letterProject.current = { id: 1, country: 'UA', full_company_name: null, hotline_phone: null }
   })
 })

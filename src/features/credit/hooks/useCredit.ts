@@ -4,11 +4,16 @@
  * Ключи кэша строятся так же, как у клиентов (`clientKeys`): общий корень →
  * списки → детали, чтобы инвалидация после решения била точечно.
  */
+import { useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { creditApi } from '../api/creditApi'
+import { creditApi, newIdempotencyKey } from '../api/creditApi'
 import type {
   CreditApplicationsParams,
+  CreditJournalParams,
   CreditLoansParams,
+  CreditQueueStatus,
+  CreditSwitchName,
+  CreditSwitchPayload,
   ManualDecisionPayload,
 } from '../api/types'
 
@@ -25,16 +30,35 @@ export const creditKeys = {
   loan: (id: string) => [...creditKeys.loans(), 'detail', id] as const,
   loanState: (id: string) => [...creditKeys.loans(), 'state', id] as const,
   loanSchedule: (id: string) => [...creditKeys.loans(), 'schedule', id] as const,
-  loanJournal: (id: string) => [...creditKeys.loans(), 'journal', id] as const,
+  /**
+   * Журнал кредита. Параметры отбора входят в ключ: без них смена корзины
+   * получала бы кэш прежней и на сервер не ходила вовсе.
+   *
+   * `params ?? {}` — чтобы «все корзины» и «параметров не передали» были ОДНИМ
+   * ключом: у одного и того же ответа не должно быть двух кэшей.
+   */
+  loanJournal: (id: string, params?: CreditJournalParams) =>
+    [...creditKeys.loans(), 'journal', id, params ?? {}] as const,
+  /** Операции рельса кредита. Под `loans()`: инвалидация кредитов достаёт и их. */
+  loanRailOperations: (id: string) => [...creditKeys.loans(), 'railOperations', id] as const,
+  /**
+   * Кредиты одного клиента CRM. Корень — `credit`, а не `clients`: владелец
+   * данных модуль, а у клиентов ключ `loans` УЖЕ занят купленными долгами
+   * (`clientKeys.loans`), и две разные `queryFn` на одном ключе — это
+   * перезапись кэша, а не общий кэш.
+   */
+  clientLoans: (clientId: number) => [...creditKeys.loans(), 'byClient', clientId] as const,
+  switches: () => [...creditKeys.all, 'switches'] as const,
 }
 
 /** Доступность модуля и права роли; молчит об ошибке — раздел просто пуст. */
-export function useCreditOverview() {
+export function useCreditOverview(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: creditKeys.overview(),
     queryFn: () => creditApi.overview(),
     staleTime: 60_000,
     retry: false,
+    enabled: options?.enabled ?? true,
   })
 }
 
@@ -51,6 +75,53 @@ export function useCreditApplication(applicationId: string | undefined) {
     queryKey: creditKeys.application(applicationId ?? ''),
     queryFn: () => creditApi.application(applicationId as string),
     enabled: Boolean(applicationId),
+  })
+}
+
+/**
+ * Очередь ручного разбора.
+ *
+ * `status` уходит В ЗАПРОС, а не режет уже полученный список: очередь — это
+ * все referred-решения за всё время, без окна и без границы, и локальный
+ * фильтр показывал бы андеррайтеру подмножество того, что модуль уже успел
+ * прислать. Ручка отдаёт всё одним ответом (`next_cursor` захардкожен `null`),
+ * так что страницы здесь не подключаются — нечего листать.
+ *
+ * `placeholderData` намеренно нет: между «в очереди» и «разобрано» состав
+ * меняется целиком, и придержанный прежний список выглядел бы как ответ на
+ * новый фильтр.
+ */
+export function useCreditUnderwritingQueue(status?: CreditQueueStatus) {
+  return useQuery({
+    queryKey: creditKeys.queue(status),
+    queryFn: () => creditApi.underwritingQueue(status),
+  })
+}
+
+/**
+ * Кредиты клиента для блока «Кредит (наш)» карточки CRM.
+ *
+ * 🔴 `retry: false` — не стиль. Глобальное правило (`main.tsx`) читает
+ * `error.response?.status` у `AxiosError`; наш клиент бросает `CreditApiError`,
+ * у которого `response` нет вовсе, значит статус читается как `undefined`,
+ * значит «повторять можно» — и на 403 и на 404 ушёл бы ВТОРОЙ запрос в шлюз, у
+ * которого маршрута нет.
+ *
+ * `enabled` приходит извне: карточка включает запрос только при открытой
+ * вкладке (KAN-610 — открытие карточки перестало стрелять двадцатью
+ * параллельными запросами, и седьмой хук без гейта вернул бы их).
+ *
+ * Поллинга нет: суммы двигаются закрытием дня, то есть раз в сутки, а свежесть
+ * выражена на экране пометкой «станом на», а не частотой опроса.
+ */
+export function useClientCreditLoans(clientId: number, enabled: boolean) {
+  return useQuery({
+    queryKey: creditKeys.clientLoans(clientId),
+    queryFn: () => creditApi.clientLoans(clientId),
+    enabled: enabled && clientId > 0,
+    retry: false,
+    staleTime: 5 * 60_000,
+    refetchOnMount: false,
   })
 }
 
@@ -112,11 +183,47 @@ export function useCreditLoanDocuments(loanId: string | undefined) {
   })
 }
 
-export function useCreditLoanJournal(loanId: string | undefined) {
+/**
+ * Журнал проводок с СЕРВЕРНЫМ отбором.
+ *
+ * Параметры уходят и в запрос, и в КЛЮЧ: ключ без них означал бы «сменил
+ * корзину — получил кэш прежней и на сервер не сходил вовсе».
+ *
+ * `placeholderData` здесь сознательно НЕ ставится, в отличие от
+ * `useCreditApplications` и `useCreditLoans`: держать строки прежней корзины
+ * под подписью новой — ложь того же класса, против которой написана пометка о
+ * сторно под фильтром.
+ *
+ * `retry: false` — по доводу `useClientCreditLoans`: `CreditApiError` без
+ * `response`, глобальное правило считает повторяемым любой отказ, а
+ * параметризованный ключ заводит свою цепочку на каждую корзину.
+ */
+export function useCreditLoanJournal(loanId: string | undefined, params?: CreditJournalParams) {
   return useQuery({
-    queryKey: creditKeys.loanJournal(loanId ?? ''),
-    queryFn: () => creditApi.loanJournal(loanId as string),
+    queryKey: creditKeys.loanJournal(loanId ?? '', params),
+    queryFn: () => creditApi.loanJournal(loanId as string, params),
     enabled: Boolean(loanId),
+    retry: false,
+  })
+}
+
+/**
+ * Операции рельса кредита — вкладка «Платежі» (17-6f).
+ *
+ * Зовётся одним местом — вкладкой платежей карточки, поэтому запрос уходит,
+ * когда оператор её открыл, а не с открытием карточки.
+ *
+ * `retry: false` — по доводу `useClientCreditLoans`: `CreditApiError` без
+ * `response`, глобальное правило считает повторяемым любой отказ, а ключ с
+ * `loanId` заводит свою цепочку повторов на каждый кредит. Модуль старше двери
+ * отвечает 404, и повторять его бессмысленно.
+ */
+export function useCreditLoanRailOperations(loanId: string | undefined) {
+  return useQuery({
+    queryKey: creditKeys.loanRailOperations(loanId ?? ''),
+    queryFn: () => creditApi.loanRailOperations(loanId as string),
+    enabled: Boolean(loanId),
+    retry: false,
   })
 }
 
@@ -156,6 +263,99 @@ export function useCreditManualDecision(applicationId: string) {
       void queryClient.invalidateQueries({ queryKey: creditKeys.application(applicationId) })
       void queryClient.invalidateQueries({ queryKey: creditKeys.applications() })
       void queryClient.invalidateQueries({ queryKey: creditKeys.overview() })
+    },
+  })
+}
+
+/**
+ * Положение рубильников продукта.
+ *
+ * `retry: false` и короткий `staleTime`: рубильник дёргает риск-менеджер в
+ * рабочее время, и раздел должен узнать об этом в пределах минуты, а не после
+ * перезагрузки страницы. Повторов нет намеренно — раздел обязан пережить
+ * недоступность модуля, а не висеть на ретраях.
+ */
+export function useCreditSwitches(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: creditKeys.switches(),
+    queryFn: () => creditApi.switches(),
+    staleTime: 30_000,
+    retry: false,
+    enabled: options?.enabled ?? true,
+  })
+}
+
+/**
+ * Показывать ли раздел кредита в CRM.
+ *
+ * Спрашиваем модуль ТОЛЬКО у тех, кто раздел и так видит по правам: иначе
+ * каждый пользователь CRM ходил бы за положением рубильника в чужой сервис,
+ * которым не пользуется.
+ *
+ * **Отвечаем «показывать» на всё, кроме явного `false`.** Ошибка сети, недоступный
+ * модуль, ещё не пришедший ответ — не повод убирать раздел из меню: пропавший
+ * пункт читается как поломка CRM, а не как решение риск-менеджера. Скрываем
+ * только тогда, когда модуль прямо сказал, что раздел выключен.
+ */
+export function useCreditSectionEnabled(canSeeSection: boolean): boolean {
+  const { data } = useCreditSwitches({ enabled: canSeeSection })
+  return data?.switches.crm_section !== false
+}
+
+/** Переключение рубильника. Право `credit.switches.write` — у риск-менеджера. */
+export function useSetCreditSwitch() {
+  const queryClient = useQueryClient()
+
+  /**
+   * Ключ идемпотентности живёт на ОДНО ДЕЙСТВИЕ пользователя, а не на один
+   * вызов.
+   *
+   * Раньше ключ минтился внутри клиента при каждой отправке, и защита от
+   * повтора не работала вообще: сеть моргнула на ответе, человек нажал ещё
+   * раз — модуль видел новый ключ, выполнял переключение второй раз и писал в
+   * append-only историю вторую запись. История и есть весь наш аудит
+   * рубильников (отдельного журнала нет намеренно), так что дубль в ней —
+   * навсегда, и разобрать потом, было переключение одно или два, уже нельзя.
+   *
+   * Границу действия задаёт его содержание: рубильник + новое положение +
+   * причина. Ту же тройку модуль кладёт в отпечаток тела, поэтому повтор с
+   * сохранённым ключом гарантированно совпадёт по отпечатку и получит реплей,
+   * а не 409. Сменил причину — это уже другое действие, и ключ обязан быть
+   * другим, иначе модуль ответил бы «ключ использован для другого запроса».
+   *
+   * После успеха ключ сбрасываем: следующее такое же переключение (выключил →
+   * включил → снова выключил с той же причиной) — новое действие, и реплей
+   * старого ответа сделал бы рубильник «залипшим».
+   */
+  // КАРТА по имени рубильника, а не одна ячейка. Один вызов хука обслуживает
+  // все три переключателя сразу, и одной ячейки хватало ровно до такого
+  // сценария: A отказал → человек тронул B → повторил A. Ячейка к этому
+  // моменту принадлежит B, повтор A уходит с НОВЫМ ключом, и модуль пишет
+  // вторую строку в append-only историю о переключении, которого не было.
+  // История — весь наш аудит рубильников, дубли в ней и есть то, ради чего
+  // ключ заводился.
+  const attempts = useRef(new Map<CreditSwitchName, { signature: string; key: string }>())
+
+  return useMutation({
+    mutationFn: ({ name, payload }: { name: CreditSwitchName; payload: CreditSwitchPayload }) => {
+      // `?? null`, а не `?? ''`: пустая причина и её отсутствие дают разные
+      // тела запроса, значит и разные отпечатки на стороне модуля.
+      const signature = JSON.stringify([name, payload.enabled, payload.reason ?? null])
+      const previous = attempts.current.get(name)
+      const attempt =
+        previous?.signature === signature
+          ? previous
+          : { signature, key: newIdempotencyKey(`fe-switch:${name}`) }
+      attempts.current.set(name, attempt)
+      return creditApi.setSwitch(name, payload, attempt.key)
+    },
+    onSuccess: (state, variables) => {
+      // Сбрасываем ключ ТОЛЬКО того рубильника, что переключили: соседний мог
+      // в этот момент ждать своего повтора.
+      attempts.current.delete(variables.name)
+      // Ответ уже содержит новое положение обоих рубильников — кладём его в
+      // кэш, чтобы экран не мигал старым значением до перезапроса.
+      queryClient.setQueryData(creditKeys.switches(), state)
     },
   })
 }

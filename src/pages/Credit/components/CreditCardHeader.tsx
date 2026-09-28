@@ -11,7 +11,7 @@
  * Плитки — тот же визуальный язык, что у счётчиков над списками: оператор уже
  * знает, что крупное число в рамке — это показатель, а не подпись.
  */
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { Icons } from '@/lib/icons'
@@ -32,8 +32,27 @@ const TONE_CLASS: Record<string, string> = {
   danger: 'text-error-700',
 }
 
-function CopyButton({ value, label }: { value: string; label: string }) {
+/**
+ * Копирование значения одной кнопкой.
+ *
+ * Экспортируется, потому что нужна не только шапке: ключи операции рельса
+ * (`provider_tx_id`, `client_transaction_id`) оператор диктует в поддержку
+ * провайдера, и набирать 40 символов руками он будет с ошибкой.
+ */
+export function CopyButton({ value, label }: { value: string; label: string }) {
   const [copied, setCopied] = useState(false)
+  // Таймер сброса галочки держим, чтобы снять его: брошенный таймер стреляет
+  // setState после ухода с карточки, а в тестах — в уже разобранный jsdom
+  // («window is not defined» роняет прогон при всех зелёных тестах).
+  const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(
+    () => () => {
+      if (resetTimerRef.current) clearTimeout(resetTimerRef.current)
+    },
+    []
+  )
+
   return (
     <button
       type="button"
@@ -42,7 +61,13 @@ function CopyButton({ value, label }: { value: string; label: string }) {
       onClick={() => {
         void navigator.clipboard?.writeText(value)
         setCopied(true)
-        setTimeout(() => setCopied(false), 1500)
+        // Повторный клик продлевает галочку, а не копит таймеры: иначе первый
+        // из них погасит её раньше 1,5 с после последнего клика.
+        if (resetTimerRef.current) clearTimeout(resetTimerRef.current)
+        resetTimerRef.current = setTimeout(() => {
+          resetTimerRef.current = null
+          setCopied(false)
+        }, 1500)
       }}
       className="text-muted-foreground hover:text-foreground inline-flex items-center"
     >

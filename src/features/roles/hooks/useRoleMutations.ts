@@ -6,9 +6,11 @@
 
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import i18n from '@/lib/i18n'
 import { rolesApi } from '../api/rolesApi'
 import { rolesKeys } from './useRoles'
 import { getErrorMessage } from '@/lib/errors'
+import { isStaleHubCatalogueRefusal } from '../hubRoles'
 import type { CreateRoleInput, UpdateRoleInput } from '../types'
 
 /**
@@ -30,13 +32,22 @@ export function useCreateRole() {
   return useMutation({
     mutationFn: (data: CreateRoleInput) => rolesApi.createRole(data),
     onSuccess: () => {
-      toast.success('Role created successfully')
+      toast.success(i18n.t('toasts.roles.created', { defaultValue: 'Role created successfully' }))
       queryClient.invalidateQueries({ queryKey: rolesKeys.lists() })
       // Invalidate departments cache to update assigned_roles_count
       queryClient.invalidateQueries({ queryKey: ['departments'] })
     },
     onError: (error) => {
       toast.error(getErrorMessage(error))
+      // KAN-1476: the backend refused the HUB chat role the form sent. Ask the
+      // catalogue again: the form hides the field (HUB_ROLE_DISABLED) or
+      // narrows it, and it shows - and sends - only a value the fresh
+      // catalogue still offers as assignable (effectiveHubRoleValue). The form
+      // also drops its pick on such a refusal, so a retry of the same save goes
+      // through without the refused value rather than being refused again.
+      if (isStaleHubCatalogueRefusal(error)) {
+        queryClient.invalidateQueries({ queryKey: rolesKeys.hubRolesAll() })
+      }
     },
   })
 }
@@ -51,7 +62,7 @@ export function useUpdateRole() {
     mutationFn: ({ roleId, data }: { roleId: number; data: UpdateRoleInput }) =>
       rolesApi.updateRole(roleId, data),
     onSuccess: (_, variables) => {
-      toast.success('Role updated successfully')
+      toast.success(i18n.t('toasts.roles.updated', { defaultValue: 'Role updated successfully' }))
       queryClient.invalidateQueries({ queryKey: rolesKeys.detail(variables.roleId) })
       queryClient.invalidateQueries({ queryKey: rolesKeys.lists() })
       // Invalidate departments cache to update assigned_roles_count
@@ -59,6 +70,10 @@ export function useUpdateRole() {
     },
     onError: (error) => {
       toast.error(getErrorMessage(error))
+      // KAN-1476: see useCreateRole.
+      if (isStaleHubCatalogueRefusal(error)) {
+        queryClient.invalidateQueries({ queryKey: rolesKeys.hubRolesAll() })
+      }
     },
   })
 }
@@ -72,7 +87,7 @@ export function useDeleteRole() {
   return useMutation({
     mutationFn: ({ roleId }: { roleId: number }) => rolesApi.deleteRole(roleId),
     onSuccess: () => {
-      toast.success('Role deleted successfully')
+      toast.success(i18n.t('toasts.roles.deleted', { defaultValue: 'Role deleted successfully' }))
       queryClient.invalidateQueries({ queryKey: rolesKeys.lists() })
       // Invalidate departments cache to update assigned_roles_count
       queryClient.invalidateQueries({ queryKey: ['departments'] })
@@ -109,7 +124,7 @@ export function useArchiveRole() {
       data: { reassign_to_role_id?: number; use_default_role?: boolean }
     }) => rolesApi.archiveRole(roleId, data),
     onSuccess: (_, variables) => {
-      toast.success('Role archived successfully')
+      toast.success(i18n.t('toasts.roles.archived', { defaultValue: 'Role archived successfully' }))
       queryClient.invalidateQueries({ queryKey: rolesKeys.detail(variables.roleId) })
       queryClient.invalidateQueries({ queryKey: rolesKeys.lists() })
       // Invalidate departments cache to update assigned_roles_count

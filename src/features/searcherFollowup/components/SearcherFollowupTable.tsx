@@ -119,6 +119,7 @@ export function SearcherFollowupTable({
       {
         key: 'employee_name',
         header: t('pages.reports.searcherFollowup.columns.employee'),
+        obscured: true,
         // Null for unassigned clients and employees without org context in
         // the project — kept on purpose: they need follow-up the most.
         render: (row) => row.employee_name ?? EMPTY,

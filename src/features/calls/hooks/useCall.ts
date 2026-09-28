@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import i18n from '@/lib/i18n'
 import { callService } from '../api/callService'
 import type { OriginateCallRequest, CallHistoryFilters, UpdateCallOutcomeRequest } from '../types'
 import { invalidateCallRelatedQueries } from '../utils/queryInvalidation'
@@ -10,7 +11,9 @@ export function useOriginateCall() {
   return useMutation({
     mutationFn: (request: OriginateCallRequest) => callService.originateCall(request),
     onSuccess: (_, variables) => {
-      toast.success('Call initiated successfully')
+      toast.success(
+        i18n.t('toasts.calls.initiated', { defaultValue: 'Call initiated successfully' })
+      )
       invalidateCallRelatedQueries(queryClient, variables.client_id)
     },
     onError: (_error: unknown) => {
@@ -74,12 +77,14 @@ export function useUpdateCallOutcome() {
     mutationFn: ({ callId, outcome }: { callId: string; outcome: UpdateCallOutcomeRequest }) =>
       callService.updateCallOutcome(callId, outcome),
     onSuccess: () => {
-      toast.success('Call outcome saved')
+      toast.success(i18n.t('toasts.calls.outcomeSaved', { defaultValue: 'Call outcome saved' }))
       queryClient.invalidateQueries({ queryKey: ['callDetails'] })
       invalidateCallRelatedQueries(queryClient)
     },
     onError: () => {
-      toast.error('Failed to save call outcome')
+      toast.error(
+        i18n.t('toasts.calls.outcomeSaveFailed', { defaultValue: 'Failed to save call outcome' })
+      )
     },
   })
 }
@@ -98,12 +103,12 @@ export function useHangupCall(clientId?: number | null) {
   return useMutation({
     mutationFn: (callId: string) => callService.hangupCall(callId),
     onSuccess: () => {
-      toast.success('Call ended')
+      toast.success(i18n.t('toasts.calls.ended', { defaultValue: 'Call ended' }))
       queryClient.invalidateQueries({ queryKey: ['callDetails'] })
       invalidateCallRelatedQueries(queryClient, clientId)
     },
     onError: () => {
-      toast.error('Failed to end call')
+      toast.error(i18n.t('toasts.calls.endFailed', { defaultValue: 'Failed to end call' }))
       invalidateCallRelatedQueries(queryClient, clientId)
     },
   })
@@ -121,12 +126,12 @@ export function useRejectCall(clientId?: number | null, agentExtension?: string 
   return useMutation({
     mutationFn: (callId: string) => callService.rejectCall(callId, agentExtension),
     onSuccess: () => {
-      toast.success('Call rejected')
+      toast.success(i18n.t('toasts.calls.rejected', { defaultValue: 'Call rejected' }))
       queryClient.invalidateQueries({ queryKey: ['callDetails'] })
       invalidateCallRelatedQueries(queryClient, clientId)
     },
     onError: () => {
-      toast.error('Failed to reject call')
+      toast.error(i18n.t('toasts.calls.rejectFailed', { defaultValue: 'Failed to reject call' }))
       invalidateCallRelatedQueries(queryClient, clientId)
     },
   })
@@ -149,7 +154,7 @@ export function useAnswerCall(clientId?: number | null, agentExtension?: string 
       invalidateCallRelatedQueries(queryClient, clientId)
     },
     onError: () => {
-      toast.error('Failed to answer call')
+      toast.error(i18n.t('toasts.calls.answerFailed', { defaultValue: 'Failed to answer call' }))
     },
   })
 }
@@ -166,7 +171,7 @@ export function useHoldCall(clientId?: number | null, agentExtension?: string | 
       invalidateCallRelatedQueries(queryClient, clientId)
     },
     onError: () => {
-      toast.error('Failed to hold call')
+      toast.error(i18n.t('toasts.calls.holdFailed', { defaultValue: 'Failed to hold call' }))
     },
   })
 }

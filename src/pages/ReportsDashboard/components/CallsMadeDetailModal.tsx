@@ -6,6 +6,7 @@
  */
 
 import { useTranslation } from 'react-i18next'
+import { dateSeparator } from '@/lib/formatters'
 import { Modal, ModalContent, ModalFooter, ModalTitle } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { ProgressBar } from '@/components/ui/ProgressBar'
@@ -58,12 +59,16 @@ export function CallsMadeDetailModal({
 
   const maxByHour = data?.byHour ? Math.max(...data.byHour.map((h) => h.calls), 1) : 1
   const maxByOperator = data?.byOperator ? Math.max(...data.byOperator.map((o) => o.calls), 1) : 1
+  // Only meaningful when the operator list is actually shown below the header.
+  const showOperatorsTotal =
+    !!data && data.byOperator.length > 0 && data.operatorsTotal !== data.total
 
   const formatDate = () => {
     const now = new Date()
     const day = String(now.getDate()).padStart(2, '0')
     const month = String(now.getMonth() + 1).padStart(2, '0')
-    return `${day}-${month}-${now.getFullYear()}`
+    const sep = dateSeparator()
+    return `${day}${sep}${month}${sep}${now.getFullYear()}`
   }
 
   const getPeriodLabel = () => {
@@ -157,23 +162,39 @@ export function CallsMadeDetailModal({
               <div className="text-foreground text-2xl leading-tight font-medium tracking-[-0.48px]">
                 {t('pages.reports.callsMadeModal.total')}: {data.total}
               </div>
-              <div className="flex items-center justify-center gap-4">
-                <span className="flex items-center justify-center gap-2">
-                  {data.changeType === 'increase' ? (
-                    <Icons.ArrowUp02 size={20} className="text-success-500" />
-                  ) : (
-                    <Icons.ArrowDown02 size={20} className="text-error-500" />
-                  )}
-                  <span className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                    {data.change}%
+              {/* The header is the dashboard KPI, the list below is operator
+                  performance — two sources. When they disagree, say so rather
+                  than let the list silently not add up to the header. The
+                  wording is neutral («за операторами», not «з них…»): the
+                  list can be larger than the header as well as smaller. */}
+              {showOperatorsTotal && (
+                <div
+                  data-testid="calls-made-operators-total"
+                  className="text-muted-foreground -mt-2 text-sm leading-[150%] font-medium tracking-[-0.28px]"
+                >
+                  {t('pages.reports.callsMadeModal.operatorsSum')}: {data.operatorsTotal}
+                </div>
+              )}
+              {/* KPI without a trend (null from report-service): no arrow, no «0 %» (#1448) */}
+              {data.change !== null && (
+                <div className="flex items-center justify-center gap-4">
+                  <span className="flex items-center justify-center gap-2">
+                    {data.changeType === 'increase' ? (
+                      <Icons.ArrowUp02 size={20} className="text-success-500" />
+                    ) : (
+                      <Icons.ArrowDown02 size={20} className="text-error-500" />
+                    )}
+                    <span className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                      {data.change}%
+                    </span>
                   </span>
-                </span>
-                <span className="text-foreground text-sm leading-[150%] tracking-[-0.28px]">
-                  <span className="font-light">{t('pages.reports.kpi.vs')} </span>
-                  <span className="font-medium">{getComparisonText()}</span>
-                  <span className="font-light"> ({data.previousTotal})</span>
-                </span>
-              </div>
+                  <span className="text-foreground text-sm leading-[150%] tracking-[-0.28px]">
+                    <span className="font-light">{t('pages.reports.kpi.vs')} </span>
+                    <span className="font-medium">{getComparisonText()}</span>
+                    <span className="font-light"> ({data.previousTotal})</span>
+                  </span>
+                </div>
+              )}
             </div>
 
             {/* By Hour */}

@@ -50,7 +50,10 @@ import {
   messageBlockReason,
 } from '@/features/clients/utils/contactBlocking'
 import { formatDate } from '@/lib/formatters'
+import { piiProps } from '@/lib/openreplay/pii'
 import { useHasAnyPermission, useHasPermission } from '@/hooks/usePermissions'
+import { useSmsServiceAvailable } from '@/features/sms'
+import { PiiTooltip } from '@/components/ui/PiiTooltip'
 
 export type RecommenderContactTag = {
   value_id: number
@@ -357,15 +360,15 @@ function LinkedContactPills({ linked }: { linked: LinkedContactBadge[] }) {
   return (
     <div className="flex flex-wrap gap-1.5" data-testid="related-contact-pills">
       {linked.map((item) => (
-        <Link
-          key={item.id}
-          to={`/dashboard/clients/${item.id}`}
-          className="border-success-200 bg-success-50 text-success-700 hover:border-success-300 hover:bg-success-100 inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] leading-3 font-semibold no-underline"
-          title={item.fullName}
-        >
-          <Icons.Link01 size={9} strokeWidth={2.2} className="shrink-0" />
-          <span className="truncate">{item.clientNumber}</span>
-        </Link>
+        <PiiTooltip key={item.id} label={item.fullName}>
+          <Link
+            to={`/dashboard/clients/${item.id}`}
+            className="border-success-200 bg-success-50 text-success-700 hover:border-success-300 hover:bg-success-100 inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] leading-3 font-semibold no-underline"
+          >
+            <Icons.Link01 size={9} strokeWidth={2.2} className="shrink-0" />
+            <span className="truncate">{item.clientNumber}</span>
+          </Link>
+        </PiiTooltip>
       ))}
     </div>
   )
@@ -440,7 +443,9 @@ function MessageActionsButton({
   onSendMessage: (phone: string) => void
 }) {
   const { t } = useTranslation('common')
-  const canSms = useHasPermission(PERMISSIONS.COMMUNICATION.SEND_SMS)
+  const hasSmsPermission = useHasPermission(PERMISSIONS.COMMUNICATION.SEND_SMS)
+  const smsServiceAvailable = useSmsServiceAvailable()
+  const canSms = hasSmsPermission && smsServiceAvailable
   const canMessage = useHasAnyPermission(ALL_MESSAGING_SEND_PERMISSIONS)
   const blockedTitle = blockReason || t('pages.contactTags.smsBlocked', 'SMS blocked')
   const messageTitle = t('pages.clients.detail.sendMessageSmsViber', 'Message (SMS / Viber)')
@@ -713,6 +718,7 @@ function ContactCard({
         <div
           data-testid="contact-comment"
           className="border-border text-muted-foreground w-[320px] max-w-[36%] shrink-0 border-l py-0.5 pl-3.5 text-xs leading-[1.35] break-words md:max-w-none"
+          {...piiProps}
         >
           {contact.comment || '\u00A0'}
         </div>

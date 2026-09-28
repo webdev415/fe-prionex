@@ -6,6 +6,8 @@
  */
 
 import { useTranslation } from 'react-i18next'
+import i18n, { spanishLocaleOr } from '@/lib/i18n'
+import { dateSeparator, withCurrency } from '@/lib/formatters'
 import { Modal, ModalContent, ModalFooter, ModalTitle } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { ProgressBar } from '@/components/ui/ProgressBar'
@@ -26,7 +28,8 @@ export interface PaymentData {
     amount: number
     percentage: number
   }>
-  trend: {
+  /** Absent when report-service sends no trend for the KPI (board #1448). */
+  trend?: {
     change: number
     direction: 'up' | 'down'
   }
@@ -73,21 +76,21 @@ export function PaymentsCollectedModal({
 
   const formatCurrency = (amount: number) => {
     // Format number with spaces as thousands separator
-    const formatted = new Intl.NumberFormat('uk-UA', {
+    const formatted = new Intl.NumberFormat(spanishLocaleOr(i18n.language, 'uk-UA'), {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
       useGrouping: true,
     }).format(amount)
 
-    // Add ₴ symbol manually
-    return `₴${formatted}`
+    return withCurrency(formatted, 'tight')
   }
 
   const formatDate = () => {
     const now = new Date()
     const day = String(now.getDate()).padStart(2, '0')
     const month = String(now.getMonth() + 1).padStart(2, '0')
-    return `${day}-${month}-${now.getFullYear()}`
+    const sep = dateSeparator()
+    return `${day}${sep}${month}${sep}${now.getFullYear()}`
   }
 
   const getComparisonText = () => {
@@ -173,20 +176,22 @@ export function PaymentsCollectedModal({
                   {totalPayments}{' '}
                   <span className="font-light">{t('pages.reports.paymentsModal.payments')}</span>
                 </span>
-                <span className="flex items-center justify-center gap-2">
-                  {data.trend.direction === 'up' ? (
-                    <Icons.ArrowUp02 size={20} className="text-success-500" />
-                  ) : (
-                    <Icons.ArrowDown02 size={20} className="text-error-500" />
-                  )}
-                  <span className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
-                    {data.trend.change}%
+                {data.trend && (
+                  <span className="flex items-center justify-center gap-2">
+                    {data.trend.direction === 'up' ? (
+                      <Icons.ArrowUp02 size={20} className="text-success-500" />
+                    ) : (
+                      <Icons.ArrowDown02 size={20} className="text-error-500" />
+                    )}
+                    <span className="text-foreground text-sm leading-[150%] font-medium tracking-[-0.28px]">
+                      {data.trend.change}%
+                    </span>
+                    <span className="text-foreground text-sm leading-[150%] font-light tracking-[-0.28px]">
+                      {t('pages.reports.kpi.vs')}{' '}
+                      <span className="font-medium">{getComparisonText()}</span>
+                    </span>
                   </span>
-                  <span className="text-foreground text-sm leading-[150%] font-light tracking-[-0.28px]">
-                    {t('pages.reports.kpi.vs')}{' '}
-                    <span className="font-medium">{getComparisonText()}</span>
-                  </span>
-                </span>
+                )}
               </div>
             </div>
 
@@ -275,7 +280,9 @@ export function PaymentsCollectedModal({
                     )
                   )
                 ) : (
-                  <span className="text-muted-foreground text-sm">No payment methods data</span>
+                  <span className="text-muted-foreground text-sm">
+                    {t('pages.reports.paymentsModal.noPaymentMethods')}
+                  </span>
                 )}
               </div>
             </div>

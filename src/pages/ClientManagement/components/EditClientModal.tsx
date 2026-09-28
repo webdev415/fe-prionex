@@ -18,6 +18,10 @@ import {
 import { useQueryClient } from '@tanstack/react-query'
 import { useHasPermission } from '@/hooks'
 import { PERMISSIONS } from '@/constants/permissions'
+import { useUbkiAvailable } from '@/features/ubki'
+import { useProjectCountry } from '@/hooks/useProjectCountry'
+import { taxIdMatches, taxIdErrorKey } from './clientTaxId'
+import { piiProps } from '@/lib/openreplay/pii'
 import {
   useClientProfile,
   useUpdateClient,
@@ -144,6 +148,8 @@ function EditForm({ profile, clientId }: EditFormProps) {
   // change someone else made while the form was open.
   const [doNotSendToUbki, setDoNotSendToUbki] = useState(profile.do_not_send_to_ubki ?? false)
   const { mutate: updateUbkiOptOut, isPending: isSavingUbkiOptOut } = useUpdateClient()
+  const ubkiAvailable = useUbkiAvailable()
+  const projectCountry = useProjectCountry()
 
   const handleToggleUbkiOptOut = (checked: boolean) => {
     const previous = doNotSendToUbki
@@ -180,6 +186,36 @@ function EditForm({ profile, clientId }: EditFormProps) {
   const [familyMembers, setFamilyMembers] = useState(profile.family_members_count?.toString() || '')
   const [incomeLevel, setIncomeLevel] = useState(profile.income_level || '')
   const [taxId, setTaxId] = useState(profile.tax_id || '')
+  /**
+   * 🔴 ИНН обязателен НЕ всегда — с ревизии 176 client-service.
+   *
+   * Клиента, которого кредитный модуль опознал по подтверждённому в кабинете
+   * e-mail, ИНН не имеет вовсе, и заполнить поле нечем. Безусловная проверка
+   * «ровно десять цифр» означала для такого человека, что его карточку нельзя
+   * отредактировать совсем: не сохранить ни телефон, ни дату рождения, ни
+   * e-mail, — и отказ показывался общим текстом, без причины.
+   *
+   * Умолчание `'tin'` — то самое, которое чужая сторона объявила
+   * `server_default`: на бэкенде старее ревизии 176 поля в теле нет, и
+   * поведение обязано остаться прежним.
+   */
+  const tinRequired = (profile.identity_key ?? 'tin') === 'tin'
+
+  /**
+   * 🔴 Необязательный — не значит «выбрасываемый».
+   *
+   * У человека, опознанного по e-mail, ИНН может ПОЯВИТЬСЯ, и оператор его
+   * впишет. Правило «не обязателен» закрывало только снятие TIN, которое
+   * client-service отвергает; молча терять введённое значение оно не
+   * разрешало. Поэтому: пусто — ключ не шлём (снятия не будет), непусто —
+   * шлём и проверяем теми же десятью цифрами, что и у всех.
+   */
+  const tinProvided = (value: string) => value.trim() !== ''
+  const tinInvalid = (value: string) => {
+    const trimmed = value.trim()
+    if (!tinRequired && !tinProvided(trimmed)) return false
+    return !taxIdMatches(trimmed, projectCountry)
+  }
 
   // Passport/document info
   const [documentType, setDocumentType] = useState(profile.passport?.document_type || '')
@@ -250,8 +286,8 @@ function EditForm({ profile, clientId }: EditFormProps) {
       setPersonalError(t('pages.clients.editModal.saveError'))
       return
     }
-    if (!/^\d{10}$/.test(tid)) {
-      setPersonalError(t('pages.clients.editModal.saveError'))
+    if (tinInvalid(tid)) {
+      setPersonalError(t(taxIdErrorKey(projectCountry)))
       return
     }
 
@@ -270,7 +306,13 @@ function EditForm({ profile, clientId }: EditFormProps) {
       marital_status: maritalStatus || undefined,
       family_members_count: familyMembers.trim() !== '' ? Number(familyMembers) : undefined,
       income_level: incomeLevel.trim() ? incomeLevel.trim() : undefined,
-      tax_id: tid,
+      // Ключа в теле НЕТ вовсе только тогда, когда ИНН не обязателен И поле
+      // пустое: client-service отвечает «TIN … cannot be removed» на попытку
+      // снять его. Введённое значение уходит всегда — иначе оператор получил
+      // бы «сохранено» на правку, которой никуда не доехала. Расширение
+      // объекта, а не `undefined`: ключ со значением `undefined` невидим по
+      // проводу, но виден читателю кода как «поле отправляется».
+      ...(tinRequired || tinProvided(tid) ? { tax_id: tid.toUpperCase() } : {}),
     }
 
     try {
@@ -364,8 +406,12 @@ function EditForm({ profile, clientId }: EditFormProps) {
     const fn = firstName.trim()
     const ln = lastName.trim()
     const tid = taxId.trim()
-    if (!fn || !ln || !/^\d{10}$/.test(tid)) {
+    if (!fn || !ln) {
       setPersonalError(t('pages.clients.editModal.saveError'))
+      return
+    }
+    if (tinInvalid(tid)) {
+      setPersonalError(t(taxIdErrorKey(projectCountry)))
       return
     }
 
@@ -384,7 +430,13 @@ function EditForm({ profile, clientId }: EditFormProps) {
       marital_status: maritalStatus || undefined,
       family_members_count: familyMembers.trim() !== '' ? Number(familyMembers) : undefined,
       income_level: incomeLevel.trim() ? incomeLevel.trim() : undefined,
-      tax_id: tid,
+      // Ключа в теле НЕТ вовсе только тогда, когда ИНН не обязателен И поле
+      // пустое: client-service отвечает «TIN … cannot be removed» на попытку
+      // снять его. Введённое значение уходит всегда — иначе оператор получил
+      // бы «сохранено» на правку, которой никуда не доехала. Расширение
+      // объекта, а не `undefined`: ключ со значением `undefined` невидим по
+      // проводу, но виден читателю кода как «поле отправляется».
+      ...(tinRequired || tinProvided(tid) ? { tax_id: tid.toUpperCase() } : {}),
     }
 
     setIsSavingAll(true)
@@ -608,28 +660,30 @@ function EditForm({ profile, clientId }: EditFormProps) {
               />
             </div>
           </div>
-          <div className="flex w-full flex-col gap-4 sm:flex-row sm:gap-5">
-            <div className="flex flex-1 items-center justify-between gap-3">
-              <label
-                className="text-foreground text-xs font-medium sm:text-sm"
-                title={t(
-                  'pages.clients.detail.ubki.doNotSendHint',
-                  'When enabled, this client is excluded from all UBKI submissions.'
-                )}
-              >
-                {t('pages.clients.detail.ubki.doNotSendLabel', 'Do not send data to UBKI')}
-              </label>
-              <ToggleSwitch
-                checked={doNotSendToUbki}
-                onChange={handleToggleUbkiOptOut}
-                disabled={!canEditAll || isSavingUbkiOptOut}
-                ariaLabel={t(
-                  'pages.clients.detail.ubki.doNotSendLabel',
-                  'Do not send data to UBKI'
-                )}
-              />
+          {ubkiAvailable && (
+            <div className="flex w-full flex-col gap-4 sm:flex-row sm:gap-5">
+              <div className="flex flex-1 items-center justify-between gap-3">
+                <label
+                  className="text-foreground text-xs font-medium sm:text-sm"
+                  title={t(
+                    'pages.clients.detail.ubki.doNotSendHint',
+                    'When enabled, this client is excluded from all UBKI submissions.'
+                  )}
+                >
+                  {t('pages.clients.detail.ubki.doNotSendLabel', 'Do not send data to UBKI')}
+                </label>
+                <ToggleSwitch
+                  checked={doNotSendToUbki}
+                  onChange={handleToggleUbkiOptOut}
+                  disabled={!canEditAll || isSavingUbkiOptOut}
+                  ariaLabel={t(
+                    'pages.clients.detail.ubki.doNotSendLabel',
+                    'Do not send data to UBKI'
+                  )}
+                />
+              </div>
             </div>
-          </div>
+          )}
           <div className="flex w-full flex-col gap-4 sm:flex-row sm:gap-5">
             <div className="flex flex-1 flex-col gap-1">
               <label className="text-foreground text-xs font-medium sm:text-sm">
@@ -667,8 +721,16 @@ function EditForm({ profile, clientId }: EditFormProps) {
             <div className="flex flex-1 flex-col gap-1">
               <label className="text-foreground text-xs font-medium sm:text-sm">
                 {t('pages.clients.editModal.taxId')}
+                {!tinRequired && (
+                  // Подпись, а не блокировка: поле остаётся редактируемым,
+                  // потому что ИНН у такого клиента может появиться.
+                  <span className="text-muted-foreground ml-1 font-normal">
+                    {t('credit.clientBlock.tinOptional')}
+                  </span>
+                )}
               </label>
               <Input
+                data-testid="edit-client-tax-id"
                 value={taxId}
                 onChange={(e) => setTaxId(e.target.value)}
                 disabled={!canEditAll}
@@ -715,10 +777,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
             variant="primary"
             onClick={handleSavePersonalOnly}
             disabled={
-              isSavingPersonal ||
-              !firstName.trim() ||
-              !lastName.trim() ||
-              !/^\d{10}$/.test(taxId.trim())
+              isSavingPersonal || !firstName.trim() || !lastName.trim() || tinInvalid(taxId)
             }
             className="rounded-md"
           >
@@ -1170,7 +1229,7 @@ function EditForm({ profile, clientId }: EditFormProps) {
                         </span>
                       )}
                     </div>
-                    <span className="text-foreground text-xs font-light sm:text-sm">
+                    <span className="text-foreground text-xs font-light sm:text-sm" {...piiProps}>
                       {address.full_address ||
                         [address.city, address.street, address.building].filter(Boolean).join(', ')}
                     </span>

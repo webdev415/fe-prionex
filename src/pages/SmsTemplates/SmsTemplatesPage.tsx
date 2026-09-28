@@ -436,7 +436,7 @@ export function SmsTemplatesPage() {
                 onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                 disabled={currentPage === 1}
                 className="border-border bg-card hover:bg-muted disabled:hover:bg-card flex h-10 w-10 items-center justify-center rounded-full border transition-colors disabled:cursor-not-allowed disabled:opacity-40"
-                aria-label="Previous page"
+                aria-label={t('components.pagination.previousPage')}
               >
                 <Icons.ArrowLeft size={16} className="text-foreground" strokeWidth={1.5} />
               </button>
@@ -514,7 +514,7 @@ export function SmsTemplatesPage() {
                 onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                 disabled={currentPage === totalPages}
                 className="border-border bg-card hover:bg-muted disabled:hover:bg-card flex h-10 w-10 items-center justify-center rounded-full border transition-colors disabled:cursor-not-allowed disabled:opacity-40"
-                aria-label="Next page"
+                aria-label={t('components.pagination.nextPage')}
               >
                 <Icons.ArrowRight size={16} className="text-foreground" strokeWidth={1.5} />
               </button>

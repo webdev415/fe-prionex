@@ -18,6 +18,7 @@ import { Icons } from '@/lib/icons'
 import { useCallStore } from '@/stores/callStore'
 import { CallMaterialsPanel } from '@/pages/Training/components/training/CallMaterialsPanel'
 import { CallPlayer, type CallPlayerHandle } from './CallPlayer'
+import { piiProps } from '@/lib/openreplay/pii'
 
 export interface CallRecordingModalProps {
   open: boolean
@@ -162,7 +163,7 @@ export const CallRecordingModal = forwardRef<CallRecordingModalHandle, CallRecor
         <button
           onClick={handleMinimize}
           className="hover:bg-muted absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-md transition-colors sm:top-4 sm:right-12"
-          aria-label="Minimize modal"
+          aria-label={t('components.modal.minimize', 'Minimize modal')}
         >
           <Icons.Remove02 size={20} className="text-foreground" strokeWidth={1.5} />
         </button>
@@ -191,11 +192,13 @@ export const CallRecordingModal = forwardRef<CallRecordingModalHandle, CallRecor
                   to={`/dashboard/clients/${callData.clientId}`}
                   className="text-primary-700 hover:underline"
                   onClick={onClose}
+                  data-openreplay-label="client-name-link"
+                  {...piiProps}
                 >
                   {callData.clientName}
                 </Link>
               ) : (
-                callData.clientName
+                <span {...piiProps}>{callData.clientName}</span>
               )}{' '}
               - {formatDate(callData.date, callData.time)}
             </div>

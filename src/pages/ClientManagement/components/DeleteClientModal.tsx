@@ -15,7 +15,9 @@ import { Modal, ModalHeader, ModalContent, ModalFooter } from '@/components/ui/M
 import { Button } from '@/components/ui/Button'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { Icons } from '@/lib/icons'
+import { piiProps } from '@/lib/openreplay/pii'
 import { toast } from 'sonner'
+import { withCurrency } from '@/lib/formatters'
 
 export interface DeleteClientModalProps {
   open: boolean
@@ -43,10 +45,12 @@ export function DeleteClientModal({
   const { mutate: deleteClient, isPending: isDeleting } = useDeleteClient()
 
   const formatCurrency = (amount: number) => {
-    return `₴ ${amount.toLocaleString(intlLocaleForUiLanguage(i18n.language), {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`
+    return withCurrency(
+      amount.toLocaleString(intlLocaleForUiLanguage(i18n.language), {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })
+    )
   }
 
   const handleClose = () => {
@@ -103,7 +107,9 @@ export function DeleteClientModal({
             <div className="flex items-start gap-6 self-stretch">
               <span className="text-foreground text-xs leading-[150%] font-light tracking-[-0.28px] sm:text-sm">
                 {t('pages.clients.modals.deleteClient.fieldName')}{' '}
-                <span className="font-medium">{client.full_name}</span>
+                <span className="font-medium" {...piiProps}>
+                  {client.full_name}
+                </span>
               </span>
             </div>
             <div className="flex items-start gap-6 self-stretch">

@@ -5,6 +5,11 @@
  * Updated: 2025-12-08 - Added new fields for UI enhancements
  */
 
+export const PROJECT_CURRENCIES = ['UAH', 'EUR', 'CAD'] as const
+export type ProjectCurrency = (typeof PROJECT_CURRENCIES)[number]
+export const PROJECT_COUNTRIES = ['UA', 'ES', 'CA'] as const
+export type ProjectCountry = (typeof PROJECT_COUNTRIES)[number]
+
 /**
  * Project from API (list view)
  */
@@ -15,6 +20,8 @@ export interface ApiProject {
   description?: string
   status: 'active' | 'inactive' | 'archived'
   is_active: boolean
+  currency?: ProjectCurrency
+  country?: ProjectCountry
 
   // Client information
   client_company?: string
@@ -133,6 +140,8 @@ export interface CreateProjectInput {
   contract_number?: string
   start_date?: string
   end_date?: string
+  currency?: ProjectCurrency
+  country?: ProjectCountry
 
   // Company legal details — all optional
   full_company_name?: string | null
@@ -160,6 +169,8 @@ export interface UpdateProjectInput {
   start_date?: string
   end_date?: string
   status?: 'active' | 'inactive'
+  currency?: ProjectCurrency
+  country?: ProjectCountry
 
   // Company legal details — all optional
   full_company_name?: string | null
@@ -190,3 +201,46 @@ export interface ExportParams {
  * Project detail response (alias for ApiProjectDetail for backward compatibility)
  */
 export type ProjectDetailResponse = ApiProjectDetail
+
+/* ── Calling window and holiday calendar (KAN-1107) ─────────────────────── */
+
+/** ISO weekday numbers: 1 = Monday … 7 = Sunday. */
+export type IsoWeekday = 1 | 2 | 3 | 4 | 5 | 6 | 7
+
+export interface CallingWindowConfig {
+  enabled: boolean
+  /** "HH:MM", inclusive. */
+  start: string | null
+  /** "HH:MM", exclusive — 20:45 means the last permitted moment is 20:44. */
+  end: string | null
+  /** null means every day is allowed. */
+  weekdays: IsoWeekday[] | null
+  timezone: string | null
+  holiday_country: string | null
+  holiday_subdivision: string | null
+}
+
+export type CallingWindowInput = CallingWindowConfig
+
+export interface HolidayCountry {
+  code: string
+  name: string
+}
+
+export interface HolidayDate {
+  holiday_date: string
+  name: string | null
+  /** 'computed' came from the package; 'manual' was added by an admin. */
+  origin: 'computed' | 'manual'
+}
+
+export interface HolidayCalendar {
+  year: number
+  country: string
+  subdivision: string | null
+  source_version: string | null
+  reviewed: boolean
+  reviewed_at: string | null
+  reviewed_by: number | null
+  dates: HolidayDate[]
+}

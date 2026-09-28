@@ -9,10 +9,12 @@ import {
   setAccessToken,
   triggerAuthExpired,
 } from '@/lib/api'
-import { applyPersistedLanguageFromServer } from '@/lib/i18n'
+import i18n, { applyPersistedLanguageFromServer } from '@/lib/i18n'
 import { applyPersistedThemeFromServer } from '@/stores/themeStore'
 import { cancelSessionHeartbeat, scheduleSessionHeartbeat } from '@/lib/sessionHeartbeat'
-import type { User, LoginRequest, AuthErrorState } from '@/types/api'
+import { activeProjectCountry, setActiveCountry } from '@/lib/projectCountry'
+import { activeProjectCurrency, setActiveCurrency } from '@/lib/projectCurrency'
+import type { User, LoginRequest, LoginResponse, AuthErrorState } from '@/types/api'
 import {
   buildUserFromJwtToken,
   mapBackendUserToUser,
@@ -43,6 +45,8 @@ interface AuthState {
   // 2FA challenge state — set when /login replies with two_factor_required
   twoFactorToken: string | null
   twoFactorUsername: string | null
+  /** `two_factor_methods` of that challenge (`'app'` = confirm on the bound phone). */
+  twoFactorMethods: string[] | null
 
   // Impersonation state
   isImpersonating: boolean
@@ -54,12 +58,47 @@ interface AuthState {
   forceLogin: () => Promise<void>
   verifyTwoFactor: (code: string) => Promise<void>
   cancelTwoFactor: () => void
+  /**
+   * Persist the `LoginResponse` a phone-confirmed sign-in returned (Epic 19,
+   * `POST /api/v1/auth/app-login/poll` → `approved`) exactly as after `/login`.
+   */
+  completeAppLogin: (login: LoginResponse) => Promise<void>
+  /** Show a `/login`-style refusal the phone-confirmed sign-in ended with. */
+  failAppLogin: (refusal: AppLoginRefusal) => void
   checkAuth: () => Promise<void>
   refreshUser: () => Promise<void>
   updateCurrentUser: (updates: Partial<User>) => void
   clearError: () => void
   startImpersonation: (userId: number) => Promise<void>
   exitImpersonation: () => Promise<void>
+}
+
+/** The part of a refused phone-confirmed sign-in the login screen shows. */
+export interface AppLoginRefusal {
+  code: string | null
+  message: string | null
+  lockoutMinutes?: number | null
+}
+
+/**
+ * Backend refusal code → the login screen's card. `null` keeps the password
+ * form and shows the message under it. Shared by `/login` and the
+ * phone-confirmed sign-in, which answer with the same codes.
+ */
+function authErrorStateForCode(code: string | null): AuthErrorState | null {
+  switch (code) {
+    case 'INVALID_CREDENTIALS':
+    case 'ACCOUNT_INACTIVE': // shown as the generic error
+      return 'INVALID_CREDENTIALS'
+    case 'ACCOUNT_LOCKED':
+      return 'ACCOUNT_LOCKED'
+    case 'ALREADY_LOGGED_IN':
+      return 'ALREADY_LOGGED_IN'
+    case 'IP_NOT_ALLOWED':
+      return 'IP_NOT_ALLOWED'
+    default:
+      return null
+  }
 }
 
 /** Load full profile from /users/me, or JWT + /users/me/projects when /me fails. */
@@ -80,12 +119,32 @@ async function resolveAuthUser(
       user = mergeUserFromProjectsResponse(user, projectsResponse.data)
     } catch {
       // Keep JWT-derived user (permissions, names from login payload)
+      user = withCachedProjectSettings(user)
     }
   }
   // KAN-757: per-tab access ceilings live only on the JWT (not /users/me), so
   // overlay them here regardless of which profile source won.
   user.tab_access_levels = extractTabAccessLevels(token)
   return user
+}
+
+function withCachedProjectSettings(user: User): User {
+  let cached: Record<string, { currency?: string; country?: string } | undefined>
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem('project_settings') ?? '{}')
+    if (!parsed || typeof parsed !== 'object') return user
+    cached = parsed as typeof cached
+  } catch {
+    return user
+  }
+  return {
+    ...user,
+    projects: user.projects?.map((p) => ({
+      ...p,
+      currency: p.currency ?? cached[p.id]?.currency,
+      country: p.country ?? cached[p.id]?.country,
+    })),
+  }
 }
 
 /** Read the `tab_access_levels` claim off the JWT (empty map when absent). */
@@ -128,6 +187,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   // 2FA challenge initial state
   twoFactorToken: null,
   twoFactorUsername: null,
+  twoFactorMethods: null,
 
   // Impersonation initial state
   isImpersonating: false,
@@ -142,11 +202,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       pendingCredentials: null,
       twoFactorToken: null,
       twoFactorUsername: null,
+      twoFactorMethods: null,
     })
 
     try {
       const response = await authApi.login(credentials)
-      const { token, user: loginUser, two_factor_required, two_factor_token } = response.data
+      const {
+        token,
+        user: loginUser,
+        two_factor_required,
+        two_factor_token,
+        two_factor_methods,
+      } = response.data
 
       // 2FA branch — password OK but the second factor is required.
       if (two_factor_required && two_factor_token) {
@@ -154,6 +221,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           isLoading: false,
           twoFactorToken: two_factor_token,
           twoFactorUsername: credentials.username,
+          twoFactorMethods: Array.isArray(two_factor_methods) ? two_factor_methods : null,
           errorState: 'TWO_FACTOR_REQUIRED',
         })
         return
@@ -223,21 +291,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
 
       // Map backend codes to frontend AuthErrorState
-      let detectedErrorState: AuthErrorState | null = null
-      let pendingCreds: LoginRequest | null = null
-
-      if (errorCode === 'INVALID_CREDENTIALS') {
-        detectedErrorState = 'INVALID_CREDENTIALS'
-      } else if (errorCode === 'ACCOUNT_LOCKED') {
-        detectedErrorState = 'ACCOUNT_LOCKED'
-      } else if (errorCode === 'ACCOUNT_INACTIVE') {
-        detectedErrorState = 'INVALID_CREDENTIALS' // Show as generic error
-      } else if (errorCode === 'ALREADY_LOGGED_IN') {
-        detectedErrorState = 'ALREADY_LOGGED_IN'
-        pendingCreds = credentials // Store credentials for force login
-      } else if (errorCode === 'IP_NOT_ALLOWED') {
-        detectedErrorState = 'IP_NOT_ALLOWED'
-      }
+      const detectedErrorState = authErrorStateForCode(errorCode)
+      // Store credentials for force login
+      const pendingCreds = errorCode === 'ALREADY_LOGGED_IN' ? credentials : null
 
       set({
         isLoading: false,
@@ -273,6 +329,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         hasCheckedAuth: false,
         twoFactorToken: null,
         twoFactorUsername: null,
+        twoFactorMethods: null,
         // Clear impersonation state
         isImpersonating: false,
         impersonatedUser: null,
@@ -289,11 +346,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return
     }
 
-    set({ isLoading: true, error: null, twoFactorToken: null, twoFactorUsername: null })
+    set({
+      isLoading: true,
+      error: null,
+      twoFactorToken: null,
+      twoFactorUsername: null,
+      twoFactorMethods: null,
+    })
 
     try {
       const response = await authApi.forceLogin(pendingCredentials)
-      const { token, user: loginUser, two_factor_required, two_factor_token } = response.data
+      const {
+        token,
+        user: loginUser,
+        two_factor_required,
+        two_factor_token,
+        two_factor_methods,
+      } = response.data
 
       // 2FA branch (also possible after force-login)
       if (two_factor_required && two_factor_token) {
@@ -301,6 +370,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           isLoading: false,
           twoFactorToken: two_factor_token,
           twoFactorUsername: pendingCredentials.username,
+          twoFactorMethods: Array.isArray(two_factor_methods) ? two_factor_methods : null,
           errorState: 'TWO_FACTOR_REQUIRED',
         })
         return
@@ -467,9 +537,74 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({
       twoFactorToken: null,
       twoFactorUsername: null,
+      twoFactorMethods: null,
       errorState: null,
       error: null,
       pendingCredentials: null,
+    })
+  },
+
+  completeAppLogin: async (login: LoginResponse) => {
+    const { token, user: loginUser } = login
+    if (!token || !loginUser) {
+      throw new Error('Phone-confirmed sign-in response missing token or user')
+    }
+
+    set({ isLoading: true, error: null })
+    setAccessToken(token)
+    scheduleSessionHeartbeat()
+
+    // The same steps as the `login()` success path: /users/me for the full
+    // profile and permissions, the login payload + JWT when /me fails.
+    let user: User
+    try {
+      try {
+        const userResponse = await authApi.me()
+        const backendUser = userResponse.data
+        user = mapBackendUserToUser(backendUser)
+        applyPersistedLanguageFromServer(backendUser.language)
+        applyPersistedThemeFromServer(backendUser.theme_base, backendUser.theme_accent)
+      } catch {
+        user = await resolveAuthUser(
+          token,
+          toLoginUserFallback(loginUser as unknown as Record<string, unknown>)
+        )
+      }
+    } catch (error) {
+      // No half-signed-in state: the token goes with the failure.
+      setAccessToken(null)
+      cancelSessionHeartbeat()
+      set({ isLoading: false })
+      throw error
+    }
+
+    set({
+      user,
+      isAuthenticated: true,
+      isLoading: false,
+      error: null,
+      errorState: null,
+      lockoutMinutes: null,
+      twoFactorToken: null,
+      twoFactorUsername: null,
+      twoFactorMethods: null,
+      pendingCredentials: null,
+      hasCheckedAuth: true,
+    })
+  },
+
+  failAppLogin: ({ code, message, lockoutMinutes }: AppLoginRefusal) => {
+    // A refusal closes the request; a 2FA challenge it came from is not
+    // offered again — the person starts over from the password form.
+    set({
+      isLoading: false,
+      error: message || 'Login failed',
+      errorState: authErrorStateForCode(code),
+      lockoutMinutes: lockoutMinutes ?? null,
+      pendingCredentials: null,
+      twoFactorToken: null,
+      twoFactorUsername: null,
+      twoFactorMethods: null,
     })
   },
 
@@ -673,7 +808,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           })
           return
         }
-        const user = buildUserFromJwtToken(token)
+        const user = withCachedProjectSettings(buildUserFromJwtToken(token))
         // The JWT carries no timezone and /me is unreachable, so restore it
         // from the localStorage cache (written by the subscription below),
         // falling back to the browser timezone.
@@ -682,10 +817,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
         // Show a sticky "reconnecting" toast, dismissed once auth-service is
         // reachable again (see the interceptor in api.ts).
-        toast.warning('Connection problem — reconnecting…', {
-          id: 'auth-offline',
-          duration: Infinity,
-        })
+        toast.warning(
+          i18n.t('components.connection.reconnecting', {
+            defaultValue: 'Connection problem — reconnecting…',
+          }),
+          {
+            id: 'auth-offline',
+            duration: Infinity,
+          }
+        )
         runOnceOnNextAuthSuccess(() => {
           toast.dismiss('auth-offline')
         })
@@ -766,6 +906,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       pendingCredentials: null,
       twoFactorToken: null,
       twoFactorUsername: null,
+      twoFactorMethods: null,
     })
   },
 
@@ -820,6 +961,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           {
             id: String(active_project.project_id),
             name: active_project.project_name,
+            currency: active_project.currency,
+            country: active_project.country,
             roles: [{ id: String(active_project.role_id), name: active_project.role_name }],
           },
         ],
@@ -844,7 +987,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const meResponse = await authApi.me()
         userForApp = mapBackendUserToUser(meResponse.data)
       } catch {
-        userForApp = targetUserProfile
+        userForApp = withCachedProjectSettings(targetUserProfile)
       }
 
       set({
@@ -1003,6 +1146,20 @@ useAuthStore.subscribe((state) => {
   if (tz && tz !== lastPersistedTimezone) {
     lastPersistedTimezone = tz
     localStorage.setItem('user_timezone', tz)
+  }
+})
+
+useAuthStore.subscribe((state) => {
+  setActiveCurrency(activeProjectCurrency(state.user))
+  setActiveCountry(activeProjectCountry(state.user))
+  const settings = Object.fromEntries(
+    (state.user?.projects ?? [])
+      .filter((p) => p.currency || p.country)
+      .map((p) => [p.id, { currency: p.currency, country: p.country }])
+  )
+  const serialized = JSON.stringify(settings)
+  if (serialized !== '{}' && serialized !== localStorage.getItem('project_settings')) {
+    localStorage.setItem('project_settings', serialized)
   }
 })
 

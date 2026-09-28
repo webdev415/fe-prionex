@@ -17,6 +17,7 @@ import { describe, expect, it } from 'vitest'
 import {
   displayKey,
   formatHotkey,
+  HOTKEY_PASSTHROUGH_TRIGGER_ATTR,
   hotkeyFromEvent,
   isTypingTarget,
   normalizeKey,
@@ -175,6 +176,25 @@ describe('isTypingTarget', () => {
     expect(isTypingTarget(listbox.querySelector('[role="option"]'))).toBe(true)
     expect(isTypingTarget(el('<button role="combobox">Choose</button>'))).toBe(true)
     expect(isTypingTarget(el('<button aria-haspopup="menu">More</button>'))).toBe(true)
+  })
+
+  it('lets a pass-through trigger give keys back only while its popup is closed', () => {
+    // Focus returns to the assignee pencil when its popover closes. It has
+    // `aria-haspopup` but no type-ahead, so once collapsed it must not keep
+    // every binding silent.
+    const closed = el(
+      `<button aria-haspopup="listbox" aria-expanded="false" ${HOTKEY_PASSTHROUGH_TRIGGER_ATTR}>Edit</button>`
+    )
+    const open = el(
+      `<button aria-haspopup="listbox" aria-expanded="true" ${HOTKEY_PASSTHROUGH_TRIGGER_ATTR}>Edit</button>`
+    )
+    expect(isTypingTarget(closed)).toBe(false)
+    expect(isTypingTarget(open)).toBe(true)
+    // Unmarked triggers keep the old rule, collapsed or not: a Radix Select
+    // trigger type-aheads even while closed.
+    expect(
+      isTypingTarget(el('<button aria-haspopup="listbox" aria-expanded="false">Pick</button>'))
+    ).toBe(true)
   })
 
   it('is false for ordinary page elements', () => {

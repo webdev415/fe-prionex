@@ -3,17 +3,22 @@
  * серверные агрегаты, и заменить должно быть можно ровно в одном месте.
  *
  * Проверяем то, что легко испортить незаметно: масштаб денег (minor units),
- * кликабельность карточек статусов и конверсию, которая не должна делиться
- * на ноль на пустой выборке.
+ * счёт «таблеток» статусов из сводки (без сводки числа нет, отсутствующий
+ * статус — ноль), отсутствие статусных карточек у заявок и конверсию, которая
+ * не должна делиться на ноль на пустой выборке.
  */
 import { describe, it, expect } from 'vitest'
-import { buildApplicationMetrics, buildLoanMetrics, formatMinorTotal } from '../metrics'
+import {
+  applicationStatusCount,
+  buildApplicationMetrics,
+  buildLoanMetrics,
+  formatMinorTotal,
+} from '../metrics'
 import type { CreditApplicationSummary, CreditLoanSummary, CreditOverview } from '../types'
 
 const OVERVIEW: CreditOverview = {
   role: 'underwriter',
   permissions: [],
-  roles_available: [],
   applications: { referred: 2, scoring: 1, declined: 118, disbursed: 257, approved: 4 },
   loans: { active: 61, delinquent: 224, closed: 22 },
   application_statuses: ['scoring', 'referred', 'approved', 'declined', 'disbursed'],
@@ -60,33 +65,89 @@ describe('formatMinorTotal', () => {
 })
 
 describe('buildApplicationMetrics', () => {
-  it('карточки статусов кликабельны и берут числа из сводки', () => {
-    const metrics = buildApplicationMetrics(OVERVIEW, [APPLICATION], [])
-    const referred = metrics.find((metric) => metric.key === 'status:referred')
-    expect(referred?.value).toBe('2')
-    expect(referred?.status).toBe('referred')
+  // Статус переключают «таблетки» над списком; карточка статуса была вторым
+  // рядом того же фильтра, и её возврат — дубль, который снимала единица.
+  it('статусных метрик у заявок нет: статус переключают только «таблетки»', () => {
+    const metrics = buildApplicationMetrics(OVERVIEW, [APPLICATION])
+    const statusLike = metrics.filter(
+      (metric) => metric.status !== undefined || metric.key.startsWith('status:')
+    )
+    expect(
+      statusLike.map((metric) => metric.key),
+      'у заявок снова есть карточка статуса — второй ряд того же фильтра'
+    ).toEqual([])
+  })
+
+  it('над заявками — только деньги и конверсия', () => {
+    const metrics = buildApplicationMetrics(OVERVIEW, [APPLICATION])
+    expect(
+      metrics.map((metric) => metric.key),
+      'набор карточек над заявками не «запрошено + конверсия»'
+    ).toEqual(['sum:requested', 'rate:conversion'])
   })
 
   it('считает конверсию заявка → выдача по решённым заявкам', () => {
-    const metrics = buildApplicationMetrics(OVERVIEW, [APPLICATION], [])
+    const metrics = buildApplicationMetrics(OVERVIEW, [APPLICATION])
     // disbursed 257 из (approved 4 + declined 118 + disbursed 257) = 68 %
     expect(metrics.find((metric) => metric.key === 'rate:conversion')?.value).toBe('68%')
   })
 
   it('не делит на ноль, когда решений ещё нет', () => {
     const empty: CreditOverview = { ...OVERVIEW, applications: { in_progress: 3 } }
-    const metrics = buildApplicationMetrics(empty, [], [])
+    const metrics = buildApplicationMetrics(empty, [])
     expect(metrics.find((metric) => metric.key === 'rate:conversion')).toBeUndefined()
   })
 
   it('суммирует запрошенное по странице', () => {
-    const metrics = buildApplicationMetrics(OVERVIEW, [APPLICATION, APPLICATION], [])
+    const metrics = buildApplicationMetrics(OVERVIEW, [APPLICATION, APPLICATION])
     // 90 000 minor × 2 = 180 000 minor = 1 800 в основных единицах.
     // Разделитель разрядов зависит от языка (мок фиксирует 'en'), поэтому
     // сравниваем по цифрам, а не по форме: смысл теста — сумма, не локаль.
     const value = metrics.find((metric) => metric.key === 'sum:requested')?.value
     expect(value?.replace(/[^\d]/g, '')).toBe('1800')
     expect(value).toContain('CAD')
+  })
+})
+
+describe('applicationStatusCount', () => {
+  it('без сводки числа нет, а не ноль', () => {
+    expect(
+      applicationStatusCount(undefined, 'referred'),
+      'без сводки «таблетка» получила число — неизвестное выдано за ноль'
+    ).toBeNull()
+  })
+
+  it('число — из сводки модуля', () => {
+    expect(applicationStatusCount(OVERVIEW, 'referred'), 'счёт referred не из сводки').toBe('2')
+  })
+
+  it('статус без ключа в сводке — ноль, и ноль виден', () => {
+    // `expired` объявлен сводкой (`application_statuses`), но в счётчиках его нет.
+    const declared: CreditOverview = {
+      ...OVERVIEW,
+      application_statuses: [...OVERVIEW.application_statuses, 'expired'],
+    }
+    expect(
+      applicationStatusCount(declared, 'expired'),
+      'статус без ключа в сводке остался без числа, а это ноль в проекте'
+    ).toBe('0')
+  })
+
+  it('статус, которого сводка не считает, — без числа, даже если ключ есть', () => {
+    // Перечень сводки — источник правды: ключ в счётчиках без статуса в перечне
+    // не делает число правдой, а отсутствующий статус не делает правдой ноль.
+    const counted: CreditOverview = {
+      ...OVERVIEW,
+      applications: { ...OVERVIEW.applications, in_progress: 3 },
+    }
+    expect(
+      applicationStatusCount(OVERVIEW, 'contracted'),
+      'статус вне перечня сводки получил выдуманный ноль'
+    ).toBeNull()
+    expect(
+      applicationStatusCount(counted, 'in_progress'),
+      'статус вне перечня сводки получил число из счётчиков'
+    ).toBeNull()
   })
 })
 
