@@ -335,7 +335,8 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
     fd.append('activation_rule', activationRule)
     if (activationTagPayload != null) fd.append('activation_tag_id', String(activationTagPayload))
     if (documentTypeId != null) fd.append('document_type_id', String(documentTypeId))
-    fd.append('auto_generate', String(autoGeneratePayload))
+    // Upload only creates, so there is never a stored flag to clear.
+    if (autoGeneratePayload) fd.append('auto_generate', 'true')
     try {
       const res = await uploadMutation.mutateAsync(fd)
       toast.success(t('pages.documentGeneration.templates.messages.uploaded', 'Template uploaded'))

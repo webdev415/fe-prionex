@@ -97,6 +97,12 @@ vi.mock('@/features/documents/api/documentTemplatesApi', () => ({
   ]),
 }))
 
+// One document type, so a new .docx template can be armed for auto-generation.
+vi.mock('@/features/documentTypes', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/features/documentTypes')>()),
+  useDocumentTypes: () => ({ data: [{ id: 7, name: 'Closure note type', color: '#336699' }] }),
+}))
+
 import * as templatesApi from '@/features/documents/api/documentTemplatesApi'
 import { toast } from 'sonner'
 import { DocumentTemplateEditor } from '../DocumentTemplateEditor'
@@ -356,7 +362,7 @@ describe('DocumentTemplateEditor — generate automatically', () => {
     )
   })
 
-  it('a .docx upload carries the flag in the form', async () => {
+  it('a .docx upload leaves the flag out when it is off', async () => {
     const user = userEvent.setup()
     renderEditor(null)
 
@@ -367,6 +373,29 @@ describe('DocumentTemplateEditor — generate automatically', () => {
 
     await waitFor(() => expect(templatesApi.uploadDocumentTemplate).toHaveBeenCalled())
     const fd = vi.mocked(templatesApi.uploadDocumentTemplate).mock.calls[0][0] as FormData
-    expect(fd.get('auto_generate')).toBe('false')
+    // Upload only creates, so an absent field is the off state -- no 'false'
+    // string for the server to parse.
+    expect(fd.has('auto_generate')).toBe(false)
+  })
+
+  it('a .docx upload sends the flag as true when it is ticked', async () => {
+    const user = userEvent.setup()
+    renderEditor(null)
+
+    await user.click(screen.getAllByRole('combobox')[0])
+    await user.click(await screen.findByRole('option', { name: 'Closed debt' }))
+    await user.click(screen.getByRole('radio', { name: /\.docx file/i }))
+    await user.click(document.querySelector('#dt-doc-type') as HTMLElement)
+    await user.click(await screen.findByRole('option', { name: 'Closure note type' }))
+    await user.click(autoGenerateBox()!)
+    await user.type(screen.getByLabelText('Template name'), 'Closure note')
+    await user.upload(document.querySelector('#dt-file') as HTMLInputElement, docxFile())
+    await user.click(screen.getByRole('button', { name: /^Create$/ }))
+
+    await waitFor(() => expect(templatesApi.uploadDocumentTemplate).toHaveBeenCalled())
+    const fd = vi.mocked(templatesApi.uploadDocumentTemplate).mock.calls[0][0] as FormData
+    expect(fd.get('auto_generate')).toBe('true')
+    expect(fd.get('activation_rule')).toBe('closed_debt')
+    expect(fd.get('document_type_id')).toBe('7')
   })
 })
