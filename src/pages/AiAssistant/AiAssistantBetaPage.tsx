@@ -95,6 +95,7 @@ import {
 import { ANSWER_POLL_INTERVAL_MS, ANSWER_POLL_MAX_MS } from './answerPolling'
 import { ConversationSidebar } from './ConversationSidebar'
 import { ContextUsageRing } from './ContextUsageRing'
+import { FeedbackCommentBox, FeedbackCommentSent } from './FeedbackCommentBox'
 import { extractContextUsage, type ContextUsageSnapshot } from './contextUsage'
 import { SlashCommandMenu } from './SlashCommandMenu'
 import { exactSlashCommand, matchSlashCommands, type SlashCommand } from './slashCommands'
@@ -196,6 +197,21 @@ type AssistDropdownProps = {
 }
 
 type ChatRole = 'user' | 'assistant'
+
+/**
+ * Судьба формы «Що не так?» под 👎 конкретного ответа: `pending` — 👎 ещё едет
+ * на сервер (писать можно, отправлять нельзя), `open` — 👎 подтверждён.
+ */
+type FeedbackCommentStatus = 'pending' | 'open' | 'sending' | 'sent'
+type CommentStatusByMessage = Record<number, FeedbackCommentStatus>
+
+/** Копия записи без ключа; та же ссылка, если ключа нет (без лишнего ререндера). */
+function withoutKey<T>(record: Record<number, T>, key: number): Record<number, T> {
+  if (!(key in record)) return record
+  const next = { ...record }
+  delete next[key]
+  return next
+}
 
 /** Attachment rendered inside a feed bubble (object URL lives client-side only). */
 type LocalAttachment = {
@@ -994,6 +1010,10 @@ export function AiAssistantBetaPage() {
   const [feedbackByMessage, setFeedbackByMessage] = useState<Record<number, MessageFeedbackState>>(
     {}
   )
+  // Форма «Що не так?» под 👎, keyed by серверный message_id: ждёт 👎 / открыта /
+  // едет на сервер / передано. Нет записи — формы нет (не открывали или «Пропустити»).
+  // После F5 пусто намеренно: история диалога комментарий не отдаёт (ПДн).
+  const [commentByMessage, setCommentByMessage] = useState<CommentStatusByMessage>({})
   // Пометки источников «верно/неверно» (Слой 5), keyed by серверный message_id →
   // (номер сноски → вердикт). Оптимистичны: применяются сразу, откатываются при
   // ошибке POST. Живут в рамках монтирования (после F5 приходят с бэкенда — TODO
@@ -1071,7 +1091,11 @@ export function AiAssistantBetaPage() {
   const hasConversation = chatMessages.length > 0
 
   const { mutateAsync: sendChat } = useSendAssistantMessage()
-  const { mutate: mutateFeedback } = useSendFeedback()
+  // `mutateAsync`, а не `mutate`: колбэки `mutate` у экземпляра срабатывают
+  // только для ПОСЛЕДНЕГО вызова — «Незрозуміло», нажатое, пока 👎 ещё едет,
+  // съело бы откат и тост оценки, а форма «Що не так?» застряла бы в ожидании.
+  // Промис — на каждый вызов, со своим откатом.
+  const { mutateAsync: sendFeedbackRequest } = useSendFeedback()
   const { mutate: mutateMarkCitation } = useMarkCitation()
   const queryClient = useQueryClient()
   const expertCapability = useExpertCapability()
@@ -1705,6 +1729,7 @@ export function AiAssistantBetaPage() {
     setContextUsage(null)
     setAwaitingServerAnswer(false)
     setFeedbackByMessage({})
+    setCommentByMessage((current) => (Object.keys(current).length > 0 ? {} : current))
     setCitationMarksByMessage((current) => (Object.keys(current).length > 0 ? {} : current))
     setReasoningOpenByMessage((current) => (Object.keys(current).length > 0 ? {} : current))
     setFocusedCitation(null)
@@ -2708,17 +2733,69 @@ export function AiAssistantBetaPage() {
       const previous = feedbackByMessage[messageId]
       const merged: MessageFeedbackState = { ...effectiveFeedback[messageId], ...patch }
       setFeedbackByMessage((current) => ({ ...current, [messageId]: merged }))
-      mutateFeedback(feedbackRequestBody(messageId, merged), {
-        onError: () => {
+      // 👎 сразу спрашивает «Що не так?» — без причины оценка мало что говорит.
+      const opensComment = patch.rating === 'not_useful'
+      // Форма сразу видна, но «Надіслати» ждёт подтверждения 👎: комментарий,
+      // ушедший раньше оценки, пережил бы её откат.
+      if (opensComment) {
+        setCommentByMessage((current) => ({ ...current, [messageId]: 'pending' }))
+      }
+      sendFeedbackRequest(feedbackRequestBody(messageId, merged)).then(
+        () => {
+          if (!opensComment) return
+          setCommentByMessage((current) =>
+            current[messageId] === 'pending' ? { ...current, [messageId]: 'open' } : current
+          )
+        },
+        () => {
           // Свой текст, а не общий apiError: «оценка не сохранилась» и
           // «ассистент недоступен» — разные события для оператора.
           toast.error(t('pages.aiAssistant.feedbackFailed'))
           setFeedbackByMessage((current) => ({ ...current, [messageId]: previous ?? {} }))
-        },
-      })
+          // Оценки нет — и комментировать нечего: форма уходит вместе с 👎.
+          // Комментарий до подтверждения 👎 не отправляется, так что уходит
+          // только ждущая/открытая форма, а не уже переданный текст.
+          if (opensComment) {
+            setCommentByMessage((current) => withoutKey(current, messageId))
+          }
+        }
+      )
     },
-    [effectiveFeedback, feedbackByMessage, mutateFeedback, t]
+    [effectiveFeedback, feedbackByMessage, sendFeedbackRequest, t]
   )
+
+  /**
+   * «Надіслати» в форме «Що не так?»: та же оценка 👎 ещё раз, теперь с
+   * `comment` (прокси хранит его шифрованно, мозг маскирует ПДн). Пропущенные
+   * поля сервер не трогает, поэтому тело — текущая оценка + комментарий.
+   */
+  const handleFeedbackComment = useCallback(
+    (messageId: number, comment: string) => {
+      setCommentByMessage((current) => ({ ...current, [messageId]: 'sending' }))
+      const body = {
+        ...feedbackRequestBody(messageId, {
+          ...effectiveFeedback[messageId],
+          rating: 'not_useful',
+        }),
+        comment,
+      }
+      sendFeedbackRequest(body).then(
+        () => setCommentByMessage((current) => ({ ...current, [messageId]: 'sent' })),
+        () => {
+          toast.error(t('pages.aiAssistant.feedbackCommentFailed'))
+          // Форма и набранный текст остаются — повторить можно без перепечатки.
+          setCommentByMessage((current) =>
+            current[messageId] === 'sending' ? { ...current, [messageId]: 'open' } : current
+          )
+        }
+      )
+    },
+    [effectiveFeedback, sendFeedbackRequest, t]
+  )
+
+  const handleFeedbackCommentSkip = useCallback((messageId: number) => {
+    setCommentByMessage((current) => withoutKey(current, messageId))
+  }, [])
 
   // Пометка источника факт-сноски «верно/неверно» (Слой 5). Оптимистично
   // подсвечиваем выбор; повторный клик по тому же вердикту снимает пометку
@@ -2996,17 +3073,43 @@ export function AiAssistantBetaPage() {
     )
   }
 
+  /** «Що не так?» под строкой оценки: форма после 👎 или «Дякуємо, передано». */
+  const renderFeedbackComment = (serverMessageId: number | null) => {
+    if (serverMessageId == null) return null
+    const status = commentByMessage[serverMessageId]
+    if (status === 'sent') return <FeedbackCommentSent messageId={serverMessageId} />
+    if (status == null) return null
+    return (
+      <FeedbackCommentBox
+        messageId={serverMessageId}
+        ratingPending={status === 'pending'}
+        sending={status === 'sending'}
+        // Форма под последним ответом стоит у самой панели ввода: прокрутка
+        // оставляет над панелью её высоту (dockHeight уже с зазором).
+        scrollMarginBottom={dockHeight}
+        // Узкая раскладка/док OneX — почти всегда сенсор: без фокуса, чтобы
+        // клавиатура не накрыла только что оценённый ответ.
+        focusOnOpen={!isMobileOrTablet}
+        onSubmit={(comment) => handleFeedbackComment(serverMessageId, comment)}
+        onSkip={() => handleFeedbackCommentSkip(serverMessageId)}
+      />
+    )
+  }
+
   /** TTS playback + feedback in one row under an assistant bubble. */
   const renderAssistantActions = (item: ChatMessage) => (
-    <div className="mt-1.5 flex flex-wrap items-center gap-1.5 px-1">
-      {renderTtsButton(item)}
-      {renderThinkingFact(item)}
-      {item.expert && renderExpertCost(item.expert)}
-      {/* Оценка есть у ЛЮБОГО дописанного ответа. Прятать её при неизвестном
-          серверном id значило прятать и сам факт, что оценить нельзя. */}
-      <span className="bg-border mx-0.5 h-4 w-px" aria-hidden />
-      {renderFeedbackControls(item.serverMessageId ?? null)}
-    </div>
+    <>
+      <div className="mt-1.5 flex flex-wrap items-center gap-1.5 px-1">
+        {renderTtsButton(item)}
+        {renderThinkingFact(item)}
+        {item.expert && renderExpertCost(item.expert)}
+        {/* Оценка есть у ЛЮБОГО дописанного ответа. Прятать её при неизвестном
+            серверном id значило прятать и сам факт, что оценить нельзя. */}
+        <span className="bg-border mx-0.5 h-4 w-px" aria-hidden />
+        {renderFeedbackControls(item.serverMessageId ?? null)}
+      </div>
+      {renderFeedbackComment(item.serverMessageId ?? null)}
+    </>
   )
 
   /**
