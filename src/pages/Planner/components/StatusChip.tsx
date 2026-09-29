@@ -1,11 +1,16 @@
 /**
- * Status chip of a task (planner story 1.10, AC3; UX «Чип статуса»).
+ * Status chip of a task (planner stories 1.10 AC3, 5.1 AC2/AC5; UX «Чип статуса»).
  *
- * Category dot + the board's status name. It is a button only when the server
- * put `change_status` in the task's `allowed_actions`; otherwise it is plain
- * text — no dead control. The list is the board's statuses with the current one
- * on top; the change goes out as `PATCH /tasks/{id}` under `If-Match`.
- * A status marked `requires_reason` asks for the reason first (UX «Диалог причины»).
+ * Category dot (DESIGN.md `cat-*`, `plannerTones`) + the board's status name,
+ * as the board spelled it. It is a button only when the server put
+ * `change_status` in the task's `allowed_actions`; otherwise it is plain text —
+ * no dead control. The contract has no per-transition rules (any status of the
+ * board is a legal target once `change_status` is there), so the menu is the
+ * board's statuses with the current one on top; the change goes out as
+ * `PATCH /tasks/{id}` under `If-Match` and is undone from a 5 s «Скасувати»
+ * toast. A status marked `requires_reason` asks for the reason first (UX
+ * «Диалог причины»), and a task that LEAVES such a status gets no undo: going
+ * back would need a reason nobody typed.
  *
  * The board (its statuses) is loaded as soon as the chip is a button, not when
  * the menu opens: otherwise the first click on «Мої задачі» or in the task panel
@@ -39,14 +44,9 @@ import {
   type PlannerTaskCard,
 } from '@/api/planner/plannerApi'
 import { useChangeTaskStatus } from '../hooks/usePlannerMutations'
+import { CATEGORY_DOT } from '../plannerTones'
 
 type Category = PlannerTaskCard['status']['category']
-
-const DOT: Record<Category, string> = {
-  todo: 'bg-muted-foreground',
-  in_progress: 'bg-info-500',
-  done: 'bg-success-500',
-}
 
 type ChipTask = Pick<
   PlannerTaskCard,
@@ -56,7 +56,10 @@ type ChipTask = Pick<
 function ChipFace({ name, category }: { name: string; category: Category }) {
   return (
     <>
-      <span aria-hidden="true" className={cn('h-2 w-2 shrink-0 rounded-full', DOT[category])} />
+      <span
+        aria-hidden="true"
+        className={cn('h-2 w-2 shrink-0 rounded-full', CATEGORY_DOT[category])}
+      />
       <span className="truncate">{name}</span>
     </>
   )
@@ -113,6 +116,10 @@ export function StatusChip({ task }: { task: ChipTask }) {
     </DropdownMenuItem>
   )
 
+  // Unknown in the loaded configuration (renamed away meanwhile) counts as
+  // «needs a reason»: no undo rather than an undo the server refuses.
+  const leavesReasonStatus = statuses.find((s) => s.id === task.status.id)?.requires_reason ?? true
+
   const send = (status: PlannerBoardStatus, withReason?: string) =>
     change.mutate({
       id: task.id,
@@ -121,6 +128,7 @@ export function StatusChip({ task }: { task: ChipTask }) {
       version: task.version,
       statusId: status.id,
       reason: withReason,
+      undo: leavesReasonStatus ? undefined : { statusId: task.status.id, toName: status.name },
     })
 
   const pick = (status: PlannerBoardStatus) => {

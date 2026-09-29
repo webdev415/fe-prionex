@@ -8,15 +8,17 @@
  *   `underline`); inside «Задачі» — `Мої задачі · Дошка ▾` (AC2).
  * - `prep` mode: a permanent info banner for those who see the section (U-40).
  * - `?task=KEY` opens the task panel on any screen of the section (1.10).
+ * - One tooltip provider for the whole section (5.1, `PlannerTooltip`).
  */
 import { useTranslation } from 'react-i18next'
 import { matchPath, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { Alert } from '@/components/ui/Alert'
 import { SegmentedTabs, segmentedTabId, segmentedTabPanelId } from '@/components/ui/SegmentedTabs'
 import { usePlannerSection } from '@/api/planner/plannerQueries'
 import { PlannerGateMessage } from './components/PlannerGateMessage'
 import { TasksNav } from './components/TasksNav'
 import { TaskPanel } from './components/TaskPanel'
+import { PlannerBanners, type PlannerBanner } from './components/PlannerStates'
+import { PlannerTooltipProvider } from './components/PlannerTooltip'
 import { PLANNER_CALENDAR_PATH, PLANNER_TASKS_PATH } from './plannerFormat'
 import { usePlannerTaskParam } from './usePlannerTaskParam'
 
@@ -37,38 +39,45 @@ export function PlannerLayout() {
   if (section.kind === 'unavailable') return <PlannerGateMessage kind="unavailable" />
 
   const tab: PlannerTab = location.pathname.startsWith(PLANNER_CALENDAR_PATH) ? 'calendar' : 'tasks'
+  // One banner per reason (5.1); the section's own reasons join this list.
+  const banners: PlannerBanner[] =
+    section.meta.mode === 'prep' ? [{ reason: 'prep', tone: 'info', text: t('prepBanner') }] : []
 
   return (
-    <div className="space-y-4 p-6">
-      <h1 className="text-foreground text-xl font-semibold">{t('section.title')}</h1>
+    <PlannerTooltipProvider>
+      <div className="space-y-4 p-6">
+        <h1 className="text-foreground text-xl font-semibold">{t('section.title')}</h1>
 
-      {section.meta.mode === 'prep' && <Alert variant="info">{t('prepBanner')}</Alert>}
+        <PlannerBanners banners={banners} />
 
-      <SegmentedTabs<PlannerTab>
-        variant="underline"
-        activation="manual"
-        idPrefix={TAB_PREFIX}
-        ariaLabel={t('tabs.ariaLabel')}
-        value={tab}
-        onChange={(next) => navigate(next === 'tasks' ? PLANNER_TASKS_PATH : PLANNER_CALENDAR_PATH)}
-        items={[
-          { id: 'tasks', label: t('tabs.tasks') },
-          { id: 'calendar', label: t('tabs.calendar') },
-        ]}
-      />
+        <SegmentedTabs<PlannerTab>
+          variant="underline"
+          activation="manual"
+          idPrefix={TAB_PREFIX}
+          ariaLabel={t('tabs.ariaLabel')}
+          value={tab}
+          onChange={(next) =>
+            navigate(next === 'tasks' ? PLANNER_TASKS_PATH : PLANNER_CALENDAR_PATH)
+          }
+          items={[
+            { id: 'tasks', label: t('tabs.tasks') },
+            { id: 'calendar', label: t('tabs.calendar') },
+          ]}
+        />
 
-      <div
-        role="tabpanel"
-        id={segmentedTabPanelId(TAB_PREFIX, tab)}
-        aria-labelledby={segmentedTabId(TAB_PREFIX, tab)}
-        className="space-y-4"
-      >
-        {tab === 'tasks' && <TasksNav activeBoard={activeBoard} />}
-        <Outlet />
+        <div
+          role="tabpanel"
+          id={segmentedTabPanelId(TAB_PREFIX, tab)}
+          aria-labelledby={segmentedTabId(TAB_PREFIX, tab)}
+          className="space-y-4"
+        >
+          {tab === 'tasks' && <TasksNav activeBoard={activeBoard} />}
+          <Outlet />
+        </div>
+
+        {taskKey && <TaskPanel key={taskKey} taskKey={taskKey} onClose={closeTask} />}
       </div>
-
-      {taskKey && <TaskPanel key={taskKey} taskKey={taskKey} onClose={closeTask} />}
-    </div>
+    </PlannerTooltipProvider>
   )
 }
 

@@ -14,6 +14,9 @@ import {
   listBoards,
   listBoardTasks,
   listMyTasks,
+  PLANNER_PEOPLE_QUERY_MAX,
+  PLANNER_PEOPLE_QUERY_MIN,
+  plannerTextLength,
   resolveTask,
   searchPeople,
   type PlannerMeta,
@@ -146,10 +149,11 @@ export function usePlannerTask(key: string | null) {
 }
 
 /**
- * People search needs at least two characters (contract `minLength: 2`). The
- * caller debounces the text. While the next answer loads, the previous one is
- * kept only when the new text is itself a search (two characters or more) and
- * one text is a prefix of the other — the list does not blink while a name is
+ * People search needs 2–100 characters after trimming (contract `minLength: 2`,
+ * `maxLength: 100`, counted like the planner counts runes): a longer text is
+ * not sent at all — it would only earn a 400. The caller debounces the text.
+ * While the next answer loads, the previous one is kept only when the new text
+ * is itself a search and one text is a prefix of the other — the list does not blink while a name is
  * typed or corrected. A shorter text (the field cleared after a pick, or its
  * first letter) keeps nothing. The next name can briefly show the last
  * search's people only while one text still continues the other, and those
@@ -157,18 +161,25 @@ export function usePlannerTask(key: string | null) {
  */
 export function usePlannerPeople(q: string) {
   const query = q.trim()
+  const searchable = isPeopleQuery(query)
   return useQuery({
     queryKey: plannerKeys.people(query),
     queryFn: () => searchPeople(query),
-    enabled: query.length >= 2,
+    enabled: searchable,
     staleTime: 60_000,
     placeholderData: (previous: PlannerPeopleList | undefined, previousQuery) => {
       const before = previousQuery?.queryKey[2]
       const refining =
-        query.length >= 2 &&
+        searchable &&
         typeof before === 'string' &&
         (query.startsWith(before) || before.startsWith(query))
       return refining ? keepPreviousData(previous) : undefined
     },
   })
+}
+
+/** A trimmed text the people search accepts (2–100 characters). */
+export function isPeopleQuery(query: string): boolean {
+  const length = plannerTextLength(query)
+  return length >= PLANNER_PEOPLE_QUERY_MIN && length <= PLANNER_PEOPLE_QUERY_MAX
 }

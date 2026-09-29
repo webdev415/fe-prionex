@@ -12,7 +12,11 @@ import { piiProps } from '@/lib/openreplay/pii'
 import { usePlannerTask } from '@/api/planner/plannerQueries'
 import { readPlannerError } from '@/api/planner/plannerErrors'
 import { StatusChip } from './StatusChip'
-import { AssigneeNames, DuePill } from './TaskMeta'
+import { AssigneeNames } from './TaskMeta'
+import { DuePill, SlaPill } from './TaskPills'
+import { OriginChip } from './OriginChip'
+import { PriorityIcon } from './PriorityIcon'
+import { PanelSkeleton } from './PlannerStates'
 
 /**
  * An `Esc` meant for a layer opened above the panel — the reason dialog, the
@@ -72,13 +76,17 @@ export function TaskPanel({ taskKey, onClose }: TaskPanelProps) {
       </div>
 
       <div className="flex-1 space-y-4 overflow-auto p-4">
-        {task.isPending && <p className="text-muted-foreground text-sm">{t('panel.loading')}</p>}
+        {task.isPending && <PanelSkeleton />}
         {task.isError && <p className="text-foreground text-sm">{t(errorTextKey(task.error))}</p>}
         {task.data && (
           <>
             <h2 className="text-foreground text-lg font-semibold break-words" {...piiProps}>
               {task.data.title}
             </h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <PriorityIcon task={task.data} />
+              <OriginChip origin={task.data.origin} />
+            </div>
             <dl className="space-y-3 text-sm">
               <div>
                 <dt className="text-muted-foreground text-xs">{t('task.status')}</dt>
@@ -94,8 +102,9 @@ export function TaskPanel({ taskKey, onClose }: TaskPanelProps) {
               </div>
               <div>
                 <dt className="text-muted-foreground text-xs">{t('task.due')}</dt>
-                <dd>
+                <dd className="flex flex-wrap items-center gap-2">
                   <DuePill task={task.data} />
+                  <SlaPill task={task.data} />
                 </dd>
               </div>
               <div>

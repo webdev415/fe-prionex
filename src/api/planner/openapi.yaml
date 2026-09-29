@@ -1,5 +1,5 @@
 # Vendored copy of CRM/planner api/openapi.yaml — do not edit by hand.
-# planner-commit: 6b6b5b5182ca6fe77bbfd36ddc2ca1da3be8ea80
+# planner-commit: 22683077ea7b48f76a7df6e8a27f0937ec6e85d8
 # Planner story 1.9 (AA-72): types are generated from this file into schema.ts
 # by `npm run planner:types`; the drift test in src/api/planner/__tests__ fails
 # when schema.ts does not match. Refresh = copy the file from a newer planner
@@ -178,10 +178,32 @@
 # checklist — последний в словаре TaskEditableField (право на команды чек-листа).
 # Периметр Kong не меняется: пути под группой tasks. Следует за 0.21.0 (3.14,
 # 3.11, 3.7, 3.5, 3.8).
+# История 3.12 (AD-19, ADR-06 A-50, A-14, AA-80; FR-25, FR-26), версия 0.23.0: SLA
+# на накопленном времени — Task несёт sla_state (SLAState: off, running, soon,
+# paused, breached), sla_deadline_at, sla_remaining_seconds, sla_breached_at,
+# sla_breached_board_id и проекцию доски нарушения sla_breached_board {id, code,
+# name}; TaskCard — sla_state и sla_deadline_at. SLA-срок считает сервер (ключа в
+# TaskPatch нет — 400 body); смена статуса или типа, перенос PUT /config и смена
+# пояса PUT /tzid пересчитывают его; нарушение — строка истории sla_breached (от
+# системы). Новых путей нет, периметр Kong не меняется. Следует за 0.22.0.
+# История 3.13 (FR-12, FR-53, NFR-5, AA-57, AA-71), версия 0.24.0: проекции доски
+# — канбан GET /boards/{code}/kanban (колонки — статусы в порядке конфигурации,
+# до 50 карточек и total в колонке, в колонках done — закрытые за 7 дней) и вид
+# «список» — GET /boards/{code}/tasks с курсором (cursor → next_cursor) в общем
+# порядке доски; у обоих — фильтры assignee_user_id, author_user_id, label_id,
+# priority_id, type_id, field_id + field_value, overdue, needs_triage и поиск q
+# (название, описание, номер, ключ «КОД-n»). Видимость — Scope пути board
+# (невидимая задача не показывается и не считается). TaskCard — origin,
+# labels_total, inactive_assignee (канбан отдаёт первые три метки);
+# TaskCardList.next_cursor. Без новых параметров GET /boards/{code}/tasks отдаёт
+# прежний набор и порядок. Перетаскивание — прежний PATCH /tasks/{id} (status_id +
+# position). Путь канбана — в группе boards: периметр Kong не меняется. Строка
+# запроса, которую сервер не разбирает, — 400 query; курсор привязан к доске и
+# набору фильтров (чужой — 400 cursor). Следует за 0.23.0.
 openapi: 3.0.3
 info:
   title: Prionex Planner API
-  version: 0.22.0
+  version: 0.24.0
   description: >-
     Планер Prionex — единственная система учёта рабочих задач, досок и календаря.
     Каждый запрос идёт под JWT CRM конечного пользователя (Authorization: Bearer),
@@ -209,7 +231,8 @@ tags:
   - name: tasks
     description: >-
       Задачи досок — создание, смена статуса, порядка и исполнителей одной командой
-      PATCH, чтение по UUID и по ключу «КОД-n», история, «Поставлені мені»
+      PATCH, чтение по UUID и по ключу «КОД-n», история, «Поставлені мені»;
+      проекции доски — канбан и список с фильтрами и поиском (история 3.13)
   - name: calendar
     description: >-
       События календаря — создание, чтение одного события, правка и отмена
@@ -1275,20 +1298,29 @@ paths:
         член и гость — 403, не участник — 404; архивная доска — 409
         board_archived. If-Match обязателен: нет — 428, устаревшая или кривая
         версия — 412 `revision_mismatch` с details.current (карточка). Смена пояса
-        пересчитывает крайние моменты (due_deadline_at) открытых задач доски со
-        сроком-датой, включая «Кошик», одной транзакцией: due_date не меняется,
-        момент — полночь после даты в новом поясе (сутки перевода часов — 23 или
-        25 ч); срок-момент (due_at) от пояса не зависит; закрытые задачи хранят
-        момент своего пояса, при переоткрытии он пересчитывается в текущем поясе
-        доски. У каждой задачи с изменённым моментом — версия +1 и строка журнала
-        updated (before/after — только due_deadline_at); событий planner.task.*
-        нет. Доска — tzid, версия +1, строка журнала tzid_changed (before {tzid},
-        after {tzid, recomputed_tasks}) и одно событие planner.board.updated (срез
-        с новым tzid, moved_tasks пуст) в той же транзакции; ответ — карточка с
-        ETag. Тот же пояс — 200 без записи и роста версии. Предел — открытых задач
-        со сроком-датой ≤ 2000: иначе 400 `validation`, details.field = tzid,
-        details.reason = recompute_too_large, details.used_count — их число (в
-        обоих режимах, ни одна строка задачи не блокируется); срок-дата, которая в
+        одной транзакцией пересчитывает открытые задачи доски, включая «Кошик»,
+        со сроком-датой или с идущими часами SLA по будням (история 3.12).
+        Срок-дата: due_date не меняется, крайний момент (due_deadline_at) —
+        полночь после даты в новом поясе (сутки перевода часов — 23 или 25 ч);
+        срок-момент (due_at) от пояса не зависит; закрытые задачи хранят момент
+        своего пояса, при переоткрытии он пересчитывается в текущем поясе доски.
+        Часы SLA по будням: интервал до смены закрывается в старом поясе, новый
+        открывается в новом, SLA-срок (sla_deadline_at) пересчитывается. У задачи
+        с изменённым крайним моментом (срока или SLA-срока) — версия +1 и строка
+        журнала updated (before/after — только изменённые из due_deadline_at и
+        sla_deadline_at). Версия +1 без строки updated — и у задачи, чьё
+        нарушение SLA нашёл пересчёт или у которой смена пояса сдвигает рабочее
+        время уже идущего интервала при том же SLA-сроке. Нарушение SLA —
+        строка журнала sla_breached от system (actor пуст) в той же транзакции.
+        Событий planner.task.* нет. Доска — tzid, версия +1, строка журнала
+        tzid_changed (before {tzid}, after {tzid, recomputed_tasks}) и одно
+        событие planner.board.updated (срез с новым tzid, moved_tasks пуст) в той
+        же транзакции; ответ — карточка с ETag. Тот же пояс — 200 без записи и
+        роста версии. Предел — открытых задач доски со сроком-датой или с идущими
+        часами SLA по будням (один общий счёт) ≤ 2000: иначе 400 `validation`,
+        details.field = tzid, details.reason = recompute_too_large,
+        details.used_count — их число (в обоих режимах, ни одна строка задачи не
+        блокируется); срок-дата, которая в
         новом поясе даёт момент вне годов 1–9999, — 400 tzid, due_out_of_range.
         Форма 400 — как у PUT /boards/{code}/config: details.field,
         details.reason, details.used_count первой ошибки и details.errors[]. С
@@ -1774,9 +1806,23 @@ paths:
         по умолчанию 200; иное — 400, details.field = limit); has_more = true —
         за пределом limit на доске есть ещё задачи. Предел общий на всю доску, а
         не на колонку: список режется в порядке колонок, поэтому на доске больше
-        limit задач правые колонки урезаются первыми (вплоть до пустых). Курсор
-        (keyset) — история 3.21, добавится аддитивно; до него сервер режет ответ
-        по limit. Ответ
+        limit задач правые колонки урезаются первыми (вплоть до пустых). Вид
+        «список» (история 3.13): при has_more = true ответ несёт next_cursor —
+        следующая страница в том же порядке запрашивается с cursor = next_cursor
+        и теми же фильтрами. Фильтры (assignee_user_id, author_user_id, label_id,
+        priority_id, type_id, field_id + field_value, overdue, needs_triage, q) —
+        те же, что у канбана GET /boards/{code}/kanban; только сужают видимое,
+        условия — через И. Каждый параметр — не больше одного раза (повтор —
+        400 этого параметра, в том числе limit); пустое значение — 400, кроме q.
+        Строка запроса, которую сервер не разбирает (кривая %-последовательность
+        вроде `?q=%zz`, незакодированная «;» вроде `?q=a;b`), — 400 `validation`
+        с details.field = query: параметр не отбрасывается молча, фильтр не
+        пропадает. Порядок отказов: строка запроса (query), limit, cursor (форма
+        и содержание), фильтры (сначала повтор и пустое значение, затем
+        значения) (400) → доска не видна (404) → field_id и field_value по
+        конфигурации доски (400) → cursor выдан для другой доски или другого
+        набора фильтров (400 cursor). Без cursor и фильтров ответ — тот
+        же набор и порядок, что до 3.13. Ответ
         несёт сильный ETag (хеш тела): совпавший If-None-Match — 304 без тела.
         Cache-Control: private, no-cache.
       parameters:
@@ -1788,7 +1834,8 @@ paths:
             Наибольшее число карточек в ответе: целое 1–500 без знака и ведущих
             нулей, по умолчанию 200 (параметра нет); иное, в том числе пустое
             значение (`?limit=`), — 400 `validation` с details.field = limit.
-            Курсора нет до истории 3.21.
+            Курсор — у вида «список» доски (cursor, история 3.13); у «Поставлені
+            мені» — с историей 3.21.
           content:
             text/plain:
               schema:
@@ -1796,6 +1843,137 @@ paths:
                 minimum: 1
                 maximum: 500
                 default: 200
+        - name: cursor
+          in: query
+          required: false
+          description: >-
+            Курсор следующей страницы — next_cursor прежнего ответа (непрозрачная
+            строка; клиент её не разбирает и шлёт с теми же фильтрами). Кривой
+            курсор — 400 `validation` с details.field = cursor. Курсор привязан
+            к доске и набору фильтров, под которыми выдан: с другой доской или
+            другими фильтрами — тоже 400 cursor (сменив фильтр, клиент начинает
+            список без cursor). Те же фильтры в другом порядке параметров или с
+            пробелами по краям q — тот же набор, курсор принимается.
+          content:
+            text/plain:
+              schema:
+                type: string
+        - &filterAssignee
+          name: assignee_user_id
+          in: query
+          required: false
+          description: >-
+            Только задачи, где этот человек — исполнитель (UUID пользователя). Не
+            UUID — 400, details.field = assignee_user_id; человек без задач на
+            доске — пустой результат.
+          content:
+            text/plain:
+              schema:
+                type: string
+        - &filterAuthor
+          name: author_user_id
+          in: query
+          required: false
+          description: Только задачи этого автора («Замовник»; UUID пользователя). Не UUID — 400.
+          content:
+            text/plain:
+              schema:
+                type: string
+        - &filterLabel
+          name: label_id
+          in: query
+          required: false
+          description: Только задачи с этой меткой доски (id метки). Не UUID — 400; чужой id — пустой результат.
+          content:
+            text/plain:
+              schema:
+                type: string
+        - &filterPriority
+          name: priority_id
+          in: query
+          required: false
+          description: Только задачи этого уровня приоритета доски. Не UUID — 400.
+          content:
+            text/plain:
+              schema:
+                type: string
+        - &filterType
+          name: type_id
+          in: query
+          required: false
+          description: Только задачи этого типа доски. Не UUID — 400.
+          content:
+            text/plain:
+              schema:
+                type: string
+        - &filterFieldID
+          name: field_id
+          in: query
+          required: false
+          description: >-
+            Поле доски для фильтра по значению — только вместе с field_value
+            (одно без другого — 400 недостающего). Не UUID или не живое поле
+            конфигурации доски — 400, details.field = field_id.
+          content:
+            text/plain:
+              schema:
+                type: string
+        - &filterFieldValue
+          name: field_value
+          in: query
+          required: false
+          description: >-
+            Значение поля field_id: у single_select и multi_select — id варианта
+            (задачи, где он выбран); у number — число (1.50 и 1.5 — одно
+            значение); у text, date (YYYY-MM-DD), link и person (UUID) — значение
+            целиком. Не по типу поля — 400, details.field = field_value.
+          content:
+            text/plain:
+              schema:
+                type: string
+        - &filterOverdue
+          name: overdue
+          in: query
+          required: false
+          description: >-
+            true — только просроченные: открытые задачи, у которых ближайший из
+            срока и SLA-срока прошёл (единая просрочка, история 3.11); false — без
+            фильтра; иное — 400.
+          content:
+            text/plain:
+              schema:
+                type: string
+                enum: ["true", "false"]
+        - &filterNeedsTriage
+          name: needs_triage
+          in: query
+          required: false
+          description: >-
+            true — только неразобранные заявки: заявка без исполнителя в статусе
+            доски по умолчанию (чип «Нерозібрані»; у карточек needs_triage = true);
+            false — без фильтра; иное — 400.
+          content:
+            text/plain:
+              schema:
+                type: string
+                enum: ["true", "false"]
+        - &filterQ
+          name: q
+          in: query
+          required: false
+          description: >-
+            Поиск по названию, описанию и номеру: полнотекстовый (конфигурация
+            ukr_rus, префиксное совпадение слов, от 2 символов) или номер задачи —
+            «42» либо ключ «КОД-42» этой доски (регистр не важен); совпадение
+            любого. Полнотекстовый поиск берёт первые 8 слов (и не больше 8
+            лексем) — остальные отбрасываются молча, без 400; префиксно ищется
+            лексема от 2 символов, однобуквенная — только целиком. Пробелы по
+            краям обрезаются; пусто — без фильтра; длиннее 200
+            символов, с NUL или невалидным UTF-8 — 400, details.field = q.
+          content:
+            text/plain:
+              schema:
+                type: string
         - &ifNoneMatch
           name: If-None-Match
           in: header
@@ -1918,6 +2096,81 @@ paths:
           $ref: "#/components/responses/Conflict"
         "413":
           $ref: "#/components/responses/PayloadTooLarge"
+        "503":
+          $ref: "#/components/responses/Unavailable"
+        default:
+          $ref: "#/components/responses/Error"
+  /boards/{code}/kanban:
+    get:
+      operationId: getBoardKanban
+      tags: [tasks]
+      summary: Канбан доски — колонки статусов, до 50 карточек и total в колонке
+      description: >-
+        Проходит право planner.access и выключатель. Кто видит доску и какие
+        карточки — как у GET /boards/{code}/tasks: участник любой роли и держатель
+        planner.admin (личную — только владелец), не участник со своей живой
+        заявкой — в гостевом виде; прочим и несуществующей доске — 404
+        `not_found`; член при own_and_intake — задачи со своей связью (и
+        неразобранные заявки, если разбирает). Колонки — все статусы доски в
+        порядке конфигурации, в том числе пустые. В колонке — первые 50 видимых
+        актору задач, прошедших фильтры, в порядке колонки (порядок PATCH
+        position), и total — их число; в колонках категории done — только
+        закрытые за 7 дней. Невидимая актору задача не показывается и не
+        считается ни в total, ни в поиске (AA-57). Подкачки колонки нет: «ще N»
+        (N = total − число карточек) ведёт в вид «список». Карточка — TaskCard с
+        первыми тремя метками (labels_total — сколько их всего). Фильтры и
+        отказы — те же, что у вида «список» (без limit и cursor), в том числе
+        400 query на строку запроса, которую сервер не разбирает. Перетаскивание
+        — PATCH /tasks/{id} со status_id и position (AA-71). Ответ несёт сильный
+        ETag (хеш тела): совпавший If-None-Match — 304 без тела. Cache-Control:
+        private, no-cache.
+      parameters:
+        - name: code
+          in: path
+          required: true
+          description: Код доски (^[A-Z]{2,10}$); иной код — 404.
+          content:
+            text/plain:
+              schema:
+                type: string
+        - *filterAssignee
+        - *filterAuthor
+        - *filterLabel
+        - *filterPriority
+        - *filterType
+        - *filterFieldID
+        - *filterFieldValue
+        - *filterOverdue
+        - *filterNeedsTriage
+        - *filterQ
+        - *ifNoneMatch
+      responses:
+        "200":
+          description: Колонки канбана
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/XRequestID"
+            ETag:
+              $ref: "#/components/headers/ListETag"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BoardKanban"
+        "304":
+          description: Канбан не изменился (If-None-Match совпал); тела нет
+          headers:
+            X-Request-ID:
+              $ref: "#/components/headers/XRequestID"
+            ETag:
+              $ref: "#/components/headers/ListETag"
+        "400":
+          $ref: "#/components/responses/Validation"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
         "503":
           $ref: "#/components/responses/Unavailable"
         default:
@@ -4032,7 +4285,7 @@ components:
       type: object
       nullable: true
       description: Последняя ночная сверка зеркала со снимком; null — сверки не было.
-      required: [on, drift]
+      required: ["on", drift]
       properties:
         "on":
           type: string
@@ -4672,8 +4925,10 @@ components:
           type: integer
           minimum: 0
           description: >-
-            Открытые задачи доски со сроком-датой (включая «Кошик»), у которых
-            изменится крайний момент.
+            Открытые задачи доски (включая «Кошик»), у которых изменится крайний
+            момент срока (due_deadline_at) или SLA-срок (sla_deadline_at); задачи,
+            у которых меняются только часы SLA или фиксируется нарушение, в счёт
+            не входят.
         overdue_before:
           type: integer
           minimum: 0
@@ -4752,7 +5007,7 @@ components:
           description: >-
             Часовой пояс доски (IANA), по умолчанию Europe/Kyiv; меняется только
             PUT /boards/{code}/tzid (с пересчётом крайних моментов открытых задач со
-            сроком-датой).
+            сроком-датой и часов SLA по будням).
         version:
           type: integer
           format: int64
@@ -5851,9 +6106,23 @@ components:
         Состояние срока (считает сервер): none — срока нет; ok — срок не скоро или
         задача закрыта; soon — до крайнего момента не больше 24 ч; overdue — прошёл.
         Только срок; просрочка в списках и счётчиках — по least(срок, SLA-срок)
-        открытых задач (SLA-срок — история 3.12).
+        открытых задач; состояние SLA — sla_state (SLAState, история 3.12).
       enum: [none, ok, soon, overdue]
       x-enum-varnames: [DueStateNone, DueStateOk, DueStateSoon, DueStateOverdue]
+    SLAState:
+      type: string
+      description: >-
+        Состояние SLA задачи (история 3.12; считает сервер, клиент правил не
+        повторяет). SLA — накопленное время задачи в статусах с режимом «идёт» по
+        календарю норматива типа (calendar — все сутки, weekdays — сутки Пн–Пт в
+        поясе доски). breached — норматив текущего цикла нарушен (держится после
+        закрытия и переоткрытия); off — норматива нет, задача закрыта, режим статуса
+        «выключен» (время не копится, SLA не нарушается) или SLA задачи ещё не
+        считался; paused — режим статуса «пауза» (срока нет, остаток отдаётся);
+        soon — до норматива осталось не больше меньшего из 24 ч и 25 % норматива;
+        running — часы идут.
+      enum: ["off", running, soon, paused, breached]
+      x-enum-varnames: [SLAStateOff, SLAStateRunning, SLAStateSoon, SLAStatePaused, SLAStateBreached]
     ReadVia:
       type: string
       description: >-
@@ -6314,7 +6583,8 @@ components:
       required: [id, key, number, board, title, description, status, status_reason, author, assignees, due_date, due_at,
                  due_deadline_at, due_state, closed_at, origin, version, read_via, allowed_actions, created_at, updated_at,
                  type, priority, labels, watchers, fields, dev_task_url, checklist, editable_fields, is_request,
-                 author_department_id, needs_triage, checklist_progress]
+                 author_department_id, needs_triage, checklist_progress, sla_state, sla_deadline_at,
+                 sla_remaining_seconds, sla_breached_at, sla_breached_board_id, sla_breached_board]
       properties:
         id:
           type: string
@@ -6469,10 +6739,59 @@ components:
             - type: object
               nullable: true
               enum: [null]
+        sla_state:
+          $ref: "#/components/schemas/SLAState"
+        sla_deadline_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: >-
+            SLA-срок — момент, когда накопленное время достигнет норматива, если задача
+            останется в статусе «идёт» (история 3.12; вычисляет сервер, клиент не
+            правит); null — часы стоят (пауза, «выключен», закрыта) или норматива нет.
+            У открытой задачи с исчерпанным нормативом — момент нарушения.
+        sla_remaining_seconds:
+          type: integer
+          format: int64
+          minimum: 1
+          nullable: true
+          description: >-
+            Рабочее время до норматива в секундах («залишилось N год») у running, soon
+            и paused; null — у off и breached.
+        sla_breached_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: >-
+            Момент нарушения SLA текущего цикла; фиксируется один раз, закрытие и
+            переоткрытие его не стирают; null — нарушения в цикле нет.
+        sla_breached_board_id:
+          type: string
+          format: uuid
+          x-go-type: uuid.UUID
+          x-go-type-import:
+            path: github.com/google/uuid
+          nullable: true
+          description: >-
+            Доска, на которой задача стояла в момент нарушения SLA текущего цикла
+            (AA-80); null — нарушения нет.
+        sla_breached_board:
+          description: >-
+            Проекция доски нарушения {id, code, name} (ADR-03, AA-80): вычисляемая,
+            только для чтения, без задач, настроек и счётчиков; отдаётся и читателю,
+            который не участник этой доски или у которого её нет в списках (архив);
+            null — нарушения в текущем цикле нет.
+          x-go-type: "*TaskBoardRef"
+          oneOf:
+            - $ref: "#/components/schemas/TaskBoardRef"
+            - type: object
+              nullable: true
+              enum: [null]
     TaskCard:
       type: object
       required: [id, key, number, board, title, status, assignees, due_date, due_at, due_deadline_at, due_state, version, allowed_actions,
-                 type, priority, labels, is_request, needs_triage, checklist_progress]
+                 type, priority, labels, is_request, needs_triage, checklist_progress, sla_state, sla_deadline_at,
+                 origin, labels_total, inactive_assignee]
       properties:
         id:
           type: string
@@ -6538,8 +6857,24 @@ components:
               enum: [null]
         labels:
           type: array
+          description: >-
+            Метки задачи в порядке конфигурации доски; канбан отдаёт первые три
+            (история 3.13), прочие проекции — все.
           items:
             $ref: "#/components/schemas/TaskNamedRef"
+        labels_total:
+          type: integer
+          minimum: 0
+          description: >-
+            Сколько меток у задачи (история 3.13): на карточке канбана их может
+            быть больше, чем в labels; 0 — меток нет или путь чтения их не отдаёт.
+        origin:
+          $ref: "#/components/schemas/TaskOrigin"
+        inactive_assignee:
+          type: boolean
+          description: >-
+            Среди исполнителей есть неактивный — его нет в зеркале оргструктуры
+            или он не активен (у него же TaskPerson.inactive; история 3.13).
         is_request:
           type: boolean
           description: Задача — заявка в другой отдел (история 3.14).
@@ -6556,9 +6891,16 @@ components:
             - type: object
               nullable: true
               enum: [null]
+        sla_state:
+          $ref: "#/components/schemas/SLAState"
+        sla_deadline_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: SLA-срок (история 3.12); null — часы стоят или норматива нет.
     TaskCardList:
       type: object
-      required: [items, has_more]
+      required: [items, has_more, next_cursor]
       properties:
         items:
           type: array
@@ -6567,8 +6909,45 @@ components:
         has_more:
           type: boolean
           description: >-
-            За пределом limit есть ещё задачи. Курсора (keyset) нет до истории
-            3.21: следующую страницу этой версией не получить.
+            За пределом limit есть ещё задачи. Следующую страницу вида «список»
+            доски отдаёт cursor = next_cursor (история 3.13); у «Поставлені мені»
+            курсора нет до истории 3.21.
+        next_cursor:
+          type: string
+          nullable: true
+          description: >-
+            Курсор следующей страницы вида «список» доски (GET
+            /boards/{code}/tasks, история 3.13): не null, только когда has_more =
+            true; непрозрачная строка, привязанная к доске и набору фильтров
+            запроса (с другими — 400 cursor). У «Поставлені мені» — всегда null
+            (курсор — история 3.21).
+    BoardKanban:
+      type: object
+      required: [columns]
+      properties:
+        columns:
+          type: array
+          description: Колонки — все статусы доски в порядке конфигурации, в том числе пустые.
+          items:
+            $ref: "#/components/schemas/BoardKanbanColumn"
+    BoardKanbanColumn:
+      type: object
+      required: [status, total, items]
+      properties:
+        status:
+          $ref: "#/components/schemas/TaskStatusRef"
+        total:
+          type: integer
+          minimum: 0
+          description: >-
+            Число видимых актору задач колонки после фильтров (у колонки категории
+            done — закрытых за 7 дней); карточек в items не больше 50.
+        items:
+          type: array
+          maxItems: 50
+          description: Первые карточки колонки в порядке колонки; у каждой — не больше трёх меток.
+          items:
+            $ref: "#/components/schemas/TaskCard"
     TaskAttachmentAction:
       type: string
       description: Команда вложения (история 3.8) — delete.
@@ -6654,8 +7033,12 @@ components:
             due_deadline_at; у команд чек-листа, история 3.9, — одна строка на
             команду: before/after = {checklist_item: {id, text, done}}, у
             перестановки ещё position; при добавлении before = {}, при удалении
-            after = {}); доска — created, member_changed, config_changed,
-            policy_changed, tzid_changed (список может расширяться). Вложения
+            after = {}); с истории 3.12 updated смены типа несёт ещё sla_deadline_at,
+            updated пересчёта смены пояса — изменённые due_deadline_at и
+            sla_deadline_at, а sla_breached (от системы: actor null, client system) —
+            нарушение SLA, after = {sla_cycle, breached_at, board_id}; доска —
+            created, member_changed, config_changed, policy_changed, tzid_changed
+            (список может расширяться). Вложения
             (история 3.8) — attachment_added (after) и attachment_deleted
             (before): {attachment_id, size_bytes}, без имени файла и типа; эти
             строки отдаются только на пути board (A-59: «Огляд» их не видит).

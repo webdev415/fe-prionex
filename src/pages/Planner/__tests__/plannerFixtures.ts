@@ -1,5 +1,5 @@
 /**
- * Contract-typed fixtures for the planner section tests (schema 0.22.0).
+ * Contract-typed fixtures for the planner section tests (schema 0.24.0).
  */
 import type {
   PlannerBoard,
@@ -12,7 +12,7 @@ export function makeMeta(overrides: Partial<PlannerMeta> = {}): PlannerMeta {
   return {
     mode: 'on',
     available: true,
-    versions: { api: '0.22.0', build: 'dev' },
+    versions: { api: '0.24.0', build: 'dev' },
     flags: {},
     org_snapshot_age_minutes: 3,
     ics_feed_available: false,
@@ -48,6 +48,11 @@ export function makeCard(overrides: Partial<PlannerTaskCard> = {}): PlannerTaskC
     is_request: false,
     needs_triage: false,
     checklist_progress: null,
+    sla_state: 'off',
+    sla_deadline_at: null,
+    origin: { kind: 'manual' },
+    labels_total: 0,
+    inactive_assignee: false,
     ...overrides,
   }
 }
@@ -88,6 +93,12 @@ export function makeTask(overrides: Partial<PlannerTask> = {}): PlannerTask {
     author_department_id: null,
     needs_triage: false,
     checklist_progress: null,
+    sla_state: 'off',
+    sla_deadline_at: null,
+    sla_remaining_seconds: null,
+    sla_breached_at: null,
+    sla_breached_board_id: null,
+    sla_breached_board: null,
     ...overrides,
   }
 }
