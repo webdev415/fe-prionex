@@ -18,7 +18,21 @@ import type { OperatorUser } from '@/features/users'
 export type ResolvedTaHistoryUsers =
   | { kind: 'all' }
   | { kind: 'ids'; ids: number[] }
-  | { kind: 'empty' }
+  | { kind: 'empty'; reason: EmptyReason }
+
+/**
+ * Why nobody matched. The screen has three different things to say, and
+ * choosing between them from the raw URL state gets it wrong: a scope that
+ * resolves to nobody carries no department and no employee, so it would be
+ * reported as an employee problem when none is selected.
+ */
+export type EmptyReason =
+  /** The page-level scope itself covers no one — no group, or no department. */
+  | 'scope'
+  /** The chosen department has no operators in this project. */
+  | 'department'
+  /** The chosen employees all fall outside the scope. */
+  | 'filter'
 
 interface TaHistoryUserSelection {
   departmentId: number | null
@@ -61,18 +75,20 @@ export function resolveTaHistoryUsers(
   // No page-level scope: the pickers stand alone.
   if (scopedUserIds === undefined) {
     if (picked === 'all') return { kind: 'all' }
-    return picked.length ? { kind: 'ids', ids: picked } : { kind: 'empty' }
+    return picked.length ? { kind: 'ids', ids: picked } : { kind: 'empty', reason: 'department' }
   }
 
   // A scope that resolves to nobody — "my" with no signed-in user, or a
   // department scope for someone who has no department.
-  if (scopedUserIds.length === 0) return { kind: 'empty' }
+  if (scopedUserIds.length === 0) return { kind: 'empty', reason: 'scope' }
 
   if (picked === 'all') return { kind: 'ids', ids: scopedUserIds }
 
   const withinScope = new Set(scopedUserIds)
   const intersected = picked.filter((id) => withinScope.has(id))
-  return intersected.length ? { kind: 'ids', ids: intersected } : { kind: 'empty' }
+  if (intersected.length) return { kind: 'ids', ids: intersected }
+  // Which picker produced the mismatch decides what the screen should say.
+  return { kind: 'empty', reason: departmentId != null ? 'department' : 'filter' }
 }
 
 /** The `recorded_by_in` parameter for a resolution, or none when unrestricted. */

@@ -26,6 +26,7 @@ vi.mock('@/features/users/hooks', () => ({
     data: [
       { id: 11, department_id: 1, first_name: 'Me', last_name: '' },
       { id: 22, department_id: 1, first_name: 'Colleague', last_name: '' },
+      { id: 33, department_id: 2, first_name: 'Elsewhere', last_name: '' },
     ],
   }),
 }))
@@ -99,5 +100,25 @@ describe('TaHistoryTab — the scope and the Employee filter disagree', () => {
   it('asks normally on "My actions" with no employee selected', () => {
     renderAt('?scope=my')
     expect(enabledArg()).toBe(true)
+  })
+})
+
+describe('TaHistoryTab — what the empty state says', () => {
+  // The i18n mock returns the key, so the key itself is the assertion.
+  const shown = () => document.body.textContent ?? ''
+
+  it('blames the employee filter when one is picked outside a usable scope', () => {
+    // A department scope leaves the employee picker usable, so a colleague
+    // outside it is a real, visible choice the operator can undo.
+    renderAt('?scope=department&employee_id=33')
+    expect(shown()).toContain('errors.scopeExcludesFilter')
+  })
+
+  it('does not blame an employee when none is selected', () => {
+    // The misleading case: a scope covering nobody carries no employee, yet
+    // the screen said one was selected and out of scope.
+    renderAt('?scope=group')
+    expect(shown()).not.toContain('scopeExcludesFilter')
+    expect(shown()).toContain('errors.emptyScopeResolution')
   })
 })

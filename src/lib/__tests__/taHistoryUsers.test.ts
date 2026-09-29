@@ -100,7 +100,7 @@ describe('resolveTaHistoryUsers — a scope that still allows the picker', () =>
         [ME],
         GROUP_ACTIONS
       )
-    ).toEqual({ kind: 'empty' })
+    ).toEqual({ kind: 'empty', reason: 'filter' })
   })
 })
 
@@ -124,7 +124,7 @@ describe('resolveTaHistoryUsers — without a page scope', () => {
   it('answers "nobody" for a department with no operators', () => {
     expect(
       resolveTaHistoryUsers({ departmentId: 99, employeeIds: [] }, operators, undefined)
-    ).toEqual({ kind: 'empty' })
+    ).toEqual({ kind: 'empty', reason: 'department' })
   })
 })
 
@@ -141,13 +141,17 @@ describe('resolveTaHistoryUsers — with a page scope', () => {
     // masked before only because a separate guard happened to cover it.
     expect(resolveTaHistoryUsers({ departmentId: 2, employeeIds: [] }, operators, [ME])).toEqual({
       kind: 'empty',
+      reason: 'department',
     })
   })
 
   it('answers "nobody" when the scope itself resolves to no one', () => {
     // "my" with no signed-in user, or a department scope for someone with no
     // department.
-    expect(resolveTaHistoryUsers(nothingPicked, operators, [])).toEqual({ kind: 'empty' })
+    expect(resolveTaHistoryUsers(nothingPicked, operators, [])).toEqual({
+      kind: 'empty',
+      reason: 'scope',
+    })
   })
 
   it('prefers the department over the employee list, as the filter bar does', () => {
@@ -169,6 +173,42 @@ describe('taHistoryRecordedBy', () => {
   it('sends nothing for "nobody" — the caller must not issue the request', () => {
     // Why this is safe: the tab disables the query on 'empty'. Without that it
     // would be the bug all over again, which is what the component test pins.
-    expect(taHistoryRecordedBy({ kind: 'empty' })).toBeUndefined()
+    expect(taHistoryRecordedBy({ kind: 'empty', reason: 'filter' })).toBeUndefined()
+  })
+})
+
+describe('resolveTaHistoryUsers — why it answered "nobody"', () => {
+  // The screen says three different things, and choosing between them from the
+  // raw URL got it wrong: a scope covering nobody carries no department and no
+  // employee, so it was reported as an employee problem with none selected.
+  it('blames the scope when the scope covers no one', () => {
+    const resolved = resolveTaHistoryUsers(nothingPicked, operators, [])
+    expect(resolved).toEqual({ kind: 'empty', reason: 'scope' })
+  })
+
+  it('blames the department when the chosen one has no operators', () => {
+    const resolved = resolveTaHistoryUsers(
+      { departmentId: 99, employeeIds: [] },
+      operators,
+      undefined
+    )
+    expect(resolved).toEqual({ kind: 'empty', reason: 'department' })
+  })
+
+  it('blames the filter when the chosen employees fall outside the scope', () => {
+    const resolved = resolveTaHistoryUsers(
+      { departmentId: null, employeeIds: [OTHER] },
+      operators,
+      [ME],
+      GROUP_ACTIONS
+    )
+    expect(resolved).toEqual({ kind: 'empty', reason: 'filter' })
+  })
+
+  it('does not blame the employee when none is selected', () => {
+    // The misleading case: "The selected employee is outside this tab's scope"
+    // shown to someone with no group and nothing picked.
+    const resolved = resolveTaHistoryUsers(nothingPicked, operators, [])
+    expect(resolved.kind === 'empty' && resolved.reason).not.toBe('filter')
   })
 })

@@ -2280,6 +2280,7 @@
         "noScoresPermission": "No tiene permiso para ver los datos de puntuación de calidad.",
         "emptyScopeResolution": "El ámbito seleccionado no devolvió ningún operador.",
         "departmentNoOperators": "No hay operadores en este departamento para el proyecto actual.",
+        "scopeExcludesFilter": "El empleado seleccionado está fuera del alcance de esta pestaña, por lo que no hay nada que mostrar.",
         "exportFailed": "Error al exportar",
         "callNotFound": "Llamada no encontrada"
       },

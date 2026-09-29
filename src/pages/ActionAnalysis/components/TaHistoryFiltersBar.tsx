@@ -100,10 +100,17 @@ export function TaHistoryFiltersBar({
   const period: CallMonitoringPeriod = draft.period ?? 'last_7d'
 
   const departmentOptions = useMemo(() => buildDepartmentOptions(operators), [operators])
-  const departmentSelectValue = draft.departmentId != null ? String(draft.departmentId) : 'all'
+  // A picker the scope disables does not apply to the query, so it must not
+  // show as applied here either. Reading the raw draft made the bar name a
+  // department the rows were not filtered by, and locked the Employee picker
+  // behind it — on a department scope, where that picker is meant to stay
+  // usable as a refinement.
+  const effectiveDepartmentId = scope?.departmentPickerDisabled ? null : draft.departmentId
+  const departmentSelectValue =
+    effectiveDepartmentId != null ? String(effectiveDepartmentId) : 'all'
   const departmentName =
-    draft.departmentId != null
-      ? (departmentOptions.find((d) => d.id === draft.departmentId)?.name ?? undefined)
+    effectiveDepartmentId != null
+      ? (departmentOptions.find((d) => d.id === effectiveDepartmentId)?.name ?? undefined)
       : undefined
 
   const pickedChain = useMemo(
@@ -215,7 +222,7 @@ export function TaHistoryFiltersBar({
             operators={operators}
             selectedIds={draft.employeeIds}
             onChange={(ids) => update({ departmentId: null, employeeIds: ids })}
-            disabled={draft.departmentId != null || scope?.employeePickerDisabled}
+            disabled={effectiveDepartmentId != null || scope?.employeePickerDisabled}
             disabledLabel={scopeLockedEmpLabel ?? departmentName}
             label={t('pages.actionAnalysis.filters.employee', 'Employee')}
           />

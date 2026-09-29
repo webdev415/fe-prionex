@@ -18,7 +18,7 @@ import {
   type TaHistoryBarState,
 } from '../lib/taHistoryUrlState'
 import { useScopedUserIds } from '../lib/scope'
-import { resolveTaHistoryUsers, taHistoryRecordedBy } from '../lib/taHistoryUsers'
+import { resolveTaHistoryUsers, taHistoryRecordedBy } from '@/lib/taHistoryUsers'
 import { TaHistoryFiltersBar } from './TaHistoryFiltersBar'
 import { TaHistoryTable } from './TaHistoryTable'
 
@@ -72,6 +72,27 @@ export function TaHistoryTab() {
   // "Nobody" — the scope and the pickers select disjoint sets. Distinct from
   // "no restriction", which is what an absent filter means to the API.
   const showsNothing = resolvedUsers.kind === 'empty'
+
+  // Said from the reason the resolver gives, not from the raw URL: a scope that
+  // covers nobody carries no department and no employee, and reading the URL
+  // reported it as an employee problem when none was selected.
+  const emptyMessage =
+    resolvedUsers.kind !== 'empty'
+      ? null
+      : resolvedUsers.reason === 'scope'
+        ? t(
+            'pages.actionAnalysis.errors.emptyScopeResolution',
+            'The selected scope returned no operators.'
+          )
+        : resolvedUsers.reason === 'department'
+          ? t(
+              'pages.actionAnalysis.errors.departmentNoOperators',
+              'No operators in this department for the current project.'
+            )
+          : t(
+              'pages.actionAnalysis.errors.scopeExcludesFilter',
+              "The selected employee is outside this tab's scope, so there is nothing to show."
+            )
 
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
@@ -142,15 +163,7 @@ export function TaHistoryTab() {
 
       {showsNothing ? (
         <div className="border-border bg-muted text-foreground rounded-md border p-3 text-sm">
-          {barState.departmentId != null
-            ? t(
-                'pages.actionAnalysis.errors.departmentNoOperators',
-                'No operators in this department for the current project.'
-              )
-            : t(
-                'pages.actionAnalysis.errors.scopeExcludesFilter',
-                "The selected employee is outside this tab's scope, so there is nothing to show."
-              )}
+          {emptyMessage}
         </div>
       ) : error ? (
         <div className="border-error-200 bg-error-100 text-error-700 rounded-md border p-3 text-sm">
