@@ -5,6 +5,7 @@ import { formatDate, formatDateTime, formatMoneyKopeckTight } from '@/lib/format
 import type { TAInteraction } from '@/features/taInteractions/api/types'
 import type { TAChain } from '@/features/taChains/api/types'
 import type { TargetAction } from '@/features/targetActions/api/types'
+import { readStepValue } from '@/lib/taStepValue'
 
 type Row = TAInteraction & { id: number }
 
@@ -57,7 +58,8 @@ function buildResultEntries(
     if (stepsOrdered.length > 0) {
       for (const step of stepsOrdered) {
         const sd = row.step_data as Record<string, string>
-        const val = sd[String(step.step_order)] ?? sd[String(step.target_action_id)]
+        const raw = readStepValue(sd, step, stepsOrdered)
+        const val = typeof raw === 'string' ? raw : raw == null ? '' : String(raw)
         if (!val) continue
         // Phone (contact-type) values render in a dedicated way on the per-client
         // page; here we just include them inline since we have no Phone column.

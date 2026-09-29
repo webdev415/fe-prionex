@@ -9,6 +9,8 @@
  *    (not step-specific) and could collide across steps that share a TA.
  */
 
+import { readStepValue } from '@/lib/taStepValue'
+
 export interface StepLike {
   step_order: number
   target_action_id: number
@@ -47,7 +49,7 @@ export function extractPhones(
   const ordered = [...steps].sort((a, b) => a.step_order - b.step_order)
   for (const step of ordered) {
     if (step.target_action_field_type !== 'contact') continue
-    const val = stepData[String(step.step_order)] ?? stepData[String(step.target_action_id)]
+    const val = readStepValue(stepData, step, ordered)
     if (typeof val === 'string' && isPhoneShaped(val)) phones.add(val)
   }
   for (const val of Object.values(stepData)) {
