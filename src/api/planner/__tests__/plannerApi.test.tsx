@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
-import { AxiosError, AxiosHeaders } from 'axios'
+import axios, { AxiosError, AxiosHeaders, type AxiosRequestConfig } from 'axios'
 
 const http = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), patch: vi.fn() }))
 vi.mock('@/lib/api', async (importOriginal) => {
@@ -26,6 +26,7 @@ import {
   patchTask,
   resolveTask,
   searchPeople,
+  uploadTaskAttachment,
   uuidV4FromRandomValues,
 } from '../plannerApi'
 import {
@@ -103,6 +104,63 @@ describe('planner operations over the shared axios', () => {
   it('a board code is a path segment, escaped', async () => {
     await listBoardTasks('A/B')
     expect(http.get.mock.calls[0][0]).toBe('/api/v1/planner/boards/A%2FB/tasks')
+  })
+
+  it('upload: the part «file», its own key, a budget by the file size instead of 75 s, progress (bot round 1 on PR #351)', async () => {
+    const file = new File(['x'], 'scan.pdf')
+    Object.defineProperty(file, 'size', { value: 52_428_800 })
+    const onProgress = vi.fn()
+    await uploadTaskAttachment('t-1', file, 'file-key', onProgress)
+    const [path, body, cfg] = http.post.mock.calls[0] as [string, FormData, AxiosRequestConfig]
+    expect(path).toBe('/api/v1/planner/tasks/t-1/attachments')
+    expect((body.get('file') as File).name).toBe('scan.pdf')
+    expect(cfg.headers).toEqual({
+      ...CRM,
+      'Idempotency-Key': 'file-key',
+      'Content-Type': 'multipart/form-data',
+    })
+    // 50 MiB: 75 s of the shared client + the file at 64 KiB/s — not the 75 s
+    // of a JSON call, and not «no limit» (the form is locked meanwhile).
+    expect(cfg.timeout).toBe(875_000)
+    cfg.onUploadProgress?.({
+      loaded: 10,
+      total: 40,
+      progress: 0.25,
+      bytes: 10,
+      lengthComputable: true,
+    })
+    cfg.onUploadProgress?.({ loaded: 10, bytes: 10, lengthComputable: false })
+    expect(onProgress.mock.calls).toEqual([[0.25]])
+
+    const small = new File(['x'], 'a.txt')
+    await uploadTaskAttachment('t-1', small, 'k-2')
+    const smallCfg = http.post.mock.calls[1][2] as AxiosRequestConfig
+    expect(smallCfg.timeout).toBe(75_001)
+    expect(smallCfg.onUploadProgress).toBeUndefined()
+  })
+
+  it('upload: under the shared JSON default the body stays FormData (the multipart header is not a no-op)', async () => {
+    await uploadTaskAttachment('t-1', new File(['abc'], 'a.txt'), 'k-1')
+    const [, body, cfg] = http.post.mock.calls[0] as [string, FormData, AxiosRequestConfig]
+    // The shared client of src/lib/api.ts, with an adapter that keeps what would be sent.
+    let sent: unknown
+    const shared = axios.create({
+      headers: { 'Content-Type': 'application/json' },
+      adapter: async (config) => {
+        sent = config.data
+        return { data: {}, status: 201, statusText: '', headers: {}, config }
+      },
+    })
+    await shared.post('/x', body, cfg)
+    expect(sent).toBeInstanceOf(FormData)
+    // Without the header axios would send `{"file":{}}` — the file lost.
+    const withoutType = Object.fromEntries(
+      Object.entries(cfg.headers as Record<string, string>).filter(
+        ([name]) => name !== 'Content-Type'
+      )
+    )
+    await shared.post('/x', body, { ...cfg, headers: withoutType })
+    expect(sent).toBe('{"file":{}}')
   })
 })
 
