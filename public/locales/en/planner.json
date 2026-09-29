@@ -356,6 +356,7 @@
       "alreadyMember": "Already a participant from the department",
       "orgStale": "The org structure was updated {{minutes}} min ago. Admins cannot be assigned until the CRM sends a fresh one",
       "orgNever": "The org structure has not come from the CRM yet. Admins cannot be assigned",
+      "orgStaleRefused": "The Planner reports the org structure is stale. Admins cannot be assigned until the CRM sends a fresh one",
       "adminUnavailable": "Admin — unavailable while the org structure is stale"
     },
     "access": {

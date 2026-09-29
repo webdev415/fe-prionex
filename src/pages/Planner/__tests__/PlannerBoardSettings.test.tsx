@@ -14,10 +14,13 @@ import { createMemoryRouter, Outlet, RouterProvider } from 'react-router-dom'
 import type { AxiosError } from 'axios'
 import type {
   PlannerBoard,
+  PlannerBoardConfigError,
   PlannerBoardConfigPreview,
+  PlannerBoardConfigPut,
   PlannerBoardMember,
   PlannerPerson,
 } from '@/api/planner/plannerApi'
+import { expectObscured } from '@/test/piiHelpers'
 
 const auth = vi.hoisted(() => ({ permissions: ['planner.access'] as string[] }))
 const archiveState = vi.hoisted(() => ({
@@ -64,12 +67,14 @@ vi.mock('@/pages/Planner/settings/archiveCommand', async (importOriginal) => {
 import { plannerRoute } from '@/routes/plannerRoutes'
 import { makeBoard, makeMeta } from './plannerFixtures'
 import {
+  currentErrors,
   locateError,
   locateErrors,
   pluralKey,
   requestBody,
   restoreUsed,
   toConfigInput,
+  withMove,
 } from '@/pages/Planner/settings/boardSettingsModel'
 
 beforeAll(async () => {
@@ -214,6 +219,33 @@ function preview(overrides: Partial<PlannerBoardConfigPreview> = {}): PlannerBoa
   }
 }
 
+/**
+ * The planner's check of `move_tasks_to` (`ValidateChange`): a removed status
+ * holding tasks needs a place (`status_in_use`), and the place is a status of
+ * the new configuration (`invalid_target`) without «Потребує причини»
+ * (`target_requires_reason`).
+ */
+function checkMoves(tasks: Record<string, number>) {
+  return async (_code: string, _version: number, body: PlannerBoardConfigPut) => {
+    const kept = body.config.statuses
+    const moves = body.move_tasks_to ?? {}
+    const errors: PlannerBoardConfigError[] = []
+    for (const [id, count] of Object.entries(tasks)) {
+      if (!kept.some((item) => item.id === id) && !(id in moves)) {
+        errors.push({ field: 'move_tasks_to', reason: 'status_in_use', id, used_count: count })
+      }
+    }
+    for (const [from, to] of Object.entries(moves)) {
+      const target = kept.find((item) => item.id === to)
+      if (!target) errors.push({ field: `move_tasks_to.${from}`, reason: 'invalid_target' })
+      else if (target.requires_reason) {
+        errors.push({ field: `move_tasks_to.${from}`, reason: 'target_requires_reason' })
+      }
+    }
+    return errors.length > 0 ? preview({ valid: false, errors }) : preview()
+  }
+}
+
 function plannerError(status: number, error: Record<string, unknown>): AxiosError {
   return Object.assign(new Error(String(status)), {
     isAxiosError: true,
@@ -301,6 +333,12 @@ describe('5.10 AC1 — разделы, предпросмотр колонок �
 
   it('неизвестный раздел ведёт на «Загальне»', async () => {
     const router = renderAt(`${SETTINGS}/nope`)
+    expect(await screen.findByText('Часовий пояс')).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe(`${SETTINGS}/general`)
+  })
+
+  it('адрес без раздела (⚙ шапки доски) открывает «Загальне»', async () => {
+    const router = renderAt(SETTINGS)
     expect(await screen.findByText('Часовий пояс')).toBeInTheDocument()
     expect(router.state.location.pathname).toBe(`${SETTINGS}/general`)
   })
@@ -619,6 +657,51 @@ describe('5.10 AC1 — разделы, предпросмотр колонок �
     await user.click(screen.getByRole('button', { name: 'Повторити' }))
     expect(await screen.findByText('Змін ще немає')).toBeInTheDocument()
   })
+
+  it('«Історія» — по моменту времени, а не по тексту: +03:00 и Z вперемешку', async () => {
+    const entry = (id: string, at: string, action: string) => ({
+      id,
+      at,
+      action,
+      actor: null,
+      client: 'crm',
+      before: null,
+      after: null,
+    })
+    api.getBoardHistory.mockResolvedValue({
+      truncated: false,
+      items: [
+        // 07:00 UTC — earlier, though its text sorts later.
+        entry('h-kyiv', '2026-09-29T10:00:00+03:00', 'created'),
+        entry('h-utc', '2026-09-29T08:00:00Z', 'config_changed'),
+      ],
+    })
+    renderAt(`${SETTINGS}/history`)
+    const history = await screen.findByRole('region', { name: 'Історія' })
+    await within(history).findByText('Дошку створено')
+    const texts = [...history.querySelectorAll('ol > li')].map((item) => item.textContent ?? '')
+    expect(texts[0]).toContain('Змінено конфігурацію')
+    expect(texts[1]).toContain('Дошку створено')
+  })
+
+  it('норматив SLA стирается и набирается заново — поле не превращается в «0»', async () => {
+    const user = userEvent.setup()
+    api.putBoardConfig.mockResolvedValue(settingsBoard({ version: 6 }))
+    renderAt(`${SETTINGS}/types`)
+    const type = await findRow('data-type-row', 't-once')
+    const norm = within(type).getByRole('spinbutton', { name: 'Норматив SLA' })
+    await user.clear(norm)
+    expect(norm).toHaveValue(null)
+    await user.type(norm, '72')
+    expect(norm).toHaveValue(72)
+    await user.click(screen.getByRole('button', { name: 'Зберегти' }))
+    await waitFor(() => expect(api.putBoardConfig).toHaveBeenCalledTimes(1))
+    expect(api.putBoardConfig.mock.calls[0][2].config.task_types[0].sla).toEqual({
+      value: 72,
+      unit: 'hours',
+      calendar: 'calendar',
+    })
+  })
 })
 
 // ─── AC2: save with dry_run, leave guard, move tasks ───────────────────────
@@ -666,6 +749,98 @@ describe('5.10 AC2 — сохранение через dry_run и If-Match', () 
     )
     expect(toast.success).toHaveBeenCalledWith('Налаштування збережено')
     await waitFor(() => expect(screen.queryByText('Є незбережені зміни')).not.toBeInTheDocument())
+  })
+
+  it('правка строки снимает её ошибку и число в меню; ошибка другой строки остаётся', async () => {
+    const user = userEvent.setup()
+    api.previewBoardConfig.mockResolvedValue(
+      preview({
+        valid: false,
+        errors: [
+          { field: 'config.statuses[1].name', reason: 'duplicate' },
+          { field: 'config.statuses[2].name', reason: 'length' },
+        ],
+      })
+    )
+    renderAt(`${SETTINGS}/statuses`)
+    const work = await findRow('data-status-row', 's-work')
+    const name = () => within(work).getByRole('textbox', { name: 'Назва статусу' })
+    await user.type(name(), '!')
+    await user.click(screen.getByRole('button', { name: 'Зберегти' }))
+    expect(await within(work).findByText('Така назва вже є')).toBeInTheDocument()
+    expect(screen.getByText('помилок: 2')).toBeInTheDocument()
+
+    await user.type(name(), '?')
+    expect(within(work).queryByText('Така назва вже є')).toBeNull()
+    expect(name()).toHaveAttribute('aria-invalid', 'false')
+    const done = row('data-status-row', 's-done')
+    expect(within(done).getByText('Порожнє або задовге значення')).toBeInTheDocument()
+    expect(screen.getByText('помилок: 1')).toBeInTheDocument()
+  })
+
+  it('два статуса подряд: задачи первого идут туда же, куда второго; сохранение проходит', async () => {
+    const user = userEvent.setup()
+    api.previewBoardConfig.mockImplementation(checkMoves({ 's-work': 12, 's-done': 5 }))
+    api.putBoardConfig.mockResolvedValue(settingsBoard({ version: 6 }))
+    renderAt(`${SETTINGS}/statuses`)
+
+    // «В роботі» → «Готово».
+    await user.click(await screen.findByRole('button', { name: 'Видалити «В роботі»' }))
+    let dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByText('Перенести 12 задач у…')).toBeInTheDocument()
+    await user.selectOptions(within(dialog).getByRole('combobox'), 's-done')
+    await user.click(within(dialog).getByRole('button', { name: 'Перенести й видалити статус' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+
+    // Then «Готово» itself → «Нова» (the only place without «Потребує причини»).
+    await user.click(screen.getByRole('button', { name: 'Видалити «Готово»' }))
+    dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByText('Перенести 5 задач у…')).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: 'Перенести й видалити статус' }))
+    await waitFor(() => expect(previewNames()).toEqual(['Новаза замовчуванням', 'Відхилено']))
+
+    await user.click(screen.getByRole('button', { name: 'Зберегти' }))
+    await waitFor(() => expect(api.putBoardConfig).toHaveBeenCalledTimes(1))
+    expect(api.putBoardConfig.mock.calls[0][2].move_tasks_to).toEqual({
+      's-work': 's-todo',
+      's-done': 's-todo',
+    })
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.queryByText('Оберіть інший статус для перенесення задач')).toBeNull()
+    expect(toast.success).toHaveBeenCalledWith('Налаштування збережено')
+  })
+
+  it('место переноса стало «Потребує причини» — «Перенести N задач у…» спрашивает снова', async () => {
+    const user = userEvent.setup()
+    api.previewBoardConfig.mockImplementation(checkMoves({ 's-work': 12 }))
+    api.putBoardConfig.mockResolvedValue(settingsBoard({ version: 6 }))
+    renderAt(`${SETTINGS}/statuses`)
+
+    await user.click(await screen.findByRole('button', { name: 'Видалити «В роботі»' }))
+    let dialog = await screen.findByRole('dialog')
+    await user.selectOptions(within(dialog).getByRole('combobox'), 's-done')
+    await user.click(within(dialog).getByRole('button', { name: 'Перенести й видалити статус' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+
+    await user.click(
+      within(row('data-status-row', 's-done')).getByRole('checkbox', { name: 'Потребує причини' })
+    )
+    await user.click(screen.getByRole('button', { name: 'Зберегти' }))
+    // The server refused the place (`target_requires_reason`): the question comes back.
+    dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByText('Перенести 12 задач у…')).toBeInTheDocument()
+    expect(
+      within(within(dialog).getByRole('combobox'))
+        .getAllByRole('option')
+        .map((o) => o.textContent)
+    ).toEqual(['Нова'])
+    await user.click(within(dialog).getByRole('button', { name: 'Перенести й видалити статус' }))
+    await waitFor(() => expect(api.putBoardConfig).toHaveBeenCalledTimes(1))
+    const body = api.putBoardConfig.mock.calls[0][2]
+    expect(body.move_tasks_to).toEqual({ 's-work': 's-todo' })
+    expect(body.config.statuses.find((s: { id: string }) => s.id === 's-done')).toMatchObject({
+      requires_reason: true,
+    })
   })
 
   it('уход со страницы с правками спрашивает «Залишити без збереження?»; переход между разделами — нет', async () => {
@@ -909,6 +1084,43 @@ describe('5.10 AC3 — «Учасники»', () => {
     expect(within(row('data-member-row', 'u-3')).queryByRole('combobox')).toBeNull()
   })
 
+  it('409 org_stale не залипает: баннер говорит об отказе, свежая карточка снова открывает «Адмін»', async () => {
+    const user = userEvent.setup()
+    api.putBoardMember.mockRejectedValue(
+      plannerError(409, { code: 'conflict', details: { reason: 'org_stale' } })
+    )
+    renderAt(`${SETTINGS}/members`)
+    const guest = await findRow('data-member-row', 'u-4')
+    await user.selectOptions(within(guest).getByRole('combobox', { name: 'Роль' }), 'board_admin')
+
+    const refused =
+      'Планер повідомив, що оргструктура застаріла. Призначення адміністраторів недоступне, доки CRM не надішле свіжу оргструктуру'
+    expect(await screen.findByText(refused)).toBeInTheDocument()
+    // Not «оновлено 3 хв тому … недоступне»: the card's own age is fresh.
+    expect(screen.queryByText(/Оргструктуру оновлено/)).toBeNull()
+    expect(toast.error).toHaveBeenCalledWith(
+      'Оргструктура застаріла — зміну не збережено. Повторіть, коли CRM надішле свіжу'
+    )
+    const guestAdmin = () =>
+      within(
+        within(row('data-member-row', 'u-4')).getByRole('combobox', { name: 'Роль' })
+      ).getByRole('option', { name: /^Адмін/ })
+    expect(guestAdmin()).toBeDisabled()
+    expect(within(row('data-member-row', 'u-3')).queryByRole('combobox')).toBeNull()
+
+    // The CRM sent a fresh structure; the card is read again (focus): 1 minute old.
+    api.getBoard.mockResolvedValue(settingsBoard({ org_snapshot_age_minutes: 1 }))
+    await act(async () => {
+      await lastQueryClient.invalidateQueries()
+    })
+    await waitFor(() => expect(screen.queryByText(refused)).toBeNull())
+    expect(guestAdmin()).toBeEnabled()
+    expect(guestAdmin()).toHaveTextContent(/^Адмін$/)
+    expect(
+      within(row('data-member-row', 'u-3')).getByRole('combobox', { name: 'Роль' })
+    ).toHaveValue('board_admin')
+  })
+
   it('«Прибрати» — DELETE участника под версией доски; карточка из ответа', async () => {
     const user = userEvent.setup()
     api.deleteBoardMember.mockResolvedValue(
@@ -933,6 +1145,63 @@ describe('5.10 AC3 — «Учасники»', () => {
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith('Не можна прибрати останнього адміністратора дошки')
     )
+  })
+})
+
+// ─── PII: names under the session-recording mask ───────────────────────────
+
+describe('5.10 — ПІБ под маской записи сессии (OpenReplay)', () => {
+  const NAMES = ['Марина Кравець', 'Олег Бондар', 'Ірина Шевчук', 'Петро Гуменюк']
+  const noNamesInAttributes = () => {
+    for (const node of document.body.querySelectorAll('*')) {
+      for (const attr of ['title', 'aria-label', 'alt']) {
+        const value = node.getAttribute(attr) ?? ''
+        for (const name of NAMES) expect(value).not.toContain(name)
+      }
+    }
+  }
+
+  it('участники, выбор исполнителя, автор строки «Історія» — под маской; ПІБ нет в атрибутах', async () => {
+    const user = userEvent.setup()
+    api.getBoardHistory.mockResolvedValue({
+      truncated: false,
+      items: [
+        {
+          id: 'h1',
+          at: '2026-09-28T09:00:00Z',
+          action: 'config_changed',
+          actor: { user_id: 'u-1', crm_user_id: 1, full_name: 'Марина Кравець', inactive: false },
+          client: 'crm',
+          before: null,
+          after: null,
+        },
+      ],
+    })
+    renderAt(`${SETTINGS}/members`)
+    const deputy = await findRow('data-member-row', 'u-3')
+    // The row's name and the one in «Прибрати» for a screen reader.
+    const deputyNames = within(deputy).getAllByText('Ірина Шевчук')
+    expect(deputyNames).toHaveLength(2)
+    for (const node of deputyNames) expectObscured(node)
+    expectObscured(within(row('data-member-row', 'u-1')).getByText('Марина Кравець'))
+    noNamesInAttributes()
+
+    await user.click(screen.getByRole('link', { name: 'Виконавець, чек-лист, опис' }))
+    const assignee = await screen.findByRole('combobox', { name: 'Виконавець за замовчуванням' })
+    expectObscured(within(assignee).getByRole('option', { name: 'Олег Бондар' }))
+    noNamesInAttributes()
+
+    await user.click(screen.getByRole('link', { name: 'Типи задач і SLA' }))
+    const typeAssignee = await screen.findByRole('combobox', {
+      name: 'Виконавець за замовчуванням',
+    })
+    expectObscured(within(typeAssignee).getByRole('option', { name: 'Петро Гуменюк' }))
+    noNamesInAttributes()
+
+    await user.click(screen.getByRole('link', { name: 'Історія' }))
+    const history = await screen.findByRole('region', { name: 'Історія' })
+    expectObscured(await within(history).findByText('Марина Кравець'))
+    noNamesInAttributes()
   })
 })
 
@@ -1033,6 +1302,66 @@ describe('5.10 — модель черновика', () => {
     expect(requestBody({ config: without, moves: { 's-work': 's-done' } }).move_tasks_to).toEqual({
       's-work': 's-done',
     })
+  })
+
+  it('перенос в удаляемый статус идёт за ним; путь move_tasks_to.<id> называет статус', () => {
+    expect(withMove({ 's-work': 's-done' }, 's-done', 's-todo')).toEqual({
+      's-work': 's-todo',
+      's-done': 's-todo',
+    })
+    expect(withMove({ 's-work': 's-done' }, 's-rej', 's-todo')).toEqual({
+      's-work': 's-done',
+      's-rej': 's-todo',
+    })
+    expect(
+      locateError({ field: 'move_tasks_to.s-work', reason: 'invalid_target' }, sent)
+    ).toMatchObject({ section: 'statuses', key: 'move_tasks_to', id: 's-work' })
+    expect(
+      locateError({ field: 'move_tasks_to', reason: 'status_in_use', id: 's-done' }, sent).id
+    ).toBe('s-done')
+  })
+
+  it('ошибка остаётся, пока её элемент такой же, как при проверке', () => {
+    const located = locateErrors(
+      [
+        { field: 'config.statuses[1].name', reason: 'duplicate' },
+        { field: 'config.fields[0].options[1].label', reason: 'length' },
+        { field: 'config.defaults.assignee_id', reason: 'not_participant' },
+        { field: 'config.priorities', reason: 'priority_count' },
+      ],
+      sent
+    )
+    expect(currentErrors(located, sent, sent)).toHaveLength(4)
+    const renamed = {
+      ...sent,
+      statuses: sent.statuses.map((s) => (s.id === 's-work' ? { ...s, name: 'Інша' } : s)),
+    }
+    expect(currentErrors(located, sent, renamed).map((e) => e.reason)).toEqual([
+      'length',
+      'not_participant',
+      'priority_count',
+    ])
+    // Another value of the same field, the checklist — no effect on these errors.
+    const elsewhere = {
+      ...sent,
+      fields: [
+        {
+          ...sent.fields[0],
+          options: [{ id: 'o-sms', label: 'СМС' }, sent.fields[0].options![1]],
+        },
+      ],
+      defaults: { ...sent.defaults, checklist: [] },
+    }
+    expect(currentErrors(located, sent, elsewhere)).toHaveLength(4)
+    const picked = {
+      ...sent,
+      defaults: { ...sent.defaults, assignee_id: 'u-2' },
+      priorities: sent.priorities.slice(0, 2),
+    }
+    expect(currentErrors(located, sent, picked).map((e) => e.reason)).toEqual([
+      'duplicate',
+      'length',
+    ])
   })
 
   it('используемое (`*_in_use`) возвращается в черновик на своё место', () => {

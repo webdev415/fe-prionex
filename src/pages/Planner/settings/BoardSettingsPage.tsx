@@ -10,13 +10,13 @@
  *   columns on top (it follows the draft). Moving between sections keeps the
  *   draft — it is one screen.
  * - The configuration sections edit one draft; «Зберегти» runs the server's
- *   check without writing (`dry_run`), puts its errors on their rows, and only
- *   then saves under `If-Match`. Leaving the settings with unsaved edits asks
- *   «Залишити без збереження?».
+ *   check without writing (`dry_run`), puts its errors on their rows (an edit of
+ *   the row takes its error away), and only then saves under `If-Match`.
+ *   Leaving the settings with unsaved edits asks «Залишити без збереження?».
  * - Removing a status or a value of a list asks the server at once whether
  *   tasks use it: a status with tasks goes only together with a place for them
- *   («Перенести N задач у…»), a used value stays («Використовується в N
- *   задачах»).
+ *   («Перенести N задач у…»; a place the server refuses is asked again), a used
+ *   value stays («Використовується в N задачах»).
  * - Participants are separate commands (each one saved at once), history and
  *   access are read only.
  */
@@ -35,11 +35,15 @@ import { boardPath } from '../plannerFormat'
 import {
   boardSettingsPath,
   countBySection,
+  currentErrors,
   isSettingsSection,
   locateErrors,
+  MOVE_TARGET_REFUSALS,
   requestBody,
   restoreUsed,
   SETTINGS_SECTIONS,
+  withMove,
+  withoutMoves,
   type ConfigDraft,
   type ConfigInput,
   type FieldInput,
@@ -125,6 +129,12 @@ interface MoveRequest {
   thenSave: boolean
 }
 
+/** The server's errors of the last check and the configuration they were found in. */
+interface CheckReport {
+  errors: LocatedError[]
+  config: ConfigInput
+}
+
 /** A default of a list field without one of its values. */
 function withoutOption(value: FieldInput['default'], optionId: string): FieldInput['default'] {
   if (value === optionId) return null
@@ -150,7 +160,7 @@ function BoardSettingsEditor({
   const { preview, save } = useBoardConfigCommands(board.code)
   const failed = useConfigFailure(board.code)
   const archive = useArchiveBoardCommand(board.code)
-  const [errors, setErrors] = useState<LocatedError[]>([])
+  const [report, setReport] = useState<CheckReport | null>(null)
   const [inUse, setInUse] = useState<ReadonlyMap<string, number>>(new Map())
   const [checkingStatus, setCheckingStatus] = useState<string | null>(null)
   const [checkingOption, setCheckingOption] = useState<string | null>(null)
@@ -198,17 +208,20 @@ function BoardSettingsEditor({
     }
   }
 
-  const showErrors = (found: PlannerBoardConfigError[] | null, sent: ConfigInput) => {
-    if (!found) return
-    const located = locateErrors(found, sent)
+  /** Errors on their rows, measured against the body that was checked (with the used put back). */
+  const putOnRows = (located: LocatedError[], sent: ConfigInput) => {
     keepUsed(located)
-    setErrors(located)
+    setReport({ errors: located, config: restoreUsed(sent, saved, located) })
   }
 
-  const runSave = async (next: ConfigDraft) => {
+  const showErrors = (found: PlannerBoardConfigError[] | null, sent: ConfigInput) => {
+    if (found) putOnRows(locateErrors(found, sent), sent)
+  }
+
+  const runSave = async (next: ConfigDraft): Promise<void> => {
     const version = base.version
     const body = requestBody(next)
-    setErrors([])
+    setReport(null)
     let check
     try {
       check = await preview.mutateAsync({ version, body })
@@ -218,6 +231,19 @@ function BoardSettingsEditor({
     }
     if (!check.valid) {
       const located = locateErrors(check.errors, body.config)
+      // A chosen place the server refuses (`invalid_target`, `target_requires_reason`)
+      // is asked again: without it the server counts the status's tasks
+      // (`status_in_use`) and «Перенести N задач у…» opens with that number.
+      const refused = located
+        .filter(
+          (error) => error.key === 'move_tasks_to' && MOVE_TARGET_REFUSALS.includes(error.reason)
+        )
+        .map((error) => error.id)
+        .filter((id): id is string => id !== undefined && id in next.moves)
+      if (refused.length > 0) {
+        draft.dropMoves(refused)
+        return runSave({ config: next.config, moves: withoutMoves(next.moves, refused) })
+      }
       const withTasks = located.find(
         (error) => error.reason === 'status_in_use' && error.id !== undefined
       )
@@ -226,15 +252,14 @@ function BoardSettingsEditor({
         setMoving({ status, count: withTasks.usedCount ?? 0, thenSave: true })
         return
       }
-      keepUsed(located)
-      setErrors(located)
+      putOnRows(located, body.config)
       toast.error(t('settings.toast.fixErrors'))
       return
     }
     try {
       const savedBoard = await save.mutateAsync({ version, body })
       draft.saveDone(savedBoard)
-      setErrors([])
+      setReport(null)
       setInUse(new Map())
       toast.success(t('settings.toast.saved'))
     } catch (error) {
@@ -320,7 +345,7 @@ function BoardSettingsEditor({
     }
     draft.update(() => config)
     draft.setMove(status.id, targetId)
-    if (thenSave) void runSave({ config, moves: { ...current.moves, [status.id]: targetId } })
+    if (thenSave) void runSave({ config, moves: withMove(current.moves, status.id, targetId) })
   }
 
   /**
@@ -333,26 +358,32 @@ function BoardSettingsEditor({
     const { status, count, thenSave } = moving
     setMoving(null)
     if (!thenSave) return
-    draft.update((config) => {
+    const putBack = (config: ConfigInput): ConfigInput => {
       if (config.statuses.some((item) => item.id === status.id)) return config
       const index = saved.statuses.findIndex((item) => item.id === status.id)
       const statuses = [...config.statuses]
       statuses.splice(index < 0 ? statuses.length : Math.min(index, statuses.length), 0, status)
       return { ...config, statuses }
+    }
+    draft.update(putBack)
+    setReport({
+      errors: [
+        {
+          section: 'statuses',
+          rowId: status.id,
+          optionId: null,
+          key: null,
+          reason: 'status_in_use',
+          usedCount: count,
+          id: status.id,
+        },
+      ],
+      config: putBack(current.config),
     })
-    setErrors([
-      {
-        section: 'statuses',
-        rowId: status.id,
-        optionId: null,
-        key: null,
-        reason: 'status_in_use',
-        usedCount: count,
-        id: status.id,
-      },
-    ])
   }
 
+  // Only the errors whose element is still as it was checked (an edit takes its error away).
+  const errors = report ? currentErrors(report.errors, report.config, current.config) : []
   const counts = countBySection(errors)
   const sectionProps = {
     config: current.config,
@@ -474,7 +505,7 @@ function BoardSettingsEditor({
           busy={busy}
           onCancel={() => {
             draft.reset()
-            setErrors([])
+            setReport(null)
             setInUse(new Map())
           }}
           onSave={() => void runSave(current)}

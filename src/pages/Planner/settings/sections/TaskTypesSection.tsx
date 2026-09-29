@@ -111,7 +111,13 @@ export function TaskTypesSection({ config, board, errors, onChange }: ConfigSect
                       aria-label={t('settings.types.slaValue')}
                       className="border-input-border bg-input text-foreground h-8 w-20 rounded-lg border px-2 text-xs"
                       value={Number.isFinite(norm.value) ? norm.value : ''}
-                      onChange={(event) => setNorm({ value: Number(event.target.value) })}
+                      // An emptied field stays empty while the number is retyped (not «0»).
+                      onChange={(event) =>
+                        setNorm({
+                          value:
+                            event.target.value === '' ? Number.NaN : Number(event.target.value),
+                        })
+                      }
                     />
                     <SettingsSelect
                       aria-label={t('settings.types.unit')}

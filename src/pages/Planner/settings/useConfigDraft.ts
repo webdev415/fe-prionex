@@ -18,6 +18,8 @@ import {
   draftFromConfig,
   sameConfig,
   toConfigInput,
+  withMove,
+  withoutMoves,
   type ConfigDraft,
   type ConfigInput,
 } from './boardSettingsModel'
@@ -67,11 +69,19 @@ export function useConfigDraft(board: PlannerBoard | undefined) {
         prev ? { ...prev, draft: { ...prev.draft, config: change(prev.draft.config) } } : prev
       )
     },
-    /** Tasks of a removed status go to `to` (`move_tasks_to`). */
+    /** Tasks of a removed status go to `to` (`move_tasks_to`); moves into `from` follow. */
     setMove(from: string, to: string) {
       setState((prev) =>
         prev
-          ? { ...prev, draft: { ...prev.draft, moves: { ...prev.draft.moves, [from]: to } } }
+          ? { ...prev, draft: { ...prev.draft, moves: withMove(prev.draft.moves, from, to) } }
+          : prev
+      )
+    },
+    /** Forget the moves of these removed statuses — their place is asked again. */
+    dropMoves(from: string[]) {
+      setState((prev) =>
+        prev
+          ? { ...prev, draft: { ...prev.draft, moves: withoutMoves(prev.draft.moves, from) } }
           : prev
       )
     },

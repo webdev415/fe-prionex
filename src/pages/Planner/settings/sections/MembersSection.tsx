@@ -15,8 +15,9 @@
  * - A person of the department itself cannot be added explicitly: the server
  *   answers 409 `already_member`, and the form says «Вже учасник з відділу».
  * - A stale org snapshot on a department board (older than the planner's
- *   15 minutes, or none yet; or the server's 409 `org_stale`) — a banner, and
- *   the role «Адмін» inactive in the lists with the reason.
+ *   15 minutes, or none yet; or the server's 409 `org_stale` on this card) — a
+ *   banner, and the role «Адмін» inactive in the lists with the reason. A newer
+ *   card decides again by its own age.
  */
 import { useState } from 'react'
 import { toast } from 'sonner'
@@ -46,11 +47,17 @@ export function MembersSection({ board }: { board: PlannerBoard }) {
   const [person, setPerson] = useState<PlannerPerson[]>([])
   const [role, setRole] = useState<PlannerBoardMemberRole>('board_member')
   const [addError, setAddError] = useState<string | undefined>()
-  const [serverSaidStale, setServerSaidStale] = useState(false)
+  // The server's 409 `org_stale` holds for the card it was answered on. A newer
+  // card (a re-read on focus, a command's answer) has its own snapshot age, and
+  // that age decides again — otherwise «Адмін» stayed blocked after the CRM had
+  // sent a fresh structure, until the page was reloaded (5.10 bot round 1).
+  const cardKey = `${board.version}:${board.org_snapshot_age_minutes ?? 'none'}`
+  const [refusedFor, setRefusedFor] = useState<string | null>(null)
+  const serverSaidStale = refusedFor === cardKey
 
   const onFailure = (reason: MemberFailure) => {
     if (reason === 'already_member') setAddError(t('settings.members.alreadyMember'))
-    if (reason === 'org_stale') setServerSaidStale(true)
+    if (reason === 'org_stale') setRefusedFor(cardKey)
   }
   const { put, remove } = useBoardMemberCommands(board.code, onFailure)
   const busy = put.isPending || remove.isPending
@@ -58,9 +65,8 @@ export function MembersSection({ board }: { board: PlannerBoard }) {
   const manageAdmins = board.allowed_actions.includes('manage_admins')
   const manageMembers = board.allowed_actions.includes('manage_members')
   const age = board.org_snapshot_age_minutes
-  const orgStale =
-    board.kind === 'department' &&
-    (serverSaidStale || age === null || age > PLANNER_ORG_STALE_MINUTES)
+  const cardStale = age === null || age > PLANNER_ORG_STALE_MINUTES
+  const orgStale = board.kind === 'department' && (serverSaidStale || cardStale)
   const canAssignAdmins = manageAdmins && !orgStale
   // With a stale snapshot «Адмін» stays in the list, inactive, with the reason.
   const adminBlocked = manageAdmins && orgStale
@@ -101,8 +107,13 @@ export function MembersSection({ board }: { board: PlannerBoard }) {
     )
   }
 
-  const staleText =
-    age === null ? t('settings.members.orgNever') : t('settings.members.orgStale', { minutes: age })
+  // The card's own age when it is stale; a refusal on a fresh-looking card says
+  // it was the server, not «оновлено 3 хв тому … недоступне».
+  const staleText = !cardStale
+    ? t('settings.members.orgStaleRefused')
+    : age === null
+      ? t('settings.members.orgNever')
+      : t('settings.members.orgStale', { minutes: age })
 
   return (
     <section className="space-y-4" aria-labelledby="planner-settings-members">

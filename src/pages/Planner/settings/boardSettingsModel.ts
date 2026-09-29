@@ -154,6 +154,35 @@ export function sameConfig(a: ConfigInput, b: ConfigInput): boolean {
   return JSON.stringify(a) === JSON.stringify(b)
 }
 
+/**
+ * Tasks of the removed status `from` go to `to`. A status whose tasks were
+ * going to `from` follows them to `to`: `from` leaves the board too, and a move
+ * into it would be refused (`invalid_target`, 5.10 bot round 1).
+ */
+export function withMove(
+  moves: Record<string, string>,
+  from: string,
+  to: string
+): Record<string, string> {
+  const next: Record<string, string> = {}
+  for (const [removed, target] of Object.entries(moves)) {
+    next[removed] = target === from ? to : target
+  }
+  next[from] = to
+  return next
+}
+
+/** The moves without those of the statuses `from`. */
+export function withoutMoves(
+  moves: Record<string, string>,
+  from: readonly string[]
+): Record<string, string> {
+  return Object.fromEntries(Object.entries(moves).filter(([removed]) => !from.includes(removed)))
+}
+
+/** Refusals of a chosen move (`move_tasks_to.<id>`): the place has to be chosen again. */
+export const MOVE_TARGET_REFUSALS: readonly string[] = ['invalid_target', 'target_requires_reason']
+
 /** The body of `PUT /config`: moves only for statuses the draft no longer has. */
 export function requestBody(draft: ConfigDraft): PlannerBoardConfigPut {
   const kept = new Set(draft.config.statuses.map((status) => status.id))
@@ -226,7 +255,14 @@ export function locateError(error: PlannerBoardConfigError, sent: ConfigInput): 
     id: error.id,
   }
   if (error.field === 'move_tasks_to' || error.field.startsWith('move_tasks_to.')) {
-    return { ...located, section: 'statuses', key: 'move_tasks_to' }
+    // `move_tasks_to.<id>` (`invalid_target`, …) names the removed status in its path.
+    const named = error.field.slice('move_tasks_to.'.length)
+    return {
+      ...located,
+      section: 'statuses',
+      key: 'move_tasks_to',
+      id: error.id ?? (named === '' ? undefined : named),
+    }
   }
   const match = PATH.exec(error.field)
   if (!match) return located
@@ -326,6 +362,52 @@ export function errorsOfRow(errors: LocatedError[], rowId: string): LocatedError
 
 export function errorsOfSection(errors: LocatedError[], section: SettingsSection): LocatedError[] {
   return errors.filter((error) => error.section === section && error.rowId === null)
+}
+
+/** Section of the editor → section of the body (the inverse of SECTION_OF_BODY). */
+const BODY_OF_SECTION: Partial<Record<SettingsSection, keyof ConfigInput>> = {
+  statuses: 'statuses',
+  types: 'task_types',
+  fields: 'fields',
+  labels: 'labels',
+  priorities: 'priorities',
+  defaults: 'defaults',
+}
+
+/** What an error points at in a configuration, as text; undefined — it is not there. */
+function pointedAt(error: LocatedError, config: ConfigInput): string | undefined {
+  if (error.section === null) return JSON.stringify(config)
+  const part = BODY_OF_SECTION[error.section]
+  if (!part) return undefined
+  if (part === 'defaults') {
+    const key = error.key as keyof DefaultsInput | null
+    return JSON.stringify(key && key in config.defaults ? config.defaults[key] : config.defaults)
+  }
+  const rows = config[part] as { id: string }[]
+  if (error.rowId === null) return JSON.stringify(rows)
+  const row = rows.find((item) => item.id === error.rowId)
+  if (!row) return undefined
+  if (error.optionId === null) return JSON.stringify(row)
+  const option = (row as FieldInput).options?.find((item) => item.id === error.optionId)
+  return option ? JSON.stringify(option) : undefined
+}
+
+/**
+ * The errors of the last check still true of the draft: an error stays while
+ * the element it points at (a row, a value, a key of «Виконавець, чек-лист,
+ * опис», a whole section) is as it was checked. Editing it — renaming the
+ * duplicate, picking a participant — takes the error and its count in the menu
+ * away; «Зберегти» asks the server again (5.10 bot round 1).
+ */
+export function currentErrors(
+  errors: LocatedError[],
+  checked: ConfigInput,
+  draft: ConfigInput
+): LocatedError[] {
+  return errors.filter((error) => {
+    const before = pointedAt(error, checked)
+    return before !== undefined && before === pointedAt(error, draft)
+  })
 }
 
 export function countBySection(errors: LocatedError[]): Map<SettingsSection | null, number> {

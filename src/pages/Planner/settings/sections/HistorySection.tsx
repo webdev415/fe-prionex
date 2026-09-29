@@ -36,6 +36,12 @@ const ROLES = ['board_admin', 'board_member', 'board_guest']
 
 type Snapshot = Record<string, unknown> | null
 
+/** Milliseconds of a journal time; an unreadable one goes to the end. */
+function instant(at: string): number {
+  const ms = Date.parse(at)
+  return Number.isNaN(ms) ? 0 : ms
+}
+
 function field(snapshot: Snapshot, key: string): unknown {
   return snapshot && typeof snapshot === 'object' ? snapshot[key] : undefined
 }
@@ -91,7 +97,8 @@ export function HistorySection({ board }: { board: PlannerBoard }) {
     timeStyle: 'short',
     ...(timeZone ? { timeZone } : { timeZone: 'UTC' }),
   })
-  const items = [...(history.data?.items ?? [])].sort((a, b) => b.at.localeCompare(a.at))
+  // Newest first by the instant, not by the text: `date-time` allows `+03:00` as well as `Z`.
+  const items = [...(history.data?.items ?? [])].sort((a, b) => instant(b.at) - instant(a.at))
 
   return (
     <section className="space-y-3" aria-labelledby="planner-settings-history">
