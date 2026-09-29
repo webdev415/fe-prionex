@@ -190,6 +190,15 @@ export interface CreateTaskInput {
   idempotencyKey: string
   /** Files of a request, uploaded right after the 201 (story 3.8: no multipart create). */
   attachments?: CreateTaskAttachment[]
+  /** Which file is uploading and its sent share (0–1): the locked form shows it. */
+  onAttachmentProgress?: (progress: AttachmentProgress) => void
+}
+
+export interface AttachmentProgress {
+  /** 0-based position of the file among `count`. */
+  index: number
+  count: number
+  fraction: number
 }
 
 export interface CreatedTask {
@@ -215,10 +224,14 @@ export function isFieldValidation(error: unknown): boolean {
  */
 async function createWithAttachments(input: CreateTaskInput): Promise<CreatedTask> {
   const task = await createTask(input.boardCode, input.body, input.idempotencyKey)
+  const attachments = input.attachments ?? []
+  const count = attachments.length
   let failedAttachments = 0
-  for (const attachment of input.attachments ?? []) {
+  for (const [index, attachment] of attachments.entries()) {
+    const progress = (fraction: number) => input.onAttachmentProgress?.({ index, count, fraction })
+    progress(0)
     try {
-      await uploadTaskAttachment(task.id, attachment.file, attachment.idempotencyKey)
+      await uploadTaskAttachment(task.id, attachment.file, attachment.idempotencyKey, progress)
     } catch {
       failedAttachments += 1
     }

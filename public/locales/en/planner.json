@@ -119,6 +119,7 @@
     "more": "More fields",
     "removeFile": "Remove file {{name}}",
     "attachmentsFailed": "Files not uploaded: {{count}}. Add them in the task",
+    "uploadProgress": "Uploading file {{index}} of {{count}}: {{percent}}%",
     "due": {
       "today": "Today 18:00",
       "tomorrow": "Tomorrow",
@@ -142,7 +143,7 @@
       "personalOwnerOnly": "On a personal board the assignee is only its owner",
       "assignees": "Only active board members can be assignees",
       "watchers": "Only active employees can be watchers",
-      "fileTooBig": "The file is larger than {{max}} MB",
+      "fileTooBig": "The file is larger than {{max}} MiB",
       "fileEmpty": "An empty file cannot be uploaded",
       "due": {
         "dateMissing": "Enter the date",

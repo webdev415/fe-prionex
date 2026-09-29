@@ -34,11 +34,19 @@ interface DueFieldProps {
 const chip =
   'border-border rounded-full border px-3 py-1 text-xs text-foreground hover:bg-muted aria-pressed:border-primary-500 aria-pressed:bg-muted aria-pressed:font-medium'
 
-function weekdayOf(date: string, language: string): string {
+/**
+ * The weekday of a `YYYY-MM-DD`; `null` for a text `Date` cannot read — a
+ * native date input takes a year of up to six digits («20261-10-05»), and
+ * formatting an Invalid Date throws. Such a date gets no summary line; «Створити»
+ * says «Такої дати немає» at the field (`dueBody`).
+ */
+function weekdayOf(date: string, language: string): string | null {
+  const day = new Date(`${date}T00:00:00Z`)
+  if (Number.isNaN(day.getTime())) return null
   return new Intl.DateTimeFormat(intlLocaleForUiLanguage(language), {
     weekday: 'short',
     timeZone: 'UTC',
-  }).format(new Date(`${date}T00:00:00Z`))
+  }).format(day)
 }
 
 export function DueField({
@@ -59,6 +67,7 @@ export function DueField({
     onChange(presetChoice(preset, new Date(), timeZone))
   }
   const current = new Date()
+  const weekday = value?.date ? weekdayOf(value.date, language) : null
   const pressed = (preset: DuePreset) => {
     if (picking || !value) return false
     const p = presetChoice(preset, current, timeZone)
@@ -132,16 +141,16 @@ export function DueField({
         </div>
       )}
 
-      {value?.date && (
+      {value?.date && weekday && (
         <p className="text-muted-foreground text-xs">
           {value.time
             ? t('create.due.summaryMoment', {
-                weekday: weekdayOf(value.date, language),
+                weekday,
                 date: formatDueDate(value.date, language),
                 time: value.time,
               })
             : t('create.due.summaryDate', {
-                weekday: weekdayOf(value.date, language),
+                weekday,
                 date: formatDueDate(value.date, language),
               })}
         </p>

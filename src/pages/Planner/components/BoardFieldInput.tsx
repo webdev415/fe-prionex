@@ -82,15 +82,13 @@ export function BoardFieldInput({ field, value, onChange, error }: BoardFieldInp
     case 'person': {
       const person = value && typeof value === 'object' && !Array.isArray(value) ? value : null
       return (
-        <div>
-          <PeoplePicker
-            value={person ? [person] : []}
-            onChange={(people: PlannerPerson[]) => onChange(people[0] ?? null)}
-            max={1}
-            label={field.required ? `${field.name}*` : field.name}
-          />
-          <FieldError id={errorId} text={error} />
-        </div>
+        <PeoplePicker
+          value={person ? [person] : []}
+          onChange={(people: PlannerPerson[]) => onChange(people[0] ?? null)}
+          max={1}
+          label={field.required ? `${field.name}*` : field.name}
+          error={error}
+        />
       )
     }
     default:

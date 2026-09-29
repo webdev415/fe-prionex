@@ -6,6 +6,7 @@
 import { describe, expect, it } from 'vitest'
 import type { PlannerBoardField } from '@/api/planner/plannerApi'
 import {
+  boardCardOption,
   boardOptions,
   dueBody,
   fieldBodyValue,
@@ -171,6 +172,19 @@ describe('выбор доски', () => {
     expect(found('тех.')).toEqual(['SUP'])
     expect(found('ito')).toEqual(['ITO'])
     expect(found('  ')).toEqual(['SKL', 'TP', 'SUP', 'ITO'])
+  })
+
+  it('карточка доски — доска члена в «Дошка» только при create_task (запасной вариант без списка)', () => {
+    const card = { code: 'SKL', name: 'Склад', kind: 'team' as const }
+    expect(boardCardOption({ ...card, allowed_actions: ['create_task', 'configure'] })).toEqual({
+      code: 'SKL',
+      name: 'Склад',
+      group: 'team',
+      request: false,
+      department: null,
+      hint: null,
+    })
+    expect(boardCardOption({ ...card, allowed_actions: ['configure'] })).toBeUndefined()
   })
 })
 

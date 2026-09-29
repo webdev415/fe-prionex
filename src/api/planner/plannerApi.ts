@@ -14,7 +14,7 @@
  *   "a planner failure never breaks the CRM" (epic 1). A really expired CRM
  *   session is still caught by the next CRM call.
  */
-import type { AxiosRequestConfig } from 'axios'
+import type { AxiosProgressEvent, AxiosRequestConfig } from 'axios'
 import api from '@/lib/api'
 import type { components, paths } from './schema'
 
@@ -222,25 +222,57 @@ export async function patchTask(
   return { task: res.data, etag: typeof etag === 'string' ? etag : undefined }
 }
 
+/** The shared client's ceiling (`src/lib/api.ts`, 75 s) — the start of an upload's budget. */
+const UPLOAD_BASE_TIMEOUT_MS = 75_000
+/** The slowest uplink an upload is waited for: 64 KiB/s (≈ 0.5 Mbit/s, a poor mobile link). */
+const UPLOAD_MIN_BYTES_PER_SECOND = 64 * 1024
+
+/**
+ * How long one file may take: the shared 75 s plus the file at 64 KiB/s — a
+ * 50 MiB file gets 875 s (~15 min), not the 75 s of a JSON call. Not `0` (no
+ * limit): the form stays locked while its files upload, so a connection that
+ * stalls must end in «не завантажено файлів», not hold the form forever.
+ */
+export function attachmentUploadTimeoutMs(size: number): number {
+  return UPLOAD_BASE_TIMEOUT_MS + Math.ceil((size / UPLOAD_MIN_BYTES_PER_SECOND) * 1000)
+}
+
 /**
  * `POST /tasks/{id}/attachments` — one file, `multipart/form-data` with the
  * part `file` (story 3.8). There is no multipart task creation: the form
  * uploads right after the 201 of the task. The key belongs to one file of one
  * form, so a retry replays the stored 201 instead of adding a second copy.
- * The explicit content type keeps the shared JSON default from turning the
- * form data into JSON; the browser adds the boundary itself.
+ * `onProgress` gets the sent share of the request (0–1) while it uploads.
+ *
+ * The explicit `multipart/form-data` must stay: the shared client's default
+ * `Content-Type: application/json` makes axios serialize a `FormData` body to
+ * JSON (`{"file":{}}` — the file is lost) unless the request names another
+ * type. Axios then drops this header for a `FormData` body in the browser, so
+ * the browser sends its own `multipart/form-data; boundary=…`, and its Node
+ * adapter rewrites it with the boundary too.
  */
 export async function uploadTaskAttachment(
   taskId: string,
   file: File,
-  idempotencyKey: string
+  idempotencyKey: string,
+  onProgress?: (fraction: number) => void
 ): Promise<PlannerTaskAttachment> {
   const body = new FormData()
   body.append('file', file, file.name)
   const res = await api.post<PlannerTaskAttachment>(
     url('/tasks/{id}/attachments', { id: taskId }),
     body,
-    config({ 'Idempotency-Key': idempotencyKey, 'Content-Type': 'multipart/form-data' })
+    config(
+      { 'Idempotency-Key': idempotencyKey, 'Content-Type': 'multipart/form-data' },
+      {
+        timeout: attachmentUploadTimeoutMs(file.size),
+        ...(onProgress && {
+          onUploadProgress: (event: AxiosProgressEvent) => {
+            if (event.progress !== undefined) onProgress(event.progress)
+          },
+        }),
+      }
+    )
   )
   return res.data
 }

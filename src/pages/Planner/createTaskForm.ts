@@ -193,6 +193,26 @@ export function boardOptions(
   return [...members, ...intake]
 }
 
+/**
+ * The board card (`GET /boards/{code}`) as a member board of the picker: the
+ * stand-in for the board page's own board while the list has not answered or
+ * failed. Only a card whose `allowed_actions` has `create_task` — the same
+ * answer the page's «+ Задача» is shown by.
+ */
+export function boardCardOption(
+  board: Pick<PlannerBoard, 'code' | 'name' | 'kind' | 'allowed_actions'>
+): BoardOption | undefined {
+  if (!board.allowed_actions.includes('create_task')) return undefined
+  return {
+    code: board.code,
+    name: board.name,
+    group: board.kind,
+    request: false,
+    department: null,
+    hint: null,
+  }
+}
+
 /** The name a request board is known by: its department, else the board's own name. */
 export function requestTargetName(option: Pick<BoardOption, 'department' | 'name'>): string {
   return option.department ?? option.name

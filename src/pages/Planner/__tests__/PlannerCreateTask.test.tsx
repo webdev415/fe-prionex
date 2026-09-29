@@ -5,7 +5,7 @@
  * form of a non-member with files uploaded right after the 201.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AxiosError, AxiosHeaders } from 'axios'
@@ -608,7 +608,7 @@ describe('Заявка не члена доски с «Приймає заявк
     expect(onClose).toHaveBeenCalled()
   })
 
-  it('файл больше 50 МБ и пустой файл — ошибка у поля, заявка не отправляется', async () => {
+  it('файл больше 50 МиБ и пустой файл — ошибка у поля, заявка не отправляется', async () => {
     const user = userEvent.setup()
     renderDialog({ boardCode: 'ANL' })
     await screen.findByRole('heading', { name: 'Нова заявка до «Аналітика»' })
@@ -617,7 +617,7 @@ describe('Заявка не члена доски с «Приймає заявк
     Object.defineProperty(big, 'size', { value: 52_428_801 })
     await user.upload(screen.getByLabelText('Вкладення'), big)
     await user.click(screen.getByRole('button', { name: 'Створити' }))
-    expect(await screen.findByText('Файл більший за 50 МБ')).toBeInTheDocument()
+    expect(await screen.findByText('Файл більший за 50 МіБ')).toBeInTheDocument()
     expect(api.createTask).not.toHaveBeenCalled()
 
     await user.click(screen.getByRole('button', { name: 'Прибрати файл big.zip' }))
@@ -796,5 +796,165 @@ describe('Ревью 5.7, раунд 1: подсказка П-9, клавиат�
     await waitFor(() => expect(toast.success).toHaveBeenCalledTimes(1))
     expect(toast.error).toHaveBeenCalledWith('Не завантажено файлів: 1. Додайте їх у задачі')
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('Ревью бота, раунд 1 (PR #351): доска без списка, файлы при смене доски, срок, загрузка, ошибки людей', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    api.listCreatableBoards.mockResolvedValue({ items: ITEMS, intake: INTAKE })
+    api.getBoard.mockResolvedValue(memberBoard())
+    api.searchPeople.mockResolvedValue({ items: [] })
+    api.createTask.mockResolvedValue(makeTask({ key: 'SKL-43' }))
+    api.uploadTaskAttachment.mockResolvedValue({})
+  })
+
+  it('список досок не ответил отказом — «+ Задача» доски всё равно создаёт задачу на своей доске', async () => {
+    api.listCreatableBoards.mockRejectedValue(plannerError(503, 'feature_disabled'))
+    const user = userEvent.setup()
+    renderDialog({ boardCode: 'SKL' })
+    // The board page's own board, from its card; the list's failure is said.
+    expect(await screen.findByRole('button', { name: 'Дошка SKL · Склад' })).toBeInTheDocument()
+    expect(await screen.findByText('Не вдалося завантажити дошки')).toBeInTheDocument()
+    await screen.findByLabelText('Тип')
+    await user.type(screen.getByLabelText('Назва'), 'Без списку')
+    await user.click(screen.getByRole('button', { name: 'Створити' }))
+    const body = await sentBody()
+    expect(api.createTask.mock.calls[0][0]).toBe('SKL')
+    expect(body).toEqual({ title: 'Без списку', due_date: null })
+    expect(screen.queryByText('Оберіть дошку', { selector: 'p' })).toBeNull()
+  })
+
+  it('«Створити» до ответа списка занята и не залипает на «Оберіть дошку»; после ответа — отправка на доску', async () => {
+    let answerList: (list: PlannerBoardList) => void = () => {}
+    api.listCreatableBoards.mockImplementation(
+      () => new Promise<PlannerBoardList>((resolve) => (answerList = resolve))
+    )
+    const user = userEvent.setup()
+    renderDialog({ boardCode: 'SKL' })
+    // The form is there from the board card while the list loads.
+    await screen.findByLabelText('Тип')
+    await user.type(screen.getByLabelText('Назва'), 'Швидкий клік')
+    const submit = screen.getByRole('button', { name: 'Створити' })
+    expect(submit).toBeDisabled()
+    await user.click(submit)
+    expect(screen.queryByText('Оберіть дошку', { selector: 'p' })).toBeNull()
+    expect(api.createTask).not.toHaveBeenCalled()
+
+    answerList({ items: ITEMS, intake: INTAKE })
+    await waitFor(() => expect(submit).toBeEnabled())
+    await user.click(submit)
+    await sentBody()
+    expect(api.createTask.mock.calls[0][0]).toBe('SKL')
+  })
+
+  it('«Оберіть дошку», сказанное до ответа карточки доски, уходит, когда доска нашлась', async () => {
+    api.listCreatableBoards.mockRejectedValue(plannerError(503, 'feature_disabled'))
+    let answerBoard: (board: PlannerBoard) => void = () => {}
+    api.getBoard.mockImplementation(
+      () => new Promise<PlannerBoard>((resolve) => (answerBoard = resolve))
+    )
+    const user = userEvent.setup()
+    renderDialog({ boardCode: 'SKL' })
+    await screen.findByText('Не вдалося завантажити дошки')
+    await user.type(screen.getByLabelText('Назва'), 'Рано')
+    await user.click(screen.getByRole('button', { name: 'Створити' }))
+    expect(await screen.findByText('Оберіть дошку', { selector: 'p' })).toBeInTheDocument()
+
+    answerBoard(memberBoard())
+    await screen.findByRole('button', { name: 'Дошка SKL · Склад' })
+    await waitFor(() => expect(screen.queryByText('Оберіть дошку', { selector: 'p' })).toBeNull())
+    await user.click(screen.getByRole('button', { name: 'Створити' }))
+    await sentBody()
+    expect(api.createTask.mock.calls[0][0]).toBe('SKL')
+  })
+
+  it('файлы заявки остаются при смене отдела, но уходят вместе с переходом на доску члена — не молча при «Створити»', async () => {
+    const user = userEvent.setup()
+    renderDialog({ boardCode: 'ANL' })
+    await screen.findByRole('heading', { name: 'Нова заявка до «Аналітика»' })
+    await user.upload(screen.getByLabelText('Вкладення'), new File(['a;b'], 'report.csv'))
+    expect(screen.getByText('report.csv')).toBeInTheDocument()
+
+    // Another department: the request keeps its files.
+    await openPicker(user)
+    await user.click(screen.getByRole('button', { name: /^Тех\. підтримка · SUP/ }))
+    expect(screen.getByText('report.csv')).toBeInTheDocument()
+
+    // A member board has no files: they go with the switch, not later.
+    await openPicker(user)
+    await user.click(screen.getByRole('button', { name: 'SKL · Склад' }))
+    expect(screen.queryByLabelText('Вкладення')).toBeNull()
+    await openPicker(user)
+    await user.click(screen.getByRole('button', { name: /^Аналітика · ANL/ }))
+    expect(screen.getByLabelText('Вкладення')).toBeInTheDocument()
+    expect(screen.queryByText('report.csv')).toBeNull()
+
+    await user.type(screen.getByLabelText('Назва'), 'Без файлу')
+    await user.click(screen.getByRole('button', { name: 'Створити' }))
+    await sentBody()
+    await waitFor(() => expect(toast.success).toHaveBeenCalledTimes(1))
+    expect(api.uploadTaskAttachment).not.toHaveBeenCalled()
+  })
+
+  it('год из шести цифр в «Обрати дату» («20261-10-05») не роняет форму: без строки-сводки, «Такої дати немає» у поля', async () => {
+    const user = userEvent.setup()
+    renderDialog({ boardCode: 'SKL' })
+    await screen.findByLabelText('Тип')
+    await user.type(screen.getByLabelText('Назва'), 'Опечатка в році')
+    await user.click(screen.getByRole('button', { name: 'Обрати дату' }))
+    fireEvent.change(screen.getByLabelText('Дата'), { target: { value: '20261-10-05' } })
+    expect(screen.getByLabelText('Дата')).toHaveValue('20261-10-05')
+    // The form is alive: no summary line for a date `Date` cannot read.
+    expect(screen.getByLabelText('Назва')).toHaveValue('Опечатка в році')
+    expect(screen.queryByText(/без часу$/)).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Створити' }))
+    expect(await screen.findByText('Такої дати немає')).toBeInTheDocument()
+    expect(api.createTask).not.toHaveBeenCalled()
+  })
+
+  it('загрузка файла заявки после 201 — «Завантаження файлу 1 з 1: 40%» и полоса в запертой форме', async () => {
+    let finishUpload: (value: unknown) => void = () => {}
+    api.createTask.mockResolvedValue(
+      makeTask({ id: 'task-anl-43', key: 'ANL-43', is_request: true, assignees: [] })
+    )
+    api.uploadTaskAttachment.mockImplementationOnce(
+      (_id: string, _file: File, _key: string, onProgress?: (fraction: number) => void) =>
+        new Promise((resolve) => {
+          onProgress?.(0.4)
+          finishUpload = resolve
+        })
+    )
+    const user = userEvent.setup()
+    const { onClose } = renderDialog({ boardCode: 'ANL' })
+    await screen.findByRole('heading', { name: 'Нова заявка до «Аналітика»' })
+    await user.type(screen.getByLabelText('Назва'), 'Великий файл')
+    await user.upload(screen.getByLabelText('Вкладення'), new File(['x'], 'a.zip'))
+    await user.click(screen.getByRole('button', { name: 'Створити' }))
+
+    const bar = await screen.findByLabelText('Завантаження файлу 1 з 1: 40%')
+    expect(bar.tagName).toBe('PROGRESS')
+    expect(bar).toHaveAttribute('value', '40')
+    expect(onClose).not.toHaveBeenCalled()
+
+    finishUpload({})
+    await waitFor(() => expect(toast.success).toHaveBeenCalledTimes(1))
+    expect(toast.error).not.toHaveBeenCalled()
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('ошибка 400 по исполнителям — у поля «Виконавці»: aria-invalid и описание поля, не отдельный абзац', async () => {
+    api.createTask.mockRejectedValueOnce(plannerError(400, 'validation', { field: 'assignee_ids' }))
+    const user = userEvent.setup()
+    renderDialog({ boardCode: 'SKL' })
+    await screen.findByText('Олена Коваль')
+    await user.type(screen.getByLabelText('Назва'), 'Чужий виконавець')
+    await user.click(screen.getByRole('button', { name: 'Створити' }))
+    const assignees = screen.getByLabelText('Виконавці')
+    await waitFor(() => expect(assignees).toHaveAttribute('aria-invalid', 'true'))
+    expect(assignees).toHaveAccessibleDescription(
+      'Виконавцями можуть бути лише активні учасники дошки'
+    )
+    expect(toast.error).not.toHaveBeenCalled()
   })
 })

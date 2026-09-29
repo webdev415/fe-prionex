@@ -6,7 +6,9 @@
  * a board in `items` takes a task of a member (type, assignees, priority,
  * fields, «Ще поля»), a board in `intake` takes a request (title, description,
  * files, required fields, deadline; «Тип, пріоритет і виконавця визначить
- * відділ»). The client does not decide who is a member.
+ * відділ»). The client does not decide who is a member. Until the list answers
+ * (or when it failed) the board page's own board stands in as a member board
+ * by its card's `create_task`, and «Створити» waits only while the list loads.
  *
  * One `Idempotency-Key` per form: it is minted when the form mounts and sent
  * with every «Створити» of this form, so a double click (or a network retry)
@@ -67,6 +69,7 @@ import {
 } from '../hooks/usePlannerMutations'
 import { usableTimeZone } from '../plannerFormat'
 import {
+  boardCardOption,
   boardOptions,
   dueBody,
   fieldBodyValue,
@@ -91,7 +94,9 @@ interface CreateTaskDialogProps {
   boardCode?: string
   /**
    * `request` — the «Нова заявка» entry (U-48): only boards that take
-   * requests, and the field is «Кому» from the start.
+   * requests, and the field is «Кому» from the start. No caller yet: the
+   * entries are «Нова заявка» in «Мої задачі» (story 5.2) and `+ Заявка` of the
+   * guest view (story 5.3); story 5.7 ships the form only.
    */
   intent?: 'task' | 'request'
   onClose: () => void
@@ -100,6 +105,8 @@ interface CreateTaskDialogProps {
 }
 
 type Errors = Partial<Record<FormFieldKey, string>>
+
+const MIB = 1024 * 1024
 
 const byPosition = <T extends { position: number }>(items: readonly T[] | undefined): T[] =>
   [...(items ?? [])].sort((a, b) => a.position - b.position)
@@ -118,13 +125,25 @@ export function CreateTaskDialog({
   const [idempotencyKey] = useState(newIdempotencyKey)
   const requestOnly = intent === 'request'
   const creatable = usePlannerCreatableBoards()
-  const options = boardOptions(creatable.data, requestOnly)
+  const listed = creatable.data ? boardOptions(creatable.data, requestOnly) : undefined
   const [code, setCode] = useState<string | undefined>(boardCode)
-  const selected = options.find((option) => option.code === code)
+  const listedChoice = listed?.find((option) => option.code === code)
+  // «+ Задача» of a board page does not wait on the list: until it answers, or
+  // when it failed, the page's own board stands in as a member board — its card
+  // is at hand (the page has read it) and allows `create_task`. «Створити»
+  // still waits for the list while it loads: the list may say the task is a
+  // request here. A request needs the list (the card has no intake fields).
+  const standInCode = !listed && !requestOnly && code === boardCode ? code : undefined
+  const board = usePlannerBoard(
+    listedChoice ? (listedChoice.request ? undefined : listedChoice.code) : standInCode,
+    true,
+    { poll: false }
+  )
+  const standIn =
+    standInCode && board.data?.code === standInCode ? boardCardOption(board.data) : undefined
+  const options = listed ?? (standIn ? [standIn] : [])
+  const selected = listedChoice ?? standIn
   const mode = selected ? (selected.request ? 'request' : 'task') : undefined
-  const board = usePlannerBoard(mode === 'task' ? selected?.code : undefined, true, {
-    poll: false,
-  })
   const config = mode === 'task' ? board.data?.config : undefined
   const intakeBoard =
     mode === 'request' ? creatable.data?.intake?.find((b) => b.code === code) : undefined
@@ -142,8 +161,19 @@ export function CreateTaskDialog({
   const [fieldDrafts, setFieldDrafts] = useState<Record<string, FieldDraft>>({})
   const [watchers, setWatchers] = useState<PlannerPerson[]>([])
   const [files, setFiles] = useState<CreateTaskAttachment[]>([])
+  /** The file being uploaded after the 201, while the form is locked. */
+  const [upload, setUpload] = useState<{ index: number; count: number; percent: number } | null>(
+    null
+  )
   const [moreOpen, setMoreOpen] = useState(false)
   const [errors, setErrors] = useState<Errors>({})
+  // A board that resolves late (the list or the card answered after a
+  // «Створити») takes the «Оберіть дошку» said meanwhile with it.
+  const [resolvedCode, setResolvedCode] = useState(selected?.code)
+  if (resolvedCode !== selected?.code) {
+    setResolvedCode(selected?.code)
+    if (resolvedCode === undefined && errors.board) setErrors({ ...errors, board: undefined })
+  }
   const formId = useId()
   const create = useCreatePlannerTask()
   // The button is disabled while the request is in flight, but a second click
@@ -219,6 +249,10 @@ export function CreateTaskDialog({
     setAssignees(undefined)
     setLabelIds([])
     setFieldDrafts({})
+    // Files belong to a request, like the title to the task: they stay from one
+    // request board to another, but a member board's form has no files — they
+    // go with the switch, visibly, not silently at «Створити».
+    if (!option.request) setFiles([])
     setErrors({})
   }
 
@@ -230,7 +264,7 @@ export function CreateTaskDialog({
   }
 
   const submit = () => {
-    if (inFlight.current) return
+    if (inFlight.current || creatable.isPending) return
     const next: Errors = {}
     if (!selected) next.board = t('create.errors.boardRequired')
     const trimmed = title.trim()
@@ -256,7 +290,9 @@ export function CreateTaskDialog({
     }
     if (mode === 'request') {
       if (files.some(({ file }) => file.size > PLANNER_ATTACHMENT_MAX_BYTES)) {
-        next.attachments = t('create.errors.fileTooBig', { max: formatCount(50) })
+        next.attachments = t('create.errors.fileTooBig', {
+          max: formatCount(PLANNER_ATTACHMENT_MAX_BYTES / MIB),
+        })
       } else if (files.some(({ file }) => file.size === 0)) {
         next.attachments = t('create.errors.fileEmpty')
       }
@@ -286,6 +322,12 @@ export function CreateTaskDialog({
         idempotencyKey,
         body,
         attachments: mode === 'request' && files.length > 0 ? files : undefined,
+        onAttachmentProgress: ({ index, count, fraction }) => {
+          const percent = Math.floor(fraction * 100)
+          setUpload((was) =>
+            was?.index === index && was.percent === percent ? was : { index, count, percent }
+          )
+        },
       },
       {
         onSuccess: ({ task, failedAttachments }) => {
@@ -324,6 +366,7 @@ export function CreateTaskDialog({
         },
         onSettled: () => {
           inFlight.current = false
+          setUpload(null)
         },
       }
     )
@@ -435,16 +478,14 @@ export function CreateTaskDialog({
                 error={errors.type}
               />
             )}
-            <div>
-              <PeoplePicker
-                value={shownAssignees}
-                onChange={(people) => {
-                  setAssignees(people)
-                  clearError('assignees')
-                }}
-              />
-              <FieldError id={`${formId}-assignees`} text={errors.assignees} />
-            </div>
+            <PeoplePicker
+              value={shownAssignees}
+              onChange={(people) => {
+                setAssignees(people)
+                clearError('assignees')
+              }}
+              error={errors.assignees}
+            />
             {dueField}
             {priorities.length > 0 && (
               <NativeSelect
@@ -507,19 +548,17 @@ export function CreateTaskDialog({
                     <FieldError id={`${formId}-labels`} text={errors.labels} />
                   </fieldset>
                 )}
-                <div>
-                  <PeoplePicker
-                    value={watchers}
-                    onChange={(people) => {
-                      setWatchers(people)
-                      clearError('watchers')
-                    }}
-                    max={PLANNER_WATCHERS_MAX}
-                    label={t('create.fields.watchers')}
-                    placeholder={t('create.fields.assigneesPlaceholder')}
-                  />
-                  <FieldError id={`${formId}-watchers`} text={errors.watchers} />
-                </div>
+                <PeoplePicker
+                  value={watchers}
+                  onChange={(people) => {
+                    setWatchers(people)
+                    clearError('watchers')
+                  }}
+                  max={PLANNER_WATCHERS_MAX}
+                  label={t('create.fields.watchers')}
+                  placeholder={t('create.fields.assigneesPlaceholder')}
+                  error={errors.watchers}
+                />
                 {optionalFields.map(renderField)}
               </div>
             )}
@@ -576,6 +615,26 @@ export function CreateTaskDialog({
                 </ul>
               )}
               <FieldError id={`${formId}-files-error`} text={errors.attachments} />
+              {upload && (
+                <div className="mt-1.5">
+                  <label
+                    htmlFor={`${formId}-upload`}
+                    className="text-muted-foreground block text-xs tabular-nums"
+                  >
+                    {t('create.uploadProgress', {
+                      index: formatCount(upload.index + 1),
+                      count: formatCount(upload.count),
+                      percent: formatCount(upload.percent),
+                    })}
+                  </label>
+                  <progress
+                    id={`${formId}-upload`}
+                    max={100}
+                    value={upload.percent}
+                    className="accent-primary-500 h-1.5 w-full"
+                  />
+                </div>
+              )}
             </div>
             {requiredFields.map(renderField)}
             {dueField}
@@ -588,7 +647,13 @@ export function CreateTaskDialog({
         <Button variant="outline" size="sm" onClick={close} disabled={create.isPending}>
           {t('create.cancel')}
         </Button>
-        <Button size="sm" onClick={submit} isLoading={create.isPending}>
+        {/* Waits for the list of boards: it says whether the task is a request. */}
+        <Button
+          size="sm"
+          onClick={submit}
+          isLoading={create.isPending}
+          disabled={creatable.isPending}
+        >
           {t('create.submit')}
         </Button>
       </ModalFooter>
