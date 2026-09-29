@@ -12754,8 +12754,10 @@
       "points": "Points",
       "total": "Total points",
       "totalValue": "{{total}} of {{max}}",
+      "totalValueBare": "{{total}}",
       "band": "Band",
-      "bandValue": "{{band}} of 7 (1 is best)",
+      "bandValue": "{{band}} of {{bands}} (1 is best)",
+      "bandValueBare": "{{band}} (1 is best)",
       "bandDeclined": "0 — declined by the gate",
       "gate": "Auto-decline gate",
       "gatePass": "Passed",
@@ -12782,6 +12784,7 @@
       "installments": "Number of installments",
       "installmentsRange": "{{min}}–{{max}}",
       "installmentsUpTo": "up to {{max}}",
+      "installmentsFrom": "from {{min}}",
       "decisionCodes": "Machine decision codes"
     },
     "scorecardParameter": {

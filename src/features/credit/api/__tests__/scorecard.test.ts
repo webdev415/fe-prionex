@@ -7,9 +7,25 @@
  * напечатать его «ні» значило бы соврать андеррайтеру о причине решения.
  */
 import { describe, it, expect } from 'vitest'
-import { readScorecard } from '../scorecard'
+import { bookLimitsOf, readScorecard, SCORECARD_BOOK_LIMITS } from '../scorecard'
 import type { CreditDecisionSnapshot } from '../types'
 import { PART_B_KEYS, SCENE_A, SCENE_B, SCENE_C, SCENE_D, withPartB } from './scorecardFixture'
+
+/**
+ * Версия книги, под которую фронт знает максимум суммы и число бандов, —
+ * литерал конфига скоринга модуля: `service/src/credit_service/infra/seed.py`
+ * модуля (`main` `86b22fed`) и все десять живых снимков DEV-приёмки 19-3
+ * (`review/fe197/scorecard-snapshots.json`). Литералом, а не первым ключом
+ * таблицы фронта: иначе K-11 сравнивал бы таблицу с ней самой. Имя проекта в
+ * литерале — данные, а не объяснение прав: разрешение в `ALLOWED_PROJECT_MENTIONS`
+ * стража `creditStaleStandTexts.test.ts`. Фикстура несёт синтетическую
+ * `scorecard@1` — версию незнакомую.
+ */
+const KNOWN_SCORECARD_VERSION = 'fin-boost-scorecard-2026-09-28@1'
+const withVersion = (snapshot: CreditDecisionSnapshot, version: string | null) => ({
+  ...snapshot,
+  scorecard: { ...snapshot.scorecard, version },
+})
 
 const view = (snapshot: CreditDecisionSnapshot) => {
   const read = readScorecard(snapshot)
@@ -29,7 +45,7 @@ const withInputs = (inputs: Record<string, unknown>): CreditDecisionSnapshot => 
 
 describe('readScorecard', () => {
   it('K-1: одобрение — восемь строк в порядке книги, баллы, сумма и банд как в снимке', () => {
-    const read = view(SCENE_A)
+    const read = view(withVersion(SCENE_A, KNOWN_SCORECARD_VERSION))
     expect(read.rows.map((item) => item.cell)).toEqual([
       'C13',
       'C14',
@@ -56,9 +72,49 @@ describe('readScorecard', () => {
     expect(read.total).toBe(12)
     expect(read.maxTotal).toBe(13)
     expect(read.band).toBe(2)
+    expect(read.bands).toBe(7)
     expect(read.declined).toBe(false)
-    expect(read.version).toBe('scorecard@1')
+    expect(read.version).toBe(KNOWN_SCORECARD_VERSION)
     expect([read.incomeClass, read.incomeClassSource]).toEqual(['A', 'both'])
+  })
+
+  it('K-10: версия книги незнакома или её нет — ни максимума суммы, ни числа бандов', () => {
+    // Та же книга, следующая калибровка: константы листа могли измениться.
+    // Унаследованные имена (`constructor`) держит K-12 — здесь их не видно:
+    // у функции-конструктора нет полей `maxTotal` и `bands`.
+    const next = KNOWN_SCORECARD_VERSION.replace(/\d{4}-\d{2}-\d{2}@\d+$/, '2027-01-01@2')
+    expect(next).not.toBe(KNOWN_SCORECARD_VERSION)
+    for (const version of [next, 'scorecard@1', null]) {
+      const read = view(withVersion(SCENE_A, version))
+      expect(
+        [read.maxTotal, read.bands],
+        `unknown scorecard version ${String(version)} got book limits`
+      ).toEqual([null, null])
+      // Сумма и банд — из снимка как есть, знаменатель не нужен им самим.
+      expect([read.total, read.band]).toEqual([12, 2])
+    }
+  })
+
+  it('K-11: таблица констант листа — ровно версия конфига скоринга модуля, 13 баллов и 7 бандов', () => {
+    // Опечатка в ключе таблицы молча превращает боевую версию в незнакомую:
+    // экран аудита теряет «з 13» и «з 7», и ни одна сцена фикстуры этого не
+    // видит — фикстура несёт синтетическую версию.
+    expect(
+      Object.keys(SCORECARD_BOOK_LIMITS),
+      "book limits table key differs from the module's scorecard version"
+    ).toEqual([KNOWN_SCORECARD_VERSION])
+    expect(SCORECARD_BOOK_LIMITS[KNOWN_SCORECARD_VERSION]).toEqual({ maxTotal: 13, bands: 7 })
+  })
+
+  it('K-12: версия ищется только среди собственных ключей таблицы — унаследованное имя не версия', () => {
+    expect(bookLimitsOf(KNOWN_SCORECARD_VERSION)).toEqual({ maxTotal: 13, bands: 7 })
+    expect(bookLimitsOf(null)).toBeNull()
+    for (const inherited of ['constructor', 'toString']) {
+      expect(
+        bookLimitsOf(inherited),
+        `inherited key resolved as a book version: ${inherited}`
+      ).toBeNull()
+    }
   })
 
   it('K-2: NSF 5 — отказ гейтом, банд 0, код AB-G-04, у C13 вход 5 и балл 0', () => {

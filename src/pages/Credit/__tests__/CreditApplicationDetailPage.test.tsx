@@ -170,6 +170,25 @@ describe('CreditApplicationDetailPage → идентификаторы', () => {
   })
 })
 
+describe('CreditApplicationDetailPage → анкета: имя держателя счёта выплаты', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('P-1: имя держателя рядом с совпадением личности скрыто в записи сессии, как ФИО', () => {
+    // Держатель синтетический: живых имён в тестах нет.
+    renderPage({
+      ...APPLICATION,
+      ibv: {
+        identity_match_rate: 0.95,
+        payout_account_id: 'acc_test_1',
+        accounts: [{ account_id: 'acc_test_1', holder_name: 'Test Holder' }],
+      },
+    } as unknown as CreditApplicationDetail)
+    expectObscured(screen.getByText('Test Holder'))
+  })
+})
+
 describe('CreditApplicationDetailPage → этап заявки доезжает до ленты', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -1244,6 +1263,25 @@ describe('CreditApplicationDetailPage → решение заменяет пре
       )
       expect(screen.queryByText('credit.scorecard.title')).toBeNull()
       expect(rawSnapshot().textContent).toContain('"net_amount_minor": 250000')
+    })
+
+    it('R-2c: класс дохода 19-2 без scorecard — ни панели, ни таблицы, ни отсылки к разбору', () => {
+      // Бывшая сцена B-5 компонента: есть ли разбор, решает страница по одному
+      // чтению снимка, панель без модели не рисуется.
+      renderDecision(
+        withSnapshot({
+          income_class: 'A',
+          income_class_source: 'both',
+          income_class_basis: {
+            ...SCENE_A.income_class_basis,
+            amounts: { sum_pension_income: 1000 },
+          },
+        } as CreditDecision['input_snapshot'])
+      )
+      expect(screen.queryByText('credit.scorecard.title')).toBeNull()
+      expect(screen.queryByText('credit.scorecard.parameter')).toBeNull()
+      expect(screen.getByText('credit.card.snapshotAmountsHidden')).toBeInTheDocument()
+      expect(screen.queryByText('credit.card.snapshotAmountsHiddenSeeBreakdown')).toBeNull()
     })
 
     it('R-3: счёт выплаты убран из сырого снимка, строка об этом есть, блок скрыт в записи', () => {

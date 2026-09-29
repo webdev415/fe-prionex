@@ -12794,8 +12794,10 @@
       "points": "Бали",
       "total": "Сума балів",
       "totalValue": "{{total}} з {{max}}",
+      "totalValueBare": "{{total}}",
       "band": "Банд",
-      "bandValue": "{{band}} з 7 (1 — найкращий)",
+      "bandValue": "{{band}} з {{bands}} (1 — найкращий)",
+      "bandValueBare": "{{band}} (1 — найкращий)",
       "bandDeclined": "0 — відмова гейтом",
       "gate": "Гейт автовідмови",
       "gatePass": "Пройдено",
@@ -12822,6 +12824,7 @@
       "installments": "Кількість внесків",
       "installmentsRange": "{{min}}–{{max}}",
       "installmentsUpTo": "до {{max}}",
+      "installmentsFrom": "від {{min}}",
       "decisionCodes": "Коди рішення машини"
     },
     "scorecardParameter": {

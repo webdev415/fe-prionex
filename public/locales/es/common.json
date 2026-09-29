@@ -12799,8 +12799,10 @@
       "points": "Puntos",
       "total": "Puntos totales",
       "totalValue": "{{total}} de {{max}}",
+      "totalValueBare": "{{total}}",
       "band": "Banda",
-      "bandValue": "{{band}} de 7 (1 es la mejor)",
+      "bandValue": "{{band}} de {{bands}} (1 es la mejor)",
+      "bandValueBare": "{{band}} (1 es la mejor)",
       "bandDeclined": "0 — rechazo por el filtro",
       "gate": "Filtro de rechazo automático",
       "gatePass": "Superado",
@@ -12827,6 +12829,7 @@
       "installments": "Número de cuotas",
       "installmentsRange": "{{min}}–{{max}}",
       "installmentsUpTo": "hasta {{max}}",
+      "installmentsFrom": "desde {{min}}",
       "decisionCodes": "Códigos de decisión de la máquina"
     },
     "scorecardParameter": {

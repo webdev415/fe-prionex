@@ -7,27 +7,34 @@
  *
  * - `ibv.payout_account` — имя и адрес держателя, номера банка, отделения и
  *   счёта. Вкладка IBV той же заявки номер счёта маскирует;
- * - `income_class_basis.amounts` и ключи `sum_*` в `ibv.risk.extra` — суммы
- *   пенсии, выплат по инвалидности, EI, соцпомощи, WSIB. Они говорят о здоровье
- *   и социальном статусе клиента, а решение по ним уже свёрнуто в признаки
- *   класса дохода, которые показывает разбор скоринга.
+ * - `income_class_basis.amounts` и семь сумм Lending в `ibv.risk.extra` — суммы
+ *   пенсии, выплат по инвалидности, EI, соцпомощи, WSIB, госдохода и алиментов.
+ *   Они говорят о здоровье и социальном статусе клиента, а решение по ним уже
+ *   свёрнуто в признаки класса дохода, которые показывает разбор скоринга.
+ *   Из `extra` убираются ровно эти семь ключей по перечню
+ *   `CREDIT_SNAPSHOT_BENEFIT_AMOUNT_KEYS`, а не всё с префиксом `sum_`: ключи
+ *   `extra` — провайдерские, и сумма дохода от работодателя пособием не является.
  *
  * Фронт убирает их с экрана, а не из ответа модуля: ответ по-прежнему их несёт.
  * Вход не мутируется — копируется только путь до убранного ключа.
  *
- * Флаг «суммы скрыты» — по значениям, а не по ключу: модуль пишет
+ * Оба флага «скрыто» — по значениям, а не по ключу: модуль пишет
  * `income_class_basis.amounts` в каждое решение, и без банковской проверки все
- * семь сумм там `null`. Ключ с одними `null` убирается молча — прятать было нечего.
+ * семь сумм там `null`; счёт выплаты может прийти `null` или пустым объектом.
+ * Ключ без единого значения убирается молча — прятать было нечего.
  */
+import { CREDIT_SNAPSHOT_BENEFIT_AMOUNT_KEYS } from './enums'
 
 type Json = Record<string, unknown>
+
+const BENEFIT_AMOUNT_KEYS: ReadonlySet<string> = new Set(CREDIT_SNAPSHOT_BENEFIT_AMOUNT_KEYS)
 
 const isObject = (value: unknown): value is Json =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 
 export interface CreditSnapshotForDisplay {
   snapshot: Json
-  /** Был ли в снимке счёт выплаты — для строки под сырым блоком. */
+  /** Были ли в снимке реквизиты счёта выплаты — хоть одно не `null`. */
   payoutHidden: boolean
   /** Были ли в снимке суммы пособий — хоть одна не `null`. */
   amountsHidden: boolean
@@ -46,9 +53,9 @@ function without(
   }
 }
 
-/** Есть ли сумма: хоть одно значение не `null` (в объекте `amounts` — среди его значений). */
-const carriesAmount = (value: unknown): boolean =>
-  isObject(value) ? Object.values(value).some(carriesAmount) : value !== null && value !== undefined
+/** Есть ли значение: не `null` сам или, у объекта, хоть один его лист не `null`. */
+const carriesValue = (value: unknown): boolean =>
+  isObject(value) ? Object.values(value).some(carriesValue) : value !== null && value !== undefined
 
 export function snapshotForDisplay(snapshot: unknown): CreditSnapshotForDisplay {
   if (!isObject(snapshot)) return { snapshot: {}, payoutHidden: false, amountsHidden: false }
@@ -61,14 +68,14 @@ export function snapshotForDisplay(snapshot: unknown): CreditSnapshotForDisplay 
     const noPayout = without(ibv, (key) => key === 'payout_account')
     if (noPayout) {
       ibv = noPayout.kept
-      payoutHidden = true
+      payoutHidden = noPayout.dropped.some(carriesValue)
     }
     const risk = ibv.risk
     if (isObject(risk) && isObject(risk.extra)) {
-      const extra = without(risk.extra, (key) => key.startsWith('sum_'))
+      const extra = without(risk.extra, (key) => BENEFIT_AMOUNT_KEYS.has(key))
       if (extra) {
         ibv = { ...ibv, risk: { ...risk, extra: extra.kept } }
-        amountsHidden ||= extra.dropped.some(carriesAmount)
+        amountsHidden ||= extra.dropped.some(carriesValue)
       }
     }
     out.ibv = ibv
@@ -78,7 +85,7 @@ export function snapshotForDisplay(snapshot: unknown): CreditSnapshotForDisplay 
     const basis = without(snapshot.income_class_basis, (key) => key === 'amounts')
     if (basis) {
       out.income_class_basis = basis.kept
-      amountsHidden ||= basis.dropped.some(carriesAmount)
+      amountsHidden ||= basis.dropped.some(carriesValue)
     }
   }
 

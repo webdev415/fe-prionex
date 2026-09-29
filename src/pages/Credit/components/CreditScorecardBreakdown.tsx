@@ -5,10 +5,13 @@
  * проверки клиента построчно: класс дохода и откуда он взят, восемь параметров
  * с входом и баллом, сумма, банд, гейт с кодами и причинами разбора, а после
  * 19-4 — тип клиента, тир и цепочка суммы. Всё — из снимка решения как записано
- * модулем (`readScorecard`), ничего не пересчитывается.
+ * модулем, ничего не пересчитывается.
  *
- * Ключа `scorecard` нет (флаг скоринга выключен, решение до 19-3, ручное или
- * override-решение) — компонент не рисует ничего: вкладка выглядит как прежде.
+ * Панель получает готовую модель `readScorecard`: страница читает снимок ОДИН
+ * раз и по тому же чтению решает, есть ли разбор на вкладке и отсылает ли к нему
+ * строка под сырым снимком. Ключа `scorecard` нет (флаг скоринга выключен,
+ * решение до 19-3, ручное или override-решение) — страница панель не рисует:
+ * вкладка выглядит как прежде.
  *
  * Тексты кодов — из индекса справочника, который форма ручного решения уже
  * загрузила (19-1f): своих запросов у панели нет. Справочника нет — только `id`;
@@ -17,8 +20,7 @@
 import { useTranslation } from 'react-i18next'
 import { decisionCodeText, type CreditDecisionCodeIndex } from '@/features/credit/api/decisionCodes'
 import { formatCreditMoney } from '@/features/credit/api/money'
-import { readScorecard, type CreditScorecardInput } from '@/features/credit/api/scorecard'
-import type { CreditDecisionSnapshot } from '@/features/credit/api/types'
+import type { CreditScorecardInput, CreditScorecardView } from '@/features/credit/api/scorecard'
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -67,20 +69,17 @@ function CodeList({
 }
 
 export function CreditScorecardBreakdown({
-  snapshot,
+  view,
   currency,
   directory,
   language,
 }: {
-  snapshot?: CreditDecisionSnapshot
+  view: CreditScorecardView
   currency?: string
   directory: CreditDecisionCodeIndex | undefined
   language: string | undefined
 }) {
   const { t } = useTranslation('common')
-  const view = readScorecard(snapshot)
-  if (!view) return null
-
   const money = (minor: number | null) => formatCreditMoney(minor, currency)
   const computed = (minor: number | null) =>
     minor === null ? t('credit.scorecard.notComputed') : money(minor)
@@ -136,12 +135,18 @@ export function CreditScorecardBreakdown({
   const basis = view.basis
   const amount = view.amount
   const installments = amount?.installments
+  // Одна граница — одна граница словами («до 7», «від 4»); ни одной — не считалось.
   const installmentsText =
-    !installments || installments.max === null
+    !installments || (installments.min === null && installments.max === null)
       ? t('credit.scorecard.notComputed')
       : installments.min === null
         ? t('credit.scorecard.installmentsUpTo', { max: installments.max })
-        : t('credit.scorecard.installmentsRange', { min: installments.min, max: installments.max })
+        : installments.max === null
+          ? t('credit.scorecard.installmentsFrom', { min: installments.min })
+          : t('credit.scorecard.installmentsRange', {
+              min: installments.min,
+              max: installments.max,
+            })
 
   return (
     <section className="border-border bg-card mb-4 rounded-xl border shadow-sm">
@@ -211,16 +216,21 @@ export function CreditScorecardBreakdown({
         </table>
 
         <Row label={t('credit.scorecard.total')}>
+          {/* Знаменатель — только под знакомую версию книги: «14 з 13» было бы ложью. */}
           {view.total === null
             ? '—'
-            : t('credit.scorecard.totalValue', { total: view.total, max: view.maxTotal })}
+            : view.maxTotal === null
+              ? t('credit.scorecard.totalValueBare', { total: view.total })
+              : t('credit.scorecard.totalValue', { total: view.total, max: view.maxTotal })}
         </Row>
         <Row label={t('credit.scorecard.band')}>
           {view.declined
             ? t('credit.scorecard.bandDeclined')
             : view.band === null
               ? '—'
-              : t('credit.scorecard.bandValue', { band: view.band })}
+              : view.bands === null
+                ? t('credit.scorecard.bandValueBare', { band: view.band })
+                : t('credit.scorecard.bandValue', { band: view.band, bands: view.bands })}
         </Row>
         <Row label={t('credit.scorecard.gate')}>{verdict}</Row>
         {view.gate.codes.length > 0 && (

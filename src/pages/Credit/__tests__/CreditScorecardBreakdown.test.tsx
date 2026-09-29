@@ -4,6 +4,9 @@
  * Снимки — срез живых решений DEV-приёмки 19-3 (`scorecardFixture.ts`), тексты
  * кодов гейта — срез реестра модуля. Мок `t` печатает ключ и подстановки: так
  * видно, ЧТО ушло в строку, а не только что строка есть.
+ *
+ * Панель получает готовую модель `readScorecard`; есть ли разбор на вкладке,
+ * решает страница (сцены R-2, R-2b, R-2c теста страницы).
  */
 import type { ReactNode } from 'react'
 import { describe, it, expect, vi } from 'vitest'
@@ -11,6 +14,7 @@ import { render, screen, within } from '@testing-library/react'
 import { CreditScorecardBreakdown } from '../components/CreditScorecardBreakdown'
 import { indexDecisionCodes } from '@/features/credit/api/decisionCodes'
 import { formatCreditMoney } from '@/features/credit/api/money'
+import { readScorecard, SCORECARD_BOOK_LIMITS } from '@/features/credit/api/scorecard'
 import type { CreditDecisionSnapshot } from '@/features/credit/api/types'
 import { DECISION_CODES_FIXTURE } from '@/features/credit/api/__tests__/decisionCodesFixture'
 import {
@@ -72,18 +76,32 @@ const gateEntry = (id: string) => {
  * молча получила бы справочник.
  */
 function renderBreakdown(
-  snapshot: CreditDecisionSnapshot | undefined,
+  snapshot: CreditDecisionSnapshot,
   directory: ReturnType<typeof indexDecisionCodes> | null = GATE_CODES
 ) {
+  const view = readScorecard(snapshot)
+  if (!view) throw new Error('сцена без scorecard: панель без модели страница не рисует')
   return render(
     <CreditScorecardBreakdown
-      snapshot={snapshot}
+      view={view}
       currency="CAD"
       directory={directory ?? undefined}
       language="uk"
     />
   )
 }
+
+/**
+ * Версия книги, под которую фронт знает максимум суммы и число бандов, — ключ
+ * таблицы констант. Сам ключ пинуется литералом модуля один раз, в K-11
+ * `scorecard.test.ts`; здесь панели нужна любая знакомая версия. Фикстура несёт
+ * синтетическую `scorecard@1` — незнакомую версию.
+ */
+const KNOWN_VERSION = Object.keys(SCORECARD_BOOK_LIMITS)[0]
+const withVersion = (snapshot: CreditDecisionSnapshot, version: string | null) => ({
+  ...snapshot,
+  scorecard: { ...snapshot.scorecard, version },
+})
 
 const text = (node: Element) => (node.textContent ?? '').replace(/\s+/g, ' ').trim()
 /** Значение ряда панели по его подписи: подпись и значение — соседи в одном ряду. */
@@ -101,9 +119,9 @@ const valueOf = (cell: string) => {
 
 describe('CreditScorecardBreakdown', () => {
   it('B-1: одобрение — шапка, восемь строк C13…C20, сумма, банд, гейт пройден; блока суммы нет', () => {
-    renderBreakdown(SCENE_A, indexDecisionCodes(DECISION_CODES_FIXTURE))
+    renderBreakdown(withVersion(SCENE_A, KNOWN_VERSION), indexDecisionCodes(DECISION_CODES_FIXTURE))
     expect(screen.getByRole('heading', { name: 'credit.scorecard.title' })).toBeInTheDocument()
-    expect(valueOfRow('credit.scorecard.version')).toContain('scorecard@1')
+    expect(valueOfRow('credit.scorecard.version')).toBe(KNOWN_VERSION)
     expect(valueOfRow('credit.scorecard.incomeClass')).toContain(
       'credit.incomeClass.A · credit.incomeClassSource.both'
     )
@@ -128,10 +146,20 @@ describe('CreditScorecardBreakdown', () => {
     expect(valueOfRow('credit.scorecard.total')).toContain(
       'credit.scorecard.totalValue total=12 max=13'
     )
-    expect(valueOfRow('credit.scorecard.band')).toContain('credit.scorecard.bandValue band=2')
+    expect(valueOfRow('credit.scorecard.band')).toBe('credit.scorecard.bandValue band=2 bands=7')
     expect(valueOfRow('credit.scorecard.gate')).toContain('credit.scorecard.gatePass')
     expect(screen.queryByText('credit.scorecard.gateCodes')).toBeNull()
     expect(screen.queryByText('credit.scorecard.amountTitle')).toBeNull()
+  })
+
+  it('B-1b: версия книги незнакома — сумма и банд без знаменателя', () => {
+    renderBreakdown(withVersion(SCENE_A, 'scorecard@2'))
+    expect(
+      valueOfRow('credit.scorecard.total'),
+      'unknown scorecard version printed a denominator'
+    ).toBe('credit.scorecard.totalValueBare total=12')
+    expect(valueOfRow('credit.scorecard.band')).toBe('credit.scorecard.bandValueBare band=2')
+    expect(screen.queryByText(/max=|bands=/)).toBeNull()
   })
 
   it('B-2: отказ AB-G-04 — банд 0, гейт «Відмова», код текстом книги и «книга: О-22»', () => {
@@ -225,15 +253,6 @@ describe('CreditScorecardBreakdown', () => {
     )
   })
 
-  it('B-5: без scorecard — ничего, ни заголовка, ни пустой таблицы', () => {
-    const { container } = renderBreakdown({
-      income_class: 'A',
-      income_class_source: 'both',
-      income_class_basis: SCENE_A.income_class_basis,
-    })
-    expect(container).toBeEmptyDOMElement()
-  })
-
   it('B-6: часть B — тип клиента, лимиты тира деньгами, «до 7 внесків», нерасчитанная сумма', () => {
     renderBreakdown(withPartB({ final_amount_minor: null }))
     expect(
@@ -266,6 +285,14 @@ describe('CreditScorecardBreakdown', () => {
 
     renderBreakdown(withPartB({ installments: null }))
     expect(valueOfRow('credit.scorecard.installments')).toBe('credit.scorecard.notComputed')
+  })
+
+  it('B-6: известна только нижняя граница взносов — «від 4», а не «не розраховувалось»', () => {
+    renderBreakdown(withPartB({ installments: { min: 4, max: null } }))
+    expect(
+      valueOfRow('credit.scorecard.installments'),
+      'lower bound of installments printed as not computed'
+    ).toBe('credit.scorecard.installmentsFrom min=4')
   })
 
   it('B-6: отказ суммой — AB-G-06 в кодах машины текстом книги и «книга: О-01»; класс B со стелей', () => {

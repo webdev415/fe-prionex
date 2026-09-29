@@ -42,8 +42,27 @@ export const SCORECARD_BOOK_ROWS: Record<
   },
 }
 
-/** Сумма баллов книги не больше 13 (форма банда C24). */
-export const SCORECARD_MAX_TOTAL = 13
+/**
+ * Константы листа книги ПОД ВЕРСИЮ скоринга: наибольшая сумма баллов (форма
+ * банда C24) и число бандов. Ключ — `scorecard.version`, который модуль пишет в
+ * снимок из конфига скоринга (`seed.py` модуля; значения конфига меняются только
+ * со сменой версии). Незнакомая версия — без знаменателя: после калибровки
+ * книги модуль может записать сумму больше прежнего максимума, и «14 з 13» на
+ * экране аудита было бы ложью фронта, а не данными модуля.
+ */
+export const SCORECARD_BOOK_LIMITS: Record<string, { maxTotal: number; bands: number }> = {
+  'fin-boost-scorecard-2026-09-28@1': { maxTotal: 13, bands: 7 },
+}
+
+/**
+ * Константы листа под версию снимка; версии нет или она незнакома — `null`.
+ * Только собственные ключи таблицы: `version` — строка из ответа модуля, и
+ * унаследованное имя (`constructor`, `toString`) версией книги не становится.
+ */
+export const bookLimitsOf = (version: string | null) =>
+  version !== null && Object.hasOwn(SCORECARD_BOOK_LIMITS, version)
+    ? SCORECARD_BOOK_LIMITS[version]
+    : null
 
 /**
  * Вход параметра. `missing` — «не измерено»: значения нет или поле названо в
@@ -96,8 +115,11 @@ export interface CreditScorecardView {
   basis: CreditScorecardBasis | null
   rows: CreditScorecardRow[]
   total: number | null
-  maxTotal: number
+  /** Наибольшая сумма баллов по версии книги; версия незнакома — `null`. */
+  maxTotal: number | null
   band: number | null
+  /** Число бандов по версии книги; версия незнакома — `null`. */
+  bands: number | null
   declined: boolean
   gate: { decline: boolean | null; codes: string[]; held: string[]; review: string[] }
   gateSignals: {
@@ -213,6 +235,8 @@ export function readScorecard(
   const incomeClass = str(scorecard.income_class) ?? str(inputs.income_class)
   const band = num(scorecard.band)
   const decline = bool(gate.decline)
+  const version = str(scorecard.version)
+  const limits = bookLimitsOf(version)
 
   const known: readonly string[] = CREDIT_SCORECARD_PARAMETERS
   const rows: CreditScorecardRow[] = CREDIT_SCORECARD_PARAMETERS.map((parameter) => {
@@ -238,14 +262,15 @@ export function readScorecard(
   }
 
   return {
-    version: str(scorecard.version),
+    version,
     incomeClass,
     incomeClassSource: str(scorecard.income_class_source) ?? str(inputs.income_class_source),
     basis: readBasis(snapshot?.income_class_basis),
     rows,
     total: num(scorecard.total),
-    maxTotal: SCORECARD_MAX_TOTAL,
+    maxTotal: limits?.maxTotal ?? null,
     band,
+    bands: limits?.bands ?? null,
     declined: decline === true || band === 0,
     gate: {
       decline,

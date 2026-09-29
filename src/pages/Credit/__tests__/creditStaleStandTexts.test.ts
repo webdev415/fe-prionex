@@ -148,6 +148,18 @@ const ALLOWED_PROJECT_MENTIONS: Array<{
     owner: 'WP-FE-6 / владелец fe',
     why: "фикстура продукта: 'fin-boost' — идентификатор проекта из контракта модуля (CREDIT_PROJECT_IDS), то есть данные, а не объяснение прав оператору",
   },
+  {
+    path: 'src/features/credit/api/scorecard.ts',
+    token: 'Fin-boost',
+    owner: '19-7 / куратор',
+    why: 'версия конфига скоринга модуля (scorecard.version из seed.py модуля) — ключ таблицы констант листа книги под версию, то есть данные, а не объяснение прав оператору',
+  },
+  {
+    path: 'src/features/credit/api/__tests__/scorecard.test.ts',
+    token: 'Fin-boost',
+    owner: '19-7 / куратор',
+    why: 'литерал версии конфига скоринга модуля в тесте-пине таблицы констант — данные, не объяснение прав',
+  },
 ]
 
 const STORAGE_KEYS = ['credit.stand.apiKey', 'credit.stand.role']

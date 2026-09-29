@@ -463,6 +463,27 @@ export const CREDIT_SCORECARD_PARAMETERS = [
 ] as const
 
 /**
+ * Семь сумм пособий Lending, которые модуль кладёт в `ibv.risk.extra` снимка и из
+ * которых выводит класс дохода: модуль `decision.py` (`_BASIS_AMOUNTS` — «семь
+ * сумм Lending как есть», `income_class_basis.amounts`), источник имён —
+ * `UNDERWRITING_LENDING_ATTRIBUTES` в `flinks_mapping.py` (сверено по `main`
+ * модуля `86b22fed`). Сырой снимок на экране оператора их не показывает.
+ *
+ * Перечнем, а не префиксом `sum_`: пространство ключей `extra` — провайдерское,
+ * у провайдера есть и несоциальные суммы (например, дохода от работодателя), и
+ * префикс спрятал бы их, назвав «суммами пособий».
+ */
+export const CREDIT_SNAPSHOT_BENEFIT_AMOUNT_KEYS = [
+  'sum_pension_income',
+  'sum_disability_income',
+  'sum_government_income_total',
+  'sum_employment_insurance_income',
+  'sum_social_assistance_income',
+  'sum_wsib_income',
+  'sum_child_support_income_government',
+] as const
+
+/**
  * Признаки класса и гейта: три сигнала гейта из `scorecard.inputs` и два
  * признака класса из `income_class_basis.evidence` (у них общий словарь).
  */

@@ -328,7 +328,13 @@ function ApplicationForm({ application }: { application: CreditApplicationDetail
             <span className={identityMatch >= 0.9 ? 'text-success-700' : 'text-warning-800'}>
               {formatCreditRate(identityMatch)}
             </span>
-            {holderName && <span className="text-muted-foreground"> · {holderName}</span>}
+            {/* Имя держателя счёта — ПД, как ФИО заёмщика: в запись сессии не уходит. */}
+            {holderName && (
+              <span className="text-muted-foreground">
+                {' · '}
+                <Pii>{holderName}</Pii>
+              </span>
+            )}
           </Field>
         )}
       </Panel>
@@ -709,6 +715,10 @@ function ApplicationDecision({
   const [rationale, setRationale] = useState('')
   const [codes, setCodes] = useState<string[]>([])
 
+  // Разбор скоринга читается ОДИН раз: по этому же чтению страница рисует панель
+  // и решает, отсылает ли к ней строка под сырым снимком.
+  const scorecard = useMemo(() => readScorecard(decision?.input_snapshot), [decision])
+
   // Сырой снимок — доказательство DAT-02, но без реквизитов счёта выплаты и
   // сумм пособий: счёт видно на вкладке IBV, класс дохода — в разборе скоринга,
   // если разбор на вкладке есть (ключ `scorecard`); иначе строка к нему не отсылает.
@@ -717,9 +727,9 @@ function ApplicationDecision({
     return {
       ...shown,
       text: JSON.stringify(shown.snapshot, null, 2),
-      withBreakdown: readScorecard(decision?.input_snapshot) !== null,
+      withBreakdown: scorecard !== null,
     }
-  }, [decision])
+  }, [decision, scorecard])
 
   // В тело и в замок кнопки идут только коды, которые справочник предлагает
   // СЕЙЧАС: отмеченный код, выпавший из отказов новой версии реестра, из формы
@@ -806,9 +816,9 @@ function ApplicationDecision({
         />
       )}
 
-      {decision && (
+      {decision && scorecard && (
         <CreditScorecardBreakdown
-          snapshot={decision.input_snapshot}
+          view={scorecard}
           currency={decision.currency ?? application.currency}
           directory={directory}
           language={language}
