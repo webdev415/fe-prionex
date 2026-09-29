@@ -260,7 +260,8 @@ export function useCreditParameters(enabled = true) {
  * `enabled` — право `credit.decisions.decide`: без него дверь отвечает 403, и
  * запрос не уходит вовсе. `retry: false` — раздел переживает недоступность
  * модуля плашкой с «Повторити», а не висит на повторах. `select` отдаёт индекс,
- * закэшированный по `version` реестра: пока версия та же, объект тот же.
+ * закэшированный по самому объекту ответа: перезапрос с тем же содержимым
+ * React Query отдаёт прежним объектом, и индекс остаётся тем же.
  */
 export function useCreditDecisionCodes(enabled: boolean) {
   return useQuery({

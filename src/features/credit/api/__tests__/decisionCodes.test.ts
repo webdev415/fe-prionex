@@ -6,14 +6,14 @@
  * придуманные записи: отбор по виду кода проверяется на тех самых `AB-C-01`,
  * `AB-G-06` и `AB-X-08`, которые реестр отдаёт.
  *
- * ⚠️ Индекс кэшируется по `version` — так обещает контракт: новое содержимое
- * реестра = новая версия. Поэтому сцена с иным содержимым обязана нести свою
- * версию: иначе она получит индекс прошлой сцены, и это будет правдой, а не
- * дефектом.
+ * Индекс кэшируется по самому объекту ответа (P-4), общего состояния между
+ * сценами нет: у каждой сцены свой объект реестра — и свой индекс. Версии
+ * вроде `book@shuffled` названы для читателя, кэш на них не опирается.
  */
 import { describe, it, expect } from 'vitest'
 import {
   CREDIT_DECLINE_KINDS,
+  decisionCodeNote,
   decisionCodeText,
   indexDecisionCodes,
   normalizeDecisionCodes,
@@ -116,32 +116,68 @@ describe('decisionCodes → порядок групп и кодов', () => {
   })
 })
 
-describe('decisionCodes → кэш индекса по версии реестра', () => {
-  it('P-4: та же версия — тот же индекс, новая версия — новый текст', () => {
+describe('decisionCodes → кэш индекса по объекту ответа', () => {
+  it('P-4: тот же ответ — тот же индекс; другой ответ — свой, даже при той же версии; общего слота нет', () => {
     const first = indexDecisionCodes(DECISION_CODES_FIXTURE)
-    const copy = JSON.parse(JSON.stringify(DECISION_CODES_FIXTURE)) as CreditDecisionCodesRegistry
-    expect(copy).not.toBe(DECISION_CODES_FIXTURE)
-
     expect(
-      indexDecisionCodes(copy),
-      'a re-fetched registry of the same version rebuilt the index — the cache is not keyed by version'
+      indexDecisionCodes(DECISION_CODES_FIXTURE),
+      'the same registry response rebuilt the index — the cache does not hold'
     ).toBe(first)
 
+    // Модуль сменил текст, а версию — нет. Кэш по `version` отдал бы индекс
+    // прежнего ответа со старым текстом.
     const NEW_TEXT = 'Синтетичний текст другої версії реєстру'
-    const second: CreditDecisionCodesRegistry = {
-      version: 'book@2',
-      codes: copy.codes.map((entry) =>
+    const sameVersion: CreditDecisionCodesRegistry = {
+      version: DECISION_CODES_FIXTURE.version,
+      codes: DECISION_CODES_FIXTURE.codes.map((entry) =>
         entry.id === 'AB-O-13' ? { ...entry, ru: NEW_TEXT } : entry
       ),
     }
-    const next = indexDecisionCodes(second)
+    const next = indexDecisionCodes(sameVersion)
 
-    expect(next, 'a new registry version returned the old index').not.toBe(first)
+    expect(
+      next,
+      'another registry response of the same version got the old index — the cache is keyed by version, not by the response'
+    ).not.toBe(first)
     expect(
       next.byId.get('AB-O-13')?.ru,
-      'a new registry version is shown with the text of the old one'
+      'a changed registry is shown with the text of the previous response'
     ).toBe(NEW_TEXT)
-    expect(next.version).toBe('book@2')
+
+    const bumped = indexDecisionCodes({ version: 'book@2', codes: sameVersion.codes })
+    expect(bumped.version).toBe('book@2')
+    expect(bumped.byId.get('AB-O-13')?.ru).toBe(NEW_TEXT)
+
+    // Два других ответа не вытеснили первый: кэш не держит одну общую ячейку.
+    expect(
+      indexDecisionCodes(DECISION_CODES_FIXTURE),
+      'indexing other responses evicted the first one — the cache is a single global slot'
+    ).toBe(first)
+    expect(first.byId.get('AB-O-13')?.ru).toBe(entryOf('AB-O-13').ru)
+  })
+})
+
+describe('decisionCodes → основание кода подсказкой', () => {
+  const withNote = entryOf('AB-O-05')
+
+  it.each(['uk', 'uk-UA'])('P-7: интерфейс %s — основание книги подсказкой', (lang) => {
+    expect(withNote.note_ru, 'the fixture code AB-O-05 lost its book rationale').toBeTruthy()
+    expect(decisionCodeNote(withNote, lang)).toBe(withNote.note_ru)
+  })
+
+  it.each([['en'], ['es'], [undefined], ['de']])(
+    'P-7: интерфейс %s — подсказки нет: основание есть только по-русски',
+    (lang) => {
+      expect(
+        decisionCodeNote(withNote, lang),
+        `the ${String(lang)} interface shows the Russian-only book rationale as a tooltip`
+      ).toBeUndefined()
+    }
+  )
+
+  it('P-7: у кода нет основания — подсказки нет и в украинском интерфейсе', () => {
+    expect(entryOf('AB-O-13').note_ru).toBeNull()
+    expect(decisionCodeNote(entryOf('AB-O-13'), 'uk')).toBeUndefined()
   })
 })
 

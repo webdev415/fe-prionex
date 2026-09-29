@@ -22,6 +22,7 @@ import {
 } from '@/features/credit/hooks/useCredit'
 import { CreditApiError } from '@/features/credit/api/creditApi'
 import {
+  decisionCodeNote,
   decisionCodeText,
   normalizeDecisionCodes,
   type CreditDecisionCodeIndex,
@@ -573,7 +574,21 @@ function manualDecisionErrorText(t: TFunction, error: unknown): string {
  * записала машина, override кодов не принимает (`OverrideRequest`), и подпись
  * «надіслано» там была бы неправдой. Ключа нет или список пуст
  * (решения до 0.1.27, `RC-11` без установленной причины) — прежний вывод
- * словарём `credit.declineCode`. Справочник не загружен — только `id` кода.
+ * словарём `credit.declineCode`.
+ *
+ * Справочника нет (у роли нет `credit.decisions.decide`, которым закрыта его
+ * дверь, либо запрос ещё не пришёл или не удался) — текст взять неоткуда, кроме
+ * прежнего словаря. Поэтому присланные коды идут прежним выводом
+ * `credit.declineCode` (старое решение `RC-04` читается словами, как до
+ * справочника), а коды справочника — приглушённой строкой с подписью, если они
+ * не совпадают с присланными. Код справочника, присланный как есть (`AB-O-13`
+ * новой формы), печатается одним `id`: строки для него в прежнем словаре нет, и
+ * `AB-O-13 — AB-O-13` ничего бы не добавило.
+ *
+ * Список смысла нормализуется тем же правилом, что сравнение с присланным: без
+ * повторов и по возрастанию. Модуль отдаёт его уже таким (`decision_codes_of` —
+ * `sorted(set)`), поэтому порядок модуля не меняется, а повтор в ответе не
+ * даёт двух строк с одним ключом.
  */
 function DecisionCodesValue({
   decision,
@@ -585,16 +600,33 @@ function DecisionCodesValue({
   language: string | undefined
 }) {
   const { t } = useTranslation('common')
-  const meaning = decision.decision_codes ?? []
-  if (meaning.length) {
+  const meaning = normalizeDecisionCodes(decision.decision_codes ?? [])
+  const legacyText = (asIs: ReadonlySet<string>) =>
+    decision.decline_codes
+      .map((code) => (asIs.has(code) ? code : `${code} — ${t(`credit.declineCode.${code}`, code)}`))
+      .join('; ')
+
+  if (meaning.length && !directory) {
+    const differs = normalizeDecisionCodes(decision.decline_codes).join('\n') !== meaning.join('\n')
+    return (
+      <span className="flex flex-col gap-1">
+        {decision.decline_codes.length > 0 && <span>{legacyText(new Set(meaning))}</span>}
+        {differs && (
+          <span className="text-muted-foreground text-xs">
+            {t('credit.card.decisionCodesIds', { codes: meaning.join(', ') })}
+          </span>
+        )}
+      </span>
+    )
+  }
+  if (meaning.length && directory) {
     const sent =
       decision.decision_mode === 'manual' ? normalizeDecisionCodes(decision.decline_codes) : []
-    const differs =
-      sent.length > 0 && sent.join('\n') !== normalizeDecisionCodes(meaning).join('\n')
+    const differs = sent.length > 0 && sent.join('\n') !== meaning.join('\n')
     return (
       <span className="flex flex-col gap-1">
         {meaning.map((id) => {
-          const entry = directory?.byId.get(id)
+          const entry = directory.byId.get(id)
           return (
             <span key={id}>
               <span className="font-mono">{id}</span>
@@ -620,15 +652,25 @@ function DecisionCodesValue({
     )
   }
   if (decision.decline_codes.length) {
-    return (
-      <>
-        {decision.decline_codes
-          .map((code) => `${code} — ${t(`credit.declineCode.${code}`, code)}`)
-          .join('; ')}
-      </>
-    )
+    return <>{legacyText(new Set())}</>
   }
   return <>—</>
+}
+
+/**
+ * Сбой справочника, который повтор не вылечит. 404 — у модуля нет двери
+ * справочника (он старше 0.1.27), 403 — роли не дают читать справочник. Ответ
+ * не изменится, пока администратор не обновит модуль или права, поэтому
+ * «Повторити» здесь не предлагается. Остальное (5xx, сеть, таймаут) — `null`:
+ * временный сбой, прежняя плашка с повтором. Ключи — статическими литералами:
+ * страж словарей видит только их.
+ */
+function permanentDirectoryFailure(t: TFunction, error: unknown): string | null {
+  if (error instanceof CreditApiError) {
+    if (error.status === 404) return t('credit.card.decisionCodesModuleTooOld')
+    if (error.status === 403) return t('credit.card.decisionCodesForbidden')
+  }
+  return null
 }
 
 function ApplicationDecision({
@@ -647,6 +689,9 @@ function ApplicationDecision({
   const decisionCodes = useCreditDecisionCodes(canDecide)
   const directory = decisionCodes.data
   const language = i18n.resolvedLanguage ?? i18n.language
+  const directoryFailure = decisionCodes.isError
+    ? permanentDirectoryFailure(t, decisionCodes.error)
+    : null
 
   const [outcome, setOutcome] = useState<CreditDecisionOutcome>('approved')
   const [amount, setAmount] = useState(String((application.requested_amount_minor ?? 0) / 100))
@@ -814,7 +859,7 @@ function ApplicationDecision({
                         return (
                           <label
                             key={entry.id}
-                            title={entry.note_ru ?? undefined}
+                            title={decisionCodeNote(entry, language)}
                             className="flex cursor-pointer items-start gap-2 py-1 text-sm"
                           >
                             <input
@@ -836,6 +881,10 @@ function ApplicationDecision({
                     </fieldset>
                   ))}
                 </div>
+              ) : directoryFailure ? (
+                <Alert variant="error" className="mb-2">
+                  {directoryFailure}
+                </Alert>
               ) : decisionCodes.isError ? (
                 <>
                   <Alert variant="error" className="mb-2">

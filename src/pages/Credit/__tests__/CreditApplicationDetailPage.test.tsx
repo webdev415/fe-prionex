@@ -41,6 +41,9 @@ const withQuery = (ui: React.ReactNode) => (
 )
 
 vi.mock('@/features/credit/hooks/useCredit')
+// Язык интерфейса мока — `uk`; сцена другого языка меняет его у себя и
+// возвращает в `finally`.
+const i18nState = vi.hoisted(() => ({ language: 'uk' }))
 // Мок печатает ключ вместе с подстановками — иначе не видно, ЧТО ушло в строку.
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -50,7 +53,7 @@ vi.mock('react-i18next', () => ({
             .map(([name, value]) => `${name}=${String(value)}`)
             .join(' ')}`
         : key,
-    i18n: { language: 'uk', changeLanguage: vi.fn() },
+    i18n: { language: i18nState.language, changeLanguage: vi.fn() },
   }),
   I18nextProvider: ({ children }: { children: ReactNode }) => children,
   initReactI18next: { type: '3rdParty', init: vi.fn() },
@@ -227,6 +230,7 @@ describe('CreditApplicationDetailPage → решение заменяет пре
   type CodesState = {
     data?: ReturnType<typeof indexDecisionCodes>
     isError?: boolean
+    error?: unknown
     isFetching?: boolean
     refetch?: () => unknown
   }
@@ -254,6 +258,7 @@ describe('CreditApplicationDetailPage → решение заменяет пре
     vi.mocked(hooks.useCreditDecisionCodes).mockReturnValue({
       data: undefined,
       isError: false,
+      error: null,
       isFetching: false,
       refetch: vi.fn(),
       ...codes,
@@ -628,6 +633,28 @@ describe('CreditApplicationDetailPage → решение заменяет пре
       expect(codeRow(panel, 'AB-O-13').hasAttribute('title')).toBe(false)
     })
 
+    it('F-4: английский интерфейс — первой строкой EN, русского основания подсказкой нет', () => {
+      i18nState.language = 'en'
+      try {
+        const panel = renderManual()
+        declineWith(panel)
+
+        const text = codeRow(panel, 'AB-O-05').textContent ?? ''
+        const { ru, en } = entryOf('AB-O-05')
+        expect(
+          text.indexOf(en),
+          'the en interface shows the book Russian text of AB-O-05 before the English one'
+        ).toBeLessThan(text.indexOf(ru))
+        expect(text.indexOf(en)).toBeGreaterThan(-1)
+        expect(
+          codeRow(panel, 'AB-O-05').hasAttribute('title'),
+          'the en interface shows the Russian-only book rationale as a tooltip'
+        ).toBe(false)
+      } finally {
+        i18nState.language = 'uk'
+      }
+    })
+
     it('F-5: отказ без кода не уходит; выбранный код уходит в теле', () => {
       const mutate = vi.fn()
       const panel = renderManual({ mutate })
@@ -711,6 +738,50 @@ describe('CreditApplicationDetailPage → решение заменяет пре
         'a second directory request left while the first one is in flight'
       ).not.toHaveBeenCalled()
     })
+
+    /**
+     * 404 — у модуля нет двери справочника (он старше 0.1.27), 403 — роли не
+     * дают его читать. Повтор этого не вылечит, поэтому текст называет причину и
+     * «Повторити» нет. 503 — временный сбой: прежний текст и повтор. 503 здесь —
+     * положительный контроль того же поиска кнопки.
+     */
+    it.each([
+      [404, 'credit.card.decisionCodesModuleTooOld', false],
+      [403, 'credit.card.decisionCodesForbidden', false],
+      [503, 'credit.card.decisionCodesUnavailable', true],
+    ] as const)(
+      'F-10: справочник ответил %i — плашка %s, повтор предлагается: %s',
+      (status, key, retryOffered) => {
+        const refetch = vi.fn()
+        const panel = renderManual({}, DECISION, {
+          isError: true,
+          error: new CreditApiError('Синтетичний збій довідника', status),
+          refetch,
+        })
+        declineWith(panel)
+
+        const alerts = panel.getAllByRole('alert')
+        expect(
+          alerts,
+          `the ${status} directory failure is drawn as more than one plate`
+        ).toHaveLength(1)
+        expect(
+          alerts[0].textContent,
+          `the ${status} directory failure is not named by its own text`
+        ).toBe(key)
+        const retry = panel.queryByRole('button', { name: 'credit.actions.retry' })
+        if (retryOffered) {
+          expect(retry, `the transient ${status} failure lost its retry button`).not.toBeNull()
+        } else {
+          expect(
+            retry,
+            `the permanent ${status} failure invites the operator to retry forever`
+          ).toBeNull()
+        }
+        expect(panel.queryAllByRole('checkbox')).toHaveLength(0)
+        expect(saveButton(panel), 'a decline can be saved without the directory').toBeDisabled()
+      }
+    )
 
     it('F-7: без права решать справочник не запрашивается', () => {
       renderDecision(withDecision(DECISION, 'referred'), [])
@@ -881,6 +952,87 @@ describe('CreditApplicationDetailPage → решение заменяет пре
       renderCard({ ...DECLINED, decline_codes: [], decision_codes: [] })
 
       expect(codesRow()).toBe('credit.fields.declineCodes—')
+    })
+
+    /**
+     * Роль без `credit.decisions.decide` открывает карточку, но справочник ей
+     * закрыт тем же правом: запрос не уходит, `data` нет. До справочника такая
+     * роль читала `RC-04 — <текст словаря>`; теперь она обязана читать то же, а
+     * коды справочника — приглушённой строкой с подписью, а не голыми `id`.
+     * Сцена с правом и справочником на той же паре кодов — C-1.
+     */
+    it('C-7: без права решать — прежний текст словаря, коды справочника подписанной строкой', () => {
+      renderDecision(
+        withDecision(
+          { ...DECLINED, decline_codes: ['RC-04'], decision_codes: ['AB-O-05'] },
+          'declined'
+        ),
+        [],
+        {},
+        { data: undefined }
+      )
+
+      expect(
+        vi.mocked(hooks.useCreditDecisionCodes).mock.calls.every(([enabled]) => enabled === false),
+        'the scene asked for the directory — it is not the read-only role'
+      ).toBe(true)
+      const row = codesRow()
+      expect(
+        row,
+        'without the directory the card lost the old decline code text — a read-only role reads bare ids'
+      ).toContain('RC-04 — credit.declineCode.RC-04')
+      expect(row, 'without the directory the registry code is not shown at all').toContain(
+        'credit.card.decisionCodesIds codes=AB-O-05'
+      )
+      expect(
+        row,
+        'without the directory the row carries something besides the old text and the labelled registry codes'
+      ).toBe(
+        'credit.fields.declineCodes' +
+          'RC-04 — credit.declineCode.RC-04' +
+          'credit.card.decisionCodesIds codes=AB-O-05'
+      )
+    })
+
+    it('C-8: без права решать, код справочника прислан как есть — один id, без выдуманного текста', () => {
+      renderDecision(
+        withDecision(
+          { ...DECLINED, decline_codes: ['AB-O-13'], decision_codes: ['AB-O-13'] },
+          'declined'
+        ),
+        [],
+        {},
+        { data: undefined }
+      )
+
+      expect(
+        codesRow(),
+        'a registry code sent as is got an invented old-dictionary text or a duplicate line'
+      ).toBe('credit.fields.declineCodesAB-O-13')
+    })
+
+    it('C-9: повтор кода в ответе модуля — одна строка и без предупреждения React о ключах', () => {
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+      try {
+        renderCard({
+          ...DECLINED,
+          decline_codes: ['AB-O-13'],
+          decision_codes: ['AB-O-13', 'AB-O-13'],
+        })
+
+        const row = screen.getByText('credit.fields.declineCodes').parentElement as HTMLElement
+        expect(
+          within(row).getAllByText('AB-O-13'),
+          'a repeated registry code is drawn twice in the decision card'
+        ).toHaveLength(1)
+        expect(row.textContent).toContain(entryOf('AB-O-13').ru)
+        expect(
+          consoleError.mock.calls.some((args) => args.map(String).join(' ').includes('same key')),
+          'a repeated registry code gave two React children with the same key'
+        ).toBe(false)
+      } finally {
+        consoleError.mockRestore()
+      }
     })
   })
 })

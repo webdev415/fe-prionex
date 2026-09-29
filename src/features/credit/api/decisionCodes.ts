@@ -50,15 +50,20 @@ const categoryRank = (category: string) => {
 }
 
 /**
- * Однослотовый кэш по `version`. Контракт обещает новую `version` при любой
- * правке содержимого реестра, значит `version` и есть тождество справочника:
- * повторный ответ той же версии (новый объект после перезапроса) отдаёт ТОТ ЖЕ
- * индекс, новая версия — новый.
+ * Кэш по самому объекту ответа, без общего состояния модуля: один и тот же
+ * ответ — тот же индекс, любой другой объект — свой. Этого хватает, потому что
+ * React Query делит структуру данных (`structuralSharing` по умолчанию):
+ * перезапрос с тем же содержимым оставляет прежний объект `data`, и индекс не
+ * пересобирается; новое содержимое — новый объект и новый индекс, даже если
+ * модуль забыл сменить `version`. `select` запроса от этого остаётся чистым:
+ * результат зависит только от входа. Ответ, который больше никто не держит,
+ * уходит из кэша вместе с ним.
  */
-let cached: CreditDecisionCodeIndex | undefined
+const indexes = new WeakMap<CreditDecisionCodesRegistry, CreditDecisionCodeIndex>()
 
 export function indexDecisionCodes(registry: CreditDecisionCodesRegistry): CreditDecisionCodeIndex {
-  if (cached?.version === registry.version) return cached
+  const known = indexes.get(registry)
+  if (known) return known
 
   const byId = new Map(registry.codes.map((entry) => [entry.id, entry] as const))
   const groups = new Map<string, CreditDecisionCodeEntry[]>()
@@ -79,9 +84,14 @@ export function indexDecisionCodes(registry: CreditDecisionCodesRegistry): Credi
       ),
     }))
 
-  cached = { version: registry.version, byId, declineGroups }
-  return cached
+  const index: CreditDecisionCodeIndex = { version: registry.version, byId, declineGroups }
+  indexes.set(registry, index)
+  return index
 }
+
+/** Украинский ли интерфейс: `uk`, `uk-UA`; язык не задан — нет. */
+const isUkrainian = (language: string | undefined) =>
+  (language ?? '').toLowerCase().split('-')[0] === 'uk'
 
 /**
  * Какой текст кода первой строкой. Украинский интерфейс — RU книги (в
@@ -93,10 +103,22 @@ export function decisionCodeText(
   entry: Pick<CreditDecisionCodeEntry, 'ru' | 'en'>,
   language: string | undefined
 ): { primary: string; secondary: string } {
-  const base = (language ?? '').toLowerCase().split('-')[0]
-  return base === 'uk'
+  return isUkrainian(language)
     ? { primary: entry.ru, secondary: entry.en }
     : { primary: entry.en, secondary: entry.ru }
+}
+
+/**
+ * Основание кода из книги — подсказкой к строке кода. Оно есть только
+ * по-русски, поэтому показывается лишь в украинском интерфейсе, где русский
+ * текст книги и так идёт первой строкой. В английском и испанском интерфейсе
+ * подсказки нет: русский абзац там был бы непрочитанным шумом.
+ */
+export function decisionCodeNote(
+  entry: Pick<CreditDecisionCodeEntry, 'note_ru'>,
+  language: string | undefined
+): string | undefined {
+  return isUkrainian(language) ? (entry.note_ru ?? undefined) : undefined
 }
 
 /** Коды для тела решения и для сравнения: без повторов, по возрастанию. */
