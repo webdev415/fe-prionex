@@ -484,6 +484,76 @@ export interface CreditDecisionSnapshot {
   }
   rules?: { decline_codes?: Record<string, string> } & Record<string, unknown>
   ibv?: Record<string, unknown>
+  /** Разбор скоринга книги (19-3; часть B — 19-4). Нет у решений без флага скоринга и у ручных. */
+  scorecard?: CreditScorecardSnapshot | null
+  /** Класс дохода 19-2 — верхний уровень снимка, пишется и без флага скоринга. */
+  income_class?: string | null
+  income_class_source?: string | null
+  income_class_basis?: CreditIncomeClassBasis | null
+}
+
+/**
+ * `input_snapshot.scorecard` — баллы, банд и гейт книги правил проверки клиента.
+ *
+ * ⚠️ В контракте модуля 0.1.28 ключ НЕ объявлен (`Decision.input_snapshot` —
+ * свободный объект), поэтому в `contractAssumptions.ts` утверждений о нём нет:
+ * утверждать нечего. Тип написан руками по коду модуля: 19-3 —
+ * `_scorecard_snapshot` и `ScorecardResult.as_dict` на `main` `7934c035`
+ * (`inputs` — все 15 полей `ScorecardInputs` плюс `missing`); часть B — по story
+ * 19-4 AC-14, её кода на 29.09 нет. Все поля необязательны и допускают `null`:
+ * форма обязана терпеть снимок старшей или младшей версии по построению.
+ */
+export interface CreditScorecardSnapshot {
+  version?: string | null
+  income_class?: string | null
+  income_class_source?: string | null
+  /** Вход целиком; `missing` — банковские поля, которых провайдер не прислал. */
+  inputs?: (Record<string, unknown> & { missing?: string[] | null }) | null
+  points?: Record<string, number> | null
+  total?: number | null
+  band?: number | null
+  gate?: {
+    decline?: boolean | null
+    /** Применённые коды гейта. */
+    codes?: string[] | null
+    /** Сработавшие, но удержанные для решения человека. */
+    held?: string[] | null
+    /** Причины разбора — ключи `referral_reasons` модуля. */
+    review?: string[] | null
+  } | null
+  client_type?: number | null
+  closed_loans?: number | null
+  tier?: {
+    min_minor?: number | null
+    max_minor?: number | null
+    class_b_cap_applied?: boolean | null
+  } | null
+  scale_amount_minor?: number | null
+  cap_amount_minor?: number | null
+  rounded_amount_minor?: number | null
+  final_amount_minor?: number | null
+  installments?: { min?: number | null; max?: number | null } | null
+  /** Коды решения машины: `gate.codes` и `AB-G-06` блока суммы. */
+  codes?: string[] | null
+}
+
+/**
+ * `input_snapshot.income_class_basis` (19-2) — только то, что читает разбор.
+ * Суммы пособий (`amounts`) и перечень неизмеренных атрибутов (`missing`) модуль
+ * тоже пишет, но в тип они не входят намеренно: суммы пенсии и выплат по
+ * инвалидности говорят о здоровье и социальном статусе клиента, а решение по
+ * ним уже свёрнуто в признаки `evidence`.
+ */
+export interface CreditIncomeClassBasis {
+  declared_class?: string | null
+  employment_status?: string | null
+  employment_status_known?: boolean | null
+  b_not_confirmed?: boolean | null
+  evidence?: {
+    employer_income_30d?: boolean | null
+    b_income?: boolean | null
+    c_income?: boolean | null
+  } | null
 }
 
 /** Полный enum LoanStatus контракта — НЕ сокращать до встреченного в БД. */
