@@ -80,7 +80,14 @@
       "description": "Description",
       "assignees": "Assignees",
       "assigneesPlaceholder": "Start typing a name",
-      "due": "Due date"
+      "due": "Due date",
+      "board": "Board",
+      "to": "To",
+      "type": "Type",
+      "priority": "Priority",
+      "labels": "Labels",
+      "watchers": "Watchers",
+      "attachments": "Attachments"
     },
     "noPeople": "Nobody found",
     "assigneesCount": "{{count}} / {{max}}",
@@ -91,6 +98,58 @@
       "titleRequired": "Enter the task title",
       "titleTooLong": "The title is at most {{max}} characters",
       "descriptionTooLong": "The description is at most {{max}} characters"
+    },
+    "requestTitle": "New request to «{{name}}»",
+    "requestTitleEmpty": "New request",
+    "requestNote": "The department will set the type, priority and assignee",
+    "boardPlaceholder": "Choose a board",
+    "boardLoading": "Loading boards…",
+    "boardSearch": "Find a board or department",
+    "boardSearchRequest": "Find a department",
+    "noBoards": "Nothing found",
+    "boardGroups": {
+      "intakeDepartment": "Request to another department",
+      "intakeTeam": "Request to a team board"
+    },
+    "boardConfigLoading": "Loading the board's fields…",
+    "boardConfigError": "Could not load the board's fields. The task will be created with the default fields",
+    "noType": "No type",
+    "noPriority": "No priority",
+    "fieldEmpty": "—",
+    "more": "More fields",
+    "removeFile": "Remove file {{name}}",
+    "attachmentsFailed": "Files not uploaded: {{count}}. Add them in the task",
+    "uploadProgress": "Uploading file {{index}} of {{count}}: {{percent}}%",
+    "due": {
+      "today": "Today 18:00",
+      "tomorrow": "Tomorrow",
+      "friday": "Fri",
+      "pick": "Pick a date",
+      "clear": "No due date",
+      "date": "Date",
+      "time": "Time (optional)",
+      "summaryDate": "{{weekday}}, {{date}} — no time",
+      "summaryMoment": "{{weekday}}, {{date}}, {{time}}"
+    },
+    "errors": {
+      "boardRequired": "Choose a board",
+      "boardGone": "The board was not found or no longer takes tasks. Choose another one",
+      "becameRequest": "You are no longer a member of this board — the task will be a request. Check the form and create it again",
+      "required": "Fill in this field",
+      "invalid": "Check the value",
+      "number": "Enter a number",
+      "triageOnly": "The department that triages the request sets this",
+      "rawHtml": "The description cannot contain HTML markup",
+      "personalOwnerOnly": "On a personal board the assignee is only its owner",
+      "assignees": "Only active board members can be assignees",
+      "watchers": "Only active employees can be watchers",
+      "fileTooBig": "The file is larger than {{max}} MiB",
+      "fileEmpty": "An empty file cannot be uploaded",
+      "due": {
+        "dateMissing": "Enter the date",
+        "invalidDate": "There is no such date",
+        "nonexistentTime": "This time does not exist on that day — choose another."
+      }
     }
   },
   "toast": {

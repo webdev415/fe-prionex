@@ -14,7 +14,7 @@
  *   "a planner failure never breaks the CRM" (epic 1). A really expired CRM
  *   session is still caught by the next CRM call.
  */
-import type { AxiosRequestConfig } from 'axios'
+import type { AxiosProgressEvent, AxiosRequestConfig } from 'axios'
 import api from '@/lib/api'
 import type { components, paths } from './schema'
 
@@ -40,6 +40,11 @@ export type PlannerSlaState = Schemas['SLAState']
 export type PlannerTaskOrigin = Schemas['TaskOrigin']
 export type PlannerTaskPerson = Schemas['TaskPerson']
 export type PlannerBoardPriority = Schemas['BoardPriority']
+export type PlannerIntakeBoard = Schemas['IntakeBoard']
+export type PlannerBoardField = Schemas['BoardField']
+export type PlannerBoardTaskType = Schemas['BoardTaskType']
+export type PlannerBoardLabel = Schemas['BoardLabel']
+export type PlannerTaskAttachment = Schemas['TaskAttachment']
 
 /** Base path of the planner route group in Kong (1.6). */
 export const PLANNER_BASE = '/api/v1/planner'
@@ -65,6 +70,10 @@ export const PLANNER_ASSIGNEES_MAX = 10
 export const PLANNER_EVENT_PARTICIPANTS_MAX = 200
 export const PLANNER_PEOPLE_QUERY_MIN = 2
 export const PLANNER_PEOPLE_QUERY_MAX = 100
+/** Watchers of a new task (`TaskCreate.watcher_ids`, `maxItems: 20`). */
+export const PLANNER_WATCHERS_MAX = 20
+/** One attachment file (`POST /tasks/{id}/attachments`: 50 MiB, `details.max_bytes`). */
+export const PLANNER_ATTACHMENT_MAX_BYTES = 52_428_800
 
 /**
  * Length the way the planner counts it — Unicode code points (Go runes), not
@@ -132,6 +141,22 @@ export async function listBoards(): Promise<PlannerBoardList> {
   return res.data
 }
 
+/**
+ * `GET /boards?can_create=true` — where a new task can go (story 3.14):
+ * `items` are boards where the actor creates a task as a member, admin or
+ * owner of the personal board; `intake` are boards where the actor's task
+ * becomes a request (department and team boards that accept requests), with
+ * the department, the П-9 hint and the required fields of the request form —
+ * the board card itself is not visible to a non-participant.
+ */
+export async function listCreatableBoards(): Promise<PlannerBoardList> {
+  const res = await api.get<PlannerBoardList>(
+    url('/boards'),
+    config({}, { params: { can_create: true } })
+  )
+  return res.data
+}
+
 /** `GET /boards/{code}` — the board card: config (statuses), members, allowed_actions. */
 export async function getBoard(code: string): Promise<PlannerBoard> {
   const res = await api.get<PlannerBoard>(url('/boards/{code}', { code }), config())
@@ -195,6 +220,61 @@ export async function patchTask(
   )
   const etag = res.headers?.etag
   return { task: res.data, etag: typeof etag === 'string' ? etag : undefined }
+}
+
+/** The shared client's ceiling (`src/lib/api.ts`, 75 s) — the start of an upload's budget. */
+const UPLOAD_BASE_TIMEOUT_MS = 75_000
+/** The slowest uplink an upload is waited for: 64 KiB/s (≈ 0.5 Mbit/s, a poor mobile link). */
+const UPLOAD_MIN_BYTES_PER_SECOND = 64 * 1024
+
+/**
+ * How long one file may take: the shared 75 s plus the file at 64 KiB/s — a
+ * 50 MiB file gets 875 s (~15 min), not the 75 s of a JSON call. Not `0` (no
+ * limit): the form stays locked while its files upload, so a connection that
+ * stalls must end in «не завантажено файлів», not hold the form forever.
+ */
+export function attachmentUploadTimeoutMs(size: number): number {
+  return UPLOAD_BASE_TIMEOUT_MS + Math.ceil((size / UPLOAD_MIN_BYTES_PER_SECOND) * 1000)
+}
+
+/**
+ * `POST /tasks/{id}/attachments` — one file, `multipart/form-data` with the
+ * part `file` (story 3.8). There is no multipart task creation: the form
+ * uploads right after the 201 of the task. The key belongs to one file of one
+ * form, so a retry replays the stored 201 instead of adding a second copy.
+ * `onProgress` gets the sent share of the request (0–1) while it uploads.
+ *
+ * The explicit `multipart/form-data` must stay: the shared client's default
+ * `Content-Type: application/json` makes axios serialize a `FormData` body to
+ * JSON (`{"file":{}}` — the file is lost) unless the request names another
+ * type. Axios then drops this header for a `FormData` body in the browser, so
+ * the browser sends its own `multipart/form-data; boundary=…`, and its Node
+ * adapter rewrites it with the boundary too.
+ */
+export async function uploadTaskAttachment(
+  taskId: string,
+  file: File,
+  idempotencyKey: string,
+  onProgress?: (fraction: number) => void
+): Promise<PlannerTaskAttachment> {
+  const body = new FormData()
+  body.append('file', file, file.name)
+  const res = await api.post<PlannerTaskAttachment>(
+    url('/tasks/{id}/attachments', { id: taskId }),
+    body,
+    config(
+      { 'Idempotency-Key': idempotencyKey, 'Content-Type': 'multipart/form-data' },
+      {
+        timeout: attachmentUploadTimeoutMs(file.size),
+        ...(onProgress && {
+          onUploadProgress: (event: AxiosProgressEvent) => {
+            if (event.progress !== undefined) onProgress(event.progress)
+          },
+        }),
+      }
+    )
+  )
+  return res.data
 }
 
 // ─── people ────────────────────────────────────────────────────────────────
