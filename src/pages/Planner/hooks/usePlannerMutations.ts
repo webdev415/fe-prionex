@@ -1,7 +1,9 @@
 /**
- * Planner commands from the CRM (planner story 1.10): create a task, change its
- * status. Errors are shown by `code` with our own text — never the server
- * `message` (epic 1, «Тексти»).
+ * Planner commands from the CRM (planner stories 1.10, 5.1): create a task,
+ * change its status. Errors are shown by `code` with our own text — never the
+ * server `message` (epic 1, «Тексти») — and each way a command can fail has its
+ * own phrase: no rights, a bad field, a conflict, too many requests, the
+ * planner switched off, the planner failing, no connection at all.
  */
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -14,8 +16,8 @@ import {
 } from '@/api/planner/plannerApi'
 import { plannerKeys } from '@/api/planner/plannerQueries'
 import { readPlannerError } from '@/api/planner/plannerErrors'
-
-type TFunction = ReturnType<typeof useTranslation>['t']
+import type { PlannerT } from '../plannerFormat'
+import { showUndoToast } from '../plannerToasts'
 
 /** Contract field → the form label the person saw (`details.field` of a 400). */
 const FIELD_LABELS: Record<string, string> = {
@@ -27,8 +29,8 @@ const FIELD_LABELS: Record<string, string> = {
 }
 
 /** Toast for a failed planner command; 412 is handled by the caller first. */
-export function toastPlannerError(t: TFunction, error: unknown): void {
-  const { status, code, details } = readPlannerError(error)
+export function toastPlannerError(t: PlannerT, error: unknown): void {
+  const { status, code, details, unreachable } = readPlannerError(error)
   if (status === 403 || code === 'forbidden') {
     const reason = typeof details.reason === 'string' ? details.reason : undefined
     const reasonText = reason ? t(`reasons.${reason}`, { defaultValue: '' }) : ''
@@ -48,6 +50,18 @@ export function toastPlannerError(t: TFunction, error: unknown): void {
   }
   if (status === 409 || code === 'conflict') {
     toast.error(t('toast.conflict'))
+    return
+  }
+  if (status === 429 || code === 'rate_limited') {
+    toast.error(t('toast.rateLimited'))
+    return
+  }
+  if (unreachable) {
+    toast.error(t('toast.network'))
+    return
+  }
+  if (status !== undefined && status >= 500) {
+    toast.error(t('toast.serverError'))
     return
   }
   toast.error(t('toast.failed'))
@@ -83,37 +97,72 @@ export interface ChangeStatusInput {
   version: number
   statusId: string
   reason?: string
+  /**
+   * Offer «Скасувати» once the change is made: the status to go back to and
+   * the new status's name for the toast. Absent on the undo itself, and when
+   * the old status needs a reason — it cannot be restored without one.
+   */
+  undo?: { statusId: string; toName: string }
+}
+
+function sendStatus(input: ChangeStatusInput) {
+  return patchTask(input.id, input.version, {
+    status_id: input.statusId,
+    ...(input.reason ? { reason: input.reason } : {}),
+  })
 }
 
 export function useChangeTaskStatus() {
   const { t } = useTranslation('planner')
   const queryClient = useQueryClient()
 
-  return useMutation({
-    mutationFn: (input: ChangeStatusInput) =>
-      patchTask(input.id, input.version, {
-        status_id: input.statusId,
-        ...(input.reason ? { reason: input.reason } : {}),
-      }),
-    onSuccess: ({ task }, input) => {
-      queryClient.setQueryData(plannerKeys.task(input.key), task)
-      refreshTaskViews(queryClient, input.boardCode, input.key)
-    },
-    onError: (error, input) => {
-      const { status, code, details } = readPlannerError(error)
-      if (status === 412 || code === 'revision_mismatch') {
-        // Somebody else changed the task: show the fresh version, never
-        // overwrite it silently (UX «Voice and Tone»).
-        const current = details.current as PlannerTask | undefined
-        if (current && typeof current === 'object' && 'version' in current) {
-          queryClient.setQueryData(plannerKeys.task(input.key), current)
-        }
-        refreshTaskViews(queryClient, input.boardCode, input.key)
-        toast.info(t('toast.stale'))
-        return
+  const onFailed = (error: unknown, input: ChangeStatusInput) => {
+    const { status, code, details } = readPlannerError(error)
+    if (status === 412 || code === 'revision_mismatch') {
+      // Somebody else changed the task: show the fresh version, never
+      // overwrite it silently (UX «Voice and Tone»).
+      const current = details.current as PlannerTask | undefined
+      if (current && typeof current === 'object' && 'version' in current) {
+        queryClient.setQueryData(plannerKeys.task(input.key), current)
       }
-      toastPlannerError(t, error)
-    },
+      refreshTaskViews(queryClient, input.boardCode, input.key)
+      toast.info(t('toast.stale'))
+      return
+    }
+    toastPlannerError(t, error)
+  }
+
+  const onApplied = (task: PlannerTask, input: ChangeStatusInput) => {
+    queryClient.setQueryData(plannerKeys.task(input.key), task)
+    refreshTaskViews(queryClient, input.boardCode, input.key)
+    const { undo } = input
+    if (!undo) return
+    // The way back is one more PATCH under the version this change produced:
+    // if somebody changed the task within the five seconds, it is a 412 and
+    // the fresh version, not a silent overwrite.
+    const back: ChangeStatusInput = {
+      id: input.id,
+      key: input.key,
+      boardCode: input.boardCode,
+      version: task.version,
+      statusId: undo.statusId,
+    }
+    showUndoToast({
+      message: t('toast.statusChanged', { key: input.key, status: undo.toName }),
+      undoLabel: t('toast.undo'),
+      onUndo: () => {
+        sendStatus(back).then(
+          (result) => onApplied(result.task, back),
+          (error: unknown) => onFailed(error, back)
+        )
+      },
+    })
+  }
+
+  return useMutation({
+    mutationFn: sendStatus,
+    onSuccess: ({ task }, input) => onApplied(task, input),
+    onError: onFailed,
   })
 }
 

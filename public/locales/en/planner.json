@@ -12,7 +12,6 @@
     "ariaLabel": "Task views",
     "mine": "My tasks",
     "board": "Board",
-    "chooseBoard": "Choose a board",
     "noBoards": "You are not a member of any board yet",
     "boardsError": "Could not load the boards",
     "groups": {
@@ -41,7 +40,8 @@
     "notFound": "The board was not found or you have no access to it",
     "error": "Could not load the board",
     "emptyColumn": "No tasks",
-    "hasMore": "Not all tasks of the board are shown"
+    "hasMore": "Not all tasks of the board are shown",
+    "empty": "The board has no tasks yet"
   },
   "task": {
     "noAssignees": "No assignee",
@@ -55,7 +55,8 @@
     "dueState": {
       "overdue": "Overdue",
       "soon": "Due soon"
-    }
+    },
+    "neverLoggedIn": "has not used the Planner yet"
   },
   "status": {
     "change": "Change status: {{status}}",
@@ -102,7 +103,12 @@
     "unavailable": "The Planner is temporarily unavailable. The rest of the CRM works",
     "conflict": "Someone changed this at the same time. Refresh and try again",
     "maybeCreated": "The task may already have been created. The board list has been refreshed",
-    "failed": "Could not save. Please try again"
+    "failed": "Could not save. Please try again",
+    "statusChanged": "{{key}} → «{{status}}»",
+    "undo": "Undo",
+    "rateLimited": "Too many requests. Wait a minute and try again",
+    "network": "No connection to the Planner. Check the network and try again",
+    "serverError": "The Planner failed. Try again a little later"
   },
   "reasons": {
     "view_as_not_supported": "«View as» mode is not supported"
@@ -111,5 +117,46 @@
     "label": "Reason*",
     "confirm": "Change status",
     "tooLong": "The reason is at most {{max}} characters"
+  },
+  "state": {
+    "loading": "Loading…"
+  },
+  "pill": {
+    "dueHint": "Due: {{value}}",
+    "dueSoonHint": "Due soon: {{value}}",
+    "dueOverdueHint": "Was due: {{value}}",
+    "sla": "SLA",
+    "slaSoon": "SLA soon",
+    "slaPaused": "SLA paused",
+    "slaBreached": "SLA breached",
+    "slaLeft": "{{value}} left",
+    "slaUntil": "until {{value}}",
+    "slaNorm": "SLA {{norm}} for type «{{type}}»",
+    "slaCalendar": "calendar time",
+    "slaWeekdays": "weekdays only (Mon–Fri)",
+    "slaPausedHint": "the SLA clock is stopped",
+    "slaBreachedAt": "breached {{value}}"
+  },
+  "duration": {
+    "minutes": "{{value}} min",
+    "hours": "{{value}} h",
+    "days": "{{value}} d"
+  },
+  "priority": {
+    "label": "Priority: {{name}}"
+  },
+  "avatar": {
+    "more": "+{{value}}",
+    "moreLabel": "and {{value}} more"
+  },
+  "origin": {
+    "chat": "from chat",
+    "protocol": "from minutes",
+    "recurrence": "recurring",
+    "import": "moved from Forgejo",
+    "openSource": "open the source"
+  },
+  "people": {
+    "tooLong": "The search is too long — at most {{max}} characters"
   }
 }

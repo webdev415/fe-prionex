@@ -11,12 +11,12 @@
  */
 import { useTranslation } from 'react-i18next'
 import { matchPath, Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { Alert } from '@/components/ui/Alert'
 import { SegmentedTabs, segmentedTabId, segmentedTabPanelId } from '@/components/ui/SegmentedTabs'
 import { usePlannerSection } from '@/api/planner/plannerQueries'
 import { PlannerGateMessage } from './components/PlannerGateMessage'
 import { TasksNav } from './components/TasksNav'
 import { TaskPanel } from './components/TaskPanel'
+import { PlannerBanners, type PlannerBanner } from './components/PlannerStates'
 import { PLANNER_CALENDAR_PATH, PLANNER_TASKS_PATH } from './plannerFormat'
 import { usePlannerTaskParam } from './usePlannerTaskParam'
 
@@ -37,12 +37,15 @@ export function PlannerLayout() {
   if (section.kind === 'unavailable') return <PlannerGateMessage kind="unavailable" />
 
   const tab: PlannerTab = location.pathname.startsWith(PLANNER_CALENDAR_PATH) ? 'calendar' : 'tasks'
+  // One banner per reason (5.1); the section's own reasons join this list.
+  const banners: PlannerBanner[] =
+    section.meta.mode === 'prep' ? [{ reason: 'prep', tone: 'info', text: t('prepBanner') }] : []
 
   return (
     <div className="space-y-4 p-6">
       <h1 className="text-foreground text-xl font-semibold">{t('section.title')}</h1>
 
-      {section.meta.mode === 'prep' && <Alert variant="info">{t('prepBanner')}</Alert>}
+      <PlannerBanners banners={banners} />
 
       <SegmentedTabs<PlannerTab>
         variant="underline"

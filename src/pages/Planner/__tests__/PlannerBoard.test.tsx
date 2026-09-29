@@ -526,3 +526,111 @@ describe('Доска, создание задачи и смена статуса
     expect(api.listMyTasks).toHaveBeenCalled()
   })
 })
+
+describe('общие компоненты на карточке, в строке и в панели (5.1)', () => {
+  const RICH = {
+    sla_state: 'soon' as const,
+    sla_deadline_at: '2026-10-02T15:00:00Z',
+    origin: { kind: 'import' },
+    priority: { id: 'p-top', name: 'Високий' },
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    const board = makeBoard()
+    api.getMeta.mockResolvedValue(makeMeta())
+    api.listBoards.mockResolvedValue({ items: [] })
+    api.getBoard.mockResolvedValue(
+      makeBoard({
+        config: {
+          ...board.config,
+          priorities: [
+            { id: 'p-low', name: 'Низький', position: 1, default: false },
+            { id: 'p-mid', name: 'Середній', position: 2, default: true },
+            { id: 'p-top', name: 'Високий', position: 3, default: false },
+          ],
+        },
+      })
+    )
+    api.listBoardTasks.mockResolvedValue({ items: [makeCard(RICH)], has_more: false })
+    api.listMyTasks.mockResolvedValue({ items: [makeCard(RICH)], has_more: false })
+    api.searchPeople.mockResolvedValue({ items: [] })
+  })
+
+  it('карточка доски: пилюля SLA, происхождение, приоритет и аватар', async () => {
+    renderAt('/dashboard/planning/tasks/boards/SKL')
+    const todo = await screen.findByRole('region', { name: 'Нова' })
+    expect(await within(todo).findByText('SLA скоро')).toBeInTheDocument()
+    expect(within(todo).getByText('перенесено з Forgejo')).toBeInTheDocument()
+    expect(await within(todo).findByRole('img', { name: 'Пріоритет: Високий' })).toHaveClass(
+      'text-warning-700'
+    )
+    expect(within(todo).getByText('ОК')).toBeInTheDocument()
+  })
+
+  it('строка «Мої задачі»: чип статуса первым, затем название, пилюли и аватар', async () => {
+    renderAt('/dashboard/planning/tasks')
+    const title = await screen.findByText('Перевірити залишки')
+    const row = title.closest('li')!
+    expect(within(row).getAllByRole('button')[0]).toHaveAccessibleName('Змінити статус: Нова')
+    expect(await within(row).findByText('SLA скоро')).toBeInTheDocument()
+    expect(within(row).getByText('перенесено з Forgejo')).toBeInTheDocument()
+  })
+
+  it('панель: остаток SLA с сервера; Esc при открытой подсказке закрывает подсказку, не панель', async () => {
+    api.resolveTask.mockResolvedValue(
+      makeTask({
+        sla_state: 'running',
+        sla_deadline_at: '2026-10-02T15:00:00Z',
+        sla_remaining_seconds: 5 * 3600,
+      })
+    )
+    renderAt('/dashboard/planning/tasks?task=SKL-2')
+    const panel = await screen.findByRole('complementary', { name: 'Задача SKL-2' })
+    const pill = (await within(panel).findByText('5 год')).closest('[tabindex="0"]') as HTMLElement
+    expect(pill).toHaveTextContent('SLA')
+    act(() => pill.focus())
+    expect(await screen.findByRole('tooltip')).toBeInTheDocument()
+    const user = userEvent.setup()
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull())
+    expect(screen.getByRole('complementary', { name: 'Задача SKL-2' })).toBeInTheDocument()
+  })
+
+  it('пустая доска — пустое состояние один раз, колонки остаются без «Немає задач»', async () => {
+    api.listBoardTasks.mockResolvedValue({ items: [], has_more: false })
+    renderAt('/dashboard/planning/tasks/boards/SKL')
+    expect(await screen.findByText('На дошці ще немає задач')).toBeInTheDocument()
+    const todo = screen.getByRole('region', { name: 'Нова' })
+    expect(within(todo).getByText('0')).toBeInTheDocument()
+    expect(screen.queryByText('Немає задач')).toBeNull()
+  })
+
+  it('конфигурация пришла раньше задач — колонки стоят со скелетоном карточек, без «0» и «Немає задач»', async () => {
+    let resolveTasks: (list: unknown) => void = () => {}
+    api.listBoardTasks.mockImplementation(() => new Promise((resolve) => (resolveTasks = resolve)))
+    renderAt('/dashboard/planning/tasks/boards/SKL')
+    const todo = await screen.findByRole('region', { name: 'Нова' })
+    expect(todo.querySelector('[aria-busy="true"]')).not.toBeNull()
+    expect(within(todo).getByText('Завантаження…')).toHaveClass('sr-only')
+    expect(within(todo).queryByText('0')).toBeNull()
+    expect(screen.queryByText('Немає задач')).toBeNull()
+    expect(screen.queryByText('На дошці ще немає задач')).toBeNull()
+
+    await act(async () => resolveTasks({ items: [makeCard()], has_more: false }))
+    expect(await within(todo).findByText('Перевірити залишки')).toBeInTheDocument()
+    expect(within(todo).getByText('1')).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'В роботі' })).toHaveTextContent('Немає задач')
+    expect(document.querySelector('[aria-busy="true"]')).toBeNull()
+  })
+
+  it('задачи доски не загрузились — ошибка, и под ней ни «0», ни «Немає задач»', async () => {
+    api.listBoardTasks.mockRejectedValue(plannerError(500, 'internal'))
+    renderAt('/dashboard/planning/tasks/boards/SKL')
+    expect(await screen.findByText('Не вдалося завантажити дошку')).toBeInTheDocument()
+    const todo = screen.getByRole('region', { name: 'Нова' })
+    expect(within(todo).queryByText('0')).toBeNull()
+    expect(screen.queryByText('Немає задач')).toBeNull()
+    expect(todo.querySelector('[aria-busy="true"]')).toBeNull()
+  })
+})
