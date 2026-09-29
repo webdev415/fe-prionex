@@ -35,6 +35,11 @@ export type PlannerTaskAction = Schemas['TaskAction']
 export type PlannerPerson = Schemas['Person']
 export type PlannerPeopleList = Schemas['PeopleList']
 export type PlannerErrorBody = Schemas['ErrorBody']
+export type PlannerDueState = Schemas['DueState']
+export type PlannerSlaState = Schemas['SLAState']
+export type PlannerTaskOrigin = Schemas['TaskOrigin']
+export type PlannerTaskPerson = Schemas['TaskPerson']
+export type PlannerBoardPriority = Schemas['BoardPriority']
 
 /** Base path of the planner route group in Kong (1.6). */
 export const PLANNER_BASE = '/api/v1/planner'
@@ -49,6 +54,17 @@ export const PLANNER_CLIENT = 'crm'
 export const PLANNER_TITLE_MAX = 300
 export const PLANNER_DESCRIPTION_MAX = 20_000
 export const PLANNER_REASON_MAX = 1000
+
+/**
+ * Size limits of the contract: assignees of a task (`TaskCreate.assignee_ids`,
+ * `maxItems: 10`), participants of a calendar event (`participant_ids`, 200 —
+ * CF-5, E-63) and the people search text (`GET /people?q=`, 2–100 characters
+ * after trimming). The dictionaries only carry `{{max}}`.
+ */
+export const PLANNER_ASSIGNEES_MAX = 10
+export const PLANNER_EVENT_PARTICIPANTS_MAX = 200
+export const PLANNER_PEOPLE_QUERY_MIN = 2
+export const PLANNER_PEOPLE_QUERY_MAX = 100
 
 /**
  * Length the way the planner counts it — Unicode code points (Go runes), not
