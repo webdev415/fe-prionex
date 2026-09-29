@@ -10,7 +10,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import axios, { AxiosError, AxiosHeaders, type AxiosRequestConfig } from 'axios'
 
-const http = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), patch: vi.fn() }))
+const http = vi.hoisted(() => ({
+  get: vi.fn(),
+  post: vi.fn(),
+  patch: vi.fn(),
+  put: vi.fn(),
+  delete: vi.fn(),
+}))
 vi.mock('@/lib/api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/api')>()
   return { ...actual, default: http, api: http }
@@ -18,6 +24,8 @@ vi.mock('@/lib/api', async (importOriginal) => {
 
 import {
   createTask,
+  deleteBoardMember,
+  getBoardHistory,
   getBoardKanban,
   getMe,
   getMeta,
@@ -26,6 +34,9 @@ import {
   listMyTasks,
   newIdempotencyKey,
   patchTask,
+  previewBoardConfig,
+  putBoardConfig,
+  putBoardMember,
   resolveTask,
   searchPeople,
   uploadTaskAttachment,
@@ -332,5 +343,57 @@ describe('people search keeps the previous answer only while a name is refined',
     // An unrelated name — nothing from before either.
     people.rerender({ q: 'Іва' })
     expect(people.result.current.data).toBeUndefined()
+  })
+})
+
+describe('board settings operations (story 5.10): dry_run and If-Match on the wire', () => {
+  const body = { config: {} } as unknown as Parameters<typeof putBoardConfig>[2]
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    http.put.mockResolvedValue({ data: { version: 6 }, headers: {} })
+    http.delete.mockResolvedValue({ data: { version: 6 }, headers: {} })
+    http.get.mockResolvedValue({ data: { items: [] }, headers: {} })
+  })
+
+  it('the check is PUT /config?dry_run=true under If-Match — it never writes', async () => {
+    await previewBoardConfig('SKL', 5, body)
+    expect(http.put).toHaveBeenCalledWith('/api/v1/planner/boards/SKL/config', body, {
+      params: { dry_run: 'true' },
+      headers: { ...CRM, 'If-Match': '"5"' },
+      _skipAuthRedirect: true,
+    })
+  })
+
+  it('the save is PUT /config without dry_run, under If-Match', async () => {
+    await putBoardConfig('SKL', 5, body)
+    expect(http.put).toHaveBeenCalledWith('/api/v1/planner/boards/SKL/config', body, {
+      headers: { ...CRM, 'If-Match': '"5"' },
+      _skipAuthRedirect: true,
+    })
+    const options = http.put.mock.calls[0][2] as { params?: unknown }
+    expect(options.params).toBeUndefined()
+  })
+
+  it('a participant: PUT with the role in the body, DELETE — both under If-Match', async () => {
+    await putBoardMember('SKL', 'u-2', 5, 'board_admin')
+    expect(http.put).toHaveBeenCalledWith(
+      '/api/v1/planner/boards/SKL/members/u-2',
+      { role: 'board_admin' },
+      { headers: { ...CRM, 'If-Match': '"5"' }, _skipAuthRedirect: true }
+    )
+    await deleteBoardMember('SKL', 'u-2', 5)
+    expect(http.delete).toHaveBeenCalledWith('/api/v1/planner/boards/SKL/members/u-2', {
+      headers: { ...CRM, 'If-Match': '"5"' },
+      _skipAuthRedirect: true,
+    })
+  })
+
+  it('the history is GET /boards/{code}/history', async () => {
+    await getBoardHistory('SKL')
+    expect(http.get).toHaveBeenCalledWith('/api/v1/planner/boards/SKL/history', {
+      headers: CRM,
+      _skipAuthRedirect: true,
+    })
   })
 })

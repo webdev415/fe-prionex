@@ -176,15 +176,21 @@ describe('доска канбаном (5.3)', () => {
       'true'
     )
     expect(screen.getAllByRole('button', { name: '+ Задача' })).toHaveLength(1)
+    // ⚙ is the entry to the settings editor (5.10): its first section «Загальне».
     const gear = screen.getByRole('link', { name: 'Налаштування дошки' })
-    expect(gear).toHaveAttribute('href', '/dashboard/planning/tasks/boards/SKL/settings')
+    expect(gear).toHaveAttribute('href', '/dashboard/planning/tasks/boards/SKL/settings/general')
 
     const user = userEvent.setup()
     await user.click(gear)
-    expect(router.state.location.pathname).toBe('/dashboard/planning/tasks/boards/SKL/settings')
-    expect(
-      await screen.findByText("Налаштування дошки з'являться з наступним оновленням")
-    ).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe(
+      '/dashboard/planning/tasks/boards/SKL/settings/general'
+    )
+    expect(await screen.findByRole('heading', { name: /Налаштування дошки/ })).toBeInTheDocument()
+    const sections = screen.getByRole('navigation', { name: 'Розділи налаштувань' })
+    expect(within(sections).getByRole('link', { name: 'Загальне' })).toHaveAttribute(
+      'aria-current',
+      'page'
+    )
   })
 
   it('без configure — ⚙ нет; без приёма заявок — нет бейджа', async () => {

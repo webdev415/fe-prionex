@@ -27,6 +27,8 @@ import {
   type PlannerPeopleList,
 } from './plannerApi'
 import { readPlannerError } from './plannerErrors'
+// Board settings (5.10) — a line of its own, so the lanes of the wave merge cleanly.
+import { getBoardHistory } from './plannerApi'
 
 export const PLANNER_POLL_MS = 30_000
 
@@ -258,4 +260,20 @@ export function usePlannerPeople(q: string) {
 export function isPeopleQuery(query: string): boolean {
   const length = plannerTextLength(query)
   return length >= PLANNER_PEOPLE_QUERY_MIN && length <= PLANNER_PEOPLE_QUERY_MAX
+}
+
+// ─── board settings (story 5.10) ───────────────────────────────────────────
+
+/** Journal of a board — under the board's key, so re-reading the board re-reads it. */
+export const plannerBoardHistoryKey = (code: string) =>
+  [...plannerKeys.board(code), 'history'] as const
+
+/** `GET /boards/{code}/history` for the settings section «Історія»; read when opened. */
+export function usePlannerBoardHistory(code: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: plannerBoardHistoryKey(code ?? ''),
+    queryFn: () => getBoardHistory(code as string),
+    enabled: enabled && Boolean(code),
+    refetchOnWindowFocus: true,
+  })
 }

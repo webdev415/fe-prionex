@@ -32,6 +32,7 @@ import {
   CalendarSkeleton,
   TaskListSkeleton,
 } from '@/pages/Planner/components/PlannerStates'
+import { SettingsSkeleton } from '@/pages/Planner/settings/SettingsSkeleton'
 
 const PlannerLayout = lazy(() =>
   import('@/pages/Planner').then((m) => ({ default: m.PlannerLayout }))
@@ -42,11 +43,11 @@ const PlannerMyTasksPage = lazy(() =>
 const PlannerBoardPage = lazy(() =>
   import('@/pages/Planner').then((m) => ({ default: m.PlannerBoardPage }))
 )
-const PlannerBoardSettingsPage = lazy(() =>
-  import('@/pages/Planner').then((m) => ({ default: m.PlannerBoardSettingsPage }))
-)
 const PlannerCalendarPage = lazy(() =>
   import('@/pages/Planner').then((m) => ({ default: m.PlannerCalendarPage }))
+)
+const BoardSettingsPage = lazy(() =>
+  import('@/pages/Planner').then((m) => ({ default: m.BoardSettingsPage }))
 )
 const PlannerTaskLinkRedirect = lazy(() =>
   import('@/pages/Planner').then((m) => ({ default: m.PlannerTaskLinkRedirect }))
@@ -70,10 +71,12 @@ export const plannerRoute: RouteObject = {
     { index: true, element: <Navigate to="/dashboard/planning/tasks" replace /> },
     { path: 'tasks', element: withSuspense(<PlannerMyTasksPage />) },
     { path: 'tasks/boards/:code', element: withSuspense(<PlannerBoardPage />, <BoardSkeleton />) },
-    // `⚙` of the board header (5.3); the settings editor itself is story 5.10.
+    // Board settings, one configuration editor (5.10, UX C-08): the section is in the address;
+    // the bare address (the board header's ⚙) opens the first section.
+    { path: 'tasks/boards/:code/settings', element: <Navigate to="general" replace /> },
     {
-      path: 'tasks/boards/:code/settings/*',
-      element: withSuspense(<PlannerBoardSettingsPage />, <CalendarSkeleton />),
+      path: 'tasks/boards/:code/settings/:section',
+      element: withSuspense(<BoardSettingsPage />, <SettingsSkeleton />),
     },
     { path: 'calendar', element: withSuspense(<PlannerCalendarPage />, <CalendarSkeleton />) },
     // Permanent link `planning/t/<KEY>` (AD-35): the task panel over «Мої задачі».

@@ -5,8 +5,9 @@
  * board (`configure` in the board's `allowed_actions`). The «Огляд» summary line
  * under the header is story 5.12.
  *
- * `⚙` leads to the settings address (C-08) — until story 5.10 a placeholder
- * page says the settings are coming, rather than a dead link.
+ * `⚙` opens the board's settings editor (story 5.10, C-08) on its first
+ * section «Загальне»; the editor itself answers «Немає прав» to a direct
+ * address without `configure`.
  */
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -14,7 +15,7 @@ import { MdInbox, MdOutlineSettings } from 'react-icons/md'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/utils'
 import type { PlannerBoard } from '@/api/planner/plannerApi'
-import { boardSettingsPath } from '../plannerFormat'
+import { boardSettingsPath } from '../settings/boardSettingsModel'
 import type { BoardView } from './useBoardFilters'
 
 interface BoardHeaderProps {
