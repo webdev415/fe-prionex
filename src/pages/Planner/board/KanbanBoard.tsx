@@ -12,7 +12,10 @@
  * (`kanbanMove.ts`), a status that needs a reason asks for it first, and the
  * outcome is said in the `aria-live` line under the board. One move at a time:
  * while the server confirms one, another waits for it (a second move of the
- * same card would carry a stale version).
+ * same card would carry a stale version). A move that is not taken — another
+ * is being saved, or the board is being re-read under new filters and still
+ * shows the previous columns (the placeholder is not in the cache) — is said
+ * on screen and in `aria-live`, never dropped in silence.
  *
  * Horizontal scrolling with a navigator; while a card is dragged the board
  * scrolls itself near its edges (`-auto-scroll`).
@@ -20,6 +23,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/adapter/element-adapter'
 import { combine } from '@atlaskit/pragmatic-drag-and-drop/combine'
 import {
@@ -47,14 +51,14 @@ import {
   cardRights,
   currentPosition,
   findCard,
+  isSamePlace,
   planDrop,
   planPatch,
   planReorder,
-  type CardRights,
   type MovePlan,
   type ReorderStep,
 } from './kanbanMove'
-import { isCardDrag, isCardTarget, isColumnTarget } from './dnd'
+import { columnAccepts, isCardDrag, isCardTarget, isColumnTarget, type CardDragData } from './dnd'
 
 interface KanbanBoardProps {
   board: PlannerBoard
@@ -67,6 +71,13 @@ interface KanbanBoardProps {
 }
 
 const NO_FILTERS: PlannerBoardFilterParams = {}
+
+/**
+ * How long after a move from `⋯` settles its card still takes a lost focus
+ * back: long enough for the re-read that follows the answer, not so long that
+ * a later poll pulls the page back to the card.
+ */
+export const REFOCUS_HOLD_MS = 1500
 
 type TargetStatus = Pick<
   PlannerBoardStatus,
@@ -91,7 +102,15 @@ export function KanbanBoard({
   // twice: the line changes by a trailing no-break space.
   const announce = (text: string) =>
     setAnnouncement((said) => (said === text ? `${text}\u00a0` : text))
-  const [dragActive, setDragActive] = useState(false)
+  // A move not taken snaps the card back like a refusal: say why, on screen
+  // as well as to screen readers.
+  const sayNotTaken = (text: string) => {
+    announce(text)
+    toast.info(text)
+  }
+  // The card being dragged (its rights): a column invites the drop only if
+  // it would take it.
+  const [dragSource, setDragSource] = useState<CardDragData | null>(null)
   const [pendingReason, setPendingReason] = useState<MoveTaskInput | null>(null)
   // The card moved from its `⋯`: its focus comes back after the move (UX-DR46).
   const [refocusTaskId, setRefocusTaskId] = useState<string | null>(null)
@@ -106,31 +125,53 @@ export function KanbanBoard({
   const loading = kanban.isPending || filters === null
   const allEmpty = kanban.data ? kanban.data.columns.every((column) => column.total === 0) : false
 
-  /** Plan → command → (reason) → move; from the cache, never from a placeholder. */
-  const requestMove = (card: PlannerTaskCard, plan: MovePlan | null, rights: CardRights) => {
-    if (!plan) return
-    if (move.isPending) {
-      // The card goes back where it was: say why (one move at a time).
-      announce(t('move.busy'))
+  /**
+   * Plan → command → (reason) → move; from the cache, never from a placeholder.
+   * `makePlan` reads the cached kanban; `statusOnly` — «Перемістити в…», which
+   * sends no place. The card's rights are the cached card's.
+   */
+  const requestMove = (
+    taskId: string,
+    makePlan: (kanban: PlannerBoardKanban) => MovePlan | null,
+    { statusOnly = false }: { statusOnly?: boolean } = {}
+  ) => {
+    const cached = queryClient.getQueryData<PlannerBoardKanban>(kanbanKey)
+    const from = cached && findCard(cached, taskId)
+    // The columns on screen are the previous filters' (a placeholder until the
+    // new answer), or the card has just left them: nothing to move from.
+    if (!cached || !from) {
+      sayNotTaken(t('move.notReady'))
       return
     }
-    const cached = queryClient.getQueryData<PlannerBoardKanban>(kanbanKey)
-    if (!cached) return
-    const planned = planPatch(cached, plan, rights)
-    if (!planned) return
-    const from = findCard(cached, card.id)
-    const fromStatus = from ? statusById.get(from.statusId) : undefined
+    const plan = makePlan(cached)
+    if (!plan) return // its own place: no move
+    if (move.isPending) {
+      // The card goes back where it was: say why (one move at a time).
+      sayNotTaken(t('move.busy'))
+      return
+    }
+    const rights = cardRights(from.card)
+    const planned = planPatch(cached, plan, statusOnly ? { ...rights, reorder: false } : rights)
+    if (!planned) {
+      // Its own place is no move; anything else the re-read card no longer allows.
+      if (!isSamePlace(cached, plan)) sayNotTaken(t('move.notReady'))
+      return
+    }
+    const fromStatus = statusById.get(from.statusId)
     // A status the loaded configuration does not know yet (added meanwhile):
     // the column's own name and category, no «повідомити автора», no reason.
     const columnStatus = cached.columns.find((c) => c.status.id === planned.plan.toStatusId)?.status
     const target: TargetStatus | undefined =
       statusById.get(planned.plan.toStatusId) ??
       (columnStatus && { ...columnStatus, notify_author: false, requires_reason: false })
-    if (!target) return
+    if (!target) {
+      sayNotTaken(t('move.notReady'))
+      return
+    }
     const statusChange = planned.patch.status_id !== undefined
-    const back = currentPosition(cached, card.id)
+    const back = currentPosition(cached, taskId)
     const input: MoveTaskInput = {
-      card: from?.card ?? card,
+      card: from.card,
       boardCode: board.code,
       kanbanKey,
       plan: planned.plan,
@@ -140,10 +181,10 @@ export function KanbanBoard({
       // The way back names the old neighbour when the card may be reordered at
       // all — «Перемістити в…» itself sends no place, its undo still does.
       undo:
-        statusChange && fromStatus && !fromStatus.requires_reason && from
+        statusChange && fromStatus && !fromStatus.requires_reason
           ? {
               status: from.card.status,
-              position: cardRights(from.card).reorder ? back?.position : undefined,
+              position: rights.reorder ? back?.position : undefined,
             }
           : undefined,
     }
@@ -158,20 +199,18 @@ export function KanbanBoard({
   const onDropRef = useRef<(taskId: string, target: Record<string, unknown>) => void>(() => {})
   useEffect(() => {
     onDropRef.current = (taskId, target) => {
-      const cached = queryClient.getQueryData<PlannerBoardKanban>(kanbanKey)
-      const at = cached && findCard(cached, taskId)
-      if (!cached || !at) return
       const edge = extractClosestEdge(target)
-      const plan = isCardTarget(target)
-        ? planDrop(cached, taskId, {
-            statusId: target.statusId,
-            overTaskId: target.taskId,
-            edge: edge === 'top' || edge === 'bottom' ? edge : null,
-          })
-        : isColumnTarget(target)
-          ? planDrop(cached, taskId, { statusId: target.statusId })
-          : null
-      requestMove(at.card, plan, cardRights(at.card))
+      requestMove(taskId, (cached) =>
+        isCardTarget(target)
+          ? planDrop(cached, taskId, {
+              statusId: target.statusId,
+              overTaskId: target.taskId,
+              edge: edge === 'top' || edge === 'bottom' ? edge : null,
+            })
+          : isColumnTarget(target)
+            ? planDrop(cached, taskId, { statusId: target.statusId })
+            : null
+      )
     }
   })
 
@@ -181,9 +220,9 @@ export function KanbanBoard({
     return combine(
       monitorForElements({
         canMonitor: ({ source }) => isCardDrag(source.data),
-        onDragStart: () => setDragActive(true),
+        onDragStart: ({ source }) => setDragSource(isCardDrag(source.data) ? source.data : null),
         onDrop: ({ source, location }) => {
-          setDragActive(false)
+          setDragSource(null)
           const target = location.current.dropTargets[0]
           if (!target || !isCardDrag(source.data)) return
           onDropRef.current(source.data.taskId, target.data)
@@ -215,6 +254,14 @@ export function KanbanBoard({
     }
   }, [refocusTaskId])
 
+  // …and not for ever: once the move has settled (and no reason is being
+  // typed), the hold ends after a short while.
+  useEffect(() => {
+    if (!refocusTaskId || move.isPending || pendingReason) return
+    const timer = window.setTimeout(() => setRefocusTaskId(null), REFOCUS_HOLD_MS)
+    return () => window.clearTimeout(timer)
+  }, [refocusTaskId, move.isPending, pendingReason])
+
   const cardActions = (card: PlannerTaskCard, index: number, count: number) => {
     const rights = cardRights(card)
     return {
@@ -223,14 +270,14 @@ export function KanbanBoard({
         setRefocusTaskId(card.id)
         // «Перемістити в…» puts the card at the end of the column: status only.
         requestMove(
-          card,
-          {
+          card.id,
+          () => ({
             taskId: card.id,
             fromStatusId: card.status.id,
             toStatusId: status.id,
             toIndex: Number.MAX_SAFE_INTEGER,
-          },
-          { changeStatus: rights.changeStatus, reorder: false }
+          }),
+          { statusOnly: true }
         )
       },
       reorder: rights.reorder
@@ -239,8 +286,7 @@ export function KanbanBoard({
             canDown: index < count - 1,
             onReorder: (step: ReorderStep) => {
               setRefocusTaskId(card.id)
-              const cached = queryClient.getQueryData<PlannerBoardKanban>(kanbanKey)
-              requestMove(card, cached ? planReorder(cached, card.id, step) : null, rights)
+              requestMove(card.id, (cached) => planReorder(cached, card.id, step))
             },
           }
         : undefined,
@@ -300,7 +346,7 @@ export function KanbanBoard({
               column={column}
               loading={loading}
               boardEmpty={allEmpty}
-              dragActive={dragActive}
+              dropInvited={dragSource !== null && columnAccepts(dragSource, status.id)}
               canCreate={canCreate}
               onCreate={onCreate}
             >

@@ -247,10 +247,17 @@ export async function patchTask(
 
 /**
  * `GET /tasks/{id}/history` — the task's journal by time: who changed what
- * (`actor`, `at`). The kanban names who changed a task under a 412 from it.
+ * (`actor`, `at`). The kanban names who changed a task under a 412 from it;
+ * `signal` lets it give up on a journal that answers too slowly.
  */
-export async function getTaskHistory(id: string): Promise<PlannerTaskHistory> {
-  const res = await api.get<PlannerTaskHistory>(url('/tasks/{id}/history', { id }), config())
+export async function getTaskHistory(
+  id: string,
+  options: { signal?: AbortSignal } = {}
+): Promise<PlannerTaskHistory> {
+  const res = await api.get<PlannerTaskHistory>(
+    url('/tasks/{id}/history', { id }),
+    config({}, { signal: options.signal })
+  )
   return res.data
 }
 

@@ -134,6 +134,17 @@ export function planPatch(
 }
 
 /**
+ * The plan leaves the card where it stands — its own column, its own index:
+ * a `null` of `planPatch` that is no move at all, not a move refused.
+ */
+export function isSamePlace(kanban: PlannerBoardKanban, plan: MovePlan): boolean {
+  const from = findCard(kanban, plan.taskId)
+  if (!from || plan.toStatusId !== from.statusId) return false
+  const target = itemsWithout(kanban, plan.toStatusId, plan.taskId)
+  return Math.max(0, Math.min(plan.toIndex, target.length)) === from.index
+}
+
+/**
  * The same move on the cached kanban: the card leaves its column (whose
  * `total` drops by one) and stands at `toIndex` of the target (whose `total`
  * grows), carrying the target's status. Nothing else changes.

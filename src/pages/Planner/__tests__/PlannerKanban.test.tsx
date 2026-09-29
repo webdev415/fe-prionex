@@ -4,7 +4,7 @@
  * drop), one Tab stop per card, and the «список» view below 1024 px.
  */
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createMemoryRouter, Outlet, RouterProvider } from 'react-router-dom'
@@ -43,6 +43,8 @@ vi.mock('@/api/planner/plannerApi', async (importOriginal) => {
 
 import { plannerRoute } from '@/routes/plannerRoutes'
 import type { PlannerBoard, PlannerBoardStatus, PlannerTaskCard } from '@/api/planner/plannerApi'
+import { CHANGED_BY_BUDGET_MS } from '../hooks/useMoveTask'
+import { REFOCUS_HOLD_MS } from '../board/KanbanBoard'
 import { makeBoard, makeCard, makeKanban, makeMeta, makeTask } from './plannerFixtures'
 
 beforeAll(async () => {
@@ -195,21 +197,30 @@ describe('доска канбаном (5.3)', () => {
   })
 
   it('колонка: 288 px, счётчик сервера, «ще N» в вид «список», «Закриті за 7 днів →», иконки режима SLA и «повідомити автора»', async () => {
-    api.getBoardKanban.mockResolvedValue(kanbanOf([FIRST, SECOND], richBoard(), { 's-todo': 57 }))
+    api.getBoardKanban.mockResolvedValue(
+      kanbanOf([FIRST, SECOND], richBoard(), { 's-todo': 57, 's-done': 3 })
+    )
     renderAt('/dashboard/planning/tasks/boards/SKL?label=l-1')
     const todo = await screen.findByRole('region', { name: 'Нова' })
     expect(todo).toHaveClass('w-72')
     expect(await within(todo).findByText('57')).toBeInTheDocument()
-    const more = within(todo).getByRole('link', { name: /ще 55/ })
+    // The list has no status filter (contract 0.24.0): the name says whole board.
+    const more = within(todo).getByRole('link', {
+      name: /ще 55\s*— відкрити всі задачі дошки списком/,
+    })
     expect(more).toHaveAttribute('href', expect.stringContaining('view=list'))
     expect(more).toHaveAttribute('href', expect.stringContaining('label=l-1'))
 
     const done = screen.getByRole('region', { name: 'Готово' })
-    expect(within(done).getByRole('link', { name: /Закриті за 7 днів/ })).toHaveAttribute(
-      'href',
-      expect.stringContaining('view=list')
-    )
+    expect(
+      within(done).getByRole('link', {
+        name: /Закриті за 7 днів.*відкрити всі задачі дошки списком/,
+      })
+    ).toHaveAttribute('href', expect.stringContaining('view=list'))
     expect(within(todo).queryByRole('link', { name: /Закриті за 7 днів/ })).toBeNull()
+    // Nothing closed within 7 days in «Відхилено» — nothing to open.
+    const rejected = screen.getByRole('region', { name: 'Відхилено' })
+    expect(within(rejected).queryByRole('link', { name: /Закриті за 7 днів/ })).toBeNull()
 
     const work = screen.getByRole('region', { name: 'В роботі' })
     const bell = within(work).getByRole('img', {
@@ -230,6 +241,7 @@ describe('доска канбаном (5.3)', () => {
   })
 
   it('«Закриті за 7 днів →» ведёт в список, и список говорит, что закрытые — только за 7 дней (Spec Change Log 8)', async () => {
+    api.getBoardKanban.mockResolvedValue(kanbanOf([FIRST, SECOND], richBoard(), { 's-done': 2 }))
     const router = renderAt('/dashboard/planning/tasks/boards/SKL')
     const done = await screen.findByRole('region', { name: 'Готово' })
     const user = userEvent.setup()
@@ -270,6 +282,48 @@ describe('доска канбаном (5.3)', () => {
           .map((b) => b.getAttribute('aria-label'))
       ).toEqual(['Нова', 'В роботі', 'Очікує', 'Готово', 'Відхилено'])
     } finally {
+      width.mockRestore()
+      client.mockRestore()
+    }
+  })
+
+  it('навигатор: отменённый указатель (прокрутку забрал браузер) повторно не отпускается', async () => {
+    const width = vi.spyOn(Element.prototype, 'scrollWidth', 'get').mockImplementation(function (
+      this: Element
+    ) {
+      return this.classList.contains('overflow-x-auto') ? 2400 : 0
+    })
+    const client = vi.spyOn(Element.prototype, 'clientWidth', 'get').mockImplementation(function (
+      this: Element
+    ) {
+      return this.classList.contains('overflow-x-auto') ? 1200 : 0
+    })
+    // jsdom has no pointer capture: the browser's rules — releasing a pointer
+    // that holds no capture throws NotFoundError.
+    const captured = new Set<number>()
+    const proto = HTMLElement.prototype as unknown as Record<string, unknown>
+    const release = vi.fn((id: number) => {
+      if (!captured.delete(id)) throw new DOMException('No active pointer', 'NotFoundError')
+    })
+    proto.setPointerCapture = (id: number) => captured.add(id)
+    proto.hasPointerCapture = (id: number) => captured.has(id)
+    proto.releasePointerCapture = release
+    try {
+      renderAt('/dashboard/planning/tasks/boards/SKL')
+      await screen.findByRole('group', { name: 'Прокрутка колонок дошки' })
+      const thumb = document.querySelector('[data-scroll-thumb]') as HTMLElement
+      fireEvent.pointerDown(thumb, { pointerId: 1, clientX: 10 })
+      captured.delete(1) // the browser took the touch over: its capture is gone
+      fireEvent.pointerCancel(thumb, { pointerId: 1 })
+      expect(release).not.toHaveBeenCalled()
+      // An ordinary release still lets go.
+      fireEvent.pointerDown(thumb, { pointerId: 2, clientX: 10 })
+      fireEvent.pointerUp(thumb, { pointerId: 2 })
+      expect(release).toHaveBeenCalledWith(2)
+    } finally {
+      delete proto.setPointerCapture
+      delete proto.hasPointerCapture
+      delete proto.releasePointerCapture
       width.mockRestore()
       client.mockRestore()
     }
@@ -335,6 +389,34 @@ describe('доска канбаном (5.3)', () => {
       name: /Виконавець: Олена Коваль/,
     })
     expect(within(chip).getByText('Олена Коваль')).toHaveAttribute('data-openreplay-obscured')
+  })
+
+  it('имя выбранного человека живёт с экраном доски: заново открытая ссылка говорит «обрано»', async () => {
+    api.searchPeople.mockResolvedValue({
+      items: [
+        {
+          user_id: 'u-olena',
+          crm_user_id: 41,
+          full_name: 'Олена Коваль',
+          never_logged_in: false,
+          departments: [],
+        },
+      ],
+    })
+    renderAt('/dashboard/planning/tasks/boards/SKL')
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: /Виконавець/, expanded: false }))
+    await user.type(screen.getByLabelText('Виконавець'), 'Оле')
+    await user.click(await screen.findByRole('button', { name: /Олена Коваль/ }))
+    expect(
+      await screen.findByRole('button', { name: /Виконавець: Олена Коваль/ })
+    ).toBeInTheDocument()
+
+    // The screen is gone (another page, a sign-out): the name goes with it.
+    cleanup()
+    renderAt('/dashboard/planning/tasks/boards/SKL?assignee=u-olena')
+    expect(await screen.findByRole('button', { name: /Виконавець: обрано/ })).toBeInTheDocument()
+    expect(screen.queryByText('Олена Коваль')).toBeNull()
   })
 
   it('«Мітка» — из меток доски; «Замовник» — через выбор людей (author_user_id)', async () => {
@@ -606,6 +688,38 @@ describe('доска канбаном (5.3)', () => {
     )
   })
 
+  it('фокус после «⋯» держится недолго: поздний перечит, унёсший карточку, фокус не тянет', async () => {
+    api.patchTask.mockResolvedValueOnce({ task: makeTask({ version: 4 }), etag: '"4"' })
+    let answer: (value: unknown) => void = () => {}
+    api.getBoardKanban
+      .mockResolvedValueOnce(kanbanOf([FIRST, SECOND]))
+      .mockImplementation(() => new Promise((resolve) => (answer = resolve)))
+    renderAt('/dashboard/planning/tasks/boards/SKL')
+    const user = userEvent.setup()
+    const card = (await screen.findByText('SKL-2')).closest('article')!
+    within(card).getAllByRole('button')[0].focus()
+    await user.keyboard('{Shift>}{F10}{/Shift}')
+    const order = await screen.findByRole('group', { name: 'Змінити порядок' })
+    within(order).getByRole('menuitem', { name: 'Нижче' }).focus()
+    await user.keyboard('{Enter}')
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByText('SKL-2').closest('button'))
+    )
+    await waitFor(() => expect(api.getBoardKanban.mock.calls.length).toBeGreaterThan(1))
+
+    // Well after the move, the re-read shows the card moved by someone else.
+    await act(() => new Promise((resolve) => setTimeout(resolve, REFOCUS_HOLD_MS + 300)))
+    const elsewhere = makeCard({
+      ...FIRST,
+      version: 5,
+      status: { id: 's-wait', name: 'Очікує', category: 'in_progress' },
+    })
+    await act(async () => answer(kanbanOf([SECOND, elsewhere])))
+    const waiting = screen.getByRole('region', { name: 'Очікує' })
+    const moved = (await within(waiting).findByText('SKL-2')).closest('button')
+    expect(document.activeElement).not.toBe(moved)
+  })
+
   it('пока сервер подтверждает перемещение, следующее не уходит, и об этом сказано', async () => {
     api.patchTask.mockImplementation(() => new Promise(() => {}))
     api.getBoardKanban
@@ -620,7 +734,50 @@ describe('доска канбаном (5.3)', () => {
     expect(screen.getByRole('status')).toHaveTextContent(
       'Зачекайте: попереднє переміщення ще зберігається'
     )
+    // Seen, not only heard: the card simply stays, as after a refusal.
+    expect(toast.info).toHaveBeenCalledWith('Зачекайте: попереднє переміщення ще зберігається')
     expect(api.patchTask).toHaveBeenCalledTimes(1)
+  })
+
+  it('пока доска перечитывается под новые фильтры (на экране прежние колонки), перемещение не теряется молча', async () => {
+    api.getBoardKanban
+      .mockResolvedValueOnce(kanbanOf([FIRST, SECOND]))
+      .mockImplementation(() => new Promise(() => {}))
+    renderAt('/dashboard/planning/tasks/boards/SKL')
+    await screen.findByText('SKL-2')
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Прострочені' }))
+    await waitFor(() =>
+      expect(api.getBoardKanban).toHaveBeenLastCalledWith('SKL', { overdue: 'true' })
+    )
+    // The previous columns stand until the answer and look fully interactive.
+    await user.click(screen.getByRole('button', { name: 'Дії з задачею SKL-2' }))
+    await user.click(screen.getByRole('menuitem', { name: 'Очікує' }))
+
+    const said = 'Дошка оновлюється — задачу не переміщено. Спробуйте ще раз'
+    expect(toast.info).toHaveBeenCalledWith(said)
+    expect(screen.getByRole('status')).toHaveTextContent(said)
+    expect(api.patchTask).not.toHaveBeenCalled()
+    expect(within(screen.getByRole('region', { name: 'Нова' })).getByText('SKL-2')).toBeVisible()
+  })
+
+  it('«Копіювати посилання» — постоянная ссылка задачи; сбой буфера обмена — свой тост', async () => {
+    renderAt('/dashboard/planning/tasks/boards/SKL')
+    let user = await openMenu('SKL-2')
+    await user.click(screen.getByRole('menuitem', { name: 'Копіювати посилання' }))
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Посилання скопійовано'))
+    expect(await navigator.clipboard.readText()).toBe(
+      `${window.location.origin}/dashboard/planning/t/SKL-2`
+    )
+
+    // Outside a secure context there is no clipboard to write to.
+    user = await openMenu('SKL-2')
+    const write = vi
+      .spyOn(navigator.clipboard, 'writeText')
+      .mockRejectedValueOnce(new DOMException('denied', 'NotAllowedError'))
+    await user.click(screen.getByRole('menuitem', { name: 'Копіювати посилання' }))
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Не вдалося скопіювати посилання'))
+    write.mockRestore()
   })
 
   it('отказ — карточка возвращается, тост с причиной сервера', async () => {
@@ -672,7 +829,9 @@ describe('доска канбаном (5.3)', () => {
     const user = await openMenu('SKL-2')
     await user.click(screen.getByRole('menuitem', { name: 'Очікує' }))
     await waitFor(() => expect(toast.info).toHaveBeenCalled())
-    expect(api.getTaskHistory).toHaveBeenCalledWith(FIRST.id)
+    expect(api.getTaskHistory).toHaveBeenCalledWith(FIRST.id, {
+      signal: expect.any(AbortSignal),
+    })
     const { container } = render(<>{toast.info.mock.calls[0][0]}</>)
     expect(container).toHaveTextContent('Задачу змінив Олег Мельник. Показано свіжу версію')
     // The name is a person's: masked in session recordings.
@@ -705,6 +864,65 @@ describe('доска канбаном (5.3)', () => {
     await waitFor(() =>
       expect(toast.info).toHaveBeenCalledWith('Задачу щойно змінили. Показано свіжу версію.')
     )
+  })
+
+  it('конфликт версии (412) — журнал не ответил в срок: запрос прерван, тост без имени', async () => {
+    api.patchTask.mockRejectedValueOnce(
+      plannerError(412, 'revision_mismatch', {
+        current: makeTask({ version: 9, updated_at: '2026-09-29T10:15:30Z' }),
+      })
+    )
+    // A journal that does not answer (unpaged: up to 500 rows / 8 MiB).
+    let signal: AbortSignal | undefined
+    api.getTaskHistory.mockImplementationOnce(
+      (_id: string, options: { signal?: AbortSignal } = {}) => {
+        signal = options.signal
+        return new Promise(() => {})
+      }
+    )
+    renderAt('/dashboard/planning/tasks/boards/SKL')
+    const user = await openMenu('SKL-2')
+    await user.click(screen.getByRole('menuitem', { name: 'Очікує' }))
+    await waitFor(() => expect(api.getTaskHistory).toHaveBeenCalledTimes(1))
+    await waitFor(
+      () => expect(toast.info).toHaveBeenCalledWith('Задачу щойно змінили. Показано свіжу версію.'),
+      { timeout: CHANGED_BY_BUDGET_MS + 1500 }
+    )
+    expect(signal?.aborted).toBe(true)
+  })
+
+  it('конфликт версии (412) — повтор против той же свежей версии журнал заново не читает', async () => {
+    const fresh = makeTask({ version: 9, updated_at: '2026-09-29T10:15:30Z' })
+    api.patchTask.mockRejectedValue(plannerError(412, 'revision_mismatch', { current: fresh }))
+    // The kanban is not re-read: the card keeps its old version, a retry meets the same 412.
+    api.getBoardKanban
+      .mockResolvedValueOnce(kanbanOf([FIRST, SECOND]))
+      .mockImplementation(() => new Promise(() => {}))
+    api.getTaskHistory.mockResolvedValue({
+      truncated: false,
+      items: [
+        {
+          id: 'h-2',
+          at: '2026-09-29T10:15:30Z',
+          action: 'status_changed',
+          actor: { user_id: 'u-2', crm_user_id: 2, full_name: 'Олег Мельник', inactive: false },
+          client: 'hub-web',
+          before: {},
+          after: {},
+        },
+      ],
+    })
+    renderAt('/dashboard/planning/tasks/boards/SKL')
+    let user = await openMenu('SKL-2')
+    await user.click(screen.getByRole('menuitem', { name: 'Очікує' }))
+    await waitFor(() => expect(toast.info).toHaveBeenCalledTimes(1))
+    user = await openMenu('SKL-2')
+    await user.click(screen.getByRole('menuitem', { name: 'Очікує' }))
+    await waitFor(() => expect(toast.info).toHaveBeenCalledTimes(2))
+    expect(api.patchTask).toHaveBeenCalledTimes(2)
+    expect(api.getTaskHistory).toHaveBeenCalledTimes(1)
+    const { container } = render(<>{toast.info.mock.calls[1][0]}</>)
+    expect(container).toHaveTextContent('Задачу змінив Олег Мельник. Показано свіжу версію')
   })
 
   it('конфликт версии (412) — возврат и тост о свежей версии; нет места (409) — свой тост', async () => {
@@ -966,6 +1184,46 @@ describe('доска канбаном (5.3)', () => {
           position: { before_id: THIRD_ID },
         })
       )
+    })
+
+    it('пока доска перечитывается под новые фильтры, бросок не теряется молча', async () => {
+      api.getBoardKanban
+        .mockResolvedValueOnce(kanbanOf([FIRST, SECOND]))
+        .mockImplementation(() => new Promise(() => {}))
+      renderAt('/dashboard/planning/tasks/boards/SKL')
+      await screen.findByText('SKL-2')
+      const user = userEvent.setup()
+      await user.click(screen.getByRole('button', { name: 'Прострочені' }))
+      await waitFor(() =>
+        expect(api.getBoardKanban).toHaveBeenLastCalledWith('SKL', { overdue: 'true' })
+      )
+      const card = screen.getByText('SKL-2').closest('article')!
+      const area = screen
+        .getByRole('region', { name: 'Очікує' })
+        .querySelector('[data-column-drop]') as HTMLElement
+      const drop = await drag(card, area)
+      await act(async () => drop())
+      await act(frame)
+      expect(toast.info).toHaveBeenCalledWith(
+        'Дошка оновлюється — задачу не переміщено. Спробуйте ще раз'
+      )
+      expect(api.patchTask).not.toHaveBeenCalled()
+    })
+
+    it('карточка только с reorder: чужие пустые колонки её не зовут «Перетягніть сюди»', async () => {
+      api.getBoardKanban.mockResolvedValue(
+        kanbanOf([FIRST, { ...SECOND, allowed_actions: ['reorder'] }])
+      )
+      renderAt('/dashboard/planning/tasks/boards/SKL')
+      const card = (await screen.findByText('SKL-4')).closest('article')!
+      const waiting = screen.getByRole('region', { name: 'Очікує' })
+      const area = waiting.querySelector('[data-column-drop]') as HTMLElement
+      const drop = await drag(card, area)
+      expect(within(waiting).queryByText('Перетягніть сюди')).toBeNull()
+      expect(within(waiting).getByText('Немає задач')).toBeInTheDocument()
+      await act(async () => drop())
+      await act(frame)
+      expect(api.patchTask).not.toHaveBeenCalled()
     })
 
     it('карточка без прав не тянется: нет draggable, нет команды', async () => {

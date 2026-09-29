@@ -8,6 +8,7 @@ import {
   applyMove,
   canMoveCard,
   currentPosition,
+  isSamePlace,
   planBack,
   planDrop,
   planPatch,
@@ -88,6 +89,21 @@ describe('план перемещения карточки (5.3)', () => {
       edge: 'bottom',
     })!
     expect(planPatch(board(), same, BOTH)).toBeNull()
+  })
+
+  it('«своё место» отличает «не перемещение» от отказа: команды нет в обоих случаях', () => {
+    const same = planDrop(board(), 't-2', {
+      statusId: 's-todo',
+      overTaskId: 't-1',
+      edge: 'bottom',
+    })!
+    expect(isSamePlace(board(), same)).toBe(true)
+    // A place the card's rights do not allow is no command, yet not its own place.
+    const across = planDrop(board(), 't-2', { statusId: 's-work', overTaskId: 't-4', edge: 'top' })!
+    expect(planPatch(board(), across, { changeStatus: false, reorder: true })).toBeNull()
+    expect(isSamePlace(board(), across)).toBe(false)
+    const lower = planReorder(board(), 't-1', 'down')!
+    expect(isSamePlace(board(), lower)).toBe(false)
   })
 
   it('права: без reorder — только status_id и конец колонки; без change_status — не в другую колонку', () => {

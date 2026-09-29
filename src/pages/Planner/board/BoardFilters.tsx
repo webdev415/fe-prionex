@@ -6,9 +6,9 @@
  * server as it is; active filters are chips with ✕ and «Скинути все».
  *
  * People are picked with the planner's people picker (`GET /people`, 5.1).
- * The address carries only the `user_id`: the chip shows the name picked in
- * this tab, else the board member's name, else «обрано». Names, search text
- * and free-text field values are masked for session recording.
+ * The address carries only the `user_id`: the chip shows the name picked on
+ * this board's screen, else the board member's name, else «обрано». Names,
+ * search text and free-text field values are masked for session recording.
  *
  * A filter the board has nothing for (no labels, a board without a priority
  * scale, no fields) is not offered: a menu with no choice is a dead control.
@@ -39,12 +39,6 @@ import {
 } from './useBoardFilters'
 
 const SEARCH_DEBOUNCE_MS = 300
-
-/**
- * Names of people picked in this tab, by `user_id`: the address carries only
- * the id, and a chip should still say whom it filters by.
- */
-const pickedNames = new Map<string, string>()
 
 type Config = PlannerBoard['config']
 type Panel = 'assignee' | 'author' | 'field' | null
@@ -78,15 +72,27 @@ export function BoardFilters({ board, state, change, clearAll }: BoardFiltersPro
   const config = board.config
   const toggle = (next: Exclude<Panel, null>) => setPanel((open) => (open === next ? null : next))
 
+  // Names of people picked on this board's screen, by `user_id`: the address
+  // carries only the id, and a chip should still say whom it filters by. They
+  // live and go with the screen (and another board starts empty).
+  const [picked, setPicked] = useState({ code: board.code, names: new Map<string, string>() })
+  const pickedNames = picked.code === board.code ? picked.names : undefined
+  const rememberName = (userId: string, name: string) =>
+    setPicked((previous) => {
+      const names = new Map(previous.code === board.code ? previous.names : [])
+      names.set(userId, name)
+      return { code: board.code, names }
+    })
+
   const personName = (userId: string) =>
-    pickedNames.get(userId) ??
+    pickedNames?.get(userId) ??
     board.members.find((member) => member.user_id === userId)?.full_name ??
     t('filters.chosen')
 
   const pickPerson = (key: 'assignee' | 'author') => (people: PlannerPerson[]) => {
     const person = people[0]
     if (!person) return
-    pickedNames.set(person.user_id, person.full_name)
+    rememberName(person.user_id, person.full_name)
     change({ [key]: person.user_id })
     setPanel(null)
   }
@@ -156,7 +162,7 @@ export function BoardFilters({ board, state, change, clearAll }: BoardFiltersPro
             <FieldPanel
               config={config}
               onApply={(field, value, name) => {
-                if (name) pickedNames.set(value, name)
+                if (name) rememberName(value, name)
                 change({ field, value })
                 setPanel(null)
               }}

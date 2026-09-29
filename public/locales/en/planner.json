@@ -178,7 +178,7 @@
     "keyboardHint": "Enter — open the task; left and right arrows — parts of the card; Shift+F10 — card actions",
     "scrollNavigator": "Scroll the board columns",
     "more": "{{value}} more",
-    "moreLabel": "open as a list",
+    "moreLabel": "open all the board's tasks as a list",
     "allClosed": "Closed in 7 days",
     "newTaskIn": "New task in the «{{status}}» column",
     "slaPaused": "SLA is paused in this status",
@@ -206,7 +206,8 @@
     "announceReordered": "{{key}}: order in the column changed",
     "announceFailed": "{{key}}: could not move",
     "staleBy": "{{name}} changed the task. Showing the fresh version",
-    "busy": "Wait: the previous move is still being saved"
+    "busy": "Wait: the previous move is still being saved",
+    "notReady": "The board is refreshing — the task was not moved. Try again"
   },
   "filters": {
     "label": "Board filters",

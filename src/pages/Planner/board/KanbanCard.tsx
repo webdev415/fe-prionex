@@ -52,7 +52,8 @@ interface KanbanCardProps {
   /**
    * The card was just moved from its `⋯` (the keyboard path): moving it
    * re-mounts or re-inserts its node and the focus falls to the page. While
-   * this holds, a lost focus comes back to the card's «номер · назва».
+   * this holds, a lost focus comes back to the card's «номер · назва». The
+   * board holds it only around the move (`REFOCUS_HOLD_MS` after it settles).
    */
   restoreFocus?: boolean
 }
@@ -146,7 +147,10 @@ export function KanbanCard({
   }, [task.id, statusId, rights.changeStatus, rights.reorder])
 
   // After every render while asked: a move (and its rollback) takes the
-  // focused node out of the document; focus that is elsewhere is left alone.
+  // focused node out of the document, and the menu's exit animation drops its
+  // focus later still — outside this card's props, so no dependency list
+  // would see it. Focus that is elsewhere is left alone; the hold itself is
+  // short (the board releases it `REFOCUS_HOLD_MS` after the move settles).
   useEffect(() => {
     if (!restoreFocus) return
     const active = document.activeElement

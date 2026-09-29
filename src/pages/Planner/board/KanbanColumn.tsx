@@ -7,9 +7,12 @@
  * «повідомити автора» bell — each explained by a tooltip on hover AND on focus
  * — and the count of the column's tasks after the filters (`total` of the
  * server). No WIP limit. At most 50 cards; beyond them «ще N» leads to the
- * «список» view. A «готово» column holds the tasks closed within 7 days and
- * links «Усі закриті →» to the list. `+` stands only in the column of the
- * default status: the server decides where a new task goes (FR-9).
+ * «список» view. A «готово» column holds the tasks closed within 7 days and,
+ * when it has any, links «Закриті за 7 днів →» to the list. The list of
+ * contract 0.24.0 has no status filter: both links open the whole board's
+ * list under the same filters, and their accessible names say so. `+` stands
+ * only in the column of the default status: the server decides where a new
+ * task goes (FR-9).
  *
  * The column's card area is a drop target: a card dropped on its free space
  * goes to the end of the column. While the tasks are unknown the column says
@@ -40,8 +43,8 @@ interface KanbanColumnProps {
   loading: boolean
   /** The whole board is empty: it says so once, not in every column. */
   boardEmpty: boolean
-  /** A card is being dragged somewhere on the board. */
-  dragActive: boolean
+  /** A card is being dragged that this column would take (`columnAccepts`). */
+  dropInvited: boolean
   canCreate: boolean
   onCreate: () => void
   children: ReactNode
@@ -69,7 +72,7 @@ export function KanbanColumn({
   column,
   loading,
   boardEmpty,
-  dragActive,
+  dropInvited,
   canCreate,
   onCreate,
   children,
@@ -158,7 +161,7 @@ export function KanbanColumn({
         {loading && <ColumnCardsSkeleton />}
         {column && items === 0 && !boardEmpty && (
           <p className="border-border text-muted-foreground rounded-lg border border-dashed px-2 py-4 text-center text-xs">
-            {dragActive ? t('kanban.dropHere') : t('board.emptyColumn')}
+            {dropInvited ? t('kanban.dropHere') : t('board.emptyColumn')}
           </p>
         )}
         {children}
@@ -170,9 +173,11 @@ export function KanbanColumn({
           <span className="sr-only"> — {t('kanban.moreLabel')}</span>
         </Link>
       )}
-      {status.category === 'done' && column && (
+      {/* Nothing closed within 7 days — nothing to open. */}
+      {status.category === 'done' && column && column.total > 0 && (
         <Link to={listHref} className="text-muted-foreground px-1 text-xs underline">
           {t('kanban.allClosed')} <span aria-hidden="true">→</span>
+          <span className="sr-only"> — {t('kanban.moreLabel')}</span>
         </Link>
       )}
     </section>

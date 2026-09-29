@@ -87,7 +87,10 @@ export function BoardScrollNavigator({ scrollRef, columns }: BoardScrollNavigato
   }
   const onThumbUp = (event: PointerEvent<HTMLDivElement>) => {
     drag.current = null
-    event.currentTarget.releasePointerCapture(event.pointerId)
+    // A cancelled pointer (a touch taken over by the browser's own scroll) has
+    // lost its capture already: releasing it again throws NotFoundError.
+    const thumb = event.currentTarget
+    if (thumb.hasPointerCapture(event.pointerId)) thumb.releasePointerCapture(event.pointerId)
   }
 
   if (!metrics.overflow) return null

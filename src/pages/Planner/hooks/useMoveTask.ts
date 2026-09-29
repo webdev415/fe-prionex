@@ -10,7 +10,10 @@
  *   who — «Задачу змінив {Ім'я}. Показано свіжу версію» — when the task's
  *   journal names the author of exactly that version (its row written at the
  *   fresh `updated_at`: one transaction, one `now()`); otherwise, or when the
- *   journal cannot be read, the toast says it without a name;
+ *   journal cannot be read, the toast says it without a name. The journal has
+ *   no paging in contract 0.24.0 (up to 500 rows), so it is read at most once
+ *   per fresh version and given `CHANGED_BY_BUDGET_MS`: a slower answer is
+ *   aborted and the toast goes out without the name;
  * - 409 `position_exhausted`, 400 on `position.*` — no room at that place, or
  *   the neighbour is gone: «Не вдалося поставити задачу на це місце»;
  * - anything else — the reason by path (`toastPlannerError`, 5.1).
@@ -101,26 +104,56 @@ function isPlaceRefused(error: unknown): boolean {
   return status === 400 && typeof details.field === 'string' && details.field.startsWith('position')
 }
 
+/** One move at a time across the board: the undo in a toast asks this too. */
+export const MOVE_TASK_KEY = ['planner', 'moveTask'] as const
+
+/**
+ * How long a 412 waits for the name of whoever changed the task. The journal
+ * is unpaged (contract 0.24.0): a slow answer is aborted, not waited for.
+ */
+export const CHANGED_BY_BUDGET_MS = 1000
+
+/** Runs `request` with an abort signal; past `ms` it is aborted and rejects. */
+function withinBudget<T>(request: (signal: AbortSignal) => Promise<T>, ms: number): Promise<T> {
+  const controller = new AbortController()
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      controller.abort()
+      reject(new Error('changed_by_budget'))
+    }, ms)
+    request(controller.signal).then(
+      (value) => {
+        clearTimeout(timer)
+        resolve(value)
+      },
+      (error: unknown) => {
+        clearTimeout(timer)
+        reject(error)
+      }
+    )
+  })
+}
+
 /**
  * Who made the task's current version: the journal row written in the same
  * transaction as `updated_at` (both `now()`), by a person with a name. A
- * change without a journal row, by the system, or an unreadable journal — no
- * name.
+ * change without a journal row, by the system, an unreadable journal or one
+ * slower than the budget — no name.
  */
 async function changedBy(task: PlannerTask): Promise<string | null> {
   const at = Date.parse(task.updated_at)
   if (Number.isNaN(at)) return null
   try {
-    const history = await getTaskHistory(task.id)
+    const history = await withinBudget(
+      (signal) => getTaskHistory(task.id, { signal }),
+      CHANGED_BY_BUDGET_MS
+    )
     const row = [...(history?.items ?? [])].reverse().find((entry) => Date.parse(entry.at) === at)
     return row?.actor?.full_name ?? null
   } catch {
     return null
   }
 }
-
-/** One move at a time across the board: the undo in a toast asks this too. */
-export const MOVE_TASK_KEY = ['planner', 'moveTask'] as const
 
 interface Options {
   /** Says the outcome to screen readers (the board's `aria-live` line). */
@@ -164,14 +197,22 @@ export function useMoveTask({ onAnnounce }: Options = {}) {
         const current = details.current as PlannerTask | undefined
         if (current && typeof current === 'object' && 'version' in current) {
           queryClient.setQueryData(plannerKeys.task(input.card.key), current)
-          void changedBy(current).then((name) =>
-            toast.info(
-              name
-                ? // The name is a person's: masked in session recordings.
-                  createElement('span', piiProps, t('move.staleBy', { name }))
-                : t('toast.stale')
+          // One journal read per fresh version: a retry against the same
+          // conflict (the kanban not re-read yet) reuses the name.
+          void queryClient
+            .fetchQuery({
+              queryKey: [...MOVE_TASK_KEY, 'changedBy', current.id, current.version],
+              queryFn: () => changedBy(current),
+              staleTime: Infinity,
+            })
+            .then((name) =>
+              toast.info(
+                name
+                  ? // The name is a person's: masked in session recordings.
+                    createElement('span', piiProps, t('move.staleBy', { name }))
+                  : t('toast.stale')
+              )
             )
-          )
         } else {
           toast.info(t('toast.stale'))
         }
@@ -213,7 +254,9 @@ export function useMoveTask({ onAnnounce }: Options = {}) {
         onUndo: () => {
           // Another move is on its way: this undo would carry a stale version.
           if (queryClient.isMutating({ mutationKey: MOVE_TASK_KEY }) > 0) {
+            // Said on screen too: the card simply stays, as after a refusal.
             onAnnounce?.(t('move.busy'))
+            toast.info(t('move.busy'))
             return
           }
           const kanban = queryClient.getQueryData<PlannerBoardKanban>(input.kanbanKey)
