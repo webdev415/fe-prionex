@@ -47,7 +47,8 @@ import { PriorityIcon } from '../components/PriorityIcon'
 import { AvatarStack, PersonAvatar } from '../components/PersonAvatar'
 import { OriginChip } from '../components/OriginChip'
 import { PeoplePicker } from '../components/PeoplePicker'
-import { TaskCardView, TaskRow } from '../components/TaskItems'
+import { TaskRow } from '../components/TaskItems'
+import { KanbanCard } from '../board/KanbanCard'
 import { PlannerTooltipProvider } from '../components/PlannerTooltip'
 import {
   BoardSkeleton,
@@ -656,7 +657,7 @@ describe('чип статуса, приоритет, аватар и проис�
     const card = without(makeCard({ origin: { kind: 'import' } }), 'origin')
     renderWithClient(
       <>
-        <TaskCardView task={card} onOpen={vi.fn()} />
+        <KanbanCard task={card} onOpen={vi.fn()} />
         <ul>
           <TaskRow task={card} onOpen={vi.fn()} />
         </ul>

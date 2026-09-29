@@ -40,11 +40,32 @@ export type PlannerSlaState = Schemas['SLAState']
 export type PlannerTaskOrigin = Schemas['TaskOrigin']
 export type PlannerTaskPerson = Schemas['TaskPerson']
 export type PlannerBoardPriority = Schemas['BoardPriority']
+export type PlannerBoardKanban = Schemas['BoardKanban']
+export type PlannerKanbanColumn = Schemas['BoardKanbanColumn']
+export type PlannerMe = Schemas['Me']
+export type PlannerTaskHistory = Schemas['TaskHistory']
 export type PlannerIntakeBoard = Schemas['IntakeBoard']
 export type PlannerBoardField = Schemas['BoardField']
 export type PlannerBoardTaskType = Schemas['BoardTaskType']
 export type PlannerBoardLabel = Schemas['BoardLabel']
 export type PlannerTaskAttachment = Schemas['TaskAttachment']
+
+/**
+ * Filters of a board's projections (planner story 3.13): the kanban and the
+ * «список» view take the same ones. Each is sent once and only when set — the
+ * server answers a repeated or empty parameter with 400.
+ */
+export interface PlannerBoardFilterParams {
+  assignee_user_id?: string
+  author_user_id?: string
+  label_id?: string
+  priority_id?: string
+  type_id?: string
+  field_id?: string
+  field_value?: string
+  overdue?: 'true'
+  q?: string
+}
 
 /** Base path of the planner route group in Kong (1.6). */
 export const PLANNER_BASE = '/api/v1/planner'
@@ -133,6 +154,12 @@ export async function getMeta(): Promise<PlannerMeta> {
   return res.data
 }
 
+/** `GET /me` — the planner's `user_id` of this person (the «Мої» filter). */
+export async function getMe(): Promise<PlannerMe> {
+  const res = await api.get<PlannerMe>(url('/me'), config())
+  return res.data
+}
+
 // ─── boards ────────────────────────────────────────────────────────────────
 
 /** `GET /boards` — boards where the actor is a participant, by code. */
@@ -163,11 +190,32 @@ export async function getBoard(code: string): Promise<PlannerBoard> {
   return res.data
 }
 
-/** `GET /boards/{code}/tasks` — card projection, ordered by column then position. */
-export async function listBoardTasks(code: string): Promise<PlannerTaskCardList> {
+/**
+ * `GET /boards/{code}/tasks` — card projection, ordered by column then
+ * position; the «список» view of a board, under the same filters as the kanban.
+ */
+export async function listBoardTasks(
+  code: string,
+  filters: PlannerBoardFilterParams = {}
+): Promise<PlannerTaskCardList> {
   const res = await api.get<PlannerTaskCardList>(
     url('/boards/{code}/tasks', { code }),
-    config({}, { params: { limit: 500 } })
+    config({}, { params: { limit: 500, ...filters } })
+  )
+  return res.data
+}
+
+/**
+ * `GET /boards/{code}/kanban` — every status of the board as a column, the
+ * first 50 cards of each and its `total` after the filters (planner story 3.13).
+ */
+export async function getBoardKanban(
+  code: string,
+  filters: PlannerBoardFilterParams = {}
+): Promise<PlannerBoardKanban> {
+  const res = await api.get<PlannerBoardKanban>(
+    url('/boards/{code}/kanban', { code }),
+    config({}, { params: filters })
   )
   return res.data
 }
@@ -220,6 +268,22 @@ export async function patchTask(
   )
   const etag = res.headers?.etag
   return { task: res.data, etag: typeof etag === 'string' ? etag : undefined }
+}
+
+/**
+ * `GET /tasks/{id}/history` — the task's journal by time: who changed what
+ * (`actor`, `at`). The kanban names who changed a task under a 412 from it;
+ * `signal` lets it give up on a journal that answers too slowly.
+ */
+export async function getTaskHistory(
+  id: string,
+  options: { signal?: AbortSignal } = {}
+): Promise<PlannerTaskHistory> {
+  const res = await api.get<PlannerTaskHistory>(
+    url('/tasks/{id}/history', { id }),
+    config({}, { signal: options.signal })
+  )
+  return res.data
 }
 
 /** The shared client's ceiling (`src/lib/api.ts`, 75 s) — the start of an upload's budget. */

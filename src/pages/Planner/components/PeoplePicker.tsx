@@ -41,6 +41,8 @@ interface PeoplePickerProps {
   /** The field's label and hint; an event's participants name their own. */
   label?: string
   placeholder?: string
+  /** «3 / 10» under the field; a one-person filter of the board (5.3) has no use for «0 / 1». */
+  showCount?: boolean
   /**
    * The caller's error for the field (a 400 of the form): said under the
    * search input and tied to it (`aria-invalid`, `aria-describedby`), like
@@ -56,6 +58,7 @@ export function PeoplePicker({
   max = PLANNER_ASSIGNEES_MAX,
   label,
   placeholder,
+  showCount = true,
   error,
 }: PeoplePickerProps) {
   const { t, i18n } = useTranslation('planner')
@@ -94,12 +97,14 @@ export function PeoplePicker({
         aria-controls={listId}
         onChange={(event) => setQuery(event.target.value)}
       />
-      <div className="text-muted-foreground text-xs tabular-nums">
-        {t('create.assigneesCount', {
-          count: value.length,
-          max: formatNumber(max, language),
-        })}
-      </div>
+      {showCount && (
+        <div className="text-muted-foreground text-xs tabular-nums">
+          {t('create.assigneesCount', {
+            count: value.length,
+            max: formatNumber(max, language),
+          })}
+        </div>
+      )}
 
       {value.length > 0 && (
         <ul className="flex flex-wrap gap-1.5" {...piiProps}>

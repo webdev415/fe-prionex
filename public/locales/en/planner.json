@@ -41,6 +41,7 @@
     "error": "Could not load the board",
     "emptyColumn": "No tasks",
     "hasMore": "Not all tasks of the board are shown",
+    "closedWindow": "Closed tasks are shown for the last 7 days only",
     "empty": "The board has no tasks yet"
   },
   "task": {
@@ -214,5 +215,82 @@
   },
   "people": {
     "tooLong": "The search is too long — at most {{max}} characters"
+  },
+  "boardHeader": {
+    "kind": {
+      "department": "Department",
+      "team": "Team",
+      "personal": "Personal"
+    },
+    "intakeOpen": "Accepts requests",
+    "settings": "Board settings",
+    "settingsSoon": "Board settings are coming in the next update",
+    "backToBoard": "Back to the board",
+    "viewLabel": "Board view",
+    "viewBoard": "Board",
+    "viewList": "List"
+  },
+  "kanban": {
+    "nothingFound": "Nothing matches the filters",
+    "resetFilters": "Reset filters",
+    "invalidFilter": "The link has an invalid filter",
+    "keyboardHint": "Enter — open the task; left and right arrows — parts of the card; Shift+F10 — card actions",
+    "scrollNavigator": "Scroll the board columns",
+    "more": "{{value}} more",
+    "moreLabel": "open all the board's tasks as a list",
+    "allClosed": "Closed in 7 days",
+    "newTaskIn": "New task in the «{{status}}» column",
+    "slaPaused": "SLA is paused in this status",
+    "slaOff": "SLA is not counted in this status",
+    "notifyAuthor": "Moving to this status notifies the requester",
+    "dropHere": "Drop here",
+    "countLabel": "Tasks:"
+  },
+  "card": {
+    "menu": "Task {{key}} actions",
+    "open": "Open",
+    "moveTo": "Move to…",
+    "reorder": "Change order",
+    "up": "Up",
+    "down": "Down",
+    "top": "To the top of the column",
+    "copyLink": "Copy link",
+    "linkCopied": "Link copied",
+    "linkCopyFailed": "Could not copy the link"
+  },
+  "move": {
+    "closed": "{{key}} closed",
+    "authorNotified": "Requester notified",
+    "placeRefused": "Could not put the task in this place. Try another place",
+    "announceReordered": "{{key}}: order in the column changed",
+    "announceFailed": "{{key}}: could not move",
+    "staleBy": "{{name}} changed the task. Showing the fresh version",
+    "busy": "Wait: the previous move is still being saved",
+    "notReady": "The board is refreshing — the task was not moved. Try again"
+  },
+  "filters": {
+    "label": "Board filters",
+    "search": "Search",
+    "searchPlaceholder": "Title, description or number",
+    "searchTooLong": "The query is too long — at most {{max}} characters",
+    "assignee": "Assignee",
+    "author": "Requester",
+    "tag": "Label",
+    "priority": "Priority",
+    "type": "Type",
+    "field": "Field…",
+    "fieldName": "Field",
+    "fieldValue": "Value",
+    "overdue": "Overdue",
+    "mine": "Mine",
+    "all": "All",
+    "chosen": "chosen",
+    "unknown": "unknown",
+    "apply": "Apply",
+    "close": "Close",
+    "active": "Active filters",
+    "searchChip": "Search: «{{value}}»",
+    "remove": "remove the filter",
+    "resetAll": "Reset all"
   }
 }
