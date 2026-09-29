@@ -7,6 +7,7 @@
 import { useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { creditApi, newIdempotencyKey } from '../api/creditApi'
+import { indexDecisionCodes } from '../api/decisionCodes'
 import type {
   CreditApplicationsParams,
   CreditJournalParams,
@@ -49,6 +50,8 @@ export const creditKeys = {
    */
   clientLoans: (clientId: number) => [...creditKeys.loans(), 'byClient', clientId] as const,
   switches: () => [...creditKeys.all, 'switches'] as const,
+  /** Справочник кодов решения: один на книгу правил, от проекта и заявки не зависит. */
+  decisionCodes: () => [...creditKeys.all, 'decisionCodes'] as const,
 }
 
 /** Доступность модуля и права роли; молчит об ошибке — раздел просто пуст. */
@@ -248,6 +251,26 @@ export function useCreditParameters(enabled = true) {
     queryFn: () => creditApi.parameters(),
     enabled,
     retry: false,
+  })
+}
+
+/**
+ * Справочник кодов решения для формы ручного решения и карточки решения.
+ *
+ * `enabled` — право `credit.decisions.decide`: без него дверь отвечает 403, и
+ * запрос не уходит вовсе. `retry: false` — раздел переживает недоступность
+ * модуля плашкой с «Повторити», а не висит на повторах. `select` отдаёт индекс,
+ * закэшированный по самому объекту ответа: перезапрос с тем же содержимым
+ * React Query отдаёт прежним объектом, и индекс остаётся тем же.
+ */
+export function useCreditDecisionCodes(enabled: boolean) {
+  return useQuery({
+    queryKey: creditKeys.decisionCodes(),
+    queryFn: () => creditApi.decisionCodes(),
+    select: indexDecisionCodes,
+    staleTime: 30 * 60_000,
+    retry: false,
+    enabled,
   })
 }
 

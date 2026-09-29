@@ -100,6 +100,8 @@ function captureRequests(): { seen: InternalAxiosRequestConfig[]; restore: () =>
  * сузил бы всё, что ниже.
  */
 const CALLS: Array<{ name: string; invoke: () => Promise<unknown> }> = [
+  // 19-1f: реестр кодов решения модуля — читается под тем же пропуском оператора.
+  { name: 'decisionCodes', invoke: () => creditApi.decisionCodes() },
   { name: 'overview', invoke: () => creditApi.overview() },
   { name: 'applications', invoke: () => creditApi.applications({}) },
   { name: 'application', invoke: () => creditApi.application('a1') },

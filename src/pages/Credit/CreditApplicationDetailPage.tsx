@@ -16,13 +16,24 @@ import { SegmentedTabs } from '@/components/ui/SegmentedTabs'
 import { formatDate, formatDateTime } from '@/lib/formatters'
 import {
   useCreditApplication,
+  useCreditDecisionCodes,
   useCreditManualDecision,
   useCreditOverview,
 } from '@/features/credit/hooks/useCredit'
 import { CreditApiError } from '@/features/credit/api/creditApi'
+import {
+  decisionCodeNote,
+  decisionCodeText,
+  normalizeDecisionCodes,
+  type CreditDecisionCodeIndex,
+} from '@/features/credit/api/decisionCodes'
 import { normalizeDraft } from '@/features/credit/api/draft'
 import { CREDIT_DOCUMENT_META_KINDS } from '@/features/credit/api/enums'
-import type { CreditApplicationDetail, CreditDecisionOutcome } from '@/features/credit/api/types'
+import type {
+  CreditApplicationDetail,
+  CreditDecision,
+  CreditDecisionOutcome,
+} from '@/features/credit/api/types'
 import { CreditStatusBadge } from './components/CreditStatusBadge'
 import { CreditDocumentOpenButton } from './components/CreditDocumentOpenButton'
 import { CreditDraftBlocks } from './components/CreditDraftBlocks'
@@ -51,7 +62,6 @@ import {
 } from '@/features/credit/api/money'
 import { Pii } from '@/lib/openreplay/pii'
 
-const DECLINE_CODES = ['RC-04', 'RC-08', 'RC-11']
 const DECIDABLE_STATUSES = ['scoring', 'referred']
 /** Заявка отработана — срок годности показывать бессмысленно. */
 const TERMINAL_STATUSES = ['disbursed', 'declined', 'expired', 'abandoned', 'contracted']
@@ -554,6 +564,123 @@ function manualDecisionErrorText(t: TFunction, error: unknown): string {
   return message.trim() ? message : t('credit.decisionError.generic')
 }
 
+/**
+ * Строка «Коди відмови» карточки решения.
+ *
+ * Смысл отказа — `decision_codes` словами справочника модуля; рядом, если
+ * оператор прислал другое (`RC-04` при смысле `AB-O-05`), приглушённо — как
+ * прислано: модуль хранит коды так, как их прислали. «Как прислано» — только у
+ * ручного решения (`decision_mode = manual`): у автоматического `decline_codes`
+ * записала машина, override кодов не принимает (`OverrideRequest`), и подпись
+ * «надіслано» там была бы неправдой. Ключа нет или список пуст
+ * (решения до 0.1.27, `RC-11` без установленной причины) — прежний вывод
+ * словарём `credit.declineCode`.
+ *
+ * Справочника нет (у роли нет `credit.decisions.decide`, которым закрыта его
+ * дверь, либо запрос ещё не пришёл или не удался) — текст взять неоткуда, кроме
+ * прежнего словаря. Поэтому присланные коды идут прежним выводом
+ * `credit.declineCode` (старое решение `RC-04` читается словами, как до
+ * справочника), а коды справочника — приглушённой строкой с подписью, если они
+ * не совпадают с присланными.
+ *
+ * Прежний вывод печатает код одним `id`, когда строки для него в прежнем
+ * словаре нет (`AB-O-13` новой формы, неизвестный код в решении без
+ * `decision_codes`): запасным текстом i18next вернул бы сам код, и строка
+ * читалась бы `AB-O-13 — AB-O-13`. Правило одно для всех трёх веток и смотрит
+ * в словарь, а не в состав `decision_codes`.
+ *
+ * Список смысла нормализуется тем же правилом, что сравнение с присланным: без
+ * повторов и по возрастанию. Модуль отдаёт его уже таким (`decision_codes_of` —
+ * `sorted(set)`), поэтому порядок модуля не меняется, а повтор в ответе не
+ * даёт двух строк с одним ключом.
+ */
+function DecisionCodesValue({
+  decision,
+  directory,
+  language,
+}: {
+  decision: CreditDecision
+  directory: CreditDecisionCodeIndex | undefined
+  language: string | undefined
+}) {
+  const { t } = useTranslation('common')
+  const meaning = normalizeDecisionCodes(decision.decision_codes ?? [])
+  const legacyText = () =>
+    decision.decline_codes
+      .map((code) => {
+        // Пустой запасной текст — признак «строки в словаре нет», а не сам код.
+        const text = t(`credit.declineCode.${code}`, { defaultValue: '' })
+        return text ? `${code} — ${text}` : code
+      })
+      .join('; ')
+
+  if (meaning.length && !directory) {
+    const differs = normalizeDecisionCodes(decision.decline_codes).join('\n') !== meaning.join('\n')
+    return (
+      <span className="flex flex-col gap-1">
+        {decision.decline_codes.length > 0 && <span>{legacyText()}</span>}
+        {differs && (
+          <span className="text-muted-foreground text-xs">
+            {t('credit.card.decisionCodesIds', { codes: meaning.join(', ') })}
+          </span>
+        )}
+      </span>
+    )
+  }
+  if (meaning.length && directory) {
+    const sent =
+      decision.decision_mode === 'manual' ? normalizeDecisionCodes(decision.decline_codes) : []
+    const differs = sent.length > 0 && sent.join('\n') !== meaning.join('\n')
+    return (
+      <span className="flex flex-col gap-1">
+        {meaning.map((id) => {
+          const entry = directory.byId.get(id)
+          return (
+            <span key={id}>
+              <span className="font-mono">{id}</span>
+              {entry && (
+                <>
+                  {' — '}
+                  {decisionCodeText(entry, language).primary}
+                  <span className="text-muted-foreground">
+                    {' · '}
+                    {t(`credit.decisionCodeCategory.${entry.category}`, entry.category)}
+                  </span>
+                </>
+              )}
+            </span>
+          )
+        })}
+        {differs && (
+          <span className="text-muted-foreground text-xs">
+            {t('credit.card.declineCodesSent', { codes: decision.decline_codes.join(', ') })}
+          </span>
+        )}
+      </span>
+    )
+  }
+  if (decision.decline_codes.length) {
+    return <>{legacyText()}</>
+  }
+  return <>—</>
+}
+
+/**
+ * Сбой справочника, который повтор не вылечит. 404 — у модуля нет двери
+ * справочника (он старше 0.1.27), 403 — роли не дают читать справочник. Ответ
+ * не изменится, пока администратор не обновит модуль или права, поэтому
+ * «Повторити» здесь не предлагается. Остальное (5xx, сеть, таймаут) — `null`:
+ * временный сбой, прежняя плашка с повтором. Ключи — статическими литералами:
+ * страж словарей видит только их.
+ */
+function permanentDirectoryFailure(t: TFunction, error: unknown): string | null {
+  if (error instanceof CreditApiError) {
+    if (error.status === 404) return t('credit.card.decisionCodesModuleTooOld')
+    if (error.status === 403) return t('credit.card.decisionCodesForbidden')
+  }
+  return null
+}
+
 function ApplicationDecision({
   application,
   canDecide,
@@ -561,10 +688,18 @@ function ApplicationDecision({
   application: CreditApplicationDetail
   canDecide: boolean
 }) {
-  const { t } = useTranslation('common')
+  const { t, i18n } = useTranslation('common')
   const decision = application.decision
   const decidable = DECIDABLE_STATUSES.includes(application.status)
   const mutation = useCreditManualDecision(application.application_id)
+  // Дверь справочника закрыта тем же правом, что и само решение: без него
+  // запрос не уходит, а карточка показывает коды одним `id`.
+  const decisionCodes = useCreditDecisionCodes(canDecide)
+  const directory = decisionCodes.data
+  const language = i18n.resolvedLanguage ?? i18n.language
+  const directoryFailure = decisionCodes.isError
+    ? permanentDirectoryFailure(t, decisionCodes.error)
+    : null
 
   const [outcome, setOutcome] = useState<CreditDecisionOutcome>('approved')
   const [amount, setAmount] = useState(String((application.requested_amount_minor ?? 0) / 100))
@@ -576,14 +711,29 @@ function ApplicationDecision({
     [decision]
   )
 
+  // В тело и в замок кнопки идут только коды, которые справочник предлагает
+  // СЕЙЧАС: отмеченный код, выпавший из отказов новой версии реестра, из формы
+  // исчез, и снять его оператору уже нечем.
+  const offered = useMemo(
+    () =>
+      new Set(directory?.declineGroups.flatMap((group) => group.codes.map((entry) => entry.id))),
+    [directory]
+  )
+  const chosen = codes.filter((id) => offered.has(id))
+
   const submit = () => {
     mutation.mutate({
       outcome,
       rationale: rationale.trim(),
       ...(outcome === 'approved' ? { final_amount_minor: Math.round(Number(amount) * 100) } : {}),
-      ...(outcome === 'declined' ? { decline_codes: codes } : {}),
+      ...(outcome === 'declined' ? { decline_codes: normalizeDecisionCodes(chosen) } : {}),
     })
   }
+
+  const toggleCode = (id: string) =>
+    setCodes((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]))
+  // Отказ без кода модуль отвергает `422`; без справочника код выбрать нечем.
+  const declineBlocked = outcome === 'declined' && (!directory || chosen.length === 0)
 
   return (
     <>
@@ -605,11 +755,7 @@ function ApplicationDecision({
             )}
           </Field>
           <Field label={t('credit.fields.declineCodes')}>
-            {decision.decline_codes.length
-              ? decision.decline_codes
-                  .map((code) => `${code} — ${t(`credit.declineCode.${code}`, code)}`)
-                  .join('; ')
-              : '—'}
+            <DecisionCodesValue decision={decision} directory={directory} language={language} />
           </Field>
           {decision.outcome === 'declined' && decision.cooldown_until && (
             <Field label={t('credit.fields.retryAfter')}>
@@ -705,30 +851,81 @@ function ApplicationDecision({
               <p className="text-muted-foreground mb-1.5 text-xs">
                 {t('credit.card.declineCodesHint')}
               </p>
-              <div className="flex flex-wrap gap-2">
-                {DECLINE_CODES.map((code) => {
-                  const active = codes.includes(code)
-                  return (
-                    <button
-                      key={code}
-                      type="button"
-                      aria-pressed={active}
-                      onClick={() =>
-                        setCodes((prev) =>
-                          prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]
+              {/* Коды — только из справочника модуля. Ввода кода строкой и
+                  запасного списка нет намеренно: второе текстовое поле обходит
+                  закрытый реестр, а запасной список прячет, что справочник не
+                  загрузился. Одобрение и направление на разбор работают и так. */}
+              {directory ? (
+                <div className="border-border max-h-80 overflow-auto rounded-md border p-3">
+                  {directory.declineGroups.map((group) => (
+                    <fieldset key={group.category} className="mb-3 last:mb-0">
+                      <legend className="text-muted-foreground mb-1 text-xs font-semibold">
+                        {t(`credit.decisionCodeCategory.${group.category}`, group.category)}
+                      </legend>
+                      {group.codes.map((entry) => {
+                        const text = decisionCodeText(entry, language)
+                        // Основание книги — текстом внутри метки, а не `title`:
+                        // подсказку видит только мышь, а клавиатура, сенсор и
+                        // скринридер — нет. Строка есть лишь там, где её отдаёт
+                        // `decisionCodeNote` (русское основание — под `uk`).
+                        const note = decisionCodeNote(entry, language)
+                        return (
+                          <label
+                            key={entry.id}
+                            className="flex cursor-pointer items-start gap-2 py-1 text-sm"
+                          >
+                            <input
+                              type="checkbox"
+                              className="mt-1 shrink-0"
+                              checked={codes.includes(entry.id)}
+                              onChange={() => toggleCode(entry.id)}
+                            />
+                            <span className="min-w-0">
+                              <span className="font-mono text-xs">{entry.id}</span>{' '}
+                              <span>{text.primary}</span>
+                              <span className="text-muted-foreground block text-xs">
+                                {text.secondary}
+                              </span>
+                              {note && (
+                                <span className="text-muted-foreground block text-xs">{note}</span>
+                              )}
+                            </span>
+                          </label>
                         )
-                      }
-                      className={`h-8 rounded-full border px-3.5 text-xs font-medium ${
-                        active
-                          ? 'bg-secondary-800 border-secondary-800 text-white'
-                          : 'border-border bg-card text-muted-foreground'
-                      }`}
-                    >
-                      {code}
-                    </button>
-                  )
-                })}
-              </div>
+                      })}
+                    </fieldset>
+                  ))}
+                </div>
+              ) : directoryFailure ? (
+                <Alert variant="error" className="mb-2">
+                  {directoryFailure}
+                </Alert>
+              ) : decisionCodes.isError || decisionCodes.isPaused ? (
+                // Пауза — запрос, начатый без сети (`networkMode: 'online'`):
+                // ни данных, ни ошибки, и без этой ветки оператор ждал бы
+                // «Завантажуємо…» бесконечно при закрытом отказе. Это
+                // временный сбой: своя строка и тот же повтор. Сеть вернулась —
+                // React Query продолжит запрос сам.
+                <>
+                  <Alert variant="error" className="mb-2">
+                    {decisionCodes.isPaused
+                      ? t('credit.card.decisionCodesOffline')
+                      : t('credit.card.decisionCodesUnavailable')}
+                  </Alert>
+                  <Button
+                    size="sm"
+                    variant="white-secondary"
+                    isLoading={decisionCodes.isFetching}
+                    onClick={() => void decisionCodes.refetch()}
+                  >
+                    {t('credit.actions.retry')}
+                  </Button>
+                </>
+              ) : (
+                <p className="text-muted-foreground text-xs">
+                  {t('credit.card.decisionCodesLoading')}
+                </p>
+              )}
             </div>
           )}
 
@@ -745,7 +942,7 @@ function ApplicationDecision({
           <div className="mt-3 flex items-center gap-3">
             <Button
               variant="primary"
-              disabled={!rationale.trim() || mutation.isPending}
+              disabled={!rationale.trim() || mutation.isPending || declineBlocked}
               isLoading={mutation.isPending}
               onClick={submit}
             >

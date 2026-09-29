@@ -99,7 +99,20 @@ export interface CreditDecision {
   application_id: string
   outcome: CreditDecisionOutcome
   decision_mode: CreditDecisionMode
+  /** Коды, как их записало решение: у ручного — как прислал оператор (`RC-04` остаётся `RC-04`). */
   decline_codes: string[]
+  /**
+   * Смысл отказа кодами реестра решения (`AB-*`, v0.1.27): `RC-04` → `AB-O-05`,
+   * `RC-08` → `AB-X-08`, `RC-11` — по установленной причине, плюс присланные
+   * оператором коды реестра. Пусто у одобренных и у отказов, причина которых не
+   * сохранена или не установлена.
+   *
+   * В контракте поле required; здесь НЕОБЯЗАТЕЛЬНОЕ намеренно: у модуля старше
+   * 0.1.27 ключа нет, и карточка обязана показать такое решение прежним
+   * словарём `credit.declineCode`, а не пустой строкой (прецедент — ключ
+   * `supersedes_decision_id` у модуля старше B-3).
+   */
+  decision_codes?: string[]
   final_amount_minor: number | null
   currency: string
   cooldown_until: string | null
@@ -1031,11 +1044,74 @@ export interface CreditJournalParams {
   as_of?: string
 }
 
+/**
+ * Вид кода реестра решения (`DecisionCodeEntry.kind`, v0.1.27): `refusal` —
+ * отказ книги `AB-O`, `conditional` — условное одобрение `AB-C` (решает
+ * руководитель), `gate` — автогейт калькулятора `AB-G`, `service` — служебный
+ * код модуля `AB-X`.
+ */
+export type CreditDecisionCodeKind = 'refusal' | 'conditional' | 'gate' | 'service'
+
+/** Раздел книги правил, к которому относится код (`DecisionCodeEntry.category`). */
+export type CreditDecisionCodeCategory =
+  | 'loan_terms'
+  | 'identity'
+  | 'bank_account'
+  | 'conduct'
+  | 'financial_hardship'
+  | 'digital_verification'
+  | 'income'
+  | 'bank_statement'
+  | 'employment'
+  | 'service'
+
+/** Признаки кода (`DecisionCodeEntry.traits`); на экране пока не показываются (19-5f). */
+export type CreditDecisionCodeTrait =
+  | 'automatic'
+  | 'on_site'
+  | 'ban_reapply'
+  | 'supervisor'
+  | 'checklist'
+
+/**
+ * Одна запись реестра кодов решения — `DecisionCodeEntry` контракта.
+ *
+ * Поля `reason` здесь нет, и это не забытое поле: модуль вырезает его из ответа
+ * двери, а схема закрыта (`additionalProperties: false`). `ru` — критерий книги
+ * дословно, `en` — рабочий перевод, украинского текста у реестра нет.
+ */
+export interface CreditDecisionCodeEntry {
+  id: string
+  kind: CreditDecisionCodeKind
+  /** Код книги (О-NN / У-NN) у `AB-O` / `AB-C`. */
+  book: string | null
+  /** Ближайший код книги у автогейта `AB-G`. */
+  book_code: string | null
+  category: CreditDecisionCodeCategory
+  ru: string
+  en: string
+  /** Основание / примечание книги — подсказкой строки кода. */
+  note_ru: string | null
+  traits: CreditDecisionCodeTrait[]
+  /** Служебный `RC-*`, который модуль проецирует на эту запись. */
+  legacy_rc: string | null
+}
+
+/**
+ * Ответ `listDecisionCodes`. `version` меняется при любой правке содержимого
+ * реестра — поэтому она и есть тождество справочника для кэша фронта.
+ */
+export interface CreditDecisionCodesRegistry {
+  version: string
+  codes: CreditDecisionCodeEntry[]
+}
+
 /** Автора ручного решения модуль берёт из пропуска CRM; поле не шлётся (17-22). */
 export interface ManualDecisionPayload {
   outcome: CreditDecisionOutcome
   rationale: string
   final_amount_minor?: number
+  /** Только при `declined`: коды отказа реестра (`AB-O`/`AB-G`/`AB-X`) или служебные `RC-*`. */
   decline_codes?: string[]
   cooldown_until?: string
 }

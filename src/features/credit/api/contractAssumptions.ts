@@ -28,6 +28,7 @@ import type {
   CreditApplicationDetail,
   CreditApplicationStatus,
   CreditDecision,
+  CreditDecisionCodeEntry,
   CreditDocumentMeta,
   CreditIdentityKey,
   CreditJournalEntry,
@@ -328,3 +329,27 @@ export type _rail_event_has_occurred_at = Assert<Has<CreditRailEvent, 'occurred_
 /** Панель рисует `items` и сравнивает их длину с `total` — строка «Показано N з M». */
 export type _rail_page_has_items = Assert<Has<CreditLoanRailOperations, 'items'>>
 export type _rail_page_has_total = Assert<Has<CreditLoanRailOperations, 'total'>>
+
+/* ─── Коды решения (справочник модуля, v0.1.27) ─────────────────────────
+   Форма ручного решения предлагает к отказу коды ровно трёх видов — `refusal`,
+   `gate`, `service` (`CREDIT_DECLINE_KINDS`) — и НИКОГДА не предлагает
+   `conditional`. Отбор стоит на этих четырёх значениях. Переименует модуль
+   любое из первых трёх — группа кодов молча выпадет из формы, и отказ по ней
+   станет невозможен; переименует `conditional` — отбор перестанет его узнавать,
+   и сравнение с новым именем придётся писать заново, иначе условное одобрение
+   уедет в список отказа при первом же расширении перечня видов. */
+export type _decision_code_has_kind = Assert<Has<CreditDecisionCodeEntry, 'kind'>>
+export type _decision_code_kind_refusal = Assert<
+  Includes<CreditDecisionCodeEntry['kind'], 'refusal'>
+>
+export type _decision_code_kind_gate = Assert<Includes<CreditDecisionCodeEntry['kind'], 'gate'>>
+export type _decision_code_kind_service = Assert<
+  Includes<CreditDecisionCodeEntry['kind'], 'service'>
+>
+export type _decision_code_kind_conditional = Assert<
+  Includes<CreditDecisionCodeEntry['kind'], 'conditional'>
+>
+/** Группы формы и подпись раздела в карточке стоят на `category`; без поля кодов не разложить. */
+export type _decision_code_has_category = Assert<Has<CreditDecisionCodeEntry, 'category'>>
+/** Карточка решения показывает смысл отказа по `decision_codes`; без поля — только «как прислано». */
+export type _decision_has_decision_codes = Assert<Has<CreditDecision, 'decision_codes'>>
