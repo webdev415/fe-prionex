@@ -42,6 +42,9 @@ const PlannerMyTasksPage = lazy(() =>
 const PlannerBoardPage = lazy(() =>
   import('@/pages/Planner').then((m) => ({ default: m.PlannerBoardPage }))
 )
+const PlannerBoardSettingsPage = lazy(() =>
+  import('@/pages/Planner').then((m) => ({ default: m.PlannerBoardSettingsPage }))
+)
 const PlannerCalendarPage = lazy(() =>
   import('@/pages/Planner').then((m) => ({ default: m.PlannerCalendarPage }))
 )
@@ -67,6 +70,11 @@ export const plannerRoute: RouteObject = {
     { index: true, element: <Navigate to="/dashboard/planning/tasks" replace /> },
     { path: 'tasks', element: withSuspense(<PlannerMyTasksPage />) },
     { path: 'tasks/boards/:code', element: withSuspense(<PlannerBoardPage />, <BoardSkeleton />) },
+    // `⚙` of the board header (5.3); the settings editor itself is story 5.10.
+    {
+      path: 'tasks/boards/:code/settings/*',
+      element: withSuspense(<PlannerBoardSettingsPage />, <CalendarSkeleton />),
+    },
     { path: 'calendar', element: withSuspense(<PlannerCalendarPage />, <CalendarSkeleton />) },
     // Permanent link `planning/t/<KEY>` (AD-35): the task panel over «Мої задачі».
     { path: 't/:key', element: withSuspense(<PlannerTaskLinkRedirect />) },

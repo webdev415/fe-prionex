@@ -18,6 +18,8 @@ vi.mock('@/lib/api', async (importOriginal) => {
 
 import {
   createTask,
+  getBoardKanban,
+  getMe,
   getMeta,
   ifMatch,
   listBoardTasks,
@@ -31,6 +33,7 @@ import {
 import {
   PLANNER_POLL_MS,
   plannerKeys,
+  usePlannerBoardKanban,
   usePlannerBoardTasks,
   usePlannerMyTasks,
   usePlannerPeople,
@@ -100,6 +103,32 @@ describe('planner operations over the shared axios', () => {
     expect(ifMatch(12)).toBe('"12"')
   })
 
+  it('kanban and the board list carry the filters of 3.13; /me for «Мої» (5.3)', async () => {
+    const filters = {
+      assignee_user_id: 'u-1',
+      label_id: 'l-1',
+      overdue: 'true' as const,
+      q: 'залишки',
+    }
+    await getBoardKanban('SKL', filters)
+    expect(http.get).toHaveBeenLastCalledWith('/api/v1/planner/boards/SKL/kanban', {
+      params: filters,
+      headers: CRM,
+      _skipAuthRedirect: true,
+    })
+    await listBoardTasks('SKL', filters)
+    expect(http.get).toHaveBeenLastCalledWith('/api/v1/planner/boards/SKL/tasks', {
+      params: { limit: 500, ...filters },
+      headers: CRM,
+      _skipAuthRedirect: true,
+    })
+    await getMe()
+    expect(http.get).toHaveBeenLastCalledWith('/api/v1/planner/me', {
+      headers: CRM,
+      _skipAuthRedirect: true,
+    })
+  })
+
   it('a board code is a path segment, escaped', async () => {
     await listBoardTasks('A/B')
     expect(http.get.mock.calls[0][0]).toBe('/api/v1/planner/boards/A%2FB/tasks')
@@ -115,11 +144,17 @@ describe('planner lists poll at least every 30 s and on return to the tab', () =
     )
     const mine = renderHook(() => usePlannerMyTasks(), { wrapper })
     const board = renderHook(() => usePlannerBoardTasks('SKL'), { wrapper })
+    const kanban = renderHook(() => usePlannerBoardKanban('SKL', {}), { wrapper })
     await waitFor(() => expect(mine.result.current.isSuccess).toBe(true))
     await waitFor(() => expect(board.result.current.isSuccess).toBe(true))
+    await waitFor(() => expect(kanban.result.current.isSuccess).toBe(true))
 
     expect(PLANNER_POLL_MS).toBeLessThanOrEqual(30_000)
-    for (const key of [plannerKeys.myTasks(), plannerKeys.boardTasks('SKL')]) {
+    for (const key of [
+      plannerKeys.myTasks(),
+      plannerKeys.boardTaskList('SKL', {}),
+      plannerKeys.boardKanban('SKL', {}),
+    ]) {
       const options = queryClient.getQueryCache().find({ queryKey: key })?.options as {
         refetchInterval?: number
         refetchOnWindowFocus?: boolean
