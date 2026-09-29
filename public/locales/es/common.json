@@ -12693,6 +12693,7 @@
       "declineCodesHint": "Los códigos de rechazo son obligatorios para un rechazo",
       "decisionCodesLoading": "Cargando el catálogo de códigos de rechazo…",
       "decisionCodesUnavailable": "El catálogo de códigos de rechazo no está disponible, así que ahora no se puede registrar un rechazo. La aprobación y la derivación a revisión siguen funcionando.",
+      "decisionCodesOffline": "No hay conexión de red, así que el catálogo de códigos de rechazo no se ha cargado y ahora no se puede registrar un rechazo. El catálogo se cargará solo en cuanto vuelva la conexión.",
       "decisionCodesModuleTooOld": "El catálogo de códigos de rechazo no está disponible: el módulo de crédito es anterior a la versión requerida 0.1.27, así que no se puede registrar un rechazo. Avise al administrador. La aprobación y la derivación a revisión siguen funcionando.",
       "decisionCodesForbidden": "Su rol no tiene permiso para leer el catálogo de códigos de rechazo, así que no se puede registrar un rechazo. Contacte con el administrador.",
       "declineCodesSent": "Enviado como: {{codes}}",

@@ -20,6 +20,7 @@ import { CreditApplicationDetailPage } from '../CreditApplicationDetailPage'
 import * as hooks from '@/features/credit/hooks/useCredit'
 import { CreditApiError } from '@/features/credit/api/creditApi'
 import { indexDecisionCodes } from '@/features/credit/api/decisionCodes'
+import ukCommon from '@/../public/locales/uk/common.json'
 import {
   DECISION_CODES_FIXTURE,
   entryOf,
@@ -45,19 +46,44 @@ vi.mock('@/features/credit/hooks/useCredit')
 // возвращает в `finally`.
 const i18nState = vi.hoisted(() => ({ language: 'uk' }))
 // Мок печатает ключ вместе с подстановками — иначе не видно, ЧТО ушло в строку.
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, vars?: Record<string, unknown>) =>
-      vars && typeof vars === 'object'
-        ? `${key} ${Object.entries(vars)
-            .map(([name, value]) => `${name}=${String(value)}`)
-            .join(' ')}`
-        : key,
-    i18n: { language: i18nState.language, changeLanguage: vi.fn() },
-  }),
-  I18nextProvider: ({ children }: { children: ReactNode }) => children,
-  initReactI18next: { type: '3rdParty', init: vi.fn() },
-}))
+// `defaultValue` он не печатает, а отвечает им, как i18next: только когда ключа
+// нет ни в словаре языка интерфейса, ни в запасном `en`. «Строки в словаре
+// нет» — так свойство настоящих словарей, а не договорённость сцены.
+vi.mock('react-i18next', async () => {
+  const dictionaries: Record<string, unknown> = {
+    uk: (await import('@/../public/locales/uk/common.json')).default,
+    en: (await import('@/../public/locales/en/common.json')).default,
+    es: (await import('@/../public/locales/es/common.json')).default,
+  }
+  const has = (dictionary: unknown, key: string) =>
+    typeof key
+      .split('.')
+      .reduce<unknown>(
+        (node, part) =>
+          node && typeof node === 'object' ? (node as Record<string, unknown>)[part] : undefined,
+        dictionary
+      ) === 'string'
+  const print = (key: string, vars: Record<string, unknown>) =>
+    `${key} ${Object.entries(vars)
+      .map(([name, value]) => `${name}=${String(value)}`)
+      .join(' ')}`
+  return {
+    useTranslation: () => ({
+      t: (key: string, vars?: Record<string, unknown>) => {
+        if (!vars || typeof vars !== 'object') return key
+        if (!('defaultValue' in vars)) return print(key, vars)
+        const { defaultValue, ...rest } = vars
+        if (!has(dictionaries[i18nState.language], key) && !has(dictionaries.en, key)) {
+          return String(defaultValue)
+        }
+        return Object.keys(rest).length ? print(key, rest) : key
+      },
+      i18n: { language: i18nState.language, changeLanguage: vi.fn() },
+    }),
+    I18nextProvider: ({ children }: { children: ReactNode }) => children,
+    initReactI18next: { type: '3rdParty', init: vi.fn() },
+  }
+})
 vi.mock('react-router-dom', async () => ({
   ...(await vi.importActual<typeof import('react-router-dom')>('react-router-dom')),
   useParams: () => ({ applicationId: '6a547e31-ba5e-4723-a2ea-ea55c8ef5197' }),
@@ -232,6 +258,9 @@ describe('CreditApplicationDetailPage → решение заменяет пре
     isError?: boolean
     error?: unknown
     isFetching?: boolean
+    isPaused?: boolean
+    isPending?: boolean
+    isLoading?: boolean
     refetch?: () => unknown
   }
   const codesLoaded = (): CodesState => ({ data: indexDecisionCodes(DECISION_CODES_FIXTURE) })
@@ -260,6 +289,7 @@ describe('CreditApplicationDetailPage → решение заменяет пре
       isError: false,
       error: null,
       isFetching: false,
+      isPaused: false,
       refetch: vi.fn(),
       ...codes,
     } as never)
@@ -618,7 +648,19 @@ describe('CreditApplicationDetailPage → решение заменяет пре
       ).not.toBeNull()
     })
 
-    it('F-4: украинский интерфейс — первой строкой RU книги, второй EN; основание — подсказкой', () => {
+    const escapeRe = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const tooltipRows = (panel: ReturnType<typeof within>) =>
+      panel
+        .getAllByRole('checkbox')
+        .map((box: HTMLElement) => box.closest('label') as HTMLElement)
+        .filter((row: HTMLElement) => row.hasAttribute('title') || row.querySelector('[title]'))
+
+    /**
+     * Основание книги (`note_ru`) — третьей приглушённой строкой внутри метки,
+     * а не `title`: подсказку видит только мышь. Текст в метке виден глазу и
+     * входит в имя чекбокса — его слышит скринридер и получает клавиатура.
+     */
+    it('F-4: украинский интерфейс — первой строкой RU книги, второй EN, третьей основание книги', () => {
       const panel = renderManual()
       declineWith(panel)
 
@@ -629,27 +671,60 @@ describe('CreditApplicationDetailPage → решение заменяет пре
         text.indexOf(en),
         'the uk interface shows the English text of AB-O-13 before the book text'
       ).toBeGreaterThan(text.indexOf(ru))
-      expect(codeRow(panel, 'AB-O-05').getAttribute('title')).toBe(entryOf('AB-O-05').note_ru)
-      expect(codeRow(panel, 'AB-O-13').hasAttribute('title')).toBe(false)
+      expect(
+        text,
+        'a code without a book rationale (AB-O-13) got an extra line under the uk interface'
+      ).toBe(`AB-O-13 ${ru}${en}`)
+
+      const withNote = entryOf('AB-O-05')
+      const note = withNote.note_ru ?? ''
+      expect(
+        note,
+        'the fixture lost the book rationale of AB-O-05 — the scene proves nothing'
+      ).not.toBe('')
+      expect(
+        codeRow(panel, 'AB-O-05').textContent,
+        'the uk interface does not show the book rationale of AB-O-05 as the third line of the row'
+      ).toBe(`AB-O-05 ${withNote.ru}${withNote.en}${note}`)
+      expect(
+        within(codeRow(panel, 'AB-O-05')).getByText(note),
+        'the book rationale is not a line of its own'
+      ).toBeInTheDocument()
+      expect(
+        panel.getByRole('checkbox', { name: /AB-O-05/ }),
+        'the book rationale is not part of the checkbox name — a screen reader does not hear it'
+      ).toHaveAccessibleName(new RegExp(escapeRe(note)))
+      expect(
+        tooltipRows(panel),
+        'a code row still carries a hover-only title tooltip'
+      ).toHaveLength(0)
     })
 
-    it('F-4: английский интерфейс — первой строкой EN, русского основания подсказкой нет', () => {
+    it('F-4: английский интерфейс — первой строкой EN, русского основания нет ни строкой, ни подсказкой', () => {
       i18nState.language = 'en'
       try {
         const panel = renderManual()
         declineWith(panel)
 
         const text = codeRow(panel, 'AB-O-05').textContent ?? ''
-        const { ru, en } = entryOf('AB-O-05')
+        const { ru, en, note_ru: note } = entryOf('AB-O-05')
         expect(
           text.indexOf(en),
           'the en interface shows the book Russian text of AB-O-05 before the English one'
         ).toBeLessThan(text.indexOf(ru))
         expect(text.indexOf(en)).toBeGreaterThan(-1)
         expect(
-          codeRow(panel, 'AB-O-05').hasAttribute('title'),
+          note,
+          'the fixture lost the book rationale of AB-O-05 — the scene proves nothing'
+        ).toBeTruthy()
+        expect(
+          text,
+          'the en interface shows the Russian-only book rationale of AB-O-05 as a line'
+        ).toBe(`AB-O-05 ${en}${ru}`)
+        expect(
+          tooltipRows(panel),
           'the en interface shows the Russian-only book rationale as a tooltip'
-        ).toBe(false)
+        ).toHaveLength(0)
       } finally {
         i18nState.language = 'uk'
       }
@@ -803,9 +878,10 @@ describe('CreditApplicationDetailPage → решение заменяет пре
     })
 
     it('F-8: справочник грузится — строка загрузки, отказ пока закрыт', () => {
-      // «Грузится» для страницы — это нет данных и нет ошибки: ветка формы
-      // `directory ? … : isError ? … : загрузка`, флаг `isLoading` она не
-      // читает. Поэтому в моке его нет: он ничего бы здесь не проверял.
+      // «Грузится» для страницы — это нет данных, нет ошибки и запрос не на
+      // паузе: ветка формы `directory ? … : isError || isPaused ? … :
+      // загрузка`, флаг `isLoading` она не читает. Поэтому в моке его нет: он
+      // ничего бы здесь не проверял. Пауза — сцена F-11.
       const panel = renderManual({}, DECISION, { data: undefined, isError: false })
       declineWith(panel)
 
@@ -813,6 +889,52 @@ describe('CreditApplicationDetailPage → решение заменяет пре
       expect(panel.queryAllByRole('checkbox')).toHaveLength(0)
       expect(saveButton(panel)).toBeDisabled()
     })
+
+    /**
+     * Запрос, начатый без сети, React Query ставит на паузу
+     * (`networkMode: 'online'`): данных нет, ошибки нет, `isPending` и
+     * `isLoading` — `true`. Без своей ветки форма рисовала «Завантажуємо…»
+     * бесконечно при закрытом отказе. Пауза — временный сбой: плашка про сеть
+     * и тот же повтор. Второй случай — пауза повторного запроса после
+     * временной ошибки: причина сейчас та же — нет сети.
+     */
+    it.each([
+      ['первый запрос', { isError: false, error: null }],
+      [
+        'повтор после временной ошибки',
+        { isError: true, error: new CreditApiError('Синтетичний збій довідника', 503) },
+      ],
+    ] as const)(
+      'F-11: справочник на паузе без сети (%s) — плашка про сеть и «Повторити», вечной загрузки нет',
+      (_case, failure) => {
+        const refetch = vi.fn()
+        const panel = renderManual({}, DECISION, {
+          data: undefined,
+          ...failure,
+          isPaused: true,
+          isPending: true,
+          isLoading: true,
+          isFetching: false,
+          refetch,
+        })
+        declineWith(panel)
+
+        expect(
+          panel.queryByText('credit.card.decisionCodesLoading'),
+          'a paused directory query shows the loading line forever'
+        ).toBeNull()
+        const alerts = panel.getAllByRole('alert')
+        expect(alerts, 'the paused directory is drawn as more than one plate').toHaveLength(1)
+        expect(
+          alerts[0].textContent,
+          'the paused directory query is not named as a lost network connection'
+        ).toBe('credit.card.decisionCodesOffline')
+        fireEvent.click(panel.getByRole('button', { name: 'credit.actions.retry' }))
+        expect(refetch, 'retry did not re-request the paused directory').toHaveBeenCalledTimes(1)
+        expect(panel.queryAllByRole('checkbox')).toHaveLength(0)
+        expect(saveButton(panel), 'a decline can be saved without the directory').toBeDisabled()
+      }
+    )
 
     it('F-9: код выпал из новой версии справочника — отказ им не открыть, в тело он не уходит', () => {
       const mutate = vi.fn()
@@ -1034,5 +1156,42 @@ describe('CreditApplicationDetailPage → решение заменяет пре
         consoleError.mockRestore()
       }
     })
+
+    /**
+     * Прежний вывод печатает код одним `id`, когда строки для него в прежнем
+     * словаре нет, — в любой ветке, а не только когда код есть в
+     * `decision_codes`. Третья ветка (ключа нет — модуль старше 0.1.27 — или
+     * список смысла пуст) печатала такой код «AB-O-13 — AB-O-13»: запасной
+     * текст i18next — сам код. `RC-04` рядом — положительный контроль: у кода
+     * со строкой словаря текст остаётся. Справочник загружен: третья ветка от
+     * него не зависит.
+     */
+    it.each([
+      ['ключа decision_codes нет', undefined, ['AB-O-13'], 'AB-O-13'],
+      ['список смысла пуст', [], ['RC-04', 'AB-O-13'], 'RC-04 — credit.declineCode.RC-04; AB-O-13'],
+    ] as const)(
+      'C-10: %s, у кода нет строки прежнего словаря — один id, без «CODE — CODE»',
+      (_case, meaning, sent, expected) => {
+        const legacy = (ukCommon as { credit: { declineCode: Record<string, string> } }).credit
+          .declineCode
+        expect(
+          legacy['AB-O-13'],
+          'the scene needs a code without an old-dictionary text: credit.declineCode.AB-O-13 appeared'
+        ).toBeUndefined()
+        expect(legacy['RC-04'], 'the positive control RC-04 lost its dictionary text').toBeTruthy()
+
+        const decision: Partial<CreditDecision> = { ...DECLINED, decline_codes: [...sent] }
+        if (meaning === undefined) delete decision.decision_codes
+        else decision.decision_codes = [...meaning]
+        renderCard(decision as CreditDecision)
+
+        const row = codesRow()
+        expect(
+          row,
+          'a code without an old-dictionary text is printed as «CODE — CODE»'
+        ).not.toMatch(/AB-O-13 — /)
+        expect(row).toBe(`credit.fields.declineCodes${expected}`)
+      }
+    )
   })
 })

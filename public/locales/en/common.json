@@ -12648,6 +12648,7 @@
       "declineCodesHint": "Decline codes are required for a decline",
       "decisionCodesLoading": "Loading the decline code directory…",
       "decisionCodesUnavailable": "The decline code directory is unavailable, so a decline cannot be recorded right now. Approval and referral still work.",
+      "decisionCodesOffline": "There is no network connection, so the decline code directory has not loaded and a decline cannot be recorded right now. The directory will load by itself once the connection is back.",
       "decisionCodesModuleTooOld": "The decline code directory is unavailable: the credit module is older than the required version 0.1.27, so a decline cannot be recorded. Tell your administrator. Approval and referral still work.",
       "decisionCodesForbidden": "Your role has no permission to read the decline code directory, so a decline cannot be recorded. Contact your administrator.",
       "declineCodesSent": "Sent as: {{codes}}",

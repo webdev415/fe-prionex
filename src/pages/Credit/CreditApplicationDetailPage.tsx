@@ -581,9 +581,13 @@ function manualDecisionErrorText(t: TFunction, error: unknown): string {
  * прежнего словаря. Поэтому присланные коды идут прежним выводом
  * `credit.declineCode` (старое решение `RC-04` читается словами, как до
  * справочника), а коды справочника — приглушённой строкой с подписью, если они
- * не совпадают с присланными. Код справочника, присланный как есть (`AB-O-13`
- * новой формы), печатается одним `id`: строки для него в прежнем словаре нет, и
- * `AB-O-13 — AB-O-13` ничего бы не добавило.
+ * не совпадают с присланными.
+ *
+ * Прежний вывод печатает код одним `id`, когда строки для него в прежнем
+ * словаре нет (`AB-O-13` новой формы, неизвестный код в решении без
+ * `decision_codes`): запасным текстом i18next вернул бы сам код, и строка
+ * читалась бы `AB-O-13 — AB-O-13`. Правило одно для всех трёх веток и смотрит
+ * в словарь, а не в состав `decision_codes`.
  *
  * Список смысла нормализуется тем же правилом, что сравнение с присланным: без
  * повторов и по возрастанию. Модуль отдаёт его уже таким (`decision_codes_of` —
@@ -601,16 +605,20 @@ function DecisionCodesValue({
 }) {
   const { t } = useTranslation('common')
   const meaning = normalizeDecisionCodes(decision.decision_codes ?? [])
-  const legacyText = (asIs: ReadonlySet<string>) =>
+  const legacyText = () =>
     decision.decline_codes
-      .map((code) => (asIs.has(code) ? code : `${code} — ${t(`credit.declineCode.${code}`, code)}`))
+      .map((code) => {
+        // Пустой запасной текст — признак «строки в словаре нет», а не сам код.
+        const text = t(`credit.declineCode.${code}`, { defaultValue: '' })
+        return text ? `${code} — ${text}` : code
+      })
       .join('; ')
 
   if (meaning.length && !directory) {
     const differs = normalizeDecisionCodes(decision.decline_codes).join('\n') !== meaning.join('\n')
     return (
       <span className="flex flex-col gap-1">
-        {decision.decline_codes.length > 0 && <span>{legacyText(new Set(meaning))}</span>}
+        {decision.decline_codes.length > 0 && <span>{legacyText()}</span>}
         {differs && (
           <span className="text-muted-foreground text-xs">
             {t('credit.card.decisionCodesIds', { codes: meaning.join(', ') })}
@@ -652,7 +660,7 @@ function DecisionCodesValue({
     )
   }
   if (decision.decline_codes.length) {
-    return <>{legacyText(new Set())}</>
+    return <>{legacyText()}</>
   }
   return <>—</>
 }
@@ -856,10 +864,14 @@ function ApplicationDecision({
                       </legend>
                       {group.codes.map((entry) => {
                         const text = decisionCodeText(entry, language)
+                        // Основание книги — текстом внутри метки, а не `title`:
+                        // подсказку видит только мышь, а клавиатура, сенсор и
+                        // скринридер — нет. Строка есть лишь там, где её отдаёт
+                        // `decisionCodeNote` (русское основание — под `uk`).
+                        const note = decisionCodeNote(entry, language)
                         return (
                           <label
                             key={entry.id}
-                            title={decisionCodeNote(entry, language)}
                             className="flex cursor-pointer items-start gap-2 py-1 text-sm"
                           >
                             <input
@@ -874,6 +886,9 @@ function ApplicationDecision({
                               <span className="text-muted-foreground block text-xs">
                                 {text.secondary}
                               </span>
+                              {note && (
+                                <span className="text-muted-foreground block text-xs">{note}</span>
+                              )}
                             </span>
                           </label>
                         )
@@ -885,10 +900,17 @@ function ApplicationDecision({
                 <Alert variant="error" className="mb-2">
                   {directoryFailure}
                 </Alert>
-              ) : decisionCodes.isError ? (
+              ) : decisionCodes.isError || decisionCodes.isPaused ? (
+                // Пауза — запрос, начатый без сети (`networkMode: 'online'`):
+                // ни данных, ни ошибки, и без этой ветки оператор ждал бы
+                // «Завантажуємо…» бесконечно при закрытом отказе. Это
+                // временный сбой: своя строка и тот же повтор. Сеть вернулась —
+                // React Query продолжит запрос сам.
                 <>
                   <Alert variant="error" className="mb-2">
-                    {t('credit.card.decisionCodesUnavailable')}
+                    {decisionCodes.isPaused
+                      ? t('credit.card.decisionCodesOffline')
+                      : t('credit.card.decisionCodesUnavailable')}
                   </Alert>
                   <Button
                     size="sm"
