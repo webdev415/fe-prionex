@@ -21,11 +21,11 @@ import {
   MdKeyboardDoubleArrowUp,
   MdPriorityHigh,
 } from 'react-icons/md'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/Tooltip'
 import { cn } from '@/lib/utils'
 import { usePlannerBoard } from '@/api/planner/plannerQueries'
 import type { PlannerTaskCard } from '@/api/planner/plannerApi'
 import { PRIORITY_TOP_INK } from '../plannerTones'
+import { PlannerTooltip } from './PlannerTooltip'
 
 /** By position in the scale, lowest first; the name marks the icon in the DOM. */
 const ICONS = [
@@ -52,28 +52,23 @@ export function PriorityIcon({ task }: PriorityIconProps) {
   const top = index === scale.length - 1
   const label = t('priority.label', { name: priority.name })
   return (
-    <TooltipProvider>
-      <Tooltip delayDuration={200}>
-        <TooltipTrigger asChild>
-          <span
-            role="img"
-            aria-label={label}
-            data-priority-icon={shape}
-            // The level name opens on keyboard focus as on hover (UX: «подсказка
-            // по наведению и по фокусу»); the icon has no action of its own.
-            // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
-            tabIndex={0}
-            className={cn(
-              'focus-visible:ring-ring inline-flex h-6 w-6 shrink-0 items-center justify-center rounded focus-visible:ring-2 focus-visible:outline-none',
-              top ? PRIORITY_TOP_INK : 'text-muted-foreground'
-            )}
-          >
-            <Icon aria-hidden="true" className="h-4 w-4" />
-          </span>
-        </TooltipTrigger>
-        <TooltipContent>{label}</TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <PlannerTooltip label={label}>
+      <span
+        role="img"
+        aria-label={label}
+        data-priority-icon={shape}
+        // The level name opens on keyboard focus as on hover (UX: «подсказка
+        // по наведению и по фокусу»); the icon has no action of its own.
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+        tabIndex={0}
+        className={cn(
+          'focus-visible:ring-ring inline-flex h-6 w-6 shrink-0 items-center justify-center rounded focus-visible:ring-2 focus-visible:outline-none',
+          top ? PRIORITY_TOP_INK : 'text-muted-foreground'
+        )}
+      >
+        <Icon aria-hidden="true" className="h-4 w-4" />
+      </span>
+    </PlannerTooltip>
   )
 }
 

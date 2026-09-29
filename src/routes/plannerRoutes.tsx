@@ -11,6 +11,13 @@
  * (planner story 5.1, AC4; EXPERIENCE «Скелетон»): the section header for the
  * layout, skeleton rows or columns for a screen — never the app's full-screen
  * spinner (`AppLoadingFallback`, `min-h-dvh`).
+ *
+ * All screens live in ONE chunk (the `@/pages/Planner` barrel), so it is the
+ * layout's boundary that shows while it loads; by the time a screen renders,
+ * the chunk is there and its lazy resolves at once. The screens keep their own
+ * boundaries anyway, each in the shape of its screen: without them a screen
+ * that suspends would climb to the layout's boundary and swap the whole
+ * section — header, tabs, banners — for the loading line (5.1, bot round 1).
  */
 import { lazy, Suspense, type ReactElement } from 'react'
 import { Navigate, type RouteObject } from 'react-router-dom'
@@ -20,7 +27,11 @@ import { PERMISSIONS } from '@/constants/permissions'
 // loads, and the skeletons stand in for it while it loads — imported directly,
 // not through the `@/pages/Planner` barrel.
 import { PlannerGateMessage } from '@/pages/Planner/components/PlannerGateMessage'
-import { BoardSkeleton, TaskListSkeleton } from '@/pages/Planner/components/PlannerStates'
+import {
+  BoardSkeleton,
+  CalendarSkeleton,
+  TaskListSkeleton,
+} from '@/pages/Planner/components/PlannerStates'
 
 const PlannerLayout = lazy(() =>
   import('@/pages/Planner').then((m) => ({ default: m.PlannerLayout }))
@@ -56,7 +67,7 @@ export const plannerRoute: RouteObject = {
     { index: true, element: <Navigate to="/dashboard/planning/tasks" replace /> },
     { path: 'tasks', element: withSuspense(<PlannerMyTasksPage />) },
     { path: 'tasks/boards/:code', element: withSuspense(<PlannerBoardPage />, <BoardSkeleton />) },
-    { path: 'calendar', element: withSuspense(<PlannerCalendarPage />) },
+    { path: 'calendar', element: withSuspense(<PlannerCalendarPage />, <CalendarSkeleton />) },
     // Permanent link `planning/t/<KEY>` (AD-35): the task panel over «Мої задачі».
     { path: 't/:key', element: withSuspense(<PlannerTaskLinkRedirect />) },
   ],

@@ -47,8 +47,11 @@ import { PriorityIcon } from '../components/PriorityIcon'
 import { AvatarStack, PersonAvatar } from '../components/PersonAvatar'
 import { OriginChip } from '../components/OriginChip'
 import { PeoplePicker } from '../components/PeoplePicker'
+import { TaskCardView, TaskRow } from '../components/TaskItems'
+import { PlannerTooltipProvider } from '../components/PlannerTooltip'
 import {
   BoardSkeleton,
+  CalendarSkeleton,
   PanelSkeleton,
   PlannerBanners,
   PlannerEmptyState,
@@ -129,6 +132,30 @@ function pillOf(word: string): HTMLElement {
   return pill as HTMLElement
 }
 
+/**
+ * The SLA pill with its tooltip. What it explains (the norm, the moment, the
+ * remainder in the norm's unit) comes with the board, so the pill becomes a
+ * tab stop once the board has answered.
+ */
+const findPill = (word: string) => waitFor(() => pillOf(word))
+
+/** A pill without a tooltip: the word's own `span` sits right in it. */
+const plainPillOf = (word: string) => screen.getByText(word).parentElement as HTMLElement
+
+/** A board answer the test releases itself. */
+function heldBoard() {
+  let answer: (board: PlannerBoard) => void = () => {}
+  api.getBoard.mockReturnValue(new Promise<PlannerBoard>((resolve) => (answer = resolve)))
+  return (board: PlannerBoard = boardWith()) => act(() => answer(board))
+}
+
+/** A card or task as a planner older than the contract sends it. */
+function without<T extends object>(item: T, ...keys: (keyof T)[]): T {
+  const copy: Partial<T> = { ...item }
+  for (const key of keys) delete copy[key]
+  return copy as T
+}
+
 beforeEach(() => {
   vi.clearAllMocks()
   api.getBoard.mockResolvedValue(boardWith())
@@ -136,23 +163,30 @@ beforeEach(() => {
 })
 
 describe('пилюли срока и SLA — иконка, слово и цвет роли, подсказка расчёта (5.1 AC1)', () => {
-  const DUE_CASES: [PlannerDueState, string, string, string][] = [
-    ['overdue', 'Прострочено', 'text-error-700 bg-error-50', 'Термін минув: 20.09.2026'],
-    ['soon', 'Скоро термін', 'text-warning-700 bg-warning-50', 'Термін скоро: 20.09.2026'],
-    ['ok', 'Термін', 'text-gray-900 bg-gray-50', 'Термін: 20.09.2026'],
+  const DUE_CASES: [PlannerDueState, string, string][] = [
+    ['overdue', 'Прострочено', 'text-error-700 bg-error-50'],
+    ['soon', 'Скоро термін', 'text-warning-700 bg-warning-50'],
+    ['ok', 'Термін', 'text-gray-900 bg-gray-50'],
   ]
-  it.each(DUE_CASES)('срок %s — «%s», %s, подсказка по фокусу', async (state, word, tone, hint) => {
-    renderWithClient(<DuePill task={makeCard({ due_date: '2026-09-20', due_state: state })} />)
-    const pill = pillOf(word)
-    for (const cls of tone.split(' ')) expect(pill).toHaveClass(cls)
-    // Never colour alone: an icon and the word (read out even when hidden).
-    expect(pill.querySelector('svg[aria-hidden="true"]')).not.toBeNull()
-    expect(pill).toHaveTextContent(word)
-    expect(pill).toHaveTextContent('20.09.2026')
-    await userEvent.setup().tab()
-    expect(pill).toHaveFocus()
-    expect(await screen.findByRole('tooltip')).toHaveTextContent(hint)
-  })
+  // The pill already says all a tooltip could («Термін: 20.09.2026» next to
+  // a calendar icon and «20.09.2026»): no tooltip, and no tab stop spent on
+  // repeating it (review bot round 1).
+  it.each(DUE_CASES)(
+    'срок %s — «%s», %s; подсказки-повтора и tab-остановки нет',
+    async (state, word, tone) => {
+      renderWithClient(<DuePill task={makeCard({ due_date: '2026-09-20', due_state: state })} />)
+      const pill = plainPillOf(word)
+      for (const cls of tone.split(' ')) expect(pill).toHaveClass(cls)
+      // Never colour alone: an icon and the word (read out even when hidden).
+      expect(pill.querySelector('svg[aria-hidden="true"]')).not.toBeNull()
+      expect(pill).toHaveTextContent(word)
+      expect(pill).toHaveTextContent('20.09.2026')
+      expect(document.querySelector('[tabindex]')).toBeNull()
+      await userEvent.setup().hover(pill)
+      await act(() => new Promise((resolve) => setTimeout(resolve, 300)))
+      expect(screen.queryByRole('tooltip')).toBeNull()
+    }
+  )
 
   it('срока нет (due_state none) — «Без терміну» без пилюли', () => {
     renderWithClient(<DuePill task={makeCard({ due_date: null, due_state: 'none' })} />)
@@ -171,12 +205,12 @@ describe('пилюли срока и SLA — иконка, слово и цве�
         })}
       />
     )
-    const pill = pillOf('SLA')
+    // The norm and the board's zone arrive with the board.
+    const pill = await findPill('SLA')
     expect(pill).toHaveTextContent('5 год')
     expect(pill).toHaveClass('text-gray-900', 'bg-gray-50')
     await userEvent.setup().tab()
     expect(pill).toHaveFocus()
-    // The norm and the board's zone arrive with the board.
     await waitFor(() =>
       expect(screen.getByRole('tooltip').textContent).toMatch(
         /^SLA 48 год за типом «Разова», календарний час, залишилось 5 год, до 02\.10\.2026.*18:00$/
@@ -195,10 +229,10 @@ describe('пилюли срока и SLA — иконка, слово и цве�
       />
     )
     await waitFor(() => expect(api.getBoard).toHaveBeenCalledWith('SKL'))
-    const pill = pillOf('SLA скоро')
+    const pill = await findPill('SLA скоро')
     expect(pill).toHaveClass('text-warning-700', 'bg-warning-50')
     // 15:00 UTC is 18:00 in Kyiv (the board's tzid), whatever the browser zone.
-    await waitFor(() => expect(pill.textContent).toMatch(/до 02\.10\.2026.*18:00/))
+    expect(pill.textContent).toMatch(/до 02\.10\.2026.*18:00/)
     expect(pill.textContent).not.toContain('залишилось')
   })
 
@@ -211,6 +245,7 @@ describe('пилюли срока и SLA — иконка, слово и цве�
         task={makeTask({ type: ONCE_TYPE, sla_state: 'running', sla_remaining_seconds: 90 * 60 })}
       />
     )
+    await findPill('SLA')
     await userEvent.setup().tab()
     await waitFor(() =>
       expect(screen.getByRole('tooltip')).toHaveTextContent(
@@ -225,7 +260,7 @@ describe('пилюли срока и SLA — иконка, слово и цве�
     )
     const pill = pillOf('SLA на паузі')
     expect(pill).toHaveClass('text-information-700', 'bg-information-50')
-    expect(pill).toHaveTextContent('12 год')
+    await waitFor(() => expect(pill).toHaveTextContent('12 год'))
     expect(pill.querySelector('svg[aria-hidden="true"]')).not.toBeNull()
     await userEvent.setup().tab()
     expect(await screen.findByRole('tooltip')).toHaveTextContent(
@@ -239,7 +274,7 @@ describe('пилюли срока и SLA — иконка, слово и цве�
         task={makeTask({ sla_state: 'breached', sla_breached_at: '2026-09-28T07:30:00Z' })}
       />
     )
-    const pill = pillOf('SLA порушено')
+    const pill = await findPill('SLA порушено')
     expect(pill).toHaveClass('text-error-700', 'bg-error-50')
     await userEvent.setup().tab()
     // 07:30 UTC is 10:30 on the board's clock (Europe/Kyiv).
@@ -254,12 +289,20 @@ describe('пилюли срока и SLA — иконка, слово и цве�
     expect(api.getBoard).not.toHaveBeenCalled()
   })
 
-  it('состояние SLA, незнакомое сборке, — пилюли нет, а не догадка', async () => {
+  it('состояние SLA, незнакомое сборке, — пилюли нет, а не догадка, и доска не читается', () => {
     const { container } = renderWithClient(
       <SlaPill task={makeCard({ sla_state: 'frozen' as unknown as PlannerSlaState })} />
     )
-    await waitFor(() => expect(api.getBoard).toHaveBeenCalled())
     expect(container).toBeEmptyDOMElement()
+    expect(api.getBoard).not.toHaveBeenCalled()
+  })
+
+  it('карточка планера до 0.23.0 (нет sla_state) — пилюли нет и доска не читается', () => {
+    const { container } = renderWithClient(
+      <SlaPill task={without(makeCard(), 'sla_state', 'sla_deadline_at')} />
+    )
+    expect(container).toBeEmptyDOMElement()
+    expect(api.getBoard).not.toHaveBeenCalled()
   })
 
   it('длительности — сокращения без плюралов, не меньше одной единицы', () => {
@@ -279,7 +322,7 @@ describe('пилюли срока и SLA — иконка, слово и цве�
         task={makeTask({ type: ONCE_TYPE, sla_state: 'running', sla_remaining_seconds: 50 * 3600 })}
       />
     )
-    const pill = pillOf('SLA')
+    const pill = await findPill('SLA')
     await userEvent.setup().tab()
     await waitFor(() =>
       expect(screen.getByRole('tooltip')).toHaveTextContent(
@@ -288,6 +331,111 @@ describe('пилюли срока и SLA — иконка, слово и цве�
     )
     expect(pill).toHaveTextContent('50 год')
     expect(pill).not.toHaveTextContent('дн')
+  })
+})
+
+// Review bot round 1, Medium 2: a moment is said on the board's clock or not
+// at all. The board is read to know that clock; until it answers, and when it
+// cannot be read (a task of another department in «Мої задачі»), the pill
+// keeps its word and says no time — the test runner's own zone is UTC, so a
+// time in «the browser's zone» would read 15:00 here.
+describe('момент — только в поясе доски: до ответа доски и без неё времени нет (раунд бота 1)', () => {
+  const DUE_AT = '2026-10-02T15:00:00Z'
+  const DATE = /\d{2}\.\d{2}\.\d{4}/
+
+  it('срок-момент до ответа доски — слово без времени; с доской — время доски', async () => {
+    const release = heldBoard()
+    renderWithClient(
+      <DuePill task={makeCard({ due_date: null, due_at: DUE_AT, due_state: 'soon' })} />
+    )
+    await waitFor(() => expect(api.getBoard).toHaveBeenCalledWith('SKL'))
+    const pill = plainPillOf('Скоро термін')
+    expect(pill.textContent).toBe('Скоро термін')
+    release()
+    await waitFor(() => expect(pill.textContent).toMatch(/^Скоро термін·02\.10\.2026.*18:00$/))
+  })
+
+  it('доска не читается — у срока-момента только слово, и оно видно', async () => {
+    api.getBoard.mockRejectedValue(plannerError(403, 'forbidden'))
+    const { client, container } = renderWithClient(
+      <DuePill task={makeCard({ due_date: null, due_at: DUE_AT, due_state: 'ok' })} />
+    )
+    await waitFor(() =>
+      expect(client.getQueryState(plannerKeys.board('SKL'))?.status).toBe('error')
+    )
+    const word = screen.getByText('Термін')
+    expect(word).not.toHaveClass('sr-only')
+    expect(container.textContent).toBe('Термін')
+  })
+
+  it('SLA-срок карточки до ответа доски — только слово, без подсказки; с доской — время доски', async () => {
+    const release = heldBoard()
+    renderWithClient(
+      <SlaPill task={makeCard({ type: ONCE_TYPE, sla_state: 'soon', sla_deadline_at: DUE_AT })} />
+    )
+    await waitFor(() => expect(api.getBoard).toHaveBeenCalledWith('SKL'))
+    expect(plainPillOf('SLA скоро').textContent).toBe('SLA скоро')
+    expect(document.querySelector('[tabindex]')).toBeNull()
+    release()
+    expect((await findPill('SLA скоро')).textContent).toMatch(/^SLA скоро·до 02\.10\.2026.*18:00$/)
+  })
+
+  it.each(['', 'Mars/Olympus'])(
+    'пояс доски «%s» браузеру непригоден — времени нет ни у срока, ни у SLA',
+    async (tzid) => {
+      api.getBoard.mockResolvedValue({ ...boardWith(), tzid })
+      const { client, container } = renderWithClient(
+        <>
+          <DuePill task={makeCard({ due_date: null, due_at: DUE_AT, due_state: 'soon' })} />
+          <SlaPill
+            task={makeCard({ type: ONCE_TYPE, sla_state: 'soon', sla_deadline_at: DUE_AT })}
+          />
+        </>
+      )
+      await waitFor(() =>
+        expect(client.getQueryState(plannerKeys.board('SKL'))?.status).toBe('success')
+      )
+      await findPill('SLA скоро')
+      expect(plainPillOf('Скоро термін').textContent).toBe('Скоро термін')
+      expect(container.textContent).not.toMatch(DATE)
+    }
+  )
+
+  it('остаток ждёт норматив доски — «2 дн» не превращается в «50 год» на глазах', async () => {
+    const release = heldBoard()
+    renderWithClient(
+      <SlaPill
+        task={makeTask({ type: ONCE_TYPE, sla_state: 'running', sla_remaining_seconds: 50 * 3600 })}
+      />
+    )
+    await waitFor(() => expect(api.getBoard).toHaveBeenCalledWith('SKL'))
+    expect(plainPillOf('SLA').textContent).toBe('SLA')
+    release()
+    const pill = await findPill('SLA')
+    expect(pill).toHaveTextContent('50 год')
+    expect(pill).not.toHaveTextContent('дн')
+  })
+
+  it('доска не читается — ни SLA-срока, ни момента нарушения; остаток — в простой шкале', async () => {
+    api.getBoard.mockRejectedValue(plannerError(403, 'forbidden'))
+    const { client, container } = renderWithClient(
+      <>
+        <SlaPill task={makeCard({ sla_state: 'running', sla_deadline_at: DUE_AT })} />
+        <SlaPill
+          task={makeTask({ sla_state: 'breached', sla_breached_at: '2026-09-28T07:30:00Z' })}
+        />
+        <SlaPill task={makeTask({ sla_state: 'paused', sla_remaining_seconds: 50 * 3600 })} />
+      </>
+    )
+    await waitFor(() =>
+      expect(client.getQueryState(plannerKeys.board('SKL'))?.status).toBe('error')
+    )
+    expect(plainPillOf('SLA').textContent).toBe('SLA')
+    // Nothing to explain without the moment: no tooltip, no tab stop.
+    expect(plainPillOf('SLA порушено').textContent).toBe('SLA порушено')
+    expect(plainPillOf('SLA порушено')).not.toHaveAttribute('tabindex')
+    expect(await findPill('SLA на паузі')).toHaveTextContent('2 дн')
+    expect(container.textContent).not.toMatch(DATE)
   })
 })
 
@@ -498,6 +646,44 @@ describe('чип статуса, приоритет, аватар и проис�
     expect(screen.queryByRole('link')).toBeNull()
     expect(screen.getByText('з чату')).toBeInTheDocument()
   })
+
+  // Review bot round 1, Medium 1: the front end may ship before planner
+  // 0.24.0, whose cards are the first to carry `origin`.
+  it('карточка планера до 0.24.0 (нет origin) — без чипа; карточка доски и строка «Мої задачі» живы', () => {
+    const { container } = render(<OriginChip origin={undefined} />)
+    expect(container).toBeEmptyDOMElement()
+
+    const card = without(makeCard({ origin: { kind: 'import' } }), 'origin')
+    renderWithClient(
+      <>
+        <TaskCardView task={card} onOpen={vi.fn()} />
+        <ul>
+          <TaskRow task={card} onOpen={vi.fn()} />
+        </ul>
+      </>
+    )
+    expect(screen.getAllByText('Перевірити залишки')).toHaveLength(2)
+    expect(screen.queryByText('перенесено з Forgejo')).toBeNull()
+  })
+
+  it('в разделе одна обёртка подсказок: пилюля и иконка приоритета под PlannerTooltipProvider', async () => {
+    api.getBoard.mockResolvedValue(boardWith({ priorities: FOUR_LEVELS }))
+    renderWithClient(
+      <PlannerTooltipProvider>
+        <SlaPill task={makeTask({ sla_state: 'paused', sla_remaining_seconds: 3600 })} />
+        <PriorityIcon task={makeCard({ priority: { id: 'p-crit', name: 'Критичний' } })} />
+      </PlannerTooltipProvider>
+    )
+    const user = userEvent.setup()
+    await findPill('SLA на паузі')
+    await user.tab()
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('годинник SLA стоїть')
+    await user.tab()
+    expect(await screen.findByRole('img', { name: 'Пріоритет: Критичний' })).toHaveFocus()
+    await waitFor(() =>
+      expect(screen.getByRole('tooltip')).toHaveTextContent('Пріоритет: Критичний')
+    )
+  })
 })
 
 describe('выбор людей (5.1 AC3, AC5)', () => {
@@ -590,6 +776,26 @@ describe('выбор людей (5.1 AC3, AC5)', () => {
     expect(screen.getByLabelText('Виконавці')).toBeDisabled()
   })
 
+  it('на пределе поле и пустеет — полузаписанное имя не ждёт, пока место освободится', () => {
+    const { client, rerender } = renderWithClient(
+      <PeoplePicker value={people(9)} onChange={vi.fn()} />
+    )
+    const field = screen.getByLabelText('Виконавці')
+    fireEvent.change(field, { target: { value: 'Ол' } })
+    const withValue = (n: number) => (
+      <QueryClientProvider client={client}>
+        <PeoplePicker value={people(n)} onChange={vi.fn()} />
+      </QueryClientProvider>
+    )
+    // The tenth person arrives from the caller (not picked in this field).
+    rerender(withValue(10))
+    expect(field).toBeDisabled()
+    expect(field).toHaveValue('')
+    rerender(withValue(9))
+    expect(field).toBeEnabled()
+    expect(field).toHaveValue('')
+  })
+
   it('запрос длиннее 100 символов не уходит — поле это говорит; 100 — уходит', async () => {
     renderWithClient(<PeoplePicker value={[]} onChange={vi.fn()} />)
     const field = screen.getByLabelText('Виконавці')
@@ -648,6 +854,41 @@ describe('тост «Скасувати», ошибки по пути отказ
     )
     expect(api.patchTask).toHaveBeenCalledTimes(2)
     expect(toast.success).toHaveBeenCalledTimes(1)
+  })
+
+  it('отмена идёт той же мутацией — чип занят, пока идёт обратный PATCH', async () => {
+    let finish: (value: { task: ReturnType<typeof makeTask>; etag: string }) => void = () => {}
+    api.patchTask
+      .mockResolvedValueOnce({ task: makeTask({ version: 4 }), etag: '"4"' })
+      .mockReturnValueOnce(new Promise((resolve) => (finish = resolve)))
+    renderWithClient(<StatusChip task={makeCard()} />)
+    await changeTo('В роботі')
+    await waitFor(() => expect(toast.success).toHaveBeenCalledTimes(1))
+    const chip = screen.getByRole('button', { name: /^Змінити статус/ })
+    await waitFor(() => expect(chip).toBeEnabled())
+
+    act(() => toast.success.mock.calls[0][1].action.onClick())
+    await waitFor(() => expect(chip).toBeDisabled())
+    await act(async () => finish({ task: makeTask({ version: 5 }), etag: '"5"' }))
+    await waitFor(() => expect(chip).toBeEnabled())
+  })
+
+  it('отмена работает и когда чипа уже нет (карточка переехала в другую колонку)', async () => {
+    api.patchTask
+      .mockResolvedValueOnce({ task: makeTask({ version: 4 }), etag: '"4"' })
+      .mockResolvedValueOnce({ task: makeTask({ version: 5 }), etag: '"5"' })
+    const { client, unmount } = renderWithClient(<StatusChip task={makeCard()} />)
+    await changeTo('В роботі')
+    await waitFor(() => expect(toast.success).toHaveBeenCalledTimes(1))
+    unmount()
+
+    act(() => toast.success.mock.calls[0][1].action.onClick())
+    await waitFor(() =>
+      expect(client.getQueryData<{ version: number }>(plannerKeys.task('SKL-2'))?.version).toBe(5)
+    )
+    expect(api.patchTask).toHaveBeenLastCalledWith('0190a0a0-0000-7000-8000-000000000002', 4, {
+      status_id: 's-todo',
+    })
   })
 
   it('отмена опоздала (412) — тост о свежей версии, не тихая перезапись', async () => {
@@ -744,12 +985,13 @@ describe('баннеры, пустые состояния и скелетоны 
       <>
         <TaskListSkeleton />
         <BoardSkeleton />
+        <CalendarSkeleton />
         <PanelSkeleton />
       </>
     )
-    expect(container.querySelectorAll('[aria-busy="true"]')).toHaveLength(3)
+    expect(container.querySelectorAll('[aria-busy="true"]')).toHaveLength(4)
     expect(container.querySelector('.animate-spin')).toBeNull()
-    expect(screen.getAllByText('Завантаження…')).toHaveLength(2)
+    expect(screen.getAllByText('Завантаження…')).toHaveLength(3)
     expect(screen.getByText('Завантаження задачі…')).toHaveClass('sr-only')
   })
 })

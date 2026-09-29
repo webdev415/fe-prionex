@@ -122,9 +122,6 @@
     "loading": "Завантаження…"
   },
   "pill": {
-    "dueHint": "Термін: {{value}}",
-    "dueSoonHint": "Термін скоро: {{value}}",
-    "dueOverdueHint": "Термін минув: {{value}}",
     "sla": "SLA",
     "slaSoon": "SLA скоро",
     "slaPaused": "SLA на паузі",

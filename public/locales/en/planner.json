@@ -122,9 +122,6 @@
     "loading": "Loading…"
   },
   "pill": {
-    "dueHint": "Due: {{value}}",
-    "dueSoonHint": "Due soon: {{value}}",
-    "dueOverdueHint": "Was due: {{value}}",
     "sla": "SLA",
     "slaSoon": "SLA soon",
     "slaPaused": "SLA paused",

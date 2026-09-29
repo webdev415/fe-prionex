@@ -573,7 +573,13 @@ describe('общие компоненты на карточке, в строке
     const title = await screen.findByText('Перевірити залишки')
     const row = title.closest('li')!
     expect(within(row).getAllByRole('button')[0]).toHaveAccessibleName('Змінити статус: Нова')
-    expect(await within(row).findByText('SLA скоро')).toBeInTheDocument()
+    // The SLA pill turns into a tooltip trigger once its board (the SLA
+    // moment's zone) arrives: look it up afresh, not a node from before that.
+    await waitFor(() =>
+      expect(within(row).getByText('SLA скоро').closest('[tabindex="0"]')).toHaveTextContent(
+        /до 02\.10\.2026.*18:00/
+      )
+    )
     expect(within(row).getByText('перенесено з Forgejo')).toBeInTheDocument()
   })
 

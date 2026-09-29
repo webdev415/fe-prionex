@@ -12,7 +12,9 @@
  * The limit is the caller's (`max`): 10 assignees of a task, 200 participants of
  * an event (CF-5, E-63); the counter reads «3 / 10», «12 / 200». The search
  * waits for a pause in typing (300 ms) and is not sent for fewer than 2 or more
- * than 100 characters (contract `q`); an over-long text is said, not cut.
+ * than 100 characters (contract `q`); an over-long text is said, not cut. A
+ * field that reaches the limit is closed and emptied: no half-typed name
+ * waits in it for a place to free up.
  */
 import { Fragment, useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -56,6 +58,13 @@ export function PeoplePicker({
   const people = usePlannerPeople(debouncedQuery)
   const chosen = new Set(value.map((person) => person.user_id))
   const full = value.length >= max
+  // The limit may come from outside too (the caller's `value`): the text is
+  // dropped when the field closes, not left for the next search.
+  const [wasFull, setWasFull] = useState(full)
+  if (full !== wasFull) {
+    setWasFull(full)
+    if (full) setQuery('')
+  }
   const results = (people.data?.items ?? []).filter((person) => !chosen.has(person.user_id))
   const typed = query.trim()
   const tooLong = plannerTextLength(typed) > PLANNER_PEOPLE_QUERY_MAX

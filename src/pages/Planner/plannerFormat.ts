@@ -9,6 +9,22 @@ import type { PlannerTaskCard } from '@/api/planner/plannerApi'
 type Person = PlannerTaskCard['assignees'][number]
 export type PlannerT = ReturnType<typeof useTranslation>['t']
 
+/**
+ * The board's zone when this browser can format in it, otherwise nothing: an
+ * empty name, or a name the browser's ICU does not know («Europe/Kyiv» before
+ * ICU 72), would make `Intl` fall back to the browser's own zone — and a
+ * moment is said on the board's clock or not at all.
+ */
+export function usableTimeZone(tzid: string | null | undefined): string | undefined {
+  if (!tzid) return undefined
+  try {
+    new Intl.DateTimeFormat('en', { timeZone: tzid })
+    return tzid
+  } catch {
+    return undefined
+  }
+}
+
 /** A calendar date `YYYY-MM-DD` is a date, not an instant: format it in UTC. */
 export function formatDueDate(date: string, language: string): string {
   const parsed = new Date(`${date}T00:00:00Z`)

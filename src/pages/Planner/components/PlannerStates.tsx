@@ -74,6 +74,21 @@ export function ColumnCardsSkeleton({ cards = 2 }: { cards?: number }) {
   )
 }
 
+/** «Календар» before 5.13–5.14: the box of its empty state, an icon and a line. */
+export function CalendarSkeleton() {
+  const { t } = useTranslation('planner')
+  return (
+    <div
+      aria-busy="true"
+      className="border-border bg-card flex flex-col items-center gap-3 rounded-xl border p-10"
+    >
+      <span className="sr-only">{t('state.loading')}</span>
+      <div aria-hidden="true" className={`${BLOCK} h-10 w-10`} />
+      <div aria-hidden="true" className={`${BLOCK} h-4 w-64 max-w-full`} />
+    </div>
+  )
+}
+
 /** The task panel body: a title and four fields. */
 export function PanelSkeleton() {
   const { t } = useTranslation('planner')

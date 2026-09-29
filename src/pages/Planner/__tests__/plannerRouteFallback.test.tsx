@@ -43,8 +43,14 @@ vi.mock('@/api/planner/plannerApi', async (importOriginal) => {
   return { ...actual, ...api }
 })
 
+import type { ReactElement } from 'react'
 import { plannerRoute } from '@/routes/plannerRoutes'
 import plannerRoutesSource from '@/routes/plannerRoutes.tsx?raw'
+import {
+  BoardSkeleton,
+  CalendarSkeleton,
+  TaskListSkeleton,
+} from '@/pages/Planner/components/PlannerStates'
 import { makeBoard, makeCard, makeMeta } from './plannerFixtures'
 
 describe('загрузка раздела «Планування» — без спиннера на весь экран (5.1 AC4)', () => {
@@ -74,6 +80,18 @@ describe('загрузка раздела «Планування» — без с
     expect(await screen.findByText('Перевірити залишки', {}, { timeout: 30_000 })).toBeVisible()
     expect(screen.queryByText('Завантаження Планера…')).toBeNull()
   }, 60_000)
+
+  // Review bot round 1: every screen waits in its own shape — the calendar
+  // (an empty-state box until 5.13) is not a list.
+  it.each([
+    ['tasks', TaskListSkeleton],
+    ['tasks/boards/:code', BoardSkeleton],
+    ['calendar', CalendarSkeleton],
+  ] as const)('экран %s ждёт в своей форме', (path, skeleton) => {
+    const route = plannerRoute.children?.find((child) => child.path === path)
+    const boundary = route?.element as ReactElement<{ fallback: ReactElement }> | undefined
+    expect(boundary?.props.fallback.type).toBe(skeleton)
+  })
 
   it('ни один маршрут раздела не берёт полноэкранный AppLoadingFallback', () => {
     expect(plannerRoutesSource).not.toMatch(/AppLoadingFallback\s*\/>/)

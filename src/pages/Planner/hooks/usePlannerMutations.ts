@@ -112,11 +112,19 @@ function sendStatus(input: ChangeStatusInput) {
   })
 }
 
+/**
+ * The change and its undo go through ONE mutation: the undo is a pending
+ * command like any other (the chip is disabled while it runs) and fails the
+ * same ways — 412 with the fresh version, the other errors as toasts. It
+ * still runs when the chip that raised the toast has unmounted meanwhile (the
+ * card moved to another column): the mutation's own callbacks are kept by
+ * the mutation, not by the component.
+ */
 export function useChangeTaskStatus() {
   const { t } = useTranslation('planner')
   const queryClient = useQueryClient()
 
-  const onFailed = (error: unknown, input: ChangeStatusInput) => {
+  const onFailed = (error: unknown, input: ChangeStatusInput): void => {
     const { status, code, details } = readPlannerError(error)
     if (status === 412 || code === 'revision_mismatch') {
       // Somebody else changed the task: show the fresh version, never
@@ -132,7 +140,7 @@ export function useChangeTaskStatus() {
     toastPlannerError(t, error)
   }
 
-  const onApplied = (task: PlannerTask, input: ChangeStatusInput) => {
+  const onApplied = (task: PlannerTask, input: ChangeStatusInput): void => {
     queryClient.setQueryData(plannerKeys.task(input.key), task)
     refreshTaskViews(queryClient, input.boardCode, input.key)
     const { undo } = input
@@ -151,19 +159,17 @@ export function useChangeTaskStatus() {
       message: t('toast.statusChanged', { key: input.key, status: undo.toName }),
       undoLabel: t('toast.undo'),
       onUndo: () => {
-        sendStatus(back).then(
-          (result) => onApplied(result.task, back),
-          (error: unknown) => onFailed(error, back)
-        )
+        change.mutate(back)
       },
     })
   }
 
-  return useMutation({
+  const change = useMutation({
     mutationFn: sendStatus,
     onSuccess: ({ task }, input) => onApplied(task, input),
     onError: onFailed,
   })
+  return change
 }
 
 export interface CreateTaskInput {

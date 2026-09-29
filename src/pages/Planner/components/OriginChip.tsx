@@ -11,6 +11,10 @@
  * «з чату» (spec 5.1, assumption). The only link the contract gives is
  * `origin.message_url` — the source message in HUB, ready-made by the planner
  * (CF-16); anything but http(s) is not a link.
+ *
+ * A card carries `origin` only from planner 0.24.0 on. The CRM may reach a
+ * planner that is older (the front end ships first): no origin — no chip,
+ * never a TypeError that takes the whole board or «Мої задачі» down with it.
  */
 import { useTranslation } from 'react-i18next'
 import type { IconType } from 'react-icons'
@@ -44,10 +48,10 @@ function sourceLink(url: string | undefined): string | undefined {
   }
 }
 
-export function OriginChip({ origin }: { origin: PlannerTaskOrigin }) {
+export function OriginChip({ origin }: { origin?: PlannerTaskOrigin | null }) {
   const { t } = useTranslation('planner')
-  const known = ORIGINS.get(origin.kind)
-  if (!known) return null
+  const known = origin ? ORIGINS.get(origin.kind) : undefined
+  if (!origin || !known) return null
   const { key, icon: Icon } = known
   const href = sourceLink(origin.message_url)
   const className = cn(
