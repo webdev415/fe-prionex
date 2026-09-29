@@ -2273,6 +2273,7 @@
         "noScoresPermission": "You do not have permission to view any quality scoring data.",
         "emptyScopeResolution": "The selected scope returned no operators.",
         "departmentNoOperators": "No operators in this department for the current project.",
+        "scopeExcludesFilter": "The selected employee is outside this tab's scope, so there is nothing to show.",
         "exportFailed": "Export failed",
         "callNotFound": "Call not found"
       },
@@ -10711,6 +10712,7 @@
         "noScoresPermission": "You do not have permission to view any quality scoring data.",
         "emptyScopeResolution": "The selected scope returned no operators.",
         "departmentNoOperators": "No operators in this department for the current project.",
+        "scopeExcludesFilter": "The selected employee is outside this tab's scope, so there is nothing to show.",
         "exportFailed": "Export failed",
         "callNotFound": "Call not found"
       },
