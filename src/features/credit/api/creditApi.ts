@@ -20,6 +20,7 @@ import type {
   CreditApplicationsParams,
   CreditApplicationSummary,
   CreditDecision,
+  CreditDecisionCodesRegistry,
   CreditDocumentMeta,
   CreditJournalEntry,
   CreditJournalParams,
@@ -321,6 +322,16 @@ export const creditApi = {
    */
   underwritingQueue: (status?: CreditQueueStatus) =>
     get<CreditPage<CreditQueueItem>>('/underwriting/queue', { status }),
+
+  /**
+   * Справочник кодов решения — `listDecisionCodes` (v0.1.27, 19-1).
+   *
+   * Право то же, что у самого решения, `credit.decisions.decide`: остальным
+   * ручка отвечает 403, поэтому хук зовёт её только при этом праве. От проекта
+   * не зависит — коды одни на всю книгу правил. Поле `reason` реестра модуль в
+   * ответ не кладёт: едут `ru`, `en` и `note_ru`.
+   */
+  decisionCodes: () => get<CreditDecisionCodesRegistry>('/underwriting/decision-codes'),
 
   /**
    * Положение рубильников и история переключений.

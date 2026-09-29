@@ -14,6 +14,7 @@
  */
 import type {
   CreditApplicationStatus,
+  CreditDecisionCodeCategory,
   CreditDisbursement,
   CreditLoanStatus,
   CreditQueueStatus,
@@ -376,9 +377,9 @@ export const CREDIT_QUEUE_STATUSES = [
  *     а не только в `credit.declineCode`: ячейка одна, и второй проход по
  *     другому пространству ради трёх строк дал бы оператору машинное имя
  *     ровно в тот день, когда такое решение впервые появится.
- *  2. `input_snapshot.referral_reasons` — шесть машинных причин
- *     (`decision._REFERRAL_RATIONALE`, сверено с живым модулем 31.08.2026;
- *     на стенде встречаются только две первые).
+ *  2. `input_snapshot.referral_reasons` — десять машинных причин
+ *     (константы `decision.py` модуля, сверено по `main` модуля 29.09.2026;
+ *     на стенде 31.08 встречались только две первые).
  *  3. `manual` — заявку направил человек, обоснование лежит в карточке.
  *
  * Перечень нужен не коду страницы (она подставляет ключ динамически), а
@@ -396,11 +397,38 @@ export const CREDIT_REVIEW_REASONS = [
   // модуле. Без строки в словаре оператор увидел бы машинное имя ровно там,
   // где решает судьбу заявки.
   'client_not_identifiable',
+  // Три причины, которые модуль добавил после 31.08 (слабое совпадение
+  // владельца счёта, телефон должника старой CRM, возврат дебета PAD по
+  // непогашенному кредиту): без строк очередь показывала их машинным именем.
+  'low_identity_match',
+  'legacy_obligation_phone_only',
+  'first_pad_return_not_repaid',
   'manual',
   'RC-04',
   'RC-08',
   'RC-11',
 ] as const
+
+/**
+ * Разделы книги правил для кодов решения (`DecisionCodeEntry.category`).
+ *
+ * Порядок — порядок enum контракта, он же порядок книги: в этом порядке форма
+ * ручного решения раскладывает коды отказа по группам. Подпись группы
+ * подставляется динамически (`credit.decisionCodeCategory.<раздел>`), поэтому
+ * перечень нужен стражу словарей.
+ */
+export const CREDIT_DECISION_CODE_CATEGORIES = [
+  'loan_terms',
+  'identity',
+  'bank_account',
+  'conduct',
+  'financial_hardship',
+  'digital_verification',
+  'income',
+  'bank_statement',
+  'employment',
+  'service',
+] as const satisfies readonly CreditDecisionCodeCategory[]
 
 /**
  * События сайта, которые хронология карточки заявки умеет назвать словами.
@@ -486,6 +514,10 @@ export const CREDIT_DYNAMIC_NAMESPACES: Record<string, readonly string[]> = {
   // заявки причину отказа платёжного провайдера. Разведены по домену.
   referralReason: CREDIT_REVIEW_REASONS,
   railReviewReason: CREDIT_RAIL_REVIEW_REASONS,
+  // Разделы книги правил — подписи групп кодов отказа в форме ручного решения и
+  // раздела кода в карточке решения. Тексты самих кодов в словари не идут: они
+  // приходят из двери справочника модуля (копия разошлась бы с книгой).
+  decisionCodeCategory: CREDIT_DECISION_CODE_CATEGORIES,
   // Этапы пути клиента и их состояния. Ключи подставляются динамически
   // (`t(`credit.stage.${step.stage}`)`), поэтому статический страж их не
   // видит; а список — не наш, он снят с кабинета клиента, и потерять в нём

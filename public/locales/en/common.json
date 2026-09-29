@@ -12646,6 +12646,9 @@
       "manualDecision": "Manual decision",
       "snapshot": "Decision input snapshot (DAT-02)",
       "declineCodesHint": "Decline codes are required for a decline",
+      "decisionCodesLoading": "Loading the decline code directory…",
+      "decisionCodesUnavailable": "The decline code directory is unavailable, so a decline cannot be recorded right now. Approval and referral still work.",
+      "declineCodesSent": "Sent as: {{codes}}",
       "rationalePlaceholder": "What was checked and why this decision. Stays in history forever.",
       "state01": "There is no way back from a decline (STATE-01): a new decision means a new application.",
       "decisionSaved": "Decision recorded.",
@@ -12964,6 +12967,18 @@
       "RC-04": "An active loan already exists",
       "RC-08": "Cool-down period after a decline",
       "RC-11": "Insufficient affordability / income below minimum"
+    },
+    "decisionCodeCategory": {
+      "loan_terms": "Loan terms",
+      "identity": "Identity and address",
+      "bank_account": "Bank account",
+      "conduct": "Applicant conduct",
+      "financial_hardship": "Financial hardship",
+      "digital_verification": "Digital verification",
+      "income": "Income",
+      "bank_statement": "Bank statement",
+      "employment": "Employment",
+      "service": "Service codes"
     },
     "channel": {
       "site": "Website",
@@ -13319,7 +13334,10 @@
       "RC-04": "An active loan already exists",
       "RC-08": "Cool-down period after a decline",
       "RC-11": "Insufficient affordability / income below minimum",
-      "client_not_identifiable": "Client could not be identified"
+      "client_not_identifiable": "Client could not be identified",
+      "low_identity_match": "The bank showed a low match between the account holder and the applicant",
+      "legacy_obligation_phone_only": "The phone matches an old-CRM borrower whose loan is not repaid",
+      "first_pad_return_not_repaid": "The client has an unpaid loan whose PAD debit the bank returned"
     },
     "stage": {
       "registration": "Registration",

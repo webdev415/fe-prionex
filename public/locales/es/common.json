@@ -12691,6 +12691,9 @@
       "manualDecision": "Decisión manual",
       "snapshot": "Instantánea de los datos de decisión (DAT-02)",
       "declineCodesHint": "Los códigos de rechazo son obligatorios para un rechazo",
+      "decisionCodesLoading": "Cargando el catálogo de códigos de rechazo…",
+      "decisionCodesUnavailable": "El catálogo de códigos de rechazo no está disponible, así que ahora no se puede registrar un rechazo. La aprobación y la derivación a revisión siguen funcionando.",
+      "declineCodesSent": "Enviado como: {{codes}}",
       "rationalePlaceholder": "Qué se comprobó y por qué esta decisión. Queda en el historial para siempre.",
       "state01": "No hay vuelta atrás desde un rechazo (STATE-01): una nueva decisión implica una nueva solicitud.",
       "decisionSaved": "Decisión registrada.",
@@ -13009,6 +13012,18 @@
       "RC-04": "Ya existe un crédito activo",
       "RC-08": "Periodo de espera tras un rechazo",
       "RC-11": "Capacidad de pago insuficiente / ingresos por debajo del mínimo"
+    },
+    "decisionCodeCategory": {
+      "loan_terms": "Condiciones del préstamo",
+      "identity": "Identidad y domicilio",
+      "bank_account": "Cuenta bancaria",
+      "conduct": "Conducta del solicitante",
+      "financial_hardship": "Dificultades financieras",
+      "digital_verification": "Verificación digital",
+      "income": "Ingresos",
+      "bank_statement": "Extracto bancario",
+      "employment": "Empleo",
+      "service": "Códigos de servicio"
     },
     "channel": {
       "site": "Sitio web",
@@ -13364,7 +13379,10 @@
       "RC-04": "Ya existe un préstamo activo",
       "RC-08": "Periodo de espera tras un rechazo",
       "RC-11": "Capacidad de pago insuficiente / ingresos por debajo del mínimo",
-      "client_not_identifiable": "No se pudo identificar al cliente"
+      "client_not_identifiable": "No se pudo identificar al cliente",
+      "low_identity_match": "El banco mostró una baja coincidencia entre el titular de la cuenta y el solicitante",
+      "legacy_obligation_phone_only": "El teléfono coincide con un prestatario del CRM anterior cuyo préstamo no está pagado",
+      "first_pad_return_not_repaid": "El cliente tiene un préstamo impago cuyo débito PAD devolvió el banco"
     },
     "stage": {
       "registration": "Registro",

@@ -13,13 +13,23 @@
  */
 import type { ReactNode } from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, within } from '@testing-library/react'
+import { render, screen, fireEvent, within, cleanup } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { CreditApplicationDetailPage } from '../CreditApplicationDetailPage'
 import * as hooks from '@/features/credit/hooks/useCredit'
 import { CreditApiError } from '@/features/credit/api/creditApi'
-import type { CreditApplicationDetail, CreditDecision } from '@/features/credit/api/types'
+import { indexDecisionCodes } from '@/features/credit/api/decisionCodes'
+import {
+  DECISION_CODES_FIXTURE,
+  entryOf,
+} from '@/features/credit/api/__tests__/decisionCodesFixture'
+import type {
+  CreditApplicationDetail,
+  CreditDecision,
+  CreditDecisionCodeEntry,
+  CreditDecisionCodesRegistry,
+} from '@/features/credit/api/types'
 
 // Страница ищет клиента CRM по телефону заёмщика (см. CreditClientLink), поэтому
 // ей нужен клиент запросов. Запрос в тестах не уходит: телефона в фикстурах нет,
@@ -209,10 +219,24 @@ describe('CreditApplicationDetailPage → решение заменяет пре
     vi.clearAllMocks()
   })
 
+  /**
+   * Состояние справочника кодов решения. По умолчанию — загружен срезом живого
+   * реестра: хук автомокнут, и забытый мок дал бы `undefined` и уронил бы всю
+   * группу на деструктуризации, а не сцену про справочник.
+   */
+  type CodesState = {
+    data?: ReturnType<typeof indexDecisionCodes>
+    isError?: boolean
+    isFetching?: boolean
+    refetch?: () => unknown
+  }
+  const codesLoaded = (): CodesState => ({ data: indexDecisionCodes(DECISION_CODES_FIXTURE) })
+
   function renderDecision(
     application: CreditApplicationDetail,
     permissions: string[] = [],
-    mutation: { mutate?: (payload: unknown) => void; isError?: boolean; error?: unknown } = {}
+    mutation: { mutate?: (payload: unknown) => void; isError?: boolean; error?: unknown } = {},
+    codes: CodesState = codesLoaded()
   ) {
     vi.mocked(hooks.useCreditApplication).mockReturnValue({
       ...idle,
@@ -227,12 +251,42 @@ describe('CreditApplicationDetailPage → решение заменяет пре
       isPending: false,
       ...mutation,
     } as never)
+    vi.mocked(hooks.useCreditDecisionCodes).mockReturnValue({
+      data: undefined,
+      isError: false,
+      isFetching: false,
+      refetch: vi.fn(),
+      ...codes,
+    } as never)
     const view = render(<MemoryRouter>{withQuery(<CreditApplicationDetailPage />)}</MemoryRouter>)
     fireEvent.click(screen.getByRole('tab', { name: 'credit.tabs.decision' }))
     return view
   }
 
   const pointerRow = () => screen.getByText('credit.fields.supersedesDecision').parentElement
+
+  /**
+   * Форма ручного решения: сцена S-5 (`referred` + право решать) поверх неё
+   * синтетический заёмщик. «Текущее решение» и «Ручное решение» несут одни и те
+   * же ключи полей, поэтому поиск по форме — только внутри её панели.
+   */
+  function renderManual(
+    mutation: Parameters<typeof renderDecision>[2] = {},
+    decision: CreditDecision = DECISION,
+    codes: CodesState = codesLoaded()
+  ) {
+    renderDecision(
+      {
+        ...withDecision(decision, 'referred'),
+        client_email: 'applicant.fe1722b@example.org',
+        draft: { personal: { first_name: 'Тест', last_name: 'Синтетичний' } },
+      } as CreditApplicationDetail,
+      ['credit.decisions.decide'],
+      mutation,
+      codes
+    )
+    return within(screen.getByText('credit.card.manualDecision').closest('section') as HTMLElement)
+  }
 
   it('S-1: показывает id прежнего решения моноширинно и копирует его', () => {
     const writeText = vi.fn(() => Promise.resolve())
@@ -305,9 +359,7 @@ describe('CreditApplicationDetailPage → решение заменяет пре
    * предлагает вписать номер и не шлёт его; три отказа модуля по пропуску оператор
    * читает текстом своего кода, а не русским `detail`.
    *
-   * Сцена — та же, что S-5 (`referred` + право решать), поверх неё синтетический
-   * заёмщик. «Текущее решение» и «Ручное решение» несут одни и те же ключи полей,
-   * поэтому поиск по форме — только внутри её панели.
+   * Сцена — та же, что S-5 (`referred` + право решать): `renderManual` выше.
    */
   describe('ручное решение: автор — из пропуска, а не из формы', () => {
     const DETAIL = 'Синтетический отказ модуля: автор решения не совпадает с пропуском'
@@ -316,24 +368,6 @@ describe('CreditApplicationDetailPage → решение заменяет пре
       [403, 'operator_id_ambiguous', 'credit.decisionError.operatorIdAmbiguous'],
       [422, 'underwriter_not_the_caller', 'credit.decisionError.underwriterNotTheCaller'],
     ] as const
-
-    function renderManual(
-      mutation: Parameters<typeof renderDecision>[2] = {},
-      decision: CreditDecision = DECISION
-    ) {
-      renderDecision(
-        {
-          ...withDecision(decision, 'referred'),
-          client_email: 'applicant.fe1722b@example.org',
-          draft: { personal: { first_name: 'Тест', last_name: 'Синтетичний' } },
-        } as CreditApplicationDetail,
-        ['credit.decisions.decide'],
-        mutation
-      )
-      return within(
-        screen.getByText('credit.card.manualDecision').closest('section') as HTMLElement
-      )
-    }
 
     it('D-1: ввода автора в форме нет, а соседние поля формы на месте', () => {
       const panel = renderManual()
@@ -374,6 +408,10 @@ describe('CreditApplicationDetailPage → решение заменяет пре
       fireEvent.change(panel.getByPlaceholderText('credit.card.rationalePlaceholder'), {
         target: { value: 'Синтетичне обґрунтування ручного рішення' },
       })
+      // Отказ без кода не отправляется (19-1f): код выбирается из справочника.
+      if (outcome === 'declined') {
+        fireEvent.click(panel.getByRole('checkbox', { name: /AB-O-13/ }))
+      }
       fireEvent.click(panel.getByRole('button', { name: 'credit.actions.saveDecision' }))
 
       expect(mutate).toHaveBeenCalledTimes(1)
@@ -381,6 +419,12 @@ describe('CreditApplicationDetailPage → решение заменяет пре
       expect(Object.keys(payload).sort(), `the ${outcome} body carries unexpected keys`).toEqual([
         ...keys,
       ])
+      if (outcome === 'declined') {
+        expect(
+          payload.decline_codes,
+          'the declined body does not carry the registry code the operator chose'
+        ).toEqual(['AB-O-13'])
+      }
       expect(
         'underwriter_id' in payload,
         'the form sends the decision author in the body again'
@@ -457,6 +501,386 @@ describe('CreditApplicationDetailPage → решение заменяет пре
         alerts[0].textContent,
         'a refusal without an Error message left the plate without the generic refusal text'
       ).toBe('credit.decisionError.generic')
+    })
+  })
+
+  /**
+   * Отказ — только кодом книги правил, и форма берёт коды из справочника модуля.
+   *
+   * До 19-1f форма предлагала три служебных `RC-*` литералом и пропускала отказ
+   * без кода (модуль отвечал `422`). Справочник теперь приходит дверью модуля;
+   * к отказу предлагаются коды отказа, автогейта и служебный, но не условное
+   * одобрение `AB-C-*`. Мок `t` печатает ключ, язык мока — `uk`: первой
+   * строкой кода идёт RU книги, второй — EN.
+   */
+  describe('ручное решение: коды из справочника модуля', () => {
+    const RATIONALE = 'Синтетичне обґрунтування відмови'
+
+    function declineWith(panel: ReturnType<typeof within>) {
+      fireEvent.change(panel.getByRole('combobox'), { target: { value: 'declined' } })
+      fireEvent.change(panel.getByPlaceholderText('credit.card.rationalePlaceholder'), {
+        target: { value: RATIONALE },
+      })
+    }
+
+    const saveButton = (panel: ReturnType<typeof within>) =>
+      panel.getByRole('button', { name: 'credit.actions.saveDecision' })
+
+    const codeRow = (panel: ReturnType<typeof within>, id: string) =>
+      panel.getByRole('checkbox', { name: new RegExp(id) }).closest('label') as HTMLElement
+
+    it('F-1: коды разложены по разделам книги, у чекбокса — id и текст книги', () => {
+      // Вход перевёрнут: ответ модуля отсортирован по `id`, и порядок формы
+      // совпал бы с ним сам собой. Перевёрнутый ставит `AB-O-09` раньше `AB-O-08`.
+      const reversed: CreditDecisionCodesRegistry = {
+        version: 'book@reversed',
+        codes: [...DECISION_CODES_FIXTURE.codes].reverse(),
+      }
+      const index = indexDecisionCodes(reversed)
+      const panel = renderManual({}, DECISION, { data: index })
+      declineWith(panel)
+
+      for (const group of index.declineGroups) {
+        const legend = panel.getByText(`credit.decisionCodeCategory.${group.category}`)
+        expect(legend.tagName, `the ${group.category} section is not a fieldset legend`).toBe(
+          'LEGEND'
+        )
+        for (const entry of group.codes) {
+          expect(legend.closest('fieldset')).toContainElement(
+            panel.getByRole('checkbox', { name: new RegExp(entry.id) })
+          )
+        }
+      }
+      const idsIn = (category: string) =>
+        within(
+          panel
+            .getByText(`credit.decisionCodeCategory.${category}`)
+            .closest('fieldset') as HTMLElement
+        )
+          .getAllByRole('checkbox')
+          .map((box) => box.closest('label')?.textContent?.split(' ')[0])
+      expect(
+        idsIn('loan_terms'),
+        'inside a section the gate AB-G-06 came before the refusal AB-O-05'
+      ).toEqual(['AB-O-05', 'AB-G-06'])
+      expect(
+        idsIn('conduct'),
+        'inside a section two refusals are not ordered by id — AB-O-09 came before AB-O-08'
+      ).toEqual(['AB-O-08', 'AB-O-09'])
+      const escaped = entryOf('AB-O-13').ru.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      expect(
+        panel.getByRole('checkbox', { name: /AB-O-13/ }),
+        'the AB-O-13 checkbox is not named by its id and the book text'
+      ).toHaveAccessibleName(new RegExp(`^AB-O-13 ${escaped}`))
+      expect(panel.getAllByRole('checkbox')).toHaveLength(7)
+    })
+
+    it('F-2: служебных RC-* в форме нет — ни чекбоксом, ни кнопкой, ни текстом', () => {
+      const panel = renderManual()
+      declineWith(panel)
+
+      expect(
+        panel.queryAllByRole('checkbox', { name: /RC-\d{2}/ }),
+        'the form offers a service RC-* code as a checkbox again'
+      ).toHaveLength(0)
+      expect(
+        panel.queryAllByRole('button', { name: /RC-\d{2}/ }),
+        'the form offers the literal RC-* chips again'
+      ).toHaveLength(0)
+      expect(
+        panel.queryByText(/RC-[01]\d/),
+        'a service RC-* code is printed in the manual decision form'
+      ).toBeNull()
+      // Поиск умеет найти код: иначе пустота выше ничего не значила бы.
+      expect(panel.getAllByRole('checkbox').length).toBeGreaterThan(0)
+    })
+
+    it('F-3: условного одобрения AB-C-* нет, автогейт и служебный код есть', () => {
+      const panel = renderManual()
+      declineWith(panel)
+
+      expect(
+        panel.queryByRole('checkbox', { name: /AB-C-01/ }),
+        'the form offers the conditional approval AB-C-01 as a refusal'
+      ).toBeNull()
+      expect(
+        panel.queryByRole('checkbox', { name: /AB-G-06/ }),
+        'the form lost the calculator gate AB-G-06'
+      ).not.toBeNull()
+      expect(
+        panel.queryByRole('checkbox', { name: /AB-X-08/ }),
+        'the form lost the service code AB-X-08'
+      ).not.toBeNull()
+    })
+
+    it('F-4: украинский интерфейс — первой строкой RU книги, второй EN; основание — подсказкой', () => {
+      const panel = renderManual()
+      declineWith(panel)
+
+      const text = codeRow(panel, 'AB-O-13').textContent ?? ''
+      const { ru, en } = entryOf('AB-O-13')
+      expect(text.indexOf(ru), 'the book text of AB-O-13 is missing').toBeGreaterThan(-1)
+      expect(
+        text.indexOf(en),
+        'the uk interface shows the English text of AB-O-13 before the book text'
+      ).toBeGreaterThan(text.indexOf(ru))
+      expect(codeRow(panel, 'AB-O-05').getAttribute('title')).toBe(entryOf('AB-O-05').note_ru)
+      expect(codeRow(panel, 'AB-O-13').hasAttribute('title')).toBe(false)
+    })
+
+    it('F-5: отказ без кода не уходит; выбранный код уходит в теле', () => {
+      const mutate = vi.fn()
+      const panel = renderManual({ mutate })
+      declineWith(panel)
+
+      expect(saveButton(panel), 'a decline without a code can be saved').toBeDisabled()
+      fireEvent.click(saveButton(panel))
+      expect(mutate, 'a decline without a code reached the module').not.toHaveBeenCalled()
+
+      fireEvent.click(panel.getByRole('checkbox', { name: /AB-O-13/ }))
+      expect(saveButton(panel)).toBeEnabled()
+      fireEvent.click(saveButton(panel))
+
+      expect(mutate).toHaveBeenCalledTimes(1)
+      expect(mutate.mock.calls[0][0]).toEqual({
+        outcome: 'declined',
+        rationale: RATIONALE,
+        decline_codes: ['AB-O-13'],
+      })
+
+      // Снятый выбор — снова «без кода».
+      fireEvent.click(panel.getByRole('checkbox', { name: /AB-O-13/ }))
+      expect(saveButton(panel), 'unchecking the only code left the save enabled').toBeDisabled()
+    })
+
+    it('F-5: два кода уходят без повторов и по возрастанию, в каком порядке ни выбирай', () => {
+      const mutate = vi.fn()
+      const panel = renderManual({ mutate })
+      declineWith(panel)
+
+      fireEvent.click(panel.getByRole('checkbox', { name: /AB-O-20/ }))
+      fireEvent.click(panel.getByRole('checkbox', { name: /AB-O-13/ }))
+      fireEvent.click(saveButton(panel))
+
+      expect((mutate.mock.calls[0][0] as { decline_codes: string[] }).decline_codes).toEqual([
+        'AB-O-13',
+        'AB-O-20',
+      ])
+    })
+
+    it('F-6: справочник недоступен — одна плашка и «Повторити»; отказ закрыт, одобрение работает', () => {
+      const mutate = vi.fn()
+      const refetch = vi.fn()
+      const panel = renderManual({ mutate }, DECISION, { isError: true, refetch })
+      declineWith(panel)
+
+      const alerts = panel.getAllByRole('alert')
+      expect(alerts, 'the directory failure is drawn as more than one plate').toHaveLength(1)
+      expect(alerts[0].textContent).toBe('credit.card.decisionCodesUnavailable')
+      fireEvent.click(panel.getByRole('button', { name: 'credit.actions.retry' }))
+      expect(refetch, 'retry did not re-request the directory').toHaveBeenCalledTimes(1)
+      expect(panel.queryAllByRole('checkbox')).toHaveLength(0)
+      expect(saveButton(panel), 'a decline can be saved without the directory').toBeDisabled()
+
+      fireEvent.change(panel.getByRole('combobox'), { target: { value: 'approved' } })
+      expect(saveButton(panel)).toBeEnabled()
+      fireEvent.click(saveButton(panel))
+      expect(mutate, 'approval stopped working while the directory is down').toHaveBeenCalledTimes(
+        1
+      )
+      expect((mutate.mock.calls[0][0] as { outcome: string }).outcome).toBe('approved')
+    })
+
+    it('F-6: повтор уже в пути — «Повторити» закрыта, второй запрос не уходит', () => {
+      const refetch = vi.fn()
+      const panel = renderManual({}, DECISION, { isError: true, isFetching: true, refetch })
+      declineWith(panel)
+
+      expect(panel.getAllByRole('alert'), 'the directory failure plate is gone').toHaveLength(1)
+      // В загрузке кнопка несёт текст загрузки, а не «Повторити», — поэтому она
+      // ищется как единственная кнопка панели, кроме «Зберегти».
+      const retry = panel.getAllByRole('button').filter((button) => button !== saveButton(panel))
+      expect(retry, 'the directory failure lost its retry button').toHaveLength(1)
+      expect(
+        retry[0],
+        'the retry button stays clickable while the retry is in flight'
+      ).toBeDisabled()
+      fireEvent.click(retry[0])
+      expect(
+        refetch,
+        'a second directory request left while the first one is in flight'
+      ).not.toHaveBeenCalled()
+    })
+
+    it('F-7: без права решать справочник не запрашивается', () => {
+      renderDecision(withDecision(DECISION, 'referred'), [])
+      const calls = vi.mocked(hooks.useCreditDecisionCodes).mock.calls
+
+      expect(calls.length, 'the decision tab did not ask for the directory at all').toBeGreaterThan(
+        0
+      )
+      expect(
+        calls.every(([enabled]) => enabled === false),
+        'the directory is requested without credit.decisions.decide — the door answers 403'
+      ).toBe(true)
+
+      // Контроль: с правом тот же поиск видит `true`.
+      cleanup()
+      vi.mocked(hooks.useCreditDecisionCodes).mockClear()
+      renderManual()
+      expect(vi.mocked(hooks.useCreditDecisionCodes).mock.calls.at(-1)).toEqual([true])
+    })
+
+    it('F-8: справочник грузится — строка загрузки, отказ пока закрыт', () => {
+      // «Грузится» для страницы — это нет данных и нет ошибки: ветка формы
+      // `directory ? … : isError ? … : загрузка`, флаг `isLoading` она не
+      // читает. Поэтому в моке его нет: он ничего бы здесь не проверял.
+      const panel = renderManual({}, DECISION, { data: undefined, isError: false })
+      declineWith(panel)
+
+      expect(panel.getByText('credit.card.decisionCodesLoading')).toBeInTheDocument()
+      expect(panel.queryAllByRole('checkbox')).toHaveLength(0)
+      expect(saveButton(panel)).toBeDisabled()
+    })
+
+    it('F-9: код выпал из новой версии справочника — отказ им не открыть, в тело он не уходит', () => {
+      const mutate = vi.fn()
+      const panel = renderManual({ mutate })
+      declineWith(panel)
+      fireEvent.click(panel.getByRole('checkbox', { name: /AB-O-13/ }))
+      expect(saveButton(panel)).toBeEnabled()
+
+      // Перезапрос принёс новую версию реестра: `AB-O-13` в ней — условное
+      // одобрение. В индексе он есть, к отказу больше не предлагается.
+      const next: CreditDecisionCodesRegistry = {
+        version: 'book@fe-c1',
+        codes: DECISION_CODES_FIXTURE.codes.map(
+          (entry): CreditDecisionCodeEntry =>
+            entry.id === 'AB-O-13' ? { ...entry, kind: 'conditional' } : entry
+        ),
+      }
+      vi.mocked(hooks.useCreditDecisionCodes).mockReturnValue({
+        data: indexDecisionCodes(next),
+        isError: false,
+        isFetching: false,
+        refetch: vi.fn(),
+      } as never)
+      // Перерисовка забирает новый ответ хука: оператор дописал обоснование.
+      fireEvent.change(panel.getByPlaceholderText('credit.card.rationalePlaceholder'), {
+        target: { value: `${RATIONALE}.` },
+      })
+
+      expect(
+        panel.queryByRole('checkbox', { name: /AB-O-13/ }),
+        'the new directory version still offers AB-O-13 — the scene proves nothing'
+      ).toBeNull()
+      expect(
+        saveButton(panel),
+        'a code the directory no longer offers still opens the decline'
+      ).toBeDisabled()
+      fireEvent.click(saveButton(panel))
+      expect(
+        mutate,
+        'a decline with only a withdrawn code reached the module'
+      ).not.toHaveBeenCalled()
+
+      fireEvent.click(panel.getByRole('checkbox', { name: /AB-O-20/ }))
+      fireEvent.click(saveButton(panel))
+      expect(mutate).toHaveBeenCalledTimes(1)
+      expect(
+        (mutate.mock.calls[0][0] as { decline_codes: string[] }).decline_codes,
+        'a code the directory no longer offers left in the decision body'
+      ).toEqual(['AB-O-20'])
+    })
+
+    const DECLINED: CreditDecision = {
+      ...DECISION,
+      outcome: 'declined',
+      decision_mode: 'manual',
+      final_amount_minor: null,
+      supersedes_decision_id: null,
+    }
+
+    const codesRow = () =>
+      screen.getByText('credit.fields.declineCodes').parentElement?.textContent ?? ''
+
+    const renderCard = (decision: CreditDecision, codes?: CodesState) =>
+      renderDecision(
+        withDecision(decision, 'declined'),
+        ['credit.decisions.decide'],
+        {},
+        codes ?? codesLoaded()
+      )
+
+    it('C-1: смысл — кодом реестра, а присланный RC-* — приглушённо «как прислано»', () => {
+      renderCard({ ...DECLINED, decline_codes: ['RC-04'], decision_codes: ['AB-O-05'] })
+
+      const row = codesRow()
+      expect(row, 'the card shows the code as sent instead of its registry meaning').toContain(
+        'AB-O-05'
+      )
+      expect(row).toContain(entryOf('AB-O-05').ru)
+      expect(row).toContain('credit.decisionCodeCategory.loan_terms')
+      expect(row, 'the code the operator sent is hidden').toContain(
+        'credit.card.declineCodesSent codes=RC-04'
+      )
+      expect(row).not.toContain('credit.declineCode.RC-04')
+    })
+
+    it('C-2: присланное совпало со смыслом — строки «Надіслано» нет', () => {
+      renderCard({ ...DECLINED, decline_codes: ['AB-O-13'], decision_codes: ['AB-O-13'] })
+
+      const row = codesRow()
+      expect(row).toContain(entryOf('AB-O-13').ru)
+      expect(row).not.toContain('credit.card.declineCodesSent')
+    })
+
+    it.each(['automatic', 'override'] as const)(
+      'C-6: решение %s — строки «Надіслано» нет: коды прислал не оператор ручного решения',
+      (mode) => {
+        renderCard({
+          ...DECLINED,
+          decision_mode: mode,
+          decline_codes: ['RC-04'],
+          decision_codes: ['AB-O-05'],
+        })
+
+        const row = codesRow()
+        expect(row).toContain(entryOf('AB-O-05').ru)
+        expect(row, `the ${mode} decision is labelled as codes sent by the operator`).not.toContain(
+          'credit.card.declineCodesSent'
+        )
+      }
+    )
+
+    it('C-3: ключа decision_codes нет (модуль старше 0.1.27) — прежний вывод словарём', () => {
+      const lagging: Partial<CreditDecision> = { ...DECLINED, decline_codes: ['RC-11'] }
+      delete lagging.decision_codes
+      expect('decision_codes' in lagging).toBe(false)
+
+      renderCard(lagging as CreditDecision)
+
+      expect(codesRow(), 'a decision of an older module lost the old decline code text').toBe(
+        'credit.fields.declineCodesRC-11 — credit.declineCode.RC-11'
+      )
+    })
+
+    it('C-4: справочник недоступен — код реестра показан своим id, страница цела', () => {
+      renderCard(
+        { ...DECLINED, decline_codes: ['AB-O-13'], decision_codes: ['AB-O-13'] },
+        { isError: true }
+      )
+
+      const row = codesRow()
+      expect(row).toContain('AB-O-13')
+      expect(row).not.toContain(entryOf('AB-O-13').ru)
+      expect(screen.getByText('credit.fields.decidedAt')).toBeInTheDocument()
+    })
+
+    it('C-5: оба списка пусты — прочерк', () => {
+      renderCard({ ...DECLINED, decline_codes: [], decision_codes: [] })
+
+      expect(codesRow()).toBe('credit.fields.declineCodes—')
     })
   })
 })
