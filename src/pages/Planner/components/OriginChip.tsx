@@ -27,6 +27,7 @@ import {
 import { cn } from '@/lib/utils'
 import type { PlannerTaskOrigin } from '@/api/planner/plannerApi'
 import { toneClass } from '../plannerTones'
+import { useCardTabIndex } from './cardFocus'
 
 // A Map, not an object literal: `origin.kind` is free text from the server,
 // and `{}['constructor']` is a function, not «unknown kind».
@@ -50,6 +51,7 @@ function sourceLink(url: string | undefined): string | undefined {
 
 export function OriginChip({ origin }: { origin?: PlannerTaskOrigin | null }) {
   const { t } = useTranslation('planner')
+  const tabIndex = useCardTabIndex()
   const known = origin ? ORIGINS.get(origin.kind) : undefined
   if (!origin || !known) return null
   const { key, icon: Icon } = known
@@ -70,6 +72,7 @@ export function OriginChip({ origin }: { origin?: PlannerTaskOrigin | null }) {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
+      tabIndex={tabIndex}
       className={cn(className, 'focus-visible:ring-ring hover:underline focus-visible:ring-2')}
     >
       {face}

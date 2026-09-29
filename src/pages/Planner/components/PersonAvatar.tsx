@@ -12,6 +12,10 @@
  * text node and the tooltip is a `PiiTooltip`, both masked. The initials are
  * letters of the name and are masked too. The avatar has no action of its own —
  * a click goes to whatever holds it (the card, the row).
+ *
+ * Inside a kanban card (story 5.3) the avatar takes focus from ← → like the
+ * card's other parts, so its tooltip — the name and «неактивний» — opens for a
+ * keyboard user too, not only on hover.
  */
 import { useTranslation } from 'react-i18next'
 import { PiiTooltip } from '@/components/ui/PiiTooltip'
@@ -20,6 +24,7 @@ import { piiProps } from '@/lib/openreplay/pii'
 import { cn } from '@/lib/utils'
 import type { PlannerPerson, PlannerTaskPerson } from '@/api/planner/plannerApi'
 import { personName } from '../plannerFormat'
+import { useCardTabIndex } from './cardFocus'
 
 export type AvatarPerson = Pick<PlannerTaskPerson, 'user_id' | 'crm_user_id' | 'full_name'> & {
   inactive?: boolean
@@ -49,12 +54,14 @@ interface PersonAvatarProps {
 
 export function PersonAvatar({ person, decorative = false }: PersonAvatarProps) {
   const label = useAvatarLabel(person)
+  const cardTabIndex = useCardTabIndex()
   const initials = monogramInitials(null, null, person.full_name) || '?'
   const disc = (
     <span
       aria-hidden={decorative || undefined}
+      tabIndex={decorative ? undefined : cardTabIndex}
       className={cn(
-        'relative inline-flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full border text-[10px] leading-none font-semibold',
+        'focus-visible:ring-ring relative inline-flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full border text-[10px] leading-none font-semibold focus-visible:ring-2 focus-visible:outline-none',
         person.inactive
           ? 'border-border bg-muted text-muted-foreground'
           : person.never_logged_in

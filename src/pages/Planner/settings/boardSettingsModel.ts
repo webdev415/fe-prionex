@@ -48,8 +48,11 @@ export const SETTINGS_SECTIONS = [
 ] as const
 export type SettingsSection = (typeof SETTINGS_SECTIONS)[number]
 
-/** Address of a section of a board's settings (UX C-08 `…/boards/:code/settings/:section`). */
-export function boardSettingsPath(code: string, section: SettingsSection): string {
+/**
+ * Address of a section of a board's settings (UX C-08 `…/boards/:code/settings/:section`) — the one
+ * address builder of the settings: the board header's `⚙` (5.3) opens the first section.
+ */
+export function boardSettingsPath(code: string, section: SettingsSection = 'general'): string {
   return `${boardPath(code)}/settings/${section}`
 }
 
