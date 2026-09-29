@@ -359,6 +359,26 @@ export function restoreUsed(
   return next
 }
 
+/**
+ * An SLA norm left empty (the field emptied and not retyped — `NaN` in the
+ * draft). JSON sends it as `null`, which the server refuses with a 400 and no
+ * row to stand on; so it is not sent, and its row says «Вкажіть норму» (5.10
+ * bot round 2). What range is valid stays the server's answer.
+ */
+export function emptySlaNorms(config: ConfigInput): LocatedError[] {
+  return config.task_types
+    .filter((type) => type.sla && !Number.isFinite(type.sla.value))
+    .map((type) => ({
+      section: 'types' as const,
+      rowId: type.id,
+      optionId: null,
+      key: 'sla',
+      reason: 'sla_norm_required',
+      usedCount: undefined,
+      id: undefined,
+    }))
+}
+
 export function errorsOfRow(errors: LocatedError[], rowId: string): LocatedError[] {
   return errors.filter((error) => error.rowId === rowId && error.optionId === null)
 }

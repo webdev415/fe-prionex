@@ -3,7 +3,7 @@
  * the row's error lines, the order buttons, a compact select. Colours are
  * theme variables only (DESIGN.md) — no hex values and no dark variant.
  */
-import { useEffect, useRef } from 'react'
+import { createContext, useContext, useEffect, useRef } from 'react'
 import type { DragEvent, ReactNode, SelectHTMLAttributes } from 'react'
 import { MdArrowDownward, MdArrowUpward, MdDeleteOutline, MdDragIndicator } from 'react-icons/md'
 import { cn } from '@/lib/utils'
@@ -146,10 +146,43 @@ export function RemoveButton({
   )
 }
 
+/** The sections are locked while a save is in flight (`EditLock`). */
+const EditLockContext = createContext(false)
+
+/**
+ * The sections while a save is in flight (5.10 bot round 2). The save replaces
+ * the draft with the card it wrote, so an edit made meanwhile would be lost
+ * without a word: a disabled fieldset takes every control of the sections out
+ * of reach (typing, choosing, the buttons), and the drag grips read the same
+ * lock. The section menu stays outside — moving between sections keeps the
+ * draft.
+ */
+export function EditLock({
+  locked,
+  className,
+  children,
+}: {
+  locked: boolean
+  className?: string
+  children: ReactNode
+}) {
+  return (
+    <EditLockContext.Provider value={locked}>
+      <fieldset
+        disabled={locked}
+        aria-busy={locked || undefined}
+        className={cn('min-w-0', className)}
+      >
+        {children}
+      </fieldset>
+    </EditLockContext.Provider>
+  )
+}
+
 /**
  * The grip a row is dragged by (only the grip: text in the row's fields stays
  * selectable); the «Вище / Нижче» buttons next to it do the same from the
- * keyboard.
+ * keyboard. A fieldset does not stop a drag, so the grip reads `EditLock` itself.
  */
 export function DragHandle({
   label,
@@ -160,13 +193,24 @@ export function DragHandle({
   onDragStart: (event: DragEvent<HTMLSpanElement>) => void
   onDragEnd: () => void
 }) {
+  const locked = useContext(EditLockContext)
   return (
     <span
-      draggable
+      draggable={!locked}
+      aria-disabled={locked || undefined}
       data-drag-handle=""
-      onDragStart={onDragStart}
+      onDragStart={(event) => {
+        if (locked) {
+          event.preventDefault()
+          return
+        }
+        onDragStart(event)
+      }}
       onDragEnd={onDragEnd}
-      className="text-muted-foreground inline-flex h-7 w-5 cursor-grab items-center justify-center"
+      className={cn(
+        'text-muted-foreground inline-flex h-7 w-5 items-center justify-center',
+        locked ? 'cursor-not-allowed opacity-50' : 'cursor-grab'
+      )}
     >
       <MdDragIndicator aria-hidden="true" className="h-4 w-4" />
       <span className="sr-only">{label}</span>

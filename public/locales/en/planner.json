@@ -508,7 +508,8 @@
       "configTooLarge": "The configuration is too large",
       "moveTooLarge": "Too many tasks to move at once",
       "moveTarget": "Choose another status to move the tasks to",
-      "dueOutOfRange": "Some due dates cannot be expressed in the board time zone — choose another status to move the tasks to"
+      "dueOutOfRange": "Some due dates cannot be expressed in the board time zone — choose another status to move the tasks to",
+      "slaNormRequired": "Enter the norm"
     }
   },
   "boardHeader": {

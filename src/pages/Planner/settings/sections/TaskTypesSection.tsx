@@ -6,9 +6,11 @@
  * assignee, «за замовчуванням». A changed norm applies to new tasks only —
  * the hint says so. What is valid (1–8760 hours, 1–365 days, the initial
  * status not «Готово» and without a reason, the assignee a participant) is the
- * server's answer on save.
+ * server's answer on save; a norm left empty is not sent — «Вкажіть норму» on
+ * its row (`emptySlaNorms`).
  */
 import { Input } from '@/components/ui/Input'
+import { cn } from '@/lib/utils'
 import { piiProps } from '@/lib/openreplay/pii'
 import { personName } from '../../plannerFormat'
 import {
@@ -50,6 +52,7 @@ export function TaskTypesSection({ config, board, errors, onChange }: ConfigSect
       <ul className="space-y-2">
         {types.map((type) => {
           const rowErrors = errorsOfRow(errors, type.id)
+          const normError = rowErrors.some((error) => error.key === 'sla')
           const norm = type.sla ?? null
           const setNorm = (values: Partial<Norm>) =>
             patch(type.id, { sla: { ...(norm ?? DEFAULT_NORM), ...values } })
@@ -109,7 +112,12 @@ export function TaskTypesSection({ config, board, errors, onChange }: ConfigSect
                       type="number"
                       min={1}
                       aria-label={t('settings.types.slaValue')}
-                      className="border-input-border bg-input text-foreground h-8 w-20 rounded-lg border px-2 text-xs"
+                      aria-invalid={normError}
+                      aria-describedby={rowErrors.length > 0 ? `type-errors-${type.id}` : undefined}
+                      className={cn(
+                        'border-input-border bg-input text-foreground h-8 w-20 rounded-lg border px-2 text-xs',
+                        normError && 'border-error-500'
+                      )}
                       value={Number.isFinite(norm.value) ? norm.value : ''}
                       // An emptied field stays empty while the number is retyped (not «0»).
                       onChange={(event) =>

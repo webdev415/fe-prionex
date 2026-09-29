@@ -36,6 +36,7 @@ import {
   boardSettingsPath,
   countBySection,
   currentErrors,
+  emptySlaNorms,
   isSettingsSection,
   locateErrors,
   MOVE_TARGET_REFUSALS,
@@ -59,7 +60,7 @@ import { ColumnsPreview } from './ColumnsPreview'
 import { MoveTasksDialog } from './MoveTasksDialog'
 import { SaveBar } from './SaveBar'
 import { SettingsSkeleton } from './SettingsSkeleton'
-import { ErrorLines } from './settingsUi'
+import { EditLock, ErrorLines } from './settingsUi'
 import { useFocusAfterRemove } from './useFocusAfterRemove'
 import { AccessSection } from './sections/AccessSection'
 import { DefaultsSection } from './sections/DefaultsSection'
@@ -165,7 +166,10 @@ function BoardSettingsEditor({
   const [checkingStatus, setCheckingStatus] = useState<string | null>(null)
   const [checkingOption, setCheckingOption] = useState<string | null>(null)
   const [moving, setMoving] = useState<MoveRequest | null>(null)
-  const busy = preview.isPending || save.isPending
+  // From «Зберегти» to its outcome (both requests and the step between them):
+  // the sections are locked, the save replaces the draft with the card it wrote.
+  const [saving, setSaving] = useState(false)
+  const busy = preview.isPending || save.isPending || saving
   const { dirty } = draft
   const settingsRoot = `${boardPath(board.code)}/settings/`
 
@@ -220,6 +224,13 @@ function BoardSettingsEditor({
 
   const runSave = async (next: ConfigDraft): Promise<void> => {
     const version = base.version
+    // An emptied SLA norm would go as `null` and come back a 400 with no row.
+    const emptyNorms = emptySlaNorms(next.config)
+    if (emptyNorms.length > 0) {
+      setReport({ errors: emptyNorms, config: next.config })
+      toast.error(t('settings.toast.fixErrors'))
+      return
+    }
     const body = requestBody(next)
     setReport(null)
     let check
@@ -264,6 +275,16 @@ function BoardSettingsEditor({
       toast.success(t('settings.toast.saved'))
     } catch (error) {
       showErrors(failed(error), body.config)
+    }
+  }
+
+  /** «Зберегти» (or the save a chosen move continues), with the sections locked until it ends. */
+  const startSave = async (next: ConfigDraft): Promise<void> => {
+    setSaving(true)
+    try {
+      await runSave(next)
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -345,7 +366,7 @@ function BoardSettingsEditor({
     }
     draft.update(() => config)
     draft.setMove(status.id, targetId)
-    if (thenSave) void runSave({ config, moves: withMove(current.moves, status.id, targetId) })
+    if (thenSave) void startSave({ config, moves: withMove(current.moves, status.id, targetId) })
   }
 
   /**
@@ -464,7 +485,7 @@ function BoardSettingsEditor({
           </ul>
         </nav>
 
-        <div className="min-w-0 flex-1 space-y-4">
+        <EditLock locked={saving} className="flex-1 space-y-4">
           {section === 'general' && <GeneralSection board={board} />}
           {section === 'statuses' && (
             <StatusesSection
@@ -493,7 +514,7 @@ function BoardSettingsEditor({
           {archive && board.allowed_actions.includes(ARCHIVE_BOARD_ACTION) && (
             <ArchiveBoardSection command={archive} />
           )}
-        </div>
+        </EditLock>
       </div>
 
       {/* Always in the DOM: says that the bar of unsaved changes has appeared. */}
@@ -508,7 +529,7 @@ function BoardSettingsEditor({
             setReport(null)
             setInUse(new Map())
           }}
-          onSave={() => void runSave(current)}
+          onSave={() => void startSave(current)}
         />
       )}
 

@@ -47,6 +47,7 @@ const api = vi.hoisted(() => ({
   getMeta: vi.fn(),
   listBoards: vi.fn(),
   getBoard: vi.fn(),
+  getBoardKanban: vi.fn(),
   listBoardTasks: vi.fn(),
   previewBoardConfig: vi.fn(),
   putBoardConfig: vi.fn(),
@@ -65,9 +66,10 @@ vi.mock('@/pages/Planner/settings/archiveCommand', async (importOriginal) => {
 })
 
 import { plannerRoute } from '@/routes/plannerRoutes'
-import { makeBoard, makeMeta } from './plannerFixtures'
+import { makeBoard, makeKanban, makeMeta } from './plannerFixtures'
 import {
   currentErrors,
+  emptySlaNorms,
   locateError,
   locateErrors,
   pluralKey,
@@ -299,6 +301,7 @@ beforeEach(() => {
   api.getMeta.mockResolvedValue(makeMeta())
   api.listBoards.mockResolvedValue({ items: [] })
   api.getBoard.mockResolvedValue(settingsBoard())
+  api.getBoardKanban.mockResolvedValue(makeKanban([], settingsBoard()))
   api.listBoardTasks.mockResolvedValue({ items: [], has_more: false })
   api.previewBoardConfig.mockResolvedValue(preview())
   api.getBoardHistory.mockResolvedValue({ items: [], truncated: false })
@@ -702,6 +705,31 @@ describe('5.10 AC1 — разделы, предпросмотр колонок �
       calendar: 'calendar',
     })
   })
+
+  it('пустой норматив SLA не уходит на сервер: «Вкажіть норму» у строки, после ввода — сохраняется', async () => {
+    const user = userEvent.setup()
+    api.putBoardConfig.mockResolvedValue(settingsBoard({ version: 6 }))
+    renderAt(`${SETTINGS}/types`)
+    const type = await findRow('data-type-row', 't-once')
+    const norm = within(type).getByRole('spinbutton', { name: 'Норматив SLA' })
+    await user.clear(norm)
+    await user.click(screen.getByRole('button', { name: 'Зберегти' }))
+
+    expect(await within(type).findByText('Вкажіть норму')).toBeInTheDocument()
+    expect(norm).toHaveAttribute('aria-invalid', 'true')
+    expect(norm).toHaveAttribute('aria-describedby', 'type-errors-t-once')
+    expect(toast.error).toHaveBeenCalledWith('Виправте позначені поля')
+    expect(screen.getByText('помилок: 1')).toBeInTheDocument()
+    // Neither the check nor the write: `NaN` would go as `null` and come back a 400.
+    expect(api.previewBoardConfig).not.toHaveBeenCalled()
+    expect(api.putBoardConfig).not.toHaveBeenCalled()
+
+    await user.type(norm, '24')
+    expect(within(type).queryByText('Вкажіть норму')).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Зберегти' }))
+    await waitFor(() => expect(api.putBoardConfig).toHaveBeenCalledTimes(1))
+    expect(api.putBoardConfig.mock.calls[0][2].config.task_types[0].sla.value).toBe(24)
+  })
 })
 
 // ─── AC2: save with dry_run, leave guard, move tasks ───────────────────────
@@ -749,6 +777,71 @@ describe('5.10 AC2 — сохранение через dry_run и If-Match', () 
     )
     expect(toast.success).toHaveBeenCalledWith('Налаштування збережено')
     await waitFor(() => expect(screen.queryByText('Є незбережені зміни')).not.toBeInTheDocument())
+  })
+
+  it('пока идёт сохранение, разделы закрыты для правки; после — черновик = карточка, «Є незбережені зміни» нет', async () => {
+    const user = userEvent.setup()
+    let answerCheck: (value: PlannerBoardConfigPreview) => void = () => {}
+    api.previewBoardConfig.mockImplementationOnce(
+      () => new Promise<PlannerBoardConfigPreview>((resolve) => (answerCheck = resolve))
+    )
+    let answerSave: (value: PlannerBoard) => void = () => {}
+    api.putBoardConfig.mockImplementationOnce(
+      () => new Promise<PlannerBoard>((resolve) => (answerSave = resolve))
+    )
+    renderAt(`${SETTINGS}/statuses`)
+    const work = await findRow('data-status-row', 's-work')
+    const name = within(work).getByRole('textbox', { name: 'Назва статусу' })
+    await user.clear(name)
+    await user.type(name, 'У роботі')
+    const order = previewNames()
+    await user.click(screen.getByRole('button', { name: 'Зберегти' }))
+
+    const expectLocked = async () => {
+      expect(name).toBeDisabled()
+      expect(
+        within(work).getByRole('button', { name: 'Перемістити «У роботі» вище' })
+      ).toBeDisabled()
+      expect(screen.getByRole('button', { name: '+ Статус' })).toBeDisabled()
+      expect(screen.getByRole('button', { name: 'Скасувати' })).toBeDisabled()
+      // Typing does not reach the draft …
+      await user.type(name, 'X')
+      expect(name).toHaveValue('У роботі')
+      // … nor does a drag by the grip (a fieldset does not stop a drag).
+      const grip = row('data-status-row', 's-rej').querySelector(
+        '[data-drag-handle]'
+      ) as HTMLElement
+      expect(grip).toHaveAttribute('draggable', 'false')
+      fireEvent.dragStart(grip, { dataTransfer: { setData: vi.fn(), effectAllowed: '' } })
+      fireEvent.dragOver(row('data-status-row', 's-todo'))
+      fireEvent.drop(row('data-status-row', 's-todo'))
+      expect(previewNames()).toEqual(order)
+    }
+
+    // The check is in flight.
+    await waitFor(() => expect(api.previewBoardConfig).toHaveBeenCalledTimes(1))
+    await expectLocked()
+    // The check passed, the write is in flight.
+    await act(async () => answerCheck(preview()))
+    await waitFor(() => expect(api.putBoardConfig).toHaveBeenCalledTimes(1))
+    await expectLocked()
+    expect(api.putBoardConfig.mock.calls[0][2].config.statuses[1]).toMatchObject({
+      id: 's-work',
+      name: 'У роботі',
+    })
+
+    const saved = settingsBoard({ version: 6 })
+    saved.config.statuses = saved.config.statuses.map((item) =>
+      item.id === 's-work' ? { ...item, name: 'У роботі' } : item
+    )
+    await act(async () => answerSave(saved))
+    await waitFor(() => expect(name).toBeEnabled())
+    expect(name).toHaveValue('У роботі')
+    expect(screen.queryByText('Є незбережені зміни')).toBeNull()
+    expect(toast.success).toHaveBeenCalledWith('Налаштування збережено')
+    // Unlocked: an edit after the save is a new unsaved change.
+    await user.type(name, '!')
+    expect(await screen.findByText('Є незбережені зміни')).toBeInTheDocument()
   })
 
   it('правка строки снимает её ошибку и число в меню; ошибка другой строки остаётся', async () => {
@@ -1208,6 +1301,32 @@ describe('5.10 — ПІБ под маской записи сессии (OpenRep
 // ─── AC4: rights and archive ───────────────────────────────────────────────
 
 describe('5.10 AC4 — права и архив', () => {
+  it('точка входа: админу (configure) ⚙ в шапке доски открывает настройки на «Загальне»', async () => {
+    const user = userEvent.setup()
+    const board = '/dashboard/planning/tasks/boards/SKL'
+    const router = renderAt(board)
+    const gear = await screen.findByRole('link', { name: 'Налаштування дошки' })
+    expect(gear).toHaveAttribute('href', `${SETTINGS}/general`)
+    await user.click(gear)
+    expect(router.state.location.pathname).toBe(`${SETTINGS}/general`)
+    expect(await screen.findByText('Часовий пояс')).toBeInTheDocument()
+    expect(
+      within(screen.getByRole('navigation', { name: 'Розділи налаштувань' })).getByRole('link', {
+        name: 'Загальне',
+      })
+    ).toHaveAttribute('aria-current', 'page')
+  })
+
+  it('не админу (без configure) ⚙ в шапке доски нет', async () => {
+    const plain = settingsBoard({ allowed_actions: ['create_task'] })
+    api.getBoard.mockResolvedValue(plain)
+    api.getBoardKanban.mockResolvedValue(makeKanban([], plain))
+    renderAt('/dashboard/planning/tasks/boards/SKL')
+    expect(await screen.findByRole('heading', { name: /Склад|SKL/ })).toBeInTheDocument()
+    expect(await screen.findByRole('region', { name: 'Нова' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Налаштування дошки' })).toBeNull()
+  })
+
   it('без configure прямой адрес настроек даёт «Немає прав»', async () => {
     api.getBoard.mockResolvedValue(settingsBoard({ allowed_actions: ['create_task'] }))
     renderAt(`${SETTINGS}/statuses`)
@@ -1387,6 +1506,25 @@ describe('5.10 — модель черновика', () => {
     expect(back.labels.map((l) => l.id)).toEqual(['l-urgent'])
     expect(back.priorities.map((p) => p.id)).toEqual(['p-low', 'p-mid', 'p-high'])
     expect(back.fields[0].options?.map((o) => o.id)).toEqual(['o-sms', 'o-call'])
+  })
+
+  it('пустой норматив SLA (NaN) — ошибка строки типа до проверки; «Без SLA» и число — нет', () => {
+    const config = toConfigInput(settingsBoard().config)
+    expect(emptySlaNorms(config)).toEqual([])
+    const noSla = { ...config, task_types: [{ ...config.task_types[0], sla: null }] }
+    expect(emptySlaNorms(noSla)).toEqual([])
+    const emptied = {
+      ...config,
+      task_types: [
+        {
+          ...config.task_types[0],
+          sla: { value: Number.NaN, unit: 'hours' as const, calendar: 'calendar' as const },
+        },
+      ],
+    }
+    expect(emptySlaNorms(emptied)).toEqual([
+      expect.objectContaining({ section: 'types', rowId: 't-once', key: 'sla' }),
+    ])
   })
 
   it('три формы числа по правилам языка', () => {

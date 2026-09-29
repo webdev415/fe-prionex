@@ -34,6 +34,8 @@ const REASONS: Record<string, string> = {
   invalid_target: 'settings.errors.moveTarget',
   target_requires_reason: 'settings.errors.moveTarget',
   due_out_of_range: 'settings.errors.dueOutOfRange',
+  // Not the server's: an emptied SLA norm is stopped before the check (`emptySlaNorms`).
+  sla_norm_required: 'settings.errors.slaNormRequired',
 }
 
 export function useSettingsText() {
