@@ -55,12 +55,15 @@ import {
 import { CreditIdentifierRows } from './components/CreditIdentifiers'
 import { CreditIbvTab } from './components/CreditIbvTab'
 import { CreditDecisionBasis } from './components/CreditDecisionBasis'
+import { CreditScorecardBreakdown } from './components/CreditScorecardBreakdown'
+import { snapshotForDisplay } from '@/features/credit/api/decisionSnapshot'
+import { readScorecard } from '@/features/credit/api/scorecard'
 import {
   formatCreditMoney,
   formatCreditPercent,
   formatCreditRate,
 } from '@/features/credit/api/money'
-import { Pii } from '@/lib/openreplay/pii'
+import { Pii, piiProps } from '@/lib/openreplay/pii'
 
 const DECIDABLE_STATUSES = ['scoring', 'referred']
 /** Заявка отработана — срок годности показывать бессмысленно. */
@@ -706,10 +709,17 @@ function ApplicationDecision({
   const [rationale, setRationale] = useState('')
   const [codes, setCodes] = useState<string[]>([])
 
-  const snapshot = useMemo(
-    () => JSON.stringify(decision?.input_snapshot ?? {}, null, 2),
-    [decision]
-  )
+  // Сырой снимок — доказательство DAT-02, но без реквизитов счёта выплаты и
+  // сумм пособий: счёт видно на вкладке IBV, класс дохода — в разборе скоринга,
+  // если разбор на вкладке есть (ключ `scorecard`); иначе строка к нему не отсылает.
+  const snapshot = useMemo(() => {
+    const shown = snapshotForDisplay(decision?.input_snapshot)
+    return {
+      ...shown,
+      text: JSON.stringify(shown.snapshot, null, 2),
+      withBreakdown: readScorecard(decision?.input_snapshot) !== null,
+    }
+  }, [decision])
 
   // В тело и в замок кнопки идут только коды, которые справочник предлагает
   // СЕЙЧАС: отмеченный код, выпавший из отказов новой версии реестра, из формы
@@ -797,13 +807,39 @@ function ApplicationDecision({
       )}
 
       {decision && (
+        <CreditScorecardBreakdown
+          snapshot={decision.input_snapshot}
+          currency={decision.currency ?? application.currency}
+          directory={directory}
+          language={language}
+        />
+      )}
+
+      {decision && (
         <details className="border-border bg-card mb-4 rounded-xl border p-4 shadow-sm">
           <summary className="text-muted-foreground cursor-pointer text-xs">
             {t('credit.card.snapshot')}
           </summary>
-          <pre className="bg-secondary-900 mt-2 max-h-72 overflow-auto rounded-md p-3 font-mono text-[11px] text-white">
-            {snapshot}
+          {/* В снимке остаются имя работодателя и свободные примечания — запись
+              сессии его не читает. */}
+          <pre
+            {...piiProps}
+            className="bg-secondary-900 mt-2 max-h-72 overflow-auto rounded-md p-3 font-mono text-[11px] text-white"
+          >
+            {snapshot.text}
           </pre>
+          {snapshot.payoutHidden && (
+            <p className="text-muted-foreground mt-2 text-xs">
+              {t('credit.card.snapshotPayoutHidden')}
+            </p>
+          )}
+          {snapshot.amountsHidden && (
+            <p className="text-muted-foreground mt-2 text-xs">
+              {snapshot.withBreakdown
+                ? t('credit.card.snapshotAmountsHiddenSeeBreakdown')
+                : t('credit.card.snapshotAmountsHidden')}
+            </p>
+          )}
         </details>
       )}
 

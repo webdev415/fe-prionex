@@ -377,9 +377,11 @@ export const CREDIT_QUEUE_STATUSES = [
  *     а не только в `credit.declineCode`: ячейка одна, и второй проход по
  *     другому пространству ради трёх строк дал бы оператору машинное имя
  *     ровно в тот день, когда такое решение впервые появится.
- *  2. `input_snapshot.referral_reasons` — десять машинных причин
- *     (константы `decision.py` модуля, сверено по `main` модуля 29.09.2026;
- *     на стенде 31.08 встречались только две первые).
+ *  2. `input_snapshot.referral_reasons` — четырнадцать машинных причин:
+ *     тринадцать ключей `_REFERRAL_RATIONALE` в `decision.py` модуля (сверено
+ *     по `main` модуля `47d2e51c` 29.09.2026; на стенде 31.08 встречались
+ *     только две первые) и `class_b_installments_unattainable` — её вводит
+ *     19-4, на 29.09 только в story, не в коде.
  *  3. `manual` — заявку направил человек, обоснование лежит в карточке.
  *
  * Перечень нужен не коду страницы (она подставляет ключ динамически), а
@@ -403,6 +405,14 @@ export const CREDIT_REVIEW_REASONS = [
   'low_identity_match',
   'legacy_obligation_phone_only',
   'first_pad_return_not_repaid',
+  // Причины разбора скоринга книги (19-3): их же пишет `scorecard.gate.review`,
+  // поэтому словарь один на разбор скоринга и очередь. Четвёртую вводит 19-4 —
+  // строка словаря безвредна до её выката, а без неё очередь показала бы
+  // машинное имя в первый же день.
+  'employment_status_unknown',
+  'income_class_b_not_confirmed',
+  'scorecard_input_missing',
+  'class_b_installments_unattainable',
   'manual',
   'RC-04',
   'RC-08',
@@ -429,6 +439,64 @@ export const CREDIT_DECISION_CODE_CATEGORIES = [
   'employment',
   'service',
 ] as const satisfies readonly CreditDecisionCodeCategory[]
+
+/**
+ * Скоринг книги правил проверки клиента в снимке решения (`input_snapshot.scorecard`).
+ *
+ * Перечни — зеркала ядра модуля, а не контракта: в контракте 0.1.28 ключ
+ * `scorecard` не объявлен. Сверено по `main` модуля `47d2e51c`:
+ * `underwriting/scorecard.py` (`POINT_PARAMETERS`, поля `ScorecardInputs`) и
+ * `underwriting/income_class.py` (`IncomeClassSource`, `EMPLOYMENT_STATUS_CLASS`).
+ *
+ * Восемь параметров — в порядке формул C13…C20 листа «Калькулятор скоринга»:
+ * в этом порядке разбор рисует таблицу, и андеррайтер идёт по листу сверху вниз.
+ */
+export const CREDIT_SCORECARD_PARAMETERS = [
+  'nsf_90d',
+  'free_cash_flow_monthly',
+  'micro_lenders',
+  'negative_balance_days_90d',
+  'overdraft',
+  'active_days_trend',
+  'history_days',
+  'income_trend',
+] as const
+
+/**
+ * Признаки класса и гейта: три сигнала гейта из `scorecard.inputs` и два
+ * признака класса из `income_class_basis.evidence` (у них общий словарь).
+ */
+export const CREDIT_SCORECARD_SIGNALS = [
+  'employer_income_30d',
+  'employment_loss',
+  'government_income_30d',
+  'b_income',
+  'c_income',
+] as const
+
+/** Классы дохода книги. */
+export const CREDIT_INCOME_CLASSES = ['A', 'B', 'C'] as const
+
+/** Откуда взят класс дохода (`IncomeClassSource` ядра). */
+export const CREDIT_INCOME_CLASS_SOURCES = ['questionnaire', 'flinks', 'both', 'default'] as const
+
+/**
+ * Статусы занятости анкеты, которые ядро знает (`EMPLOYMENT_STATUS_CLASS`, девять
+ * значений формы витрины). Статус вне списка модуль пишет как есть с
+ * `employment_status_known = false`: такой разбор показывает его сырым и с
+ * припиской, а не пустой строкой.
+ */
+export const CREDIT_EMPLOYMENT_STATUSES = [
+  'employment_full_time',
+  'employment_part_time',
+  'pension',
+  'disability',
+  'self_employed',
+  'social_assistance',
+  'student',
+  'none',
+  'other',
+] as const
 
 /**
  * События сайта, которые хронология карточки заявки умеет назвать словами.
@@ -518,6 +586,14 @@ export const CREDIT_DYNAMIC_NAMESPACES: Record<string, readonly string[]> = {
   // раздела кода в карточке решения. Тексты самих кодов в словари не идут: они
   // приходят из двери справочника модуля (копия разошлась бы с книгой).
   decisionCodeCategory: CREDIT_DECISION_CODE_CATEGORIES,
+  // Разбор скоринга книги на вкладке решения: имена параметров, признаки,
+  // класс дохода и его источник, статус анкеты. Значения приходят из снимка
+  // модуля, и параметр без строки доехал бы до андеррайтера машинным именем.
+  scorecardParameter: CREDIT_SCORECARD_PARAMETERS,
+  scorecardSignal: CREDIT_SCORECARD_SIGNALS,
+  incomeClass: CREDIT_INCOME_CLASSES,
+  incomeClassSource: CREDIT_INCOME_CLASS_SOURCES,
+  employment: CREDIT_EMPLOYMENT_STATUSES,
   // Этапы пути клиента и их состояния. Ключи подставляются динамически
   // (`t(`credit.stage.${step.stage}`)`), поэтому статический страж их не
   // видит; а список — не наш, он снят с кабинета клиента, и потерять в нём

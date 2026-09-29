@@ -25,6 +25,8 @@ import {
   DECISION_CODES_FIXTURE,
   entryOf,
 } from '@/features/credit/api/__tests__/decisionCodesFixture'
+import { SCENE_A } from '@/features/credit/api/__tests__/scorecardFixture'
+import { expectObscured } from '@/test/piiHelpers'
 import type {
   CreditApplicationDetail,
   CreditDecision,
@@ -48,7 +50,8 @@ const i18nState = vi.hoisted(() => ({ language: 'uk' }))
 // Мок печатает ключ вместе с подстановками — иначе не видно, ЧТО ушло в строку.
 // `defaultValue` он не печатает, а отвечает им, как i18next: только когда ключа
 // нет ни в словаре языка интерфейса, ни в запасном `en`. «Строки в словаре
-// нет» — так свойство настоящих словарей, а не договорённость сцены.
+// нет» — так свойство настоящих словарей, а не договорённость сцены. Строка
+// вторым аргументом — тот же `defaultValue`, как у i18next (`t(key, 'запасное')`).
 vi.mock('react-i18next', async () => {
   const dictionaries: Record<string, unknown> = {
     uk: (await import('@/../public/locales/uk/common.json')).default,
@@ -69,7 +72,8 @@ vi.mock('react-i18next', async () => {
       .join(' ')}`
   return {
     useTranslation: () => ({
-      t: (key: string, vars?: Record<string, unknown>) => {
+      t: (key: string, options?: Record<string, unknown> | string) => {
+        const vars = typeof options === 'string' ? { defaultValue: options } : options
         if (!vars || typeof vars !== 'object') return key
         if (!('defaultValue' in vars)) return print(key, vars)
         const { defaultValue, ...rest } = vars
@@ -1193,5 +1197,141 @@ describe('CreditApplicationDetailPage → решение заменяет пре
         expect(row).toBe(`credit.fields.declineCodes${expected}`)
       }
     )
+  })
+
+  /**
+   * Разбор скоринга на вкладке решения и сырой снимок под ним (19-7).
+   *
+   * Реквизиты выплаты и суммы пособий — синтетические (`Test Holder`,
+   * `000000000`, круглые суммы): живых значений в тестах нет.
+   */
+  describe('разбор скоринга на вкладке решения', () => {
+    const withSnapshot = (input_snapshot: CreditDecision['input_snapshot']) =>
+      withDecision({ ...DECISION, input_snapshot })
+    const rawSnapshot = () => {
+      const pre = document.querySelector('details pre')
+      if (!pre) throw new Error('сырого снимка на вкладке нет')
+      return pre
+    }
+    const PAYOUT = { holder_name: 'Test Holder', account_number: '000000000' }
+
+    it('R-1: снимок со scorecard — «Розбір скорингу» сразу после «Підстава рішення»', () => {
+      renderDecision(withSnapshot(SCENE_A))
+      const basis = screen.getByText('credit.card.decisionBasis')
+      const breakdown = screen.getByText('credit.scorecard.title')
+      expect(
+        basis.compareDocumentPosition(breakdown) & Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy()
+      expect(
+        breakdown.compareDocumentPosition(rawSnapshot()) & Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy()
+    })
+
+    it('R-2: решение без scorecard — панели разбора нет', () => {
+      renderDecision(withDecision(DECISION))
+      expect(screen.queryByText('credit.scorecard.title')).toBeNull()
+    })
+
+    it('R-2b: снимок есть (доход, правила, IBV), ключа scorecard нет — панели разбора нет', () => {
+      // Решение до 19-3, ручное или при выключенном флаге скоринга: снимок не
+      // пустой, но разбора в нём нет.
+      renderDecision(
+        withSnapshot({
+          income: { net_amount_minor: 250_000 },
+          rules: { ruleset: 'synthetic@1' },
+          ibv: { provider: 'mock' },
+        } as CreditDecision['input_snapshot'])
+      )
+      expect(screen.queryByText('credit.scorecard.title')).toBeNull()
+      expect(rawSnapshot().textContent).toContain('"net_amount_minor": 250000')
+    })
+
+    it('R-3: счёт выплаты убран из сырого снимка, строка об этом есть, блок скрыт в записи', () => {
+      renderDecision(
+        withSnapshot({
+          ...SCENE_A,
+          ibv: { provider: 'mock', payout_account_id: 'acc_test_1', payout_account: PAYOUT },
+        })
+      )
+      const pre = rawSnapshot()
+      // Проверяется ключ, а не подстрока: `payout_account_id` модуль пишет рядом
+      // всегда, и он остаётся — это доказательство DAT-02.
+      expect(pre.textContent).not.toContain('"payout_account":')
+      expect(pre.textContent).toContain('payout_account_id')
+      expect(pre.textContent).not.toContain('000000000')
+      expect(pre.textContent).toContain('"provider": "mock"')
+      expect(screen.getByText('credit.card.snapshotPayoutHidden')).toBeInTheDocument()
+      expectObscured(pre)
+    })
+
+    it('R-4: счёта выплаты в снимке нет — строки о нём нет', () => {
+      renderDecision(withSnapshot({ ...SCENE_A, ibv: { provider: 'mock' } }))
+      expect(screen.queryByText('credit.card.snapshotPayoutHidden')).toBeNull()
+      expect(screen.queryByText('credit.card.snapshotAmountsHidden')).toBeNull()
+      expect(screen.queryByText('credit.card.snapshotAmountsHiddenSeeBreakdown')).toBeNull()
+      expectObscured(rawSnapshot())
+    })
+
+    it('R-5: суммы пособий убраны из сырого снимка; разбор есть — строка отсылает к нему', () => {
+      renderDecision(
+        withSnapshot({
+          ...SCENE_A,
+          income_class_basis: {
+            ...SCENE_A.income_class_basis,
+            amounts: { sum_pension_income: 1000 },
+          },
+          ibv: { risk: { extra: { sum_pension_income: 1000, has_overdraft: false } } },
+        } as CreditDecision['input_snapshot'])
+      )
+      const pre = rawSnapshot()
+      expect(pre.textContent).not.toContain('amounts')
+      expect(pre.textContent).not.toContain('sum_pension_income')
+      expect(pre.textContent).toContain('"has_overdraft": false')
+      expect(screen.getByText('credit.scorecard.title')).toBeInTheDocument()
+      expect(screen.getByText('credit.card.snapshotAmountsHiddenSeeBreakdown')).toBeInTheDocument()
+      expect(screen.queryByText('credit.card.snapshotAmountsHidden')).toBeNull()
+      expect(screen.queryByText('credit.card.snapshotPayoutHidden')).toBeNull()
+    })
+
+    /** Живая форма `amounts` без банковской проверки: семь сумм Lending, все `null`. */
+    const NULL_AMOUNTS = {
+      sum_pension_income: null,
+      sum_disability_income: null,
+      sum_government_income_total: null,
+      sum_employment_insurance_income: null,
+      sum_social_assistance_income: null,
+      sum_wsib_income: null,
+      sum_child_support_income_government: null,
+    }
+
+    it('R-6: amounts из одних null — ни одной строки о суммах: прятать было нечего', () => {
+      renderDecision(
+        withSnapshot({
+          income: { net_amount_minor: 250_000 },
+          income_class: 'A',
+          income_class_basis: { declared_class: 'A', amounts: NULL_AMOUNTS },
+        } as CreditDecision['input_snapshot'])
+      )
+      expect(screen.queryByText('credit.card.snapshotAmountsHidden')).toBeNull()
+      expect(screen.queryByText('credit.card.snapshotAmountsHiddenSeeBreakdown')).toBeNull()
+      expectObscured(rawSnapshot())
+    })
+
+    it('R-7: суммы есть, разбора нет — короткая строка, без отсылки к разбору', () => {
+      renderDecision(
+        withSnapshot({
+          income: { net_amount_minor: 250_000 },
+          income_class: 'B',
+          income_class_basis: {
+            declared_class: 'B',
+            amounts: { ...NULL_AMOUNTS, sum_pension_income: 1000 },
+          },
+        } as CreditDecision['input_snapshot'])
+      )
+      expect(rawSnapshot().textContent).not.toContain('sum_pension_income')
+      expect(screen.queryByText('credit.scorecard.title')).toBeNull()
+      expect(screen.getByText('credit.card.snapshotAmountsHidden')).toBeInTheDocument()
+      expect(screen.queryByText('credit.card.snapshotAmountsHiddenSeeBreakdown')).toBeNull()
+    })
   })
 })
