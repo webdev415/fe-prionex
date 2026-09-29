@@ -59,6 +59,7 @@ function makeDocxTemplate(overrides: Partial<DocumentTemplate> = {}): DocumentTe
     activation_rule: 'always',
     activation_tag_id: null,
     document_type_id: null,
+    auto_generate: false,
     ...overrides,
   }
 }

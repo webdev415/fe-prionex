@@ -33,8 +33,10 @@ interface UseLoginApprovalOptions {
   /**
    * The phone cannot be asked (mode off, no phone). The card shows `failed`;
    * the 2FA step uses this to switch to the Google Authenticator code instead.
+   * `reset` is `cancel` handed in, so a caller that leaves the flow does not
+   * reach for the hook's own return value from inside its options.
    */
-  onUnavailable?: () => void
+  onUnavailable?: (reset: () => void) => void
 }
 
 const IDLE: LoginApprovalPhase = { kind: 'idle' }
@@ -60,6 +62,13 @@ export function useLoginApproval(options: UseLoginApprovalOptions) {
     sessionRef.current = null
   }, [])
 
+  /** «Скасувати» / leaving the flow: stop, cancel on the server, back to idle. */
+  const cancel = useCallback(() => {
+    stopSession()
+    lastBodyRef.current = null
+    setPhase(IDLE)
+  }, [stopSession])
+
   const start = useCallback(
     (body: LoginApprovalStartBody) => {
       stopSession()
@@ -74,24 +83,17 @@ export function useLoginApproval(options: UseLoginApprovalOptions) {
         },
         onUnavailable: () => {
           setPhase({ kind: 'failed' })
-          optionsRef.current.onUnavailable?.()
+          optionsRef.current.onUnavailable?.(cancel)
         },
       })
     },
-    [stopSession]
+    [stopSession, cancel]
   )
 
   /** «Надіслати ще раз»: the same body again; the server supersedes the old request. */
   const resend = useCallback(() => {
     if (lastBodyRef.current) start(lastBodyRef.current)
   }, [start])
-
-  /** «Скасувати» / leaving the flow: stop, cancel on the server, back to idle. */
-  const cancel = useCallback(() => {
-    stopSession()
-    lastBodyRef.current = null
-    setPhase(IDLE)
-  }, [stopSession])
 
   useEffect(() => stopSession, [stopSession])
 

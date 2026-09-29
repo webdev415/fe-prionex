@@ -78,3 +78,27 @@ describe('login approval translation keys', () => {
     expect(lookup(uk, 'appLogin.approval.useTotp')).toBe('Ввести код з Google Authenticator')
   })
 })
+
+describe('QR sign-in translation keys (story 19.17)', () => {
+  it('en, uk and es carry the same QR keys', () => {
+    const reference = leaves(lookup(en, 'appLogin.qr')).sort()
+    expect(reference.length).toBeGreaterThan(10)
+    expect(leaves(lookup(uk, 'appLogin.qr')).sort()).toEqual(reference)
+    expect(leaves(lookup(es, 'appLogin.qr')).sort()).toEqual(reference)
+  })
+
+  it('the login page uses the tab labels', () => {
+    expect(usedKeys()).toEqual(
+      expect.arrayContaining(['appLogin.qr.tabs.password', 'appLogin.qr.tabs.qr'])
+    )
+  })
+
+  it('the Ukrainian texts are the ones of the board issue (#1580)', () => {
+    expect(lookup(uk, 'appLogin.qr.tabs.qr')).toBe('QR-код')
+    expect(lookup(uk, 'appLogin.qr.hint')).toBe('Відскануйте код у застосунку HUB → Безпека')
+    expect(lookup(uk, 'appLogin.qr.newCode')).toBe('Новий код')
+    expect(lookup(uk, 'appLogin.qr.retry')).toBe('Спробувати ще раз')
+    // The scanned step reuses the approval heading of the design.
+    expect(lookup(uk, 'appLogin.approval.waiting.title')).toBe('Підтвердіть вхід на телефоні')
+  })
+})

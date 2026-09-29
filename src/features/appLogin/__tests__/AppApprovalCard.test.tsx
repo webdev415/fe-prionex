@@ -139,19 +139,19 @@ describe('AppApprovalCard', () => {
       'Enter the Google Authenticator code',
     ],
     [
-      { kind: 'rateLimited', minutes: 4 },
+      { kind: 'rateLimited', minutes: 4, retryAt: 0 },
       'passwordless',
       'Too many attempts. Try again in 4 min or sign in with your password.',
       'Sign in with password',
     ],
     [
-      { kind: 'rateLimited', minutes: 2 },
+      { kind: 'rateLimited', minutes: 2, retryAt: 0 },
       'second_factor',
       'Too many attempts. Try again in 2 min or enter the Google Authenticator code.',
       'Enter the Google Authenticator code',
     ],
     [
-      { kind: 'blocked', minutes: 60 },
+      { kind: 'blocked', minutes: 60, retryAt: 0 },
       'second_factor',
       'Sign-in with the app is blocked for now. Try again in 60 min or enter the Google Authenticator code.',
       'Enter the Google Authenticator code',

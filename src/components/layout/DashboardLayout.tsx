@@ -23,6 +23,7 @@ import { DRAFT_PAGE_PERMISSIONS, PERMISSIONS } from '@/constants/permissions'
 import type { Permission } from '@/constants/permissions'
 import { useHasPermission, useHasAnyPermission } from '@/hooks/usePermissions'
 import { useCreditSectionEnabled } from '@/features/credit/hooks/useCredit'
+import { usePlannerMeta } from '@/api/planner/plannerQueries'
 import { SearchResults, type SearchResult } from '@/components/ui/SearchResults'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { NEW_CONVERSATION_QUERY } from '@/pages/AiAssistant/conversationUrl'
@@ -783,6 +784,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   // get the nav entry.
   const v3UiEnabled = useV3UiEnabled()
 
+  // Planner (planner story 1.9): «Планування» needs `planner.access` in the JWT
+  // AND an explicit `available: true` from the planner's `GET /meta`. Anything
+  // else — off, prep without the person on the list, 404 on a stand without
+  // the planner, a network error, no answer yet — hides the entry, and the rest
+  // of the CRM works. Only holders of the right ask the planner at all.
+  const canAccessPlanner = Boolean(user?.permissions?.includes(PERMISSIONS.PLANNER.ACCESS))
+  const { data: plannerMeta } = usePlannerMeta(canAccessPlanner)
+  const plannerAvailable = canAccessPlanner && plannerMeta?.available === true
+
   // useMemo prevents unnecessary re-filtering on every render
   // Only recalculates when user permissions change
   const navItemsResult = useMemo(() => {
@@ -794,6 +804,17 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         label: t('navigation.dashboard'),
         requiredPermission: PERMISSIONS.CLIENTS.VIEW,
       },
+      // Planner 1.9 (UX U-4): exactly one entry, right after «Дашборд».
+      ...(plannerAvailable
+        ? [
+            {
+              path: '/dashboard/planning',
+              icon: 'calendar-check-in-01',
+              label: t('menu', { ns: 'planner', defaultValue: 'Planning' }),
+              requiredPermission: PERMISSIONS.PLANNER.ACCESS,
+            },
+          ]
+        : []),
       {
         path: '/dashboard/import',
         icon: 'file-import',
@@ -1156,6 +1177,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               PERMISSIONS.DOCUMENT_GENERATION.VIEW_TEMPLATES,
               PERMISSIONS.DOCUMENT_GENERATION.CREATE_EDIT_TEMPLATES,
               PERMISSIONS.DOCUMENT_GENERATION.DELETE_TEMPLATES,
+              // Kept in step with the route: manage_settings alone opens the
+              // bulk-upload rules tab, so it has to reach the page.
+              PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
             ],
             mode: 'any' as const,
           },
@@ -1262,6 +1286,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     ubkiAvailable,
     smsServiceAvailable,
     creditSectionEnabled,
+    plannerAvailable,
   ])
 
   const { navItems, bottomNavItems } = navItemsResult
