@@ -32,6 +32,7 @@ import {
   CalendarSkeleton,
   TaskListSkeleton,
 } from '@/pages/Planner/components/PlannerStates'
+import { SettingsSkeleton } from '@/pages/Planner/settings/SettingsSkeleton'
 
 const PlannerLayout = lazy(() =>
   import('@/pages/Planner').then((m) => ({ default: m.PlannerLayout }))
@@ -44,6 +45,9 @@ const PlannerBoardPage = lazy(() =>
 )
 const PlannerCalendarPage = lazy(() =>
   import('@/pages/Planner').then((m) => ({ default: m.PlannerCalendarPage }))
+)
+const BoardSettingsPage = lazy(() =>
+  import('@/pages/Planner').then((m) => ({ default: m.BoardSettingsPage }))
 )
 const PlannerTaskLinkRedirect = lazy(() =>
   import('@/pages/Planner').then((m) => ({ default: m.PlannerTaskLinkRedirect }))
@@ -67,6 +71,11 @@ export const plannerRoute: RouteObject = {
     { index: true, element: <Navigate to="/dashboard/planning/tasks" replace /> },
     { path: 'tasks', element: withSuspense(<PlannerMyTasksPage />) },
     { path: 'tasks/boards/:code', element: withSuspense(<PlannerBoardPage />, <BoardSkeleton />) },
+    // Board settings, one configuration editor (5.10, UX C-08): the section is in the address.
+    {
+      path: 'tasks/boards/:code/settings/:section',
+      element: withSuspense(<BoardSettingsPage />, <SettingsSkeleton />),
+    },
     { path: 'calendar', element: withSuspense(<PlannerCalendarPage />, <CalendarSkeleton />) },
     // Permanent link `planning/t/<KEY>` (AD-35): the task panel over «Мої задачі».
     { path: 't/:key', element: withSuspense(<PlannerTaskLinkRedirect />) },

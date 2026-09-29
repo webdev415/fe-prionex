@@ -204,3 +204,93 @@ export async function searchPeople(q: string): Promise<PlannerPeopleList> {
   const res = await api.get<PlannerPeopleList>(url('/people'), config({}, { params: { q } }))
   return res.data
 }
+
+// ─── board settings (story 5.10) ───────────────────────────────────────────
+// One block, appended: the lanes of the same wave also extend this file.
+
+export type PlannerBoardConfig = Schemas['BoardConfig']
+export type PlannerBoardConfigInput = Schemas['BoardConfigInput']
+export type PlannerBoardConfigPut = Schemas['BoardConfigPut']
+export type PlannerBoardConfigPreview = Schemas['BoardConfigPreview']
+export type PlannerBoardConfigError = Schemas['BoardConfigError']
+export type PlannerBoardMember = Schemas['BoardMember']
+export type PlannerBoardMemberRole = Schemas['BoardMemberRole']
+export type PlannerBoardHistory = Schemas['BoardHistory']
+export type PlannerBoardHistoryEntry = Schemas['TaskHistoryEntry']
+export type PlannerBoardPolicy = Schemas['BoardPolicy']
+
+/**
+ * Age of the org snapshot past which the planner refuses admin changes on a
+ * department board (409 `org_stale`, «снимок оргструктуры старше 15 минут» in
+ * the contract of `PUT /boards/{code}/members/{user_id}`).
+ */
+export const PLANNER_ORG_STALE_MINUTES = 15
+
+/** Levels of a board's priority scale (`PUT /config`: 3–5). */
+export const PLANNER_PRIORITIES_MAX = 5
+
+/**
+ * `PUT /boards/{code}/config?dry_run=true` — the same code as a save, rolled
+ * back: which rows are wrong and what the board would become. Nothing is
+ * written; the answer has no ETag. `If-Match` is still checked (412).
+ */
+export async function previewBoardConfig(
+  code: string,
+  version: number,
+  body: PlannerBoardConfigPut
+): Promise<PlannerBoardConfigPreview> {
+  const res = await api.put<PlannerBoardConfigPreview>(
+    url('/boards/{code}/config', { code }),
+    body,
+    config({ 'If-Match': ifMatch(version) }, { params: { dry_run: 'true' } })
+  )
+  return res.data
+}
+
+/** `PUT /boards/{code}/config` — replace the whole configuration; answers the board card. */
+export async function putBoardConfig(
+  code: string,
+  version: number,
+  body: PlannerBoardConfigPut
+): Promise<PlannerBoard> {
+  const res = await api.put<PlannerBoard>(
+    url('/boards/{code}/config', { code }),
+    body,
+    config({ 'If-Match': ifMatch(version) })
+  )
+  return res.data
+}
+
+/** `PUT /boards/{code}/members/{user_id}` — an explicit participant or a new role; the board card back. */
+export async function putBoardMember(
+  code: string,
+  userId: string,
+  version: number,
+  role: PlannerBoardMemberRole
+): Promise<PlannerBoard> {
+  const res = await api.put<PlannerBoard>(
+    url('/boards/{code}/members/{user_id}', { code, user_id: userId }),
+    { role },
+    config({ 'If-Match': ifMatch(version) })
+  )
+  return res.data
+}
+
+/** `DELETE /boards/{code}/members/{user_id}` — remove an explicit participant; the board card back. */
+export async function deleteBoardMember(
+  code: string,
+  userId: string,
+  version: number
+): Promise<PlannerBoard> {
+  const res = await api.delete<PlannerBoard>(
+    url('/boards/{code}/members/{user_id}', { code, user_id: userId }),
+    config({ 'If-Match': ifMatch(version) })
+  )
+  return res.data
+}
+
+/** `GET /boards/{code}/history` — the board's journal: created, members, configuration, policy, zone. */
+export async function getBoardHistory(code: string): Promise<PlannerBoardHistory> {
+  const res = await api.get<PlannerBoardHistory>(url('/boards/{code}/history', { code }), config())
+  return res.data
+}
