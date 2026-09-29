@@ -43,6 +43,13 @@ interface PeoplePickerProps {
   placeholder?: string
   /** «3 / 10» under the field; a one-person filter of the board (5.3) has no use for «0 / 1». */
   showCount?: boolean
+  /**
+   * The caller's error for the field (a 400 of the form): said under the
+   * search input and tied to it (`aria-invalid`, `aria-describedby`), like
+   * any other field. A too-long search text is said first — it is what the
+   * person is typing now.
+   */
+  error?: string
 }
 
 export function PeoplePicker({
@@ -52,6 +59,7 @@ export function PeoplePicker({
   label,
   placeholder,
   showCount = true,
+  error,
 }: PeoplePickerProps) {
   const { t, i18n } = useTranslation('planner')
   const language = i18n.language ?? 'uk'
@@ -84,7 +92,7 @@ export function PeoplePicker({
         error={
           tooLong && !full
             ? t('people.tooLong', { max: formatNumber(PLANNER_PEOPLE_QUERY_MAX, language) })
-            : undefined
+            : error
         }
         aria-controls={listId}
         onChange={(event) => setQuery(event.target.value)}

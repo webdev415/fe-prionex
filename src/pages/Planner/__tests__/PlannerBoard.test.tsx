@@ -23,6 +23,7 @@ vi.mock('sonner', () => ({ toast }))
 const api = vi.hoisted(() => ({
   getMeta: vi.fn(),
   listBoards: vi.fn(),
+  listCreatableBoards: vi.fn(),
   listMyTasks: vi.fn(),
   resolveTask: vi.fn(),
   getBoard: vi.fn(),
@@ -98,6 +99,21 @@ describe('Доска, создание задачи и смена статуса
     vi.clearAllMocks()
     api.getMeta.mockResolvedValue(makeMeta())
     api.listBoards.mockResolvedValue({ items: [] })
+    // The task form (5.7) offers the boards of `GET /boards?can_create=true`.
+    api.listCreatableBoards.mockResolvedValue({
+      items: [
+        {
+          id: 'b1',
+          code: 'SKL',
+          name: 'Склад',
+          kind: 'team',
+          version: 5,
+          role: 'board_member',
+          allowed_actions: ['create_task'],
+        },
+      ],
+      intake: [],
+    })
     api.listMyTasks.mockResolvedValue({ items: [makeCard()], has_more: false })
     api.getBoard.mockResolvedValue(makeBoard())
     api.getBoardKanban.mockResolvedValue(makeKanban([makeCard(), SECOND]))
@@ -170,11 +186,13 @@ describe('Доска, создание задачи и смена статуса
     const user = userEvent.setup()
     await user.click(await screen.findByRole('button', { name: '+ Задача' }))
     await user.type(screen.getByLabelText('Назва'), 'Інвентаризація')
-    await user.type(screen.getByLabelText('Виконавці'), 'Оле')
+    await user.type(await screen.findByLabelText('Виконавці'), 'Оле')
     await user.click(await screen.findByRole('button', { name: /Олена Коваль/ }))
     expect(api.searchPeople).toHaveBeenCalledWith('Оле')
     expect(screen.getByText('1 / 10')).toBeInTheDocument()
-    await user.type(screen.getByLabelText('Термін'), '2026-10-05')
+    // «Обрати дату» without an hour — the date goes as `due_date` (5.7).
+    await user.click(screen.getByRole('button', { name: 'Обрати дату' }))
+    await user.type(screen.getByLabelText('Дата'), '2026-10-05')
     await user.click(screen.getByRole('button', { name: 'Створити' }))
     await waitFor(() => expect(api.createTask).toHaveBeenCalledTimes(1))
     const body = api.createTask.mock.calls[0][1]
@@ -206,7 +224,7 @@ describe('Доска, создание задачи и смена статуса
     renderAt('/dashboard/planning/tasks/boards/SKL')
     const user = userEvent.setup()
     await user.click(await screen.findByRole('button', { name: '+ Задача' }))
-    await user.type(screen.getByLabelText('Виконавці'), 'Олена')
+    await user.type(await screen.findByLabelText('Виконавці'), 'Олена')
     expect(await screen.findByText('Нікого не знайдено')).toBeInTheDocument()
     expect(api.searchPeople).toHaveBeenCalledTimes(1)
     expect(api.searchPeople).toHaveBeenCalledWith('Олена')
