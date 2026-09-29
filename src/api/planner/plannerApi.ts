@@ -40,6 +40,11 @@ export type PlannerSlaState = Schemas['SLAState']
 export type PlannerTaskOrigin = Schemas['TaskOrigin']
 export type PlannerTaskPerson = Schemas['TaskPerson']
 export type PlannerBoardPriority = Schemas['BoardPriority']
+export type PlannerIntakeBoard = Schemas['IntakeBoard']
+export type PlannerBoardField = Schemas['BoardField']
+export type PlannerBoardTaskType = Schemas['BoardTaskType']
+export type PlannerBoardLabel = Schemas['BoardLabel']
+export type PlannerTaskAttachment = Schemas['TaskAttachment']
 
 /** Base path of the planner route group in Kong (1.6). */
 export const PLANNER_BASE = '/api/v1/planner'
@@ -65,6 +70,10 @@ export const PLANNER_ASSIGNEES_MAX = 10
 export const PLANNER_EVENT_PARTICIPANTS_MAX = 200
 export const PLANNER_PEOPLE_QUERY_MIN = 2
 export const PLANNER_PEOPLE_QUERY_MAX = 100
+/** Watchers of a new task (`TaskCreate.watcher_ids`, `maxItems: 20`). */
+export const PLANNER_WATCHERS_MAX = 20
+/** One attachment file (`POST /tasks/{id}/attachments`: 50 MiB, `details.max_bytes`). */
+export const PLANNER_ATTACHMENT_MAX_BYTES = 52_428_800
 
 /**
  * Length the way the planner counts it — Unicode code points (Go runes), not
@@ -132,6 +141,22 @@ export async function listBoards(): Promise<PlannerBoardList> {
   return res.data
 }
 
+/**
+ * `GET /boards?can_create=true` — where a new task can go (story 3.14):
+ * `items` are boards where the actor creates a task as a member, admin or
+ * owner of the personal board; `intake` are boards where the actor's task
+ * becomes a request (department and team boards that accept requests), with
+ * the department, the П-9 hint and the required fields of the request form —
+ * the board card itself is not visible to a non-participant.
+ */
+export async function listCreatableBoards(): Promise<PlannerBoardList> {
+  const res = await api.get<PlannerBoardList>(
+    url('/boards'),
+    config({}, { params: { can_create: true } })
+  )
+  return res.data
+}
+
 /** `GET /boards/{code}` — the board card: config (statuses), members, allowed_actions. */
 export async function getBoard(code: string): Promise<PlannerBoard> {
   const res = await api.get<PlannerBoard>(url('/boards/{code}', { code }), config())
@@ -195,6 +220,29 @@ export async function patchTask(
   )
   const etag = res.headers?.etag
   return { task: res.data, etag: typeof etag === 'string' ? etag : undefined }
+}
+
+/**
+ * `POST /tasks/{id}/attachments` — one file, `multipart/form-data` with the
+ * part `file` (story 3.8). There is no multipart task creation: the form
+ * uploads right after the 201 of the task. The key belongs to one file of one
+ * form, so a retry replays the stored 201 instead of adding a second copy.
+ * The explicit content type keeps the shared JSON default from turning the
+ * form data into JSON; the browser adds the boundary itself.
+ */
+export async function uploadTaskAttachment(
+  taskId: string,
+  file: File,
+  idempotencyKey: string
+): Promise<PlannerTaskAttachment> {
+  const body = new FormData()
+  body.append('file', file, file.name)
+  const res = await api.post<PlannerTaskAttachment>(
+    url('/tasks/{id}/attachments', { id: taskId }),
+    body,
+    config({ 'Idempotency-Key': idempotencyKey, 'Content-Type': 'multipart/form-data' })
+  )
+  return res.data
 }
 
 // ─── people ────────────────────────────────────────────────────────────────

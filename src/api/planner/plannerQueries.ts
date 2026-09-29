@@ -13,6 +13,7 @@ import {
   getMeta,
   listBoards,
   listBoardTasks,
+  listCreatableBoards,
   listMyTasks,
   PLANNER_PEOPLE_QUERY_MAX,
   PLANNER_PEOPLE_QUERY_MIN,
@@ -30,6 +31,7 @@ export const plannerKeys = {
   all: ['planner'] as const,
   meta: () => [...plannerKeys.all, 'meta'] as const,
   boards: () => [...plannerKeys.all, 'boards'] as const,
+  creatableBoards: () => [...plannerKeys.all, 'boards', 'can-create'] as const,
   board: (code: string) => [...plannerKeys.all, 'board', code] as const,
   boardTasks: (code: string) => [...plannerKeys.all, 'board', code, 'tasks'] as const,
   myTasks: () => [...plannerKeys.all, 'me', 'tasks', 'assigned'] as const,
@@ -91,6 +93,21 @@ export function usePlannerBoards(enabled = true) {
     queryFn: listBoards,
     enabled,
     ...live,
+  })
+}
+
+/**
+ * `GET /boards?can_create=true` for the task form (story 5.7): read when the
+ * form opens, no polling — the form is short-lived, and a board that stopped
+ * taking tasks answers the create itself (404 / 400 `triage_only`), which
+ * re-reads this list.
+ */
+export function usePlannerCreatableBoards(enabled = true) {
+  return useQuery({
+    queryKey: plannerKeys.creatableBoards(),
+    queryFn: listCreatableBoards,
+    enabled,
+    staleTime: PLANNER_POLL_MS,
   })
 }
 

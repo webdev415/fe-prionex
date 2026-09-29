@@ -80,7 +80,14 @@
       "description": "Опис",
       "assignees": "Виконавці",
       "assigneesPlaceholder": "Почніть вводити ПІБ",
-      "due": "Термін"
+      "due": "Термін",
+      "board": "Дошка",
+      "to": "Кому",
+      "type": "Тип",
+      "priority": "Пріоритет",
+      "labels": "Мітки",
+      "watchers": "Спостерігачі",
+      "attachments": "Вкладення"
     },
     "noPeople": "Нікого не знайдено",
     "assigneesCount": "{{count}} / {{max}}",
@@ -91,6 +98,57 @@
       "titleRequired": "Вкажіть назву задачі",
       "titleTooLong": "Назва — не довше {{max}} символів",
       "descriptionTooLong": "Опис — не довше {{max}} символів"
+    },
+    "requestTitle": "Нова заявка до «{{name}}»",
+    "requestTitleEmpty": "Нова заявка",
+    "requestNote": "Тип, пріоритет і виконавця визначить відділ",
+    "boardPlaceholder": "Оберіть дошку",
+    "boardLoading": "Завантаження дощок…",
+    "boardSearch": "Знайти дошку або відділ",
+    "boardSearchRequest": "Знайти відділ",
+    "noBoards": "Нічого не знайдено",
+    "boardGroups": {
+      "intakeDepartment": "Заявка в інший відділ",
+      "intakeTeam": "Заявка на дошку команди"
+    },
+    "boardConfigLoading": "Завантаження полів дошки…",
+    "boardConfigError": "Не вдалося завантажити поля дошки. Задачу буде створено з полями за замовчуванням",
+    "noType": "Без типу",
+    "noPriority": "Без пріоритету",
+    "fieldEmpty": "—",
+    "more": "Ще поля",
+    "removeFile": "Прибрати файл {{name}}",
+    "attachmentsFailed": "Не завантажено файлів: {{count}}. Додайте їх у задачі",
+    "due": {
+      "today": "Сьогодні 18:00",
+      "tomorrow": "Завтра",
+      "friday": "Пт",
+      "pick": "Обрати дату",
+      "clear": "Без терміну",
+      "date": "Дата",
+      "time": "Час (необов'язково)",
+      "summaryDate": "{{weekday}}, {{date}} — без часу",
+      "summaryMoment": "{{weekday}}, {{date}}, {{time}}"
+    },
+    "errors": {
+      "boardRequired": "Оберіть дошку",
+      "boardGone": "Дошку не знайдено або вона вже не приймає задач. Оберіть іншу",
+      "becameRequest": "Ви вже не учасник цієї дошки — задача стане заявкою. Перевірте форму й створіть ще раз",
+      "required": "Заповніть це поле",
+      "invalid": "Перевірте значення",
+      "number": "Введіть число",
+      "triageOnly": "Це визначить відділ, який розбирає заявку",
+      "rawHtml": "Опис не може містити HTML-розмітку",
+      "personalOwnerOnly": "На особистій дошці виконавець — лише її власник",
+      "assignees": "Виконавцями можуть бути лише активні учасники дошки",
+      "watchers": "Спостерігачами можуть бути лише активні співробітники",
+      "fileTooBig": "Файл більший за {{max}} МБ",
+      "fileEmpty": "Порожній файл не завантажиться",
+      "due": {
+        "dateMissing": "Вкажіть дату",
+        "invalidDate": "Такої дати немає",
+        "nonexistentTime": "Такого часу в цей день не існує — оберіть інший."
+      }
     }
   },
   "toast": {

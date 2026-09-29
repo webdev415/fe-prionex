@@ -11,6 +11,7 @@ import { toast } from 'sonner'
 import {
   createTask,
   patchTask,
+  uploadTaskAttachment,
   type PlannerTask,
   type PlannerTaskCreate,
 } from '@/api/planner/plannerApi'
@@ -26,6 +27,10 @@ const FIELD_LABELS: Record<string, string> = {
   assignee_ids: 'create.fields.assignees',
   due_date: 'create.fields.due',
   due_at: 'create.fields.due',
+  type_id: 'create.fields.type',
+  priority_id: 'create.fields.priority',
+  label_ids: 'create.fields.labels',
+  watcher_ids: 'create.fields.watchers',
 }
 
 /** Toast for a failed planner command; 412 is handled by the caller first. */
@@ -172,11 +177,53 @@ export function useChangeTaskStatus() {
   return change
 }
 
+/** A file of the form with its own key: a retry of the upload replays, it does not add a copy. */
+export interface CreateTaskAttachment {
+  file: File
+  idempotencyKey: string
+}
+
 export interface CreateTaskInput {
   boardCode: string
   body: PlannerTaskCreate
   /** One key per form: a repeated «Створити» replays, it does not duplicate. */
   idempotencyKey: string
+  /** Files of a request, uploaded right after the 201 (story 3.8: no multipart create). */
+  attachments?: CreateTaskAttachment[]
+}
+
+export interface CreatedTask {
+  task: PlannerTask
+  /** Files that did not reach the task (the task itself exists). */
+  failedAttachments: number
+}
+
+/**
+ * A 400 that names its field (`details.field`): the form says it at the field
+ * (story 5.7), so the hook does not toast it — the form toasts only a field it
+ * does not show.
+ */
+export function isFieldValidation(error: unknown): boolean {
+  const { status, details } = readPlannerError(error)
+  return status === 400 && typeof details.field === 'string'
+}
+
+/**
+ * Create a task (or a request), then upload the request's files one by one.
+ * The task exists after the 201 whatever happens to the files: a failed upload
+ * is counted, not thrown, and the form says how many did not arrive.
+ */
+async function createWithAttachments(input: CreateTaskInput): Promise<CreatedTask> {
+  const task = await createTask(input.boardCode, input.body, input.idempotencyKey)
+  let failedAttachments = 0
+  for (const attachment of input.attachments ?? []) {
+    try {
+      await uploadTaskAttachment(task.id, attachment.file, attachment.idempotencyKey)
+    } catch {
+      failedAttachments += 1
+    }
+  }
+  return { task, failedAttachments }
 }
 
 export function useCreatePlannerTask() {
@@ -184,9 +231,8 @@ export function useCreatePlannerTask() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (input: CreateTaskInput) =>
-      createTask(input.boardCode, input.body, input.idempotencyKey),
-    onSuccess: (task, input) => {
+    mutationFn: createWithAttachments,
+    onSuccess: ({ task }, input) => {
       queryClient.setQueryData(plannerKeys.task(task.key), task)
       void queryClient.invalidateQueries({ queryKey: plannerKeys.boardTasks(input.boardCode) })
       void queryClient.invalidateQueries({ queryKey: plannerKeys.myTasks() })
@@ -201,6 +247,13 @@ export function useCreatePlannerTask() {
         toast.info(t('toast.maybeCreated'))
         return
       }
+      const { status, details } = readPlannerError(error)
+      // The board is gone, or the actor stopped being its member (the task
+      // would now be a request): the list of boards is stale.
+      if (status === 404 || details.reason === 'triage_only') {
+        void queryClient.invalidateQueries({ queryKey: plannerKeys.creatableBoards() })
+      }
+      if (status === 404 || isFieldValidation(error)) return
       toastPlannerError(t, error)
     },
   })
