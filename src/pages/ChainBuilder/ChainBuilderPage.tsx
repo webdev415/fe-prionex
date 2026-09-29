@@ -65,6 +65,7 @@ import {
 } from '@/features/messaging/api/types'
 import { useAuthStore } from '@/stores/authStore'
 import { getErrorMessage } from '@/lib/errors'
+import { isTriggerConfigIncomplete } from './triggerConfig'
 
 const TYPE_COLOR: Record<string, string> = {
   text: 'var(--color-success-500)',
@@ -749,7 +750,7 @@ export function ChainBuilderPage() {
                             toast.error(getErrorMessage(e))
                           }
                         }}
-                        disabled={newTriggerType === 'debt_status' && !newTriggerConfig.status}
+                        disabled={isTriggerConfigIncomplete(newTriggerType, newTriggerConfig)}
                         className="border-border bg-muted text-muted-foreground hover:bg-muted flex h-8 items-center justify-center rounded-md border text-xs disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         {t('pages.chainBuilder.addTrigger')}
