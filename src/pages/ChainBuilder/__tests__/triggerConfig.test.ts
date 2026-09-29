@@ -1,16 +1,22 @@
 import { describe, expect, it } from 'vitest'
-import { isTriggerConfigIncomplete } from '../triggerConfig'
+import {
+  TRIGGER_TYPES,
+  type TriggerType,
+  buildTriggerConfig,
+  isTriggerConfigIncomplete,
+} from '../triggerConfig'
 
 /**
  * KAN-711: a trigger saved without its field fires on every event of its type,
  * so "Add trigger" must stay disabled until that field is filled in.
  */
 describe('isTriggerConfigIncomplete', () => {
-  it('blocks the default form: tag_change with no tag chosen', () => {
-    expect(isTriggerConfigIncomplete('tag_change', {})).toBe(true)
+  it('blocks the default form: the first type with no field chosen', () => {
+    expect(TRIGGER_TYPES[0]).toBe('tag_change')
+    expect(isTriggerConfigIncomplete(TRIGGER_TYPES[0], {})).toBe(true)
   })
 
-  it.each([
+  it.each<[TriggerType, string, string]>([
     ['tag_change', 'tag_id', '12'],
     ['call_result', 'result_code', 'no_answer'],
     ['debt_status', 'status', 'overdue'],
@@ -28,7 +34,47 @@ describe('isTriggerConfigIncomplete', () => {
     expect(isTriggerConfigIncomplete('tag_change', { status: 'overdue' })).toBe(true)
   })
 
-  it.each(['date_reached', 'role_action'])('leaves %s alone, it has no field', (type) => {
-    expect(isTriggerConfigIncomplete(type, {})).toBe(false)
+  // No backend event source for these yet; see REQUIRED_TRIGGER_FIELD.
+  it.each<TriggerType>(['date_reached', 'role_action'])(
+    'leaves %s alone, the backend has no event for it yet',
+    (type) => {
+      expect(isTriggerConfigIncomplete(type, {})).toBe(false)
+    }
+  )
+})
+
+describe('buildTriggerConfig', () => {
+  it('sends the result code trimmed, so it can match the backend code', () => {
+    expect(buildTriggerConfig({ result_code: '  no_answer ' })).toEqual({
+      result_code: 'no_answer',
+    })
+  })
+
+  it('sends ids as numbers', () => {
+    expect(buildTriggerConfig({ tag_id: '12' })).toEqual({ tag_id: 12 })
+    expect(buildTriggerConfig({ source_chain_id: '3' })).toEqual({ source_chain_id: 3 })
+  })
+
+  it('sends the debt status as chosen', () => {
+    expect(buildTriggerConfig({ status: 'overdue' })).toEqual({ status: 'overdue' })
+  })
+
+  it('drops blank values instead of sending them', () => {
+    expect(buildTriggerConfig({ result_code: '   ' })).toEqual({})
+    expect(buildTriggerConfig({})).toEqual({})
+  })
+
+  it('never sends a config the guard would have blocked', () => {
+    // Whatever passes the guard must still carry its field after building.
+    for (const [type, field, value] of [
+      ['tag_change', 'tag_id', '12'],
+      ['call_result', 'result_code', ' x '],
+      ['debt_status', 'status', 'active'],
+      ['chain_completed', 'source_chain_id', '3'],
+    ] as const) {
+      const form = { [field]: value }
+      expect(isTriggerConfigIncomplete(type, form)).toBe(false)
+      expect(buildTriggerConfig(form)).toHaveProperty(field)
+    }
   })
 })

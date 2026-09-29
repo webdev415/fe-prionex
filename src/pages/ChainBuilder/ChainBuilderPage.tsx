@@ -65,7 +65,12 @@ import {
 } from '@/features/messaging/api/types'
 import { useAuthStore } from '@/stores/authStore'
 import { getErrorMessage } from '@/lib/errors'
-import { isTriggerConfigIncomplete } from './triggerConfig'
+import {
+  TRIGGER_TYPES,
+  type TriggerType,
+  buildTriggerConfig,
+  isTriggerConfigIncomplete,
+} from './triggerConfig'
 
 const TYPE_COLOR: Record<string, string> = {
   text: 'var(--color-success-500)',
@@ -73,15 +78,6 @@ const TYPE_COLOR: Record<string, string> = {
   date: 'var(--color-warning-500)',
   amount: 'var(--color-information-400)',
 }
-
-const TRIGGER_TYPES = [
-  'tag_change',
-  'call_result',
-  'date_reached',
-  'debt_status',
-  'chain_completed',
-  'role_action',
-]
 
 // Debt statuses offered for the "Debt status" trigger. The dropdown (vs free
 // text) guarantees the stored value matches the backend exactly — no "close"
@@ -339,7 +335,7 @@ export function ChainBuilderPage() {
   const deleteEffectMut = useDeleteEffect(chainId)
 
   // Form state for adding new items
-  const [newTriggerType, setNewTriggerType] = useState(TRIGGER_TYPES[0])
+  const [newTriggerType, setNewTriggerType] = useState<TriggerType>(TRIGGER_TYPES[0])
   const [newTriggerConfig, setNewTriggerConfig] = useState<Record<string, string>>({})
   const [newBlockerType, setNewBlockerType] = useState(BLOCKER_TYPES[0])
   const [newBlockerConfig, setNewBlockerConfig] = useState<Record<string, string>>({})
@@ -646,7 +642,7 @@ export function ChainBuilderPage() {
                       <Select
                         value={newTriggerType}
                         onValueChange={(v) => {
-                          setNewTriggerType(v)
+                          setNewTriggerType(v as TriggerType)
                           setNewTriggerConfig({})
                         }}
                       >
@@ -731,18 +727,10 @@ export function ChainBuilderPage() {
                       <button
                         type="button"
                         onClick={async () => {
-                          const cfg: Record<string, unknown> = {}
-                          if (newTriggerConfig.tag_id)
-                            cfg.tag_id = parseInt(newTriggerConfig.tag_id, 10)
-                          if (newTriggerConfig.source_chain_id)
-                            cfg.source_chain_id = parseInt(newTriggerConfig.source_chain_id, 10)
-                          if (newTriggerConfig.result_code)
-                            cfg.result_code = newTriggerConfig.result_code
-                          if (newTriggerConfig.status) cfg.status = newTriggerConfig.status
                           try {
                             await createTrigger.mutateAsync({
                               trigger_type: newTriggerType,
-                              config: cfg,
+                              config: buildTriggerConfig(newTriggerConfig),
                             })
                             toast.success(t('pages.chainBuilder.toasts.triggerAdded'))
                             setNewTriggerConfig({})
