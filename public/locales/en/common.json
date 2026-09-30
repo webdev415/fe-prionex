@@ -12470,7 +12470,9 @@
       "referred": "Referred",
       "waiting": "In queue",
       "assigned": "Assigned",
-      "disbursed": "Disbursed"
+      "disbursed": "Disbursed",
+      "checklist": "Checklist",
+      "conditional": "Condition"
     },
     "fields": {
       "name": "Name",
@@ -12574,13 +12576,18 @@
       "loanId": "Loan ID",
       "loanAgeDays": "Days since disbursement",
       "advanceRefundExcess": "Refund excess after cancellation",
-      "supersedesDecision": "Supersedes the previous decision"
+      "supersedesDecision": "Supersedes the previous decision",
+      "checklist": "Checklist",
+      "conditionalCodes": "Approval conditions"
     },
     "decisionError": {
       "operatorIdNotNumeric": "The decision was not saved: the user number in your CRM pass is not a whole number, so the decision's author cannot be recorded. Contact the administrator — this is a sign-in setting, not your mistake.",
       "operatorIdAmbiguous": "The decision was not saved: your CRM pass names two different user numbers, so the decision's author cannot be determined. Contact the administrator.",
       "underwriterNotTheCaller": "The decision was not saved: the author of a manual decision is the owner of the CRM pass, and the page sent a different number. Refresh the page and try again.",
-      "generic": "The decision was not saved. Try again; if it happens again, contact the administrator."
+      "generic": "The decision was not saved. Try again; if it happens again, contact the administrator.",
+      "conditionalApprovalUnconfirmed": "The approval was not saved: a condition has been declared for this application, so only the head of risk management's confirmation can approve it. You can still decline it or propose another condition.",
+      "confirmerIsTheAuthor": "The confirmation was not saved: you are the author of this proposal, and someone else — the head of risk management — must confirm it.",
+      "proposalNotActive": "The confirmation was not saved: the proposal is no longer current — another decision replaced it, the application is no longer in review, or the bank data changed after the proposal (a new review is needed). Refresh the card."
     },
     "tabs": {
       "form": "Application form",
@@ -12608,7 +12615,9 @@
       "saveDecision": "Submit decision",
       "retry": "Retry",
       "copy": "Copy",
-      "showMore": "Show more"
+      "showMore": "Show more",
+      "proposeConditional": "Propose a conditional approval",
+      "confirmConditional": "Confirm the conditional approval"
     },
     "metrics": {
       "requested": "Requested (page)",
@@ -12738,7 +12747,15 @@
       "identifiers": "Identifiers",
       "owedToClient": "Owed to the client",
       "owedToClientHint": "After cancelling, the client returned more than they received. The module owes this amount back to the client — it is not the client's debt and not an overpayment.",
-      "owedToClientUnknown": "The module did not say whether we owe the client: the field is missing from the response. This does not mean there is no excess."
+      "owedToClientUnknown": "The module did not say whether we owe the client: the field is missing from the response. This does not mean there is no excess.",
+      "conditionalTitle": "Approve with a condition (the head of risk management must confirm)",
+      "conditionalHint": "With a condition the decision becomes a proposal: the application stays in review and no agreement is issued until the head of risk management confirms. Someone other than the author confirms.",
+      "conditionalUnavailable": "Approval conditions are unavailable: the code directory did not load. A plain approval still works.",
+      "proposedAmount": "Proposed amount: {{amount}}",
+      "confirmTitle": "Confirm the conditional approval?",
+      "confirmMessage": "The application will be approved for {{amount}} with conditions {{codes}}, and an agreement will be issued for the client to sign. The confirmation cannot be undone.",
+      "confirmNotAuthor": "Someone other than the author of the proposal confirms.",
+      "conditionalConfirmed": "The conditional approval is confirmed."
     },
     "scorecard": {
       "title": "Scorecard breakdown",
@@ -13065,6 +13082,46 @@
       "bank_statement": "Bank statement",
       "employment": "Employment",
       "service": "Service codes"
+    },
+    "checklistItem": {
+      "ibv_all_accounts": "Check of all the client's bank accounts (IBV)",
+      "statement_two_months": "Bank statement covering at least 2 months",
+      "salary_regular": "The salary is regular over the whole period",
+      "nsf_isolated": "NSF returns are acceptable if isolated or corrected by today",
+      "loan_repayments_on_payday_max6": "No more than 6 loan repayments on the last payday",
+      "salary_account_connected": "The salary account is connected (save), the card is checked, the bank and bank code are entered manually",
+      "id_photo_only": "Only photos of the ID (passport, ID card, driver's licence) are accepted — scans are not",
+      "id_valid_on_apply": "The document is valid on the application date",
+      "id_alberta_only": "Documents from the province of Alberta only",
+      "pay_document": "A pay document is on file",
+      "residence_proof": "Proof of residence is on file"
+    },
+    "checklistHint": {
+      "ibv_all_accounts": "If statements or IBV do not load, request them through the CRM",
+      "statement_two_months": "In Flinks, check the current card (there may be several)",
+      "salary_regular": "Check it in the IBV section of the dashboard",
+      "nsf_isolated": "1 or 2 times a month; after them come debits for credits, instalment plans and loans",
+      "loan_repayments_on_payday_max6": "Mandatory: the loan will be debited from this card",
+      "residence_proof": "In a small town it need not be requested — then “Not applicable”"
+    },
+    "checklistAnswer": {
+      "yes": "Yes",
+      "no": "No",
+      "n_a": "Not applicable"
+    },
+    "checklist": {
+      "title": "Verification checklist",
+      "progress": "{{answered}} of {{total}} marked",
+      "unansweredNotSent": "Unmarked items are not included in the decision.",
+      "addNote": "Note",
+      "clearAnswer": "Clear",
+      "share": "“Yes” — {{yes}} of {{applicable}} applicable",
+      "noneApplicable": "No item applies",
+      "notFilled": "Checklist not filled in"
+    },
+    "conditionalStage": {
+      "proposed": "Awaiting the manager's confirmation",
+      "confirmed": "Confirmed by the manager"
     },
     "channel": {
       "site": "Website",
@@ -13393,7 +13450,8 @@
       "empty": "The queue is empty",
       "noNumberHint": "The queue endpoint returns only the application id — it carries no application number and no client email. Open the card by clicking a row to see them.",
       "noAssignmentHint": "Assignment to an underwriter does not exist yet: the mechanism arrives with WS-20, so the “Assigned” column is empty for every row.",
-      "noSortingHint": "The module returns the whole queue as one list in referral order: there is no column sorting and no paging, because the server supports neither."
+      "noSortingHint": "The module returns the whole queue as one list in referral order: there is no column sorting and no paging, because the server supports neither.",
+      "awaitingConfirmation": "Awaiting confirmation"
     },
     "railReviewReason": {
       "payout_account_not_pinned": "The decision did not pin a payout account",

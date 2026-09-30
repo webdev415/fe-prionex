@@ -116,6 +116,11 @@ const CALLS: Array<{ name: string; invoke: () => Promise<unknown> }> = [
     name: 'decide',
     invoke: () => creditApi.decide('a1', { outcome: 'approved', rationale: 'r' }),
   },
+  // 19-5f: подтверждение условного одобрения — та же дверь под пропуском оператора.
+  {
+    name: 'confirmConditional',
+    invoke: () => creditApi.confirmConditional('a1', { proposal_decision_id: 'd1' }, 'idem-2'),
+  },
   { name: 'loans', invoke: () => creditApi.loans({}) },
   // Дверь карточки клиента CRM (WS-11): её вызов уносит id клиента, и уже
   // поэтому обязан быть в переборе — иначе первый же метод, добавленный мимо

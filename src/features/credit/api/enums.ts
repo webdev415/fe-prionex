@@ -14,6 +14,8 @@
  */
 import type {
   CreditApplicationStatus,
+  CreditChecklistAnswer,
+  CreditConditionalStage,
   CreditDecisionCodeCategory,
   CreditDisbursement,
   CreditLoanStatus,
@@ -441,6 +443,51 @@ export const CREDIT_DECISION_CODE_CATEGORIES = [
 ] as const satisfies readonly CreditDecisionCodeCategory[]
 
 /**
+ * Пункты чек-листа ручного решения — enum `DecisionChecklistItem.key` контракта
+ * модуля 0.1.30/0.1.31 (19-5), сверено с `main` модуля 0852c782 — `openapi.yaml`
+ * `DecisionChecklistItem`. Порядок — порядок листа книги и enum контракта: в нём
+ * форма рисует пункты и в нём же они уходят в теле решения. Текстов пунктов у
+ * модуля нет (двери-справочника у чек-листа нет), они живут в словаре CRM
+ * `credit.checklistItem.*`.
+ */
+export const CREDIT_CHECKLIST_KEYS = [
+  'ibv_all_accounts',
+  'statement_two_months',
+  'salary_regular',
+  'nsf_isolated',
+  'loan_repayments_on_payday_max6',
+  'salary_account_connected',
+  'id_photo_only',
+  'id_valid_on_apply',
+  'id_alberta_only',
+  'pay_document',
+  'residence_proof',
+] as const
+
+/** Пункты, у которых в форме есть подсказка оператору (`credit.checklistHint.*`). */
+export const CREDIT_CHECKLIST_HINTED = [
+  'ibv_all_accounts',
+  'statement_two_months',
+  'salary_regular',
+  'nsf_isolated',
+  'loan_repayments_on_payday_max6',
+  'residence_proof',
+] as const satisfies readonly (typeof CREDIT_CHECKLIST_KEYS)[number][]
+
+/** Ответ на пункт: `n_a` — «не застосовно», модуль не считает его невыполненным. */
+export const CREDIT_CHECKLIST_ANSWERS = [
+  'yes',
+  'no',
+  'n_a',
+] as const satisfies readonly CreditChecklistAnswer[]
+
+/** Ступень условного одобрения (`Decision.conditional_stage`, 19-5). */
+export const CREDIT_CONDITIONAL_STAGES = [
+  'proposed',
+  'confirmed',
+] as const satisfies readonly CreditConditionalStage[]
+
+/**
  * Скоринг книги правил проверки клиента в снимке решения (`input_snapshot.scorecard`).
  *
  * Перечни — зеркала ядра модуля, а не контракта: в контракте 0.1.28 ключ
@@ -607,6 +654,13 @@ export const CREDIT_DYNAMIC_NAMESPACES: Record<string, readonly string[]> = {
   // раздела кода в карточке решения. Тексты самих кодов в словари не идут: они
   // приходят из двери справочника модуля (копия разошлась бы с книгой).
   decisionCodeCategory: CREDIT_DECISION_CODE_CATEGORIES,
+  // Чек-лист ручного решения и ступень условного одобрения (19-5f): пункт,
+  // подсказка, ответ и ступень подставляются динамически, а пункт без строки
+  // доехал бы до андеррайтера машинным ключом.
+  checklistItem: CREDIT_CHECKLIST_KEYS,
+  checklistHint: CREDIT_CHECKLIST_HINTED,
+  checklistAnswer: CREDIT_CHECKLIST_ANSWERS,
+  conditionalStage: CREDIT_CONDITIONAL_STAGES,
   // Разбор скоринга книги на вкладке решения: имена параметров, признаки,
   // класс дохода и его источник, статус анкеты. Значения приходят из снимка
   // модуля, и параметр без строки доехал бы до андеррайтера машинным именем.

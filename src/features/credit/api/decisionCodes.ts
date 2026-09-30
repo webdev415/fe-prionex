@@ -36,6 +36,8 @@ export interface CreditDecisionCodeIndex {
   byId: ReadonlyMap<string, CreditDecisionCodeEntry>
   /** Коды отказа по разделам книги, в порядке книги. */
   declineGroups: readonly CreditDecisionCodeGroup[]
+  /** Коды условного одобрения (`kind = conditional`, `AB-C-*`) по `id` — варианты «Схвалити з умовою» (19-5f). */
+  conditional: readonly CreditDecisionCodeEntry[]
 }
 
 const DECLINE_KIND_ORDER: readonly string[] = CREDIT_DECLINE_KINDS
@@ -84,7 +86,16 @@ export function indexDecisionCodes(registry: CreditDecisionCodesRegistry): Credi
       ),
     }))
 
-  const index: CreditDecisionCodeIndex = { version: registry.version, byId, declineGroups }
+  const conditional = registry.codes
+    .filter((entry) => entry.kind === 'conditional')
+    .sort((a, b) => byText(a.id, b.id))
+
+  const index: CreditDecisionCodeIndex = {
+    version: registry.version,
+    byId,
+    declineGroups,
+    conditional,
+  }
   indexes.set(registry, index)
   return index
 }

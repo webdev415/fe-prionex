@@ -43,6 +43,8 @@ export const PERMISSIONS = {
     APPLICATIONS_VIEW: 'credit.applications.read',
     APPLICATIONS_WRITE: 'credit.applications.write',
     DECISIONS_DECIDE: 'credit.decisions.decide',
+    // Второй человек условного одобрения: 19-5a, миграция auth 098.
+    DECISIONS_CONFIRM_CONDITIONAL: 'credit.decisions.confirm_conditional',
     DOCUMENTS_VIEW: 'credit.documents.read',
     DOCUMENTS_GENERATE: 'credit.documents.generate',
     LOANS_VIEW: 'credit.loans.read',
@@ -578,6 +580,8 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   'credit.applications.read': 'View credit applications and their cards',
   'credit.applications.write': 'Create and edit credit applications on behalf of a client',
   'credit.decisions.decide': 'Make a manual underwriting decision on an application',
+  'credit.decisions.confirm_conditional':
+    'Confirm a conditional approval proposed by another underwriter (second person)',
   'credit.documents.read': 'View credit application and loan documents',
   'credit.documents.generate': 'Generate credit documents (agreement, schedule, disclosures)',
   'credit.loans.read': 'View loans, schedules and the ledger',

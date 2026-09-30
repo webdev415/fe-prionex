@@ -6,10 +6,11 @@
  */
 import { useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { creditApi, newIdempotencyKey } from '../api/creditApi'
+import { CreditApiError, creditApi, newIdempotencyKey } from '../api/creditApi'
 import { indexDecisionCodes } from '../api/decisionCodes'
 import type {
   CreditApplicationsParams,
+  CreditConditionalConfirmationPayload,
   CreditJournalParams,
   CreditLoansParams,
   CreditQueueStatus,
@@ -286,6 +287,51 @@ export function useCreditManualDecision(applicationId: string) {
       void queryClient.invalidateQueries({ queryKey: creditKeys.application(applicationId) })
       void queryClient.invalidateQueries({ queryKey: creditKeys.applications() })
       void queryClient.invalidateQueries({ queryKey: creditKeys.overview() })
+      // Очередь не лежит под `applications()`: без сброса предложение условного
+      // одобрения встало бы в очередь с бейджем только через `staleTime` (19-5f).
+      void queryClient.invalidateQueries({ queryKey: [...creditKeys.all, 'queue'] })
+    },
+  })
+}
+
+/**
+ * Подтверждение условного одобрения руководителем (19-5f, право
+ * `credit.decisions.confirm_conditional`).
+ *
+ * Ключ идемпотентности живёт на ДЕЙСТВИЕ, а не на вызов (образец —
+ * `useSetCreditSwitch`): подпись действия — `proposal_decision_id`. Сетевой
+ * сбой без ответа — повтор с тем же ключом, и модуль отдаст реплей, а не
+ * выпустит второй договор. Любой ответ сервера со статусом (успех или отказ)
+ * действие завершает: следующий клик — новое действие и новый ключ.
+ */
+export function useCreditConfirmConditional(applicationId: string) {
+  const queryClient = useQueryClient()
+  const attempt = useRef<{ proposal: string; key: string } | null>(null)
+
+  return useMutation({
+    mutationFn: (payload: CreditConditionalConfirmationPayload) => {
+      const previous = attempt.current
+      const current =
+        previous?.proposal === payload.proposal_decision_id
+          ? previous
+          : {
+              proposal: payload.proposal_decision_id,
+              key: newIdempotencyKey(`fe-confirm:${applicationId}`),
+            }
+      attempt.current = current
+      return creditApi.confirmConditional(applicationId, payload, current.key)
+    },
+    onError: (error) => {
+      if (error instanceof CreditApiError && error.status !== undefined) attempt.current = null
+    },
+    onSuccess: () => {
+      attempt.current = null
+      void queryClient.invalidateQueries({ queryKey: creditKeys.application(applicationId) })
+      void queryClient.invalidateQueries({ queryKey: creditKeys.applications() })
+      void queryClient.invalidateQueries({ queryKey: creditKeys.overview() })
+      // Префиксом — все статусы очереди разом: бейдж «Чекає підтвердження» не
+      // должен держаться до `staleTime` в той же SPA-сессии.
+      void queryClient.invalidateQueries({ queryKey: [...creditKeys.all, 'queue'] })
     },
   })
 }

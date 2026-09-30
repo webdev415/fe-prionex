@@ -20,13 +20,16 @@ import { CreditApplicationDetailPage } from '../CreditApplicationDetailPage'
 import * as hooks from '@/features/credit/hooks/useCredit'
 import { CreditApiError } from '@/features/credit/api/creditApi'
 import { indexDecisionCodes } from '@/features/credit/api/decisionCodes'
+import { formatCreditMoney } from '@/features/credit/api/money'
 import ukCommon from '@/../public/locales/uk/common.json'
 import {
   DECISION_CODES_FIXTURE,
   entryOf,
 } from '@/features/credit/api/__tests__/decisionCodesFixture'
 import { SCENE_A } from '@/features/credit/api/__tests__/scorecardFixture'
-import { expectObscured } from '@/test/piiHelpers'
+import { expectNotObscured, expectObscured } from '@/test/piiHelpers'
+import { useAuthStore } from '@/stores/authStore'
+import { CREDIT_CHECKLIST_HINTED, CREDIT_CHECKLIST_KEYS } from '@/features/credit/api/enums'
 import type {
   CreditApplicationDetail,
   CreditDecision,
@@ -288,11 +291,21 @@ describe('CreditApplicationDetailPage → решение заменяет пре
   }
   const codesLoaded = (): CodesState => ({ data: indexDecisionCodes(DECISION_CODES_FIXTURE) })
 
+  /** Состояние хука подтверждения условного одобрения (19-5f). */
+  type ConfirmState = {
+    mutate?: (payload: unknown, options?: { onSuccess?: () => void }) => void
+    isPending?: boolean
+    isError?: boolean
+    isSuccess?: boolean
+    error?: unknown
+  }
+
   function renderDecision(
     application: CreditApplicationDetail,
     permissions: string[] = [],
     mutation: { mutate?: (payload: unknown) => void; isError?: boolean; error?: unknown } = {},
-    codes: CodesState = codesLoaded()
+    codes: CodesState = codesLoaded(),
+    confirm: ConfirmState = {}
   ) {
     vi.mocked(hooks.useCreditApplication).mockReturnValue({
       ...idle,
@@ -315,6 +328,16 @@ describe('CreditApplicationDetailPage → решение заменяет пре
       isPaused: false,
       refetch: vi.fn(),
       ...codes,
+    } as never)
+    // Хук автомокнут: без ответа по умолчанию кнопка подтверждения (19-5f)
+    // уронила бы сцену на деструктуризации `undefined`.
+    vi.mocked(hooks.useCreditConfirmConditional).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+      isError: false,
+      isSuccess: false,
+      error: null,
+      ...confirm,
     } as never)
     const view = render(<MemoryRouter>{withQuery(<CreditApplicationDetailPage />)}</MemoryRouter>)
     fireEvent.click(screen.getByRole('tab', { name: 'credit.tabs.decision' }))
@@ -1370,6 +1393,796 @@ describe('CreditApplicationDetailPage → решение заменяет пре
       expect(screen.queryByText('credit.scorecard.title')).toBeNull()
       expect(screen.getByText('credit.card.snapshotAmountsHidden')).toBeInTheDocument()
       expect(screen.queryByText('credit.card.snapshotAmountsHiddenSeeBreakdown')).toBeNull()
+    })
+  })
+
+  /**
+   * Чек-лист проверки в форме ручного решения (19-5f).
+   *
+   * Ответ — три radio в `<fieldset>` пункта; «Скинути» и «Примітка» — только у
+   * отвеченного пункта. Мок `t` печатает ключ: пункт ищется группой по имени
+   * `credit.checklistItem.<key>`. Кнопки по всей панели здесь не считаются — так
+   * считает F-6, и её ожидание держит отсутствие кнопок у неотвеченных пунктов.
+   */
+  describe('19-5f: чек-лист в форме ручного решения', () => {
+    const RATIONALE = 'Синтетичне обґрунтування з чек-листом'
+
+    const item = (panel: ReturnType<typeof within>, key: string) =>
+      within(panel.getByRole('group', { name: `credit.checklistItem.${key}` }))
+
+    const answerItem = (
+      panel: ReturnType<typeof within>,
+      key: string,
+      answer: 'yes' | 'no' | 'n_a'
+    ) =>
+      fireEvent.click(
+        item(panel, key).getByRole('radio', { name: `credit.checklistAnswer.${answer}` })
+      )
+
+    const save = (panel: ReturnType<typeof within>) => {
+      fireEvent.change(panel.getByPlaceholderText('credit.card.rationalePlaceholder'), {
+        target: { value: RATIONALE },
+      })
+      fireEvent.click(panel.getByRole('button', { name: 'credit.actions.saveDecision' }))
+    }
+
+    it('19-5f K-1: одиннадцать пунктов в порядке листа, шесть подсказок, по три ответа; кнопок и полей у неотвеченных нет', () => {
+      const panel = renderManual()
+
+      const legends = panel
+        .getAllByRole('group')
+        .map((group) => group.querySelector('legend')?.textContent ?? '')
+        .filter((text) => text.startsWith('credit.checklistItem.'))
+      expect(legends, 'the checklist items are not the book sheet in its order').toEqual(
+        CREDIT_CHECKLIST_KEYS.map((key) => `credit.checklistItem.${key}`)
+      )
+      for (const key of CREDIT_CHECKLIST_KEYS) {
+        const radios = item(panel, key).getAllByRole('radio')
+        expect(
+          radios.map((radio) => radio.closest('label')?.textContent),
+          `the ${key} item does not offer the three answers`
+        ).toEqual([
+          'credit.checklistAnswer.yes',
+          'credit.checklistAnswer.no',
+          'credit.checklistAnswer.n_a',
+        ])
+        expect(radios.some((radio) => (radio as HTMLInputElement).checked)).toBe(false)
+      }
+      const hints = panel.getAllByText(/^credit\.checklistHint\./).map((node) => node.textContent)
+      expect(hints, 'the six hints are not under their items').toEqual(
+        CREDIT_CHECKLIST_HINTED.map((key) => `credit.checklistHint.${key}`)
+      )
+      for (const key of CREDIT_CHECKLIST_HINTED) {
+        expect(item(panel, key).getByText(`credit.checklistHint.${key}`)).toBeInTheDocument()
+      }
+      expect(
+        panel.getAllByRole('textbox'),
+        'an untouched checklist added a text input to the form'
+      ).toHaveLength(1)
+      expect(
+        panel.queryAllByRole('button', { name: 'credit.checklist.clearAnswer' }),
+        'an unanswered item offers «Clear»'
+      ).toHaveLength(0)
+      expect(
+        panel.queryAllByRole('button', { name: 'credit.checklist.addNote' }),
+        'an unanswered item offers «Note»'
+      ).toHaveLength(0)
+    })
+
+    it('19-5f K-2: два ответа + одобрение — чек-лист в порядке листа, прочие ключи прежние', () => {
+      const mutate = vi.fn()
+      const panel = renderManual({ mutate })
+
+      // Порядок кликов обратный листу.
+      answerItem(panel, 'residence_proof', 'yes')
+      answerItem(panel, 'ibv_all_accounts', 'yes')
+      save(panel)
+
+      expect(mutate).toHaveBeenCalledTimes(1)
+      const payload = mutate.mock.calls[0][0] as Record<string, unknown>
+      expect(Object.keys(payload).sort()).toEqual([
+        'checklist',
+        'final_amount_minor',
+        'outcome',
+        'rationale',
+      ])
+      expect(
+        payload.checklist,
+        'the checklist left in the click order, not in the sheet order'
+      ).toEqual([
+        { key: 'ibv_all_accounts', answer: 'yes' },
+        { key: 'residence_proof', answer: 'yes' },
+      ])
+      expect(payload.outcome).toBe('approved')
+    })
+
+    it('19-5f K-3: «Скинути» снимает ответ — пункта в теле нет; ни одного ответа — ключа checklist нет', () => {
+      const mutate = vi.fn()
+      const panel = renderManual({ mutate })
+
+      answerItem(panel, 'pay_document', 'no')
+      answerItem(panel, 'id_photo_only', 'yes')
+      fireEvent.click(
+        item(panel, 'pay_document').getByRole('button', { name: 'credit.checklist.clearAnswer' })
+      )
+      expect(
+        item(panel, 'pay_document')
+          .getAllByRole('radio')
+          .some((radio) => (radio as HTMLInputElement).checked),
+        '«Clear» left the answer checked'
+      ).toBe(false)
+      save(panel)
+      expect((mutate.mock.calls[0][0] as { checklist: unknown }).checklist).toEqual([
+        { key: 'id_photo_only', answer: 'yes' },
+      ])
+
+      fireEvent.click(
+        item(panel, 'id_photo_only').getByRole('button', { name: 'credit.checklist.clearAnswer' })
+      )
+      fireEvent.click(panel.getByRole('button', { name: 'credit.actions.saveDecision' }))
+      expect(mutate).toHaveBeenCalledTimes(2)
+      expect(
+        'checklist' in (mutate.mock.calls[1][0] as Record<string, unknown>),
+        'a checklist without answers is sent as a key'
+      ).toBe(false)
+    })
+
+    it('19-5f K-4: «Скинути» и «Примітка» — только у отвеченного; поле подписано текстом пункта, ≤ 500, текст уходит note', () => {
+      const mutate = vi.fn()
+      const panel = renderManual({ mutate })
+
+      answerItem(panel, 'pay_document', 'yes')
+      expect(
+        item(panel, 'pay_document').getByRole('button', { name: 'credit.checklist.clearAnswer' })
+      ).toBeInTheDocument()
+      expect(
+        panel.getAllByRole('button', { name: 'credit.checklist.addNote' }),
+        '«Note» appears on more than the answered item'
+      ).toHaveLength(1)
+      expect(panel.getAllByRole('textbox'), 'the note opened without a click').toHaveLength(1)
+
+      fireEvent.click(
+        item(panel, 'pay_document').getByRole('button', { name: 'credit.checklist.addNote' })
+      )
+      const note = panel.getByRole('textbox', { name: 'credit.checklistItem.pay_document' })
+      expect(note.getAttribute('maxlength')).toBe('500')
+      // Управляемый textarea пишет значение дочерним текстом — маска ввода его не закрывает.
+      expectObscured(note)
+      fireEvent.change(note, { target: { value: '  FE195F-NOTE  ' } })
+      save(panel)
+
+      expect((mutate.mock.calls[0][0] as { checklist: unknown }).checklist).toEqual([
+        { key: 'pay_document', answer: 'yes', note: 'FE195F-NOTE' },
+      ])
+    })
+
+    it.each([
+      ['declined', ['checklist', 'decline_codes', 'outcome', 'rationale']],
+      ['referred', ['checklist', 'outcome', 'rationale']],
+    ] as const)('19-5f K-5: чек-лист уходит и при исходе %s', (outcome, keys) => {
+      const mutate = vi.fn()
+      const panel = renderManual({ mutate })
+
+      fireEvent.change(panel.getByRole('combobox'), { target: { value: outcome } })
+      if (outcome === 'declined') {
+        fireEvent.click(panel.getByRole('checkbox', { name: /AB-O-13/ }))
+      }
+      answerItem(panel, 'nsf_isolated', 'n_a')
+      save(panel)
+
+      const payload = mutate.mock.calls[0][0] as Record<string, unknown>
+      expect(Object.keys(payload).sort()).toEqual([...keys])
+      expect(payload.checklist).toEqual([{ key: 'nsf_isolated', answer: 'n_a' }])
+    })
+
+    it('19-5f K-6: счёт отвеченных — «Відмічено 2 з 11»', () => {
+      const panel = renderManual()
+
+      expect(panel.getByText(/credit\.checklist\.progress answered=0 total=11/)).toBeInTheDocument()
+      answerItem(panel, 'salary_regular', 'yes')
+      answerItem(panel, 'id_alberta_only', 'no')
+      expect(panel.getByText(/credit\.checklist\.progress answered=2 total=11/)).toBeInTheDocument()
+      expect(panel.getByText(/credit\.checklist\.unansweredNotSent/)).toBeInTheDocument()
+      expect(
+        panel.getByText(/credit\.checklist\.progress/).textContent,
+        'the count and the «unmarked items» line are glued into one sentence'
+      ).not.toContain('credit.checklist.unansweredNotSent')
+    })
+  })
+
+  /**
+   * «Схвалити з умовою» (19-5f): коды условия `AB-C-*` под исходом «Схвалити»,
+   * одна кнопка сохранения. Выбранный код делает решение ПРЕДЛОЖЕНИЕМ —
+   * `referred` с кодами; `approved` с `AB-C-*` форма не шлёт никогда.
+   */
+  describe('19-5f: условное одобрение в форме', () => {
+    const RATIONALE = 'Синтетичне обґрунтування пропозиції'
+    const DETAIL = 'Синтетический отказ модуля: условие уже заявлено'
+
+    const idsOf = (panel: ReturnType<typeof within>): Array<string | undefined> =>
+      panel
+        .queryAllByRole('checkbox')
+        .map((box: HTMLElement) => box.closest('label')?.textContent?.split(' ')[0])
+
+    const typeRationale = (panel: ReturnType<typeof within>) =>
+      fireEvent.change(panel.getByPlaceholderText('credit.card.rationalePlaceholder'), {
+        target: { value: RATIONALE },
+      })
+
+    it('19-5f Q-1: при «Схвалити» — четыре AB-C-* по id и ничего кроме; при отказе условий нет, отказов по-прежнему 7', () => {
+      const reversed: CreditDecisionCodesRegistry = {
+        version: 'book@q1',
+        codes: [...DECISION_CODES_FIXTURE.codes].reverse(),
+      }
+      const panel = renderManual({}, DECISION, { data: indexDecisionCodes(reversed) })
+
+      expect(
+        panel.getByText('credit.card.conditionalTitle').tagName,
+        'the conditions are not a fieldset'
+      ).toBe('LEGEND')
+      expect(idsOf(panel), 'the conditions are not the AB-C-* codes of the registry').toEqual([
+        'AB-C-01',
+        'AB-C-02',
+        'AB-C-03',
+        'AB-C-04',
+      ])
+      for (const id of ['AB-O-13', 'AB-G-06', 'AB-X-08']) {
+        expect(
+          panel.queryByRole('checkbox', { name: new RegExp(id) }),
+          `the conditional approval offers ${id}`
+        ).toBeNull()
+      }
+
+      fireEvent.change(panel.getByRole('combobox'), { target: { value: 'declined' } })
+      expect(
+        idsOf(panel).filter((id) => id?.startsWith('AB-C-')),
+        'a decline offers a conditional code'
+      ).toEqual([])
+      expect(panel.getAllByRole('checkbox')).toHaveLength(7)
+    })
+
+    it('19-5f Q-2: выбран AB-C-02 — кнопка «Запропонувати умовне схвалення» и подсказка', () => {
+      const panel = renderManual()
+      expect(panel.queryByText('credit.card.conditionalHint')).toBeNull()
+
+      fireEvent.click(panel.getByRole('checkbox', { name: /AB-C-02/ }))
+
+      expect(
+        panel.getByRole('button', { name: 'credit.actions.proposeConditional' })
+      ).toBeInTheDocument()
+      expect(
+        panel.queryByRole('button', { name: 'credit.actions.saveDecision' }),
+        'the proposal still reads as a plain save'
+      ).toBeNull()
+      expect(panel.getByText('credit.card.conditionalHint')).toBeInTheDocument()
+    })
+
+    it('19-5f Q-3: тело предложения — referred, коды по возрастанию, сумма; без decline_codes и без approved', () => {
+      const mutate = vi.fn()
+      const panel = renderManual({ mutate })
+
+      fireEvent.click(panel.getByRole('checkbox', { name: /AB-C-02/ }))
+      fireEvent.click(panel.getByRole('checkbox', { name: /AB-C-01/ }))
+      typeRationale(panel)
+      fireEvent.click(panel.getByRole('button', { name: 'credit.actions.proposeConditional' }))
+
+      expect(mutate).toHaveBeenCalledTimes(1)
+      expect(mutate.mock.calls[0][0]).toEqual({
+        outcome: 'referred',
+        rationale: RATIONALE,
+        final_amount_minor: 30_000,
+        conditional_codes: ['AB-C-01', 'AB-C-02'],
+      })
+      for (const [payload] of mutate.mock.calls) {
+        const body = payload as Record<string, unknown>
+        expect(
+          body.outcome === 'approved' && 'conditional_codes' in body,
+          'the form sent approved with AB-C-* — the module answers 409'
+        ).toBe(false)
+      }
+    })
+
+    it('19-5f Q-4: коды сняты — прежнее одобрение', () => {
+      const mutate = vi.fn()
+      const panel = renderManual({ mutate })
+
+      fireEvent.click(panel.getByRole('checkbox', { name: /AB-C-02/ }))
+      fireEvent.click(panel.getByRole('checkbox', { name: /AB-C-02/ }))
+      typeRationale(panel)
+      fireEvent.click(panel.getByRole('button', { name: 'credit.actions.saveDecision' }))
+
+      const payload = mutate.mock.calls[0][0] as Record<string, unknown>
+      expect(Object.keys(payload).sort()).toEqual(['final_amount_minor', 'outcome', 'rationale'])
+      expect(payload.outcome).toBe('approved')
+    })
+
+    it('19-5f Q-5: справочник в ошибке — строка, а не плашка; одобрение сохраняется; условие без справочника закрывает кнопку', () => {
+      const mutate = vi.fn()
+      const panel = renderManual({ mutate }, DECISION, { isError: true })
+
+      expect(panel.getByText('credit.card.conditionalUnavailable')).toBeInTheDocument()
+      expect(
+        panel.queryAllByRole('alert'),
+        'the unavailable conditions are drawn as an alert plate'
+      ).toHaveLength(0)
+      typeRationale(panel)
+      fireEvent.click(panel.getByRole('button', { name: 'credit.actions.saveDecision' }))
+      expect(mutate).toHaveBeenCalledTimes(1)
+      expect((mutate.mock.calls[0][0] as { outcome: string }).outcome).toBe('approved')
+
+      // Условие отмечено, потом справочник пропал: одобрение без условия не уходит.
+      cleanup()
+      const second = vi.fn()
+      const form = renderManual({ mutate: second })
+      fireEvent.click(form.getByRole('checkbox', { name: /AB-C-02/ }))
+      vi.mocked(hooks.useCreditDecisionCodes).mockReturnValue({
+        data: undefined,
+        isError: true,
+        isFetching: false,
+        refetch: vi.fn(),
+      } as never)
+      typeRationale(form)
+      const button = form.getByRole('button', { name: 'credit.actions.saveDecision' })
+      expect(
+        button,
+        'a chosen condition without the directory leaves as a plain approval'
+      ).toBeDisabled()
+      fireEvent.click(button)
+      expect(second).not.toHaveBeenCalled()
+    })
+
+    it('19-5f Q-6: 409 conditional_approval_unconfirmed — одна плашка со своим текстом, detail модуля не виден', () => {
+      const panel = renderManual({
+        isError: true,
+        error: new CreditApiError(DETAIL, 409, 'conditional_approval_unconfirmed'),
+      })
+
+      const alerts = panel.getAllByRole('alert')
+      expect(alerts).toHaveLength(1)
+      expect(alerts[0].textContent).toBe('credit.decisionError.conditionalApprovalUnconfirmed')
+      expect(panel.queryByText(DETAIL)).toBeNull()
+    })
+  })
+
+  /**
+   * Подтверждение условного одобрения руководителем (19-5f): кнопка — при праве
+   * `credit.decisions.confirm_conditional`, заявке `referred` и ступени
+   * `proposed`. Автору не прячется — «подтверждает другой» проверяет модуль.
+   */
+  describe('19-5f: подтверждение условного одобрения', () => {
+    const CONFIRM = 'credit.decisions.confirm_conditional'
+    const DETAIL = 'Синтетический отказ модуля подтверждения'
+
+    const PROPOSAL: CreditDecision = {
+      ...DECISION,
+      outcome: 'referred',
+      decision_mode: 'manual',
+      decline_codes: [],
+      decision_codes: ['AB-C-02'],
+      final_amount_minor: null,
+      supersedes_decision_id: null,
+      underwriter_id: 103,
+      rationale: 'Синтетичне обґрунтування пропозиції',
+      conditional_stage: 'proposed',
+      checklist_completed: { yes: 10, applicable: 10 },
+      input_snapshot: {
+        conditional: { stage: 'proposed', codes: ['AB-C-02'], amount_minor: 25_000 },
+      },
+    }
+
+    const renderProposal = (
+      permissions: string[] = [CONFIRM, 'credit.decisions.decide'],
+      confirm: ConfirmState = {},
+      decision: CreditDecision = PROPOSAL,
+      status: CreditApplicationDetail['status'] = 'referred'
+    ) => renderDecision(withDecision(decision, status), permissions, {}, codesLoaded(), confirm)
+
+    const confirmButton = () =>
+      screen.queryByRole('button', { name: 'credit.actions.confirmConditional' })
+    const conditionRow = () =>
+      screen.getByText('credit.fields.conditionalCodes').parentElement as HTMLElement
+
+    it('19-5f R-1: предложение без права — кнопки нет, ступень видна', () => {
+      renderProposal(['credit.decisions.decide'])
+
+      expect(confirmButton(), 'the confirmation is offered without the right').toBeNull()
+      expect(
+        within(conditionRow()).getByText('credit.conditionalStage.proposed')
+      ).toBeInTheDocument()
+    })
+
+    it('19-5f R-2: с правом — кнопка и строка «подтверждает другой»', () => {
+      renderProposal()
+
+      expect(confirmButton()).not.toBeNull()
+      expect(within(conditionRow()).getByText('credit.card.confirmNotAuthor')).toBeInTheDocument()
+    })
+
+    it.each<[string, CreditDecision, CreditApplicationDetail['status']]>([
+      ['заявка уже approved', PROPOSAL, 'approved'],
+      [
+        'ступень confirmed',
+        {
+          ...PROPOSAL,
+          outcome: 'approved',
+          conditional_stage: 'confirmed',
+          input_snapshot: {
+            conditional: { stage: 'confirmed', codes: ['AB-C-02'], amount_minor: 25_000 },
+          },
+        },
+        'referred',
+      ],
+    ])('19-5f R-2: %s — кнопки нет', (_case, decision, status) => {
+      renderProposal([CONFIRM], {}, decision, status)
+
+      expect(
+        confirmButton(),
+        'the confirmation is offered for a decision that is not a live proposal'
+      ).toBeNull()
+      expect(conditionRow()).toBeInTheDocument()
+    })
+
+    it('19-5f R-2b: право подтверждения без права решать — кнопка и подсказка есть', () => {
+      // Без `credit.decisions.decide` справочник не запрашивается: коды условия — одним id (C-7).
+      renderDecision(withDecision(PROPOSAL, 'referred'), [CONFIRM], {}, { data: undefined })
+
+      expect(confirmButton(), 'the confirmation also requires the right to decide').not.toBeNull()
+      expect(within(conditionRow()).getByText('credit.card.confirmNotAuthor')).toBeInTheDocument()
+      expect(conditionRow().textContent).toContain('AB-C-02')
+      expect(conditionRow().textContent).not.toContain(entryOf('AB-C-02').ru)
+    })
+
+    it('19-5f R-3: диалог с суммой и кодами; «Скасувати» — без запроса; «Підтвердити» — один вызов с id предложения', () => {
+      const mutate = vi.fn()
+      renderProposal(undefined, { mutate })
+
+      fireEvent.click(confirmButton() as HTMLElement)
+      const dialog = within(screen.getByRole('dialog'))
+      // Сумма — предложенная из снимка (25 000), а не запрошенная (30 000) и не
+      // `final_amount_minor` предложения (`null` → «—»).
+      expect(dialog.getByText(/credit\.card\.confirmMessage/).textContent).toBe(
+        `credit.card.confirmMessage amount=${formatCreditMoney(25_000, 'CAD')} codes=AB-C-02`
+      )
+      fireEvent.click(dialog.getByRole('button', { name: 'actions.cancel' }))
+      expect(mutate, '«Cancel» sent the confirmation').not.toHaveBeenCalled()
+      expect(screen.queryByRole('dialog')).toBeNull()
+
+      fireEvent.click(confirmButton() as HTMLElement)
+      fireEvent.click(
+        within(screen.getByRole('dialog')).getByRole('button', {
+          name: 'credit.actions.confirmConditional',
+        })
+      )
+      expect(mutate).toHaveBeenCalledTimes(1)
+      expect(mutate.mock.calls[0][0]).toEqual({ proposal_decision_id: PROPOSAL.decision_id })
+    })
+
+    it('19-5f R-4: 409 conditional_confirmer_is_the_author — одна плашка со своим текстом', () => {
+      renderProposal(undefined, {
+        isError: true,
+        error: new CreditApiError(DETAIL, 409, 'conditional_confirmer_is_the_author'),
+      })
+
+      const alerts = within(conditionRow()).getAllByRole('alert')
+      expect(alerts).toHaveLength(1)
+      expect(alerts[0].textContent).toBe('credit.decisionError.confirmerIsTheAuthor')
+      expect(screen.queryByText(DETAIL)).toBeNull()
+    })
+
+    it('19-5f R-5: автор предложения — тот же пользователь CRM, а кнопка всё равно видна', () => {
+      useAuthStore.setState({
+        user: { id: '103', username: 'u', projects: [], active_project_id: '1' } as never,
+      })
+      try {
+        renderProposal()
+        expect(
+          confirmButton(),
+          'the button is hidden from the author — the author rule belongs to the module'
+        ).not.toBeNull()
+      } finally {
+        useAuthStore.setState({ user: null })
+      }
+    })
+
+    it.each([
+      [
+        '409 invalid_state',
+        new CreditApiError(DETAIL, 409, 'invalid_state'),
+        'credit.decisionError.proposalNotActive',
+      ],
+      [
+        '403 operator_id_not_numeric',
+        new CreditApiError(DETAIL, 403, 'operator_id_not_numeric'),
+        'credit.decisionError.operatorIdNotNumeric',
+      ],
+      [
+        '422 validation_failed (график не строится)',
+        new CreditApiError(DETAIL, 422, 'validation_failed'),
+        DETAIL,
+      ],
+      ['Error без сообщения', new Error(''), 'credit.decisionError.generic'],
+    ] as const)('19-5f R-6: %s — текст плашки подтверждения', (_case, error, shown) => {
+      renderProposal(undefined, { isError: true, error })
+
+      const alerts = within(conditionRow()).getAllByRole('alert')
+      expect(alerts).toHaveLength(1)
+      expect(alerts[0].textContent).toBe(shown)
+    })
+
+    it('19-5f R-7: успех — плашка «Умовне схвалення підтверджено» переживает перезапрос карточки, кнопки нет', () => {
+      const mutate = vi.fn((_payload: unknown, options?: { onSuccess?: () => void }) =>
+        options?.onSuccess?.()
+      )
+      const view = renderProposal(undefined, { mutate })
+
+      fireEvent.click(confirmButton() as HTMLElement)
+      fireEvent.click(
+        within(screen.getByRole('dialog')).getByRole('button', {
+          name: 'credit.actions.confirmConditional',
+        })
+      )
+      expect(mutate).toHaveBeenCalledTimes(1)
+      // Окно до ответа перезапроса: карточка ещё несёт предложение.
+      expect(
+        within(conditionRow()).getByText('credit.card.conditionalConfirmed')
+      ).toBeInTheDocument()
+      expect(confirmButton(), 'the button is live again before the card refreshed').toBeNull()
+
+      // Сброс кэша принёс заявку `approved` с решением-подтверждением.
+      vi.mocked(hooks.useCreditApplication).mockReturnValue({
+        ...idle,
+        data: withDecision(
+          {
+            ...PROPOSAL,
+            decision_id: 'd5d5d5d5-5555-4555-8555-555555555555',
+            outcome: 'approved',
+            conditional_stage: 'confirmed',
+            input_snapshot: {
+              conditional: { stage: 'confirmed', codes: ['AB-C-02'], amount_minor: 25_000 },
+            },
+          },
+          'approved'
+        ),
+      } as unknown as ReturnType<typeof hooks.useCreditApplication>)
+      view.rerender(<MemoryRouter>{withQuery(<CreditApplicationDetailPage />)}</MemoryRouter>)
+
+      // Положительный контроль: карточка действительно перерисована подтверждением.
+      expect(
+        within(conditionRow()).getByText('credit.conditionalStage.confirmed')
+      ).toBeInTheDocument()
+      expect(
+        within(conditionRow()).getByText('credit.card.conditionalConfirmed'),
+        'the success plate left together with the confirm button'
+      ).toBeInTheDocument()
+      expect(confirmButton()).toBeNull()
+    })
+  })
+
+  /**
+   * Карточка решения с условием (19-5f): условие — своей строкой из снимка,
+   * «Коди відмови» — без кодов условия. Сырой снимок с примечанием чек-листа —
+   * под маской записи сессии.
+   */
+  describe('19-5f: условие и чек-лист в карточке решения', () => {
+    const PROPOSAL: CreditDecision = {
+      ...DECISION,
+      outcome: 'referred',
+      decision_mode: 'manual',
+      decline_codes: [],
+      decision_codes: ['AB-C-02'],
+      final_amount_minor: null,
+      supersedes_decision_id: null,
+      conditional_stage: 'proposed',
+      input_snapshot: {
+        conditional: { stage: 'proposed', codes: ['AB-C-02'], amount_minor: 25_000 },
+      },
+    }
+    const codesRow = () =>
+      screen.getByText('credit.fields.declineCodes').parentElement?.textContent ?? ''
+    const conditionRow = () =>
+      screen.getByText('credit.fields.conditionalCodes').parentElement?.textContent ?? ''
+
+    it('19-5f C-6: предложение — «Коди відмови» прочерк, условие своей строкой: код, текст книги, ступень, сумма', () => {
+      renderDecision(withDecision(PROPOSAL, 'referred'), ['credit.decisions.decide'])
+
+      expect(codesRow(), 'the conditional approval is shown as a decline code').toBe(
+        'credit.fields.declineCodes—'
+      )
+      const row = conditionRow()
+      expect(row).toContain('AB-C-02')
+      expect(row).toContain(entryOf('AB-C-02').ru)
+      expect(row).toContain('credit.conditionalStage.proposed')
+      // Предложенная сумма снимка (25 000), а не запрошенная (30 000) и не
+      // `final_amount_minor` предложения (`null` → «—»).
+      expect(row).toContain(`credit.card.proposedAmount amount=${formatCreditMoney(25_000, 'CAD')}`)
+    })
+
+    it('19-5f C-7: справочника нет — в строке условия только id, страница цела', () => {
+      renderDecision(withDecision(PROPOSAL, 'referred'), [], {}, { data: undefined })
+
+      const row = conditionRow()
+      expect(row).toContain('AB-C-02')
+      expect(row).not.toContain(entryOf('AB-C-02').ru)
+      expect(screen.getByText('credit.fields.decidedAt')).toBeInTheDocument()
+    })
+
+    it('19-5f C-10: решение без условия и чек-листа — строка кодов как прежде, строки условия нет', () => {
+      renderDecision(
+        withDecision(
+          {
+            ...DECISION,
+            outcome: 'declined',
+            decision_mode: 'manual',
+            final_amount_minor: null,
+            supersedes_decision_id: null,
+            decline_codes: ['AB-O-13'],
+            decision_codes: ['AB-O-13'],
+          },
+          'declined'
+        ),
+        ['credit.decisions.decide', 'credit.decisions.confirm_conditional']
+      )
+
+      expect(codesRow()).toContain(entryOf('AB-O-13').ru)
+      expect(codesRow()).toContain('credit.decisionCodeCategory.financial_hardship')
+      expect(screen.queryByText('credit.fields.conditionalCodes')).toBeNull()
+      expect(screen.queryByRole('button', { name: 'credit.actions.confirmConditional' })).toBeNull()
+    })
+
+    it('19-5f C-11: примечание чек-листа в сыром снимке — текст есть, узел под маской записи', () => {
+      renderDecision(
+        withDecision({
+          ...DECISION,
+          decision_mode: 'manual',
+          checklist_completed: { yes: 1, applicable: 1 },
+          input_snapshot: {
+            checklist: {
+              version: 'checklist@1',
+              items: [{ key: 'pay_document', answer: 'yes', note: 'FE195F-NOTE' }],
+            },
+          },
+        })
+      )
+
+      const pre = document.querySelector('details pre')
+      expect(pre, 'the raw snapshot is not on the tab').not.toBeNull()
+      expect(
+        pre?.textContent,
+        'the scene proves nothing: the note is not in the raw snapshot'
+      ).toContain('FE195F-NOTE')
+      expectObscured(pre)
+    })
+
+    /**
+     * Строка «Чек-лист» (19-5f, Р-11): доля — числами модуля `checklist_completed`
+     * (правило `n_a` — модуля, fe не пересчитывает), ответы — свёрнутым списком из
+     * снимка в порядке ответа модуля. Ручное решение без чек-листа — «не
+     * заповнено»; автоматическое без чек-листа — строки нет.
+     */
+    const MANUAL: CreditDecision = {
+      ...DECISION,
+      decision_mode: 'manual',
+      supersedes_decision_id: null,
+    }
+    /** Десять «Так» и `residence_proof` «Не застосовно» — сцена DEV-приёмки 3(а). */
+    const TEN_OF_TEN = CREDIT_CHECKLIST_KEYS.map((key) => ({
+      key,
+      answer: key === 'residence_proof' ? ('n_a' as const) : ('yes' as const),
+      note: null,
+    }))
+    const checklistRow = () =>
+      screen.queryByText('credit.fields.checklist')?.parentElement as HTMLElement | null | undefined
+
+    it('19-5f C-8: доля — числами модуля: {10, 10} → «Так — 10 з 10», а не «з 11»', () => {
+      renderDecision(
+        withDecision({
+          ...MANUAL,
+          checklist_completed: { yes: 10, applicable: 10 },
+          input_snapshot: { checklist: { version: 'checklist@1', items: TEN_OF_TEN } },
+        })
+      )
+
+      const row = checklistRow()?.textContent ?? ''
+      expect(row, 'the checklist row is missing from the decision card').toContain(
+        'credit.checklist.share yes=10 applicable=10'
+      )
+      expect(row, 'the share was recounted in the CRM over the whole sheet').not.toContain(
+        'applicable=11'
+      )
+    })
+
+    it('19-5f C-8: все пункты «Не застосовно» — {0, 0} → «Жоден пункт не застосовний»', () => {
+      renderDecision(
+        withDecision({
+          ...MANUAL,
+          checklist_completed: { yes: 0, applicable: 0 },
+          input_snapshot: {
+            checklist: {
+              version: 'checklist@1',
+              items: CREDIT_CHECKLIST_KEYS.map((key) => ({
+                key,
+                answer: 'n_a' as const,
+                note: null,
+              })),
+            },
+          },
+        })
+      )
+
+      const row = checklistRow()?.textContent ?? ''
+      expect(row).toContain('credit.checklist.noneApplicable')
+      expect(row, '«0 of 0 applicable» is shown instead of «none applies»').not.toContain(
+        'credit.checklist.share'
+      )
+    })
+
+    it.each([
+      ['checklist_completed: null', null],
+      ['ключа нет (решение до 19-5)', undefined],
+    ] as const)(
+      '19-5f C-8: ручное решение без чек-листа (%s) — «Чек-лист не заповнено»',
+      (_case, completed) => {
+        const manual: CreditDecision = { ...MANUAL }
+        if (completed === null) manual.checklist_completed = null
+        else delete manual.checklist_completed
+
+        renderDecision(withDecision(manual))
+
+        const row = checklistRow()
+        expect(row, 'a manual decision without a checklist lost the «Чек-лист» row').toBeTruthy()
+        expect(row?.textContent).toBe('credit.fields.checklistcredit.checklist.notFilled')
+        expect(row?.querySelector('details'), 'an empty answer list is drawn').toBeNull()
+      }
+    )
+
+    it('19-5f C-8: автоматическое решение без чек-листа — строки «Чек-лист» нет', () => {
+      // Положительный контроль: та же карточка с долей модуля строку показывает —
+      // отсутствие ниже значит «строки нет», а не «ключ подписи другой».
+      renderDecision(withDecision({ ...DECISION, checklist_completed: { yes: 3, applicable: 5 } }))
+      expect(checklistRow()?.textContent).toContain('credit.checklist.share yes=3 applicable=5')
+      cleanup()
+
+      renderDecision(withDecision(DECISION))
+
+      expect(screen.getByText('credit.fields.decidedAt')).toBeInTheDocument()
+      expect(
+        screen.queryByText('credit.fields.checklist'),
+        'an automatic decision got a «not filled» checklist row'
+      ).toBeNull()
+    })
+
+    it('19-5f C-9: примечание в раскрытом списке ответов — под маской записи, текст виден; порядок — ответа модуля', () => {
+      renderDecision(
+        withDecision({
+          ...MANUAL,
+          checklist_completed: { yes: 1, applicable: 1 },
+          input_snapshot: {
+            checklist: {
+              version: 'checklist@1',
+              items: [
+                { key: 'residence_proof', answer: 'n_a', note: null },
+                { key: 'pay_document', answer: 'yes', note: 'FE195F-NOTE-CARD' },
+              ],
+            },
+          },
+        })
+      )
+
+      const answers = checklistRow()?.querySelector('details')
+      expect(answers, 'the answer list is not in the «Чек-лист» row').toBeTruthy()
+      const list = within(answers as HTMLElement)
+      expect(
+        list.getAllByRole('listitem').map((li) => li.textContent?.split(' — ')[0]),
+        'the answers are reordered instead of kept in the module order'
+      ).toEqual(['credit.checklistItem.residence_proof', 'credit.checklistItem.pay_document'])
+      expect(list.getByText(/credit\.checklistItem\.pay_document/).textContent).toContain(
+        'credit.checklistAnswer.yes'
+      )
+      // Положительный контроль: примечание на экране есть — маскируется именно оно.
+      const note = list.getByText('FE195F-NOTE-CARD')
+      expectObscured(note)
+      // Текст пункта — копирайт интерфейса, его запись читать должна.
+      expectNotObscured(list.getByText(/credit\.checklistItem\.pay_document/))
     })
   })
 })

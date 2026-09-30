@@ -1,14 +1,17 @@
 /**
  * Срез живого реестра кодов решения — не выдумка.
  *
- * Восемь записей дословно из `registry_view()` файла
+ * Одиннадцать записей дословно из `registry_view()` файла
  * `service/src/credit_service/app/decision_codes.py` репозитория credit-module
- * (`main` `8b46966`, единица 19-1; sha256 файла на этом коммите `f10e7824…`).
- * Отобраны так, чтобы в срезе был каждый вид: условное одобрение `AB-C-01`
- * (форма его НЕ предлагает), автогейт `AB-G-06` и служебный `AB-X-08`
- * (предлагает — положительный контроль отбора), отказы книги в четырёх разделах.
- * Два отказа одного раздела — `AB-O-08` и `AB-O-09` (`conduct`): без них порядок
- * по `id` внутри группы не проверить.
+ * (`main` `8b46966`, единица 19-1; sha256 файла на этом коммите `f10e7824…`);
+ * `AB-C-02`…`AB-C-04` добавлены в 19-5f из снимка того же реестра
+ * `registry-view-1f05e4c.json` (sha256 `a58891e6…`, в нём ровно четыре записи
+ * `kind = conditional`) — срез несёт весь живой состав условий. Отобраны так,
+ * чтобы в срезе был каждый вид: условное одобрение `AB-C-01`…`AB-C-04` (форма
+ * предлагает `AB-C-*` при `approved` и никогда — к отказу), автогейт `AB-G-06` и
+ * служебный `AB-X-08` (к отказу предлагает — положительный контроль отбора),
+ * отказы книги в четырёх разделах. Два отказа одного раздела — `AB-O-08` и
+ * `AB-O-09` (`conduct`): без них порядок по `id` внутри группы не проверить.
  *
  * Единственное отличие от `registry_view()` — `version`: живое значение несёт
  * имя проекта, а страж устаревших текстов раздела ищет его и в тестах. Для
@@ -26,6 +29,42 @@ export const DECISION_CODE_ENTRIES: readonly CreditDecisionCodeEntry[] = [
     ru: 'В расчётном листке выплачены отпускные (признак увольнения)',
     en: 'Vacation pay on the pay stub (sign of termination)',
     note_ru: 'Требуется одобрение руководителя',
+    traits: ['supervisor'],
+    legacy_rc: null,
+  },
+  {
+    id: 'AB-C-02',
+    kind: 'conditional',
+    book: 'У-02',
+    book_code: null,
+    category: 'bank_statement',
+    ru: 'Один случай NSF',
+    en: 'One NSF event',
+    note_ru: 'Требуется одобрение руководителя',
+    traits: ['supervisor'],
+    legacy_rc: null,
+  },
+  {
+    id: 'AB-C-03',
+    kind: 'conditional',
+    book: 'У-03',
+    book_code: null,
+    category: 'bank_statement',
+    ru: 'Клиент снимает всю сумму в день зарплаты',
+    en: 'Client withdraws the full amount on payday',
+    note_ru: 'Требуется одобрение руководителя',
+    traits: ['supervisor'],
+    legacy_rc: null,
+  },
+  {
+    id: 'AB-C-04',
+    kind: 'conditional',
+    book: 'У-04',
+    book_code: null,
+    category: 'employment',
+    ru: 'Заявитель не отработал полный расчётный период у работодателя',
+    en: 'Applicant has not completed a full pay period with the employer (employer letter required)',
+    note_ru: 'Требуется письмо от работодателя, подтверждающее занятость',
     traits: ['supervisor'],
     legacy_rc: null,
   },

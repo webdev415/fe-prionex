@@ -7,7 +7,7 @@
  */
 
 /** Состояния заявки (ApplicationStatus контракта). */
-import type { CREDIT_BUCKETS, CREDIT_ENTRY_TYPES } from './enums'
+import type { CREDIT_BUCKETS, CREDIT_CHECKLIST_KEYS, CREDIT_ENTRY_TYPES } from './enums'
 
 /** Тип проводки журнала — значения из перечисления контракта, не произвольная
  *  строка. Ветка «не дублировать слово сторно» сравнивает это поле с
@@ -45,6 +45,40 @@ export const CREDIT_APPLICATION_STATUSES: CreditApplicationStatus[] = [
 
 export type CreditDecisionOutcome = 'approved' | 'declined' | 'referred'
 export type CreditDecisionMode = 'automatic' | 'manual' | 'override'
+
+/**
+ * Чек-лист и условное одобрение ручного решения — контракт модуля 0.1.30/0.1.31
+ * (19-5), сверено с `main` модуля 0852c782 — `openapi.yaml` `DecisionChecklistItem`,
+ * `Decision`. Пункт — из листа книги (`CREDIT_CHECKLIST_KEYS`).
+ */
+export type CreditChecklistKey = (typeof CREDIT_CHECKLIST_KEYS)[number]
+export type CreditChecklistAnswer = 'yes' | 'no' | 'n_a'
+/** Пункт в снимке решения: `note` модуль кладёт всегда, `null` — примечания нет. */
+export interface CreditChecklistItem {
+  key: CreditChecklistKey
+  answer: CreditChecklistAnswer
+  note: string | null
+}
+/** Заполненность чек-листа: `applicable` — пункты листа минус `n_a`. Долю считает модуль. */
+export interface CreditChecklistCompleted {
+  yes: number
+  applicable: number
+}
+/** `proposed` — предложение андеррайтера (решение `referred`), `confirmed` — подтверждено руководителем. */
+export type CreditConditionalStage = 'proposed' | 'confirmed'
+
+/** `input_snapshot.conditional` — `Decision.input_snapshot.conditional` контракта 0.1.30/0.1.31. */
+export interface CreditConditionalSnapshot {
+  stage: CreditConditionalStage
+  /** Коды условия `AB-C-*`. */
+  codes: string[]
+  /** Сумма, которую одобряет подтверждение. */
+  amount_minor: number
+  proposal_decision_id?: string
+  proposed_by?: number | null
+  confirmed_by?: number | null
+  confirmed_at?: string
+}
 
 /** Строка списка заявок (ApplicationSummary). */
 export interface CreditApplicationSummary {
@@ -137,6 +171,15 @@ export interface CreditDecision {
    */
   supersedes_decision_id: string | null
   decided_at: string
+  /**
+   * Заполненность чек-листа (контракт модуля 0.1.30/0.1.31, 19-5, `Decision`);
+   * `null` — решение без чек-листа. В контракте поле required; здесь
+   * НЕОБЯЗАТЕЛЬНОЕ: у модуля старше 19-5 (PROD) ключа нет, и карточка обязана
+   * это пережить.
+   */
+  checklist_completed?: CreditChecklistCompleted | null
+  /** Ступень условного одобрения (0.1.30/0.1.31, 19-5); `null` — без условия. Необязательно — довод выше. */
+  conditional_stage?: CreditConditionalStage | null
 }
 
 export interface CreditConsent {
@@ -490,6 +533,10 @@ export interface CreditDecisionSnapshot {
   income_class?: string | null
   income_class_source?: string | null
   income_class_basis?: CreditIncomeClassBasis | null
+  /** Чек-лист ручного решения (0.1.30/0.1.31, 19-5): версия листа и присланные пункты в порядке листа. */
+  checklist?: { version: string; items: CreditChecklistItem[] }
+  /** Условное одобрение (0.1.30/0.1.31, 19-5): есть у предложения и у подтверждения. */
+  conditional?: CreditConditionalSnapshot
 }
 
 /**
@@ -1065,6 +1112,16 @@ export interface CreditQueueItem {
   currency?: string
   product_code?: string
   review_reasons?: string[]
+  /**
+   * Чек-лист и условие решения строки (контракт модуля 0.1.30/0.1.31, 19-5,
+   * `UnderwritingQueueItem`). В контракте required; здесь необязательны — модуль
+   * старше 19-5 их не шлёт, и экран обязан пережить их отсутствие.
+   */
+  checklist_completed?: CreditChecklistCompleted | null
+  /** Коды условия `AB-C-*`; `[]` — условия нет. */
+  conditional_codes?: string[]
+  /** Ждёт подтверждения руководителя — только действующее предложение заявки. */
+  awaiting_confirmation?: boolean
 }
 
 /** Конвенция обёртки списков контракта. */
@@ -1184,6 +1241,18 @@ export interface ManualDecisionPayload {
   /** Только при `declined`: коды отказа реестра (`AB-O`/`AB-G`/`AB-X`) или служебные `RC-*`. */
   decline_codes?: string[]
   cooldown_until?: string
+  /** Чек-лист (0.1.30/0.1.31, 19-5): только отвеченные пункты, в порядке листа, при любом исходе. */
+  checklist?: Array<{ key: CreditChecklistKey; answer: CreditChecklistAnswer; note?: string }>
+  /** Коды условия `AB-C-*` — только с `outcome: 'referred'`: это ПРЕДЛОЖЕНИЕ условного одобрения. */
+  conditional_codes?: string[]
+}
+
+/**
+ * Тело `confirmConditionalApproval` (0.1.30/0.1.31, 19-5). `confirmed_by` не шлётся:
+ * подтверждающий — владелец пропуска CRM, как автор ручного решения (17-22).
+ */
+export interface CreditConditionalConfirmationPayload {
+  proposal_decision_id: string
 }
 
 /**
