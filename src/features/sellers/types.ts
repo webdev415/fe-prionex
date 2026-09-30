@@ -67,6 +67,11 @@ export interface FactoringAgreement {
    * historical agreements created before this field existed have no value.
    */
   reporting_date?: string | null
+  /**
+   * Contract type of the sale, `factoring` | `cession` (read it through
+   * `./saleType`). Optional: a client-service not yet rolled out omits it.
+   */
+  sale_type?: string | null
   created_at: string
   /** Count of debts (in the caller's project) linked to this agreement. */
   debt_count: number

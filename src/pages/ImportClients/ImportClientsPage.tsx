@@ -14,6 +14,8 @@ import { DoubleButton } from '@/components/ui/DoubleButton'
 import { Step1LoanSource, type Step1Data } from './components/Step1LoanSource'
 import { Step2FileUpload, type Step2Data } from './components/Step2FileUpload'
 import { Step2VendorDump, type Step2VendorDumpData } from './components/Step2VendorDump'
+import { EMPTY_NEW_FACTORING_AGREEMENT, type SaleTypeConflict } from './utils/newFactoringAgreement'
+import { toSaleType } from '@/features/sellers/saleType'
 import { Icons } from '@/lib/icons'
 import { ImportHistoryModal, type ImportHistoryData } from './components/ImportHistoryModal'
 import { useNavigate } from 'react-router-dom'
@@ -257,13 +259,9 @@ export function ImportClientsPage() {
     schemaCode: '',
     factoringAgreementMode: 'existing',
     factoringAgreementId: '',
-    newFactoringAgreement: {
-      agreement_number: '',
-      previous_lender: '',
-      contract_purchase_date: '',
-      reporting_date: '',
-    },
+    newFactoringAgreement: { ...EMPTY_NEW_FACTORING_AGREEMENT },
     selectedSellerLegalName: null,
+    saleTypeConflict: null,
   })
 
   const [step2Data, setStep2Data] = useState<Step2Data>({
@@ -279,6 +277,13 @@ export function ImportClientsPage() {
 
   const handleStep1Change = (data: Partial<Step1Data>) => {
     setStep1Data((prev) => ({ ...prev, ...data }))
+  }
+
+  // The upload refused a new agreement whose number the seller already has
+  // under another type: that is a step-1 decision, so go back there and say so.
+  const handleSaleTypeConflict = (conflict: SaleTypeConflict) => {
+    setStep1Data((prev) => ({ ...prev, saleTypeConflict: conflict }))
+    setCurrentStep(1)
   }
 
   //   const handleStep2Change = (data: Partial<Step2Data>) => {
@@ -310,6 +315,7 @@ export function ImportClientsPage() {
     if (step1Data.factoringAgreementMode === 'existing') {
       if (!step1Data.factoringAgreementId) return false
     } else {
+      if (!toSaleType(step1Data.newFactoringAgreement.sale_type)) return false
       if (!step1Data.newFactoringAgreement.agreement_number.trim()) return false
       if (!step1Data.newFactoringAgreement.contract_purchase_date) return false
       // Reporting Date is required in create-new mode.
@@ -441,6 +447,7 @@ export function ImportClientsPage() {
                   // Refetch import jobs to get the new job and show progress bar
                   refetchImportJobs()
                 }}
+                onSaleTypeConflict={handleSaleTypeConflict}
               />
             )}
 
@@ -455,6 +462,7 @@ export function ImportClientsPage() {
                   // Refetch import jobs to get the new job and show progress bar
                   refetchImportJobs()
                 }}
+                onSaleTypeConflict={handleSaleTypeConflict}
               />
             )}
 

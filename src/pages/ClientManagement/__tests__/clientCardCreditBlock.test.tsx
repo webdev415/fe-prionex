@@ -1085,3 +1085,93 @@ describe('S-14: лента активности называет вкладку 
     spy.mockRestore()
   })
 })
+
+describe('KAN-1617: тип договора покупки в строке «Позики» — через маппер страницы', () => {
+  /**
+   * Купленный долг в форме ответа client-service после истории 1: у долга своя
+   * копия типа (её печатает зона 4), у вложенного договора — свой тип (им
+   * подписана дата договора). Здесь они РАЗНЫЕ намеренно: так видно, какое поле
+   * читает каждое место. В жизни они расходятся, только если тип договора
+   * исправили отдельно от копий (задача доски #1619).
+   */
+  const CESSION_DEBT = {
+    ...FACTORING_DEBT,
+    id: 9010,
+    contract_number: 'CESSION-1',
+    sale_type: 'cession',
+    factoring_agreement_id: 77,
+    factoring_agreement: {
+      id: 77,
+      agreement_number: '30-09-26ФБ',
+      contract_purchase_date: '2026-09-30',
+      sale_type: 'factoring',
+    },
+  } as unknown as DebtDetail
+
+  /** Строка, записанная старым образом: копии у долга нет, тип знает только договор. */
+  const AGREEMENT_ONLY_DEBT = {
+    ...FACTORING_DEBT,
+    id: 9011,
+    contract_number: 'OLD-FA-1',
+    factoring_agreement_id: 78,
+    factoring_agreement: {
+      id: 78,
+      agreement_number: '12-03-25ФБ',
+      contract_purchase_date: '2025-03-12',
+      sale_type: 'factoring',
+    },
+  } as unknown as DebtDetail
+
+  /** Значение зоны 4 карточки: соседний узел подписи «Тип договору». */
+  const saleTypeOf = (card: HTMLElement) =>
+    within(card).getByText('Тип договору', { selector: 'span' }).nextElementSibling?.textContent
+
+  it('зона 4 — тип долга «Цесія», подпись даты — тип договора «за ДФ»', async () => {
+    await renderCard({ rows: [CESSION_DEBT] })
+    await screen.findByText(/CESSION-1/)
+    const card = cardOf('CESSION-1')
+
+    expect(saleTypeOf(card), 'зона 4 взяла тип не из копии долга').toBe('Цесія')
+    // Дата — договора, и назвать она должна его тип, а не копию долга.
+    expect(within(card).getByText('Дата купівлі за ДФ')).toBeInTheDocument()
+    expect(
+      within(card).queryByText('Дата купівлі (відступлення)'),
+      'дата договора факторинга подписана по копии долга'
+    ).toBeNull()
+  })
+
+  /** Договор, у которого тип не задан: копия у долга есть, у договора — NULL. */
+  const UNTYPED_AGREEMENT_DEBT = {
+    ...FACTORING_DEBT,
+    id: 9012,
+    contract_number: 'UNTYPED-FA-1',
+    sale_type: 'cession',
+    factoring_agreement_id: 79,
+    factoring_agreement: {
+      id: 79,
+      agreement_number: '01-08-26ФБ',
+      contract_purchase_date: '2026-08-01',
+      sale_type: null,
+    },
+  } as unknown as DebtDetail
+
+  it('договор без типа: зона 4 «Цесія» по копии долга, подпись даты без названия договора', async () => {
+    await renderCard({ rows: [UNTYPED_AGREEMENT_DEBT] })
+    await screen.findByText(/UNTYPED-FA-1/)
+    const card = cardOf('UNTYPED-FA-1')
+
+    expect(saleTypeOf(card)).toBe('Цесія')
+    expect(within(card).getByText('Дата купівлі')).toBeInTheDocument()
+    expect(within(card).queryByText('Дата купівлі за ДФ')).toBeNull()
+    expect(within(card).queryByText('Дата купівлі (відступлення)')).toBeNull()
+  })
+
+  it('без копии у долга тип берётся у договора: «Факторинг» и «Дата купівлі за ДФ»', async () => {
+    await renderCard({ rows: [AGREEMENT_ONLY_DEBT] })
+    await screen.findByText(/OLD-FA-1/)
+    const card = cardOf('OLD-FA-1')
+
+    expect(saleTypeOf(card), 'пустая копия у долга напечатана прочерком').toBe('Факторинг')
+    expect(within(card).getByText('Дата купівлі за ДФ')).toBeInTheDocument()
+  })
+})

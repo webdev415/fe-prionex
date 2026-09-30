@@ -15,6 +15,7 @@ import { ErrorState } from '@/components/ErrorState'
 import { Pagination } from '@/components/ui/Pagination'
 import { useURLState } from '@/hooks'
 import { useSellerDetail, useSellerFactoringAgreements } from '@/features/sellers'
+import { saleTypeLabelKey } from '@/features/sellers/saleType'
 import { formatDate } from '@/lib/formatters'
 import {
   SellerDetailAgreementsSkeleton,
@@ -70,6 +71,11 @@ export function SellerDetailPage() {
   const agreements = agreementsPage?.items ?? []
   const totalAgreements = agreementsPage?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(totalAgreements / pageSize))
+  // "—" for an agreement without a type, or a server that does not send one yet.
+  const saleTypeLabel = (value: unknown) => {
+    const key = saleTypeLabelKey(value)
+    return key ? t(key) : '—'
+  }
 
   return (
     <div className="space-y-6">
@@ -142,6 +148,12 @@ export function SellerDetailPage() {
                     </th>
                     <th className="px-4 py-3 text-center">
                       {t(
+                        'pages.sellers.detail.factoringAgreements.columns.saleType',
+                        'Contract type'
+                      )}
+                    </th>
+                    <th className="px-4 py-3 text-center">
+                      {t(
                         'pages.sellers.detail.factoringAgreements.columns.debtCount',
                         'Number of debts'
                       )}
@@ -157,6 +169,9 @@ export function SellerDetailPage() {
                       </td>
                       <td className="px-4 py-3 text-center font-light">
                         {formatDate(a.contract_purchase_date ?? undefined)}
+                      </td>
+                      <td className="px-4 py-3 text-center font-light">
+                        {saleTypeLabel(a.sale_type)}
                       </td>
                       <td className="px-4 py-3 text-center font-medium">{a.debt_count}</td>
                     </tr>

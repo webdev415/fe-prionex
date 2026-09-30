@@ -161,6 +161,7 @@
     "CONTACT_RESTRICTION_ALREADY_LIFTED": "Esta restricción de contacto ya se ha levantado.",
     "CONTACT_RESTRICTION_NOT_LIFTED": "Esta restricción de contacto está vigente: no hay ningún levantamiento que deshacer.",
     "CONTACT_RESTRICTION_ALREADY_REINSTATED": "Este levantamiento ya se ha deshecho: la restricción ya se volvió a poner en vigor.",
-    "PROJECT_CANADA_DISABLED": "Los proyectos en dólares canadienses o en Canadá todavía no están disponibles aquí. Elija otra moneda u otro país."
+    "PROJECT_CANADA_DISABLED": "Los proyectos en dólares canadienses o en Canadá todavía no están disponibles aquí. Elija otra moneda u otro país.",
+    "SALE_TYPE_CONFLICT": "Este vendedor ya tiene un contrato con este número de otro tipo."
   }
 }

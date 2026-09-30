@@ -16,6 +16,11 @@ import { useUploadImport } from '@/features/imports'
 import { useSellerFactoringAgreements } from '@/features/sellers'
 import type { Step1Data } from './Step1LoanSource'
 import { getErrorMessage } from '@/lib/errors'
+import {
+  buildNewFactoringAgreementJson,
+  parseSaleTypeConflict,
+  type SaleTypeConflict,
+} from '../utils/newFactoringAgreement'
 
 // Logical names mirror the backend's vendor-schema logical names
 // (`users`, `credits`, `payments`, `write_offs`, `prolongations`).
@@ -49,6 +54,8 @@ export interface Step2VendorDumpProps {
   isImportInProgress?: boolean
   step1Data: Step1Data
   onImportStarted?: (jobId: number | string) => void
+  /** 409 SALE_TYPE_CONFLICT on the new agreement — the wizard takes it back to step 1. */
+  onSaleTypeConflict?: (conflict: SaleTypeConflict) => void
 }
 
 const INITIAL_DATASETS: Omit<DatasetFile, 'id'>[] = [
@@ -69,6 +76,7 @@ export function Step2VendorDump({
   isImportInProgress = false,
   step1Data,
   onImportStarted,
+  onSaleTypeConflict,
 }: Step2VendorDumpProps) {
   const { t } = useTranslation('common')
   const [isDragging, setIsDragging] = useState(false)
@@ -245,21 +253,7 @@ export function Step2VendorDump({
       effectivePurchaseDate = pickedAgreement?.contract_purchase_date || undefined
     } else {
       const newFa = step1Data.newFactoringAgreement
-      const payload: Record<string, string> = {
-        agreement_number: newFa.agreement_number.trim(),
-      }
-      if (newFa.previous_lender.trim()) {
-        payload.previous_lender = newFa.previous_lender.trim()
-      }
-      if (newFa.contract_purchase_date) {
-        // The wizard stores contract_purchase_date as a UTC ISO datetime
-        // but client-service's Pydantic schema expects a plain YYYY-MM-DD.
-        payload.contract_purchase_date = newFa.contract_purchase_date.split('T')[0]
-      }
-      if (newFa.reporting_date) {
-        payload.reporting_date = newFa.reporting_date.split('T')[0]
-      }
-      newFactoringAgreementJson = JSON.stringify(payload)
+      newFactoringAgreementJson = buildNewFactoringAgreementJson(newFa)
       effectivePurchaseDate = newFa.contract_purchase_date || undefined
     }
 
@@ -301,6 +295,22 @@ export function Step2VendorDump({
         onImportStarted(result.job_id)
       }
     } catch (error) {
+      // Same hand-back as the simple flow: a type conflict of a NEW agreement is
+      // a step-1 decision, tied to the step-1 data this upload was sent with.
+      const saleTypeConflict =
+        step1Data.factoringAgreementMode === 'new'
+          ? parseSaleTypeConflict(error, {
+              sellerId: step1Data.sellerId,
+              agreementNumber: step1Data.newFactoringAgreement.agreement_number,
+            })
+          : null
+      if (saleTypeConflict && onSaleTypeConflict) {
+        // Only a guard: step 2 unmounts on the way back, and this local error
+        // goes with it. The vendor flow keeps no error in the page's state.
+        setImportError(null)
+        onSaleTypeConflict(saleTypeConflict)
+        return
+      }
       setImportError(getErrorMessage(error))
     }
   }

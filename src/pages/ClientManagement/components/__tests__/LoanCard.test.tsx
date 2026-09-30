@@ -39,6 +39,10 @@ const baseLoan: LoanCardLoan = {
   creditBureauSentDate: null,
   closingCoefficient: null,
   needsManualClosureReview: false,
+  // A typed purchase, so zone 4 prints a word, not a second "—" beside the
+  // one the money test below looks for.
+  saleType: 'factoring',
+  agreementSaleType: 'factoring',
 }
 
 function renderCard(
@@ -173,6 +177,117 @@ describe('LoanCard — action menu', () => {
     await user.click(screen.getByRole('button', { name: MORE_ACTIONS }))
 
     expect(onFocus).not.toHaveBeenCalled()
+  })
+})
+
+const SALE_TYPE_LABEL = 'saleType.label'
+const DATE_FA = 'pages.clients.detail.tableHeaders.purchaseDateFa'
+const DATE_CESSION = 'pages.clients.detail.tableHeaders.purchaseDateCession'
+const DATE_GENERIC = 'pages.clients.detail.tableHeaders.purchaseDateGeneric'
+
+/** Zone 4's value: the SecRow sibling of the type label. */
+const saleTypeValue = () => screen.getByText(SALE_TYPE_LABEL).nextElementSibling?.textContent
+
+describe('LoanCard — contract type zone', () => {
+  it.each([
+    ['factoring', 'saleType.values.factoring', DATE_FA],
+    ['cession', 'saleType.values.cession', DATE_CESSION],
+  ])(
+    'a %s purchase shows its type and names its agreement on the purchase date',
+    (type, word, date) => {
+      renderCard({ saleType: type, agreementSaleType: type })
+
+      expect(saleTypeValue()).toBe(word)
+      expect(screen.getByText(date)).toBeInTheDocument()
+      // Never the other agreement's name — a cession agreement must not read as factoring.
+      for (const other of [DATE_FA, DATE_CESSION, DATE_GENERIC].filter((d) => d !== date)) {
+        expect(screen.queryByText(other)).not.toBeInTheDocument()
+      }
+    }
+  )
+
+  // The date is the agreement's, so its label follows the agreement's type —
+  // even when the debt's copy says otherwise (a type corrected apart, #1619).
+  it.each([
+    ['cession', 'factoring', 'saleType.values.cession', DATE_FA],
+    ['factoring', 'cession', 'saleType.values.factoring', DATE_CESSION],
+  ])(
+    'a %s debt under a %s agreement: zone 4 from the debt, the date label from the agreement',
+    (debtType, agreementType, word, date) => {
+      renderCard({ saleType: debtType, agreementSaleType: agreementType })
+
+      expect(saleTypeValue()).toBe(word)
+      expect(screen.getByText(date)).toBeInTheDocument()
+      for (const other of [DATE_FA, DATE_CESSION, DATE_GENERIC].filter((d) => d !== date)) {
+        expect(screen.queryByText(other)).not.toBeInTheDocument()
+      }
+    }
+  )
+
+  it.each([
+    ['absent (server not rolled out yet)', undefined],
+    ['null', null],
+    ['an unknown value', 'credit'],
+  ])('a debt whose own type is %s shows "—" in zone 4', (_label, saleType) => {
+    renderCard({ saleType })
+
+    expect(saleTypeValue()).toBe('—')
+  })
+
+  it.each([
+    ['absent (server not rolled out yet)', undefined],
+    ['null', null],
+    ['an unknown value', 'credit'],
+  ])(
+    'an agreement whose type is %s leaves the purchase date plain',
+    (_label, agreementSaleType) => {
+      renderCard({ saleType: 'cession', agreementSaleType })
+
+      expect(screen.getByText(DATE_GENERIC)).toBeInTheDocument()
+      expect(screen.queryByText(DATE_FA)).not.toBeInTheDocument()
+      expect(screen.queryByText(DATE_CESSION)).not.toBeInTheDocument()
+      // The debt's own copy is not a stand-in for the agreement's type.
+      expect(saleTypeValue()).toBe('saleType.values.cession')
+    }
+  )
+
+  it('shows the type on a closed card too', () => {
+    renderCard({ saleType: 'cession' }, { isClosed: true })
+
+    expect(saleTypeValue()).toBe('saleType.values.cession')
+  })
+
+  it.each(['cession', 'factoring'])(
+    'a %s debt without an agreement date names no agreement on the empty date',
+    (type) => {
+      // A debt with no agreement: its type came from its own purchase date, so
+      // "by the assignment agreement: —" would name a document that is not there.
+      renderCard({ saleType: type, agreementSaleType: type, factoringAgreementPurchaseDate: null })
+
+      expect(saleTypeValue()).toBe(`saleType.values.${type}`)
+      const label = screen.getByText(DATE_GENERIC)
+      expect(label.nextElementSibling?.textContent).toBe('—')
+      expect(screen.queryByText(DATE_FA)).not.toBeInTheDocument()
+      expect(screen.queryByText(DATE_CESSION)).not.toBeInTheDocument()
+    }
+  )
+
+  it('a credit-module loan has neither the dates nor the type zone — and no dashes', () => {
+    const { container } = renderCard({
+      origin: 'credit_module',
+      saleType: null,
+      agreementSaleType: null,
+      principalDebt: null,
+      currency: 'CAD',
+      lifecycleDetail: null,
+    })
+
+    expect(screen.queryByText(SALE_TYPE_LABEL)).not.toBeInTheDocument()
+    expect(screen.queryByText(DATE_GENERIC)).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('pages.clients.detail.tableHeaders.issueDate')
+    ).not.toBeInTheDocument()
+    expect(container.textContent).not.toContain('—')
   })
 })
 

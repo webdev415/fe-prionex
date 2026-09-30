@@ -21,6 +21,7 @@ export interface DebtFactoringAgreement {
   agreement_number: string
   previous_lender?: string | null
   contract_purchase_date?: string | null
+  sale_type?: string | null
 }
 
 export interface DebtDetail {
@@ -118,6 +119,10 @@ export interface DebtDetail {
   // Info expansion without an extra round-trip.
   factoring_agreement_id?: number | null
   factoring_agreement?: DebtFactoringAgreement | null
+  // Contract type the debt was bought under (`factoring` | `cession`), a copy
+  // of its agreement's; the card reads this one. Absent until client-service
+  // ships it, and always empty on a credit-module loan.
+  sale_type?: string | null
 }
 
 export interface RestructuringAgreementSummary {
