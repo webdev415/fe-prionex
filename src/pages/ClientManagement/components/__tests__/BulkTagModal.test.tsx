@@ -4,11 +4,12 @@
  *
  * The modal asked for project 1's tags in every project (a hardcoded id), so an
  * operator in the Canadian project was offered Ukrainian tags. It now takes the
- * active project from the auth store; without one it asks for nothing and shows
- * the usual empty list — even when the page's own tag queries have already
- * cached a list without a project under the same key. The tags hook is real —
- * only the request is stubbed — so the scenes see the project id the request is
- * actually sent with.
+ * active project from the auth store; without one — or with an id that is not a
+ * number — it asks for nothing and offers nothing, even when the page's own tag
+ * queries have already cached a list without a project under the same key, and
+ * says "select a project first" rather than "no tags found" (bot review round 1,
+ * L-1/L-2). The tags hook is real — only the request is stubbed — so the scenes
+ * see the project id the request is actually sent with.
  */
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest'
 import { render, screen } from '@testing-library/react'
@@ -25,6 +26,9 @@ const TAG_OF_PROJECT = {
   color: '#123456',
   visibility: 'visible',
 }
+
+const NO_TAGS_FOUND = 'pages.clients.modals.bulkTag.noTagsFound'
+const SELECT_PROJECT_FIRST = 'pages.clients.modals.bulkTag.selectProjectFirst'
 
 function setActiveProject(projectId: string | null) {
   useAuthStore.setState({ user: { id: '1', active_project_id: projectId } as unknown as User })
@@ -72,13 +76,13 @@ describe('BulkTagModal — tags of the active project', () => {
     expect(getTags.mock.calls).toEqual([[1]])
   })
 
-  it('BT-3: without an active project it asks for nothing and shows the usual empty list', async () => {
+  it('BT-3: without an active project it asks for nothing and lists nothing', async () => {
     setActiveProject(null)
     renderModal()
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(getTags).not.toHaveBeenCalled()
-    expect(screen.getByText('pages.clients.modals.bulkTag.noTagsFound')).toBeInTheDocument()
+    expect(screen.queryByText(TAG_OF_PROJECT.name)).not.toBeInTheDocument()
   })
 
   it('BT-4: without an active project a list the page already cached without a project is not offered', async () => {
@@ -98,9 +102,36 @@ describe('BulkTagModal — tags of the active project', () => {
     renderModal(qc)
     await new Promise((resolve) => setTimeout(resolve, 0))
 
-    expect(screen.getByText('pages.clients.modals.bulkTag.noTagsFound')).toBeInTheDocument()
     expect(screen.queryByText('Tag of project 1')).not.toBeInTheDocument()
     expect(screen.queryByText('Tag of project 3')).not.toBeInTheDocument()
     expect(getTags).not.toHaveBeenCalled()
+  })
+
+  it('BT-5: an active project id that is not a number counts as none — nothing is asked for', async () => {
+    setActiveProject('abc')
+    renderModal()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(getTags).not.toHaveBeenCalled()
+    expect(screen.getByText(SELECT_PROJECT_FIRST)).toBeInTheDocument()
+  })
+
+  it('BT-6: without an active project it says to select a project first, not that no tags were found', async () => {
+    setActiveProject(null)
+    renderModal()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(screen.getByText(SELECT_PROJECT_FIRST)).toBeInTheDocument()
+    expect(screen.queryByText(NO_TAGS_FOUND)).not.toBeInTheDocument()
+  })
+
+  it('BT-7: control — in a project without tags it says no tags were found, not to select a project', async () => {
+    getTags.mockResolvedValue([])
+    setActiveProject('3')
+    renderModal()
+
+    expect(await screen.findByText(NO_TAGS_FOUND)).toBeInTheDocument()
+    expect(screen.queryByText(SELECT_PROJECT_FIRST)).not.toBeInTheDocument()
+    expect(getTags.mock.calls).toEqual([[3]])
   })
 })

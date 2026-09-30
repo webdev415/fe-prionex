@@ -6374,6 +6374,7 @@
           "searchTags": "Buscar etiquetas…",
           "loadingTags": "Cargando etiquetas…",
           "noTagsFound": "No se encontraron etiquetas",
+          "selectProjectFirst": "Seleccione primero un proyecto",
           "tagsSelected": "etiqueta(s) seleccionada(s)",
           "selectAtLeastOneTag": "Seleccione al menos una etiqueta",
           "cancel": "Cancelar",

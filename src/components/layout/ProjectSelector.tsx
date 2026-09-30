@@ -72,6 +72,11 @@ export function ProjectSelector() {
 
       // Update token
       setAccessToken(access_token)
+      // The header search belongs to the previous project: the clients page is not
+      // mounted here, so it would carry it into the next one. Requests go to the new
+      // project from here on, with or without a fresh /me; the header field, its
+      // results and panel go too (DashboardLayout). The search type stays.
+      useSearchStore.getState().resetForProjectSwitch()
 
       // Fetch updated user data directly (bypassing checkAuth guard)
       try {
@@ -86,9 +91,6 @@ export function ProjectSelector() {
         // Still clear cache even if user fetch failed — token was already updated
         queryClient.removeQueries()
       }
-      // The header search belongs to the previous project: the clients page is not
-      // mounted here, so it would carry it into the next one. The search type stays.
-      useSearchStore.getState().setSearchQuery('')
 
       toast.success(
         t('pages.users.messages.projectSwitched', {

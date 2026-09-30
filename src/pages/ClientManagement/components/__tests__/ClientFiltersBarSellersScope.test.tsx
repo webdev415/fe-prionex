@@ -34,15 +34,21 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Profiler, type ReactNode } from 'react'
-import { act, fireEvent, render, renderHook, screen, waitFor, within } from '@testing-library/react'
+import { act, render, renderHook, screen, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
-import { ProjectSelector } from '@/components/layout/ProjectSelector'
 import { authApi } from '@/features/auth/api/authApi'
 import { setAccessToken } from '@/lib/api'
 import { useAuthStore } from '@/stores/authStore'
 import { useSearchStore } from '@/stores/searchStore'
 import { sellersApi } from '@/features/sellers/api/sellersApi'
+import {
+  SWITCHER_PROJECTS,
+  meIn,
+  pickProject,
+  renderProjectSelector,
+  switchedTo,
+} from '@/test/projectSwitch'
 import type { User } from '@/types/api'
 import { ClientFiltersBar } from '../ClientFiltersBar'
 import { ClientManagementPage, type ClientFilters } from '../../ClientManagementPage'
@@ -190,32 +196,12 @@ async function switchProjectLive(projectId: string) {
  * this page is not: the real switcher, its API stubbed.
  */
 async function switchProjectOnProfilePage(projectId: number) {
-  const projects = [
-    { id: 1, name: 'Project 1', country: 'UA', role_name: 'Admin' },
-    { id: 3, name: 'Project 3', country: 'CA', role_name: 'Admin' },
-  ]
-  const active = projects.find((p) => p.id === projectId)
-  vi.spyOn(authApi, 'switchProject').mockResolvedValue({
-    data: { access_token: `token-${projectId}`, active_project: { project_name: active?.name } },
-  } as never)
-  vi.spyOn(authApi, 'me').mockResolvedValue({
-    data: { id: 1, username: 'operator', projects, active_project: active },
-  } as never)
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  const profile = render(
-    <QueryClientProvider client={qc}>
-      <MemoryRouter>
-        <ProjectSelector />
-      </MemoryRouter>
-    </QueryClientProvider>
-  )
-  const trigger = screen.getByRole('button')
-  fireEvent.pointerDown(trigger, { button: 0, ctrlKey: false, pointerType: 'mouse' })
-  const item = screen
-    .getAllByRole('menuitem')
-    .find((el) => el.textContent?.includes(active?.name ?? '?'))
-  if (!item) throw new Error(`no menu item for project ${projectId}`)
-  fireEvent.click(item)
+  const active = SWITCHER_PROJECTS.find((p) => p.id === projectId)
+  if (!active) throw new Error(`no project ${projectId} in the switcher`)
+  vi.spyOn(authApi, 'switchProject').mockResolvedValue(switchedTo(projectId) as never)
+  vi.spyOn(authApi, 'me').mockResolvedValue(meIn(projectId) as never)
+  const profile = renderProjectSelector()
+  pickProject(active.name)
   await waitFor(() =>
     expect(useAuthStore.getState().user?.active_project_id).toBe(String(projectId))
   )

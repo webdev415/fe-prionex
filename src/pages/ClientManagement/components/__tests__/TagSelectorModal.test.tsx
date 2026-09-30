@@ -57,11 +57,12 @@ vi.mock('@/features/tags/hooks/useTags', () => ({
 
 // The component reads state.user?.active_role_name. Mocking role_name instead
 // left roleName undefined in every test, which silently disabled the protected
-// checkbox and made a case below pass for the wrong reason.
+// checkbox and made a case below pass for the wrong reason. The catalogue is the
+// active project's (17-56b): without one the modal offers none.
 const roleRef = vi.hoisted(() => ({ current: 'Admin' }))
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: (selector?: (s: unknown) => unknown) => {
-    const state = { user: { active_role_name: roleRef.current } }
+    const state = { user: { active_role_name: roleRef.current, active_project_id: '1' } }
     return selector ? selector(state) : state
   },
 }))
@@ -101,7 +102,6 @@ function renderModal(onTagsChanged: () => void) {
       <TagSelectorModal
         clientId={42}
         clientName="Test Client"
-        projectId={1}
         open
         onClose={vi.fn()}
         onTagsChanged={onTagsChanged}

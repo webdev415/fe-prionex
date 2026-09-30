@@ -6370,7 +6370,6 @@ export function ClientDetailPage() {
           open={isTagModalOpen}
           clientId={clientId}
           clientName={client.fullName}
-          projectId={1}
           onClose={() => setIsTagModalOpen(false)}
           onTagsChanged={() => {
             // A tag change may fire a "Tag change" trigger that launches a chain

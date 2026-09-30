@@ -520,8 +520,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   // Search state - separate local input state from applied store state
   // Local state: for the search input (updates as user types)
   // Store state: for the clients page (updates only on "View All Results")
-  const { setSearchQuery: setAppliedSearchQuery, setSearchType: setAppliedSearchType } =
-    useSearchStore()
+  const {
+    setSearchQuery: setAppliedSearchQuery,
+    setSearchType: setAppliedSearchType,
+    switchNonce,
+  } = useSearchStore()
   const [localSearchQuery, setLocalSearchQuery] = useState('')
   const [localSearchType, setLocalSearchType] = useState('phone')
   const [searchResults, setSearchResults] = useState<SearchResult[]>([])
@@ -535,6 +538,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   useEffect(() => {
     setShowSearchDropdown(false)
   }, [location.pathname])
+
+  // A project switch (ProjectSelector) leaves nothing of the previous project's search in the
+  // header: the text, its type, the results — reopened from cache without a request — and the panel.
+  useEffect(() => {
+    setLocalSearchQuery('')
+    setLocalSearchType('phone')
+    setSearchResults([])
+    setShowSearchDropdown(false)
+  }, [switchNonce])
 
   // Automatically refresh permissions every 5 minutes
   usePermissionRefresh()

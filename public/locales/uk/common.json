@@ -7140,6 +7140,7 @@
           "searchTags": "Пошук тегів...",
           "loadingTags": "Завантаження тегів...",
           "noTagsFound": "Теги не знайдено",
+          "selectProjectFirst": "Спочатку оберіть проєкт",
           "tagsSelected": "тег(ів) вибрано",
           "selectAtLeastOneTag": "Будь ласка, виберіть хоча б один тег",
           "cancel": "Скасувати",

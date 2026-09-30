@@ -28,6 +28,7 @@ import { PERMISSIONS } from '@/constants/permissions'
 import { useTranslation } from 'react-i18next'
 import { PromiseAssignDialog } from './PromiseAssignDialog'
 import { useAuthStore } from '@/stores/authStore'
+import { useActiveProjectId } from '@/hooks/useActiveProjectId'
 import { canRemoveProtectedTag } from '@/features/tags/utils/protected'
 import type { TagDefinition } from '@/features/tags/types'
 import { Pii } from '@/lib/openreplay/pii'
@@ -35,7 +36,6 @@ import { Pii } from '@/lib/openreplay/pii'
 interface TagSelectorModalProps {
   clientId: number
   clientName: string
-  projectId: number
   open: boolean
   onClose: () => void
   /**
@@ -52,7 +52,6 @@ interface TagSelectorModalProps {
 export const TagSelectorModal = memo(function TagSelectorModal({
   clientId,
   clientName,
-  projectId,
   open,
   onClose,
   onTagsChanged,
@@ -61,7 +60,12 @@ export const TagSelectorModal = memo(function TagSelectorModal({
   const queryClient = useQueryClient()
   const roleName = useAuthStore((state) => state.user?.active_role_name)
   const canAssignTags = useHasPermission(PERMISSIONS.CLIENTS.ASSIGN_TAGS)
-  const { data: allTags, isLoading: tagsLoading } = useTags(projectId)
+  // The active project's catalogue, as in BulkTagModal: without an active project nothing is
+  // asked for and none is offered — only the client's own tags stay listed.
+  const projectId = useActiveProjectId()
+  const hasProject = projectId !== undefined
+  const { data: projectTags, isLoading: tagsLoading } = useTags(projectId, { enabled: hasProject })
+  const allTags = hasProject ? projectTags : undefined
   const { data: clientTags, isLoading: clientTagsLoading } = useClientTags(clientId)
   const assignMutation = useAssignClientTag()
   const removeMutation = useRemoveClientTag()
