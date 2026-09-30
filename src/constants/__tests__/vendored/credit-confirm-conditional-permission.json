@@ -1,0 +1,11 @@
+{
+  "source_repo": "CRM/api-prionex",
+  "source_ref": "main",
+  "source_commit_sha": "30118df5184c18e13de39ed7904ebd6f64cd1fca",
+  "source_path": "services/auth/alembic/versions/20260929_0000_098_credit_decisions_confirm_conditional.py",
+  "source_sha256": "7f36f7425768610c08b52418d88cd1ef0505d7a3fbf37b12251012cd47f175b1",
+  "captured_at": "2026-09-29T22:42:19+00:00",
+  "captured_by": "sub-curator cur-19-5f (19-5f, R-9), git tree api-prionex@30118df5 (merge of PR #533)",
+  "permissions": ["credit.decisions.confirm_conditional"],
+  "sha256": "d7f4ade68e681481e3589dd8728d5bc072052edc8965d33ed3c4e78f66616794"
+}

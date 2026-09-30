@@ -6,10 +6,11 @@
  */
 import { useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { creditApi, newIdempotencyKey } from '../api/creditApi'
+import { CreditApiError, creditApi, newIdempotencyKey } from '../api/creditApi'
 import { indexDecisionCodes } from '../api/decisionCodes'
 import type {
   CreditApplicationsParams,
+  CreditConditionalConfirmationPayload,
   CreditJournalParams,
   CreditLoansParams,
   CreditQueueStatus,
@@ -25,7 +26,12 @@ export const creditKeys = {
   applicationList: (params: CreditApplicationsParams) =>
     [...creditKeys.applications(), 'list', params] as const,
   application: (id: string) => [...creditKeys.applications(), 'detail', id] as const,
-  queue: (status?: string) => [...creditKeys.all, 'queue', status ?? 'all'] as const,
+  /**
+   * Все статусы очереди разбора — префикс для сброса после решения. Сам ключ
+   * статуса строится от него же: иначе сброс и чтение разошлись бы молча.
+   */
+  queues: () => [...creditKeys.all, 'queue'] as const,
+  queue: (status?: string) => [...creditKeys.queues(), status ?? 'all'] as const,
   loans: () => [...creditKeys.all, 'loans'] as const,
   loanList: (params: CreditLoansParams) => [...creditKeys.loans(), 'list', params] as const,
   loan: (id: string) => [...creditKeys.loans(), 'detail', id] as const,
@@ -286,6 +292,63 @@ export function useCreditManualDecision(applicationId: string) {
       void queryClient.invalidateQueries({ queryKey: creditKeys.application(applicationId) })
       void queryClient.invalidateQueries({ queryKey: creditKeys.applications() })
       void queryClient.invalidateQueries({ queryKey: creditKeys.overview() })
+      // Очередь не лежит под `applications()`: без сброса предложение условного
+      // одобрения встало бы в очередь с бейджем только через `staleTime` (19-5f).
+      void queryClient.invalidateQueries({ queryKey: creditKeys.queues() })
+    },
+  })
+}
+
+/**
+ * Отказ, после которого действие точно не выполнено: ответ `4xx`, кроме `408`
+ * (таймаут запроса) и `429` (ограничение частоты), — их, как и `5xx`, повторяют
+ * тем же ключом.
+ */
+function isSettledRefusal(error: unknown): boolean {
+  if (!(error instanceof CreditApiError) || error.status === undefined) return false
+  return error.status < 500 && error.status !== 408 && error.status !== 429
+}
+
+/**
+ * Подтверждение условного одобрения руководителем (19-5f, право
+ * `credit.decisions.confirm_conditional`).
+ *
+ * Ключ идемпотентности живёт на ДЕЙСТВИЕ, а не на вызов (образец —
+ * `useSetCreditSwitch`): подпись действия — `proposal_decision_id`. Действие
+ * завершает только ОПРЕДЕЛЁННЫЙ исход: успех или отказ `4xx`, кроме `408` и
+ * `429`, — следующий клик тогда новое действие и новый ключ. Исход не определён
+ * (сетевой сбой без ответа, `5xx` шлюза или модуля, `408`, `429`) — договор мог
+ * уже выйти, и повтор идёт с ТЕМ ЖЕ ключом: модуль отдаст реплей, а не выпустит
+ * второй договор.
+ */
+export function useCreditConfirmConditional(applicationId: string) {
+  const queryClient = useQueryClient()
+  const attempt = useRef<{ proposal: string; key: string } | null>(null)
+
+  return useMutation({
+    mutationFn: (payload: CreditConditionalConfirmationPayload) => {
+      const previous = attempt.current
+      const current =
+        previous?.proposal === payload.proposal_decision_id
+          ? previous
+          : {
+              proposal: payload.proposal_decision_id,
+              key: newIdempotencyKey(`fe-confirm:${applicationId}`),
+            }
+      attempt.current = current
+      return creditApi.confirmConditional(applicationId, payload, current.key)
+    },
+    onError: (error) => {
+      if (isSettledRefusal(error)) attempt.current = null
+    },
+    onSuccess: () => {
+      attempt.current = null
+      void queryClient.invalidateQueries({ queryKey: creditKeys.application(applicationId) })
+      void queryClient.invalidateQueries({ queryKey: creditKeys.applications() })
+      void queryClient.invalidateQueries({ queryKey: creditKeys.overview() })
+      // Префиксом — все статусы очереди разом: бейдж «Чекає підтвердження» не
+      // должен держаться до `staleTime` в той же SPA-сессии.
+      void queryClient.invalidateQueries({ queryKey: creditKeys.queues() })
     },
   })
 }

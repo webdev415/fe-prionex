@@ -141,6 +141,43 @@ export function CreditUnderwritingQueuePage() {
       },
     },
     {
+      key: 'checklist',
+      header: t('credit.columns.checklist'),
+      // Заполненность чек-листа решения строки — числами модуля (19-5f); `null` и
+      // отсутствие ключа (модуль старше 19-5) — прочерк.
+      render: (row) =>
+        row.checklist_completed ? (
+          <span className="text-xs tabular-nums">
+            {`${row.checklist_completed.yes}/${row.checklist_completed.applicable}`}
+          </span>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
+    },
+    {
+      key: 'conditional',
+      header: t('credit.columns.conditional'),
+      render: (row) => {
+        const codes = row.conditional_codes ?? []
+        // Ждёт подтверждения — ТОЛЬКО по флагу модуля: действующее предложение
+        // модуль считает по порядку решений, а коды есть и у подтверждённой строки.
+        if (row.awaiting_confirmation === true) {
+          return (
+            <span className="flex flex-wrap items-center gap-1.5">
+              <span className="bg-warning-100 text-warning-800 inline-flex h-6 items-center rounded-full px-2.5 text-xs">
+                {t('credit.queue.awaitingConfirmation')}
+              </span>
+              <span className="font-mono text-xs">{codes.join(', ')}</span>
+            </span>
+          )
+        }
+        if (codes.length) {
+          return <span className="text-muted-foreground font-mono text-xs">{codes.join(', ')}</span>
+        }
+        return <span className="text-muted-foreground">—</span>
+      },
+    },
+    {
       key: 'referred',
       header: t('credit.columns.referred'),
       render: (row) => (

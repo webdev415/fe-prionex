@@ -50,8 +50,10 @@ print(hashlib.sha256('\n'.join(sorted(d['permissions'])).encode()).hexdigest() =
 
 ### Когда пересъёмка обязательна
 
-- вышла новая миграция прав в auth-сервисе (082 → 083 и далее) — снимок обязан
-  быть пересмотрен, иначе интерфейс продолжит просить или терять имя молча;
+- вышла новая миграция прав в auth-сервисе — рядом кладётся **новый** снимок с
+  провенансом этой миграции (как `credit-confirm-conditional-permission.json` для
+  098), снимок 082 не переписывается: его провенанс — один файл миграции; страж
+  объединяет снимки;
 - перед заморозкой релиза (условие `F-FE-05`) — подтвердить отсутствие дрейфа
   либо обновить `source_commit_sha`, `source_sha256`, `captured_at`;
 - ни один тест этого репозитория **не** открывает миграцию и не пересчитывает
@@ -59,6 +61,37 @@ print(hashlib.sha256('\n'.join(sorted(d['permissions'])).encode()).hexdigest() =
 
 Владелец снимка — куратор программы Wave 1 (`F-FE-05`). Секретов в файле нет и
 быть не должно: это публичные имена прав.
+
+## `credit-confirm-conditional-permission.json` — право подтверждения условного одобрения (19-5a)
+
+| Что | Значение |
+|---|---|
+| Источник | `CRM/api-prionex`, ветка `main` |
+| Путь в источнике | `services/auth/alembic/versions/20260929_0000_098_credit_decisions_confirm_conditional.py` |
+| Коммит съёмки | поле `source_commit_sha` в самом файле (мерж PR #533) |
+| Кто снял | поле `captured_by` |
+| Когда | поле `captured_at` |
+| Сколько имён | 1 |
+
+Файл читает `../creditW1Permissions.test.ts`: словарь стража — объединение этого снимка и
+снимка 082; проверки канона, списка, провенанса и самохеша идут на каждом снимке со своим
+счётом (082 — 17, этот — 1).
+
+### Как проверить, что снимок не протух
+
+```bash
+# 1. sha256 источника — обязан совпасть с полем source_sha256
+sha256sum services/auth/alembic/versions/20260929_0000_098_credit_decisions_confirm_conditional.py
+
+# 2. список имён из миграции — обязан совпасть с полем permissions
+grep -o 'credit\.[a-z_]*\.[a-z_]*' \
+  services/auth/alembic/versions/20260929_0000_098_credit_decisions_confirm_conditional.py | sort -u
+
+# 3. подпись списка — обязана совпасть с полем sha256
+python3 -c "import json,hashlib,sys; d=json.load(open(sys.argv[1])); \
+print(hashlib.sha256('\n'.join(sorted(d['permissions'])).encode()).hexdigest() == d['sha256'])" \
+  src/constants/__tests__/vendored/credit-confirm-conditional-permission.json
+```
 
 ## `credit-rail-codes.json` — перечни операций рельса кредитного модуля
 

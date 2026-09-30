@@ -45,6 +45,41 @@ describe('decisionCodes → что предлагается к отказу', ()
   })
 })
 
+describe('decisionCodes → варианты условного одобрения (19-5f)', () => {
+  it('X-1: conditional — ровно коды AB-C-* фикстуры по id; отказов, автогейта и служебного нет; индекс кэширован по ответу', () => {
+    // Вход перевёрнут: ответ модуля отсортирован по `id`, и порядок совпал бы сам.
+    const reversed: CreditDecisionCodesRegistry = {
+      version: 'book@x1',
+      codes: [...DECISION_CODES_FIXTURE.codes].reverse(),
+    }
+    const index = indexDecisionCodes(reversed)
+    const expected = DECISION_CODES_FIXTURE.codes
+      .filter((entry) => entry.kind === 'conditional')
+      .map((entry) => entry.id)
+
+    expect(expected, 'the fixture lost its four conditional codes').toEqual([
+      'AB-C-01',
+      'AB-C-02',
+      'AB-C-03',
+      'AB-C-04',
+    ])
+    expect(
+      index.conditional.map((entry) => entry.id),
+      'the conditional options are not the AB-C-* codes of the registry ordered by id'
+    ).toEqual(expected)
+    for (const id of ['AB-O-13', 'AB-G-06', 'AB-X-08']) {
+      expect(
+        index.conditional.some((entry) => entry.id === id),
+        `the conditional approval offers ${id}, which is not a conditional code`
+      ).toBe(false)
+    }
+    expect(indexDecisionCodes(reversed), 'the same response rebuilt the index').toBe(index)
+    const next = indexDecisionCodes({ version: 'book@x2', codes: reversed.codes })
+    expect(next, 'a new response of another version got the old index').not.toBe(index)
+    expect(next.conditional.map((entry) => entry.id)).toEqual(expected)
+  })
+})
+
 describe('decisionCodes → язык текста кода', () => {
   const entry = entryOf('AB-O-13')
 
