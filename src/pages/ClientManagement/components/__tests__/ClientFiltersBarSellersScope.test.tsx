@@ -7,6 +7,15 @@
  * showed the whole seller directory in every project, other portfolios
  * included. A project without debts gets an empty row: the label stays, no
  * items and no "+ N more". The number in brackets is the seller id, not a count.
+ *
+ * The door (api-prionex `services/client/app/routers/sellers.py:47-87`, main):
+ * `project_id: Optional[int] = Query(...)`, a foreign project → 403, and
+ * `SellerService.list_sellers(project_id=…)` keeps only sellers with debts of
+ * that project's clients. DEV 29.09: total 3 without it, 0 with an empty project.
+ *
+ * A seller picked in another project is not in this project's list, so the bar
+ * drops it once the list has arrived — otherwise it stays an invisible filter
+ * nobody can untick. While the list loads, nothing changes.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, render, screen, within } from '@testing-library/react'
@@ -47,13 +56,24 @@ function setActiveProject(projectId: string | null) {
   })
 }
 
-function renderBar() {
+function renderBar(filters = {} as ClientFilters, onFilterChange = vi.fn()) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={qc}>
-      <ClientFiltersBar filters={{} as ClientFilters} onFilterChange={vi.fn()} />
+      <ClientFiltersBar filters={filters} onFilterChange={onFilterChange} />
     </QueryClientProvider>
   )
+}
+
+const PROJECT_SELLERS = {
+  data: {
+    sellers: [
+      { id: 1, seller_name: 'Seller A' },
+      { id: 2, seller_name: 'Seller B' },
+      { id: 3, seller_name: 'Seller C' },
+    ],
+  },
+  isLoading: false,
 }
 
 function lastSellersParams() {
@@ -119,5 +139,43 @@ describe('ClientFiltersBar — sellers of the active project only', () => {
 
     expect(screen.getByText('Seller A (3)')).toBeInTheDocument()
     expect(screen.getByText('Seller B (5)')).toBeInTheDocument()
+  })
+
+  it("S-6: drops a seller picked in another project once the project's list has arrived", () => {
+    useSellersMock.mockReturnValue(PROJECT_SELLERS)
+    setActiveProject('3')
+    const onFilterChange = vi.fn()
+    renderBar({ portfolio: [7] } as ClientFilters, onFilterChange)
+
+    expect(onFilterChange).toHaveBeenCalledTimes(1)
+    expect(onFilterChange).toHaveBeenCalledWith({ portfolio: [] })
+  })
+
+  it("S-7: keeps a picked seller that is in the project's list", () => {
+    useSellersMock.mockReturnValue(PROJECT_SELLERS)
+    setActiveProject('3')
+    const onFilterChange = vi.fn()
+    renderBar({ portfolio: [3] } as ClientFilters, onFilterChange)
+
+    expect(onFilterChange).not.toHaveBeenCalled()
+  })
+
+  it("S-8: changes nothing while the project's list is still loading", () => {
+    useSellersMock.mockReturnValue({ data: undefined, isLoading: true })
+    setActiveProject('3')
+    const onFilterChange = vi.fn()
+    renderBar({ portfolio: [7] } as ClientFilters, onFilterChange)
+
+    expect(onFilterChange).not.toHaveBeenCalled()
+  })
+
+  it("S-9: drops only the foreign seller and keeps the project's own one", () => {
+    useSellersMock.mockReturnValue(PROJECT_SELLERS)
+    setActiveProject('3')
+    const onFilterChange = vi.fn()
+    renderBar({ portfolio: [7, 3] } as ClientFilters, onFilterChange)
+
+    expect(onFilterChange).toHaveBeenCalledTimes(1)
+    expect(onFilterChange).toHaveBeenCalledWith({ portfolio: [3] })
   })
 })

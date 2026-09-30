@@ -445,6 +445,8 @@ describe('NotificationBell — visibility of all types', () => {
 // keeps the tab, since hiding a non-empty tab would lose the alert. A hidden
 // tab never stays selected: the header is not remounted on a project switch,
 // so a UBKI tab opened in a Ukrainian project falls back to the tasks panel.
+// A shown tab does not vanish under the operator while the panel is open; the
+// choice is taken again when the panel is reopened or the project changes.
 const ubkiConnectionDownItem = makeItem({
   id: 'n-ubki-down',
   type: 'ubki_connection_down',
@@ -521,7 +523,12 @@ describe('UBKI tab only in a Ukrainian project', () => {
 
     expect(screen.queryByText('notificationBell.tabs.ubki')).not.toBeInTheDocument()
     expect(screen.queryByText('notificationBell.empty.ubki')).not.toBeInTheDocument()
+    // Panels follow the shown tab, not the raw choice: the tasks panel with its
+    // card and actions, not a blank one.
     expect(await screen.findByText('Overdue task')).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'notificationBell.taskActions.completeAria' })
+    ).toBeInTheDocument()
     // The strip highlights the tab the panel shows, not the hidden UBKI one.
     expect(screen.getByText('notificationBell.tabs.tasks')).toHaveClass('border-primary-500')
   })
@@ -536,5 +543,30 @@ describe('UBKI tab only in a Ukrainian project', () => {
     await user.click(await screen.findByText('notificationBell.tabs.ubki'))
 
     expect(await screen.findByText('UBKI connection lost')).toBeInTheDocument()
+  })
+
+  it('N-6: a shown UBKI tab stays while the panel is open, even when a refetch drops the last alert', async () => {
+    installApiMocks([ubkiConnectionDownItem])
+    useAuthStore.setState({ user: userInProject('CA') })
+    const user = userEvent.setup()
+    renderBell()
+    await openBell(user)
+    await user.click(await screen.findByText('notificationBell.tabs.ubki'))
+    expect(await screen.findByText('UBKI connection lost')).toBeInTheDocument()
+
+    // The operator dismisses the last UBKI alert; the refetch comes back without it.
+    installApiMocks()
+    await user.click(screen.getByRole('button', { name: 'notificationBell.dismissAria' }))
+    await waitFor(() => expect(screen.queryByText('UBKI connection lost')).not.toBeInTheDocument())
+
+    expect(screen.getByText('notificationBell.tabs.ubki')).toBeInTheDocument()
+    expect(screen.getByText('notificationBell.empty.ubki')).toBeInTheDocument()
+
+    // Closing and reopening the panel takes the choice again: the tab is gone.
+    await user.click(screen.getByLabelText(/notificationBell\.ariaLabel/))
+    await openBell(user)
+
+    expect(await screen.findByText('Overdue task')).toBeInTheDocument()
+    expect(screen.queryByText('notificationBell.tabs.ubki')).not.toBeInTheDocument()
   })
 })

@@ -1,3 +1,11 @@
+/**
+ * The shared country folds every code except 'ES' into 'UA'. These gates stay
+ * on that fold on purpose — story 17-56 tail, awaiting the owner's decision:
+ * SMS (`useSmsServiceAvailable.ts`), the assistant and SMS templates
+ * (`UkrainianProjectRoute.tsx`), phone formats (`phone.ts`) and the assistant
+ * menu item (`DashboardLayout.tsx:82`). Only UBKI reads the raw code, through
+ * `activeProjectIsUkrainian`.
+ */
 export type Country = 'UA' | 'ES'
 
 let active: Country = 'UA'
@@ -20,8 +28,7 @@ export function activeProjectCountry(
     | null
     | undefined
 ): Country {
-  const project = user?.projects?.find((p) => p.id === user.active_project_id)
-  return (project?.country ?? user?.active_project_country) === 'ES' ? 'ES' : 'UA'
+  return activeProjectCode(user) === 'ES' ? 'ES' : 'UA'
 }
 
 /**
@@ -36,7 +43,12 @@ export function activeProjectCountry(
 export function activeProjectIsUkrainian(
   user: Parameters<typeof activeProjectCountry>[0]
 ): boolean {
-  const project = user?.projects?.find((p) => p.id === user.active_project_id)
-  const code = project?.country ?? user?.active_project_country
+  const code = activeProjectCode(user)
   return !code || code === 'UA'
+}
+
+/** The raw country code of the active project: its own, else the one from /me. */
+function activeProjectCode(user: Parameters<typeof activeProjectCountry>[0]): string | undefined {
+  const project = user?.projects?.find((p) => p.id === user.active_project_id)
+  return project?.country ?? user?.active_project_country
 }
