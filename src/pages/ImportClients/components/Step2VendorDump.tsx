@@ -305,6 +305,9 @@ export function Step2VendorDump({
             })
           : null
       if (saleTypeConflict && onSaleTypeConflict) {
+        // Only a guard: step 2 unmounts on the way back, and this local error
+        // goes with it. The vendor flow keeps no error in the page's state.
+        setImportError(null)
         onSaleTypeConflict(saleTypeConflict)
         return
       }

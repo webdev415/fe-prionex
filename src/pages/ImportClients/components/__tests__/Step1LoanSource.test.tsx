@@ -1,5 +1,5 @@
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { beforeAll, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useCallback, useState } from 'react'
 
@@ -58,6 +58,32 @@ vi.mock('@/stores/authStore', () => ({
     selector({ user: { timezone: 'UTC' } }),
 }))
 
+// The date picker is a third-party widget with its own typed-input handling;
+// a plain input hands the step the same `{ value: Date }` it would.
+vi.mock('@/components/ui/DateSelect', () => ({
+  DateSelect: ({
+    id,
+    label,
+    onChange,
+  }: {
+    id?: string
+    label?: string
+    onChange?: (args: { value: Date | null }) => void
+  }) => (
+    <div id={id}>
+      <label>
+        {label}
+        <input
+          type="date"
+          onChange={(e) =>
+            onChange?.({ value: e.target.value ? new Date(`${e.target.value}T12:00:00`) : null })
+          }
+        />
+      </label>
+    </div>
+  ),
+}))
+
 // Radix select probes pointer capture, which jsdom does not implement.
 beforeAll(() => {
   Element.prototype.hasPointerCapture = vi.fn(() => false)
@@ -113,6 +139,10 @@ function renderStep(overrides: Partial<Step1Data> = {}) {
 }
 
 const saleTypeTrigger = () => document.querySelector('#new-fa-sale-type') as HTMLElement
+const purchaseDateInput = () =>
+  screen.getByLabelText('pages.imports.step1.factoringAgreement.fields.contractPurchaseDate')
+const typePurchaseDate = (day: string) =>
+  fireEvent.change(purchaseDateInput(), { target: { value: day } })
 
 async function choose(
   user: ReturnType<typeof userEvent.setup>,
@@ -147,6 +177,7 @@ describe('Step1LoanSource — contract type of a new agreement', () => {
 
     expect(onPatch).toHaveBeenLastCalledWith({
       newFactoringAgreement: { ...EMPTY_NEW_FACTORING_AGREEMENT, sale_type: 'factoring' },
+      saleTypeChosen: true,
       saleTypeConflict: null,
     })
     expect(saleTypeTrigger()).toHaveTextContent(FACTORING)
@@ -162,6 +193,7 @@ describe('Step1LoanSource — contract type of a new agreement', () => {
       expect.objectContaining({
         sellerId: '8',
         newFactoringAgreement: EMPTY_NEW_FACTORING_AGREEMENT,
+        saleTypeChosen: false,
       })
     )
     expect(saleTypeTrigger()).toHaveTextContent(CESSION)
@@ -179,6 +211,116 @@ describe('Step1LoanSource — contract type of a new agreement', () => {
     )
 
     expect(saleTypeTrigger()).toHaveTextContent(CESSION)
+  })
+})
+
+describe('Step1LoanSource — the type follows the purchase date until it is picked', () => {
+  // A historical import typed in with its old date must not leave as cession
+  // just because nobody opened the type field.
+  it('turns to factoring for a purchase before 30.07.2026', () => {
+    const { onPatch } = renderStep()
+
+    typePurchaseDate('2026-07-29')
+
+    expect(saleTypeTrigger()).toHaveTextContent(FACTORING)
+    expect(onPatch).toHaveBeenLastCalledWith({
+      newFactoringAgreement: {
+        ...EMPTY_NEW_FACTORING_AGREEMENT,
+        contract_purchase_date: '2026-07-29T12:00:00.000Z',
+        sale_type: 'factoring',
+      },
+      saleTypeConflict: null,
+    })
+  })
+
+  it('turns back to cession for a purchase on 30.07.2026, and when the date is cleared', () => {
+    renderStep()
+    typePurchaseDate('2026-07-29')
+    expect(saleTypeTrigger()).toHaveTextContent(FACTORING)
+
+    typePurchaseDate('2026-07-30')
+    expect(saleTypeTrigger()).toHaveTextContent(CESSION)
+
+    typePurchaseDate('2025-01-10')
+    expect(saleTypeTrigger()).toHaveTextContent(FACTORING)
+    typePurchaseDate('')
+    expect(saleTypeTrigger()).toHaveTextContent(CESSION)
+  })
+
+  it('stays silent while it follows the date — there is nothing to contradict', () => {
+    renderStep()
+
+    typePurchaseDate('2026-07-29')
+    expect(saleTypeTrigger()).toHaveTextContent(FACTORING)
+    expect(
+      screen.queryByText('pages.imports.step1.factoringAgreement.saleTypeDateHint')
+    ).not.toBeInTheDocument()
+
+    typePurchaseDate('2026-07-30')
+    expect(saleTypeTrigger()).toHaveTextContent(CESSION)
+    expect(
+      screen.queryByText('pages.imports.step1.factoringAgreement.saleTypeDateHint')
+    ).not.toBeInTheDocument()
+  })
+
+  it('keeps a type picked by hand when the date is cleared — no fall back to the default', async () => {
+    const { user, onPatch } = renderStep()
+    await choose(user, saleTypeTrigger(), FACTORING)
+    typePurchaseDate('2026-09-30')
+
+    typePurchaseDate('')
+
+    expect(saleTypeTrigger()).toHaveTextContent(FACTORING)
+    expect(onPatch).toHaveBeenLastCalledWith({
+      newFactoringAgreement: {
+        ...EMPTY_NEW_FACTORING_AGREEMENT,
+        contract_purchase_date: '',
+        sale_type: 'factoring',
+      },
+      saleTypeConflict: null,
+    })
+  })
+
+  it('stays where the operator put it once picked by hand, and warns on a mismatch', async () => {
+    const { user } = renderStep()
+    await choose(user, saleTypeTrigger(), FACTORING)
+
+    typePurchaseDate('2026-09-30')
+
+    expect(saleTypeTrigger()).toHaveTextContent(FACTORING)
+    expect(
+      screen.getAllByText('pages.imports.step1.factoringAgreement.saleTypeDateHint')
+    ).toHaveLength(2)
+  })
+
+  it('follows the date again after the seller changes', async () => {
+    const { user } = renderStep()
+    await choose(user, saleTypeTrigger(), FACTORING)
+    await choose(user, document.querySelector('#seller-creditor') as HTMLElement, 'FB - Finbust')
+    expect(saleTypeTrigger()).toHaveTextContent(CESSION)
+
+    typePurchaseDate('2026-01-15')
+
+    expect(saleTypeTrigger()).toHaveTextContent(FACTORING)
+  })
+
+  it('follows the date again after the agreement mode is switched away and back', async () => {
+    const { user, onPatch } = renderStep()
+    await choose(user, saleTypeTrigger(), FACTORING)
+
+    await user.click(
+      screen.getByRole('radio', { name: 'pages.imports.step1.factoringAgreement.pickExisting' })
+    )
+    await user.click(
+      screen.getByRole('radio', { name: 'pages.imports.step1.factoringAgreement.createNew' })
+    )
+    expect(onPatch).toHaveBeenCalledWith(
+      expect.objectContaining({ factoringAgreementMode: 'existing', saleTypeChosen: false })
+    )
+
+    typePurchaseDate('2026-01-15')
+
+    expect(saleTypeTrigger()).toHaveTextContent(FACTORING)
   })
 })
 
@@ -226,6 +368,8 @@ describe('Step1LoanSource — existing agreements', () => {
 
 describe('Step1LoanSource — type conflict returned by the upload', () => {
   const NUMBER = '30-09-26ФБ'
+  const numberInput = () =>
+    screen.getByLabelText(/pages\.imports\.step1\.factoringAgreement\.fields\.number/)
   /** Step 1 as the upload was sent: seller 7, this number, and the 409 about them. */
   const withConflict = (
     existingSaleType: 'factoring' | 'cession' | null,
@@ -258,6 +402,47 @@ describe('Step1LoanSource — type conflict returned by the upload', () => {
     renderStep()
 
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('brings the message into view and puts the cursor in the agreement number', () => {
+    const focus = vi.spyOn(HTMLElement.prototype, 'focus')
+    onTestFinished(() => focus.mockRestore())
+    renderStep(withConflict('factoring'))
+
+    const alert = screen.getByRole('alert')
+    const scrollIntoView = vi.mocked(Element.prototype.scrollIntoView)
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'center' })
+    expect(scrollIntoView.mock.contexts).toContain(alert)
+    expect(numberInput()).toHaveFocus()
+    // Focus must not scroll again and push the message back out of view.
+    expect(focus.mock.contexts).toContain(numberInput())
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true })
+  })
+
+  it('moves neither the page nor the cursor for a conflict about another number', () => {
+    renderStep(withConflict('factoring', { agreementNumber: 'OTHER-1' }))
+
+    expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled()
+    expect(numberInput()).not.toHaveFocus()
+  })
+
+  // The cursor lands in the number: a screen reader reads out why with it.
+  it('ties the agreement number to the message', () => {
+    renderStep(withConflict('factoring'))
+
+    const alert = screen.getByRole('alert')
+    expect(alert).toHaveAttribute('id', 'new-fa-sale-type-conflict')
+    expect(numberInput()).toHaveAttribute('aria-describedby', 'new-fa-sale-type-conflict')
+    expect(numberInput()).toHaveAccessibleDescription(`${CONFLICT}(${FACTORING})`)
+  })
+
+  it.each([
+    ['without a conflict', {}],
+    ['for a conflict about another number', withConflict('factoring', { agreementNumber: 'X' })],
+  ])('leaves the agreement number undescribed %s', (_label, over) => {
+    renderStep(over)
+
+    expect(numberInput()).not.toHaveAttribute('aria-describedby')
   })
 
   it('still matches a number typed with surrounding spaces — the upload sent it trimmed', () => {
@@ -328,22 +513,32 @@ describe('Step1LoanSource — type conflict returned by the upload', () => {
 
 describe('Step1LoanSource — type against the purchase date', () => {
   const HINT = 'pages.imports.step1.factoringAgreement.saleTypeDateHint'
+  // A mismatch can only come from a type picked by hand: until then the type
+  // follows the date.
   const withDate = (contractPurchaseDate: string, saleType: 'factoring' | 'cession') => ({
     newFactoringAgreement: {
       ...EMPTY_NEW_FACTORING_AGREEMENT,
       contract_purchase_date: contractPurchaseDate,
       sale_type: saleType,
     },
+    saleTypeChosen: true,
   })
 
   // The wizard stores the chosen day as a noon-UTC ISO datetime.
   it.each([
     ['cession on a date before 30.07.2026', '2026-07-29T12:00:00.000Z', 'cession'],
     ['factoring from 30.07.2026 on', '2026-07-30T12:00:00.000Z', 'factoring'],
-  ] as const)('hints at %s — without blocking anything', (_label, date, saleType) => {
+  ] as const)('warns about %s — without blocking anything', (_label, date, saleType) => {
     renderStep(withDate(date, saleType))
 
-    expect(screen.getByText(HINT)).toBeInTheDocument()
+    // Under both fields — either may be the one to fix — as a warning, not
+    // as the muted helper text around it.
+    const typeField = saleTypeTrigger().parentElement as HTMLElement
+    const dateField = (document.querySelector('#new-fa-contract-purchase-date') as HTMLElement)
+      .parentElement as HTMLElement
+    expect(screen.getAllByText(HINT)).toHaveLength(2)
+    expect(within(typeField).getByText(HINT)).toHaveClass('text-warning-700')
+    expect(within(dateField).getByText(HINT)).toHaveClass('text-warning-700')
     // A hint, not a refusal: nothing is announced as an error.
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
@@ -361,7 +556,7 @@ describe('Step1LoanSource — type against the purchase date', () => {
 
   it('goes away once the type is switched to the one the date implies', async () => {
     const { user } = renderStep(withDate('2026-01-15T12:00:00.000Z', 'cession'))
-    expect(screen.getByText(HINT)).toBeInTheDocument()
+    expect(screen.getAllByText(HINT)).toHaveLength(2)
 
     await choose(user, saleTypeTrigger(), FACTORING)
 

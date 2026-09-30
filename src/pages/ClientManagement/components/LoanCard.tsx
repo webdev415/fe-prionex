@@ -22,11 +22,17 @@ import { saleTypeLabelKey, toSaleType } from '@/features/sellers/saleType'
  *   - 1 meta/counterparty   flex 1 1 300px / min 170px   (grid 88px 1fr)
  *   - 2 amounts (3 cols)    flex 1 1 400px / min 342px
  *   - 3 secondary dates     flex 1 1 300px / min 200px   (grid 112px 1fr)
- *   - 4 contract type       flex 1 1 400px / min 200px   (grid 112px 1fr)
+ *   - 4 contract type       flex 1 1 400px / min 312px   (grid 112px 1fr)
  *
- * Both rows give their zones the SAME flex bases, so whenever a row holds two
- * zones they resolve to the same widths and the columns line up; the minimums
- * only differ once a row has wrapped.
+ * Both rows break onto two lines at the same card width, so the divider
+ * before the right column never jumps between them. A flex row wraps as soon
+ * as the BASES of its zones plus the gap stop fitting, and both rows have the
+ * SAME bases (300 | 400, 710px with the 10px gap) and the SAME side padding —
+ * that is what makes them break together, and what resolves two zones on a
+ * row to the same widths so the columns line up. The minimums play no part in
+ * the break: they only floor a zone left alone on its line, and zone 2's
+ * 342px is what sets the narrowest card. Zone 4's 312px mirrors the first
+ * row's minimums (170 + 342 = 200 + 312) for symmetry, not for the break.
  *
  * Those bases are tuned so that at 100% zoom on a full-width panel nothing has
  * to wrap: the widest real counterparty stays on one line, and so does the
@@ -46,12 +52,12 @@ import { saleTypeLabelKey, toSaleType } from '@/features/sellers/saleType'
  * The rows themselves also wrap — when the card is too narrow for two
  * columns, each row drops its right zone under its left one and the card reads
  * as one column (meta, amounts, dates, type) instead of overflowing, so the
- * page never scrolls horizontally (AC #2/#13). Equal bases make both rows
- * break at the same width. The column definitions stay identical on every
- * card, which is what keeps the amounts on one plane and the date values
- * aligned across cards even when a neighbouring cell wraps. Zones are
- * top-aligned so a taller card doesn't shift its amounts block relative to its
- * neighbours.
+ * page never scrolls horizontally (AC #2/#13). Equal bases and equal padding
+ * make both rows break at the same width. The column definitions stay
+ * identical on every card, which is what keeps the amounts on one plane and
+ * the date values aligned across cards even when a neighbouring cell wraps.
+ * Zones are top-aligned so a taller card doesn't shift its amounts block
+ * relative to its neighbours.
  *
  * Colored status badges are gone — status is conveyed by which section
  * (Open/Closed) the card sits in. Closed cards are veiled by a translucent
@@ -771,8 +777,11 @@ export function LoanCard({
           </div>
 
           {/* Zone 4 — contract type, bottom right. Always present on a purchased
-              debt: "—" when the type is unknown, never an empty corner. */}
-          <div className="border-border flex min-w-[200px] flex-[1_1_400px] flex-col gap-1 border-l pr-1 pl-3">
+              debt: "—" when the type is unknown, never an empty corner. Its
+              312px min-width mirrors the first row (170 + 342 = 200 + 312):
+              symmetry, not the break point — like the first row, this one
+              wraps by its bases (300 + 400 + gap). */}
+          <div className="border-border flex min-w-[312px] flex-[1_1_400px] flex-col gap-1 border-l pr-1 pl-3">
             <SecRow
               label={t('saleType.label', 'Contract type')}
               value={saleTypeKey ? t(saleTypeKey) : '—'}

@@ -2,7 +2,7 @@
  * Step 1: Loan Source & Import Type
  */
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
@@ -20,6 +20,7 @@ import { RadioCard } from './RadioCard'
 import { useProjects } from '@/features/projects'
 import { useSellers, useSellerFactoringAgreements } from '@/features/sellers'
 import {
+  DEFAULT_SALE_TYPE,
   SALE_TYPES,
   saleTypeByPurchaseDate,
   saleTypeLabelKey,
@@ -61,12 +62,19 @@ export interface Step1Data {
   // and it is shown only while the seller and the number are still the ones
   // the upload was sent with.
   saleTypeConflict?: SaleTypeConflict | null
+  // True once the operator picked the new agreement's type by hand. Until then
+  // the type follows the purchase date (the 30.07.2026 boundary); after it, the
+  // date no longer moves it. A form flag, not part of the request body. A new
+  // seller or mode empties the create block and clears it.
+  saleTypeChosen?: boolean
 }
 
 interface Step1LoanSourceProps {
   data: Step1Data
   onChange: (data: Partial<Step1Data>) => void
 }
+
+const SALE_TYPE_CONFLICT_ID = 'new-fa-sale-type-conflict'
 
 export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
   const { t } = useTranslation('common')
@@ -134,6 +142,7 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
       sellerId: value,
       factoringAgreementId: '',
       newFactoringAgreement: { ...EMPTY_NEW_FACTORING_AGREEMENT },
+      saleTypeChosen: false,
       saleTypeConflict: null,
     })
   }
@@ -145,6 +154,7 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
       factoringAgreementId: mode === 'existing' ? data.factoringAgreementId : '',
       newFactoringAgreement:
         mode === 'new' ? data.newFactoringAgreement : { ...EMPTY_NEW_FACTORING_AGREEMENT },
+      saleTypeChosen: false,
       saleTypeConflict: null,
     })
   }
@@ -167,6 +177,24 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
     if (!saleType) return
     onChange({
       newFactoringAgreement: { ...data.newFactoringAgreement, sale_type: saleType },
+      saleTypeChosen: true,
+      saleTypeConflict: null,
+    })
+  }
+
+  // Until the operator picks the type, it follows the purchase date — so a
+  // historical import typed in with its old date is not sent as cession by a
+  // default nobody looked at. No date means the default again.
+  const handlePurchaseDateChange = (value: string) => {
+    const saleType = data.saleTypeChosen
+      ? data.newFactoringAgreement.sale_type
+      : (saleTypeByPurchaseDate(value) ?? DEFAULT_SALE_TYPE)
+    onChange({
+      newFactoringAgreement: {
+        ...data.newFactoringAgreement,
+        contract_purchase_date: value,
+        sale_type: saleType,
+      },
       saleTypeConflict: null,
     })
   }
@@ -187,11 +215,34 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
       ? conflict
       : null
 
-  // A hint, not a block: a type that disagrees with the purchase date means a
-  // slip in one of the two, and only the operator knows which.
+  // The conflict sends the operator back here from step 2, and the message sits
+  // under the create block, possibly below the fold: bring it into view and put
+  // the cursor in the number, the field the message asks to change. The focus
+  // must not scroll again, or the browser would pull the page up to the number
+  // and push the message back out of view.
+  const conflictRef = useRef<HTMLParagraphElement>(null)
+  const agreementNumberRef = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    if (!visibleConflict) return
+    conflictRef.current?.scrollIntoView?.({ block: 'center' })
+    agreementNumberRef.current?.focus({ preventScroll: true })
+  }, [visibleConflict])
+
+  // A warning, not a block: a type that disagrees with the purchase date means a
+  // slip in one of the two, and only the operator knows which. It can only come
+  // from a type picked by hand — until then the type follows the date — and it
+  // is shown under both fields, since either may be the one to fix.
   const saleTypeByDate = saleTypeByPurchaseDate(data.newFactoringAgreement.contract_purchase_date)
   const saleTypeContradictsDate =
     saleTypeByDate !== null && saleTypeByDate !== data.newFactoringAgreement.sale_type
+  const saleTypeDateHint = saleTypeContradictsDate ? (
+    <p className="text-warning-700 mt-1.5 text-xs">
+      {t(
+        'pages.imports.step1.factoringAgreement.saleTypeDateHint',
+        'The type does not match the purchase date: portfolios bought before 30.07.2026 were bought under factoring, from 30.07.2026 on — under assignment. Check the date or the type.'
+      )}
+    </p>
+  ) : null
 
   return (
     <div className="space-y-6">
@@ -397,21 +448,18 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
                           ))}
                         </SelectContent>
                       </Select>
-                      {saleTypeContradictsDate && (
-                        <p className="text-muted-foreground mt-1.5 text-xs">
-                          {t(
-                            'pages.imports.step1.factoringAgreement.saleTypeDateHint',
-                            'The type does not match the purchase date: portfolios bought before 30.07.2026 were bought under factoring, from 30.07.2026 on — under assignment. Check the type.'
-                          )}
-                        </p>
-                      )}
+                      {saleTypeDateHint}
                     </div>
                     <Input
+                      ref={agreementNumberRef}
                       label={t(
                         'pages.imports.step1.factoringAgreement.fields.number',
                         'Agreement number'
                       )}
                       required
+                      // The cursor lands here with the conflict: a screen reader
+                      // then reads out why along with the field.
+                      aria-describedby={visibleConflict ? SALE_TYPE_CONFLICT_ID : undefined}
                       value={data.newFactoringAgreement.agreement_number}
                       onChange={(e) =>
                         handleNewAgreementFieldChange('agreement_number', e.target.value)
@@ -499,61 +547,61 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
                         'Select reporting date'
                       )}
                     />
-                    <DateSelect
-                      id="new-fa-contract-purchase-date"
-                      label={t(
-                        'pages.imports.step1.factoringAgreement.fields.contractPurchaseDate',
-                        'Contract purchase date'
-                      )}
-                      required
-                      value={
-                        data.newFactoringAgreement.contract_purchase_date
-                          ? (() => {
-                              // Convert UTC datetime ISO back to a Date object that
-                              // react-datepicker renders as the correct calendar day in
-                              // the user's timezone (mirrors the old top-level picker's
-                              // timezone-aware display logic).
-                              const utcDate = new Date(
-                                data.newFactoringAgreement.contract_purchase_date
-                              )
-                              if (userTimezone) {
-                                const formatter = new Intl.DateTimeFormat('en-CA', {
-                                  timeZone: userTimezone,
-                                  year: 'numeric',
-                                  month: '2-digit',
-                                  day: '2-digit',
-                                })
-                                const dateStr = formatter.format(utcDate)
-                                const [year, month, day] = dateStr.split('-').map(Number)
-                                return new Date(year, month - 1, day, 12, 0, 0)
-                              }
-                              return utcDate
-                            })()
-                          : null
-                      }
-                      onChange={(args) => {
-                        if (!args.value) {
-                          handleNewAgreementFieldChange('contract_purchase_date', '')
-                          return
+                    <div>
+                      <DateSelect
+                        id="new-fa-contract-purchase-date"
+                        label={t(
+                          'pages.imports.step1.factoringAgreement.fields.contractPurchaseDate',
+                          'Contract purchase date'
+                        )}
+                        required
+                        value={
+                          data.newFactoringAgreement.contract_purchase_date
+                            ? (() => {
+                                // Convert UTC datetime ISO back to a Date object that
+                                // react-datepicker renders as the correct calendar day in
+                                // the user's timezone (mirrors the old top-level picker's
+                                // timezone-aware display logic).
+                                const utcDate = new Date(
+                                  data.newFactoringAgreement.contract_purchase_date
+                                )
+                                if (userTimezone) {
+                                  const formatter = new Intl.DateTimeFormat('en-CA', {
+                                    timeZone: userTimezone,
+                                    year: 'numeric',
+                                    month: '2-digit',
+                                    day: '2-digit',
+                                  })
+                                  const dateStr = formatter.format(utcDate)
+                                  const [year, month, day] = dateStr.split('-').map(Number)
+                                  return new Date(year, month - 1, day, 12, 0, 0)
+                                }
+                                return utcDate
+                              })()
+                            : null
                         }
-                        // Mirror the old picker — store the chosen day as a UTC
-                        // datetime ISO (noon UTC). BE strips the time portion
-                        // before persisting to the date column.
-                        const selectedDate = args.value
-                        const year = selectedDate.getFullYear()
-                        const month = selectedDate.getMonth()
-                        const day = selectedDate.getDate()
-                        const utcDate = new Date(Date.UTC(year, month, day, 12, 0, 0))
-                        handleNewAgreementFieldChange(
-                          'contract_purchase_date',
-                          utcDate.toISOString()
-                        )
-                      }}
-                      placeholder={t(
-                        'pages.imports.step1.factoringAgreement.fields.contractPurchaseDatePlaceholder',
-                        'Select contract purchase date'
-                      )}
-                    />
+                        onChange={(args) => {
+                          if (!args.value) {
+                            handlePurchaseDateChange('')
+                            return
+                          }
+                          // Mirror the old picker — store the chosen day as a UTC
+                          // datetime ISO (noon UTC). BE strips the time portion
+                          // before persisting to the date column.
+                          const selectedDate = args.value
+                          const year = selectedDate.getFullYear()
+                          const month = selectedDate.getMonth()
+                          const day = selectedDate.getDate()
+                          const utcDate = new Date(Date.UTC(year, month, day, 12, 0, 0))
+                          handlePurchaseDateChange(utcDate.toISOString())
+                        }}
+                        placeholder={t(
+                          'pages.imports.step1.factoringAgreement.fields.contractPurchaseDatePlaceholder',
+                          'Select contract purchase date'
+                        )}
+                      />
+                      {saleTypeDateHint}
+                    </div>
                   </div>
                 )}
 
@@ -563,7 +611,12 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
                     switch to, and with a matching type the server silently
                     returns the old agreement and the dates typed here are lost. */}
                 {data.factoringAgreementMode === 'new' && visibleConflict && (
-                  <p role="alert" className="text-error-500 text-sm">
+                  <p
+                    ref={conflictRef}
+                    id={SALE_TYPE_CONFLICT_ID}
+                    role="alert"
+                    className="text-error-500 text-sm"
+                  >
                     {t(
                       'pages.imports.step1.factoringAgreement.saleTypeConflict',
                       'This seller already has an agreement with this number (type: {{existing}}). Pick it under “Pick existing” or enter another number.',

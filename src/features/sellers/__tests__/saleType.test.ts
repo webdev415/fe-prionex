@@ -57,6 +57,14 @@ describe('sale type by purchase date', () => {
     expect(saleTypeByPurchaseDate(date)).toBe(expected)
   })
 
+  // Built the way the wizard builds it from the picked day, not typed in by hand.
+  it.each([
+    ['29.07.2026', 'factoring', Date.UTC(2026, 6, 29, 12)],
+    ['30.07.2026', 'cession', Date.UTC(2026, 6, 30, 12)],
+  ])('reads %s picked in the wizard (noon UTC, ISO) → %s', (_day, expected, utcMs) => {
+    expect(saleTypeByPurchaseDate(new Date(utcMs).toISOString())).toBe(expected)
+  })
+
   it('names no type for an empty date', () => {
     expect(saleTypeByPurchaseDate('')).toBeNull()
   })

@@ -121,6 +121,20 @@ describe('Step2VendorDump — contract type of a new agreement', () => {
     expect(onSaleTypeConflict).not.toHaveBeenCalled()
   })
 
+  it('drops an earlier refusal when it hands the conflict back', async () => {
+    uploadImport.mockRejectedValueOnce(httpError(409, { detail: 'Agreement is locked' }))
+    uploadImport.mockRejectedValueOnce(conflict409())
+    const { user, onSaleTypeConflict } = renderStep()
+    await user.click(startImport())
+    expect(await screen.findByText('Agreement is locked')).toBeInTheDocument()
+
+    await waitFor(() => expect(startImport()).toBeEnabled())
+    await user.click(startImport())
+
+    await waitFor(() => expect(onSaleTypeConflict).toHaveBeenCalledTimes(1))
+    expect(screen.queryByText('Agreement is locked')).not.toBeInTheDocument()
+  })
+
   it('keeps any other refusal on step 2', async () => {
     uploadImport.mockRejectedValue(httpError(409, { detail: 'Agreement is locked' }))
     const { user, onSaleTypeConflict } = renderStep()

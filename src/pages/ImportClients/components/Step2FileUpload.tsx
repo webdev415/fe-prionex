@@ -381,6 +381,11 @@ export function Step2FileUpload({
             })
           : null
       if (saleTypeConflict && onSaleTypeConflict) {
+        // Only a guard: step 2 unmounts on the way back, and this local error
+        // goes with it. The page's step-2 state survives, but any CSV error in
+        // it is about the file now on the form (Start stays disabled while one
+        // is set, so none was there when this upload left) — it is kept.
+        setImportError(null)
         onSaleTypeConflict(saleTypeConflict)
         return
       }

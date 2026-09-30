@@ -4892,7 +4892,7 @@
         "factoringAgreement": {
           "title": "Acuerdo de compra",
           "saleTypeConflict": "Este cedente ya tiene un acuerdo con este número (tipo: {{existing}}). Selecciónelo con «Elegir existente» o indique otro número.",
-          "saleTypeDateHint": "El tipo no coincide con la fecha de compra: antes del 30.07.2026 las carteras se compraban por factoring y desde el 30.07.2026, por acuerdo de cesión. Revise el tipo.",
+          "saleTypeDateHint": "El tipo no coincide con la fecha de compra: antes del 30.07.2026 las carteras se compraban por factoring y desde el 30.07.2026, por acuerdo de cesión. Compruebe la fecha o el tipo.",
           "pickSellerFirst": "Seleccione primero un cedente.",
           "pickExisting": "Elegir existente",
           "createNew": "Crear nuevo",

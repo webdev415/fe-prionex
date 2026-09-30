@@ -164,6 +164,22 @@ async function fillStep1(user: User, importType: 'simple' | 'vendor') {
   })
 }
 
+const csvInput = () => document.querySelector('input[type="file"]') as HTMLInputElement
+
+/** A CSV with every column the simple import requires, and no rows. */
+function csvFile(name: string) {
+  const header = [
+    'clients_first_name',
+    'clients_last_name',
+    'clients_tax_id',
+    'client_contacts_client_mobile_phone_contact_value',
+    'debts_1_contract_number',
+    'debts_1_remaining_debt_amount',
+    'debts_1_seller_company_legacy',
+  ].join(',')
+  return new File([`${header}\n`], name, { type: 'text/csv' })
+}
+
 async function expectBackOnStep1WithConflict() {
   // Step 1 again: the create block with its type field is on screen…
   await waitFor(() => expect(document.querySelector('#new-fa-sale-type')).not.toBeNull())
@@ -171,8 +187,10 @@ async function expectBackOnStep1WithConflict() {
   expect(screen.getByRole('alert')).toHaveTextContent(
     `${FA}.saleTypeConflict(saleType.values.factoring)`
   )
-  // What the operator typed is still there to fix.
-  expect(screen.getByLabelText(new RegExp(`${FA}\\.fields\\.number`))).toHaveValue('30-09-26ФБ')
+  // What the operator typed is still there to fix — with the cursor in it.
+  const number = screen.getByLabelText(new RegExp(`${FA}\\.fields\\.number`))
+  expect(number).toHaveValue('30-09-26ФБ')
+  expect(number).toHaveFocus()
 }
 
 describe('ImportClientsPage — step 1 with a new agreement', () => {
@@ -196,6 +214,20 @@ describe('ImportClientsPage — step 1 with a new agreement', () => {
     expect(document.querySelector('#new-fa-sale-type')).toHaveTextContent('saleType.values.cession')
     expect(nextButton()).toBeEnabled()
   })
+
+  it('takes factoring from a purchase date before 30.07.2026 when the type was not picked', async () => {
+    const user = renderPage()
+    await choose(user, document.querySelector('#seller-creditor') as HTMLElement, 'EG - Egroshi')
+    await user.click(screen.getByRole('radio', { name: `${FA}.createNew` }))
+
+    fireEvent.change(screen.getByLabelText(`${FA}.fields.contractPurchaseDate`), {
+      target: { value: '2025-03-14' },
+    })
+
+    expect(document.querySelector('#new-fa-sale-type')).toHaveTextContent(
+      'saleType.values.factoring'
+    )
+  })
 })
 
 describe('ImportClientsPage — a 409 SALE_TYPE_CONFLICT returns the wizard to step 1', () => {
@@ -205,19 +237,7 @@ describe('ImportClientsPage — a 409 SALE_TYPE_CONFLICT returns the wizard to s
     await fillStep1(user, 'simple')
     await user.click(nextButton())
 
-    const header = [
-      'clients_first_name',
-      'clients_last_name',
-      'clients_tax_id',
-      'client_contacts_client_mobile_phone_contact_value',
-      'debts_1_contract_number',
-      'debts_1_remaining_debt_amount',
-      'debts_1_seller_company_legacy',
-    ].join(',')
-    await user.upload(
-      document.querySelector('input[type="file"]') as HTMLInputElement,
-      new File([`${header}\n`], 'clients.csv', { type: 'text/csv' })
-    )
+    await user.upload(csvInput(), csvFile('clients.csv'))
     const start = screen.getByRole('button', { name: /step2\.simple\.startImport/ })
     await waitFor(() => expect(start).toBeEnabled())
     await user.click(start)
@@ -227,6 +247,40 @@ describe('ImportClientsPage — a 409 SALE_TYPE_CONFLICT returns the wizard to s
       agreement_number: '30-09-26ФБ',
       sale_type: 'cession',
     })
+  })
+
+  // Step 2 unmounts on the way back; the page's step-2 state is what survives.
+  // A refusal of an earlier try must not greet the operator on the return.
+  it('brings back no CSV error of an earlier try once the operator returns to step 2', async () => {
+    const refusal = 'CSV row 2: clients_tax_id is not a valid tax number'
+    uploadImport
+      .mockRejectedValueOnce(httpError(400, { detail: refusal }))
+      .mockRejectedValueOnce(conflict409())
+    const user = renderPage()
+    await fillStep1(user, 'simple')
+    await user.click(nextButton())
+    const start = () => screen.getByRole('button', { name: /step2\.simple\.startImport/ })
+
+    await user.upload(csvInput(), csvFile('clients.csv'))
+    await waitFor(() => expect(start()).toBeEnabled())
+    await user.click(start())
+    // The first try is refused on the file: Start waits for another one.
+    expect((await screen.findAllByText(refusal)).length).toBeGreaterThan(0)
+    expect(start()).toBeDisabled()
+
+    await user.upload(csvInput(), csvFile('clients-fixed.csv'))
+    await waitFor(() => expect(start()).toBeEnabled())
+    await user.click(start())
+    await expectBackOnStep1WithConflict()
+
+    await user.click(nextButton())
+
+    expect(await screen.findByText(/clients-fixed\.csv/)).toBeInTheDocument()
+    expect(screen.queryByText(refusal)).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('pages.imports.step2.simple.invalidCsvStructure')
+    ).not.toBeInTheDocument()
+    expect(start()).toBeEnabled()
   })
 
   it('from the vendor dump flow', async () => {

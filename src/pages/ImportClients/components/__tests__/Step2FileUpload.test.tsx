@@ -202,6 +202,22 @@ describe('Step2FileUpload — the upload refuses the type', () => {
     expect(onSaleTypeConflict).not.toHaveBeenCalled()
   })
 
+  it('drops an earlier refusal when it hands the conflict back', async () => {
+    // In the wizard step 2 unmounts on the way back and takes this error along;
+    // the clearing is a guard, pinned here where the step stays mounted.
+    uploadImport.mockRejectedValueOnce(httpError(502, { detail: 'Agreement is locked' }))
+    uploadImport.mockRejectedValueOnce(SALE_TYPE_CONFLICT_409)
+    const { user, onSaleTypeConflict } = renderStep()
+    await user.click(startImport())
+    expect(await screen.findByText('Agreement is locked')).toBeInTheDocument()
+
+    await waitFor(() => expect(startImport()).toBeEnabled())
+    await user.click(startImport())
+
+    await waitFor(() => expect(onSaleTypeConflict).toHaveBeenCalledTimes(1))
+    expect(screen.queryByText('Agreement is locked')).not.toBeInTheDocument()
+  })
+
   it.each([
     ['a 409 without the code', httpError(409, { detail: 'Agreement is locked' })],
     ['a 502 from the import service', httpError(502, { detail: 'Agreement is locked' })],

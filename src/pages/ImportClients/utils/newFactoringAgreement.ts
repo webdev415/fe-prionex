@@ -44,6 +44,12 @@ export function buildNewFactoringAgreementJson(newFa: NewFactoringAgreementInput
   if (newFa.reporting_date) {
     payload.reporting_date = newFa.reporting_date.split('T')[0]
   }
+  // Always sent, and safe with either server: an import-service before api
+  // #563 parses this JSON and reads only the keys it knows, so it ignores
+  // `sale_type`; from #563 on it passes the type to client-service (api #565).
+  // The read paths still allow a server without the field — debts and
+  // agreements that carry no type. Rollout order for PROD: api stories 1–2
+  // ship before this or together with it, or the operator's choice is dropped.
   payload.sale_type = newFa.sale_type
   return JSON.stringify(payload)
 }
