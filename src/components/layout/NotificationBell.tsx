@@ -33,6 +33,7 @@ import {
   useUpdateTaskFromBell,
 } from '@/features/notifications/hooks/useNotifications'
 import { useNotificationSocket } from '@/features/notifications/hooks/useNotificationSocket'
+import { useUbkiAvailable } from '@/features/ubki/hooks/useUbkiAvailable'
 import { NotificationType } from '@/features/notifications/types'
 import type { NotificationItem } from '@/features/notifications/types'
 import { piiProps } from '@/lib/openreplay/pii'
@@ -224,11 +225,13 @@ function EmptyState({ label }: { t: TFunction; label: string }) {
 }
 
 function NotificationTabStrip({
+  tabs,
   activeTab,
   onTabChange,
   tabCounts,
   t,
 }: {
+  tabs: readonly Tab[]
   activeTab: Tab
   onTabChange: (tab: Tab) => void
   tabCounts: Record<Tab, number>
@@ -306,7 +309,7 @@ function NotificationTabStrip({
           canScrollRight && 'pr-6'
         )}
       >
-        {TABS.map((tab) => {
+        {tabs.map((tab) => {
           const count = tabCounts[tab]
           const isActive = activeTab === tab
           return (
@@ -366,6 +369,8 @@ export function NotificationBell() {
 
   // Tab state — Tasks is the default (operators' most-frequent action).
   const [activeTab, setActiveTab] = useState<Tab>('tasks')
+  const ubkiAvailable = useUbkiAvailable()
+  const activeProjectId = useAuthStore((state) => state.user?.active_project_id)
 
   const { data: taskNotifData } = useNotifications({
     page: 1,
@@ -435,10 +440,6 @@ export function NotificationBell() {
   const readHistoryTypes = [
     ...new Set([...TASK_TAB_TYPES, ...NON_TASK_TAB_TYPES, ...TRAINING_TAB_TYPES, ...miscTypes]),
   ].sort()
-  const { data: readNotifData, dataUpdatedAt: readFetchedAt } = useNotifications(
-    { page: 1, page_size: 100, read: true, type: readHistoryTypes },
-    { enabled: isOpen && activeTab === 'read' }
-  )
 
   const dismissMutation = useDismissNotification()
   const markAllReadMutation = useMarkAllAsRead()
@@ -447,7 +448,6 @@ export function NotificationBell() {
   const otherNotifs = otherNotifData?.items ?? []
   const trainingNotifs = trainingNotifData?.items ?? []
   const miscNotifs = miscNotifData?.items ?? []
-  const readNotifs = readNotifData?.items ?? []
 
   const [isShaking, setIsShaking] = useState(false)
   const prevCountRef = useRef(0)
@@ -508,6 +508,28 @@ export function NotificationBell() {
       n.type === NotificationType.UBKI_CONNECTION_DOWN ||
       n.type === NotificationType.UBKI_DAILY_SUMMARY
   )
+  // UBKI is Ukrainian-only (story 17-56, Р-5): elsewhere the tab is hidden while
+  // empty, and an alert that did arrive keeps it. A hidden tab never stays
+  // selected — a project switch does not remount the header. A shown tab holds
+  // while the panel is open, so a refetch that drops the last alert does not
+  // pull it from under the operator; opening the panel or a project switch
+  // takes the choice again. A tab that goes gives up the choice too, or an alert
+  // arriving later would pull the open panel back to UBKI by itself.
+  const ubkiTabNow = ubkiAvailable || ubkiTabItems.length > 0
+  const ubkiLatchKey = isOpen ? `${activeProjectId}:${ubkiAvailable}` : null
+  const [ubkiLatch, setUbkiLatch] = useState({ key: ubkiLatchKey, shown: ubkiTabNow })
+  if (ubkiLatch.key !== ubkiLatchKey || (ubkiTabNow && !ubkiLatch.shown)) {
+    setUbkiLatch({ key: ubkiLatchKey, shown: ubkiTabNow })
+    if (!ubkiTabNow && activeTab === 'ubki') setActiveTab('tasks')
+  }
+  const showUbkiTab = ubkiTabNow || (isOpen && ubkiLatch.shown)
+  const shownTab = !showUbkiTab && activeTab === 'ubki' ? 'tasks' : activeTab
+  // Read history (types above) — fetched only while its tab is shown.
+  const { data: readNotifData, dataUpdatedAt: readFetchedAt } = useNotifications(
+    { page: 1, page_size: 100, read: true, type: readHistoryTypes },
+    { enabled: isOpen && shownTab === 'read' }
+  )
+  const readNotifs = readNotifData?.items ?? []
   const trainingTabItems = trainingNotifs
   // Defensive re-filter: the misc fetch already excludes hidden types
   // server-side, but never let a hidden type slip into the panel.
@@ -649,7 +671,8 @@ export function NotificationBell() {
           </div>
 
           <NotificationTabStrip
-            activeTab={activeTab}
+            tabs={showUbkiTab ? TABS : TABS.filter((tab) => tab !== 'ubki')}
+            activeTab={shownTab}
             onTabChange={setActiveTab}
             tabCounts={{
               tasks: tasksTabItems.length,
@@ -667,7 +690,7 @@ export function NotificationBell() {
 
           {/* Tab content panel */}
           <div className="max-h-80 overflow-y-auto">
-            {activeTab === 'tasks' &&
+            {shownTab === 'tasks' &&
               (tasksTabItems.length === 0 ? (
                 <EmptyState t={t} label={t('notificationBell.empty.tasks', 'No overdue tasks')} />
               ) : (
@@ -685,7 +708,7 @@ export function NotificationBell() {
                 ))
               ))}
 
-            {activeTab === 'starred' &&
+            {shownTab === 'starred' &&
               (starredTabItems.length === 0 ? (
                 <EmptyState t={t} label={t('notificationBell.empty.starred', 'No starred tasks')} />
               ) : (
@@ -703,7 +726,7 @@ export function NotificationBell() {
                 ))
               ))}
 
-            {activeTab === 'payments' &&
+            {shownTab === 'payments' &&
               (paymentsTabItems.length === 0 ? (
                 <EmptyState
                   t={t}
@@ -720,7 +743,7 @@ export function NotificationBell() {
                 ))
               ))}
 
-            {activeTab === 'calls' &&
+            {shownTab === 'calls' &&
               (callsTabItems.length === 0 ? (
                 <EmptyState t={t} label={t('notificationBell.empty.calls', 'No inbound calls')} />
               ) : (
@@ -734,7 +757,7 @@ export function NotificationBell() {
                 ))
               ))}
 
-            {activeTab === 'rrPayments' &&
+            {shownTab === 'rrPayments' &&
               (rrPaymentsTabItems.length === 0 ? (
                 <EmptyState
                   t={t}
@@ -751,7 +774,7 @@ export function NotificationBell() {
                 ))
               ))}
 
-            {activeTab === 'ubki' &&
+            {shownTab === 'ubki' &&
               (ubkiTabItems.length === 0 ? (
                 <EmptyState t={t} label={t('notificationBell.empty.ubki', 'No UBKI alerts')} />
               ) : (
@@ -765,7 +788,7 @@ export function NotificationBell() {
                 ))
               ))}
 
-            {activeTab === 'training' &&
+            {shownTab === 'training' &&
               (trainingTabItems.length === 0 ? (
                 <EmptyState
                   t={t}
@@ -783,7 +806,7 @@ export function NotificationBell() {
                 ))
               ))}
 
-            {activeTab === 'other' &&
+            {shownTab === 'other' &&
               (miscTabItems.length === 0 ? (
                 <EmptyState
                   t={t}
@@ -803,7 +826,7 @@ export function NotificationBell() {
             {/* Read history — the last 30 days of read notifications.
                 Deliberately non-destructive: no dismiss button, so
                 "Позначити як прочитані" can never erase the trail again. */}
-            {activeTab === 'read' &&
+            {shownTab === 'read' &&
               (readTabItems.length === 0 ? (
                 <EmptyState
                   t={t}

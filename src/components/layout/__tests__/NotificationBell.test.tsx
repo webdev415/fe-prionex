@@ -23,8 +23,8 @@
  *     the client-side HIDDEN_TYPES filter would blank the tab, and the
  *     trail would be lost again right after mark-all-read.
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
@@ -33,6 +33,8 @@ import type { ReactNode } from 'react'
 import { NotificationBell } from '../NotificationBell'
 import * as notificationApi from '@/features/notifications/api/notificationApi'
 import type { NotificationItem, UnreadCountResponse } from '@/features/notifications/types'
+import { useAuthStore } from '@/stores/authStore'
+import type { User } from '@/types/api'
 
 vi.mock('@/features/notifications/api/notificationApi')
 vi.mock('@/features/notifications/hooks/useNotificationSocket', () => ({
@@ -157,7 +159,7 @@ const noiseItems: NotificationItem[] = Array.from({ length: 120 }, (_, i) =>
 let allRead = false
 let unread: UnreadCountResponse
 
-function installApiMocks() {
+function installApiMocks(extraItems: NotificationItem[] = []) {
   allRead = false
   unread = {
     total: 11578,
@@ -182,6 +184,7 @@ function installApiMocks() {
       groupTrainingItem,
       feedbackDueItem,
       unknownTypeItem,
+      ...extraItems,
       ...noiseItems,
     ].map((n) => (allRead ? { ...n, read: true, read_at: new Date().toISOString() } : n))
     if (params.read !== undefined) {
@@ -222,7 +225,7 @@ function renderBell() {
       <MemoryRouter>{children}</MemoryRouter>
     </QueryClientProvider>
   )
-  return render(<NotificationBell />, { wrapper })
+  return { queryClient, ...render(<NotificationBell />, { wrapper }) }
 }
 
 async function openBell(user: ReturnType<typeof userEvent.setup>) {
@@ -434,5 +437,161 @@ describe('NotificationBell — visibility of all types', () => {
     // types keeps it in the read fetch's type list.
     expect(await screen.findByText('Something brand new')).toBeInTheDocument()
     expect(screen.queryByText(/TA chain/)).not.toBeInTheDocument()
+  })
+})
+
+// UBKI is a Ukrainian-only integration (story 17-56, Р-5). In any other
+// project the UBKI tab is hidden while it is empty; an alert that did arrive
+// keeps the tab, since hiding a non-empty tab would lose the alert. A hidden
+// tab never stays selected: the header is not remounted on a project switch,
+// so a UBKI tab opened in a Ukrainian project falls back to the tasks panel.
+// A shown tab does not vanish under the operator while the panel is open; the
+// choice is taken again when the panel is reopened or the project changes. A
+// tab that did go gives up the choice too, so a UBKI alert arriving later adds
+// the tab to the strip without pulling the open panel back to it.
+const ubkiConnectionDownItem = makeItem({
+  id: 'n-ubki-down',
+  type: 'ubki_connection_down',
+  title: 'UBKI connection lost',
+  created_at: HOUR_AGO,
+})
+
+function userInProject(country: string): User {
+  return {
+    id: '1',
+    projects: [{ id: '3', name: 'Project', country, roles: [] }],
+    active_project_id: '3',
+  } as unknown as User
+}
+
+describe('UBKI tab only in a Ukrainian project', () => {
+  afterEach(() => {
+    useAuthStore.setState({ user: null })
+  })
+
+  it('N-1: hides the empty UBKI tab in a Canadian project', async () => {
+    useAuthStore.setState({ user: userInProject('CA') })
+    const user = userEvent.setup()
+    renderBell()
+    await openBell(user)
+
+    expect(await screen.findByText('notificationBell.tabs.tasks')).toBeInTheDocument()
+    expect(await screen.findByText('Overdue task')).toBeInTheDocument()
+    expect(screen.queryByText('notificationBell.tabs.ubki')).not.toBeInTheDocument()
+    // Only UBKI goes: every other tab, including the ones after it, stays.
+    for (const tab of [
+      'notificationBell.tabs.starred',
+      'notificationBell.tabs.training',
+      'notificationBell.tabs.payments',
+      'notificationBell.tabs.calls',
+      'notificationBell.tabs.rrPayments',
+      'notificationBell.tabs.other',
+      'notificationBell.tabs.read',
+    ]) {
+      expect(screen.getByText(tab)).toBeInTheDocument()
+    }
+  })
+
+  it('N-2: keeps the UBKI tab in a Canadian project once a UBKI alert arrived', async () => {
+    installApiMocks([ubkiConnectionDownItem])
+    useAuthStore.setState({ user: userInProject('CA') })
+    const user = userEvent.setup()
+    renderBell()
+    await openBell(user)
+
+    expect(await screen.findByText('notificationBell.tabs.ubki')).toBeInTheDocument()
+  })
+
+  it('N-3: keeps the UBKI tab in a Ukrainian project with no UBKI alerts', async () => {
+    useAuthStore.setState({ user: userInProject('UA') })
+    const user = userEvent.setup()
+    renderBell()
+    await openBell(user)
+
+    expect(await screen.findByText('notificationBell.tabs.ubki')).toBeInTheDocument()
+  })
+
+  it('N-4: a UBKI tab opened in a Ukrainian project falls back to tasks after a switch to a Canadian one', async () => {
+    useAuthStore.setState({ user: userInProject('UA') })
+    const user = userEvent.setup()
+    renderBell()
+    await openBell(user)
+
+    await user.click(await screen.findByText('notificationBell.tabs.ubki'))
+    expect(await screen.findByText('notificationBell.empty.ubki')).toBeInTheDocument()
+    expect(screen.getByText('notificationBell.tabs.tasks')).not.toHaveClass('border-primary-500')
+
+    act(() => useAuthStore.setState({ user: userInProject('CA') }))
+
+    expect(screen.queryByText('notificationBell.tabs.ubki')).not.toBeInTheDocument()
+    expect(screen.queryByText('notificationBell.empty.ubki')).not.toBeInTheDocument()
+    // Panels follow the shown tab, not the raw choice: the tasks panel with its
+    // card and actions, not a blank one.
+    expect(await screen.findByText('Overdue task')).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'notificationBell.taskActions.completeAria' })
+    ).toBeInTheDocument()
+    // The strip highlights the tab the panel shows, not the hidden UBKI one.
+    expect(screen.getByText('notificationBell.tabs.tasks')).toHaveClass('border-primary-500')
+  })
+
+  it('N-5: opens a UBKI alert that arrived in a Canadian project', async () => {
+    installApiMocks([ubkiConnectionDownItem])
+    useAuthStore.setState({ user: userInProject('CA') })
+    const user = userEvent.setup()
+    renderBell()
+    await openBell(user)
+
+    await user.click(await screen.findByText('notificationBell.tabs.ubki'))
+
+    expect(await screen.findByText('UBKI connection lost')).toBeInTheDocument()
+  })
+
+  it('N-6: a shown UBKI tab stays while the panel is open, even when a refetch drops the last alert', async () => {
+    installApiMocks([ubkiConnectionDownItem])
+    useAuthStore.setState({ user: userInProject('CA') })
+    const user = userEvent.setup()
+    renderBell()
+    await openBell(user)
+    await user.click(await screen.findByText('notificationBell.tabs.ubki'))
+    expect(await screen.findByText('UBKI connection lost')).toBeInTheDocument()
+
+    // The operator dismisses the last UBKI alert; the refetch comes back without it.
+    installApiMocks()
+    await user.click(screen.getByRole('button', { name: 'notificationBell.dismissAria' }))
+    await waitFor(() => expect(screen.queryByText('UBKI connection lost')).not.toBeInTheDocument())
+
+    expect(screen.getByText('notificationBell.tabs.ubki')).toBeInTheDocument()
+    expect(screen.getByText('notificationBell.empty.ubki')).toBeInTheDocument()
+
+    // Closing and reopening the panel takes the choice again: the tab is gone.
+    await user.click(screen.getByLabelText(/notificationBell\.ariaLabel/))
+    await openBell(user)
+
+    expect(await screen.findByText('Overdue task')).toBeInTheDocument()
+    expect(screen.queryByText('notificationBell.tabs.ubki')).not.toBeInTheDocument()
+  })
+
+  it('N-7: after the UBKI tab went away, a UBKI alert arriving later does not pull the open panel to it', async () => {
+    useAuthStore.setState({ user: userInProject('UA') })
+    const user = userEvent.setup()
+    const { queryClient } = renderBell()
+    await openBell(user)
+    await user.click(await screen.findByText('notificationBell.tabs.ubki'))
+    expect(await screen.findByText('notificationBell.empty.ubki')).toBeInTheDocument()
+
+    act(() => useAuthStore.setState({ user: userInProject('CA') }))
+    expect(await screen.findByText('Overdue task')).toBeInTheDocument()
+    expect(screen.queryByText('notificationBell.tabs.ubki')).not.toBeInTheDocument()
+
+    // A UBKI alert comes in with the background poll while the panel is open.
+    installApiMocks([ubkiConnectionDownItem])
+    await act(() => queryClient.invalidateQueries({ queryKey: ['notifications'] }))
+
+    // The tab is back in the strip, but the panel stays on tasks.
+    expect(await screen.findByText('notificationBell.tabs.ubki')).toBeInTheDocument()
+    expect(screen.getByText('notificationBell.tabs.tasks')).toHaveClass('border-primary-500')
+    expect(screen.getByText('Overdue task')).toBeInTheDocument()
+    expect(screen.queryByText('UBKI connection lost')).not.toBeInTheDocument()
   })
 })
