@@ -4,7 +4,10 @@ import userEvent from '@testing-library/user-event'
 import { useCallback, useState } from 'react'
 
 import { Step1LoanSource, type Step1Data } from '../Step1LoanSource'
-import { EMPTY_NEW_FACTORING_AGREEMENT } from '../../utils/newFactoringAgreement'
+import {
+  EMPTY_NEW_FACTORING_AGREEMENT,
+  type SaleTypeConflictReason,
+} from '../../utils/newFactoringAgreement'
 
 // Keys, not words — but the interpolation values are kept (bar the fallback),
 // so a test can see WHICH type the conflict message names.
@@ -97,6 +100,7 @@ beforeEach(() => {
 })
 
 const CONFLICT = 'pages.imports.step1.factoringAgreement.saleTypeConflict'
+const REASONS = 'pages.imports.step1.factoringAgreement.saleTypeConflictReasons'
 const FACTORING = 'saleType.values.factoring'
 const CESSION = 'saleType.values.cession'
 
@@ -371,9 +375,15 @@ describe('Step1LoanSource — type conflict returned by the upload', () => {
   const numberInput = () =>
     screen.getByLabelText(/pages\.imports\.step1\.factoringAgreement\.fields\.number/)
   /** Step 1 as the upload was sent: seller 7, this number, and the 409 about them. */
+  /** Without `reason` — the shape a server from before the field sends. */
   const withConflict = (
     existingSaleType: 'factoring' | 'cession' | null,
-    over: { sellerId?: string; agreementNumber?: string; formNumber?: string } = {}
+    over: {
+      sellerId?: string
+      agreementNumber?: string
+      formNumber?: string
+      reason?: SaleTypeConflictReason | null
+    } = {}
   ): Partial<Step1Data> => ({
     newFactoringAgreement: {
       ...EMPTY_NEW_FACTORING_AGREEMENT,
@@ -381,6 +391,7 @@ describe('Step1LoanSource — type conflict returned by the upload', () => {
     },
     saleTypeConflict: {
       existingSaleType,
+      reason: over.reason ?? null,
       sellerId: over.sellerId ?? '7',
       agreementNumber: over.agreementNumber ?? NUMBER,
     },
@@ -392,10 +403,28 @@ describe('Step1LoanSource — type conflict returned by the upload', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(`${CONFLICT}(${FACTORING})`)
   })
 
-  it('says "not set" when the existing agreement has no type', () => {
-    renderStep(withConflict(null))
+  // Exact text, not a substring: every reason key starts with the stored-type one.
+  it.each([
+    ['stored_type', 'factoring', `${CONFLICT}(${FACTORING})`],
+    ['stored_type', null, `${CONFLICT}(saleType.none)`],
+    ['debt_types', null, `${REASONS}.debt_types`],
+    ['foreign_project_debts', null, `${REASONS}.foreign_project_debts`],
+    // A service token never reaches this screen as an operator: nothing to name.
+    ['service_caller', null, `${REASONS}.other`],
+  ] as const)('says why for the reason %s (stored type %s)', (reason, existing, message) => {
+    renderStep(withConflict(existing, { reason }))
 
-    expect(screen.getByRole('alert')).toHaveTextContent(`${CONFLICT}(saleType.none)`)
+    expect(screen.getByRole('alert').textContent).toBe(message)
+  })
+
+  it.each([
+    // A server from before `reason`: a stored type can only mean the agreement has one.
+    ['a stored type', 'cession', `${CONFLICT}(${CESSION})`],
+    ['no stored type', null, `${REASONS}.other`],
+  ] as const)('with no reason and %s, falls back to its message', (_label, existing, message) => {
+    renderStep(withConflict(existing))
+
+    expect(screen.getByRole('alert').textContent).toBe(message)
   })
 
   it('is absent without a conflict', () => {

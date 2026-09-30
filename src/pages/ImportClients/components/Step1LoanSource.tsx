@@ -217,6 +217,37 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
       ? conflict
       : null
 
+  // The message names why the agreement cannot take the type. A server from
+  // before `reason` sends only the stored type: with one, the agreement has
+  // another type already; without one — and for a reason unknown here, or a
+  // service caller, which an operator never is — the neutral message.
+  const saleTypeConflictMessage = (shown: SaleTypeConflict) => {
+    const reason = shown.reason ?? (shown.existingSaleType ? 'stored_type' : null)
+    switch (reason) {
+      case 'stored_type':
+        return t(
+          'pages.imports.step1.factoringAgreement.saleTypeConflict',
+          'This seller already has an agreement with this number (type: {{existing}}). Pick it under “Pick existing” or enter another number.',
+          { existing: t(saleTypeLabelKey(shown.existingSaleType) ?? 'saleType.none') }
+        )
+      case 'debt_types':
+        return t(
+          'pages.imports.step1.factoringAgreement.saleTypeConflictReasons.debt_types',
+          'This seller already has an agreement with this number without a type, and its debts already carry another type. Pick it under “Pick existing” or enter another number.'
+        )
+      case 'foreign_project_debts':
+        return t(
+          'pages.imports.step1.factoringAgreement.saleTypeConflictReasons.foreign_project_debts',
+          'This seller already has an agreement with this number without a type, and its debts belong to another project. Pick it under “Pick existing” or enter another number.'
+        )
+      default:
+        return t(
+          'pages.imports.step1.factoringAgreement.saleTypeConflictReasons.other',
+          'This seller already has an agreement with this number and cannot take the chosen type. Pick it under “Pick existing” or enter another number.'
+        )
+    }
+  }
+
   // The conflict sends the operator back here from step 2, and the message sits
   // under the create block, possibly below the fold: bring it into view and put
   // the cursor in the number, the field the message asks to change. The focus
@@ -628,15 +659,7 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
                     role="alert"
                     className="text-error-500 text-sm"
                   >
-                    {t(
-                      'pages.imports.step1.factoringAgreement.saleTypeConflict',
-                      'This seller already has an agreement with this number (type: {{existing}}). Pick it under “Pick existing” or enter another number.',
-                      {
-                        existing: t(
-                          saleTypeLabelKey(visibleConflict.existingSaleType) ?? 'saleType.none'
-                        ),
-                      }
-                    )}
+                    {saleTypeConflictMessage(visibleConflict)}
                   </p>
                 )}
               </>

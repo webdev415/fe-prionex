@@ -4884,6 +4884,11 @@
         "factoringAgreement": {
           "title": "Purchase agreement",
           "saleTypeConflict": "This seller already has an agreement with this number (type: {{existing}}). Pick it under “Pick existing” or enter another number.",
+          "saleTypeConflictReasons": {
+            "debt_types": "This seller already has an agreement with this number without a type, and its debts already carry another type. Pick it under “Pick existing” or enter another number.",
+            "foreign_project_debts": "This seller already has an agreement with this number without a type, and its debts belong to another project. Pick it under “Pick existing” or enter another number.",
+            "other": "This seller already has an agreement with this number and cannot take the chosen type. Pick it under “Pick existing” or enter another number."
+          },
           "saleTypeDateHint": "The type does not match the purchase date: portfolios bought before 30.07.2026 were bought under factoring, from 30.07.2026 on — under an assignment agreement. Check the date or the type.",
           "pickSellerFirst": "Pick a seller first.",
           "pickExisting": "Pick existing",

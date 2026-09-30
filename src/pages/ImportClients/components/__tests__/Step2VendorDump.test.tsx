@@ -87,10 +87,10 @@ describe('Step2VendorDump — contract type of a new agreement', () => {
     httpError(409, {
       detail: 'Agreement already exists with another sale_type',
       code: 'SALE_TYPE_CONFLICT',
-      params: { existing_sale_type: null },
+      params: { existing_sale_type: null, reason: 'debt_types' },
     })
 
-  it('hands a 409 SALE_TYPE_CONFLICT back to step 1 — no type means "not set"', async () => {
+  it('hands a 409 SALE_TYPE_CONFLICT back to step 1 with its reason', async () => {
     uploadImport.mockRejectedValue(conflict409())
     const { user, onSaleTypeConflict } = renderStep()
 
@@ -99,6 +99,7 @@ describe('Step2VendorDump — contract type of a new agreement', () => {
     await waitFor(() =>
       expect(onSaleTypeConflict).toHaveBeenCalledWith({
         existingSaleType: null,
+        reason: 'debt_types',
         sellerId: '7',
         agreementNumber: '30-09-26ФБ',
       })

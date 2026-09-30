@@ -151,8 +151,10 @@ describe('Step2FileUpload — the upload refuses the type', () => {
     await waitFor(() => expect(onSaleTypeConflict).toHaveBeenCalledTimes(1))
     // Tied to the seller and number this upload was sent with, so step 1 can
     // tell a late answer about an agreement it no longer holds.
+    // No `reason` in this 409 — a server from before the field.
     expect(onSaleTypeConflict).toHaveBeenCalledWith({
       existingSaleType: 'factoring',
+      reason: null,
       sellerId: '7',
       agreementNumber: '30-09-26ФБ',
     })

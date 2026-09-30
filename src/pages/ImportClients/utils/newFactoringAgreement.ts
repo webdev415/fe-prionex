@@ -60,15 +60,39 @@ export interface SaleTypeConflictTarget {
   agreementNumber: string
 }
 
+/**
+ * Why the seller's agreement with that number cannot take the sent type
+ * (`params.reason` of the 409):
+ * - `stored_type` — the agreement already has another type;
+ * - `debt_types` — it has no type, but its debts already carry another one;
+ * - `foreign_project_debts` — it has no type, and its debts belong to another
+ *   project;
+ * - `service_caller` — it has no type, and a service token may not set one.
+ */
+export type SaleTypeConflictReason =
+  | 'stored_type'
+  | 'debt_types'
+  | 'foreign_project_debts'
+  | 'service_caller'
+
+const SALE_TYPE_CONFLICT_REASONS: readonly SaleTypeConflictReason[] = [
+  'stored_type',
+  'debt_types',
+  'foreign_project_debts',
+  'service_caller',
+]
+
 export interface SaleTypeConflict extends SaleTypeConflictTarget {
   /** Type the seller's existing agreement with that number carries; null = not set. */
   existingSaleType: SaleType | null
+  /** null = not sent (a server before the field) or a reason this screen does not know. */
+  reason: SaleTypeConflictReason | null
 }
 
 /**
  * The upload's 409 `SALE_TYPE_CONFLICT`: the seller already has an agreement
- * with this number under another type. Any other refusal — a 409 without that
- * code included — is null and keeps its usual path.
+ * with this number that cannot take the sent type. Any other refusal — a 409
+ * without that code included — is null and keeps its usual path.
  *
  * `target` is what step 1 held when the upload was SENT. The answer can arrive
  * after the operator went back and changed the seller or the number, and step 1
@@ -81,12 +105,11 @@ export function parseSaleTypeConflict(
   if (!isApiError(error) || error.response?.status !== 409) return null
   if (getErrorCode(error) !== 'SALE_TYPE_CONFLICT') return null
   const params = (error.response.data as { params?: unknown }).params
-  const existing =
-    params && typeof params === 'object'
-      ? (params as Record<string, unknown>).existing_sale_type
-      : undefined
+  const fields: Record<string, unknown> =
+    params && typeof params === 'object' ? (params as Record<string, unknown>) : {}
   return {
-    existingSaleType: toSaleType(existing),
+    existingSaleType: toSaleType(fields.existing_sale_type),
+    reason: SALE_TYPE_CONFLICT_REASONS.find((reason) => reason === fields.reason) ?? null,
     sellerId: target.sellerId,
     agreementNumber: target.agreementNumber.trim(),
   }

@@ -74,10 +74,46 @@ describe('parseSaleTypeConflict', () => {
       params: { existing_sale_type: 'factoring' },
     })
 
+    // A server from before `reason` — the reason stays unknown.
     expect(parseSaleTypeConflict(error, target)).toEqual({
       existingSaleType: 'factoring',
+      reason: null,
       sellerId: '7',
       agreementNumber: '30-09-26ФБ',
+    })
+  })
+
+  it.each(['stored_type', 'debt_types', 'foreign_project_debts', 'service_caller'])(
+    'reads the reason %s',
+    (reason) => {
+      const error = httpError(409, {
+        detail: 'conflict',
+        code: 'SALE_TYPE_CONFLICT',
+        params: { existing_sale_type: null, reason },
+      })
+
+      expect(parseSaleTypeConflict(error, target)).toMatchObject({ reason })
+    }
+  )
+
+  // A reason this screen does not know is no reason: never a guessed message.
+  it.each([
+    ['a reason outside the known set', 'debt_project'],
+    ['another casing', 'Stored_Type'],
+    ['an empty string', ''],
+    ['null', null],
+    ['a number', 1],
+    ['an object', { reason: 'debt_types' }],
+  ])('reads %s as no reason', (_label, reason) => {
+    const error = httpError(409, {
+      detail: 'conflict',
+      code: 'SALE_TYPE_CONFLICT',
+      params: { existing_sale_type: 'cession', reason },
+    })
+
+    expect(parseSaleTypeConflict(error, target)).toMatchObject({
+      existingSaleType: 'cession',
+      reason: null,
     })
   })
 
@@ -97,7 +133,11 @@ describe('parseSaleTypeConflict', () => {
   ])('still reports the conflict when the existing type is %s — with no type', (_l, params) => {
     const error = httpError(409, { detail: 'conflict', code: 'SALE_TYPE_CONFLICT', params })
 
-    expect(parseSaleTypeConflict(error, target)).toEqual({ ...target, existingSaleType: null })
+    expect(parseSaleTypeConflict(error, target)).toEqual({
+      ...target,
+      existingSaleType: null,
+      reason: null,
+    })
   })
 
   it.each([
