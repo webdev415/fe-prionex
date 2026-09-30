@@ -24,13 +24,15 @@ export const sellersKeys = {
  * Hook to fetch sellers list
  *
  * @param params - Query parameters for filtering and pagination
+ * @param options - `enabled: false` sends no request; a cached list is still returned
  * @returns React Query result with sellers data
  */
-export function useSellers(params: SellerListParams = {}) {
+export function useSellers(params: SellerListParams = {}, options: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: sellersKeys.list(params),
     queryFn: () => sellersApi.getSellers(params),
     staleTime: 5 * 60 * 1000, // 5 minutes - sellers change infrequently
+    enabled: options.enabled ?? true,
   })
 }
 

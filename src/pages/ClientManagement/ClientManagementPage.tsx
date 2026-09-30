@@ -302,6 +302,9 @@ const ENABLE_BULK_UBKI_SUBMISSION = true
 
 const BULK_ACTION_LIMIT = 10000
 
+// A saved set written when no filter was active keeps only these — the view.
+const VIEW_ONLY_KEYS = ['rowsPerPage', 'sortBy', 'sortOrder']
+
 export function ClientManagementPage() {
   const { t } = useTranslation('common')
   // Get search state from global store (synced with header search)
@@ -497,6 +500,58 @@ export function ClientManagementPage() {
     ? `client-filters-state-${user.id}${user.active_project_id ? `-${user.active_project_id}` : ''}`
     : null
 
+  // The project the filter state belongs to (17-56). ProjectSelector switches the
+  // project live — a new user in the store, a dropped query cache, the page stays
+  // mounted — so for one render the state still holds the previous project's
+  // filters under the new project's key. Until the switch effect below has reset
+  // them, nothing sends, saves or checks that state for the new project.
+  // `undefined` — no user yet: a user arriving is not a switch.
+  const projectOfUser = user ? (user.active_project_id ?? null) : undefined
+  const [filtersProjectId, setFiltersProjectId] = useState(projectOfUser)
+  const filtersOfAnotherProject = filtersProjectId !== projectOfUser
+
+  // Filters, page and sort back to their defaults (Clear All, a project switch).
+  const resetFilters = () => {
+    setSelectedPriorities([])
+    setPortfolioFilter([])
+    setTagIdsFilter([])
+    setRrStatusFilter([])
+    setExcludeTagIdsFilter([])
+    setSegmentIdFilter(0)
+    setResponsibleEmployeeFilter('')
+    setResponsibleEmployeeIdsFilter([])
+    setResponsibleSearcherFilter('')
+    setUnassignedOnlyFilter(false)
+    setHasVerifiedPaymentFilter(false)
+    setDateOfSaleFromFilter('')
+    setDateOfSaleToFilter('')
+    setDebtRangeFromFilter(0)
+    setDebtRangeToFilter(0)
+    setPrincipalRangeFromFilter(0)
+    setPrincipalRangeToFilter(0)
+    setDpdRangeFromFilter(0)
+    setDpdRangeToFilter(0)
+    setTaDateFromFilter('')
+    setTaDateToFilter('')
+    setInteractionUserIdsFilter([])
+    setInteractionDateFromFilter('')
+    setInteractionDateToFilter('')
+    setAssignmentDateFromFilter('')
+    setAssignmentDateToFilter('')
+    setChainIdsFilter([])
+    // Back to the default, not to false — Clear All restores defaults.
+    setOnlyLastChainFilter(true)
+    setChainStepIdsFilter([])
+    setStepValuesRawFilter('')
+
+    // Reset to first page
+    setCurrentPage(1)
+
+    // Reset sorting to defaults
+    setSortBy('priority')
+    setSortOrder('desc')
+  }
+
   // Legacy URL fold (KAN-572): saved bookmarks with `?employee=<id>` or
   // `?interactionUserId=<id>` (singular scalar) are migrated to the new
   // `?employeeIds=<id>` / `?interactionUserIds=<id>` (comma-separated
@@ -538,6 +593,8 @@ export function ClientManagementPage() {
 
   // Save filters to localStorage whenever they change (for persistence when sidebar navigation clears URL)
   useEffect(() => {
+    // The previous project's filters, still in state: not under this project's key.
+    if (filtersOfAnotherProject) return
     const filterState = {
       selectedPriorities,
       currentPage,
@@ -616,15 +673,17 @@ export function ClientManagementPage() {
       }
     } else if (STORAGE_KEY && hasSetDefaultFilter.current) {
       // Nothing active any more (the last filter unticked, a foreign seller
-      // dropped): forget the saved set, or the next visit restores it. Not before
-      // the first restore on this mount has read it.
+      // dropped): keep only the view — page size and sort — so the next visit
+      // starts from the default filter, not from the old set, in the same view.
+      // Not before the first restore on this mount has read the saved set.
       try {
-        localStorage.removeItem(STORAGE_KEY)
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ rowsPerPage, sortBy, sortOrder }))
       } catch (e) {
-        console.error('Failed to clear saved filters in localStorage:', e)
+        console.error('Failed to save the view to localStorage:', e)
       }
     }
   }, [
+    filtersOfAnotherProject,
     STORAGE_KEY,
     selectedPriorities,
     currentPage,
@@ -663,6 +722,22 @@ export function ClientManagementPage() {
     searchQuery,
     searchType,
   ])
+
+  // A live project switch (see filtersProjectId): back to a first visit — the
+  // previous project's filters, page and sort are reset, and the restore below
+  // runs again for the new project's key: its saved set, or "assigned to me".
+  // The filter params in the URL follow the reset (useURLState, debounced).
+  useEffect(() => {
+    if (!filtersOfAnotherProject) return
+    if (filtersProjectId !== undefined && projectOfUser !== undefined) {
+      resetFilters()
+      setSelectedV3Buckets([])
+      hasSetDefaultFilter.current = false
+    }
+    setFiltersProjectId(projectOfUser)
+    // resetFilters only calls state setters.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtersOfAnotherProject, filtersProjectId, projectOfUser])
 
   // Set default "assigned to me" filter on initial load OR restore from localStorage
   useEffect(() => {
@@ -799,6 +874,10 @@ export function ClientManagementPage() {
             if (parsed.sortOrder) setSortOrder(parsed.sortOrder)
             // Note: search query and type are managed separately via setSearchParams
           }, 0)
+          // Written with nothing active, only the view kept: the filter starts
+          // from the default, as on a first visit.
+          if (Object.keys(parsed).every((k) => VIEW_ONLY_KEYS.includes(k)))
+            setResponsibleEmployeeIdsFilter(defaultEmployeeIds)
         } else {
           // No saved state, apply default "assigned to me" filter
           setResponsibleEmployeeIdsFilter(defaultEmployeeIds)
@@ -811,9 +890,10 @@ export function ClientManagementPage() {
     }
 
     hasSetDefaultFilter.current = true
-    // Only run once when user is available
+    // Once when the user is available, and again once a project switch has reset
+    // the filters (filtersProjectId follows the reset).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id])
+  }, [user?.id, filtersProjectId])
 
   // Close dropdown when screen size crosses breakpoint (in either direction)
   useEffect(() => {
@@ -1116,7 +1196,7 @@ export function ClientManagementPage() {
     isError,
     error,
   } = useClients(apiParams, {
-    enabled: !operatorFilterActive || operatorOptionsReady,
+    enabled: !filtersOfAnotherProject && (!operatorFilterActive || operatorOptionsReady),
   })
 
   // Extract paginated data from response
@@ -1138,17 +1218,21 @@ export function ClientManagementPage() {
   // set, a project switch) is not in it: drop it here, where it applies with the
   // filter bar folded too, or it stays an unseen filter that empties the list
   // (17-56). Only a complete list decides: one still loading, or a page cut
-  // short by the limit, changes nothing.
-  const { data: projectSellers } = useSellers({
-    is_active: true,
-    limit: 1000,
-    project_id: activeProjectIdNum,
-  })
+  // short by the limit, changes nothing. Asked only while a seller is picked;
+  // the open bar asks anyway, and the cache is shared.
+  const { data: projectSellers } = useSellers(
+    { is_active: true, limit: 1000, project_id: activeProjectIdNum },
+    { enabled: portfolioFilter.length > 0 }
+  )
   useEffect(() => {
+    // `total` is the count after the `project_id` filter, not the directory size
+    // (api-prionex services/client/app/routers/sellers.py:47-87; DEV 29.09: 0 for
+    // an empty project), so `total <= sellers.length` means the page is complete.
+    if (filtersOfAnotherProject) return
     if (!projectSellers || !(projectSellers.total <= projectSellers.sellers.length)) return
     const kept = portfolioFilter.filter((id) => projectSellers.sellers.some((s) => s.id === id))
     if (kept.length < portfolioFilter.length) setPortfolioFilter(kept)
-  }, [projectSellers, portfolioFilter, setPortfolioFilter])
+  }, [filtersOfAnotherProject, projectSellers, portfolioFilter, setPortfolioFilter])
 
   // v3 priority rollup for the visible clients (KAN-791) — only for brands cut
   // over after the KAN-794 sign-off; shows the v3 bucket in place of the old
@@ -1727,44 +1811,7 @@ export function ClientManagementPage() {
 
   const handleClearAll = () => {
     // Clear all URL state filters (useURLState will handle URL updates after debounce)
-    setSelectedPriorities([])
-    setPortfolioFilter([])
-    setTagIdsFilter([])
-    setRrStatusFilter([])
-    setExcludeTagIdsFilter([])
-    setSegmentIdFilter(0)
-    setResponsibleEmployeeFilter('')
-    setResponsibleEmployeeIdsFilter([])
-    setResponsibleSearcherFilter('')
-    setUnassignedOnlyFilter(false)
-    setHasVerifiedPaymentFilter(false)
-    setDateOfSaleFromFilter('')
-    setDateOfSaleToFilter('')
-    setDebtRangeFromFilter(0)
-    setDebtRangeToFilter(0)
-    setPrincipalRangeFromFilter(0)
-    setPrincipalRangeToFilter(0)
-    setDpdRangeFromFilter(0)
-    setDpdRangeToFilter(0)
-    setTaDateFromFilter('')
-    setTaDateToFilter('')
-    setInteractionUserIdsFilter([])
-    setInteractionDateFromFilter('')
-    setInteractionDateToFilter('')
-    setAssignmentDateFromFilter('')
-    setAssignmentDateToFilter('')
-    setChainIdsFilter([])
-    // Back to the default, not to false — Clear All restores defaults.
-    setOnlyLastChainFilter(true)
-    setChainStepIdsFilter([])
-    setStepValuesRawFilter('')
-
-    // Reset to first page
-    setCurrentPage(1)
-
-    // Reset sorting to defaults
-    setSortBy('priority')
-    setSortOrder('desc')
+    resetFilters()
 
     // Clear search query from global store
     clearSearchQuery('')

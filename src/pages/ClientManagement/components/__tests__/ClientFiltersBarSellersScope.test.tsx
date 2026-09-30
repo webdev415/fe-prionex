@@ -17,15 +17,24 @@
  * not in this project's list. The clients page — not the folding filter bar —
  * drops it once the complete list has arrived, so it never filters the clients
  * request unseen with the bar folded. A list still loading, or a page cut short
- * by the limit, changes nothing. The saved filter set is kept per user and
- * project, and a set left with no active filter is forgotten, not restored on
- * the next visit.
+ * by the limit, changes nothing; the page asks for the list only while a seller
+ * is picked. `total` is the count after the `project_id` filter (the door above),
+ * which is what makes `total <= sellers.length` a complete page — the fe cannot
+ * pin that contract, S-10 pins the rule on top of it.
+ *
+ * The saved filter set is kept per user and project. A set left with no active
+ * filter keeps only its view (page size, sort): the next visit starts from the
+ * default filter in that view. A live project switch — the page stays mounted —
+ * sends and saves nothing of the previous project and restores the next
+ * project's own set, as a first visit would.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, render, screen, within } from '@testing-library/react'
+import type { ReactNode } from 'react'
+import { act, render, renderHook, screen, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
+import { sellersApi } from '@/features/sellers/api/sellersApi'
 import type { User } from '@/types/api'
 import { ClientFiltersBar } from '../ClientFiltersBar'
 import { ClientManagementPage, type ClientFilters } from '../../ClientManagementPage'
@@ -141,9 +150,28 @@ function renderPage(url = '/') {
   )
 }
 
-/** Every clients request the page made, in order. */
+/** Every clients request the page made, in order — a disabled query makes none. */
 function clientsRequests() {
-  return useClientsMock.mock.calls.map(([params]) => params as Record<string, unknown>)
+  return useClientsMock.mock.calls
+    .filter(([, options]) => (options as { enabled?: boolean } | undefined)?.enabled !== false)
+    .map(([params]) => params as Record<string, unknown>)
+}
+
+/** The sellers query as react-query answers it: disabled and nothing cached — no data. */
+function sellersOf(listOf: (projectId?: number) => typeof PROJECT_SELLERS) {
+  return (params?: { project_id?: number }, options?: { enabled?: boolean }) =>
+    options?.enabled === false ? { data: undefined, isLoading: false } : listOf(params?.project_id)
+}
+
+/** The page's own sellers queries: it passes options, the folding bar does not. */
+function pageSellersCalls() {
+  return useSellersMock.mock.calls.filter((call) => call.length > 1)
+}
+
+/** Switch the project the way ProjectSelector does: the page stays mounted. */
+async function switchProjectLive(projectId: string) {
+  act(() => setActiveProject(projectId))
+  await afterRestore()
 }
 
 /** The page restores a saved set on the next tick — let it. */
@@ -220,7 +248,7 @@ describe('ClientManagementPage — a seller of another project never filters uns
 
   beforeEach(() => {
     useSellersMock.mockReset()
-    useSellersMock.mockReturnValue(PROJECT_SELLERS)
+    useSellersMock.mockImplementation(sellersOf(() => PROJECT_SELLERS))
     useClientsMock.mockReset()
     useClientsMock.mockReturnValue({
       data: { items: [], total: 0, total_pages: 1 },
@@ -233,6 +261,7 @@ describe('ClientManagementPage — a seller of another project never filters uns
   })
 
   afterEach(() => {
+    vi.restoreAllMocks()
     useAuthStore.setState({ user: null })
     localStorage.clear()
   })
@@ -282,7 +311,64 @@ describe('ClientManagementPage — a seller of another project never filters uns
     expect(clientsRequests().every((p) => p.seller_ids === '7')).toBe(true)
   })
 
-  it('S-11: a filter set saved in another project is not restored after a project switch', async () => {
+  it("S-11: a live project switch neither sends nor saves project 1's filters and restores project 3's own set", async () => {
+    // Seller 9 exists in project 1 only; seller 2 in both.
+    useSellersMock.mockImplementation(
+      sellersOf((projectId) =>
+        projectId === 1
+          ? {
+              data: {
+                sellers: [
+                  { id: 2, seller_name: 'Seller B' },
+                  { id: 9, seller_name: 'Seller Z' },
+                ],
+                total: 2,
+              },
+              isLoading: false,
+            }
+          : PROJECT_SELLERS
+      )
+    )
+    localStorage.setItem(
+      'client-filters-state-1-1',
+      JSON.stringify({ portfolioFilter: [2, 9], tagIdsFilter: [5] })
+    )
+    localStorage.setItem(
+      SAVED_IN_PROJECT_3,
+      JSON.stringify({ portfolioFilter: [3], tagIdsFilter: [8] })
+    )
+    setActiveProject('1')
+    renderPage('/')
+    await afterRestore()
+    expect(clientsRequests().at(-1)).toMatchObject({ seller_ids: '2,9', tag_ids: '5' })
+
+    const setItem = vi.spyOn(Storage.prototype, 'setItem')
+    useClientsMock.mockClear()
+    await switchProjectLive('3')
+
+    // (a) No request after the switch carries project 1's sellers or tag.
+    expect(
+      clientsRequests().every(
+        (p) =>
+          [undefined, '3'].includes(p.seller_ids as string) &&
+          [undefined, '8'].includes(p.tag_ids as string)
+      )
+    ).toBe(true)
+    // (b) Nothing of project 1 was ever written under project 3's key.
+    const underProject3 = setItem.mock.calls
+      .filter(([key]) => key === SAVED_IN_PROJECT_3)
+      .map(([, value]) => JSON.parse(value))
+    expect(
+      underProject3.every(
+        (set) => !set.portfolioFilter?.includes(9) && !set.tagIdsFilter?.includes(5)
+      )
+    ).toBe(true)
+    // (c) Project 3's own set is back, exactly as saved — no "assigned to me" on top.
+    expect(clientsRequests().at(-1)).toMatchObject({ seller_ids: '3', tag_ids: '8' })
+    expect(clientsRequests().at(-1)?.responsible_employee_ids).toBeUndefined()
+  })
+
+  it('S-15: a filter set saved in another project is not restored on a fresh mount in the next one', async () => {
     setActiveProject('1')
     const inProject1 = renderPage('/?sellers=2')
     await afterRestore()
@@ -316,15 +402,22 @@ describe('ClientManagementPage — a seller of another project never filters uns
     expect(clientsRequests().at(-1)?.seller_ids).toBe('2')
   })
 
-  it('S-14: a saved set whose only filter was a foreign seller is forgotten, not restored next time', async () => {
-    localStorage.setItem(SAVED_IN_PROJECT_3, JSON.stringify({ portfolioFilter: [7] }))
+  it('S-14: a saved set whose only filter was a foreign seller keeps just its view; the next visit starts from the default filter in that view', async () => {
+    localStorage.setItem(
+      SAVED_IN_PROJECT_3,
+      JSON.stringify({ portfolioFilter: [7], rowsPerPage: 50, sortBy: 'debt', sortOrder: 'asc' })
+    )
     setActiveProject('3')
     const first = renderPage('/')
     await afterRestore()
 
     expect(clientsRequests().some((p) => p.seller_ids === '7')).toBe(true)
     expect(clientsRequests().at(-1)?.seller_ids).toBeUndefined()
-    expect(localStorage.getItem(SAVED_IN_PROJECT_3)).toBeNull()
+    expect(JSON.parse(localStorage.getItem(SAVED_IN_PROJECT_3) ?? 'null')).toEqual({
+      rowsPerPage: 50,
+      sortBy: 'debt',
+      sortOrder: 'asc',
+    })
 
     first.unmount()
     useClientsMock.mockClear()
@@ -332,5 +425,86 @@ describe('ClientManagementPage — a seller of another project never filters uns
     await afterRestore()
 
     expect(clientsRequests().every((p) => p.seller_ids === undefined)).toBe(true)
+    expect(clientsRequests().at(-1)).toMatchObject({
+      limit: 50,
+      sort_by: 'total_debt',
+      sort_order: 'asc',
+      responsible_employee_ids: '1',
+    })
+  })
+
+  it('S-16: a live switch into a project without a saved set starts from "assigned to me"; the link filters of project 1 stay out', async () => {
+    setActiveProject('1')
+    renderPage('/?sellers=2&tags=5')
+    await afterRestore()
+    expect(clientsRequests().at(-1)).toMatchObject({ seller_ids: '2', tag_ids: '5' })
+
+    useClientsMock.mockClear()
+    await switchProjectLive('3')
+    // Past the URL debounce: project 1's params leave the address, nothing comes back.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 400))
+    })
+
+    expect(
+      clientsRequests().every((p) => p.seller_ids === undefined && p.tag_ids === undefined)
+    ).toBe(true)
+    expect(clientsRequests().at(-1)?.responsible_employee_ids).toBe('1')
+    expect(JSON.parse(localStorage.getItem(SAVED_IN_PROJECT_3) ?? '{}')).toMatchObject({
+      portfolioFilter: [],
+      tagIdsFilter: [],
+      responsibleEmployeeIdsFilter: [1],
+    })
+  })
+
+  it('S-17: the page asks for the sellers list only while a seller is picked', async () => {
+    setActiveProject('3')
+    const folded = renderPage('/')
+    await afterRestore()
+
+    expect(pageSellersCalls().length).toBeGreaterThan(0)
+    expect(pageSellersCalls().every(([, options]) => options?.enabled === false)).toBe(true)
+
+    folded.unmount()
+    useSellersMock.mockClear()
+    // The project's own seller stays picked, so the list stays asked for.
+    renderPage('/?sellers=3')
+
+    expect(pageSellersCalls().at(-1)?.[1]).toEqual({ enabled: true })
+  })
+
+  it('S-18: a user who arrives after the page mounted is not a project switch — the link filter stays', async () => {
+    useAuthStore.setState({ user: null })
+    renderPage('/?sellers=2')
+    await switchProjectLive('3')
+
+    expect(clientsRequests().at(-1)?.seller_ids).toBe('2')
+  })
+})
+
+describe('useSellers — the page switches its request off', () => {
+  it('S-19: a disabled sellers query sends no request; enabled, it does', async () => {
+    const { useSellers } = await vi.importActual<
+      typeof import('@/features/sellers/hooks/useSellers')
+    >('@/features/sellers/hooks/useSellers')
+    const getSellers = vi
+      .spyOn(sellersApi, 'getSellers')
+      .mockResolvedValue({ sellers: [], total: 0 } as unknown as Awaited<
+        ReturnType<typeof sellersApi.getSellers>
+      >)
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={qc}>{children}</QueryClientProvider>
+    )
+    const { rerender } = renderHook(
+      ({ enabled }: { enabled: boolean }) => useSellers({ project_id: 3 }, { enabled }),
+      { wrapper, initialProps: { enabled: false } }
+    )
+    await afterRestore()
+    expect(getSellers).not.toHaveBeenCalled()
+
+    rerender({ enabled: true })
+    await waitFor(() => expect(getSellers).toHaveBeenCalledWith({ project_id: 3 }))
+    getSellers.mockRestore()
   })
 })
