@@ -727,11 +727,14 @@ export function ClientManagementPage() {
   // previous project's filters, page and sort are reset, and the restore below
   // runs again for the new project's key: its saved set, or "assigned to me".
   // The filter params in the URL follow the reset (useURLState, debounced).
+  // The header search goes too, as with Clear All: left in place, it would save
+  // a set of empty filters under the new project's key and skip its restore.
   useEffect(() => {
     if (!filtersOfAnotherProject) return
     if (filtersProjectId !== undefined && projectOfUser !== undefined) {
       resetFilters()
       setSelectedV3Buckets([])
+      clearSearchQuery('')
       hasSetDefaultFilter.current = false
     }
     setFiltersProjectId(projectOfUser)
@@ -2147,8 +2150,14 @@ export function ClientManagementPage() {
   // is intentionally disabled while operator options load (see useClients
   // `enabled` above); a disabled query reports isLoading=false, so cover that
   // gating window here too or the empty state would flash before the fetch runs.
+  // A live project switch is such a window as well: the query is off until the
+  // previous project's filters are reset (filtersOfAnotherProject), and
+  // ProjectSelector drops the query cache with the switch: nothing to show yet.
   const awaitingOperatorOptions = operatorFilterActive && !operatorOptionsReady
-  if ((isLoading || awaitingOperatorOptions) && apiClients.length === 0) {
+  if (
+    (isLoading || awaitingOperatorOptions || filtersOfAnotherProject) &&
+    apiClients.length === 0
+  ) {
     return <ClientManagementPageSkeleton />
   }
 

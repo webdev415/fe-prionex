@@ -26,14 +26,16 @@
  * filter keeps only its view (page size, sort): the next visit starts from the
  * default filter in that view. A live project switch — the page stays mounted —
  * sends and saves nothing of the previous project and restores the next
- * project's own set, as a first visit would.
+ * project's own set, as a first visit would: the header search is cleared with
+ * it, and the loading skeleton covers the switch instead of an empty list.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { ReactNode } from 'react'
+import { Profiler, type ReactNode } from 'react'
 import { act, render, renderHook, screen, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
+import { useSearchStore } from '@/stores/searchStore'
 import { sellersApi } from '@/features/sellers/api/sellersApi'
 import type { User } from '@/types/api'
 import { ClientFiltersBar } from '../ClientFiltersBar'
@@ -139,12 +141,15 @@ function lastSellersParams() {
   return useSellersMock.mock.calls.at(-1)?.[0]
 }
 
-function renderPage(url = '/') {
+/** `onCommit` runs after every commit of the page, with its DOM in place. */
+function renderPage(url = '/', onCommit = () => {}) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={qc}>
       <MemoryRouter initialEntries={[url]}>
-        <ClientManagementPage />
+        <Profiler id="page" onRender={onCommit}>
+          <ClientManagementPage />
+        </Profiler>
       </MemoryRouter>
     </QueryClientProvider>
   )
@@ -263,6 +268,7 @@ describe('ClientManagementPage — a seller of another project never filters uns
   afterEach(() => {
     vi.restoreAllMocks()
     useAuthStore.setState({ user: null })
+    useSearchStore.setState({ searchQuery: '', searchType: 'phone' })
     localStorage.clear()
   })
 
@@ -479,6 +485,76 @@ describe('ClientManagementPage — a seller of another project never filters uns
     await switchProjectLive('3')
 
     expect(clientsRequests().at(-1)?.seller_ids).toBe('2')
+  })
+
+  it("S-20: a live switch with a header search leaves project 3's saved set as it was and restores it; the search is cleared", async () => {
+    const savedInProject3 = { portfolioFilter: [3], tagIdsFilter: [8] }
+    localStorage.setItem(SAVED_IN_PROJECT_3, JSON.stringify(savedInProject3))
+    setActiveProject('1')
+    renderPage('/')
+    await afterRestore()
+    act(() => useSearchStore.setState({ searchQuery: '380501234567', searchType: 'phone' }))
+    // Control: without a switch the header search does reach the request.
+    expect(clientsRequests().at(-1)).toMatchObject({ q: '380501234567', search_type: 'phone' })
+
+    const setItem = vi.spyOn(Storage.prototype, 'setItem')
+    useClientsMock.mockClear()
+    await switchProjectLive('3')
+
+    // (a) Project 3's set is never overwritten by the search with empty filters.
+    // The restore saves it again in full, so compare the set's own filters.
+    const underProject3 = setItem.mock.calls
+      .filter(([key]) => key === SAVED_IN_PROJECT_3)
+      .map(([, value]) => JSON.parse(value))
+    expect(underProject3.every((set) => !set.searchQuery)).toBe(true)
+    expect(JSON.parse(localStorage.getItem(SAVED_IN_PROJECT_3) ?? '{}')).toMatchObject(
+      savedInProject3
+    )
+    // (b) The set is restored, without the search and without "assigned to me".
+    expect(clientsRequests().every((p) => p.q === undefined)).toBe(true)
+    expect(clientsRequests().at(-1)).toMatchObject({ seller_ids: '3', tag_ids: '8' })
+    expect(clientsRequests().at(-1)?.responsible_employee_ids).toBeUndefined()
+    // (c) The header search is gone from the store.
+    expect(useSearchStore.getState().searchQuery).toBe('')
+  })
+
+  it('S-21: a live project switch shows the loading skeleton, not an empty list, until the request of project 3 goes', async () => {
+    // As ProjectSelector leaves react-query: the cache dropped, so a disabled
+    // clients query has nothing and is not loading.
+    useClientsMock.mockImplementation((_params, options?: { enabled?: boolean }) =>
+      options?.enabled === false
+        ? { data: undefined, isLoading: false, isFetching: false, isError: false, error: null }
+        : {
+            data: { items: [], total: 0, total_pages: 1 },
+            isLoading: false,
+            isFetching: false,
+            isError: false,
+            error: null,
+          }
+    )
+    // Every commit of the page: was its clients query off, and did the screen
+    // show the empty list?
+    const commits: { queryOff: boolean; emptyList: boolean }[] = []
+    const onCommit = () =>
+      commits.push({
+        queryOff:
+          (useClientsMock.mock.calls.at(-1)?.[1] as { enabled?: boolean } | undefined)?.enabled ===
+          false,
+        emptyList: screen.queryByText('pages.clients.noClientsFound') !== null,
+      })
+    setActiveProject('1')
+    renderPage('/', onCommit)
+    await afterRestore()
+
+    commits.length = 0
+    await switchProjectLive('3')
+
+    // The switch window was on screen (the query off) …
+    expect(commits.some((c) => c.queryOff)).toBe(true)
+    // … and never as "no clients found".
+    expect(commits.filter((c) => c.queryOff && c.emptyList)).toEqual([])
+    // Once project 3's request has gone, its (empty) result is shown.
+    expect(screen.getByText('pages.clients.noClientsFound')).toBeInTheDocument()
   })
 })
 
