@@ -225,7 +225,7 @@ function renderBell() {
       <MemoryRouter>{children}</MemoryRouter>
     </QueryClientProvider>
   )
-  return render(<NotificationBell />, { wrapper })
+  return { queryClient, ...render(<NotificationBell />, { wrapper }) }
 }
 
 async function openBell(user: ReturnType<typeof userEvent.setup>) {
@@ -446,7 +446,9 @@ describe('NotificationBell — visibility of all types', () => {
 // tab never stays selected: the header is not remounted on a project switch,
 // so a UBKI tab opened in a Ukrainian project falls back to the tasks panel.
 // A shown tab does not vanish under the operator while the panel is open; the
-// choice is taken again when the panel is reopened or the project changes.
+// choice is taken again when the panel is reopened or the project changes. A
+// tab that did go gives up the choice too, so a UBKI alert arriving later adds
+// the tab to the strip without pulling the open panel back to it.
 const ubkiConnectionDownItem = makeItem({
   id: 'n-ubki-down',
   type: 'ubki_connection_down',
@@ -568,5 +570,28 @@ describe('UBKI tab only in a Ukrainian project', () => {
 
     expect(await screen.findByText('Overdue task')).toBeInTheDocument()
     expect(screen.queryByText('notificationBell.tabs.ubki')).not.toBeInTheDocument()
+  })
+
+  it('N-7: after the UBKI tab went away, a UBKI alert arriving later does not pull the open panel to it', async () => {
+    useAuthStore.setState({ user: userInProject('UA') })
+    const user = userEvent.setup()
+    const { queryClient } = renderBell()
+    await openBell(user)
+    await user.click(await screen.findByText('notificationBell.tabs.ubki'))
+    expect(await screen.findByText('notificationBell.empty.ubki')).toBeInTheDocument()
+
+    act(() => useAuthStore.setState({ user: userInProject('CA') }))
+    expect(await screen.findByText('Overdue task')).toBeInTheDocument()
+    expect(screen.queryByText('notificationBell.tabs.ubki')).not.toBeInTheDocument()
+
+    // A UBKI alert comes in with the background poll while the panel is open.
+    installApiMocks([ubkiConnectionDownItem])
+    await act(() => queryClient.invalidateQueries({ queryKey: ['notifications'] }))
+
+    // The tab is back in the strip, but the panel stays on tasks.
+    expect(await screen.findByText('notificationBell.tabs.ubki')).toBeInTheDocument()
+    expect(screen.getByText('notificationBell.tabs.tasks')).toHaveClass('border-primary-500')
+    expect(screen.getByText('Overdue task')).toBeInTheDocument()
+    expect(screen.queryByText('UBKI connection lost')).not.toBeInTheDocument()
   })
 })

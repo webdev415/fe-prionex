@@ -4,7 +4,7 @@
  * Collapsible filter bar with multiple filter options for client management.
  */
 
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import i18n, { spanishLocaleOr } from '@/lib/i18n'
 import { Input } from '@/components/ui/Input'
@@ -240,24 +240,14 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
     })
   }
 
-  const handlePortfolioChange = useCallback(
-    (sellerIds: number[]) => {
-      onFilterChange({
-        ...filters,
-        portfolio: sellerIds,
-      })
-    },
-    [filters, onFilterChange]
-  )
-
-  // A seller picked in another project is not in this project's list: drop it
-  // once the list has arrived, or it stays an invisible filter nobody can untick.
-  // While the list loads, nothing changes.
-  useEffect(() => {
-    if (!sellersResponse || !filters.portfolio) return
-    const kept = filters.portfolio.filter((id) => portfolioOptions.some((o) => o.id === id))
-    if (kept.length < filters.portfolio.length) handlePortfolioChange(kept)
-  }, [sellersResponse, filters.portfolio, portfolioOptions, handlePortfolioChange])
+  // A seller of another project is dropped by ClientManagementPage, which owns
+  // the filter state and checks it with this bar folded too (17-56).
+  const handlePortfolioChange = (sellerIds: number[]) => {
+    onFilterChange({
+      ...filters,
+      portfolio: sellerIds,
+    })
+  }
 
   const handleTagsChange = (selection: TagFilterSelection) => {
     const hasManual = selection.includeIds.length > 0 || selection.excludeIds.length > 0

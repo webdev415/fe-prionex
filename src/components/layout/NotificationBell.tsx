@@ -513,12 +513,14 @@ export function NotificationBell() {
   // selected — a project switch does not remount the header. A shown tab holds
   // while the panel is open, so a refetch that drops the last alert does not
   // pull it from under the operator; opening the panel or a project switch
-  // takes the choice again.
+  // takes the choice again. A tab that goes gives up the choice too, or an alert
+  // arriving later would pull the open panel back to UBKI by itself.
   const ubkiTabNow = ubkiAvailable || ubkiTabItems.length > 0
   const ubkiLatchKey = isOpen ? `${activeProjectId}:${ubkiAvailable}` : null
   const [ubkiLatch, setUbkiLatch] = useState({ key: ubkiLatchKey, shown: ubkiTabNow })
   if (ubkiLatch.key !== ubkiLatchKey || (ubkiTabNow && !ubkiLatch.shown)) {
     setUbkiLatch({ key: ubkiLatchKey, shown: ubkiTabNow })
+    if (!ubkiTabNow && activeTab === 'ubki') setActiveTab('tasks')
   }
   const showUbkiTab = ubkiTabNow || (isOpen && ubkiLatch.shown)
   const shownTab = !showUbkiTab && activeTab === 'ubki' ? 'tasks' : activeTab

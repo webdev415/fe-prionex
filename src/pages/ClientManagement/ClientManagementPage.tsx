@@ -68,6 +68,7 @@ import { PERMISSIONS } from '@/constants/permissions'
 import { ALL_MESSAGING_LAUNCH_PERMISSIONS } from '@/features/messaging'
 import { useBulkOptOutUbki, useBulkSubmitByClients, useUbkiAvailable } from '@/features/ubki'
 import { useTags } from '@/features/tags/hooks/useTags'
+import { useSellers } from '@/features/sellers/hooks/useSellers'
 import { isAdminRole, isHiddenVisibility } from '@/features/tags/utils/visibility'
 import { toast } from 'sonner'
 
@@ -489,8 +490,12 @@ export function ClientManagementPage() {
   } | null>(null)
   const [openDropdownClientId, setOpenDropdownClientId] = useState<number | null>(null)
   const hasSetDefaultFilter = useRef(false)
-  // User-specific storage key to prevent filter leakage between users
-  const STORAGE_KEY = user?.id ? `client-filters-state-${user.id}` : null
+  // User-specific storage key to prevent filter leakage between users, and one
+  // saved set per project, so a set picked in another project (its sellers, its
+  // tags) is never restored here (17-56). No active project — the per-user key.
+  const STORAGE_KEY = user?.id
+    ? `client-filters-state-${user.id}${user.active_project_id ? `-${user.active_project_id}` : ''}`
+    : null
 
   // Legacy URL fold (KAN-572): saved bookmarks with `?employee=<id>` or
   // `?interactionUserId=<id>` (singular scalar) are migrated to the new
@@ -608,6 +613,15 @@ export function ClientManagementPage() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(filterState))
       } catch (e) {
         console.error('Failed to save filters to localStorage:', e)
+      }
+    } else if (STORAGE_KEY && hasSetDefaultFilter.current) {
+      // Nothing active any more (the last filter unticked, a foreign seller
+      // dropped): forget the saved set, or the next visit restores it. Not before
+      // the first restore on this mount has read it.
+      try {
+        localStorage.removeItem(STORAGE_KEY)
+      } catch (e) {
+        console.error('Failed to clear saved filters in localStorage:', e)
       }
     }
   }, [
@@ -1118,6 +1132,23 @@ export function ClientManagementPage() {
   // Fetch active users for resolving employee/searcher IDs to names (project-scoped)
   const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
   const activeProjectIdNum = activeProjectId ? Number(activeProjectId) : undefined
+
+  // Sellers of the active project — the very query the filter bar lists (one
+  // fetch, shared cache). A seller picked in another project (a link, a saved
+  // set, a project switch) is not in it: drop it here, where it applies with the
+  // filter bar folded too, or it stays an unseen filter that empties the list
+  // (17-56). Only a complete list decides: one still loading, or a page cut
+  // short by the limit, changes nothing.
+  const { data: projectSellers } = useSellers({
+    is_active: true,
+    limit: 1000,
+    project_id: activeProjectIdNum,
+  })
+  useEffect(() => {
+    if (!projectSellers || !(projectSellers.total <= projectSellers.sellers.length)) return
+    const kept = portfolioFilter.filter((id) => projectSellers.sellers.some((s) => s.id === id))
+    if (kept.length < portfolioFilter.length) setPortfolioFilter(kept)
+  }, [projectSellers, portfolioFilter, setPortfolioFilter])
 
   // v3 priority rollup for the visible clients (KAN-791) — only for brands cut
   // over after the KAN-794 sign-off; shows the v3 bucket in place of the old
