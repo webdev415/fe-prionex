@@ -3,7 +3,9 @@
  *
  * Сегодня связи нет вовсе: в `permissions.ts` лежат десять кредитных литералов, а
  * настоящий словарь живёт в миграции 082 auth-сервиса api-prionex и содержит
- * семнадцать имён. Опечатка в константе или тихое появление в гейте имени,
+ * семнадцать имён. Миграция 098 (19-5a) добавила восемнадцатое — право
+ * подтверждения условного одобрения; оно лежит ВТОРЫМ снимком со своим
+ * провенансом, а словарь стража — объединение снимков (19-5f). Опечатка в константе или тихое появление в гейте имени,
  * которого backend не выдаёт, проходят CI зелёными — и оператор получает пункт
  * меню, который никогда не откроется, либо, наоборот, теряет доступ.
  *
@@ -34,6 +36,7 @@
 import { describe, it, expect } from 'vitest'
 import { PERMISSIONS } from '../permissions'
 import snapshot from './vendored/credit-w1-permissions.json'
+import snapshot098 from './vendored/credit-confirm-conditional-permission.json'
 import {
   OUT_OF_W1_VALUES,
   PERMISSION_NAME_RE,
@@ -42,8 +45,11 @@ import {
   isTestFile,
 } from './creditPermissionSets'
 
-/** Словарь W1 из снимка. */
-const W1 = new Set<string>(snapshot.permissions)
+/**
+ * Словарь W1 — объединение снимков: 082 (17 имён) и 098 (19-5a, 1 имя). Снимок
+ * 082 не переписывается: его провенанс — один файл миграции.
+ */
+const W1 = new Set<string>([...snapshot.permissions, ...snapshot098.permissions])
 
 /** Сырой текст снимка — для проверок, которые `JSON.parse` уже не видит. */
 const SNAPSHOT_RAW = Object.values(
@@ -53,6 +59,19 @@ const SNAPSHOT_RAW = Object.values(
     eager: true,
   }) as Record<string, string>
 )[0]
+const SNAPSHOT_098_RAW = Object.values(
+  import.meta.glob('./vendored/credit-confirm-conditional-permission.json', {
+    query: '?raw',
+    import: 'default',
+    eager: true,
+  }) as Record<string, string>
+)[0]
+
+/** Каждый снимок — со своим сырым текстом и своим ожидаемым счётом имён. */
+const SNAPSHOTS = [
+  { label: '082', snap: snapshot, raw: SNAPSHOT_RAW, expected: 17 },
+  { label: '098 (19-5a)', snap: snapshot098, raw: SNAPSHOT_098_RAW, expected: 1 },
+]
 
 /** Четыре области нормы. Пути относительные от `src/constants/__tests__/`. */
 const SOURCES = {
@@ -244,9 +263,9 @@ const CANON_KEYS = [
 ]
 
 /** Проблемы списка прав: счёт, дубли, сортировка, форма имени. */
-function listProblems(list: string[]): string[] {
+function listProblems(list: string[], expected: number): string[] {
   const problems: string[] = []
-  if (list.length !== 17) problems.push(`имён ${list.length}, ожидалось 17`)
+  if (list.length !== expected) problems.push(`имён ${list.length}, ожидалось ${expected}`)
   if (new Set(list).size !== list.length) problems.push('в списке есть дубли')
   if (list.join('\n') !== [...list].sort().join('\n')) problems.push('список не отсортирован')
   for (const name of list)
@@ -371,29 +390,56 @@ describe('T-FE-2-02 объявленные константы делятся н�
   })
 })
 
-describe('T-FE-2-02 (б) снимок описывает своё происхождение и сходится', () => {
-  it('девять полей канона в каноническом порядке', () => {
-    const problems = keyOrderProblems(Object.keys(snapshot))
-    expect(problems, `канон снимка нарушен: ${problems.join('; ')}`).toEqual([])
+describe.each(SNAPSHOTS)(
+  'T-FE-2-02 (б) снимок $label описывает своё происхождение и сходится',
+  ({ snap, raw, expected }) => {
+    it('девять полей канона в каноническом порядке', () => {
+      const problems = keyOrderProblems(Object.keys(snap))
+      expect(problems, `канон снимка нарушен: ${problems.join('; ')}`).toEqual([])
+    })
+
+    it('каждый ключ канона встречается в файле ровно один раз', () => {
+      const problems = duplicateKeyProblems(raw)
+      expect(problems, `дубль ключа в снимке: ${problems.join('; ')}`).toEqual([])
+    })
+
+    it('права своего счёта: отсортированы, без дублей, каждое по форме имени', () => {
+      const problems = listProblems(snap.permissions, expected)
+      expect(problems, `список прав снимка: ${problems.join('; ')}`).toEqual([])
+    })
+
+    it('поля происхождения по форме', () => {
+      const problems = provenanceProblems(snap)
+      expect(problems, `происхождение снимка: ${problems.join('; ')}`).toEqual([])
+    })
+
+    it('sha256 равен хешу канонического списка', async () => {
+      expect(await canonHash(snap.permissions), 'sha256 снимка не сходится').toBe(snap.sha256)
+    })
+  }
+)
+
+describe('T-FE-2-02 право подтверждения условного одобрения (19-5a → 19-5f)', () => {
+  it('W-1: право употреблено на странице карточки и принадлежит второму снимку', () => {
+    const uses = identifierUses().filter(
+      (u) =>
+        u.file.endsWith('pages/Credit/CreditApplicationDetailPage.tsx') &&
+        u.value === 'credit.decisions.confirm_conditional'
+    )
+    expect(uses, 'the card no longer checks the conditional confirmation right').toHaveLength(1)
+    expect(
+      snapshot098.permissions,
+      'the 19-5a snapshot lost the conditional confirmation right'
+    ).toContain('credit.decisions.confirm_conditional')
+    expect(
+      snapshot.permissions,
+      'the right appeared in the 082 snapshot — 082 must not be rewritten'
+    ).not.toContain('credit.decisions.confirm_conditional')
   })
 
-  it('каждый ключ канона встречается в файле ровно один раз', () => {
-    const problems = duplicateKeyProblems(SNAPSHOT_RAW)
-    expect(problems, `дубль ключа в снимке: ${problems.join('; ')}`).toEqual([])
-  })
-
-  it('семнадцать прав: отсортированы, без дублей, каждое по форме имени', () => {
-    const problems = listProblems(snapshot.permissions)
-    expect(problems, `список прав снимка: ${problems.join('; ')}`).toEqual([])
-  })
-
-  it('поля происхождения по форме', () => {
-    const problems = provenanceProblems(snapshot)
-    expect(problems, `происхождение снимка: ${problems.join('; ')}`).toEqual([])
-  })
-
-  it('sha256 равен хешу канонического списка', async () => {
-    expect(await canonHash(snapshot.permissions), 'sha256 снимка не сходится').toBe(snapshot.sha256)
+  it('W-2: снимки не пересекаются', () => {
+    const both = snapshot098.permissions.filter((name) => snapshot.permissions.includes(name))
+    expect(both, `имя числится в обоих снимках: ${both.join(', ')}`).toEqual([])
   })
 })
 
@@ -405,7 +451,12 @@ describe('T-FE-2-02 отрицательные контроли (копии в �
     expect(mutated, 'контроль не построен: подмена имени не состоялась').not.toEqual(
       snapshot.permissions
     )
-    const strays = straysOf([...identifierUses(), ...bareUses()], new Set(mutated))
+    // Второй снимок — в словаре контроля: краснеть обязано подменённое имя 082,
+    // а не право 19-5a, которого в 082 нет по построению.
+    const strays = straysOf(
+      [...identifierUses(), ...bareUses()],
+      new Set([...mutated, ...snapshot098.permissions])
+    )
     expect(
       strays.length,
       'контроль не покраснел: страж принял употребление права, которого нет в подменённом снимке'
@@ -442,17 +493,17 @@ describe('T-FE-2-02 отрицательные контроли (копии в �
   it('дубль имени и укороченный список краснят проверку списка', () => {
     const withDuplicate = [...snapshot.permissions.slice(0, 16), snapshot.permissions[0]]
     expect(
-      listProblems(withDuplicate).length,
+      listProblems(withDuplicate, 17).length,
       'контроль не покраснел: список с дублем принят'
     ).toBeGreaterThan(0)
     const sixteen = snapshot.permissions.slice(0, 16)
     expect(
-      listProblems(sixteen).length,
+      listProblems(sixteen, 17).length,
       'контроль не покраснел: список из 16 имён принят'
     ).toBeGreaterThan(0)
     const malformed = [...snapshot.permissions.slice(0, 16), 'Credit.Switches.WRITE ']
     expect(
-      listProblems(malformed).length,
+      listProblems(malformed, 17).length,
       'контроль не покраснел: имя не по форме принято'
     ).toBeGreaterThan(0)
   })
@@ -491,8 +542,13 @@ describe('T-FE-2-02 отрицательные контроли (копии в �
       uses.length
     )
     // Общий порог >=4 при этом ОСТАЁТСЯ выполненным за счёт меню — ровно тот
-    // случай, ради которого якоря считаются на файл.
-    expect(new Set(withoutRoutes.map((u) => u.value)).size).toBe(4)
+    // случай, ради которого якоря считаются на файл. Счёт — по меню: с 19-5f
+    // карточка заявки несёт пятое имя (право подтверждения), и сумма по всем
+    // файлам перестала бы быть заслугой меню.
+    const menuOnly = withoutRoutes.filter((u) =>
+      u.file.endsWith('components/layout/DashboardLayout.tsx')
+    )
+    expect(new Set(menuOnly.map((u) => u.value)).size).toBe(4)
     const lost = missingIdentifierAnchors(withoutRoutes)
     expect(
       lost,

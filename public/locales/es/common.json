@@ -9241,7 +9241,8 @@
         "promises-daily": "Promesas hasta fin de mes",
         "promises-feed": "Promesas",
         "callbacks": "Devoluciones de llamada",
-        "drains": "Fugas"
+        "drains": "Fugas",
+        "recorded-payments": "Pagos registrados"
       },
       "processing": {
         "dateFrom": "Fecha desde",
@@ -9492,6 +9493,10 @@
           "conversionVerified": "Conversión (verificado)"
         },
         "inactiveBadge": "baja",
+        "highlightedOperator": "Operador {{name}} resaltado",
+        "highlightedOperatorMissing": "El operador #{{id}} no tiene filas en este periodo",
+        "highlightedOperatorHidden": "El operador {{name}} está en el informe, pero no en esta subpestaña; su fila se muestra en la pestaña «Todos»",
+        "clearHighlight": "Quitar el resaltado",
         "totals": {
           "title": "Totales",
           "generatedAt": "Datos a fecha de {{value}}",
@@ -9664,6 +9669,64 @@
         "today": "Hoy",
         "thisWeek": "Esta semana",
         "thisMonth": "Este mes"
+      },
+      "recordedPayments": {
+        "dateFrom": "Fecha de confirmación desde",
+        "dateTo": "Fecha de confirmación hasta",
+        "invalidDate": "La fecha no es una fecha de calendario real; elija una fecha para sustituirla",
+        "invalidRange": "La fecha de inicio es posterior a la fecha de fin",
+        "rangeTooLong": "El rango de fechas no puede superar los 366 días",
+        "verifiedOnly": "Solo verificados",
+        "operators": "Responsable del cliente",
+        "allOperators": "Todos los operadores",
+        "operatorsTooMany": "Se pueden seleccionar como máximo {{max}} operadores; deseleccione algunos o borre el filtro",
+        "operatorsInvalid": "La lista de operadores del enlace está dañada; borre el filtro",
+        "serviceBadge": "de servicio",
+        "deletedClientBadge": "eliminado",
+        "openClient": "Cliente {{id}}",
+        "operatorPromisesLink": "Promesas del operador {{name}}",
+        "summary": "Pagos: {{count}} · Importe: {{amount}}",
+        "breakdown": {
+          "title": "Desglose por responsable del cliente",
+          "operator": "Operador",
+          "count": "Pagos",
+          "amount": "Importe",
+          "unresolved": "Sin responsable",
+          "capped": "El desglose por operadores no se ha calculado: el periodo seleccionado contiene demasiados clientes. Reduzca el periodo para ver el desglose y filtrar por operador.",
+          "truncated": "Solo se muestran los {{count}} operadores con mayor importe; el resto de las líneas del desglose se ha omitido. Reduzca el periodo.",
+          "filter": "Mostrar los pagos del operador {{name}}",
+          "clearFilter": "Mostrar todos los operadores",
+          "empty": "No hay pagos en el periodo seleccionado"
+        },
+        "status": {
+          "verified": "Verificado",
+          "cancelled": "Cancelado",
+          "pending": "Pendiente"
+        },
+        "columns": {
+          "contractNumber": "Número de contrato",
+          "inn": "NIF",
+          "amount": "Importe",
+          "paymentDate": "Fecha de pago",
+          "confirmationDate": "Fecha de confirmación (banco)",
+          "verifiedAt": "Verificado en el CRM",
+          "status": "Estado",
+          "client": "Cliente",
+          "recordedBy": "Registrado por",
+          "clientResponsible": "Responsable del cliente",
+          "paymentResponsible": "Responsable del pago",
+          "purchaseDate": "Fecha de compra",
+          "seller": "Contraparte",
+          "paymentMethod": "Método de pago",
+          "paymentType": "Tipo de pago"
+        },
+        "empty": "Ningún pago registrado coincide con estos filtros",
+        "forbidden": "No tiene permiso para ver este informe",
+        "unavailable": "Los datos de pagos, clientes o empleados no están disponibles temporalmente. Inténtelo de nuevo más tarde.",
+        "error": {
+          "title": "No se han podido cargar los datos",
+          "retry": "Reintentar"
+        }
       },
       "kpi": {
         "callsMade": "Llamadas realizadas",
@@ -12515,7 +12578,9 @@
       "referred": "Derivada",
       "waiting": "En cola",
       "assigned": "Asignada",
-      "disbursed": "Desembolsado"
+      "disbursed": "Desembolsado",
+      "checklist": "Lista",
+      "conditional": "Condición"
     },
     "fields": {
       "name": "Nombre",
@@ -12619,13 +12684,18 @@
       "loanId": "ID del préstamo",
       "loanAgeDays": "Días desde el desembolso",
       "advanceRefundExcess": "Excedente de devolución tras la cancelación",
-      "supersedesDecision": "Sustituye la decisión anterior"
+      "supersedesDecision": "Sustituye la decisión anterior",
+      "checklist": "Lista de verificación",
+      "conditionalCodes": "Condiciones de aprobación"
     },
     "decisionError": {
       "operatorIdNotNumeric": "La decisión no se guardó: el número de usuario de su pase de CRM no es un número entero, por lo que no se puede registrar al autor de la decisión. Contacte al administrador: es un ajuste del inicio de sesión, no un error suyo.",
       "operatorIdAmbiguous": "La decisión no se guardó: su pase de CRM indica dos números de usuario distintos, por lo que no se puede determinar al autor de la decisión. Contacte al administrador.",
       "underwriterNotTheCaller": "La decisión no se guardó: el autor de una decisión manual es el titular del pase de CRM, y la página envió otro número. Actualice la página e inténtelo de nuevo.",
-      "generic": "La decisión no se guardó. Inténtelo de nuevo; si vuelve a ocurrir, contacte al administrador."
+      "generic": "La decisión no se guardó. Inténtelo de nuevo; si vuelve a ocurrir, contacte al administrador.",
+      "conditionalApprovalUnconfirmed": "La aprobación no se guardó: para esta solicitud se declaró una condición, así que solo la confirmación del responsable de riesgos puede aprobarla. Todavía puede rechazarla o proponer otra condición.",
+      "confirmerIsTheAuthor": "La confirmación no se guardó: usted es el autor de esta propuesta y debe confirmarla otra persona, el responsable de riesgos.",
+      "proposalNotActive": "La confirmación no se guardó porque la propuesta ya no está vigente: otra decisión la reemplazó, la solicitud ya no está en revisión o los datos bancarios cambiaron después de la propuesta (hace falta una nueva revisión). Actualice la ficha."
     },
     "tabs": {
       "form": "Formulario de solicitud",
@@ -12653,7 +12723,9 @@
       "saveDecision": "Enviar decisión",
       "retry": "Reintentar",
       "copy": "Copiar",
-      "showMore": "Mostrar más"
+      "showMore": "Mostrar más",
+      "proposeConditional": "Proponer una aprobación condicional",
+      "confirmConditional": "Confirmar la aprobación condicional"
     },
     "metrics": {
       "requested": "Solicitado (página)",
@@ -12783,7 +12855,15 @@
       "identifiers": "Identificadores",
       "owedToClient": "Adeudado al cliente",
       "owedToClientHint": "Tras cancelar, el cliente devolvió más de lo que recibió. El módulo debe devolverle esta cantidad: no es una deuda del cliente ni un sobrepago.",
-      "owedToClientUnknown": "El módulo no indicó si le debemos algo al cliente: el campo falta en la respuesta. Esto no significa que no haya excedente."
+      "owedToClientUnknown": "El módulo no indicó si le debemos algo al cliente: el campo falta en la respuesta. Esto no significa que no haya excedente.",
+      "conditionalTitle": "Aprobar con condición (debe confirmarlo el responsable de riesgos)",
+      "conditionalHint": "Con una condición, la decisión pasa a ser una propuesta: la solicitud sigue en revisión y no se emite el contrato hasta que lo confirme el responsable de riesgos. Confirma otra persona, no el autor de la propuesta.",
+      "conditionalUnavailable": "Las condiciones de aprobación no están disponibles: el catálogo de códigos no se cargó. La aprobación simple sigue funcionando.",
+      "proposedAmount": "Importe propuesto: {{amount}}",
+      "confirmTitle": "¿Confirmar la aprobación condicional?",
+      "confirmMessage": "La solicitud se aprobará por {{amount}} con las condiciones {{codes}} y se emitirá un contrato para que lo firme el cliente. La confirmación no se puede deshacer.",
+      "confirmNotAuthor": "Confirma otra persona, no el autor de la propuesta.",
+      "conditionalConfirmed": "La aprobación condicional está confirmada."
     },
     "scorecard": {
       "title": "Desglose de la puntuación",
@@ -13110,6 +13190,46 @@
       "bank_statement": "Extracto bancario",
       "employment": "Empleo",
       "service": "Códigos de servicio"
+    },
+    "checklistItem": {
+      "ibv_all_accounts": "Verificación de todas las cuentas bancarias del cliente (IBV)",
+      "statement_two_months": "Extracto bancario de al menos 2 meses",
+      "salary_regular": "El salario es regular durante todo el período",
+      "nsf_isolated": "Las devoluciones NSF son aceptables si son aisladas o están corregidas a la fecha actual",
+      "loan_repayments_on_payday_max6": "No más de 6 pagos de préstamos el día del último salario",
+      "salary_account_connected": "La cuenta donde se recibe el salario está conectada (save), la tarjeta está verificada y el banco y su código se ingresaron manualmente",
+      "id_photo_only": "Solo se aceptan fotos del documento (pasaporte, documento de identidad, licencia de conducir); los escaneos no sirven",
+      "id_valid_on_apply": "El documento es válido en la fecha de la solicitud",
+      "id_alberta_only": "Documentos solo de la provincia de Alberta",
+      "pay_document": "Hay un documento de salario",
+      "residence_proof": "Hay comprobante de domicilio"
+    },
+    "checklistHint": {
+      "ibv_all_accounts": "Si los extractos o el IBV no se cargan, solicítelos a través del CRM",
+      "statement_two_months": "En Flinks, verifique la tarjeta vigente (puede haber varias)",
+      "salary_regular": "Verifíquelo en la sección IBV del panel",
+      "nsf_isolated": "1 o 2 veces al mes; después vienen cargos de créditos, planes a plazos y préstamos",
+      "loan_repayments_on_payday_max6": "Obligatorio: el préstamo se cobrará de esta tarjeta",
+      "residence_proof": "En una ciudad pequeña no hace falta solicitarlo; entonces, «No aplica»"
+    },
+    "checklistAnswer": {
+      "yes": "Sí",
+      "no": "No",
+      "n_a": "No aplica"
+    },
+    "checklist": {
+      "title": "Lista de verificación",
+      "progress": "Marcados {{answered}} de {{total}}",
+      "unansweredNotSent": "Los puntos sin marcar no se incluyen en la decisión.",
+      "addNote": "Nota",
+      "clearAnswer": "Borrar",
+      "share": "«Sí»: {{yes}} de {{applicable}} aplicables",
+      "noneApplicable": "Ningún punto aplica",
+      "notFilled": "Lista no completada"
+    },
+    "conditionalStage": {
+      "proposed": "Pendiente de confirmación del responsable",
+      "confirmed": "Confirmado por el responsable"
     },
     "channel": {
       "site": "Sitio web",
@@ -13438,7 +13558,8 @@
       "empty": "La cola está vacía",
       "noNumberHint": "El endpoint de la cola solo devuelve el ID de la solicitud: no incluye el número de solicitud ni el correo del cliente. Abra la ficha haciendo clic en una fila para verlos.",
       "noAssignmentHint": "La asignación a un analista de crédito todavía no existe: el mecanismo llega con WS-20, así que la columna «Asignada» está vacía en todas las filas.",
-      "noSortingHint": "El módulo devuelve toda la cola como una sola lista en orden de derivación: no hay ordenación por columnas ni paginación, porque el servidor no admite ninguna de las dos."
+      "noSortingHint": "El módulo devuelve toda la cola como una sola lista en orden de derivación: no hay ordenación por columnas ni paginación, porque el servidor no admite ninguna de las dos.",
+      "awaitingConfirmation": "Pendiente de confirmación"
     },
     "railReviewReason": {
       "payout_account_not_pinned": "La decisión no fijó una cuenta de desembolso",

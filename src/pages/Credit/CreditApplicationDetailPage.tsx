@@ -13,6 +13,7 @@ import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { SegmentedTabs } from '@/components/ui/SegmentedTabs'
+import { PERMISSIONS } from '@/constants/permissions'
 import { formatDate, formatDateTime } from '@/lib/formatters'
 import {
   useCreditApplication,
@@ -27,6 +28,14 @@ import {
   normalizeDecisionCodes,
   type CreditDecisionCodeIndex,
 } from '@/features/credit/api/decisionCodes'
+import {
+  checklistItemsOf,
+  checklistPayload,
+  conditionalOf,
+  withoutConditionalCodes,
+  type CreditChecklistAnswers,
+  type CreditChecklistNotes,
+} from '@/features/credit/api/decisionChecklist'
 import { normalizeDraft } from '@/features/credit/api/draft'
 import { CREDIT_DOCUMENT_META_KINDS } from '@/features/credit/api/enums'
 import type {
@@ -56,6 +65,11 @@ import { CreditIdentifierRows } from './components/CreditIdentifiers'
 import { CreditIbvTab } from './components/CreditIbvTab'
 import { CreditDecisionBasis } from './components/CreditDecisionBasis'
 import { CreditScorecardBreakdown } from './components/CreditScorecardBreakdown'
+import {
+  CreditDecisionChecklistForm,
+  CreditDecisionChecklistView,
+} from './components/CreditDecisionChecklist'
+import { CreditConditionalConfirm } from './components/CreditConditionalConfirm'
 import { snapshotForDisplay } from '@/features/credit/api/decisionSnapshot'
 import { readScorecard } from '@/features/credit/api/scorecard'
 import {
@@ -104,6 +118,9 @@ export function CreditApplicationDetailPage() {
   const now = useNowTick()
 
   const canDecide = Boolean(overview?.permissions.includes('credit.decisions.decide'))
+  const canConfirm = Boolean(
+    overview?.permissions.includes(PERMISSIONS.CREDIT.DECISIONS_CONFIRM_CONDITIONAL)
+  )
 
   if (isLoading) {
     return <div className="text-muted-foreground p-6">{t('common.loading', 'Загрузка…')}</div>
@@ -280,7 +297,11 @@ export function CreditApplicationDetailPage() {
       {tab === 'ibv' && <CreditIbvTab ibv={application.ibv} currency={application.currency} />}
       {tab === 'documents' && <ApplicationDocuments application={application} />}
       {tab === 'decision' && (
-        <ApplicationDecision application={application} canDecide={canDecide} />
+        <ApplicationDecision
+          application={application}
+          canDecide={canDecide}
+          canConfirm={canConfirm}
+        />
       )}
       {tab === 'history' && <ApplicationHistory application={application} />}
     </div>
@@ -567,10 +588,31 @@ function manualDecisionErrorText(t: TFunction, error: unknown): string {
         return t('credit.decisionError.operatorIdAmbiguous')
       case 'underwriter_not_the_caller':
         return t('credit.decisionError.underwriterNotTheCaller')
+      case 'conditional_approval_unconfirmed':
+        return t('credit.decisionError.conditionalApprovalUnconfirmed')
     }
   }
   const message = error instanceof Error ? error.message : ''
   return message.trim() ? message : t('credit.decisionError.generic')
+}
+
+/**
+ * Отказ двери подтверждения условного одобрения (19-5f). Свои тексты — у двух
+ * кодов: автор подтверждает своё же предложение, и предложение больше не
+ * действует (`invalid_state`: заявка не на разборе, его заменило другое решение
+ * или факты банка изменились после него). Всё прочее — как у ручного решения:
+ * отказы по пропуску, сообщение модуля, пустое — общий текст.
+ */
+function confirmErrorText(t: TFunction, error: unknown): string {
+  if (error instanceof CreditApiError) {
+    switch (error.code) {
+      case 'conditional_confirmer_is_the_author':
+        return t('credit.decisionError.confirmerIsTheAuthor')
+      case 'invalid_state':
+        return t('credit.decisionError.proposalNotActive')
+    }
+  }
+  return manualDecisionErrorText(t, error)
 }
 
 /**
@@ -693,9 +735,11 @@ function permanentDirectoryFailure(t: TFunction, error: unknown): string | null 
 function ApplicationDecision({
   application,
   canDecide,
+  canConfirm,
 }: {
   application: CreditApplicationDetail
   canDecide: boolean
+  canConfirm: boolean
 }) {
   const { t, i18n } = useTranslation('common')
   const decision = application.decision
@@ -714,6 +758,17 @@ function ApplicationDecision({
   const [amount, setAmount] = useState(String((application.requested_amount_minor ?? 0) / 100))
   const [rationale, setRationale] = useState('')
   const [codes, setCodes] = useState<string[]>([])
+  const [answers, setAnswers] = useState<CreditChecklistAnswers>({})
+  const [notes, setNotes] = useState<CreditChecklistNotes>({})
+  const [conditionalCodes, setConditionalCodes] = useState<string[]>([])
+  // Подтверждение прошло: карточка перезапросится подтверждённой, и кнопка уйдёт
+  // вместе со своим компонентом — плашка успеха живёт здесь, а не в нём.
+  const [confirmed, setConfirmed] = useState(false)
+
+  // Условие действующего решения — из снимка (у роли без справочника тоже).
+  const conditional = decision ? conditionalOf(decision) : null
+  const confirmable =
+    canConfirm && application.status === 'referred' && conditional?.stage === 'proposed'
 
   // Разбор скоринга читается ОДИН раз: по этому же чтению страница рисует панель
   // и решает, отсылает ли к ней строка под сырым снимком.
@@ -740,18 +795,40 @@ function ApplicationDecision({
     [directory]
   )
   const chosen = codes.filter((id) => offered.has(id))
+  // Условие одобрения — тем же приёмом: только коды, которые справочник
+  // предлагает сейчас. Выбран хоть один — это ПРЕДЛОЖЕНИЕ: `referred` с кодами,
+  // и никогда `approved` с `AB-C-*` (модуль ответил бы 409).
+  const conditionalChosen = normalizeDecisionCodes(
+    conditionalCodes.filter((id) => directory?.conditional.some((entry) => entry.id === id))
+  )
+  const proposing = outcome === 'approved' && conditionalChosen.length > 0
+  // Справочник загружен, а кодов условия в нём нет — ни пустой рамки, ни строки о
+  // недоступности: условий в книге просто нет, одобрение обычное.
+  const conditionalOffered = directory?.conditional ?? []
+  // Условие отмечено, а справочник пропал — без блокировки ушло бы одобрение без условия.
+  const conditionalLost = outcome === 'approved' && !directory && conditionalCodes.length > 0
 
   const submit = () => {
+    const checklist = checklistPayload(answers, notes)
+    const sentOutcome = proposing ? 'referred' : outcome
     mutation.mutate({
-      outcome,
+      outcome: sentOutcome,
       rationale: rationale.trim(),
+      // Ключи ниже — по ВЫБРАННОМУ исходу: предложение (`referred`) намеренно несёт
+      // `final_amount_minor` — из него модуль читает предложенную сумму.
       ...(outcome === 'approved' ? { final_amount_minor: Math.round(Number(amount) * 100) } : {}),
       ...(outcome === 'declined' ? { decline_codes: normalizeDecisionCodes(chosen) } : {}),
+      ...(proposing ? { conditional_codes: conditionalChosen } : {}),
+      ...(checklist ? { checklist } : {}),
     })
   }
 
   const toggleCode = (id: string) =>
     setCodes((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]))
+  const toggleConditional = (id: string) =>
+    setConditionalCodes((prev) =>
+      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
+    )
   // Отказ без кода модуль отвергает `422`; без справочника код выбрать нечем.
   const declineBlocked = outcome === 'declined' && (!directory || chosen.length === 0)
 
@@ -775,8 +852,62 @@ function ApplicationDecision({
             )}
           </Field>
           <Field label={t('credit.fields.declineCodes')}>
-            <DecisionCodesValue decision={decision} directory={directory} language={language} />
+            <DecisionCodesValue
+              decision={withoutConditionalCodes(decision)}
+              directory={directory}
+              language={language}
+            />
           </Field>
+          {conditional && (
+            <Field label={t('credit.fields.conditionalCodes')}>
+              <span className="flex flex-col gap-1">
+                {conditional.codes.map((id) => {
+                  const entry = directory?.byId.get(id)
+                  return (
+                    <span key={id}>
+                      <span className="font-mono">{id}</span>
+                      {entry && ` — ${decisionCodeText(entry, language).primary}`}
+                    </span>
+                  )
+                })}
+                <span className="flex flex-wrap items-center gap-2 text-xs">
+                  {conditional.stage && (
+                    <span className="bg-warning-100 text-warning-800 inline-flex h-6 items-center rounded-full px-2.5">
+                      {t(`credit.conditionalStage.${conditional.stage}`, conditional.stage)}
+                    </span>
+                  )}
+                  <span>
+                    {t('credit.card.proposedAmount', {
+                      amount: money(conditional.amountMinor, decision.currency),
+                    })}
+                  </span>
+                </span>
+                {confirmed && (
+                  <Alert variant="success">{t('credit.card.conditionalConfirmed')}</Alert>
+                )}
+                {confirmable && !confirmed && (
+                  <CreditConditionalConfirm
+                    applicationId={application.application_id}
+                    proposalDecisionId={decision.decision_id}
+                    amount={money(conditional.amountMinor, decision.currency)}
+                    codes={conditional.codes}
+                    errorText={confirmErrorText}
+                    onConfirmed={() => setConfirmed(true)}
+                  />
+                )}
+              </span>
+            </Field>
+          )}
+          {(decision.decision_mode === 'manual' ||
+            decision.checklist_completed ||
+            decision.input_snapshot?.checklist) && (
+            <Field label={t('credit.fields.checklist')}>
+              <CreditDecisionChecklistView
+                completed={decision.checklist_completed}
+                items={checklistItemsOf(decision)}
+              />
+            </Field>
+          )}
           {decision.outcome === 'declined' && decision.cooldown_until && (
             <Field label={t('credit.fields.retryAfter')}>
               {formatDate(decision.cooldown_until)}
@@ -872,7 +1003,12 @@ function ApplicationDecision({
               <select
                 className="border-input-border bg-card text-foreground h-10 rounded-md border px-3 text-sm"
                 value={outcome}
-                onChange={(event) => setOutcome(event.target.value as CreditDecisionOutcome)}
+                onChange={(event) => {
+                  setOutcome(event.target.value as CreditDecisionOutcome)
+                  // Условие — только под «Схвалити»: при смене исхода отметки уходят
+                  // с экрана, и в состоянии их тоже нет — возврат не вернёт их молча.
+                  setConditionalCodes([])
+                }}
               >
                 <option value="approved">{t('credit.actions.approve')}</option>
                 <option value="declined">{t('credit.actions.decline')}</option>
@@ -975,6 +1111,60 @@ function ApplicationDecision({
             </div>
           )}
 
+          {outcome === 'approved' &&
+            (conditionalOffered.length > 0 ? (
+              <fieldset className="border-border mb-3 rounded-md border p-3">
+                <legend className="text-muted-foreground px-1 text-xs font-semibold">
+                  {t('credit.card.conditionalTitle')}
+                </legend>
+                {conditionalOffered.map((entry) => {
+                  const text = decisionCodeText(entry, language)
+                  const note = decisionCodeNote(entry, language)
+                  return (
+                    <label
+                      key={entry.id}
+                      className="flex cursor-pointer items-start gap-2 py-1 text-sm"
+                    >
+                      <input
+                        type="checkbox"
+                        className="mt-1 shrink-0"
+                        checked={conditionalCodes.includes(entry.id)}
+                        onChange={() => toggleConditional(entry.id)}
+                      />
+                      <span className="min-w-0">
+                        <span className="font-mono text-xs">{entry.id}</span>{' '}
+                        <span>{text.primary}</span>
+                        <span className="text-muted-foreground block text-xs">
+                          {text.secondary}
+                        </span>
+                        {note && (
+                          <span className="text-muted-foreground block text-xs">{note}</span>
+                        )}
+                      </span>
+                    </label>
+                  )
+                })}
+              </fieldset>
+            ) : (
+              !directory &&
+              decisionCodes.isError && (
+                // Строка, а не плашка: одобрение без условия работает, а плашки
+                // `alert` панели считают отказы решения.
+                <p className="text-muted-foreground mb-3 text-xs">
+                  {t('credit.card.conditionalUnavailable')}
+                </p>
+              )
+            ))}
+
+          <CreditDecisionChecklistForm
+            answers={answers}
+            notes={notes}
+            // Снятый ответ — `undefined`: пункт не уходит, примечание остаётся в
+            // состоянии и уйдёт снова, если пункт ответят (`checklistPayload`).
+            onAnswer={(key, value) => setAnswers((prev) => ({ ...prev, [key]: value }))}
+            onNote={(key, note) => setNotes((prev) => ({ ...prev, [key]: note }))}
+          />
+
           <label className="text-muted-foreground mb-1.5 block text-xs">
             {t('credit.fields.rationale')}
           </label>
@@ -988,14 +1178,21 @@ function ApplicationDecision({
           <div className="mt-3 flex items-center gap-3">
             <Button
               variant="primary"
-              disabled={!rationale.trim() || mutation.isPending || declineBlocked}
+              disabled={
+                !rationale.trim() || mutation.isPending || declineBlocked || conditionalLost
+              }
               isLoading={mutation.isPending}
               onClick={submit}
             >
-              {t('credit.actions.saveDecision')}
+              {proposing
+                ? t('credit.actions.proposeConditional')
+                : t('credit.actions.saveDecision')}
             </Button>
             <span className="text-muted-foreground text-xs">{t('credit.card.state01')}</span>
           </div>
+          {proposing && (
+            <p className="text-muted-foreground mt-2 text-xs">{t('credit.card.conditionalHint')}</p>
+          )}
         </Panel>
       )}
 

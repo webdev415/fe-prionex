@@ -33,7 +33,10 @@
  * All tab state the user set lives in the URL (`?opf=`, `?opt=`, `?opd=`) so it
  * survives refresh, bookmarking and switching between the page tabs (panels
  * unmount on switch). Filter updates use `replace` — only page-tab changes
- * create history entries.
+ * create history entries. A fourth key, `?opu=`, is READ but never set here:
+ * it is the operator the recorded payments tab (card 76) linked to by
+ * `user_id`, and this tab answers it by highlighting and scrolling to that
+ * row (never by filtering — the roster stays whole).
  *
  * The URL keys are deliberately NEW — the host page keeps every tab's params in
  * the URL, so this tab must not collide with any sibling's. Every tab's set is
@@ -42,7 +45,7 @@
  * one tab's filter into another.
  */
 
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
@@ -70,6 +73,8 @@ import {
   type OperatorPromisesTabId,
 } from '../utils/departmentTabs'
 import { sumOperatorPromisesRows } from '../utils/totals'
+import { linkedOperatorNotice } from '../utils/linkedOperatorNotice'
+import { operatorPromisesRowAnchorId } from '../utils/rowAnchor'
 import { OPERATOR_PROMISES_COLUMN_COUNT, OperatorPromisesTable } from './OperatorPromisesTable'
 import { OperatorPromisesTotals } from './OperatorPromisesTotals'
 
@@ -82,7 +87,21 @@ const {
   dateFrom: DATE_FROM_KEY,
   dateTo: DATE_TO_KEY,
   department: DEPARTMENT_KEY,
+  user: USER_KEY,
 } = REPORTS_URL_KEYS.operatorPromises
+
+/**
+ * The linked operator (`?opu=`), or null. A positive int32 only — the same
+ * shape the row's `user_id` has; anything else reads as "no link" rather than
+ * as a complaint, because nothing on this tab writes the key: it arrives
+ * from the recorded payments tab's operator link, and a malformed one is a
+ * hand-edited URL with nothing to act on.
+ */
+function readLinkedUserId(raw: string | null): number | null {
+  if (!raw || !/^\d+$/.test(raw)) return null
+  const id = Number(raw)
+  return id >= 1 && id <= 2_147_483_647 ? id : null
+}
 
 const TABS_ID_PREFIX = 'operator-promises'
 
@@ -229,6 +248,31 @@ export function OperatorPromisesTab() {
     t(`pages.reports.operatorPromises.subtabs.${DEFAULT_OPERATOR_PROMISES_TAB}`)
 
   const visibleRows = useMemo(() => filterRowsByTab(rows, activeTab), [rows, activeTab])
+
+  // The operator a sibling tab linked to (the recorded payments tab, by
+  // `user_id`, with the same window). Their row is highlighted and scrolled
+  // into view once the rows are on screen — the roster is whole and unpaged,
+  // so there is nothing to request; the link only has to be FOUND. The
+  // notice tells three cases apart (utils/linkedOperatorNotice.ts): the row
+  // is on screen; the row EXISTS but the department sub-tab hides it (the
+  // link never writes `opd`, but a click on a sub-tab keeps `opu`); the
+  // period has no row for them at all. Only the last one may say "no rows".
+  const linkedUserId = readLinkedUserId(searchParams.get(USER_KEY))
+  const linkedRow = useMemo(
+    () =>
+      linkedUserId === null ? null : (rows.find((row) => row.user_id === linkedUserId) ?? null),
+    [rows, linkedUserId]
+  )
+  const isLinkedRowVisible =
+    linkedRow !== null && visibleRows.some((row) => row.user_id === linkedUserId)
+  const linkedNotice =
+    linkedUserId === null ? null : linkedOperatorNotice(linkedUserId, linkedRow, isLinkedRowVisible)
+  useEffect(() => {
+    if (linkedUserId === null || !isLinkedRowVisible) return
+    document
+      .getElementById(operatorPromisesRowAnchorId(linkedUserId))
+      ?.scrollIntoView({ block: 'center' })
+  }, [linkedUserId, isLinkedRowVisible])
   const visibleTotals = useMemo(() => sumOperatorPromisesRows(visibleRows), [visibleRows])
 
   // "The period produced rows, but none of them belong to this tab" — a
@@ -375,6 +419,27 @@ export function OperatorPromisesTab() {
             className="relative flex w-full flex-col gap-4"
             aria-busy={isRefreshing || undefined}
           >
+            {linkedNotice && (
+              <p
+                role="status"
+                data-testid="operator-promises-linked-operator"
+                data-notice={linkedNotice.key}
+                className="text-foreground bg-information-50 flex flex-wrap items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium"
+              >
+                <span>
+                  {t(`pages.reports.operatorPromises.${linkedNotice.key}`, linkedNotice.params)}
+                </span>
+                {/* Dropping the key is the only thing this tab ever writes to
+                    it; the window it arrived with stays. */}
+                <button
+                  type="button"
+                  onClick={() => setUrlParam(USER_KEY, null)}
+                  className="text-information-700 hover:underline"
+                >
+                  {t('pages.reports.operatorPromises.clearHighlight')}
+                </button>
+              </p>
+            )}
             <OperatorPromisesTotals
               visible={visibleTotals}
               overall={query.data.totals}
@@ -396,6 +461,7 @@ export function OperatorPromisesTab() {
                 right there in the strip too (utils/departmentTabs.ts). */}
             <OperatorPromisesTable
               rows={visibleRows}
+              highlightedUserId={linkedUserId}
               emptyMessage={t(
                 hasUnmatchedRows
                   ? 'pages.reports.operatorPromises.emptyDepartment'

@@ -98,6 +98,11 @@ vi.mock('@/features/drainsFeed', () => ({
   DrainsFeedTab: () => <div data-testid="drains-feed-tab" />,
 }))
 
+// …and for the recorded payments feed (features/recordedPayments).
+vi.mock('@/features/recordedPayments', () => ({
+  RecordedPaymentsTab: () => <div data-testid="recorded-payments-tab" />,
+}))
+
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: (selector: (s: unknown) => unknown) =>
     selector({
@@ -181,6 +186,8 @@ const promisesDailyTab = () =>
 const promisesFeedTab = () => screen.getByRole('tab', { name: 'pages.reports.tabs.promises-feed' })
 const callbacksFeedTab = () => screen.getByRole('tab', { name: 'pages.reports.tabs.callbacks' })
 const drainsFeedTab = () => screen.getByRole('tab', { name: 'pages.reports.tabs.drains' })
+const recordedPaymentsTab = () =>
+  screen.getByRole('tab', { name: 'pages.reports.tabs.recorded-payments' })
 
 describe('ReportsDashboardPage (tab host)', () => {
   it('renders the processing report panel for ?tab=processing', () => {
@@ -681,7 +688,37 @@ describe('ReportsDashboardPage (tab host)', () => {
     expect(search()).toContain('drt=2026-09-13')
   })
 
-  it('offers all fourteen report tabs in a fixed order', () => {
+  it('renders the recorded payments panel for ?tab=recorded-payments', () => {
+    renderPage(['/reports?tab=recorded-payments'])
+
+    expect(screen.getByTestId('recorded-payments-tab')).toBeInTheDocument()
+    expect(screen.queryByTestId('drains-feed-tab')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('agent-performance-table')).not.toBeInTheDocument()
+    expect(recordedPaymentsTab()).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'reports-panel-recorded-payments')
+  })
+
+  it('keeps the recorded payments filters when switching tabs', async () => {
+    renderPage([
+      '/reports?tab=recorded-payments&rpf=2026-09-01&rpt=2026-09-29&rpu=101,102&rpv=1&rppg=2',
+    ])
+    expect(screen.getByTestId('recorded-payments-tab')).toBeInTheDocument()
+
+    await userEvent.click(dashboardTab())
+    expect(screen.getByTestId('agent-performance-table')).toBeInTheDocument()
+
+    // Same documented contract as the other report tabs: the filters survive
+    // a round-trip through the dashboard.
+    await userEvent.click(recordedPaymentsTab())
+    expect(screen.getByTestId('recorded-payments-tab')).toBeInTheDocument()
+    expect(screen.getByTestId('location-search').textContent).toContain('rpf=2026-09-01')
+    expect(screen.getByTestId('location-search').textContent).toContain('rpt=2026-09-29')
+    expect(screen.getByTestId('location-search').textContent).toMatch(/rpu=101(,|%2C)102/)
+    expect(screen.getByTestId('location-search').textContent).toContain('rpv=1')
+    expect(screen.getByTestId('location-search').textContent).toContain('rppg=2')
+  })
+
+  it('offers all fifteen report tabs in a fixed order', () => {
     // The strip is the only place the tab set is visible at a glance; a new
     // report must be ADDED here rather than replace a sibling.
     renderPage()
@@ -707,9 +744,13 @@ describe('ReportsDashboardPage (tab host)', () => {
       // …and the call plan next to the promises feed it shares a frame
       // with: same operators, but «whom do I RING, and at what time».
       'pages.reports.tabs.callbacks',
-      // …and the drains feed last, closing the factoring family: the only one
-      // of the three whose row is a CLIENT rather than an interaction.
+      // …and the drains feed, closing the promise side of the factoring
+      // family: the only one of the three whose row is a CLIENT rather than
+      // an interaction.
       'pages.reports.tabs.drains',
+      // …and the recorded payments feed last — the money that ARRIVED, the
+      // family's answer after its three questions.
+      'pages.reports.tabs.recorded-payments',
     ])
   })
 

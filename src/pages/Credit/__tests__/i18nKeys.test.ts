@@ -172,3 +172,37 @@ describe('разбор скоринга: подписи несут свои пл
     }
   )
 })
+
+describe('19-5f: шаблоны чек-листа и условия несут свои плейсхолдеры', () => {
+  // Та же слепота: мок `t` теста страницы печатает имена переменных из кода, а не
+  // шаблон словаря, `spanishLocaleParity` сверяет только en и es. Потерянный в uk
+  // плейсхолдер дал бы андеррайтеру «з {{applicable}}», а руководителю — диалог
+  // подтверждения без суммы или без кодов.
+  const dictionaries = [
+    ['uk', uk],
+    ['en', en],
+    ['es', es],
+  ] as const
+
+  const TEMPLATES: Array<[string, string[]]> = [
+    ['checklist.progress', ['{{answered}}', '{{total}}']],
+    ['checklist.share', ['{{yes}}', '{{applicable}}']],
+    ['card.proposedAmount', ['{{amount}}']],
+    ['card.confirmMessage', ['{{amount}}', '{{codes}}']],
+  ]
+
+  it.each(dictionaries)(
+    '%s: 19-5f — плейсхолдеры чек-листа и условия на месте',
+    (lang, dictionary) => {
+      for (const [key, placeholders] of TEMPLATES) {
+        const value = lookup(dictionary, `credit.${key}`)
+        expect(typeof value, `${lang} credit.${key} is not a string`).toBe('string')
+        for (const placeholder of placeholders) {
+          expect(String(value), `${lang} ${key} lost the ${placeholder} placeholder`).toContain(
+            placeholder
+          )
+        }
+      }
+    }
+  )
+})
