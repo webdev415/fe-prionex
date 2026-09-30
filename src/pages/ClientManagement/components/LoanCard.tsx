@@ -104,12 +104,20 @@ export type LoanCardLoan = {
   /** KAN-784 AC2 — fully repaid but short of principal; auto-close blocked. */
   needsManualClosureReview: boolean
   /**
-   * Contract type the debt was bought under — the debt's own `sale_type`.
-   * Optional for the same reason as the three fields below, and read only
-   * through `toSaleType`: absent (server not rolled out yet), `null` or an
-   * unknown string all print "—". A credit-module loan never shows it.
+   * Contract type the debt was bought under — the debt's own copy of
+   * `sale_type` (the page falls back to its agreement's for a row written
+   * before the copy). Zone 4 prints it. Optional for the same reason as the
+   * three fields below, and read only through `toSaleType`: absent (server not
+   * rolled out yet), `null` or an unknown string all print "—". A
+   * credit-module loan never shows it.
    */
   saleType?: string | null
+  /**
+   * The purchase agreement's own `sale_type`: it names the agreement on the
+   * purchase-date label, since that date is the agreement's. Optional and read
+   * like `saleType`; anything outside the known set leaves the label generic.
+   */
+  agreementSaleType?: string | null
   /**
    * WS-11 (14-7b) — откуда взялась строка. Три поля ниже ОПЦИОНАЛЬНЫ намеренно:
    * у купленного долга их нет и не будет, и их обязательность заставила бы
@@ -351,15 +359,17 @@ export function LoanCard({
   // через `i18n.exists`: под тестовым моком словаря тот вернул бы сам ключ.
   const lifecycleKey =
     loan.lifecycleDetail != null ? LIFECYCLE_DETAIL_KEY.get(loan.lifecycleDetail) : undefined
-  // Zone 4 and the purchase-date label follow the contract type. The label may
-  // name the factoring agreement only on a factoring debt (a cession debt must
-  // not read as one). It names an agreement only when there is an agreement
-  // date to show: a debt without one (its type derived from its own date)
-  // would read "by the assignment agreement: —", and without a known type it
-  // names no agreement at all.
-  const saleType = toSaleType(loan.saleType)
-  const saleTypeKey = saleTypeLabelKey(saleType)
-  const agreementSaleType = loan.factoringAgreementPurchaseDate ? saleType : null
+  // Zone 4 prints the debt's copy of the type. The purchase-date label names the
+  // agreement whose date it shows, so it reads the agreement's own type, not
+  // the debt's copy. The two differ only when
+  // an agreement's type is corrected apart from its debts' copies (board task
+  // #1619). The label names an agreement only when there is an agreement date
+  // to show — "by the assignment agreement: —" would name a document that is
+  // not there — and without a known type it names no agreement at all.
+  const saleTypeKey = saleTypeLabelKey(loan.saleType)
+  const agreementSaleType = loan.factoringAgreementPurchaseDate
+    ? toSaleType(loan.agreementSaleType)
+    : null
   const purchaseDateLabel =
     agreementSaleType === 'factoring'
       ? t('pages.clients.detail.tableHeaders.purchaseDateFa', 'Purchase date (FA)')
