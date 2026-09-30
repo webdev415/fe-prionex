@@ -1,7 +1,7 @@
 /**
  * ReportsDashboardPage Component
  *
- * Main page for viewing reports. Hosts fourteen tabs (active tab in the URL via
+ * Main page for viewing reports. Hosts fifteen tabs (active tab in the URL via
  * `?tab=…`): the reports dashboard with KPIs and agent performance metrics
  * (default), the "Відпрацювання за ЦД" client processing report, the
  * "Верифікація 3-х осіб" third-party verification report, the
@@ -13,8 +13,8 @@
  * "Обіцянки по операторах" operator promises report, the
  * "Вихідні дзвінки" outbound calls report, the
  * "Обіцянки до кінця місяця" daily promises report, the
- * "Обіцянки" promises feed, the "Перезвони" callbacks feed and the
- * "Зливи" drains feed.
+ * "Обіцянки" promises feed, the "Перезвони" callbacks feed, the
+ * "Зливи" drains feed and the "Внесені платежі" recorded payments feed.
  */
 
 import { useState, useMemo, useEffect } from 'react'
@@ -67,6 +67,7 @@ import { PromisesDailyTab } from '@/features/promisesDaily'
 import { PromisesFeedTab } from '@/features/promisesFeed'
 import { CallbacksFeedTab } from '@/features/callbacksFeed'
 import { DrainsFeedTab } from '@/features/drainsFeed'
+import { RecordedPaymentsTab } from '@/features/recordedPayments'
 import { SegmentedTabs, segmentedTabId, segmentedTabPanelId } from '@/components/ui/SegmentedTabs'
 
 // ============================================================================
@@ -507,6 +508,12 @@ const REPORT_TABS = [
   // it is the only one of the three whose row is a CLIENT rather than an
   // interaction, and the only one whose window can be switched off entirely.
   'drains',
+  // The money that actually ARRIVED, after the three promise-side feeds:
+  // the list of bank-confirmed payments (Card 76), the first tab served by
+  // the payment service. Last because it is the family's answer rather than
+  // its question — the operators who work promises, callbacks and drains
+  // read what was collected right after.
+  'recorded-payments',
 ] as const
 type ReportsTab = (typeof REPORT_TABS)[number]
 
@@ -636,6 +643,8 @@ export function ReportsDashboardPage() {
           <CallbacksFeedTab />
         ) : activeTab === 'drains' ? (
           <DrainsFeedTab />
+        ) : activeTab === 'recorded-payments' ? (
+          <RecordedPaymentsTab />
         ) : (
           <DashboardTab />
         )}

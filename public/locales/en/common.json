@@ -9203,7 +9203,8 @@
         "promises-daily": "Promises till end of month",
         "promises-feed": "Promises",
         "callbacks": "Callbacks",
-        "drains": "Drains"
+        "drains": "Drains",
+        "recorded-payments": "Recorded payments"
       },
       "processing": {
         "dateFrom": "Date from",
@@ -9453,6 +9454,10 @@
           "conversionVerified": "Conversion (verified)"
         },
         "inactiveBadge": "dismissed",
+        "highlightedOperator": "Operator {{name}} is highlighted",
+        "highlightedOperatorMissing": "Operator #{{id}} has no rows in this period",
+        "highlightedOperatorHidden": "Operator {{name}} is in the report but not on this sub-tab — their row is shown on the «All» tab",
+        "clearHighlight": "Clear the highlight",
         "totals": {
           "title": "Totals",
           "generatedAt": "Data as of {{value}}",
@@ -9625,6 +9630,64 @@
         "today": "Today",
         "thisWeek": "This Week",
         "thisMonth": "This Month"
+      },
+      "recordedPayments": {
+        "dateFrom": "Confirmation date from",
+        "dateTo": "Confirmation date to",
+        "invalidDate": "The date is not a real calendar date — pick a date to replace it",
+        "invalidRange": "Start date is later than end date",
+        "rangeTooLong": "Date range must not exceed 366 days",
+        "verifiedOnly": "Verified only",
+        "operators": "Client's responsible employee",
+        "allOperators": "All operators",
+        "operatorsTooMany": "At most {{max}} operators can be selected — deselect some or clear the filter",
+        "operatorsInvalid": "The operator list in the link is malformed — clear the filter",
+        "serviceBadge": "service",
+        "deletedClientBadge": "deleted",
+        "openClient": "Client {{id}}",
+        "operatorPromisesLink": "Promises of operator {{name}}",
+        "summary": "Payments: {{count}} · Amount: {{amount}}",
+        "breakdown": {
+          "title": "Breakdown by the client's responsible employee",
+          "operator": "Operator",
+          "count": "Payments",
+          "amount": "Amount",
+          "unresolved": "No responsible employee",
+          "capped": "The operator breakdown was not computed: the selected period holds too many clients. Narrow the period to see the breakdown and filter by operator.",
+          "truncated": "Only the {{count}} largest operators by amount are shown — the remaining breakdown lines are omitted. Narrow the period.",
+          "filter": "Show payments of operator {{name}}",
+          "clearFilter": "Show all operators",
+          "empty": "No payments in the selected period"
+        },
+        "status": {
+          "verified": "Verified",
+          "cancelled": "Cancelled",
+          "pending": "Pending"
+        },
+        "columns": {
+          "contractNumber": "Contract number",
+          "inn": "Tax ID",
+          "amount": "Amount",
+          "paymentDate": "Payment date",
+          "confirmationDate": "Confirmation date (bank)",
+          "verifiedAt": "Verified in CRM",
+          "status": "Status",
+          "client": "Client",
+          "recordedBy": "Recorded by",
+          "clientResponsible": "Client's responsible employee",
+          "paymentResponsible": "Responsible for the payment",
+          "purchaseDate": "Purchase date",
+          "seller": "Counterparty",
+          "paymentMethod": "Payment method",
+          "paymentType": "Payment type"
+        },
+        "empty": "No recorded payments match these filters",
+        "forbidden": "You don't have permission to view this report",
+        "unavailable": "Payment, client or employee data is temporarily unavailable. Please try again later.",
+        "error": {
+          "title": "Failed to load the data",
+          "retry": "Retry"
+        }
       },
       "kpi": {
         "callsMade": "Calls Made",

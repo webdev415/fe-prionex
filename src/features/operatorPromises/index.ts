@@ -13,6 +13,7 @@ export {
   OperatorPromisesTable,
   OPERATOR_PROMISES_COLUMN_COUNT,
 } from './components/OperatorPromisesTable'
+export { operatorPromisesRowAnchorId } from './utils/rowAnchor'
 export { OperatorPromisesTotals } from './components/OperatorPromisesTotals'
 export {
   useOperatorPromisesReport,
