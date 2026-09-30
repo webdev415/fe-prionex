@@ -26,6 +26,7 @@ import type { PlannerSlaState, PlannerTask, PlannerTaskCard } from '@/api/planne
 import { formatDueDate, formatPlannerDuration, usableTimeZone } from '../plannerFormat'
 import { toneClass, type PlannerTone } from '../plannerTones'
 import { PlannerTooltip } from './PlannerTooltip'
+import { useCardTabIndex } from './cardFocus'
 
 interface PillProps {
   tone: PlannerTone
@@ -43,6 +44,8 @@ const PILL_CLASS =
   'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium tabular-nums'
 
 function Pill({ tone, icon: Icon, word, srOnly, value, hint, className }: PillProps) {
+  // Inside a kanban card: reached with ← →, not with Tab (story 5.3).
+  const cardTabIndex = useCardTabIndex()
   const face = (
     <>
       <Icon aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
@@ -56,9 +59,9 @@ function Pill({ tone, icon: Icon, word, srOnly, value, hint, className }: PillPr
     <PlannerTooltip label={hint} contentClassName="max-w-xs">
       <span
         // The explanation must open on keyboard focus as on hover (WCAG
-        // 1.4.13), so the pill takes a tab stop; it has no action.
-        // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
-        tabIndex={0}
+        // 1.4.13), so the pill takes a tab stop; it has no action. Inside a
+        // kanban card it is reached with ← → instead of Tab (5.3).
+        tabIndex={cardTabIndex ?? 0}
         className={cn(
           PILL_CLASS,
           'focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none',

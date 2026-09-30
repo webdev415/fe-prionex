@@ -1,9 +1,9 @@
 /**
- * Task card (board) and task row (lists) — planner stories 1.10 (AC1, AC4) and
- * 5.1 (the shared pieces). The card shows number, title, status, due and SLA
- * pills, origin, priority and assignee avatars; a click opens the task panel.
- * The title is masked for session recording (`piiProps`): analysts put debtor
- * data into titles (UX «Карточка задачи»).
+ * Task row (lists) — planner stories 1.10 (AC4) and 5.1 (the shared pieces):
+ * status chip, number, title, due and SLA pills, priority, origin and assignee
+ * avatars; a click opens the task panel. The title is masked for session
+ * recording (`piiProps`): analysts put debtor data into titles (UX «Карточка
+ * задачи»). The kanban card is `board/KanbanCard` (5.3).
  */
 import { useTranslation } from 'react-i18next'
 import { piiProps } from '@/lib/openreplay/pii'
@@ -17,38 +17,6 @@ import { PriorityIcon } from './PriorityIcon'
 interface TaskItemProps {
   task: PlannerTaskCard
   onOpen: (key: string) => void
-}
-
-interface TaskCardViewProps extends TaskItemProps {
-  /** The board's `tzid`, already at hand on the board screen. */
-  timeZone?: string
-}
-
-export function TaskCardView({ task, onOpen, timeZone }: TaskCardViewProps) {
-  return (
-    <article className="border-border bg-card space-y-2 rounded-lg border p-3 shadow-sm">
-      <button type="button" className="block w-full text-left" onClick={() => onOpen(task.key)}>
-        <span className="text-muted-foreground block font-mono text-xs tabular-nums">
-          {task.key}
-        </span>
-        <span className="text-foreground block text-sm font-medium break-words" {...piiProps}>
-          {task.title}
-        </span>
-      </button>
-      <div className="flex flex-wrap items-center gap-2">
-        <StatusChip task={task} />
-        <DuePill task={task} timeZone={timeZone} />
-        <SlaPill task={task} />
-      </div>
-      <div className="flex items-center gap-2">
-        <OriginChip origin={task.origin} />
-        <PriorityIcon task={task} />
-        <span className="ml-auto">
-          <AvatarStack people={task.assignees} />
-        </span>
-      </div>
-    </article>
-  )
 }
 
 export function TaskRow({ task, onOpen }: TaskItemProps) {

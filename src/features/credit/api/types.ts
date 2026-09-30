@@ -7,7 +7,7 @@
  */
 
 /** Состояния заявки (ApplicationStatus контракта). */
-import type { CREDIT_BUCKETS, CREDIT_ENTRY_TYPES } from './enums'
+import type { CREDIT_BUCKETS, CREDIT_CHECKLIST_KEYS, CREDIT_ENTRY_TYPES } from './enums'
 
 /** Тип проводки журнала — значения из перечисления контракта, не произвольная
  *  строка. Ветка «не дублировать слово сторно» сравнивает это поле с
@@ -45,6 +45,40 @@ export const CREDIT_APPLICATION_STATUSES: CreditApplicationStatus[] = [
 
 export type CreditDecisionOutcome = 'approved' | 'declined' | 'referred'
 export type CreditDecisionMode = 'automatic' | 'manual' | 'override'
+
+/**
+ * Чек-лист и условное одобрение ручного решения — контракт модуля 0.1.30/0.1.31
+ * (19-5), сверено с `main` модуля 0852c782 — `openapi.yaml` `DecisionChecklistItem`,
+ * `Decision`. Пункт — из листа книги (`CREDIT_CHECKLIST_KEYS`).
+ */
+export type CreditChecklistKey = (typeof CREDIT_CHECKLIST_KEYS)[number]
+export type CreditChecklistAnswer = 'yes' | 'no' | 'n_a'
+/** Пункт в снимке решения: `note` модуль кладёт всегда, `null` — примечания нет. */
+export interface CreditChecklistItem {
+  key: CreditChecklistKey
+  answer: CreditChecklistAnswer
+  note: string | null
+}
+/** Заполненность чек-листа: `applicable` — пункты листа минус `n_a`. Долю считает модуль. */
+export interface CreditChecklistCompleted {
+  yes: number
+  applicable: number
+}
+/** `proposed` — предложение андеррайтера (решение `referred`), `confirmed` — подтверждено руководителем. */
+export type CreditConditionalStage = 'proposed' | 'confirmed'
+
+/** `input_snapshot.conditional` — `Decision.input_snapshot.conditional` контракта 0.1.30/0.1.31. */
+export interface CreditConditionalSnapshot {
+  stage: CreditConditionalStage
+  /** Коды условия `AB-C-*`. */
+  codes: string[]
+  /** Сумма, которую одобряет подтверждение. */
+  amount_minor: number
+  proposal_decision_id?: string
+  proposed_by?: number | null
+  confirmed_by?: number | null
+  confirmed_at?: string
+}
 
 /** Строка списка заявок (ApplicationSummary). */
 export interface CreditApplicationSummary {
@@ -99,7 +133,20 @@ export interface CreditDecision {
   application_id: string
   outcome: CreditDecisionOutcome
   decision_mode: CreditDecisionMode
+  /** Коды, как их записало решение: у ручного — как прислал оператор (`RC-04` остаётся `RC-04`). */
   decline_codes: string[]
+  /**
+   * Смысл отказа кодами реестра решения (`AB-*`, v0.1.27): `RC-04` → `AB-O-05`,
+   * `RC-08` → `AB-X-08`, `RC-11` — по установленной причине, плюс присланные
+   * оператором коды реестра. Пусто у одобренных и у отказов, причина которых не
+   * сохранена или не установлена.
+   *
+   * В контракте поле required; здесь НЕОБЯЗАТЕЛЬНОЕ намеренно: у модуля старше
+   * 0.1.27 ключа нет, и карточка обязана показать такое решение прежним
+   * словарём `credit.declineCode`, а не пустой строкой (прецедент — ключ
+   * `supersedes_decision_id` у модуля старше B-3).
+   */
+  decision_codes?: string[]
   final_amount_minor: number | null
   currency: string
   cooldown_until: string | null
@@ -124,6 +171,15 @@ export interface CreditDecision {
    */
   supersedes_decision_id: string | null
   decided_at: string
+  /**
+   * Заполненность чек-листа (контракт модуля 0.1.30/0.1.31, 19-5, `Decision`);
+   * `null` — решение без чек-листа. В контракте поле required; здесь
+   * НЕОБЯЗАТЕЛЬНОЕ: у модуля старше 19-5 (PROD) ключа нет, и карточка обязана
+   * это пережить.
+   */
+  checklist_completed?: CreditChecklistCompleted | null
+  /** Ступень условного одобрения (0.1.30/0.1.31, 19-5); `null` — без условия. Необязательно — довод выше. */
+  conditional_stage?: CreditConditionalStage | null
 }
 
 export interface CreditConsent {
@@ -471,6 +527,80 @@ export interface CreditDecisionSnapshot {
   }
   rules?: { decline_codes?: Record<string, string> } & Record<string, unknown>
   ibv?: Record<string, unknown>
+  /** Разбор скоринга книги (19-3; часть B — 19-4). Нет у решений без флага скоринга и у ручных. */
+  scorecard?: CreditScorecardSnapshot | null
+  /** Класс дохода 19-2 — верхний уровень снимка, пишется и без флага скоринга. */
+  income_class?: string | null
+  income_class_source?: string | null
+  income_class_basis?: CreditIncomeClassBasis | null
+  /** Чек-лист ручного решения (0.1.30/0.1.31, 19-5): версия листа и присланные пункты в порядке листа. */
+  checklist?: { version: string; items: CreditChecklistItem[] }
+  /** Условное одобрение (0.1.30/0.1.31, 19-5): есть у предложения и у подтверждения. */
+  conditional?: CreditConditionalSnapshot
+}
+
+/**
+ * `input_snapshot.scorecard` — баллы, банд и гейт книги правил проверки клиента.
+ *
+ * ⚠️ В контракте модуля 0.1.28 ключ НЕ объявлен (`Decision.input_snapshot` —
+ * свободный объект), поэтому в `contractAssumptions.ts` утверждений о нём нет:
+ * утверждать нечего. Тип написан руками по коду модуля: 19-3 —
+ * `_scorecard_snapshot` и `ScorecardResult.as_dict` на `main` `7934c035`
+ * (`inputs` — все 15 полей `ScorecardInputs` плюс `missing`); часть B — по story
+ * 19-4 AC-14, её кода на 29.09 нет. Все поля необязательны и допускают `null`:
+ * форма обязана терпеть снимок старшей или младшей версии по построению.
+ */
+export interface CreditScorecardSnapshot {
+  version?: string | null
+  income_class?: string | null
+  income_class_source?: string | null
+  /** Вход целиком; `missing` — банковские поля, которых провайдер не прислал. */
+  inputs?: (Record<string, unknown> & { missing?: string[] | null }) | null
+  points?: Record<string, number> | null
+  total?: number | null
+  band?: number | null
+  gate?: {
+    decline?: boolean | null
+    /** Применённые коды гейта. */
+    codes?: string[] | null
+    /** Сработавшие, но удержанные для решения человека. */
+    held?: string[] | null
+    /** Причины разбора — ключи `referral_reasons` модуля. */
+    review?: string[] | null
+  } | null
+  client_type?: number | null
+  closed_loans?: number | null
+  tier?: {
+    min_minor?: number | null
+    max_minor?: number | null
+    class_b_cap_applied?: boolean | null
+  } | null
+  scale_amount_minor?: number | null
+  cap_amount_minor?: number | null
+  rounded_amount_minor?: number | null
+  final_amount_minor?: number | null
+  installments?: { min?: number | null; max?: number | null } | null
+  /** Коды решения машины: `gate.codes` и `AB-G-06` блока суммы. */
+  codes?: string[] | null
+}
+
+/**
+ * `input_snapshot.income_class_basis` (19-2) — только то, что читает разбор.
+ * Суммы пособий (`amounts`) и перечень неизмеренных атрибутов (`missing`) модуль
+ * тоже пишет, но в тип они не входят намеренно: суммы пенсии и выплат по
+ * инвалидности говорят о здоровье и социальном статусе клиента, а решение по
+ * ним уже свёрнуто в признаки `evidence`.
+ */
+export interface CreditIncomeClassBasis {
+  declared_class?: string | null
+  employment_status?: string | null
+  employment_status_known?: boolean | null
+  b_not_confirmed?: boolean | null
+  evidence?: {
+    employer_income_30d?: boolean | null
+    b_income?: boolean | null
+    c_income?: boolean | null
+  } | null
 }
 
 /** Полный enum LoanStatus контракта — НЕ сокращать до встреченного в БД. */
@@ -982,6 +1112,16 @@ export interface CreditQueueItem {
   currency?: string
   product_code?: string
   review_reasons?: string[]
+  /**
+   * Чек-лист и условие решения строки (контракт модуля 0.1.30/0.1.31, 19-5,
+   * `UnderwritingQueueItem`). В контракте required; здесь необязательны — модуль
+   * старше 19-5 их не шлёт, и экран обязан пережить их отсутствие.
+   */
+  checklist_completed?: CreditChecklistCompleted | null
+  /** Коды условия `AB-C-*`; `[]` — условия нет. */
+  conditional_codes?: string[]
+  /** Ждёт подтверждения руководителя — только действующее предложение заявки. */
+  awaiting_confirmation?: boolean
 }
 
 /** Конвенция обёртки списков контракта. */
@@ -1031,13 +1171,88 @@ export interface CreditJournalParams {
   as_of?: string
 }
 
+/**
+ * Вид кода реестра решения (`DecisionCodeEntry.kind`, v0.1.27): `refusal` —
+ * отказ книги `AB-O`, `conditional` — условное одобрение `AB-C` (решает
+ * руководитель), `gate` — автогейт калькулятора `AB-G`, `service` — служебный
+ * код модуля `AB-X`.
+ */
+export type CreditDecisionCodeKind = 'refusal' | 'conditional' | 'gate' | 'service'
+
+/** Раздел книги правил, к которому относится код (`DecisionCodeEntry.category`). */
+export type CreditDecisionCodeCategory =
+  | 'loan_terms'
+  | 'identity'
+  | 'bank_account'
+  | 'conduct'
+  | 'financial_hardship'
+  | 'digital_verification'
+  | 'income'
+  | 'bank_statement'
+  | 'employment'
+  | 'service'
+
+/** Признаки кода (`DecisionCodeEntry.traits`); на экране пока не показываются (19-5f). */
+export type CreditDecisionCodeTrait =
+  | 'automatic'
+  | 'on_site'
+  | 'ban_reapply'
+  | 'supervisor'
+  | 'checklist'
+
+/**
+ * Одна запись реестра кодов решения — `DecisionCodeEntry` контракта.
+ *
+ * Поля `reason` здесь нет, и это не забытое поле: модуль вырезает его из ответа
+ * двери, а схема закрыта (`additionalProperties: false`). `ru` — критерий книги
+ * дословно, `en` — рабочий перевод, украинского текста у реестра нет.
+ */
+export interface CreditDecisionCodeEntry {
+  id: string
+  kind: CreditDecisionCodeKind
+  /** Код книги (О-NN / У-NN) у `AB-O` / `AB-C`. */
+  book: string | null
+  /** Ближайший код книги у автогейта `AB-G`. */
+  book_code: string | null
+  category: CreditDecisionCodeCategory
+  ru: string
+  en: string
+  /** Основание / примечание книги — подсказкой строки кода. */
+  note_ru: string | null
+  traits: CreditDecisionCodeTrait[]
+  /** Служебный `RC-*`, который модуль проецирует на эту запись. */
+  legacy_rc: string | null
+}
+
+/**
+ * Ответ `listDecisionCodes`. `version` меняется при любой правке содержимого
+ * реестра — поэтому она и есть тождество справочника для кэша фронта.
+ */
+export interface CreditDecisionCodesRegistry {
+  version: string
+  codes: CreditDecisionCodeEntry[]
+}
+
 /** Автора ручного решения модуль берёт из пропуска CRM; поле не шлётся (17-22). */
 export interface ManualDecisionPayload {
   outcome: CreditDecisionOutcome
   rationale: string
   final_amount_minor?: number
+  /** Только при `declined`: коды отказа реестра (`AB-O`/`AB-G`/`AB-X`) или служебные `RC-*`. */
   decline_codes?: string[]
   cooldown_until?: string
+  /** Чек-лист (0.1.30/0.1.31, 19-5): только отвеченные пункты, в порядке листа, при любом исходе. */
+  checklist?: Array<{ key: CreditChecklistKey; answer: CreditChecklistAnswer; note?: string }>
+  /** Коды условия `AB-C-*` — только с `outcome: 'referred'`: это ПРЕДЛОЖЕНИЕ условного одобрения. */
+  conditional_codes?: string[]
+}
+
+/**
+ * Тело `confirmConditionalApproval` (0.1.30/0.1.31, 19-5). `confirmed_by` не шлётся:
+ * подтверждающий — владелец пропуска CRM, как автор ручного решения (17-22).
+ */
+export interface CreditConditionalConfirmationPayload {
+  proposal_decision_id: string
 }
 
 /**

@@ -13,10 +13,14 @@
  *    придирка к стилю: у ручки нет ни `sort`, ни `limit`/`cursor` — параметры
  *    молча отбрасываются (проверено живьём: `?sort=bogus` → 200 и все строки),
  *    так что кликабельный заголовок отсортировал бы только загруженное и
- *    соврал бы оператору, попросившему «самых старых наверх».
+ *    соврал бы оператору, попросившему «самых старых наверх»;
+ *  - колонки «Чек-лист» и «Умова» (19-5f): бейдж «Чекає підтвердження» — ТОЛЬКО
+ *    по флагу модуля `awaiting_confirmation`, а не по непустым кодам условия:
+ *    коды есть и у подтверждённой строки, и руководитель искал бы там, где
+ *    подтверждать уже нечего.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes, useParams } from 'react-router-dom'
 import { CreditUnderwritingQueuePage } from '../CreditUnderwritingQueuePage'
 import { useCreditOverview, useCreditUnderwritingQueue } from '@/features/credit/hooks/useCredit'
@@ -69,6 +73,19 @@ function mockQueue(items: CreditQueueItem[] = [ROW]) {
     isLoading: false,
     error: null,
   } as unknown as ReturnType<typeof useCreditUnderwritingQueue>)
+}
+
+/**
+ * Ячейка строки под заголовком колонки. Колонку ищем по заголовку, а не по
+ * номеру: вставка колонки сдвинула бы номера, и сцена читала бы соседнюю.
+ */
+function cellUnder(container: HTMLElement, header: string, rowIndex = 0): HTMLElement {
+  const headers = [...container.querySelectorAll('thead th')].map((th) => th.textContent)
+  const column = headers.indexOf(header)
+  expect(column, `no column «${header}» among: ${headers.join(' | ')}`).toBeGreaterThanOrEqual(0)
+  const row = container.querySelectorAll('tbody tr')[rowIndex]
+  expect(row, `no table row #${rowIndex}`).toBeTruthy()
+  return row.querySelectorAll('td')[column] as HTMLElement
 }
 
 /** Заглушка карточки заявки: показывает id, на который её открыли. */
@@ -189,5 +206,84 @@ describe('CreditUnderwritingQueuePage', () => {
     expect(SOURCE).not.toMatch(/sortKey:/)
     expect(SOURCE).not.toMatch(/<Pagination/)
     expect(SOURCE).not.toMatch(/CREDIT_PAGE_SIZE_OPTIONS/)
+  })
+
+  /** Предложение условного одобрения, ждущее руководителя (строки 19-5 модуля). */
+  const PROPOSAL_ROW: CreditQueueItem = {
+    ...ROW,
+    decision_id: 'b7c0a1d2-5f19-4e5f-9a1b-195f00000001',
+    checklist_completed: { yes: 10, applicable: 10 },
+    conditional_codes: ['AB-C-02'],
+    awaiting_confirmation: true,
+  }
+
+  it('19-5f U-1: предложение ждёт подтверждения — бейдж, код условия и доля чек-листа', async () => {
+    mockQueue([PROPOSAL_ROW])
+    const { container } = renderPage()
+    await screen.findByText('a5f957e1…')
+
+    const conditional = cellUnder(container, 'credit.columns.conditional')
+    expect(
+      within(conditional).getByText('credit.queue.awaitingConfirmation'),
+      'the manager cannot find the proposal: no «awaiting confirmation» badge'
+    ).toBeInTheDocument()
+    expect(within(conditional).getByText('AB-C-02')).toBeInTheDocument()
+    expect(cellUnder(container, 'credit.columns.checklist').textContent).toBe('10/10')
+  })
+
+  it('19-5f U-2: подтверждённая строка — коды приглушённо, бейджа нет: ожидание только по флагу модуля', async () => {
+    // Две строки одной заявки: живое предложение (положительный контроль бейджа)
+    // и строка с теми же кодами, которую модуль ожиданием не считает.
+    mockQueue([
+      PROPOSAL_ROW,
+      {
+        ...PROPOSAL_ROW,
+        decision_id: 'b7c0a1d2-5f19-4e5f-9a1b-195f00000002',
+        status: 'done',
+        awaiting_confirmation: false,
+      },
+    ])
+    const { container } = renderPage()
+    await screen.findAllByText('a5f957e1…')
+
+    expect(
+      within(cellUnder(container, 'credit.columns.conditional', 0)).queryByText(
+        'credit.queue.awaitingConfirmation'
+      )
+    ).not.toBeNull()
+    const confirmed = cellUnder(container, 'credit.columns.conditional', 1)
+    expect(
+      within(confirmed).queryByText('credit.queue.awaitingConfirmation'),
+      'a row with conditional codes is badged although the module does not await its confirmation'
+    ).toBeNull()
+    const codes = within(confirmed).getByText('AB-C-02')
+    expect(codes.className, 'the codes of a settled row are not muted').toContain(
+      'text-muted-foreground'
+    )
+  })
+
+  it('19-5f U-3: строки без чек-листа и условия — прочерк в обеих колонках', async () => {
+    // Первая — строка модуля старше 19-5 (ключей нет вовсе), вторая — 19-5 без
+    // чек-листа и условия (`null`, `[]`, `false`).
+    mockQueue([
+      ROW,
+      {
+        ...ROW,
+        decision_id: 'b7c0a1d2-5f19-4e5f-9a1b-195f00000003',
+        checklist_completed: null,
+        conditional_codes: [],
+        awaiting_confirmation: false,
+      },
+    ])
+    const { container } = renderPage()
+    await screen.findAllByText('a5f957e1…')
+
+    for (const rowIndex of [0, 1]) {
+      expect(
+        cellUnder(container, 'credit.columns.checklist', rowIndex).textContent,
+        `row #${rowIndex}: a missing checklist is not a dash`
+      ).toBe('—')
+      expect(cellUnder(container, 'credit.columns.conditional', rowIndex).textContent).toBe('—')
+    }
   })
 })

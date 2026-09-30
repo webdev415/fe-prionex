@@ -41,6 +41,7 @@
     "error": "Could not load the board",
     "emptyColumn": "No tasks",
     "hasMore": "Not all tasks of the board are shown",
+    "closedWindow": "Closed tasks are shown for the last 7 days only",
     "empty": "The board has no tasks yet"
   },
   "task": {
@@ -80,7 +81,14 @@
       "description": "Description",
       "assignees": "Assignees",
       "assigneesPlaceholder": "Start typing a name",
-      "due": "Due date"
+      "due": "Due date",
+      "board": "Board",
+      "to": "To",
+      "type": "Type",
+      "priority": "Priority",
+      "labels": "Labels",
+      "watchers": "Watchers",
+      "attachments": "Attachments"
     },
     "noPeople": "Nobody found",
     "assigneesCount": "{{count}} / {{max}}",
@@ -91,6 +99,58 @@
       "titleRequired": "Enter the task title",
       "titleTooLong": "The title is at most {{max}} characters",
       "descriptionTooLong": "The description is at most {{max}} characters"
+    },
+    "requestTitle": "New request to «{{name}}»",
+    "requestTitleEmpty": "New request",
+    "requestNote": "The department will set the type, priority and assignee",
+    "boardPlaceholder": "Choose a board",
+    "boardLoading": "Loading boards…",
+    "boardSearch": "Find a board or department",
+    "boardSearchRequest": "Find a department",
+    "noBoards": "Nothing found",
+    "boardGroups": {
+      "intakeDepartment": "Request to another department",
+      "intakeTeam": "Request to a team board"
+    },
+    "boardConfigLoading": "Loading the board's fields…",
+    "boardConfigError": "Could not load the board's fields. The task will be created with the default fields",
+    "noType": "No type",
+    "noPriority": "No priority",
+    "fieldEmpty": "—",
+    "more": "More fields",
+    "removeFile": "Remove file {{name}}",
+    "attachmentsFailed": "Files not uploaded: {{count}}. Add them in the task",
+    "uploadProgress": "Uploading file {{index}} of {{count}}: {{percent}}%",
+    "due": {
+      "today": "Today 18:00",
+      "tomorrow": "Tomorrow",
+      "friday": "Fri",
+      "pick": "Pick a date",
+      "clear": "No due date",
+      "date": "Date",
+      "time": "Time (optional)",
+      "summaryDate": "{{weekday}}, {{date}} — no time",
+      "summaryMoment": "{{weekday}}, {{date}}, {{time}}"
+    },
+    "errors": {
+      "boardRequired": "Choose a board",
+      "boardGone": "The board was not found or no longer takes tasks. Choose another one",
+      "becameRequest": "You are no longer a member of this board — the task will be a request. Check the form and create it again",
+      "required": "Fill in this field",
+      "invalid": "Check the value",
+      "number": "Enter a number",
+      "triageOnly": "The department that triages the request sets this",
+      "rawHtml": "The description cannot contain HTML markup",
+      "personalOwnerOnly": "On a personal board the assignee is only its owner",
+      "assignees": "Only active board members can be assignees",
+      "watchers": "Only active employees can be watchers",
+      "fileTooBig": "The file is larger than {{max}} MiB",
+      "fileEmpty": "An empty file cannot be uploaded",
+      "due": {
+        "dateMissing": "Enter the date",
+        "invalidDate": "There is no such date",
+        "nonexistentTime": "This time does not exist on that day — choose another."
+      }
     }
   },
   "toast": {
@@ -155,5 +215,376 @@
   },
   "people": {
     "tooLong": "The search is too long — at most {{max}} characters"
+  },
+  "settings": {
+    "title": "Board settings",
+    "backToBoard": "Back to the board",
+    "noRights": "You have no rights to configure this board",
+    "navLabel": "Settings sections",
+    "errorsInSection": "errors: {{count}}",
+    "conflict": "Another admin has just changed the configuration. «Save» will replace it with your version, «Cancel» will show the fresh one",
+    "refreshFailed": "Could not refresh the board — the last loaded version is shown, your edits are kept",
+    "retry": "Retry",
+    "sections": {
+      "general": "General",
+      "statuses": "Statuses",
+      "types": "Task types and SLA",
+      "fields": "Fields",
+      "labels": "Labels",
+      "priorities": "Priorities",
+      "defaults": "Assignee, checklist, description",
+      "members": "Participants",
+      "access": "Access",
+      "history": "History"
+    },
+    "preview": {
+      "label": "Column preview",
+      "default": "default",
+      "slaPaused": "SLA: paused",
+      "slaOff": "SLA off"
+    },
+    "saveBar": {
+      "dirty": "There are unsaved changes",
+      "cancel": "Cancel",
+      "save": "Save",
+      "announce": "There are unsaved changes — «Save» is at the bottom of the page"
+    },
+    "leave": {
+      "title": "Leave without saving?",
+      "message": "Unsaved changes to the board settings will be lost",
+      "confirm": "Leave",
+      "cancel": "Stay"
+    },
+    "toast": {
+      "saved": "Settings saved",
+      "fixErrors": "Fix the marked fields",
+      "stale": "The board has just changed. Showing the fresh version",
+      "staleDraft": "Another admin changed the configuration — your edits are kept in the draft",
+      "archived": "The board is archived — read only",
+      "configChanged": "The configuration has just changed. Save again",
+      "memberAdded": "Participant added",
+      "memberRemoved": "Participant removed",
+      "roleChanged": "Role changed",
+      "departmentManager": "The department head from the CRM cannot be changed or removed",
+      "orgStale": "The org structure is stale — the change was not saved. Try again once the CRM sends a fresh one",
+      "lastAdmin": "The last admin of the board cannot be removed",
+      "personInvalid": "This employee is not active in the CRM org structure"
+    },
+    "common": {
+      "default": "Default",
+      "dragHandle": "Drag to reorder",
+      "moveUp": "Move «{{name}}» up",
+      "moveDown": "Move «{{name}}» down",
+      "movedTo": "«{{name}}» — position {{position}} of {{total}}",
+      "removeItem": "Delete «{{name}}»",
+      "otherPerson": "Selected employee"
+    },
+    "general": {
+      "name": "Name",
+      "code": "Code",
+      "kind": "Kind",
+      "kinds": {
+        "department": "Department board",
+        "team": "Team board",
+        "personal": "Personal board"
+      },
+      "template": "Template",
+      "noTemplate": "No template",
+      "tzid": "Time zone",
+      "readOnly": "Name, code and kind are set when the board is created"
+    },
+    "statuses": {
+      "add": "+ Status",
+      "newName": "New status",
+      "nameLabel": "Status name",
+      "category": "Category",
+      "categories": {
+        "todo": "To do",
+        "in_progress": "In progress",
+        "done": "Done"
+      },
+      "slaMode": "SLA mode",
+      "slaModes": {
+        "running": "Running",
+        "paused": "Paused",
+        "off": "Off"
+      },
+      "slaWarning": "Takes effect when saved and is recorded in the board history",
+      "notifyAuthor": "Notify the author",
+      "requiresReason": "Requires a reason",
+      "checking": "Checking whether the status holds tasks…"
+    },
+    "move": {
+      "titleOne": "Move {{count}} task to…",
+      "titleFew": "Move {{count}} tasks to…",
+      "titleMany": "Move {{count}} tasks to…",
+      "message": "Status «{{status}}» holds tasks. Choose where to move them; the status is deleted when you save",
+      "target": "Status",
+      "confirm": "Move and delete the status",
+      "noTarget": "No status to move the tasks to: add a status without «Requires a reason»"
+    },
+    "types": {
+      "add": "+ Type",
+      "newName": "New type",
+      "nameLabel": "Type name",
+      "hint": "A changed norm applies to new tasks only",
+      "noSla": "No SLA",
+      "slaValue": "SLA norm",
+      "unit": "Norm unit",
+      "units": {
+        "hours": "h",
+        "days": "d"
+      },
+      "calendar": "SLA clock",
+      "calendars": {
+        "calendar": "Calendar time",
+        "weekdays": "Weekdays only"
+      },
+      "initialStatus": "Initial status",
+      "boardDefaultStatus": "Board default status",
+      "defaultAssignee": "Default assignee",
+      "noAssignee": "No assignee"
+    },
+    "fields": {
+      "add": "+ Field",
+      "newName": "New field",
+      "nameLabel": "Field name",
+      "type": "Field type",
+      "types": {
+        "text": "Text",
+        "number": "Number",
+        "date": "Date",
+        "link": "Link",
+        "single_select": "One of a list",
+        "multi_select": "Several of a list",
+        "person": "Employee"
+      },
+      "typeLocked": "Need another type — create a new field",
+      "required": "Required",
+      "default": "Default value",
+      "noDefault": "None",
+      "options": "List values",
+      "optionLabel": "List value",
+      "addOption": "+ Value",
+      "newOption": "New value",
+      "inUseOne": "Used in {{count}} task",
+      "inUseFew": "Used in {{count}} tasks",
+      "inUseMany": "Used in {{count}} tasks"
+    },
+    "labels": {
+      "add": "+ Label",
+      "newName": "New label",
+      "nameLabel": "Label name",
+      "hint": "Labels have no colour",
+      "empty": "No labels yet"
+    },
+    "priorities": {
+      "add": "+ Level",
+      "newName": "New level",
+      "nameLabel": "Level name",
+      "hint": "3 to 5 levels, from the lowest to the highest; only the highest is coloured",
+      "empty": "No priority scale yet"
+    },
+    "defaults": {
+      "assignee": "Default assignee",
+      "noAssignee": "No assignee",
+      "checklist": "Default checklist",
+      "addItem": "+ Item",
+      "item": "Item {{n}}",
+      "removeItem": "Delete item {{n}}",
+      "description": "Description template"
+    },
+    "members": {
+      "computedTitle": "From the department — read only",
+      "explicitTitle": "Added by hand",
+      "empty": "No explicit participants yet",
+      "fromDepartment": "from the department",
+      "departmentManager": "department head in the CRM",
+      "notInDepartment": "Not in the department",
+      "role": "Role",
+      "roles": {
+        "board_admin": "Admin",
+        "board_member": "Member",
+        "board_guest": "Guest"
+      },
+      "adminHint": "Admin — a deputy, the «request dispatcher». Explicit admins are assigned by the department head and the Planner admin",
+      "add": "Add a participant",
+      "person": "Employee",
+      "addPlaceholder": "Start typing a name",
+      "addButton": "Add",
+      "removeButton": "Remove",
+      "alreadyMember": "Already a participant from the department",
+      "orgStale": "The org structure was updated {{minutes}} min ago. Admins cannot be assigned until the CRM sends a fresh one",
+      "orgNever": "The org structure has not come from the CRM yet. Admins cannot be assigned",
+      "orgStaleRefused": "The Planner reports the org structure is stale. Admins cannot be assigned until the CRM sends a fresh one",
+      "adminUnavailable": "Admin — unavailable while the org structure is stale"
+    },
+    "access": {
+      "editIn": "Changed in the «Board policy» section",
+      "memberVisibility": "What board members see",
+      "memberVisibilityValues": {
+        "all": "All tasks of the board",
+        "own_and_intake": "Their own tasks and untriaged requests"
+      },
+      "triageBy": "Who triages requests",
+      "triageByValues": {
+        "admins_and_members": "Board admins and members",
+        "admins_only": "Admins only"
+      },
+      "requestAuthor": "Request author",
+      "requestAuthorOpen": "The board takes requests; an author sees only their own requests on it",
+      "requestAuthorClosed": "The board does not take requests",
+      "overview": "«Overview» and «Outgoing department requests»",
+      "confidential": "Confidential board — only participants see tasks: «Overview» shows numbers only, «Outgoing department requests» does not show requests to it",
+      "notConfidential": "Board tasks are visible in «Overview», requests to it — in the author department's «Outgoing department requests»",
+      "unknown": "The board policy was not received"
+    },
+    "history": {
+      "empty": "No changes yet",
+      "error": "Could not load the history",
+      "truncated": "Showing the last 500 entries",
+      "system": "System",
+      "actions": {
+        "created": "Board created",
+        "member_changed": "Participant changed",
+        "config_changed": "Configuration changed",
+        "policy_changed": "Policy changed",
+        "tzid_changed": "Time zone changed"
+      },
+      "clients": {
+        "crm": "CRM",
+        "hub-web": "HUB in the browser",
+        "hub-mobile": "HUB on the phone",
+        "system": "automatically"
+      },
+      "sectionsChanged": "Sections: {{list}}",
+      "roleChange": "Role: {{before}} → {{after}}",
+      "tzidChange": "{{before}} → {{after}}",
+      "policyKeys": "Settings: {{list}}",
+      "policyKeyNames": {
+        "intake_open": "Takes requests",
+        "triage_by": "Who triages requests",
+        "intake_notify": "Who is notified of a new request",
+        "member_visibility": "What board members see",
+        "group_lanes": "Group lanes",
+        "intake_default_type": "Default request type",
+        "confidential": "Confidential board",
+        "intake_hint": "Hint for requesters"
+      }
+    },
+    "archive": {
+      "button": "Archive the board",
+      "openOne": "The board has {{count}} open task. To archive, close it with a reason",
+      "openFew": "The board has {{count}} open tasks. To archive, close them with a reason",
+      "openMany": "The board has {{count}} open tasks. To archive, close them with a reason",
+      "reason": "Reason*",
+      "reasonTooLong": "The reason is at most {{max}} characters",
+      "confirmOne": "Close {{count}} task and archive",
+      "confirmFew": "Close {{count}} tasks and archive",
+      "confirmMany": "Close {{count}} tasks and archive",
+      "noOpenTitle": "Archive the board?",
+      "noOpen": "The board will become read only",
+      "confirm": "Archive"
+    },
+    "errors": {
+      "generic": "Check the value",
+      "duplicate": "This name already exists",
+      "length": "Empty or too long",
+      "invalid": "Invalid value",
+      "typeImmutable": "A field's type cannot change after it is created",
+      "categoryInUse": "The status holds tasks — its category cannot change. Create a new status and move the tasks",
+      "statusInUse": "The status holds tasks — choose where to move them",
+      "tooMany": "Too many items",
+      "priorityCount": "The priority scale has 3 to 5 levels",
+      "defaultCount": "Mark exactly one item as default",
+      "notParticipant": "Only a board participant",
+      "inactivePerson": "The employee is inactive",
+      "optionsRequired": "Add at least one list value",
+      "optionsNotAllowed": "List values only in «One of a list» and «Several of a list» fields",
+      "initialStatus": "The initial status is not «Done» and has no «Requires a reason»",
+      "defaultRequiresReason": "The default status cannot require a reason",
+      "idTaken": "This item was already on a board — delete the row and create it again",
+      "intakeDefaultType": "The type is the default request type in the board policy — change the policy first",
+      "configTooLarge": "The configuration is too large",
+      "moveTooLarge": "Too many tasks to move at once",
+      "moveTarget": "Choose another status to move the tasks to",
+      "dueOutOfRange": "Some due dates cannot be expressed in the board time zone — choose another status to move the tasks to",
+      "slaNormRequired": "Enter the norm"
+    }
+  },
+  "boardHeader": {
+    "kind": {
+      "department": "Department",
+      "team": "Team",
+      "personal": "Personal"
+    },
+    "intakeOpen": "Accepts requests",
+    "settings": "Board settings",
+    "viewLabel": "Board view",
+    "viewBoard": "Board",
+    "viewList": "List"
+  },
+  "kanban": {
+    "nothingFound": "Nothing matches the filters",
+    "resetFilters": "Reset filters",
+    "invalidFilter": "The link has an invalid filter",
+    "keyboardHint": "Enter — open the task; left and right arrows — parts of the card; Shift+F10 — card actions",
+    "scrollNavigator": "Scroll the board columns",
+    "more": "{{value}} more",
+    "moreLabel": "open all the board's tasks as a list",
+    "allClosed": "Closed in 7 days",
+    "newTaskIn": "New task in the «{{status}}» column",
+    "slaPaused": "SLA is paused in this status",
+    "slaOff": "SLA is not counted in this status",
+    "notifyAuthor": "Moving to this status notifies the requester",
+    "dropHere": "Drop here",
+    "countLabel": "Tasks:"
+  },
+  "card": {
+    "menu": "Task {{key}} actions",
+    "open": "Open",
+    "moveTo": "Move to…",
+    "reorder": "Change order",
+    "up": "Up",
+    "down": "Down",
+    "top": "To the top of the column",
+    "copyLink": "Copy link",
+    "linkCopied": "Link copied",
+    "linkCopyFailed": "Could not copy the link"
+  },
+  "move": {
+    "closed": "{{key}} closed",
+    "authorNotified": "Requester notified",
+    "placeRefused": "Could not put the task in this place. Try another place",
+    "announceReordered": "{{key}}: order in the column changed",
+    "announceFailed": "{{key}}: could not move",
+    "staleBy": "{{name}} changed the task. Showing the fresh version",
+    "busy": "Wait: the previous move is still being saved",
+    "notReady": "The board is refreshing — the task was not moved. Try again"
+  },
+  "filters": {
+    "label": "Board filters",
+    "search": "Search",
+    "searchPlaceholder": "Title, description or number",
+    "searchTooLong": "The query is too long — at most {{max}} characters",
+    "assignee": "Assignee",
+    "author": "Requester",
+    "tag": "Label",
+    "priority": "Priority",
+    "type": "Type",
+    "field": "Field…",
+    "fieldName": "Field",
+    "fieldValue": "Value",
+    "overdue": "Overdue",
+    "mine": "Mine",
+    "all": "All",
+    "chosen": "chosen",
+    "unknown": "unknown",
+    "apply": "Apply",
+    "close": "Close",
+    "active": "Active filters",
+    "searchChip": "Search: «{{value}}»",
+    "remove": "remove the filter",
+    "resetAll": "Reset all"
   }
 }

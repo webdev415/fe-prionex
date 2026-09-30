@@ -10,19 +10,25 @@ import { useHasPermission } from '@/hooks/usePermissions'
 import { PERMISSIONS } from '@/constants/permissions'
 import {
   getBoard,
+  getBoardKanban,
+  getMe,
   getMeta,
   listBoards,
   listBoardTasks,
+  listCreatableBoards,
   listMyTasks,
   PLANNER_PEOPLE_QUERY_MAX,
   PLANNER_PEOPLE_QUERY_MIN,
   plannerTextLength,
   resolveTask,
   searchPeople,
+  type PlannerBoardFilterParams,
   type PlannerMeta,
   type PlannerPeopleList,
 } from './plannerApi'
 import { readPlannerError } from './plannerErrors'
+// Board settings (5.10) — a line of its own, so the lanes of the wave merge cleanly.
+import { getBoardHistory } from './plannerApi'
 
 export const PLANNER_POLL_MS = 30_000
 
@@ -30,8 +36,17 @@ export const plannerKeys = {
   all: ['planner'] as const,
   meta: () => [...plannerKeys.all, 'meta'] as const,
   boards: () => [...plannerKeys.all, 'boards'] as const,
+  creatableBoards: () => [...plannerKeys.all, 'boards', 'can-create'] as const,
   board: (code: string) => [...plannerKeys.all, 'board', code] as const,
+  /** Prefix of every task projection of a board: invalidating it refreshes all of them. */
   boardTasks: (code: string) => [...plannerKeys.all, 'board', code, 'tasks'] as const,
+  /** The «список» view under a set of filters (3.13). */
+  boardTaskList: (code: string, filters: PlannerBoardFilterParams) =>
+    [...plannerKeys.boardTasks(code), 'list', filters] as const,
+  /** The kanban under a set of filters (3.13); a child of `boardTasks`. */
+  boardKanban: (code: string, filters: PlannerBoardFilterParams) =>
+    [...plannerKeys.boardTasks(code), 'kanban', filters] as const,
+  whoAmI: () => [...plannerKeys.all, 'whoami'] as const,
   myTasks: () => [...plannerKeys.all, 'me', 'tasks', 'assigned'] as const,
   task: (key: string) => [...plannerKeys.all, 'task', key] as const,
   people: (q: string) => [...plannerKeys.all, 'people', q] as const,
@@ -95,6 +110,21 @@ export function usePlannerBoards(enabled = true) {
 }
 
 /**
+ * `GET /boards?can_create=true` for the task form (story 5.7): read when the
+ * form opens, no polling — the form is short-lived, and a board that stopped
+ * taking tasks answers the create itself (404 / 400 `triage_only`), which
+ * re-reads this list.
+ */
+export function usePlannerCreatableBoards(enabled = true) {
+  return useQuery({
+    queryKey: plannerKeys.creatableBoards(),
+    queryFn: listCreatableBoards,
+    enabled,
+    staleTime: PLANNER_POLL_MS,
+  })
+}
+
+/**
  * `GET /boards/{code}`. `poll: false` is for observers that only need the
  * board's configuration at hand (the status chip loads it up front so its menu
  * is never empty on the first click) — a list of fifty chips must not add fifty
@@ -114,12 +144,60 @@ export function usePlannerBoard(
   })
 }
 
-export function usePlannerBoardTasks(code: string | undefined) {
+/**
+ * Keep the previous answer while the next one loads — but only for the same
+ * board: another board's cards must never stand in this board's columns.
+ */
+function sameBoard(code: string | undefined) {
+  return <T>(previous: T | undefined, previousQuery?: { queryKey: readonly unknown[] }) =>
+    previousQuery?.queryKey[2] === code ? keepPreviousData(previous) : undefined
+}
+
+/**
+ * The «список» view of a board under the filters of the address. A change of
+ * filters keeps the previous rows until the new answer (no blink to a skeleton).
+ */
+export function usePlannerBoardTasks(
+  code: string | undefined,
+  filters: PlannerBoardFilterParams = {},
+  enabled = true
+) {
   return useQuery({
-    queryKey: plannerKeys.boardTasks(code ?? ''),
-    queryFn: () => listBoardTasks(code as string),
-    enabled: Boolean(code),
+    queryKey: plannerKeys.boardTaskList(code ?? '', filters),
+    queryFn: () => listBoardTasks(code as string, filters),
+    enabled: enabled && Boolean(code),
+    placeholderData: sameBoard(code),
     ...live,
+  })
+}
+
+/**
+ * The kanban of a board under the filters of the address (planner story 5.3):
+ * columns, the first 50 cards of each and its `total` — all counted by the
+ * server. Polls like every open list; a change of filters keeps the previous
+ * columns until the new answer.
+ */
+export function usePlannerBoardKanban(
+  code: string | undefined,
+  filters: PlannerBoardFilterParams,
+  enabled = true
+) {
+  return useQuery({
+    queryKey: plannerKeys.boardKanban(code ?? '', filters),
+    queryFn: () => getBoardKanban(code as string, filters),
+    enabled: enabled && Boolean(code),
+    placeholderData: sameBoard(code),
+    ...live,
+  })
+}
+
+/** `GET /me` — the person's planner `user_id`; it does not change within a session. */
+export function usePlannerMe(enabled = true) {
+  return useQuery({
+    queryKey: plannerKeys.whoAmI(),
+    queryFn: getMe,
+    enabled,
+    staleTime: Infinity,
   })
 }
 
@@ -182,4 +260,20 @@ export function usePlannerPeople(q: string) {
 export function isPeopleQuery(query: string): boolean {
   const length = plannerTextLength(query)
   return length >= PLANNER_PEOPLE_QUERY_MIN && length <= PLANNER_PEOPLE_QUERY_MAX
+}
+
+// ─── board settings (story 5.10) ───────────────────────────────────────────
+
+/** Journal of a board — under the board's key, so re-reading the board re-reads it. */
+export const plannerBoardHistoryKey = (code: string) =>
+  [...plannerKeys.board(code), 'history'] as const
+
+/** `GET /boards/{code}/history` for the settings section «Історія»; read when opened. */
+export function usePlannerBoardHistory(code: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: plannerBoardHistoryKey(code ?? ''),
+    queryFn: () => getBoardHistory(code as string),
+    enabled: enabled && Boolean(code),
+    refetchOnWindowFocus: true,
+  })
 }

@@ -73,3 +73,8 @@ export const PLANNER_CALENDAR_PATH = `${PLANNER_ROOT_PATH}/calendar`
 export function boardPath(code: string): string {
   return `${PLANNER_TASKS_PATH}/boards/${encodeURIComponent(code)}`
 }
+
+/** Permanent link of a task (C-05, AD-35) — «Копіювати посилання». */
+export function taskLinkPath(key: string): string {
+  return `${PLANNER_ROOT_PATH}/t/${encodeURIComponent(key)}`
+}

@@ -14,6 +14,9 @@
  */
 import type {
   CreditApplicationStatus,
+  CreditChecklistAnswer,
+  CreditConditionalStage,
+  CreditDecisionCodeCategory,
   CreditDisbursement,
   CreditLoanStatus,
   CreditQueueStatus,
@@ -376,9 +379,11 @@ export const CREDIT_QUEUE_STATUSES = [
  *     а не только в `credit.declineCode`: ячейка одна, и второй проход по
  *     другому пространству ради трёх строк дал бы оператору машинное имя
  *     ровно в тот день, когда такое решение впервые появится.
- *  2. `input_snapshot.referral_reasons` — шесть машинных причин
- *     (`decision._REFERRAL_RATIONALE`, сверено с живым модулем 31.08.2026;
- *     на стенде встречаются только две первые).
+ *  2. `input_snapshot.referral_reasons` — четырнадцать машинных причин:
+ *     тринадцать ключей `_REFERRAL_RATIONALE` в `decision.py` модуля (сверено
+ *     по `main` модуля `47d2e51c` 29.09.2026; на стенде 31.08 встречались
+ *     только две первые) и `class_b_installments_unattainable` — её вводит
+ *     19-4, на 29.09 только в story, не в коде.
  *  3. `manual` — заявку направил человек, обоснование лежит в карточке.
  *
  * Перечень нужен не коду страницы (она подставляет ключ динамически), а
@@ -396,10 +401,169 @@ export const CREDIT_REVIEW_REASONS = [
   // модуле. Без строки в словаре оператор увидел бы машинное имя ровно там,
   // где решает судьбу заявки.
   'client_not_identifiable',
+  // Три причины, которые модуль добавил после 31.08 (слабое совпадение
+  // владельца счёта, телефон должника старой CRM, возврат дебета PAD по
+  // непогашенному кредиту): без строк очередь показывала их машинным именем.
+  'low_identity_match',
+  'legacy_obligation_phone_only',
+  'first_pad_return_not_repaid',
+  // Причины разбора скоринга книги (19-3): их же пишет `scorecard.gate.review`,
+  // поэтому словарь один на разбор скоринга и очередь. Четвёртую вводит 19-4 —
+  // строка словаря безвредна до её выката, а без неё очередь показала бы
+  // машинное имя в первый же день.
+  'employment_status_unknown',
+  'income_class_b_not_confirmed',
+  'scorecard_input_missing',
+  'class_b_installments_unattainable',
   'manual',
   'RC-04',
   'RC-08',
   'RC-11',
+] as const
+
+/**
+ * Разделы книги правил для кодов решения (`DecisionCodeEntry.category`).
+ *
+ * Порядок — порядок enum контракта, он же порядок книги: в этом порядке форма
+ * ручного решения раскладывает коды отказа по группам. Подпись группы
+ * подставляется динамически (`credit.decisionCodeCategory.<раздел>`), поэтому
+ * перечень нужен стражу словарей.
+ */
+export const CREDIT_DECISION_CODE_CATEGORIES = [
+  'loan_terms',
+  'identity',
+  'bank_account',
+  'conduct',
+  'financial_hardship',
+  'digital_verification',
+  'income',
+  'bank_statement',
+  'employment',
+  'service',
+] as const satisfies readonly CreditDecisionCodeCategory[]
+
+/**
+ * Пункты чек-листа ручного решения — enum `DecisionChecklistItem.key` контракта
+ * модуля 0.1.30/0.1.31 (19-5), сверено с `main` модуля 0852c782 — `openapi.yaml`
+ * `DecisionChecklistItem`. Порядок — порядок листа книги и enum контракта: в нём
+ * форма рисует пункты и в нём же они уходят в теле решения. Текстов пунктов у
+ * модуля нет (двери-справочника у чек-листа нет), они живут в словаре CRM
+ * `credit.checklistItem.*`.
+ */
+export const CREDIT_CHECKLIST_KEYS = [
+  'ibv_all_accounts',
+  'statement_two_months',
+  'salary_regular',
+  'nsf_isolated',
+  'loan_repayments_on_payday_max6',
+  'salary_account_connected',
+  'id_photo_only',
+  'id_valid_on_apply',
+  'id_alberta_only',
+  'pay_document',
+  'residence_proof',
+] as const
+
+/** Пункты, у которых в форме есть подсказка оператору (`credit.checklistHint.*`). */
+export const CREDIT_CHECKLIST_HINTED = [
+  'ibv_all_accounts',
+  'statement_two_months',
+  'salary_regular',
+  'nsf_isolated',
+  'loan_repayments_on_payday_max6',
+  'residence_proof',
+] as const satisfies readonly (typeof CREDIT_CHECKLIST_KEYS)[number][]
+
+/** Ответ на пункт: `n_a` — «не застосовно», модуль не считает его невыполненным. */
+export const CREDIT_CHECKLIST_ANSWERS = [
+  'yes',
+  'no',
+  'n_a',
+] as const satisfies readonly CreditChecklistAnswer[]
+
+/** Ступень условного одобрения (`Decision.conditional_stage`, 19-5). */
+export const CREDIT_CONDITIONAL_STAGES = [
+  'proposed',
+  'confirmed',
+] as const satisfies readonly CreditConditionalStage[]
+
+/**
+ * Скоринг книги правил проверки клиента в снимке решения (`input_snapshot.scorecard`).
+ *
+ * Перечни — зеркала ядра модуля, а не контракта: в контракте 0.1.28 ключ
+ * `scorecard` не объявлен. Сверено по `main` модуля `47d2e51c`:
+ * `underwriting/scorecard.py` (`POINT_PARAMETERS`, поля `ScorecardInputs`) и
+ * `underwriting/income_class.py` (`IncomeClassSource`, `EMPLOYMENT_STATUS_CLASS`).
+ *
+ * Восемь параметров — в порядке формул C13…C20 листа «Калькулятор скоринга»:
+ * в этом порядке разбор рисует таблицу, и андеррайтер идёт по листу сверху вниз.
+ */
+export const CREDIT_SCORECARD_PARAMETERS = [
+  'nsf_90d',
+  'free_cash_flow_monthly',
+  'micro_lenders',
+  'negative_balance_days_90d',
+  'overdraft',
+  'active_days_trend',
+  'history_days',
+  'income_trend',
+] as const
+
+/**
+ * Семь сумм пособий Lending, которые модуль кладёт в `ibv.risk.extra` снимка и из
+ * которых выводит класс дохода: модуль `decision.py` (`_BASIS_AMOUNTS` — «семь
+ * сумм Lending как есть», `income_class_basis.amounts`), источник имён —
+ * `UNDERWRITING_LENDING_ATTRIBUTES` в `flinks_mapping.py` (сверено по `main`
+ * модуля `86b22fed`). Сырой снимок на экране оператора их не показывает.
+ *
+ * Перечнем, а не префиксом `sum_`: пространство ключей `extra` — провайдерское,
+ * у провайдера есть и несоциальные суммы (например, дохода от работодателя), и
+ * префикс спрятал бы их, назвав «суммами пособий».
+ */
+export const CREDIT_SNAPSHOT_BENEFIT_AMOUNT_KEYS = [
+  'sum_pension_income',
+  'sum_disability_income',
+  'sum_government_income_total',
+  'sum_employment_insurance_income',
+  'sum_social_assistance_income',
+  'sum_wsib_income',
+  'sum_child_support_income_government',
+] as const
+
+/**
+ * Признаки класса и гейта: три сигнала гейта из `scorecard.inputs` и два
+ * признака класса из `income_class_basis.evidence` (у них общий словарь).
+ */
+export const CREDIT_SCORECARD_SIGNALS = [
+  'employer_income_30d',
+  'employment_loss',
+  'government_income_30d',
+  'b_income',
+  'c_income',
+] as const
+
+/** Классы дохода книги. */
+export const CREDIT_INCOME_CLASSES = ['A', 'B', 'C'] as const
+
+/** Откуда взят класс дохода (`IncomeClassSource` ядра). */
+export const CREDIT_INCOME_CLASS_SOURCES = ['questionnaire', 'flinks', 'both', 'default'] as const
+
+/**
+ * Статусы занятости анкеты, которые ядро знает (`EMPLOYMENT_STATUS_CLASS`, девять
+ * значений формы витрины). Статус вне списка модуль пишет как есть с
+ * `employment_status_known = false`: такой разбор показывает его сырым и с
+ * припиской, а не пустой строкой.
+ */
+export const CREDIT_EMPLOYMENT_STATUSES = [
+  'employment_full_time',
+  'employment_part_time',
+  'pension',
+  'disability',
+  'self_employed',
+  'social_assistance',
+  'student',
+  'none',
+  'other',
 ] as const
 
 /**
@@ -486,6 +650,25 @@ export const CREDIT_DYNAMIC_NAMESPACES: Record<string, readonly string[]> = {
   // заявки причину отказа платёжного провайдера. Разведены по домену.
   referralReason: CREDIT_REVIEW_REASONS,
   railReviewReason: CREDIT_RAIL_REVIEW_REASONS,
+  // Разделы книги правил — подписи групп кодов отказа в форме ручного решения и
+  // раздела кода в карточке решения. Тексты самих кодов в словари не идут: они
+  // приходят из двери справочника модуля (копия разошлась бы с книгой).
+  decisionCodeCategory: CREDIT_DECISION_CODE_CATEGORIES,
+  // Чек-лист ручного решения и ступень условного одобрения (19-5f): пункт,
+  // подсказка, ответ и ступень подставляются динамически, а пункт без строки
+  // доехал бы до андеррайтера машинным ключом.
+  checklistItem: CREDIT_CHECKLIST_KEYS,
+  checklistHint: CREDIT_CHECKLIST_HINTED,
+  checklistAnswer: CREDIT_CHECKLIST_ANSWERS,
+  conditionalStage: CREDIT_CONDITIONAL_STAGES,
+  // Разбор скоринга книги на вкладке решения: имена параметров, признаки,
+  // класс дохода и его источник, статус анкеты. Значения приходят из снимка
+  // модуля, и параметр без строки доехал бы до андеррайтера машинным именем.
+  scorecardParameter: CREDIT_SCORECARD_PARAMETERS,
+  scorecardSignal: CREDIT_SCORECARD_SIGNALS,
+  incomeClass: CREDIT_INCOME_CLASSES,
+  incomeClassSource: CREDIT_INCOME_CLASS_SOURCES,
+  employment: CREDIT_EMPLOYMENT_STATUSES,
   // Этапы пути клиента и их состояния. Ключи подставляются динамически
   // (`t(`credit.stage.${step.stage}`)`), поэтому статический страж их не
   // видит; а список — не наш, он снят с кабинета клиента, и потерять в нём

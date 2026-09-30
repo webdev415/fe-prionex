@@ -14,7 +14,7 @@
  *   "a planner failure never breaks the CRM" (epic 1). A really expired CRM
  *   session is still caught by the next CRM call.
  */
-import type { AxiosRequestConfig } from 'axios'
+import type { AxiosProgressEvent, AxiosRequestConfig } from 'axios'
 import api from '@/lib/api'
 import type { components, paths } from './schema'
 
@@ -40,6 +40,32 @@ export type PlannerSlaState = Schemas['SLAState']
 export type PlannerTaskOrigin = Schemas['TaskOrigin']
 export type PlannerTaskPerson = Schemas['TaskPerson']
 export type PlannerBoardPriority = Schemas['BoardPriority']
+export type PlannerBoardKanban = Schemas['BoardKanban']
+export type PlannerKanbanColumn = Schemas['BoardKanbanColumn']
+export type PlannerMe = Schemas['Me']
+export type PlannerTaskHistory = Schemas['TaskHistory']
+export type PlannerIntakeBoard = Schemas['IntakeBoard']
+export type PlannerBoardField = Schemas['BoardField']
+export type PlannerBoardTaskType = Schemas['BoardTaskType']
+export type PlannerBoardLabel = Schemas['BoardLabel']
+export type PlannerTaskAttachment = Schemas['TaskAttachment']
+
+/**
+ * Filters of a board's projections (planner story 3.13): the kanban and the
+ * «список» view take the same ones. Each is sent once and only when set — the
+ * server answers a repeated or empty parameter with 400.
+ */
+export interface PlannerBoardFilterParams {
+  assignee_user_id?: string
+  author_user_id?: string
+  label_id?: string
+  priority_id?: string
+  type_id?: string
+  field_id?: string
+  field_value?: string
+  overdue?: 'true'
+  q?: string
+}
 
 /** Base path of the planner route group in Kong (1.6). */
 export const PLANNER_BASE = '/api/v1/planner'
@@ -65,6 +91,10 @@ export const PLANNER_ASSIGNEES_MAX = 10
 export const PLANNER_EVENT_PARTICIPANTS_MAX = 200
 export const PLANNER_PEOPLE_QUERY_MIN = 2
 export const PLANNER_PEOPLE_QUERY_MAX = 100
+/** Watchers of a new task (`TaskCreate.watcher_ids`, `maxItems: 20`). */
+export const PLANNER_WATCHERS_MAX = 20
+/** One attachment file (`POST /tasks/{id}/attachments`: 50 MiB, `details.max_bytes`). */
+export const PLANNER_ATTACHMENT_MAX_BYTES = 52_428_800
 
 /**
  * Length the way the planner counts it — Unicode code points (Go runes), not
@@ -124,11 +154,33 @@ export async function getMeta(): Promise<PlannerMeta> {
   return res.data
 }
 
+/** `GET /me` — the planner's `user_id` of this person (the «Мої» filter). */
+export async function getMe(): Promise<PlannerMe> {
+  const res = await api.get<PlannerMe>(url('/me'), config())
+  return res.data
+}
+
 // ─── boards ────────────────────────────────────────────────────────────────
 
 /** `GET /boards` — boards where the actor is a participant, by code. */
 export async function listBoards(): Promise<PlannerBoardList> {
   const res = await api.get<PlannerBoardList>(url('/boards'), config())
+  return res.data
+}
+
+/**
+ * `GET /boards?can_create=true` — where a new task can go (story 3.14):
+ * `items` are boards where the actor creates a task as a member, admin or
+ * owner of the personal board; `intake` are boards where the actor's task
+ * becomes a request (department and team boards that accept requests), with
+ * the department, the П-9 hint and the required fields of the request form —
+ * the board card itself is not visible to a non-participant.
+ */
+export async function listCreatableBoards(): Promise<PlannerBoardList> {
+  const res = await api.get<PlannerBoardList>(
+    url('/boards'),
+    config({}, { params: { can_create: true } })
+  )
   return res.data
 }
 
@@ -138,11 +190,32 @@ export async function getBoard(code: string): Promise<PlannerBoard> {
   return res.data
 }
 
-/** `GET /boards/{code}/tasks` — card projection, ordered by column then position. */
-export async function listBoardTasks(code: string): Promise<PlannerTaskCardList> {
+/**
+ * `GET /boards/{code}/tasks` — card projection, ordered by column then
+ * position; the «список» view of a board, under the same filters as the kanban.
+ */
+export async function listBoardTasks(
+  code: string,
+  filters: PlannerBoardFilterParams = {}
+): Promise<PlannerTaskCardList> {
   const res = await api.get<PlannerTaskCardList>(
     url('/boards/{code}/tasks', { code }),
-    config({}, { params: { limit: 500 } })
+    config({}, { params: { limit: 500, ...filters } })
+  )
+  return res.data
+}
+
+/**
+ * `GET /boards/{code}/kanban` — every status of the board as a column, the
+ * first 50 cards of each and its `total` after the filters (planner story 3.13).
+ */
+export async function getBoardKanban(
+  code: string,
+  filters: PlannerBoardFilterParams = {}
+): Promise<PlannerBoardKanban> {
+  const res = await api.get<PlannerBoardKanban>(
+    url('/boards/{code}/kanban', { code }),
+    config({}, { params: filters })
   )
   return res.data
 }
@@ -197,10 +270,171 @@ export async function patchTask(
   return { task: res.data, etag: typeof etag === 'string' ? etag : undefined }
 }
 
+/**
+ * `GET /tasks/{id}/history` — the task's journal by time: who changed what
+ * (`actor`, `at`). The kanban names who changed a task under a 412 from it;
+ * `signal` lets it give up on a journal that answers too slowly.
+ */
+export async function getTaskHistory(
+  id: string,
+  options: { signal?: AbortSignal } = {}
+): Promise<PlannerTaskHistory> {
+  const res = await api.get<PlannerTaskHistory>(
+    url('/tasks/{id}/history', { id }),
+    config({}, { signal: options.signal })
+  )
+  return res.data
+}
+
+/** The shared client's ceiling (`src/lib/api.ts`, 75 s) — the start of an upload's budget. */
+const UPLOAD_BASE_TIMEOUT_MS = 75_000
+/** The slowest uplink an upload is waited for: 64 KiB/s (≈ 0.5 Mbit/s, a poor mobile link). */
+const UPLOAD_MIN_BYTES_PER_SECOND = 64 * 1024
+
+/**
+ * How long one file may take: the shared 75 s plus the file at 64 KiB/s — a
+ * 50 MiB file gets 875 s (~15 min), not the 75 s of a JSON call. Not `0` (no
+ * limit): the form stays locked while its files upload, so a connection that
+ * stalls must end in «не завантажено файлів», not hold the form forever.
+ */
+export function attachmentUploadTimeoutMs(size: number): number {
+  return UPLOAD_BASE_TIMEOUT_MS + Math.ceil((size / UPLOAD_MIN_BYTES_PER_SECOND) * 1000)
+}
+
+/**
+ * `POST /tasks/{id}/attachments` — one file, `multipart/form-data` with the
+ * part `file` (story 3.8). There is no multipart task creation: the form
+ * uploads right after the 201 of the task. The key belongs to one file of one
+ * form, so a retry replays the stored 201 instead of adding a second copy.
+ * `onProgress` gets the sent share of the request (0–1) while it uploads.
+ *
+ * The explicit `multipart/form-data` must stay: the shared client's default
+ * `Content-Type: application/json` makes axios serialize a `FormData` body to
+ * JSON (`{"file":{}}` — the file is lost) unless the request names another
+ * type. Axios then drops this header for a `FormData` body in the browser, so
+ * the browser sends its own `multipart/form-data; boundary=…`, and its Node
+ * adapter rewrites it with the boundary too.
+ */
+export async function uploadTaskAttachment(
+  taskId: string,
+  file: File,
+  idempotencyKey: string,
+  onProgress?: (fraction: number) => void
+): Promise<PlannerTaskAttachment> {
+  const body = new FormData()
+  body.append('file', file, file.name)
+  const res = await api.post<PlannerTaskAttachment>(
+    url('/tasks/{id}/attachments', { id: taskId }),
+    body,
+    config(
+      { 'Idempotency-Key': idempotencyKey, 'Content-Type': 'multipart/form-data' },
+      {
+        timeout: attachmentUploadTimeoutMs(file.size),
+        ...(onProgress && {
+          onUploadProgress: (event: AxiosProgressEvent) => {
+            if (event.progress !== undefined) onProgress(event.progress)
+          },
+        }),
+      }
+    )
+  )
+  return res.data
+}
+
 // ─── people ────────────────────────────────────────────────────────────────
 
 /** `GET /people?q=` — active people of the CRM org mirror, by name substring. */
 export async function searchPeople(q: string): Promise<PlannerPeopleList> {
   const res = await api.get<PlannerPeopleList>(url('/people'), config({}, { params: { q } }))
+  return res.data
+}
+
+// ─── board settings (story 5.10) ───────────────────────────────────────────
+// One block, appended: the lanes of the same wave also extend this file.
+
+export type PlannerBoardConfig = Schemas['BoardConfig']
+export type PlannerBoardConfigInput = Schemas['BoardConfigInput']
+export type PlannerBoardConfigPut = Schemas['BoardConfigPut']
+export type PlannerBoardConfigPreview = Schemas['BoardConfigPreview']
+export type PlannerBoardConfigError = Schemas['BoardConfigError']
+export type PlannerBoardMember = Schemas['BoardMember']
+export type PlannerBoardMemberRole = Schemas['BoardMemberRole']
+export type PlannerBoardHistory = Schemas['BoardHistory']
+export type PlannerBoardHistoryEntry = Schemas['TaskHistoryEntry']
+export type PlannerBoardPolicy = Schemas['BoardPolicy']
+
+/**
+ * Age of the org snapshot past which the planner refuses admin changes on a
+ * department board (409 `org_stale`, «снимок оргструктуры старше 15 минут» in
+ * the contract of `PUT /boards/{code}/members/{user_id}`).
+ */
+export const PLANNER_ORG_STALE_MINUTES = 15
+
+/** Levels of a board's priority scale (`PUT /config`: 3–5). */
+export const PLANNER_PRIORITIES_MAX = 5
+
+/**
+ * `PUT /boards/{code}/config?dry_run=true` — the same code as a save, rolled
+ * back: which rows are wrong and what the board would become. Nothing is
+ * written; the answer has no ETag. `If-Match` is still checked (412).
+ */
+export async function previewBoardConfig(
+  code: string,
+  version: number,
+  body: PlannerBoardConfigPut
+): Promise<PlannerBoardConfigPreview> {
+  const res = await api.put<PlannerBoardConfigPreview>(
+    url('/boards/{code}/config', { code }),
+    body,
+    config({ 'If-Match': ifMatch(version) }, { params: { dry_run: 'true' } })
+  )
+  return res.data
+}
+
+/** `PUT /boards/{code}/config` — replace the whole configuration; answers the board card. */
+export async function putBoardConfig(
+  code: string,
+  version: number,
+  body: PlannerBoardConfigPut
+): Promise<PlannerBoard> {
+  const res = await api.put<PlannerBoard>(
+    url('/boards/{code}/config', { code }),
+    body,
+    config({ 'If-Match': ifMatch(version) })
+  )
+  return res.data
+}
+
+/** `PUT /boards/{code}/members/{user_id}` — an explicit participant or a new role; the board card back. */
+export async function putBoardMember(
+  code: string,
+  userId: string,
+  version: number,
+  role: PlannerBoardMemberRole
+): Promise<PlannerBoard> {
+  const res = await api.put<PlannerBoard>(
+    url('/boards/{code}/members/{user_id}', { code, user_id: userId }),
+    { role },
+    config({ 'If-Match': ifMatch(version) })
+  )
+  return res.data
+}
+
+/** `DELETE /boards/{code}/members/{user_id}` — remove an explicit participant; the board card back. */
+export async function deleteBoardMember(
+  code: string,
+  userId: string,
+  version: number
+): Promise<PlannerBoard> {
+  const res = await api.delete<PlannerBoard>(
+    url('/boards/{code}/members/{user_id}', { code, user_id: userId }),
+    config({ 'If-Match': ifMatch(version) })
+  )
+  return res.data
+}
+
+/** `GET /boards/{code}/history` — the board's journal: created, members, configuration, policy, zone. */
+export async function getBoardHistory(code: string): Promise<PlannerBoardHistory> {
+  const res = await api.get<PlannerBoardHistory>(url('/boards/{code}/history', { code }), config())
   return res.data
 }
