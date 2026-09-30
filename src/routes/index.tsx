@@ -4,6 +4,8 @@ import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom'
 import { ProtectedRoute } from './ProtectedRoute'
 import { PermissionRoute } from './PermissionRoute'
 import { UkrainianProjectRoute } from './UkrainianProjectRoute'
+import { UbkiProjectRoute } from './UbkiProjectRoute'
+import { DashboardHomeRoute } from './DashboardHomeRoute'
 import { GuestRoute } from './GuestRoute'
 import { useTabTracker } from '@/features/auth/hooks/useTabTracker'
 import { DashboardLayout } from '@/components/layout'
@@ -306,11 +308,7 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: (
-          <PermissionRoute requiredPermission={PERMISSIONS.CLIENTS.VIEW}>
-            {withSuspense(<ClientManagementPage />)}
-          </PermissionRoute>
-        ),
+        element: <DashboardHomeRoute>{withSuspense(<ClientManagementPage />)}</DashboardHomeRoute>,
       },
       {
         path: 'profile',
@@ -659,7 +657,7 @@ export const router = createBrowserRouter([
         path: 'system-settings/integrations/ubki',
         element: (
           <PermissionRoute requiredPermission={PERMISSIONS.MESSAGING.MANAGE_INTEGRATIONS}>
-            <UkrainianProjectRoute>{withSuspense(<UbkiIntegrationPage />)}</UkrainianProjectRoute>
+            <UbkiProjectRoute>{withSuspense(<UbkiIntegrationPage />)}</UbkiProjectRoute>
           </PermissionRoute>
         ),
       },

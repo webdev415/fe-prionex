@@ -1,6 +1,6 @@
-import { activeProjectCountry } from '@/lib/projectCountry'
+import { activeProjectIsUkrainian } from '@/lib/projectCountry'
 import { useAuthStore } from '@/stores/authStore'
 
 export function useUbkiAvailable(): boolean {
-  return useAuthStore((s) => activeProjectCountry(s.user) === 'UA')
+  return useAuthStore((s) => activeProjectIsUkrainian(s.user))
 }

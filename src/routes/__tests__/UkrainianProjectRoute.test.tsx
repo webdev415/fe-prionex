@@ -57,7 +57,7 @@ const ROUTES_SOURCE = Object.values(
 )[0] as string
 
 describe('the routes that only Ukrainian projects may open', () => {
-  it.each(['AiAssistantPage', 'UbkiIntegrationPage'])('guards %s', (page) => {
+  it.each(['AiAssistantPage'])('guards %s', (page) => {
     const wrapped = new RegExp(`<UkrainianProjectRoute>\\s*\\{withSuspense\\(<${page} />\\)\\}`)
     expect(ROUTES_SOURCE).toMatch(wrapped)
   })
