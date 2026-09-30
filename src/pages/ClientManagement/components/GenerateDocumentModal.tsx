@@ -367,6 +367,11 @@ export function GenerateDocumentModal({
           'pages.clients.detail.generateModal.reasons.no_required_tag',
           'Немає потрібного тегу на клієнті'
         )
+      case 'sale_type_mismatch':
+        return t(
+          'pages.clients.detail.generateModal.reasons.sale_type_mismatch',
+          'Шаблон призначений для іншого типу договору'
+        )
       default:
         return t(
           'pages.clients.detail.generateModal.reasons.unavailable',

@@ -53,6 +53,12 @@ import {
   type DocumentTemplateKind,
   type TemplateVariableDefinition,
 } from '@/features/documents'
+import {
+  DOCUMENT_TEMPLATE_SALE_TYPES,
+  isTemplateSaleType,
+  templateSaleTypeOf,
+  type DocumentTemplateSaleType,
+} from '@/features/documents/saleType'
 import { downloadBlob } from '@/features/messaging/utils/downloadBlob'
 import { useDocumentTypes } from '@/features/documentTypes'
 import { DocumentTypePill } from '@/components/DocumentTypePill'
@@ -102,6 +108,13 @@ const ACTIVATION_RULE_FALLBACK: Record<DocumentActivationRule, string> = {
   tag_active: 'Active tag',
 }
 
+/** English fallbacks for contract-type options (used when i18n is unset). */
+const SALE_TYPE_FALLBACK: Record<DocumentTemplateSaleType, string> = {
+  all: 'All',
+  factoring: 'Factoring',
+  cession: 'Cession',
+}
+
 function formatBytes(bytes: number | null | undefined): string {
   if (bytes == null) return ''
   if (bytes < 1024) return `${bytes} B`
@@ -132,6 +145,8 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
   const [documentTypeId, setDocumentTypeId] = useState<number | null>(
     () => template?.document_type_id ?? null
   )
+  // Contract type picked in this session; null until the operator chooses.
+  const [pickedSaleType, setPickedSaleType] = useState<DocumentTemplateSaleType | null>(null)
   const [activationRule, setActivationRule] = useState<DocumentActivationRule>(
     () => template?.activation_rule ?? 'always'
   )
@@ -203,6 +218,10 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
     t(`pages.documentGeneration.templates.variableGroups.${group}`, GROUP_FALLBACK[group] ?? group)
   const activationRuleLabel = (rule: DocumentActivationRule): string =>
     t(`pages.documentGeneration.templates.activationRules.${rule}`, ACTIVATION_RULE_FALLBACK[rule])
+  const saleTypeLabel = (value: DocumentTemplateSaleType): string =>
+    value === 'all'
+      ? t('pages.documentGeneration.templates.saleTypes.all', SALE_TYPE_FALLBACK.all)
+      : t(`saleType.values.${value}`, SALE_TYPE_FALLBACK[value])
 
   /** Insert `{{name}}` at the textarea's current cursor (text mode only). */
   const handleInsert = (variableName: string) => {
@@ -273,6 +292,16 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
     return true
   }
 
+  // Contract type: a missing stored value (older server) reads as `all` and is
+  // sent. A stored value this screen does not know (a newer type) is shown as
+  // `all` but left out of the update until the operator picks a type, so
+  // saving e.g. the description never overwrites it. Create always sends it.
+  const storedSaleType = template?.sale_type
+  const saleType = pickedSaleType ?? templateSaleTypeOf(storedSaleType)
+  const keepsStoredSaleType =
+    pickedSaleType == null && storedSaleType != null && !isTemplateSaleType(storedSaleType)
+  const saleTypeUpdatePayload = keepsStoredSaleType ? {} : { sale_type: saleType }
+
   const handleTextSubmit = async () => {
     const trimmedName = requireName()
     if (!trimmedName) return
@@ -297,6 +326,7 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
             activation_rule: activationRule,
             activation_tag_id: activationTagPayload,
             auto_generate: autoGeneratePayload,
+            ...saleTypeUpdatePayload,
           },
         })
         toast.success(t('pages.documentGeneration.templates.messages.updated', 'Template updated'))
@@ -308,6 +338,7 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
           activation_rule: activationRule,
           activation_tag_id: activationTagPayload,
           auto_generate: autoGeneratePayload,
+          sale_type: saleType,
         })
         toast.success(t('pages.documentGeneration.templates.messages.created', 'Template created'))
       }
@@ -333,6 +364,7 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
     fd.append('name', trimmedName)
     if (description.trim()) fd.append('description', description.trim())
     fd.append('activation_rule', activationRule)
+    fd.append('sale_type', saleType)
     if (activationTagPayload != null) fd.append('activation_tag_id', String(activationTagPayload))
     if (documentTypeId != null) fd.append('document_type_id', String(documentTypeId))
     // Upload only creates, so there is never a stored flag to clear.
@@ -381,6 +413,7 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
         activation_tag_id: activationTagPayload,
         document_type_id: documentTypeId,
         auto_generate: autoGeneratePayload,
+        sale_type: saleType,
       })
       toast.success(t('pages.documentGeneration.templates.messages.created', 'Template created'))
       if (res.unknown_variables.length > 0) {
@@ -411,6 +444,7 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
           activation_tag_id: activationTagPayload,
           document_type_id: documentTypeId,
           auto_generate: autoGeneratePayload,
+          ...saleTypeUpdatePayload,
         },
       })
       toast.success(t('pages.documentGeneration.templates.messages.updated', 'Template updated'))
@@ -744,6 +778,37 @@ export function DocumentTemplateEditor({ open, onClose, template }: Props) {
                           )}
                           maxLength={500}
                         />
+                      </div>
+
+                      {/* Contract type — limits the template to credits of that purchase type. */}
+                      <div className="flex flex-col gap-1">
+                        <Label htmlFor="dt-sale-type">{t('saleType.label', 'Contract type')}</Label>
+                        {/* An unknown stored type has no option: the empty value shows
+                            "all" as a placeholder, so picking "all" still counts as a choice. */}
+                        <Select
+                          value={keepsStoredSaleType ? '' : saleType}
+                          onValueChange={(v) => {
+                            // Ignore anything outside the list (Radix may report '').
+                            if (isTemplateSaleType(v)) setPickedSaleType(v)
+                          }}
+                        >
+                          <SelectTrigger id="dt-sale-type" className="w-full">
+                            <SelectValue placeholder={saleTypeLabel(saleType)} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {DOCUMENT_TEMPLATE_SALE_TYPES.map((value) => (
+                              <SelectItem key={value} value={value}>
+                                {saleTypeLabel(value)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-muted-foreground text-xs">
+                          {t(
+                            'pages.documentGeneration.templates.form.saleTypeHelp',
+                            '“All” — the template is available for any credit, including one with no contract type. “Factoring” or “Cession” — only for credits of that type, also in documents covering several credits and in automatic generation on closure.'
+                          )}
+                        </p>
                       </div>
 
                       {/* Activation rule — gates when the template is offered for generation. */}

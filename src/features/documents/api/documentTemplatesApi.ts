@@ -13,6 +13,7 @@ import type {
   DocumentTemplateUploadResponse,
   TemplateVariablesResponse,
 } from './types'
+import type { DocumentTemplateSaleType } from '@/features/documents/saleType'
 
 const BASE_URL = '/api/v1/documents/templates'
 
@@ -144,6 +145,8 @@ export interface DocumentTemplateComposePayload {
   document_type_id?: number | null
   /** Generate on every loan closure; `closed_debt` rule + document type only. */
   auto_generate?: boolean
+  /** Contract type the template is limited to (`all` = any credit). */
+  sale_type?: DocumentTemplateSaleType
 }
 
 /**

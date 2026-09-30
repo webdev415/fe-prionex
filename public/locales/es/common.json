@@ -6554,6 +6554,7 @@
             "no_active_promise": "No hay ninguna promesa de pago activa",
             "no_activation_tag": "Plantilla no configurada: seleccione una etiqueta",
             "no_required_tag": "Al cliente le falta la etiqueta requerida",
+            "sale_type_mismatch": "Esta plantilla está limitada a otro tipo de contrato",
             "unavailable": "No disponible para este crédito"
           },
           "hiddenTemplates": "Plantillas ocultas no disponibles para este crédito: {{count}}",
@@ -7792,7 +7793,8 @@
           "includeRequisites": "Datos de pago",
           "includeSchedule": "Tabla del calendario de pagos (RR)",
           "documentType": "Tipo de documento (para la generación)",
-          "documentTypePlaceholder": "No establecido: el operador lo elige manualmente"
+          "documentTypePlaceholder": "No establecido: el operador lo elige manualmente",
+          "saleTypeHelp": "«Todos»: la plantilla está disponible para cualquier crédito, incluso sin tipo de contrato. «Factoring» o «Cesión»: solo para créditos de ese tipo, también en los documentos de varios créditos y en la generación automática al cerrar."
         },
         "activationRules": {
           "always": "Siempre disponible",
@@ -7803,6 +7805,9 @@
           "rr_draft": "Reestructuración: borrador",
           "promise_active": "Promesa de pago activa",
           "tag_active": "Etiqueta activa"
+        },
+        "saleTypes": {
+          "all": "Todos"
         },
         "variableGroups": {
           "client": "Cliente",

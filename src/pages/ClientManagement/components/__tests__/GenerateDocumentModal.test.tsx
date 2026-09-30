@@ -503,6 +503,27 @@ describe('GenerateDocumentModal', () => {
     expect(await screen.findByText('Немає потрібного тегу на клієнті')).toBeInTheDocument()
   })
 
+  it('surfaces the contract-type reason on a 409 response', async () => {
+    getOptionsMock.mockResolvedValue(optionsWith(true, 'ok'))
+    generateMock.mockRejectedValue({
+      response: {
+        status: 409,
+        data: { detail: { message: 'Sale type mismatch', reason: 'sale_type_mismatch' } },
+      },
+    })
+    const user = userEvent.setup()
+    renderModal()
+
+    await user.click(await screen.findByRole('radio', { name: /Demand letter/i }))
+    await pickDocumentType(user)
+    await chooseDelivery(user)
+    await user.click(screen.getByRole('button', { name: 'Згенерувати' }))
+
+    expect(
+      await screen.findByText('Шаблон призначений для іншого типу договору')
+    ).toBeInTheDocument()
+  })
+
   it("offers the client's contacts as options in the delivery-contact field", async () => {
     getOptionsMock.mockResolvedValue(optionsWith(true, 'ok'))
     useClientProfileMock.mockReturnValue({ data: PROFILE_WITH_CONTACTS })

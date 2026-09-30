@@ -31,6 +31,7 @@ const SUBTREES = [
   'pages.clients.detail.tableHeaders.',
   'pages.imports.step1.factoringAgreement.',
   'pages.sellers.detail.factoringAgreements.columns.',
+  'pages.documentGeneration.templates.saleTypes.',
 ] as const
 
 const PLURAL_SUFFIX = /_(zero|one|two|few|many|other)$/
