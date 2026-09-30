@@ -9,6 +9,8 @@
  *    (not step-specific) and could collide across steps that share a TA.
  */
 
+import { legacyKeyIsUnambiguous, readStepValue } from '@/lib/taStepValue'
+
 export interface StepLike {
   step_order: number
   target_action_id: number
@@ -47,7 +49,7 @@ export function extractPhones(
   const ordered = [...steps].sort((a, b) => a.step_order - b.step_order)
   for (const step of ordered) {
     if (step.target_action_field_type !== 'contact') continue
-    const val = stepData[String(step.step_order)] ?? stepData[String(step.target_action_id)]
+    const val = readStepValue(stepData, step, ordered)
     if (typeof val === 'string' && isPhoneShaped(val)) phones.add(val)
   }
   for (const val of Object.values(stepData)) {
@@ -96,10 +98,10 @@ function unwrapValue(raw: unknown): string {
  * Order of preference:
  *   1. wizard snapshot (`instanceStepData`) keyed by step_order
  *   2. `interactionStepData` keyed by step_order
- *   3. legacy `interactionStepData` keyed by target_action_id — but ONLY when
- *      exactly one step in the chain uses that target action. If several steps
- *      share the TA, this fallback is ambiguous and could pull another step's
- *      value (e.g. a phone into an empty loan field), so we return '' instead.
+ *   3. legacy `interactionStepData` keyed by target_action_id — but only where
+ *      that key unambiguously names this step. `legacyKeyIsUnambiguous` owns
+ *      that rule; when it declines, the honest answer is '' rather than another
+ *      step's value.
  */
 export function resolveStepValue(
   step: StepLike,
@@ -116,18 +118,7 @@ export function resolveStepValue(
   const byOrder = unwrapValue(interactionStepData?.[String(step.step_order)])
   if (byOrder !== '') return byOrder
 
-  const sharesTa = allSteps.filter((s) => s.target_action_id === step.target_action_id).length > 1
-  // Legacy fallback: older interactions keyed step_data by target_action_id.
-  // BUT target_action_id and step_order share one key namespace, so a step
-  // whose target_action_id equals ANOTHER step's step_order would wrongly
-  // grab that other step's value — e.g. the credit step (target_action_id 10)
-  // pulling in the contact step (step_order 10), so a phone shows in the
-  // credit slot (KAN-744). Only use the fallback when the id is unambiguous:
-  // the TA is unique AND its id collides with no other step's step_order.
-  const idCollidesWithAnotherStepOrder = allSteps.some(
-    (s) => s.step_order === step.target_action_id && s.step_order !== step.step_order
-  )
-  if (!sharesTa && !idCollidesWithAnotherStepOrder) {
+  if (legacyKeyIsUnambiguous(step, allSteps)) {
     return unwrapValue(interactionStepData?.[String(step.target_action_id)])
   }
   return ''
