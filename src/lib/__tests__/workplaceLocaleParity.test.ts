@@ -18,12 +18,19 @@ type Json = Record<string, unknown>
 // дважды — он читает только `pages/Credit/**` и `features/credit/**` и только
 // префикс `credit.`. Без этой строки пропажа английского значения доехала бы
 // до оператора молча.
+// Тип договора покупки (KAN-1617): слова типа, подписи дат карточки кредита,
+// блок договора на шаге загрузки и колонка у продавца — по ним оператор решает,
+// какие слова говорить должнику, и машинный ключ вместо них недопустим.
 const SUBTREES = [
   'pages.lawyerWorkplace.',
   'pages.training.',
   'pages.clients.detail.tabs.',
   'pages.aiAssistant.',
   'pages.clients.detail.creditModule',
+  'saleType.',
+  'pages.clients.detail.tableHeaders.',
+  'pages.imports.step1.factoringAgreement.',
+  'pages.sellers.detail.factoringAgreements.columns.',
 ] as const
 
 const PLURAL_SUFFIX = /_(zero|one|two|few|many|other)$/

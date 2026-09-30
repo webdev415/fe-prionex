@@ -4890,7 +4890,9 @@
         "noProjectsAvailable": "No hay proyectos disponibles",
         "noSellersAvailable": "No hay cedentes disponibles",
         "factoringAgreement": {
-          "title": "Acuerdo de factoring",
+          "title": "Acuerdo de compra",
+          "saleTypeConflict": "Este cedente ya tiene un acuerdo con este número (tipo: {{existing}}). Selecciónelo con «Elegir existente» o indique otro número.",
+          "saleTypeDateHint": "El tipo no coincide con la fecha de compra: antes del 30.07.2026 las carteras se compraban por factoring y desde el 30.07.2026, por acuerdo de cesión. Revise el tipo.",
           "pickSellerFirst": "Seleccione primero un cedente.",
           "pickExisting": "Elegir existente",
           "createNew": "Crear nuevo",
@@ -6625,6 +6627,8 @@
           "loanAmount": "Importe del crédito",
           "remainingDebtLawful": "Deuda restante (legal)",
           "purchaseDateFa": "Fecha de compra (FA)",
+          "purchaseDateCession": "Fecha de compra (cesión)",
+          "purchaseDateGeneric": "Fecha de compra",
           "debtTerm": "Plazo de la deuda",
           "eligibleForReturn": "Apto para devolución",
           "remainingDebtAmount": "Deuda restante",
@@ -8991,6 +8995,7 @@
             "number": "Número de acuerdo",
             "previousLender": "Quién vendió",
             "purchaseDate": "Fecha de compra",
+            "saleType": "Tipo de contrato",
             "debtCount": "Número de deudas"
           }
         }
@@ -12455,6 +12460,14 @@
     "actions": {
       "restore": "Restaurar"
     }
+  },
+  "saleType": {
+    "label": "Tipo de contrato",
+    "values": {
+      "factoring": "Factoring",
+      "cession": "Cesión"
+    },
+    "none": "no indicado"
   },
   "credit": {
     "clientBlock": {

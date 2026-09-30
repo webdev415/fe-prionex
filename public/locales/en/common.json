@@ -4882,7 +4882,9 @@
         "noProjectsAvailable": "No projects available",
         "noSellersAvailable": "No sellers available",
         "factoringAgreement": {
-          "title": "Factoring agreement",
+          "title": "Purchase agreement",
+          "saleTypeConflict": "This seller already has an agreement with this number (type: {{existing}}). Pick it under “Pick existing” or enter another number.",
+          "saleTypeDateHint": "The type does not match the purchase date: portfolios bought before 30.07.2026 were bought under factoring, from 30.07.2026 on — under an assignment agreement. Check the type.",
           "pickSellerFirst": "Pick a seller first.",
           "pickExisting": "Pick existing",
           "createNew": "Create new",
@@ -6615,6 +6617,8 @@
           "loanAmount": "Loan amount",
           "remainingDebtLawful": "Remaining debt (Lawful)",
           "purchaseDateFa": "Purchase date (FA)",
+          "purchaseDateCession": "Purchase date (assignment)",
+          "purchaseDateGeneric": "Purchase date",
           "debtTerm": "Debt term",
           "eligibleForReturn": "Eligible for Return",
           "remainingDebtAmount": "Remaining debt",
@@ -8953,6 +8957,7 @@
             "number": "Agreement number",
             "previousLender": "Who sold",
             "purchaseDate": "Purchase date",
+            "saleType": "Contract type",
             "debtCount": "Number of debts"
           }
         }
@@ -12410,6 +12415,14 @@
     "actions": {
       "restore": "Restore"
     }
+  },
+  "saleType": {
+    "label": "Contract type",
+    "values": {
+      "factoring": "Factoring",
+      "cession": "Cession"
+    },
+    "none": "not set"
   },
   "credit": {
     "clientBlock": {

@@ -5,7 +5,7 @@
  * Mirrors SellerDetailPage: back link, header, divider, agreements section.
  */
 
-const AGREEMENT_COLUMNS = 4
+const AGREEMENT_COLUMNS = 5
 const AGREEMENT_ROWS = 5
 
 /** Agreements table/area only — used when the seller chrome is already mounted. */

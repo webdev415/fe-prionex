@@ -316,6 +316,10 @@ function mapCollectionDebtToRow(d: DebtDetail) {
     factoringAgreementPurchaseDate: d.factoring_agreement?.contract_purchase_date
       ? formatDate(d.factoring_agreement.contract_purchase_date)
       : null,
+    // Contract type for the card's zone 4 and its purchase-date label: the
+    // debt's own copy, else its agreement's — the agreement is the source of
+    // truth, and the copy can be empty on a row written the old way.
+    saleType: d.sale_type ?? d.factoring_agreement?.sale_type ?? null,
     principalAmount: Number(d.principal_amount ?? 0),
     principalDebt: d.principal_debt != null ? Number(d.principal_debt) : null,
     remainingDebtAmount: Number(d.remaining_debt_amount ?? 0),

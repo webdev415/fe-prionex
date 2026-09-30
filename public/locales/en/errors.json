@@ -161,6 +161,7 @@
     "CONTACT_RESTRICTION_ALREADY_LIFTED": "This contact restriction has already been lifted.",
     "CONTACT_RESTRICTION_NOT_LIFTED": "This contact restriction is in force: there is no lift to undo.",
     "CONTACT_RESTRICTION_ALREADY_REINSTATED": "This lift has already been undone: the restriction was put back in force earlier.",
-    "PROJECT_CANADA_DISABLED": "Projects in Canadian dollars or in Canada are not available here yet. Choose a different currency or country."
+    "PROJECT_CANADA_DISABLED": "Projects in Canadian dollars or in Canada are not available here yet. Choose a different currency or country.",
+    "SALE_TYPE_CONFLICT": "This seller already has an agreement with this number of a different type"
   }
 }

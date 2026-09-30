@@ -15,6 +15,11 @@ import { useUploadImport } from '@/features/imports'
 import { useSellerFactoringAgreements } from '@/features/sellers'
 import type { Step1Data } from './Step1LoanSource'
 import { getErrorMessage } from '@/lib/errors'
+import {
+  buildNewFactoringAgreementJson,
+  parseSaleTypeConflict,
+  type SaleTypeConflict,
+} from '../utils/newFactoringAgreement'
 
 export interface Step2Data {
   csvFile: File | null
@@ -32,6 +37,8 @@ export interface Step2FileUploadProps {
   isImportInProgress?: boolean
   step1Data: Step1Data
   onImportStarted?: (importId: number | string) => void
+  /** 409 SALE_TYPE_CONFLICT on the new agreement — the wizard takes it back to step 1. */
+  onSaleTypeConflict?: (conflict: SaleTypeConflict) => void
 }
 
 export function Step2FileUpload({
@@ -40,6 +47,7 @@ export function Step2FileUpload({
   isImportInProgress = false,
   step1Data,
   onImportStarted,
+  onSaleTypeConflict,
 }: Step2FileUploadProps) {
   const { t } = useTranslation('common')
   const [isDragging, setIsDragging] = useState(false)
@@ -333,23 +341,7 @@ export function Step2FileUpload({
       effectivePurchaseDate = pickedAgreement?.contract_purchase_date || undefined
     } else {
       const newFa = step1Data.newFactoringAgreement
-      const payload: Record<string, string> = {
-        agreement_number: newFa.agreement_number.trim(),
-      }
-      if (newFa.previous_lender.trim()) {
-        payload.previous_lender = newFa.previous_lender.trim()
-      }
-      if (newFa.contract_purchase_date) {
-        // The wizard stores contract_purchase_date as a UTC datetime ISO
-        // string (consistent with the legacy top-level Purchase date
-        // picker's format) but client-service's Pydantic schema expects
-        // a plain YYYY-MM-DD date. Truncate the time portion here.
-        payload.contract_purchase_date = newFa.contract_purchase_date.split('T')[0]
-      }
-      if (newFa.reporting_date) {
-        payload.reporting_date = newFa.reporting_date.split('T')[0]
-      }
-      newFactoringAgreementJson = JSON.stringify(payload)
+      newFactoringAgreementJson = buildNewFactoringAgreementJson(newFa)
       // effectivePurchaseDate keeps the UTC ISO format — batch_processor
       // already strips the time before stamping debts.purchase_date.
       effectivePurchaseDate = newFa.contract_purchase_date || undefined
@@ -376,6 +368,23 @@ export function Step2FileUpload({
         onImportStarted(result.job_id)
       }
     } catch (error) {
+      // The new agreement's number is taken by one of another type — a step-1
+      // decision, handed back there instead of shown as a file error. Only a
+      // NEW agreement can conflict: in the existing mode a 409 keeps the usual
+      // path. `step1Data` here is what this upload was sent with, even if the
+      // operator has changed step 1 since.
+      const saleTypeConflict =
+        step1Data.factoringAgreementMode === 'new'
+          ? parseSaleTypeConflict(error, {
+              sellerId: step1Data.sellerId,
+              agreementNumber: step1Data.newFactoringAgreement.agreement_number,
+            })
+          : null
+      if (saleTypeConflict && onSaleTypeConflict) {
+        onSaleTypeConflict(saleTypeConflict)
+        return
+      }
+
       // Handle validation errors from backend upload endpoint
       const errorMessage = getErrorMessage(error)
       setImportError(errorMessage)

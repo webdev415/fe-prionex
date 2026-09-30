@@ -4895,7 +4895,9 @@
         "noProjectsAvailable": "Немає доступних проєктів",
         "noSellersAvailable": "Немає доступних продавців",
         "factoringAgreement": {
-          "title": "Договір факторингу",
+          "title": "Договір купівлі",
+          "saleTypeConflict": "Договір з цим номером у продавця вже є (тип: {{existing}}). Оберіть його в режимі «Вибрати існуючий» або вкажіть інший номер.",
+          "saleTypeDateHint": "Тип не відповідає даті купівлі: до 30.07.2026 портфелі купувалися за факторингом, з 30.07.2026 — за договором відступлення. Перевірте тип.",
           "pickSellerFirst": "Спочатку оберіть продавця.",
           "pickExisting": "Вибрати існуючий",
           "createNew": "Створити новий",
@@ -5863,6 +5865,8 @@
           "loanAmount": "Сума позики",
           "remainingDebtLawful": "Залишок боргу (Правомірно)",
           "purchaseDateFa": "Дата купівлі за ДФ",
+          "purchaseDateCession": "Дата купівлі (відступлення)",
+          "purchaseDateGeneric": "Дата купівлі",
           "debtTerm": "Строк кредиту",
           "eligibleForReturn": "Дозволена до повернення",
           "remainingDebtAmount": "Залишок боргу",
@@ -8295,6 +8299,7 @@
             "number": "Номер договору",
             "previousLender": "Хто продав",
             "purchaseDate": "Дата купівлі",
+            "saleType": "Тип договору",
             "debtCount": "Кількість боргів"
           }
         }
@@ -12450,6 +12455,14 @@
     "actions": {
       "restore": "Відновити"
     }
+  },
+  "saleType": {
+    "label": "Тип договору",
+    "values": {
+      "factoring": "Факторинг",
+      "cession": "Цесія"
+    },
+    "none": "не вказано"
   },
   "credit": {
     "clientBlock": {
