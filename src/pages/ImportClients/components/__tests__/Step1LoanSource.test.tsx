@@ -406,7 +406,8 @@ describe('Step1LoanSource — type conflict returned by the upload', () => {
   // Exact text, not a substring: every reason key starts with the stored-type one.
   it.each([
     ['stored_type', 'factoring', `${CONFLICT}(${FACTORING})`],
-    ['stored_type', null, `${CONFLICT}(saleType.none)`],
+    // A stored-type conflict naming no stored type contradicts itself: neutral.
+    ['stored_type', null, `${REASONS}.other`],
     ['debt_types', null, `${REASONS}.debt_types`],
     ['foreign_project_debts', null, `${REASONS}.foreign_project_debts`],
     // A service token never reaches this screen as an operator: nothing to name.

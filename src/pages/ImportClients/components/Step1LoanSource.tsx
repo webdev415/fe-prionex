@@ -220,9 +220,14 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
   // The message names why the agreement cannot take the type. A server from
   // before `reason` sends only the stored type: with one, the agreement has
   // another type already; without one — and for a reason unknown here, or a
-  // service caller, which an operator never is — the neutral message.
+  // service caller, which an operator never is — the neutral message. So is
+  // `stored_type` sent without the stored type: "(type: not set)" would say the
+  // agreement has none, the opposite of that reason.
   const saleTypeConflictMessage = (shown: SaleTypeConflict) => {
-    const reason = shown.reason ?? (shown.existingSaleType ? 'stored_type' : null)
+    const reason =
+      shown.reason === 'stored_type' && !shown.existingSaleType
+        ? null
+        : (shown.reason ?? (shown.existingSaleType ? 'stored_type' : null))
     switch (reason) {
       case 'stored_type':
         return t(
