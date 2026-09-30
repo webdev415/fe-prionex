@@ -10,7 +10,7 @@
  * Same collision as the filter defect in KAN-1090; this is the display half.
  */
 import { describe, it, expect } from 'vitest'
-import { readStepValue } from '../taStepValue'
+import { legacyKeyIsUnambiguous, readStepValue } from '../taStepValue'
 
 // The shape that reproduces it: the date step sits at order 2, and its action
 // id (3) is also the order of the step after it.
@@ -53,6 +53,36 @@ describe('readStepValue — legacy rows keyed by action id', () => {
     // This is the whole fix: id 3 is also order 3 here, so "3" cannot be read
     // as belonging to the step at order 2.
     expect(readStepValue({ '3': 'belongs to order 3' }, DATE_STEP, CHAIN)).toBeUndefined()
+  })
+
+  it('declines the legacy key when two steps share the target action', () => {
+    // Neither step can claim "7": the key names the action, and the action is
+    // used twice. Reading it would show one answer under both steps (KAN-744).
+    const chain = [
+      { step_order: 1, target_action_id: 7 },
+      { step_order: 2, target_action_id: 7 },
+    ]
+    expect(readStepValue({ '7': 'whose?' }, chain[0], chain)).toBeUndefined()
+    expect(readStepValue({ '7': 'whose?' }, chain[1], chain)).toBeUndefined()
+  })
+})
+
+describe('legacyKeyIsUnambiguous', () => {
+  it('does not count the step itself as the step occupying that order', () => {
+    // Order 4 / id 4. Both readers happen to short-circuit on the own-order key
+    // before asking, so no current caller can tell — but the predicate is
+    // exported and its answer here is "yes, that key is mine", not "ambiguous".
+    const chain = [{ step_order: 4, target_action_id: 4 }]
+    expect(legacyKeyIsUnambiguous(chain[0], chain)).toBe(true)
+  })
+
+  it('refuses a key that names another step, and one shared by two steps', () => {
+    expect(legacyKeyIsUnambiguous(DATE_STEP, CHAIN)).toBe(false)
+    const shared = [
+      { step_order: 1, target_action_id: 7 },
+      { step_order: 2, target_action_id: 7 },
+    ]
+    expect(legacyKeyIsUnambiguous(shared[0], shared)).toBe(false)
   })
 })
 
