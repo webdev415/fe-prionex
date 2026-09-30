@@ -13,6 +13,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/features/auth'
 import { authApi } from '@/features/auth/api/authApi'
 import { useAuthStore } from '@/stores/authStore'
+import { useSearchStore } from '@/stores/searchStore'
 import { setAccessToken } from '@/lib/api'
 import { mapBackendUserToUser } from '@/lib/mapBackendUser'
 import { Icons } from '@/lib/icons'
@@ -85,6 +86,9 @@ export function ProjectSelector() {
         // Still clear cache even if user fetch failed — token was already updated
         queryClient.removeQueries()
       }
+      // The header search belongs to the previous project: the clients page is not
+      // mounted here, so it would carry it into the next one. The search type stays.
+      useSearchStore.getState().setSearchQuery('')
 
       toast.success(
         t('pages.users.messages.projectSwitched', {

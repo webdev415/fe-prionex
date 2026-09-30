@@ -31,9 +31,12 @@ export function BulkTagModal({ open, clientIds, clientCount, action, onClose }: 
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([])
 
-  // Fetch tags - TODO: Get projectId from auth context
-  const projectId = 1 // Temporary hardcoded value
-  const { data: tags, isLoading } = useTags(projectId)
+  // The active project's tags. Without an active project nothing is asked for and the list
+  // stays empty, even if the page's own tag queries cached a list under the same key.
+  const activeProjectId = useAuthStore((state) => state.user?.active_project_id)
+  const projectId = activeProjectId ? Number(activeProjectId) : undefined
+  const { data, isLoading } = useTags(projectId, { enabled: projectId !== undefined })
+  const tags = projectId !== undefined ? (data ?? []) : []
   const bulkTagMutation = useBulkTagClients()
 
   // Reset state when modal closes
