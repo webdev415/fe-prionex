@@ -137,14 +137,17 @@ export function ClientFiltersBar({ filters, onFilterChange }: ClientFiltersBarPr
   const [portfolioDropdownOpen, setPortfolioDropdownOpen] = useState(false)
   const [tagsDropdownOpen, setTagsDropdownOpen] = useState(false)
 
-  // Fetch sellers from API (replaces mock portfolio data)
+  const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
+  const projectIdNum = activeProjectId ? Number(activeProjectId) : undefined
+
+  // Fetch sellers from API (replaces mock portfolio data), scoped to the active
+  // project: only sellers with debts of its clients, not the whole directory
+  // (story 17-56, Р-6). No active project — no parameter, as before.
   const { data: sellersResponse } = useSellers({
     is_active: true,
     limit: 1000,
+    project_id: projectIdNum,
   })
-
-  const activeProjectId = useAuthStore((s) => s.user?.active_project_id)
-  const projectIdNum = activeProjectId ? Number(activeProjectId) : undefined
 
   // Fetch tags for the operator's active project (tag_definitions.id values).
   const { data: tagsData } = useTags(projectIdNum)

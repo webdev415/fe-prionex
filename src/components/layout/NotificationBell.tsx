@@ -33,6 +33,7 @@ import {
   useUpdateTaskFromBell,
 } from '@/features/notifications/hooks/useNotifications'
 import { useNotificationSocket } from '@/features/notifications/hooks/useNotificationSocket'
+import { useUbkiAvailable } from '@/features/ubki/hooks/useUbkiAvailable'
 import { NotificationType } from '@/features/notifications/types'
 import type { NotificationItem } from '@/features/notifications/types'
 import { piiProps } from '@/lib/openreplay/pii'
@@ -224,11 +225,13 @@ function EmptyState({ label }: { t: TFunction; label: string }) {
 }
 
 function NotificationTabStrip({
+  tabs,
   activeTab,
   onTabChange,
   tabCounts,
   t,
 }: {
+  tabs: readonly Tab[]
   activeTab: Tab
   onTabChange: (tab: Tab) => void
   tabCounts: Record<Tab, number>
@@ -306,7 +309,7 @@ function NotificationTabStrip({
           canScrollRight && 'pr-6'
         )}
       >
-        {TABS.map((tab) => {
+        {tabs.map((tab) => {
           const count = tabCounts[tab]
           const isActive = activeTab === tab
           return (
@@ -366,6 +369,7 @@ export function NotificationBell() {
 
   // Tab state — Tasks is the default (operators' most-frequent action).
   const [activeTab, setActiveTab] = useState<Tab>('tasks')
+  const ubkiAvailable = useUbkiAvailable()
 
   const { data: taskNotifData } = useNotifications({
     page: 1,
@@ -508,6 +512,11 @@ export function NotificationBell() {
       n.type === NotificationType.UBKI_CONNECTION_DOWN ||
       n.type === NotificationType.UBKI_DAILY_SUMMARY
   )
+  // UBKI is Ukrainian-only (story 17-56, Р-5): elsewhere the tab is hidden while
+  // empty, and an alert that did arrive keeps it. A hidden tab never stays
+  // selected — a project switch does not remount the header.
+  const showUbkiTab = ubkiAvailable || ubkiTabItems.length > 0
+  const shownTab = !showUbkiTab && activeTab === 'ubki' ? 'tasks' : activeTab
   const trainingTabItems = trainingNotifs
   // Defensive re-filter: the misc fetch already excludes hidden types
   // server-side, but never let a hidden type slip into the panel.
@@ -649,7 +658,8 @@ export function NotificationBell() {
           </div>
 
           <NotificationTabStrip
-            activeTab={activeTab}
+            tabs={showUbkiTab ? TABS : TABS.filter((tab) => tab !== 'ubki')}
+            activeTab={shownTab}
             onTabChange={setActiveTab}
             tabCounts={{
               tasks: tasksTabItems.length,
@@ -667,7 +677,7 @@ export function NotificationBell() {
 
           {/* Tab content panel */}
           <div className="max-h-80 overflow-y-auto">
-            {activeTab === 'tasks' &&
+            {shownTab === 'tasks' &&
               (tasksTabItems.length === 0 ? (
                 <EmptyState t={t} label={t('notificationBell.empty.tasks', 'No overdue tasks')} />
               ) : (
@@ -751,7 +761,7 @@ export function NotificationBell() {
                 ))
               ))}
 
-            {activeTab === 'ubki' &&
+            {shownTab === 'ubki' &&
               (ubkiTabItems.length === 0 ? (
                 <EmptyState t={t} label={t('notificationBell.empty.ubki', 'No UBKI alerts')} />
               ) : (
