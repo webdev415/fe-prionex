@@ -1,11 +1,16 @@
 /**
- * Status chip of a task (planner story 1.10, AC3; UX «Чип статуса»).
+ * Status chip of a task (planner stories 1.10 AC3, 5.1 AC2/AC5; UX «Чип статуса»).
  *
- * Category dot + the board's status name. It is a button only when the server
- * put `change_status` in the task's `allowed_actions`; otherwise it is plain
- * text — no dead control. The list is the board's statuses with the current one
- * on top; the change goes out as `PATCH /tasks/{id}` under `If-Match`.
- * A status marked `requires_reason` asks for the reason first (UX «Диалог причины»).
+ * Category dot (DESIGN.md `cat-*`, `plannerTones`) + the board's status name,
+ * as the board spelled it. It is a button only when the server put
+ * `change_status` in the task's `allowed_actions`; otherwise it is plain text —
+ * no dead control. The contract has no per-transition rules (any status of the
+ * board is a legal target once `change_status` is there), so the menu is the
+ * board's statuses with the current one on top; the change goes out as
+ * `PATCH /tasks/{id}` under `If-Match` and is undone from a 5 s «Скасувати»
+ * toast. A status marked `requires_reason` asks for the reason first (UX
+ * «Диалог причины»), and a task that LEAVES such a status gets no undo: going
+ * back would need a reason nobody typed.
  *
  * The board (its statuses) is loaded as soon as the chip is a button, not when
  * the menu opens: otherwise the first click on «Мої задачі» or in the task panel
@@ -14,39 +19,27 @@
  * failed, the statuses already loaded stay usable and a quiet «Повторити» sits
  * under them; the error text is for a menu that has nothing else to offer.
  *
- * The reason is limited as the contract says (1–1000 characters after trimming,
- * counted in code points like the planner's runes). An overflow is reported in
- * the dialog, never cut off by `maxLength`.
+ * The reason is asked in `StatusReasonDialog` (limits of the contract there).
+ * Inside a kanban card the chip leaves the Tab order and is reached with ← →
+ * (`cardFocus`, story 5.3).
  */
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { formatNumber } from '@/lib/localeFormat'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/DropdownMenu'
-import { Modal, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/Modal'
-import { Button } from '@/components/ui/Button'
-import { Textarea } from '@/components/ui/Textarea'
 import { cn } from '@/lib/utils'
 import { usePlannerBoard } from '@/api/planner/plannerQueries'
-import {
-  PLANNER_REASON_MAX,
-  plannerTextLength,
-  type PlannerBoardStatus,
-  type PlannerTaskCard,
-} from '@/api/planner/plannerApi'
+import type { PlannerBoardStatus, PlannerTaskCard } from '@/api/planner/plannerApi'
 import { useChangeTaskStatus } from '../hooks/usePlannerMutations'
+import { CATEGORY_DOT } from '../plannerTones'
+import { StatusReasonDialog } from './StatusReasonDialog'
+import { useCardTabIndex } from './cardFocus'
 
 type Category = PlannerTaskCard['status']['category']
-
-const DOT: Record<Category, string> = {
-  todo: 'bg-muted-foreground',
-  in_progress: 'bg-info-500',
-  done: 'bg-success-500',
-}
 
 type ChipTask = Pick<
   PlannerTaskCard,
@@ -56,18 +49,20 @@ type ChipTask = Pick<
 function ChipFace({ name, category }: { name: string; category: Category }) {
   return (
     <>
-      <span aria-hidden="true" className={cn('h-2 w-2 shrink-0 rounded-full', DOT[category])} />
+      <span
+        aria-hidden="true"
+        className={cn('h-2 w-2 shrink-0 rounded-full', CATEGORY_DOT[category])}
+      />
       <span className="truncate">{name}</span>
     </>
   )
 }
 
 export function StatusChip({ task }: { task: ChipTask }) {
-  const { t, i18n } = useTranslation('planner')
+  const { t } = useTranslation('planner')
   const [open, setOpen] = useState(false)
   const [reasonFor, setReasonFor] = useState<PlannerBoardStatus | null>(null)
-  const [reason, setReason] = useState('')
-  const [reasonError, setReasonError] = useState<string | undefined>()
+  const tabIndex = useCardTabIndex()
   const canChange = task.allowed_actions.includes('change_status')
   const board = usePlannerBoard(task.board.code, canChange, { poll: false })
   const change = useChangeTaskStatus()
@@ -113,6 +108,10 @@ export function StatusChip({ task }: { task: ChipTask }) {
     </DropdownMenuItem>
   )
 
+  // Unknown in the loaded configuration (renamed away meanwhile) counts as
+  // «needs a reason»: no undo rather than an undo the server refuses.
+  const leavesReasonStatus = statuses.find((s) => s.id === task.status.id)?.requires_reason ?? true
+
   const send = (status: PlannerBoardStatus, withReason?: string) =>
     change.mutate({
       id: task.id,
@@ -121,12 +120,11 @@ export function StatusChip({ task }: { task: ChipTask }) {
       version: task.version,
       statusId: status.id,
       reason: withReason,
+      undo: leavesReasonStatus ? undefined : { statusId: task.status.id, toName: status.name },
     })
 
   const pick = (status: PlannerBoardStatus) => {
     if (status.requires_reason) {
-      setReason('')
-      setReasonError(undefined)
       setReasonFor(status)
       return
     }
@@ -141,6 +139,7 @@ export function StatusChip({ task }: { task: ChipTask }) {
             type="button"
             className={cn(chipClass, 'hover:bg-muted cursor-pointer')}
             aria-label={t('status.change', { status: task.status.name })}
+            tabIndex={tabIndex}
             disabled={change.isPending}
             onClick={(event) => event.stopPropagation()}
           >
@@ -178,41 +177,15 @@ export function StatusChip({ task }: { task: ChipTask }) {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Modal open={reasonFor !== null} onClose={() => setReasonFor(null)} maxWidth="sm">
-        <ModalHeader title={reasonFor ? `${task.key} → ${reasonFor.name}` : ''} />
-        <ModalContent>
-          <Textarea
-            label={t('reasonDialog.label')}
-            value={reason}
-            error={reasonError}
-            onChange={(event) => setReason(event.target.value)}
-          />
-        </ModalContent>
-        <ModalFooter>
-          <Button variant="outline" size="sm" onClick={() => setReasonFor(null)}>
-            {t('create.cancel')}
-          </Button>
-          <Button
-            size="sm"
-            disabled={reason.trim() === ''}
-            onClick={() => {
-              const trimmed = reason.trim()
-              if (plannerTextLength(trimmed) > PLANNER_REASON_MAX) {
-                setReasonError(
-                  t('reasonDialog.tooLong', {
-                    max: formatNumber(PLANNER_REASON_MAX, i18n.language ?? 'uk'),
-                  })
-                )
-                return
-              }
-              if (reasonFor) send(reasonFor, trimmed)
-              setReasonFor(null)
-            }}
-          >
-            {t('reasonDialog.confirm')}
-          </Button>
-        </ModalFooter>
-      </Modal>
+      <StatusReasonDialog
+        open={reasonFor !== null}
+        title={reasonFor ? `${task.key} → ${reasonFor.name}` : ''}
+        onCancel={() => setReasonFor(null)}
+        onConfirm={(reason) => {
+          if (reasonFor) send(reasonFor, reason)
+          setReasonFor(null)
+        }}
+      />
     </>
   )
 }

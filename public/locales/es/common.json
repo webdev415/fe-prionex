@@ -12515,7 +12515,9 @@
       "referred": "Derivada",
       "waiting": "En cola",
       "assigned": "Asignada",
-      "disbursed": "Desembolsado"
+      "disbursed": "Desembolsado",
+      "checklist": "Lista",
+      "conditional": "Condición"
     },
     "fields": {
       "name": "Nombre",
@@ -12619,13 +12621,18 @@
       "loanId": "ID del préstamo",
       "loanAgeDays": "Días desde el desembolso",
       "advanceRefundExcess": "Excedente de devolución tras la cancelación",
-      "supersedesDecision": "Sustituye la decisión anterior"
+      "supersedesDecision": "Sustituye la decisión anterior",
+      "checklist": "Lista de verificación",
+      "conditionalCodes": "Condiciones de aprobación"
     },
     "decisionError": {
       "operatorIdNotNumeric": "La decisión no se guardó: el número de usuario de su pase de CRM no es un número entero, por lo que no se puede registrar al autor de la decisión. Contacte al administrador: es un ajuste del inicio de sesión, no un error suyo.",
       "operatorIdAmbiguous": "La decisión no se guardó: su pase de CRM indica dos números de usuario distintos, por lo que no se puede determinar al autor de la decisión. Contacte al administrador.",
       "underwriterNotTheCaller": "La decisión no se guardó: el autor de una decisión manual es el titular del pase de CRM, y la página envió otro número. Actualice la página e inténtelo de nuevo.",
-      "generic": "La decisión no se guardó. Inténtelo de nuevo; si vuelve a ocurrir, contacte al administrador."
+      "generic": "La decisión no se guardó. Inténtelo de nuevo; si vuelve a ocurrir, contacte al administrador.",
+      "conditionalApprovalUnconfirmed": "La aprobación no se guardó: para esta solicitud se declaró una condición, así que solo la confirmación del responsable de riesgos puede aprobarla. Todavía puede rechazarla o proponer otra condición.",
+      "confirmerIsTheAuthor": "La confirmación no se guardó: usted es el autor de esta propuesta y debe confirmarla otra persona, el responsable de riesgos.",
+      "proposalNotActive": "La confirmación no se guardó porque la propuesta ya no está vigente: otra decisión la reemplazó, la solicitud ya no está en revisión o los datos bancarios cambiaron después de la propuesta (hace falta una nueva revisión). Actualice la ficha."
     },
     "tabs": {
       "form": "Formulario de solicitud",
@@ -12653,7 +12660,9 @@
       "saveDecision": "Enviar decisión",
       "retry": "Reintentar",
       "copy": "Copiar",
-      "showMore": "Mostrar más"
+      "showMore": "Mostrar más",
+      "proposeConditional": "Proponer una aprobación condicional",
+      "confirmConditional": "Confirmar la aprobación condicional"
     },
     "metrics": {
       "requested": "Solicitado (página)",
@@ -12690,7 +12699,17 @@
       "currentDecision": "Decisión actual",
       "manualDecision": "Decisión manual",
       "snapshot": "Instantánea de los datos de decisión (DAT-02)",
+      "snapshotPayoutHidden": "Los datos de la cuenta de pago están ocultos en la instantánea; la cuenta se ve en la pestaña IBV.",
+      "snapshotAmountsHidden": "Los importes de pensiones y prestaciones están ocultos en la instantánea.",
+      "snapshotAmountsHiddenSeeBreakdown": "Los importes de pensiones y prestaciones están ocultos en la instantánea; la clase de ingresos se ve en el desglose de la puntuación.",
       "declineCodesHint": "Los códigos de rechazo son obligatorios para un rechazo",
+      "decisionCodesLoading": "Cargando el catálogo de códigos de rechazo…",
+      "decisionCodesUnavailable": "El catálogo de códigos de rechazo no está disponible, así que ahora no se puede registrar un rechazo. La aprobación y la derivación a revisión siguen funcionando.",
+      "decisionCodesOffline": "No hay conexión de red, así que el catálogo de códigos de rechazo no se ha cargado y ahora no se puede registrar un rechazo. El catálogo se cargará solo en cuanto vuelva la conexión.",
+      "decisionCodesModuleTooOld": "El catálogo de códigos de rechazo no está disponible: el módulo de crédito es anterior a la versión requerida 0.1.27, así que no se puede registrar un rechazo. Avise al administrador. La aprobación y la derivación a revisión siguen funcionando.",
+      "decisionCodesForbidden": "Su rol no tiene permiso para leer el catálogo de códigos de rechazo, así que no se puede registrar un rechazo. Contacte con el administrador.",
+      "declineCodesSent": "Enviado como: {{codes}}",
+      "decisionCodesIds": "Códigos del catálogo: {{codes}}",
       "rationalePlaceholder": "Qué se comprobó y por qué esta decisión. Queda en el historial para siempre.",
       "state01": "No hay vuelta atrás desde un rechazo (STATE-01): una nueva decisión implica una nueva solicitud.",
       "decisionSaved": "Decisión registrada.",
@@ -12773,7 +12792,90 @@
       "identifiers": "Identificadores",
       "owedToClient": "Adeudado al cliente",
       "owedToClientHint": "Tras cancelar, el cliente devolvió más de lo que recibió. El módulo debe devolverle esta cantidad: no es una deuda del cliente ni un sobrepago.",
-      "owedToClientUnknown": "El módulo no indicó si le debemos algo al cliente: el campo falta en la respuesta. Esto no significa que no haya excedente."
+      "owedToClientUnknown": "El módulo no indicó si le debemos algo al cliente: el campo falta en la respuesta. Esto no significa que no haya excedente.",
+      "conditionalTitle": "Aprobar con condición (debe confirmarlo el responsable de riesgos)",
+      "conditionalHint": "Con una condición, la decisión pasa a ser una propuesta: la solicitud sigue en revisión y no se emite el contrato hasta que lo confirme el responsable de riesgos. Confirma otra persona, no el autor de la propuesta.",
+      "conditionalUnavailable": "Las condiciones de aprobación no están disponibles: el catálogo de códigos no se cargó. La aprobación simple sigue funcionando.",
+      "proposedAmount": "Importe propuesto: {{amount}}",
+      "confirmTitle": "¿Confirmar la aprobación condicional?",
+      "confirmMessage": "La solicitud se aprobará por {{amount}} con las condiciones {{codes}} y se emitirá un contrato para que lo firme el cliente. La confirmación no se puede deshacer.",
+      "confirmNotAuthor": "Confirma otra persona, no el autor de la propuesta.",
+      "conditionalConfirmed": "La aprobación condicional está confirmada."
+    },
+    "scorecard": {
+      "title": "Desglose de la puntuación",
+      "version": "Versión de las reglas de puntuación",
+      "incomeClass": "Clase de ingresos",
+      "declaredClass": "Clase según el formulario",
+      "employmentStatus": "Situación laboral en el formulario",
+      "employmentStatusUnknown": "no está en la lista del formulario",
+      "bNotConfirmed": "El banco no confirmó la clase B declarada",
+      "evidence": "Señales de clase según el banco",
+      "parameter": "Parámetro",
+      "value": "Valor",
+      "points": "Puntos",
+      "total": "Puntos totales",
+      "totalValue": "{{total}} de {{max}}",
+      "totalValueBare": "{{total}}",
+      "band": "Banda",
+      "bandValue": "{{band}} de {{bands}} (1 es la mejor)",
+      "bandValueBare": "{{band}} (1 es la mejor)",
+      "bandDeclined": "0 — rechazo por el filtro",
+      "gate": "Filtro de rechazo automático",
+      "gatePass": "Superado",
+      "gateDecline": "Rechazo",
+      "gateCodes": "Códigos de rechazo del filtro",
+      "gateHeld": "Retenidos para decisión humana",
+      "gateHeldVerdict": "Retenido para decisión humana",
+      "gateReview": "Por qué lo revisa una persona",
+      "gateSignals": "Señales del filtro",
+      "yes": "sí",
+      "no": "no",
+      "notMeasured": "no medido",
+      "notComputed": "no calculado",
+      "bookCode": "libro: {{code}}",
+      "amountTitle": "Importe por nivel",
+      "clientType": "Tipo de cliente",
+      "clientTypeValue": "{{type}} (préstamos pagados: {{closed}})",
+      "tier": "Límites del nivel",
+      "classBCap": "se aplicó el tope de la clase B",
+      "scale": "Importe de escala por banda",
+      "cap": "Tope del 50 % del salario",
+      "rounded": "Tras el redondeo",
+      "final": "Importe propuesto por la máquina",
+      "installments": "Número de cuotas",
+      "installmentsRange": "{{min}}–{{max}}",
+      "installmentsUpTo": "hasta {{max}}",
+      "installmentsFrom": "desde {{min}}",
+      "decisionCodes": "Códigos de decisión de la máquina"
+    },
+    "scorecardParameter": {
+      "nsf_90d": "Pagos devueltos (NSF) en 90 días",
+      "free_cash_flow_monthly": "Flujo de caja libre mensual promedio",
+      "micro_lenders": "Microprestamistas distintos",
+      "negative_balance_days_90d": "Días con saldo negativo en 90 días",
+      "overdraft": "Descubierto",
+      "active_days_trend": "Tendencia de días activos de la cuenta",
+      "history_days": "Profundidad del historial bancario recibido",
+      "income_trend": "Tendencia de ingresos (clase B: ingreso gubernamental)"
+    },
+    "scorecardSignal": {
+      "employer_income_30d": "Ingresos del empleador en los últimos 30 días",
+      "employment_loss": "El banco detecta una pérdida de empleo",
+      "government_income_30d": "Ingreso gubernamental en los últimos 30 días",
+      "b_income": "Pensión o prestación por discapacidad según el banco",
+      "c_income": "EI, asistencia social o WSIB según el banco"
+    },
+    "incomeClass": {
+      "A": "A — ingresos laborales",
+      "B": "B — pensión o prestación por discapacidad",
+      "C": "C — otros ingresos (prestaciones, autoempleo)"
+    },
+    "incomeClassSource": {
+      "questionnaire": "según el formulario",
+      "flinks": "según los datos bancarios",
+      "both": "el formulario y el banco coinciden",
+      "default": "por defecto: ni el formulario ni el banco indicaron una clase"
     },
     "settings": {
       "title": "Configuración del módulo de crédito",
@@ -12889,7 +12991,11 @@
       "employed": "Empleado",
       "unemployed": "Desempleado",
       "retired": "Jubilado",
-      "student": "Estudiante"
+      "student": "Estudiante",
+      "disability": "Prestación por discapacidad",
+      "social_assistance": "Asistencia social",
+      "none": "Sin empleo",
+      "other": "Otro"
     },
     "frequency": {
       "bi_weekly": "cada dos semanas",
@@ -13009,6 +13115,58 @@
       "RC-04": "Ya existe un crédito activo",
       "RC-08": "Periodo de espera tras un rechazo",
       "RC-11": "Capacidad de pago insuficiente / ingresos por debajo del mínimo"
+    },
+    "decisionCodeCategory": {
+      "loan_terms": "Condiciones del préstamo",
+      "identity": "Identidad y domicilio",
+      "bank_account": "Cuenta bancaria",
+      "conduct": "Conducta del solicitante",
+      "financial_hardship": "Dificultades financieras",
+      "digital_verification": "Verificación digital",
+      "income": "Ingresos",
+      "bank_statement": "Extracto bancario",
+      "employment": "Empleo",
+      "service": "Códigos de servicio"
+    },
+    "checklistItem": {
+      "ibv_all_accounts": "Verificación de todas las cuentas bancarias del cliente (IBV)",
+      "statement_two_months": "Extracto bancario de al menos 2 meses",
+      "salary_regular": "El salario es regular durante todo el período",
+      "nsf_isolated": "Las devoluciones NSF son aceptables si son aisladas o están corregidas a la fecha actual",
+      "loan_repayments_on_payday_max6": "No más de 6 pagos de préstamos el día del último salario",
+      "salary_account_connected": "La cuenta donde se recibe el salario está conectada (save), la tarjeta está verificada y el banco y su código se ingresaron manualmente",
+      "id_photo_only": "Solo se aceptan fotos del documento (pasaporte, documento de identidad, licencia de conducir); los escaneos no sirven",
+      "id_valid_on_apply": "El documento es válido en la fecha de la solicitud",
+      "id_alberta_only": "Documentos solo de la provincia de Alberta",
+      "pay_document": "Hay un documento de salario",
+      "residence_proof": "Hay comprobante de domicilio"
+    },
+    "checklistHint": {
+      "ibv_all_accounts": "Si los extractos o el IBV no se cargan, solicítelos a través del CRM",
+      "statement_two_months": "En Flinks, verifique la tarjeta vigente (puede haber varias)",
+      "salary_regular": "Verifíquelo en la sección IBV del panel",
+      "nsf_isolated": "1 o 2 veces al mes; después vienen cargos de créditos, planes a plazos y préstamos",
+      "loan_repayments_on_payday_max6": "Obligatorio: el préstamo se cobrará de esta tarjeta",
+      "residence_proof": "En una ciudad pequeña no hace falta solicitarlo; entonces, «No aplica»"
+    },
+    "checklistAnswer": {
+      "yes": "Sí",
+      "no": "No",
+      "n_a": "No aplica"
+    },
+    "checklist": {
+      "title": "Lista de verificación",
+      "progress": "Marcados {{answered}} de {{total}}",
+      "unansweredNotSent": "Los puntos sin marcar no se incluyen en la decisión.",
+      "addNote": "Nota",
+      "clearAnswer": "Borrar",
+      "share": "«Sí»: {{yes}} de {{applicable}} aplicables",
+      "noneApplicable": "Ningún punto aplica",
+      "notFilled": "Lista no completada"
+    },
+    "conditionalStage": {
+      "proposed": "Pendiente de confirmación del responsable",
+      "confirmed": "Confirmado por el responsable"
     },
     "channel": {
       "site": "Sitio web",
@@ -13337,7 +13495,8 @@
       "empty": "La cola está vacía",
       "noNumberHint": "El endpoint de la cola solo devuelve el ID de la solicitud: no incluye el número de solicitud ni el correo del cliente. Abra la ficha haciendo clic en una fila para verlos.",
       "noAssignmentHint": "La asignación a un analista de crédito todavía no existe: el mecanismo llega con WS-20, así que la columna «Asignada» está vacía en todas las filas.",
-      "noSortingHint": "El módulo devuelve toda la cola como una sola lista en orden de derivación: no hay ordenación por columnas ni paginación, porque el servidor no admite ninguna de las dos."
+      "noSortingHint": "El módulo devuelve toda la cola como una sola lista en orden de derivación: no hay ordenación por columnas ni paginación, porque el servidor no admite ninguna de las dos.",
+      "awaitingConfirmation": "Pendiente de confirmación"
     },
     "railReviewReason": {
       "payout_account_not_pinned": "La decisión no fijó una cuenta de desembolso",
@@ -13364,7 +13523,14 @@
       "RC-04": "Ya existe un préstamo activo",
       "RC-08": "Periodo de espera tras un rechazo",
       "RC-11": "Capacidad de pago insuficiente / ingresos por debajo del mínimo",
-      "client_not_identifiable": "No se pudo identificar al cliente"
+      "client_not_identifiable": "No se pudo identificar al cliente",
+      "low_identity_match": "El banco mostró una baja coincidencia entre el titular de la cuenta y el solicitante",
+      "legacy_obligation_phone_only": "El teléfono coincide con un prestatario del CRM anterior cuyo préstamo no está pagado",
+      "first_pad_return_not_repaid": "El cliente tiene un préstamo impago cuyo débito PAD devolvió el banco",
+      "employment_status_unknown": "La situación laboral del formulario no está en la lista: la clase de ingresos no está determinada",
+      "income_class_b_not_confirmed": "El cliente declaró una pensión o prestación por discapacidad; el banco no la confirmó",
+      "scorecard_input_missing": "El banco no envió una señal por la que el libro de reglas rechaza automáticamente",
+      "class_b_installments_unattainable": "Clase B: el calendario de pagos da menos de las 4 cuotas que exige el libro"
     },
     "stage": {
       "registration": "Registro",

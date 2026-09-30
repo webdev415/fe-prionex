@@ -100,6 +100,8 @@ function captureRequests(): { seen: InternalAxiosRequestConfig[]; restore: () =>
  * сузил бы всё, что ниже.
  */
 const CALLS: Array<{ name: string; invoke: () => Promise<unknown> }> = [
+  // 19-1f: реестр кодов решения модуля — читается под тем же пропуском оператора.
+  { name: 'decisionCodes', invoke: () => creditApi.decisionCodes() },
   { name: 'overview', invoke: () => creditApi.overview() },
   { name: 'applications', invoke: () => creditApi.applications({}) },
   { name: 'application', invoke: () => creditApi.application('a1') },
@@ -113,6 +115,11 @@ const CALLS: Array<{ name: string; invoke: () => Promise<unknown> }> = [
   {
     name: 'decide',
     invoke: () => creditApi.decide('a1', { outcome: 'approved', rationale: 'r' }),
+  },
+  // 19-5f: подтверждение условного одобрения — та же дверь под пропуском оператора.
+  {
+    name: 'confirmConditional',
+    invoke: () => creditApi.confirmConditional('a1', { proposal_decision_id: 'd1' }, 'idem-2'),
   },
   { name: 'loans', invoke: () => creditApi.loans({}) },
   // Дверь карточки клиента CRM (WS-11): её вызов уносит id клиента, и уже

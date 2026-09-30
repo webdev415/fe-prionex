@@ -8,9 +8,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
-import { AxiosError, AxiosHeaders } from 'axios'
+import axios, { AxiosError, AxiosHeaders, type AxiosRequestConfig } from 'axios'
 
-const http = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), patch: vi.fn() }))
+const http = vi.hoisted(() => ({
+  get: vi.fn(),
+  post: vi.fn(),
+  patch: vi.fn(),
+  put: vi.fn(),
+  delete: vi.fn(),
+}))
 vi.mock('@/lib/api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/api')>()
   return { ...actual, default: http, api: http }
@@ -18,19 +24,28 @@ vi.mock('@/lib/api', async (importOriginal) => {
 
 import {
   createTask,
+  deleteBoardMember,
+  getBoardHistory,
+  getBoardKanban,
+  getMe,
   getMeta,
   ifMatch,
   listBoardTasks,
   listMyTasks,
   newIdempotencyKey,
   patchTask,
+  previewBoardConfig,
+  putBoardConfig,
+  putBoardMember,
   resolveTask,
   searchPeople,
+  uploadTaskAttachment,
   uuidV4FromRandomValues,
 } from '../plannerApi'
 import {
   PLANNER_POLL_MS,
   plannerKeys,
+  usePlannerBoardKanban,
   usePlannerBoardTasks,
   usePlannerMyTasks,
   usePlannerPeople,
@@ -100,9 +115,92 @@ describe('planner operations over the shared axios', () => {
     expect(ifMatch(12)).toBe('"12"')
   })
 
+  it('kanban and the board list carry the filters of 3.13; /me for «Мої» (5.3)', async () => {
+    const filters = {
+      assignee_user_id: 'u-1',
+      label_id: 'l-1',
+      overdue: 'true' as const,
+      q: 'залишки',
+    }
+    await getBoardKanban('SKL', filters)
+    expect(http.get).toHaveBeenLastCalledWith('/api/v1/planner/boards/SKL/kanban', {
+      params: filters,
+      headers: CRM,
+      _skipAuthRedirect: true,
+    })
+    await listBoardTasks('SKL', filters)
+    expect(http.get).toHaveBeenLastCalledWith('/api/v1/planner/boards/SKL/tasks', {
+      params: { limit: 500, ...filters },
+      headers: CRM,
+      _skipAuthRedirect: true,
+    })
+    await getMe()
+    expect(http.get).toHaveBeenLastCalledWith('/api/v1/planner/me', {
+      headers: CRM,
+      _skipAuthRedirect: true,
+    })
+  })
+
   it('a board code is a path segment, escaped', async () => {
     await listBoardTasks('A/B')
     expect(http.get.mock.calls[0][0]).toBe('/api/v1/planner/boards/A%2FB/tasks')
+  })
+
+  it('upload: the part «file», its own key, a budget by the file size instead of 75 s, progress (bot round 1 on PR #351)', async () => {
+    const file = new File(['x'], 'scan.pdf')
+    Object.defineProperty(file, 'size', { value: 52_428_800 })
+    const onProgress = vi.fn()
+    await uploadTaskAttachment('t-1', file, 'file-key', onProgress)
+    const [path, body, cfg] = http.post.mock.calls[0] as [string, FormData, AxiosRequestConfig]
+    expect(path).toBe('/api/v1/planner/tasks/t-1/attachments')
+    expect((body.get('file') as File).name).toBe('scan.pdf')
+    expect(cfg.headers).toEqual({
+      ...CRM,
+      'Idempotency-Key': 'file-key',
+      'Content-Type': 'multipart/form-data',
+    })
+    // 50 MiB: 75 s of the shared client + the file at 64 KiB/s — not the 75 s
+    // of a JSON call, and not «no limit» (the form is locked meanwhile).
+    expect(cfg.timeout).toBe(875_000)
+    cfg.onUploadProgress?.({
+      loaded: 10,
+      total: 40,
+      progress: 0.25,
+      bytes: 10,
+      lengthComputable: true,
+    })
+    cfg.onUploadProgress?.({ loaded: 10, bytes: 10, lengthComputable: false })
+    expect(onProgress.mock.calls).toEqual([[0.25]])
+
+    const small = new File(['x'], 'a.txt')
+    await uploadTaskAttachment('t-1', small, 'k-2')
+    const smallCfg = http.post.mock.calls[1][2] as AxiosRequestConfig
+    expect(smallCfg.timeout).toBe(75_001)
+    expect(smallCfg.onUploadProgress).toBeUndefined()
+  })
+
+  it('upload: under the shared JSON default the body stays FormData (the multipart header is not a no-op)', async () => {
+    await uploadTaskAttachment('t-1', new File(['abc'], 'a.txt'), 'k-1')
+    const [, body, cfg] = http.post.mock.calls[0] as [string, FormData, AxiosRequestConfig]
+    // The shared client of src/lib/api.ts, with an adapter that keeps what would be sent.
+    let sent: unknown
+    const shared = axios.create({
+      headers: { 'Content-Type': 'application/json' },
+      adapter: async (config) => {
+        sent = config.data
+        return { data: {}, status: 201, statusText: '', headers: {}, config }
+      },
+    })
+    await shared.post('/x', body, cfg)
+    expect(sent).toBeInstanceOf(FormData)
+    // Without the header axios would send `{"file":{}}` — the file lost.
+    const withoutType = Object.fromEntries(
+      Object.entries(cfg.headers as Record<string, string>).filter(
+        ([name]) => name !== 'Content-Type'
+      )
+    )
+    await shared.post('/x', body, { ...cfg, headers: withoutType })
+    expect(sent).toBe('{"file":{}}')
   })
 })
 
@@ -115,11 +213,17 @@ describe('planner lists poll at least every 30 s and on return to the tab', () =
     )
     const mine = renderHook(() => usePlannerMyTasks(), { wrapper })
     const board = renderHook(() => usePlannerBoardTasks('SKL'), { wrapper })
+    const kanban = renderHook(() => usePlannerBoardKanban('SKL', {}), { wrapper })
     await waitFor(() => expect(mine.result.current.isSuccess).toBe(true))
     await waitFor(() => expect(board.result.current.isSuccess).toBe(true))
+    await waitFor(() => expect(kanban.result.current.isSuccess).toBe(true))
 
     expect(PLANNER_POLL_MS).toBeLessThanOrEqual(30_000)
-    for (const key of [plannerKeys.myTasks(), plannerKeys.boardTasks('SKL')]) {
+    for (const key of [
+      plannerKeys.myTasks(),
+      plannerKeys.boardTaskList('SKL', {}),
+      plannerKeys.boardKanban('SKL', {}),
+    ]) {
       const options = queryClient.getQueryCache().find({ queryKey: key })?.options as {
         refetchInterval?: number
         refetchOnWindowFocus?: boolean
@@ -239,5 +343,57 @@ describe('people search keeps the previous answer only while a name is refined',
     // An unrelated name — nothing from before either.
     people.rerender({ q: 'Іва' })
     expect(people.result.current.data).toBeUndefined()
+  })
+})
+
+describe('board settings operations (story 5.10): dry_run and If-Match on the wire', () => {
+  const body = { config: {} } as unknown as Parameters<typeof putBoardConfig>[2]
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    http.put.mockResolvedValue({ data: { version: 6 }, headers: {} })
+    http.delete.mockResolvedValue({ data: { version: 6 }, headers: {} })
+    http.get.mockResolvedValue({ data: { items: [] }, headers: {} })
+  })
+
+  it('the check is PUT /config?dry_run=true under If-Match — it never writes', async () => {
+    await previewBoardConfig('SKL', 5, body)
+    expect(http.put).toHaveBeenCalledWith('/api/v1/planner/boards/SKL/config', body, {
+      params: { dry_run: 'true' },
+      headers: { ...CRM, 'If-Match': '"5"' },
+      _skipAuthRedirect: true,
+    })
+  })
+
+  it('the save is PUT /config without dry_run, under If-Match', async () => {
+    await putBoardConfig('SKL', 5, body)
+    expect(http.put).toHaveBeenCalledWith('/api/v1/planner/boards/SKL/config', body, {
+      headers: { ...CRM, 'If-Match': '"5"' },
+      _skipAuthRedirect: true,
+    })
+    const options = http.put.mock.calls[0][2] as { params?: unknown }
+    expect(options.params).toBeUndefined()
+  })
+
+  it('a participant: PUT with the role in the body, DELETE — both under If-Match', async () => {
+    await putBoardMember('SKL', 'u-2', 5, 'board_admin')
+    expect(http.put).toHaveBeenCalledWith(
+      '/api/v1/planner/boards/SKL/members/u-2',
+      { role: 'board_admin' },
+      { headers: { ...CRM, 'If-Match': '"5"' }, _skipAuthRedirect: true }
+    )
+    await deleteBoardMember('SKL', 'u-2', 5)
+    expect(http.delete).toHaveBeenCalledWith('/api/v1/planner/boards/SKL/members/u-2', {
+      headers: { ...CRM, 'If-Match': '"5"' },
+      _skipAuthRedirect: true,
+    })
+  })
+
+  it('the history is GET /boards/{code}/history', async () => {
+    await getBoardHistory('SKL')
+    expect(http.get).toHaveBeenCalledWith('/api/v1/planner/boards/SKL/history', {
+      headers: CRM,
+      _skipAuthRedirect: true,
+    })
   })
 })

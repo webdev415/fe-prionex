@@ -23,10 +23,13 @@ vi.mock('sonner', () => ({ toast }))
 const api = vi.hoisted(() => ({
   getMeta: vi.fn(),
   listBoards: vi.fn(),
+  listCreatableBoards: vi.fn(),
   listMyTasks: vi.fn(),
   resolveTask: vi.fn(),
   getBoard: vi.fn(),
   listBoardTasks: vi.fn(),
+  getBoardKanban: vi.fn(),
+  getMe: vi.fn(),
   createTask: vi.fn(),
   patchTask: vi.fn(),
   searchPeople: vi.fn(),
@@ -38,7 +41,7 @@ vi.mock('@/api/planner/plannerApi', async (importOriginal) => {
 
 import { plannerRoute } from '@/routes/plannerRoutes'
 import { plannerKeys } from '@/api/planner/plannerQueries'
-import { makeBoard, makeCard, makeMeta, makeTask } from './plannerFixtures'
+import { makeBoard, makeCard, makeKanban, makeMeta, makeTask } from './plannerFixtures'
 
 // The section is lazy-loaded. On a loaded CI runner the first render spent more
 // than the 5 s query timeout on transforming the chunk and the test saw only the
@@ -96,9 +99,24 @@ describe('Доска, создание задачи и смена статуса
     vi.clearAllMocks()
     api.getMeta.mockResolvedValue(makeMeta())
     api.listBoards.mockResolvedValue({ items: [] })
+    // The task form (5.7) offers the boards of `GET /boards?can_create=true`.
+    api.listCreatableBoards.mockResolvedValue({
+      items: [
+        {
+          id: 'b1',
+          code: 'SKL',
+          name: 'Склад',
+          kind: 'team',
+          version: 5,
+          role: 'board_member',
+          allowed_actions: ['create_task'],
+        },
+      ],
+      intake: [],
+    })
     api.listMyTasks.mockResolvedValue({ items: [makeCard()], has_more: false })
     api.getBoard.mockResolvedValue(makeBoard())
-    api.listBoardTasks.mockResolvedValue({ items: [makeCard(), SECOND], has_more: false })
+    api.getBoardKanban.mockResolvedValue(makeKanban([makeCard(), SECOND]))
     api.searchPeople.mockResolvedValue({ items: [] })
   })
 
@@ -168,11 +186,13 @@ describe('Доска, создание задачи и смена статуса
     const user = userEvent.setup()
     await user.click(await screen.findByRole('button', { name: '+ Задача' }))
     await user.type(screen.getByLabelText('Назва'), 'Інвентаризація')
-    await user.type(screen.getByLabelText('Виконавці'), 'Оле')
+    await user.type(await screen.findByLabelText('Виконавці'), 'Оле')
     await user.click(await screen.findByRole('button', { name: /Олена Коваль/ }))
     expect(api.searchPeople).toHaveBeenCalledWith('Оле')
     expect(screen.getByText('1 / 10')).toBeInTheDocument()
-    await user.type(screen.getByLabelText('Термін'), '2026-10-05')
+    // «Обрати дату» without an hour — the date goes as `due_date` (5.7).
+    await user.click(screen.getByRole('button', { name: 'Обрати дату' }))
+    await user.type(screen.getByLabelText('Дата'), '2026-10-05')
     await user.click(screen.getByRole('button', { name: 'Створити' }))
     await waitFor(() => expect(api.createTask).toHaveBeenCalledTimes(1))
     const body = api.createTask.mock.calls[0][1]
@@ -204,7 +224,7 @@ describe('Доска, создание задачи и смена статуса
     renderAt('/dashboard/planning/tasks/boards/SKL')
     const user = userEvent.setup()
     await user.click(await screen.findByRole('button', { name: '+ Задача' }))
-    await user.type(screen.getByLabelText('Виконавці'), 'Олена')
+    await user.type(await screen.findByLabelText('Виконавці'), 'Олена')
     expect(await screen.findByText('Нікого не знайдено')).toBeInTheDocument()
     expect(api.searchPeople).toHaveBeenCalledTimes(1)
     expect(api.searchPeople).toHaveBeenCalledWith('Олена')
@@ -256,14 +276,14 @@ describe('Доска, создание задачи и смена статуса
     const user = userEvent.setup()
     await user.click(await screen.findByRole('button', { name: '+ Задача' }))
     await user.type(screen.getByLabelText('Назва'), 'Повтор')
-    const before = api.listBoardTasks.mock.calls.length
+    const before = api.getBoardKanban.mock.calls.length
     await user.click(screen.getByRole('button', { name: 'Створити' }))
     await waitFor(() =>
       expect(toast.info).toHaveBeenCalledWith(
         'Задачу, можливо, вже створено. Список дошки оновлено'
       )
     )
-    await waitFor(() => expect(api.listBoardTasks.mock.calls.length).toBeGreaterThan(before))
+    await waitFor(() => expect(api.getBoardKanban.mock.calls.length).toBeGreaterThan(before))
     expect(toast.error).not.toHaveBeenCalled()
     // The key is spent: the dialog closes instead of offering a «Створити»
     // that would get the same 409 again.
@@ -321,7 +341,7 @@ describe('Доска, создание задачи и смена статуса
     await waitFor(() =>
       expect(toast.info).toHaveBeenCalledWith('Задачу щойно змінили. Показано свіжу версію.')
     )
-    await waitFor(() => expect(api.listBoardTasks.mock.calls.length).toBeGreaterThan(1))
+    await waitFor(() => expect(api.getBoardKanban.mock.calls.length).toBeGreaterThan(1))
 
     api.patchTask.mockRejectedValueOnce(
       plannerError(403, 'forbidden', { reason: 'view_as_not_supported' })
@@ -524,5 +544,119 @@ describe('Доска, создание задачи и смена статуса
     renderAt('/dashboard/planning/tasks')
     expect(await screen.findByText('Перевірити залишки')).toBeInTheDocument()
     expect(api.listMyTasks).toHaveBeenCalled()
+  })
+})
+
+describe('общие компоненты на карточке, в строке и в панели (5.1)', () => {
+  const RICH = {
+    sla_state: 'soon' as const,
+    sla_deadline_at: '2026-10-02T15:00:00Z',
+    origin: { kind: 'import' },
+    priority: { id: 'p-top', name: 'Високий' },
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    const board = makeBoard()
+    api.getMeta.mockResolvedValue(makeMeta())
+    api.listBoards.mockResolvedValue({ items: [] })
+    api.getBoard.mockResolvedValue(
+      makeBoard({
+        config: {
+          ...board.config,
+          priorities: [
+            { id: 'p-low', name: 'Низький', position: 1, default: false },
+            { id: 'p-mid', name: 'Середній', position: 2, default: true },
+            { id: 'p-top', name: 'Високий', position: 3, default: false },
+          ],
+        },
+      })
+    )
+    api.getBoardKanban.mockResolvedValue(makeKanban([makeCard(RICH)]))
+    api.listMyTasks.mockResolvedValue({ items: [makeCard(RICH)], has_more: false })
+    api.searchPeople.mockResolvedValue({ items: [] })
+  })
+
+  it('карточка доски: пилюля SLA, происхождение, приоритет и аватар', async () => {
+    renderAt('/dashboard/planning/tasks/boards/SKL')
+    const todo = await screen.findByRole('region', { name: 'Нова' })
+    expect(await within(todo).findByText('SLA скоро')).toBeInTheDocument()
+    expect(within(todo).getByText('перенесено з Forgejo')).toBeInTheDocument()
+    expect(await within(todo).findByRole('img', { name: 'Пріоритет: Високий' })).toHaveClass(
+      'text-warning-700'
+    )
+    expect(within(todo).getByText('ОК')).toBeInTheDocument()
+  })
+
+  it('строка «Мої задачі»: чип статуса первым, затем название, пилюли и аватар', async () => {
+    renderAt('/dashboard/planning/tasks')
+    const title = await screen.findByText('Перевірити залишки')
+    const row = title.closest('li')!
+    expect(within(row).getAllByRole('button')[0]).toHaveAccessibleName('Змінити статус: Нова')
+    // The SLA pill turns into a tooltip trigger once its board (the SLA
+    // moment's zone) arrives: look it up afresh, not a node from before that.
+    await waitFor(() =>
+      expect(within(row).getByText('SLA скоро').closest('[tabindex="0"]')).toHaveTextContent(
+        /до 02\.10\.2026.*18:00/
+      )
+    )
+    expect(within(row).getByText('перенесено з Forgejo')).toBeInTheDocument()
+  })
+
+  it('панель: остаток SLA с сервера; Esc при открытой подсказке закрывает подсказку, не панель', async () => {
+    api.resolveTask.mockResolvedValue(
+      makeTask({
+        sla_state: 'running',
+        sla_deadline_at: '2026-10-02T15:00:00Z',
+        sla_remaining_seconds: 5 * 3600,
+      })
+    )
+    renderAt('/dashboard/planning/tasks?task=SKL-2')
+    const panel = await screen.findByRole('complementary', { name: 'Задача SKL-2' })
+    const pill = (await within(panel).findByText('5 год')).closest('[tabindex="0"]') as HTMLElement
+    expect(pill).toHaveTextContent('SLA')
+    act(() => pill.focus())
+    expect(await screen.findByRole('tooltip')).toBeInTheDocument()
+    const user = userEvent.setup()
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull())
+    expect(screen.getByRole('complementary', { name: 'Задача SKL-2' })).toBeInTheDocument()
+  })
+
+  it('пустая доска — пустое состояние один раз, колонки остаются без «Немає задач»', async () => {
+    api.getBoardKanban.mockResolvedValue(makeKanban([]))
+    renderAt('/dashboard/planning/tasks/boards/SKL')
+    expect(await screen.findByText('На дошці ще немає задач')).toBeInTheDocument()
+    const todo = screen.getByRole('region', { name: 'Нова' })
+    expect(within(todo).getByText('0')).toBeInTheDocument()
+    expect(screen.queryByText('Немає задач')).toBeNull()
+  })
+
+  it('конфигурация пришла раньше задач — колонки стоят со скелетоном карточек, без «0» и «Немає задач»', async () => {
+    let resolveTasks: (list: unknown) => void = () => {}
+    api.getBoardKanban.mockImplementation(() => new Promise((resolve) => (resolveTasks = resolve)))
+    renderAt('/dashboard/planning/tasks/boards/SKL')
+    const todo = await screen.findByRole('region', { name: 'Нова' })
+    expect(todo.querySelector('[aria-busy="true"]')).not.toBeNull()
+    expect(within(todo).getByText('Завантаження…')).toHaveClass('sr-only')
+    expect(within(todo).queryByText('0')).toBeNull()
+    expect(screen.queryByText('Немає задач')).toBeNull()
+    expect(screen.queryByText('На дошці ще немає задач')).toBeNull()
+
+    await act(async () => resolveTasks(makeKanban([makeCard()])))
+    expect(await within(todo).findByText('Перевірити залишки')).toBeInTheDocument()
+    expect(within(todo).getByText('1')).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'В роботі' })).toHaveTextContent('Немає задач')
+    expect(document.querySelector('[aria-busy="true"]')).toBeNull()
+  })
+
+  it('задачи доски не загрузились — ошибка, и под ней ни «0», ни «Немає задач»', async () => {
+    api.getBoardKanban.mockRejectedValue(plannerError(500, 'internal'))
+    renderAt('/dashboard/planning/tasks/boards/SKL')
+    expect(await screen.findByText('Не вдалося завантажити дошку')).toBeInTheDocument()
+    const todo = screen.getByRole('region', { name: 'Нова' })
+    expect(within(todo).queryByText('0')).toBeNull()
+    expect(screen.queryByText('Немає задач')).toBeNull()
+    expect(todo.querySelector('[aria-busy="true"]')).toBeNull()
   })
 })

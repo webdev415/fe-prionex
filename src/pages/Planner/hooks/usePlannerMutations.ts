@@ -1,7 +1,9 @@
 /**
- * Planner commands from the CRM (planner story 1.10): create a task, change its
- * status. Errors are shown by `code` with our own text — never the server
- * `message` (epic 1, «Тексти»).
+ * Planner commands from the CRM (planner stories 1.10, 5.1): create a task,
+ * change its status. Errors are shown by `code` with our own text — never the
+ * server `message` (epic 1, «Тексти») — and each way a command can fail has its
+ * own phrase: no rights, a bad field, a conflict, too many requests, the
+ * planner switched off, the planner failing, no connection at all.
  */
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -9,13 +11,14 @@ import { toast } from 'sonner'
 import {
   createTask,
   patchTask,
+  uploadTaskAttachment,
   type PlannerTask,
   type PlannerTaskCreate,
 } from '@/api/planner/plannerApi'
 import { plannerKeys } from '@/api/planner/plannerQueries'
 import { readPlannerError } from '@/api/planner/plannerErrors'
-
-type TFunction = ReturnType<typeof useTranslation>['t']
+import type { PlannerT } from '../plannerFormat'
+import { showUndoToast } from '../plannerToasts'
 
 /** Contract field → the form label the person saw (`details.field` of a 400). */
 const FIELD_LABELS: Record<string, string> = {
@@ -24,11 +27,15 @@ const FIELD_LABELS: Record<string, string> = {
   assignee_ids: 'create.fields.assignees',
   due_date: 'create.fields.due',
   due_at: 'create.fields.due',
+  type_id: 'create.fields.type',
+  priority_id: 'create.fields.priority',
+  label_ids: 'create.fields.labels',
+  watcher_ids: 'create.fields.watchers',
 }
 
 /** Toast for a failed planner command; 412 is handled by the caller first. */
-export function toastPlannerError(t: TFunction, error: unknown): void {
-  const { status, code, details } = readPlannerError(error)
+export function toastPlannerError(t: PlannerT, error: unknown): void {
+  const { status, code, details, unreachable } = readPlannerError(error)
   if (status === 403 || code === 'forbidden') {
     const reason = typeof details.reason === 'string' ? details.reason : undefined
     const reasonText = reason ? t(`reasons.${reason}`, { defaultValue: '' }) : ''
@@ -48,6 +55,18 @@ export function toastPlannerError(t: TFunction, error: unknown): void {
   }
   if (status === 409 || code === 'conflict') {
     toast.error(t('toast.conflict'))
+    return
+  }
+  if (status === 429 || code === 'rate_limited') {
+    toast.error(t('toast.rateLimited'))
+    return
+  }
+  if (unreachable) {
+    toast.error(t('toast.network'))
+    return
+  }
+  if (status !== undefined && status >= 500) {
+    toast.error(t('toast.serverError'))
     return
   }
   toast.error(t('toast.failed'))
@@ -83,38 +102,85 @@ export interface ChangeStatusInput {
   version: number
   statusId: string
   reason?: string
+  /**
+   * Offer «Скасувати» once the change is made: the status to go back to and
+   * the new status's name for the toast. Absent on the undo itself, and when
+   * the old status needs a reason — it cannot be restored without one.
+   */
+  undo?: { statusId: string; toName: string }
 }
 
+function sendStatus(input: ChangeStatusInput) {
+  return patchTask(input.id, input.version, {
+    status_id: input.statusId,
+    ...(input.reason ? { reason: input.reason } : {}),
+  })
+}
+
+/**
+ * The change and its undo go through ONE mutation: the undo is a pending
+ * command like any other (the chip is disabled while it runs) and fails the
+ * same ways — 412 with the fresh version, the other errors as toasts. It
+ * still runs when the chip that raised the toast has unmounted meanwhile (the
+ * card moved to another column): the mutation's own callbacks are kept by
+ * the mutation, not by the component.
+ */
 export function useChangeTaskStatus() {
   const { t } = useTranslation('planner')
   const queryClient = useQueryClient()
 
-  return useMutation({
-    mutationFn: (input: ChangeStatusInput) =>
-      patchTask(input.id, input.version, {
-        status_id: input.statusId,
-        ...(input.reason ? { reason: input.reason } : {}),
-      }),
-    onSuccess: ({ task }, input) => {
-      queryClient.setQueryData(plannerKeys.task(input.key), task)
-      refreshTaskViews(queryClient, input.boardCode, input.key)
-    },
-    onError: (error, input) => {
-      const { status, code, details } = readPlannerError(error)
-      if (status === 412 || code === 'revision_mismatch') {
-        // Somebody else changed the task: show the fresh version, never
-        // overwrite it silently (UX «Voice and Tone»).
-        const current = details.current as PlannerTask | undefined
-        if (current && typeof current === 'object' && 'version' in current) {
-          queryClient.setQueryData(plannerKeys.task(input.key), current)
-        }
-        refreshTaskViews(queryClient, input.boardCode, input.key)
-        toast.info(t('toast.stale'))
-        return
+  const onFailed = (error: unknown, input: ChangeStatusInput): void => {
+    const { status, code, details } = readPlannerError(error)
+    if (status === 412 || code === 'revision_mismatch') {
+      // Somebody else changed the task: show the fresh version, never
+      // overwrite it silently (UX «Voice and Tone»).
+      const current = details.current as PlannerTask | undefined
+      if (current && typeof current === 'object' && 'version' in current) {
+        queryClient.setQueryData(plannerKeys.task(input.key), current)
       }
-      toastPlannerError(t, error)
-    },
+      refreshTaskViews(queryClient, input.boardCode, input.key)
+      toast.info(t('toast.stale'))
+      return
+    }
+    toastPlannerError(t, error)
+  }
+
+  const onApplied = (task: PlannerTask, input: ChangeStatusInput): void => {
+    queryClient.setQueryData(plannerKeys.task(input.key), task)
+    refreshTaskViews(queryClient, input.boardCode, input.key)
+    const { undo } = input
+    if (!undo) return
+    // The way back is one more PATCH under the version this change produced:
+    // if somebody changed the task within the five seconds, it is a 412 and
+    // the fresh version, not a silent overwrite.
+    const back: ChangeStatusInput = {
+      id: input.id,
+      key: input.key,
+      boardCode: input.boardCode,
+      version: task.version,
+      statusId: undo.statusId,
+    }
+    showUndoToast({
+      message: t('toast.statusChanged', { key: input.key, status: undo.toName }),
+      undoLabel: t('toast.undo'),
+      onUndo: () => {
+        change.mutate(back)
+      },
+    })
+  }
+
+  const change = useMutation({
+    mutationFn: sendStatus,
+    onSuccess: ({ task }, input) => onApplied(task, input),
+    onError: onFailed,
   })
+  return change
+}
+
+/** A file of the form with its own key: a retry of the upload replays, it does not add a copy. */
+export interface CreateTaskAttachment {
+  file: File
+  idempotencyKey: string
 }
 
 export interface CreateTaskInput {
@@ -122,6 +188,55 @@ export interface CreateTaskInput {
   body: PlannerTaskCreate
   /** One key per form: a repeated «Створити» replays, it does not duplicate. */
   idempotencyKey: string
+  /** Files of a request, uploaded right after the 201 (story 3.8: no multipart create). */
+  attachments?: CreateTaskAttachment[]
+  /** Which file is uploading and its sent share (0–1): the locked form shows it. */
+  onAttachmentProgress?: (progress: AttachmentProgress) => void
+}
+
+export interface AttachmentProgress {
+  /** 0-based position of the file among `count`. */
+  index: number
+  count: number
+  fraction: number
+}
+
+export interface CreatedTask {
+  task: PlannerTask
+  /** Files that did not reach the task (the task itself exists). */
+  failedAttachments: number
+}
+
+/**
+ * A 400 that names its field (`details.field`): the form says it at the field
+ * (story 5.7), so the hook does not toast it — the form toasts only a field it
+ * does not show.
+ */
+export function isFieldValidation(error: unknown): boolean {
+  const { status, details } = readPlannerError(error)
+  return status === 400 && typeof details.field === 'string'
+}
+
+/**
+ * Create a task (or a request), then upload the request's files one by one.
+ * The task exists after the 201 whatever happens to the files: a failed upload
+ * is counted, not thrown, and the form says how many did not arrive.
+ */
+async function createWithAttachments(input: CreateTaskInput): Promise<CreatedTask> {
+  const task = await createTask(input.boardCode, input.body, input.idempotencyKey)
+  const attachments = input.attachments ?? []
+  const count = attachments.length
+  let failedAttachments = 0
+  for (const [index, attachment] of attachments.entries()) {
+    const progress = (fraction: number) => input.onAttachmentProgress?.({ index, count, fraction })
+    progress(0)
+    try {
+      await uploadTaskAttachment(task.id, attachment.file, attachment.idempotencyKey, progress)
+    } catch {
+      failedAttachments += 1
+    }
+  }
+  return { task, failedAttachments }
 }
 
 export function useCreatePlannerTask() {
@@ -129,9 +244,8 @@ export function useCreatePlannerTask() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (input: CreateTaskInput) =>
-      createTask(input.boardCode, input.body, input.idempotencyKey),
-    onSuccess: (task, input) => {
+    mutationFn: createWithAttachments,
+    onSuccess: ({ task }, input) => {
       queryClient.setQueryData(plannerKeys.task(task.key), task)
       void queryClient.invalidateQueries({ queryKey: plannerKeys.boardTasks(input.boardCode) })
       void queryClient.invalidateQueries({ queryKey: plannerKeys.myTasks() })
@@ -146,6 +260,13 @@ export function useCreatePlannerTask() {
         toast.info(t('toast.maybeCreated'))
         return
       }
+      const { status, details } = readPlannerError(error)
+      // The board is gone, or the actor stopped being its member (the task
+      // would now be a request): the list of boards is stale.
+      if (status === 404 || details.reason === 'triage_only') {
+        void queryClient.invalidateQueries({ queryKey: plannerKeys.creatableBoards() })
+      }
+      if (status === 404 || isFieldValidation(error)) return
       toastPlannerError(t, error)
     },
   })

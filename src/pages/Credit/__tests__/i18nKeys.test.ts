@@ -13,6 +13,7 @@
  */
 import { describe, it, expect } from 'vitest'
 import en from '../../../../public/locales/en/common.json'
+import es from '../../../../public/locales/es/common.json'
 import uk from '../../../../public/locales/uk/common.json'
 import { CREDIT_DYNAMIC_NAMESPACES } from '@/features/credit/api/enums'
 
@@ -133,6 +134,75 @@ describe('этап заявки: значения ключей, а не толь
       expect(typeof value).toBe('string')
       expect(String(value)).toContain('{{index}}')
       expect(String(value)).toContain('{{total}}')
+    }
+  )
+})
+
+describe('разбор скоринга: подписи несут свои плейсхолдеры', () => {
+  // Та же слепота, что у подписи шага: тест панели видит подписи через мок `t`,
+  // настоящий шаблон из JSON не рендерит, и потерянный при переводе
+  // плейсхолдер оставался бы зелёным. Оператор прочёл бы «2 з 7» с числом
+  // бандов, вписанным в словарь, после калибровки книги — или «від» без числа.
+  const dictionaries = [
+    ['uk', uk],
+    ['en', en],
+    ['es', es],
+  ] as const
+
+  const PLACEHOLDERS: Array<[string, string[]]> = [
+    ['bandValue', ['{{band}}', '{{bands}}']],
+    ['totalValue', ['{{total}}', '{{max}}']],
+    ['installmentsFrom', ['{{min}}']],
+    ['installmentsUpTo', ['{{max}}']],
+    ['installmentsRange', ['{{min}}', '{{max}}']],
+  ]
+
+  it.each(dictionaries)(
+    '%s: credit.scorecard.* — каждый плейсхолдер на месте',
+    (lang, dictionary) => {
+      for (const [key, placeholders] of PLACEHOLDERS) {
+        const value = lookup(dictionary, `credit.scorecard.${key}`)
+        expect(typeof value, `${lang} credit.scorecard.${key} is not a string`).toBe('string')
+        for (const placeholder of placeholders) {
+          expect(String(value), `${lang} ${key} lost the ${placeholder} placeholder`).toContain(
+            placeholder
+          )
+        }
+      }
+    }
+  )
+})
+
+describe('19-5f: шаблоны чек-листа и условия несут свои плейсхолдеры', () => {
+  // Та же слепота: мок `t` теста страницы печатает имена переменных из кода, а не
+  // шаблон словаря, `spanishLocaleParity` сверяет только en и es. Потерянный в uk
+  // плейсхолдер дал бы андеррайтеру «з {{applicable}}», а руководителю — диалог
+  // подтверждения без суммы или без кодов.
+  const dictionaries = [
+    ['uk', uk],
+    ['en', en],
+    ['es', es],
+  ] as const
+
+  const TEMPLATES: Array<[string, string[]]> = [
+    ['checklist.progress', ['{{answered}}', '{{total}}']],
+    ['checklist.share', ['{{yes}}', '{{applicable}}']],
+    ['card.proposedAmount', ['{{amount}}']],
+    ['card.confirmMessage', ['{{amount}}', '{{codes}}']],
+  ]
+
+  it.each(dictionaries)(
+    '%s: 19-5f — плейсхолдеры чек-листа и условия на месте',
+    (lang, dictionary) => {
+      for (const [key, placeholders] of TEMPLATES) {
+        const value = lookup(dictionary, `credit.${key}`)
+        expect(typeof value, `${lang} credit.${key} is not a string`).toBe('string')
+        for (const placeholder of placeholders) {
+          expect(String(value), `${lang} ${key} lost the ${placeholder} placeholder`).toContain(
+            placeholder
+          )
+        }
+      }
     }
   )
 })

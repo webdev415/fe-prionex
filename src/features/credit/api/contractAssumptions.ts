@@ -27,7 +27,10 @@ import type {
   CreditApplicantApplications,
   CreditApplicationDetail,
   CreditApplicationStatus,
+  CreditConditionalStage,
   CreditDecision,
+  CreditDecisionCodeEntry,
+  CreditDecisionSnapshot,
   CreditDocumentMeta,
   CreditIdentityKey,
   CreditJournalEntry,
@@ -36,6 +39,7 @@ import type {
   CreditLoanStatus,
   CreditPayment,
   CreditPortalEventRecord,
+  CreditQueueItem,
   CreditRailCallback,
   CreditRailEvent,
   CreditRailOperation,
@@ -328,3 +332,49 @@ export type _rail_event_has_occurred_at = Assert<Has<CreditRailEvent, 'occurred_
 /** Панель рисует `items` и сравнивает их длину с `total` — строка «Показано N з M». */
 export type _rail_page_has_items = Assert<Has<CreditLoanRailOperations, 'items'>>
 export type _rail_page_has_total = Assert<Has<CreditLoanRailOperations, 'total'>>
+
+/* ─── Коды решения (справочник модуля, v0.1.27) ─────────────────────────
+   Форма ручного решения предлагает к отказу коды ровно трёх видов — `refusal`,
+   `gate`, `service` (`CREDIT_DECLINE_KINDS`) — и НИКОГДА не предлагает к отказу
+   `conditional` (его форма предлагает отдельно, при «Схвалити», 19-5f). Отбор
+   стоит на этих четырёх значениях. Переименует модуль
+   любое из первых трёх — группа кодов молча выпадет из формы, и отказ по ней
+   станет невозможен; переименует `conditional` — отбор перестанет его узнавать,
+   и сравнение с новым именем придётся писать заново, иначе условное одобрение
+   уедет в список отказа при первом же расширении перечня видов. */
+export type _decision_code_has_kind = Assert<Has<CreditDecisionCodeEntry, 'kind'>>
+export type _decision_code_kind_refusal = Assert<
+  Includes<CreditDecisionCodeEntry['kind'], 'refusal'>
+>
+export type _decision_code_kind_gate = Assert<Includes<CreditDecisionCodeEntry['kind'], 'gate'>>
+export type _decision_code_kind_service = Assert<
+  Includes<CreditDecisionCodeEntry['kind'], 'service'>
+>
+export type _decision_code_kind_conditional = Assert<
+  Includes<CreditDecisionCodeEntry['kind'], 'conditional'>
+>
+/** Группы формы и подпись раздела в карточке стоят на `category`; без поля кодов не разложить. */
+export type _decision_code_has_category = Assert<Has<CreditDecisionCodeEntry, 'category'>>
+/** Карточка решения показывает смысл отказа по `decision_codes`; без поля — только «как прислано». */
+export type _decision_has_decision_codes = Assert<Has<CreditDecision, 'decision_codes'>>
+
+/* ─── Чек-лист и условное одобрение (контракт модуля 0.1.30/0.1.31, 19-5) ───
+   Сверено с `main` модуля 0852c782 — `openapi.yaml` `Decision`,
+   `UnderwritingQueueItem`. Поля в типах необязательны (модуль старше 19-5 их не
+   шлёт), поэтому утверждается наличие поля, а не его обязательность. */
+/** Кнопка подтверждения стоит на ступени решения; без поля её не показать никогда. */
+export type _decision_has_conditional_stage = Assert<Has<CreditDecision, 'conditional_stage'>>
+/** Доля чек-листа в карточке — только числами модуля; без поля ручное решение читалось бы «Чек-лист не заповнено». */
+export type _decision_has_checklist_completed = Assert<Has<CreditDecision, 'checklist_completed'>>
+/** Кнопка «Підтвердити» — при `proposed`; переименование спрячет её навсегда. */
+export type _conditional_stage_proposed = Assert<Includes<CreditConditionalStage, 'proposed'>>
+/** Бейдж «Підтверджено керівником» и отсутствие кнопки — при `confirmed`. */
+export type _conditional_stage_confirmed = Assert<Includes<CreditConditionalStage, 'confirmed'>>
+/** Строка «Умови схвалення» и исключение кодов условия из «Коди відмови» — по снимку. */
+export type _snapshot_has_conditional = Assert<Has<CreditDecisionSnapshot, 'conditional'>>
+/** Ответы чек-листа и их примечания (в сыром снимке — под маской записи) — из снимка. */
+export type _snapshot_has_checklist = Assert<Has<CreditDecisionSnapshot, 'checklist'>>
+/** «Чекає підтвердження» в очереди — только по этому флагу; без поля руководитель не найдёт предложение. */
+export type _queue_item_has_awaiting_confirmation = Assert<
+  Has<CreditQueueItem, 'awaiting_confirmation'>
+>

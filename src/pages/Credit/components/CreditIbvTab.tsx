@@ -8,13 +8,15 @@
  * во вкладке решения.
  *
  * Номер счёта маскируется: полный оператору для решения не нужен, а утечь
- * через скриншот может.
+ * через скриншот может. Имя держателя счёта — ФИО клиента: оно под `<Pii>`, как
+ * на вкладке «Анкета», иначе уходит в запись сессии буквами.
  */
 import { useTranslation } from 'react-i18next'
 import { Alert } from '@/components/ui/Alert'
 import { formatDate, formatDateTime } from '@/lib/formatters'
 import { formatCreditMoney, formatCreditRate } from '@/features/credit/api/money'
 import type { CreditIbv, CreditIbvAccount } from '@/features/credit/api/types'
+import { Pii } from '@/lib/openreplay/pii'
 
 /** Провайдеры, чьи данные НЕ боевые — показываем это явно. */
 const SYNTHETIC_PROVIDERS = new Set(['mock', 'stub', 'demo', 'fake'])
@@ -97,7 +99,10 @@ export function CreditIbvTab({ ibv, currency }: { ibv?: CreditIbv; currency?: st
             {formatCreditRate(ibv.identity_match_rate)}
           </span>
           {payout?.holder_name && (
-            <span className="text-muted-foreground"> · {payout.holder_name}</span>
+            <span className="text-muted-foreground">
+              {' · '}
+              <Pii>{payout.holder_name}</Pii>
+            </span>
           )}
         </Row>
         {ibv.income?.employer_name && (
@@ -229,7 +234,9 @@ function AccountRows({ account, currency }: { account: CreditIbvAccount; currenc
       <Row label={t('credit.fields.balanceCurrent')}>
         {formatCreditMoney(account.balance_current_minor, account.currency ?? currency)}
       </Row>
-      <Row label={t('credit.fields.holder')}>{account.holder_name ?? '—'}</Row>
+      <Row label={t('credit.fields.holder')}>
+        <Pii>{account.holder_name ?? '—'}</Pii>
+      </Row>
     </>
   )
 }

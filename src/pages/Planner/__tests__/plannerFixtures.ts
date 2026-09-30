@@ -1,8 +1,9 @@
 /**
- * Contract-typed fixtures for the planner section tests (schema 0.22.0).
+ * Contract-typed fixtures for the planner section tests (schema 0.24.0).
  */
 import type {
   PlannerBoard,
+  PlannerBoardKanban,
   PlannerMeta,
   PlannerTask,
   PlannerTaskCard,
@@ -12,7 +13,7 @@ export function makeMeta(overrides: Partial<PlannerMeta> = {}): PlannerMeta {
   return {
     mode: 'on',
     available: true,
-    versions: { api: '0.22.0', build: 'dev' },
+    versions: { api: '0.24.0', build: 'dev' },
     flags: {},
     org_snapshot_age_minutes: 3,
     ics_feed_available: false,
@@ -48,6 +49,11 @@ export function makeCard(overrides: Partial<PlannerTaskCard> = {}): PlannerTaskC
     is_request: false,
     needs_triage: false,
     checklist_progress: null,
+    sla_state: 'off',
+    sla_deadline_at: null,
+    origin: { kind: 'manual' },
+    labels_total: 0,
+    inactive_assignee: false,
     ...overrides,
   }
 }
@@ -88,6 +94,12 @@ export function makeTask(overrides: Partial<PlannerTask> = {}): PlannerTask {
     author_department_id: null,
     needs_triage: false,
     checklist_progress: null,
+    sla_state: 'off',
+    sla_deadline_at: null,
+    sla_remaining_seconds: null,
+    sla_breached_at: null,
+    sla_breached_board_id: null,
+    sla_breached_board: null,
     ...overrides,
   }
 }
@@ -139,5 +151,29 @@ export function makeBoard(overrides: Partial<PlannerBoard> = {}): PlannerBoard {
     created_at: '2026-09-27T08:00:00Z',
     org_snapshot_age_minutes: 3,
     ...overrides,
+  }
+}
+
+/**
+ * `GET /boards/{code}/kanban` for these cards (story 5.3): every status of the
+ * board as a column in configuration order, the cards by their status, `total`
+ * — their number unless given (a column cut at 50 has more).
+ */
+export function makeKanban(
+  cards: PlannerTaskCard[],
+  board: PlannerBoard = makeBoard(),
+  totals: Record<string, number> = {}
+): PlannerBoardKanban {
+  return {
+    columns: [...board.config.statuses]
+      .sort((a, b) => a.position - b.position)
+      .map((status) => {
+        const items = cards.filter((card) => card.status.id === status.id)
+        return {
+          status: { id: status.id, name: status.name, category: status.category },
+          total: totals[status.id] ?? items.length,
+          items,
+        }
+      }),
   }
 }

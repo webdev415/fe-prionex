@@ -19,7 +19,9 @@ import type {
   CreditApplicationDetail,
   CreditApplicationsParams,
   CreditApplicationSummary,
+  CreditConditionalConfirmationPayload,
   CreditDecision,
+  CreditDecisionCodesRegistry,
   CreditDocumentMeta,
   CreditJournalEntry,
   CreditJournalParams,
@@ -323,6 +325,16 @@ export const creditApi = {
     get<CreditPage<CreditQueueItem>>('/underwriting/queue', { status }),
 
   /**
+   * Справочник кодов решения — `listDecisionCodes` (v0.1.27, 19-1).
+   *
+   * Право то же, что у самого решения, `credit.decisions.decide`: остальным
+   * ручка отвечает 403, поэтому хук зовёт её только при этом праве. От проекта
+   * не зависит — коды одни на всю книгу правил. Поле `reason` реестра модуль в
+   * ответ не кладёт: едут `ru`, `en` и `note_ru`.
+   */
+  decisionCodes: () => get<CreditDecisionCodesRegistry>('/underwriting/decision-codes'),
+
+  /**
    * Положение рубильников и история переключений.
    *
    * Читаем именно эту ручку, а не демо-сводку: та отвечает 403 при выключенном
@@ -349,6 +361,26 @@ export const creditApi = {
   decide: (applicationId: string, payload: ManualDecisionPayload) =>
     post<CreditDecision>(`/applications/${applicationId}/decision`, payload, {
       'Idempotency-Key': newIdempotencyKey(`fe-decision:${applicationId}`),
+    }),
+
+  /**
+   * Подтвердить условное одобрение — `confirmConditionalApproval` (контракт модуля
+   * 0.1.30/0.1.31, 19-5; сверено с `main` модуля 0852c782 — `openapi.yaml`).
+   * Право `credit.decisions.confirm_conditional`; ответ `201 Decision` — новое
+   * решение `approved` и договор. `confirmed_by` не шлётся: подтверждающий —
+   * владелец пропуска CRM (как автор ручного решения, 17-22).
+   *
+   * Ключ идемпотентности приходит СНАРУЖИ и обязателен, как у `setSwitch`: повтор
+   * после сетевого сбоя обязан прийти с тем же ключом и получить реплей, а не
+   * второй договор. Сколько живёт ключ, решает хук.
+   */
+  confirmConditional: (
+    applicationId: string,
+    payload: CreditConditionalConfirmationPayload,
+    idempotencyKey: string
+  ) =>
+    post<CreditDecision>(`/applications/${applicationId}/decision/confirm`, payload, {
+      'Idempotency-Key': idempotencyKey,
     }),
 
   /**
