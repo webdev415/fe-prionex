@@ -43,11 +43,22 @@ import { useTranslation } from 'react-i18next'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import type { OperatorPromisesRow } from '../types'
 import { EMPTY, formatConversion, formatCount, formatMoney } from '../utils/format'
+import { operatorPromisesRowAnchorId } from '../utils/rowAnchor'
 
 export interface OperatorPromisesTableProps {
   rows: OperatorPromisesRow[]
   /** Shown in the table body when the selected department legitimately has no rows. */
   emptyMessage: string
+  /**
+   * OPT-IN: the operator a sibling tab linked to (`?opu=<user_id>`). Their
+   * row is marked — a ring (`OPERATOR_PROMISES_HIGHLIGHT_CLASS`) in the same
+   * `information` scale the shared DataTable uses for a selected row, defined
+   * in every theme — plus `data-highlighted` and `aria-current` on the name
+   * cell, which is what a screen reader and the tab's scroll-into-view read.
+   * Never a filter: the roster stays whole. Absent = no row is marked,
+   * exactly as before the prop existed.
+   */
+  highlightedUserId?: number | null
 }
 
 /** DataTable requires an `id`; rows are keyed by `user_id` server-side, which is unique. */
@@ -62,7 +73,32 @@ type OperatorPromisesTableRow = OperatorPromisesRow & { id: number }
  */
 export const OPERATOR_PROMISES_COLUMN_COUNT = 12
 
-export function OperatorPromisesTable({ rows, emptyMessage }: OperatorPromisesTableProps) {
+/**
+ * The linked row's mark: a 1px inset ring, NOT a background.
+ *
+ * DataTable paints every row's background itself — `bg-muted` on even rows,
+ * `bg-card` on odd ones (or `bg-information-50` for its own selected rows,
+ * which it REPLACES rather than appends) — and `rowClassName` is appended
+ * after it. Appending a second `bg-*` class does not override the first:
+ * Tailwind v4 emits utilities in a fixed source order and the browser
+ * resolves two same-specificity rules by that order, not by the order of the
+ * tokens in `class`. Compiled from `src/index.css`, `.bg-information-50`
+ * sits BEFORE `.bg-muted`, so a background highlight vanished on every even
+ * row, the first one included. A ring is a `box-shadow`: it competes with
+ * nothing the row already sets, so it shows on every row in every theme —
+ * the same device ClientDetailPage and ClientReversalsTable use to mark a
+ * payment row in this very DataTable. `ring-inset` keeps the 1px inside the
+ * row's own box, where a neighbouring row's background cannot paint over it
+ * (the table is `border-collapse`). Pinned by a test that compiles the
+ * stylesheet and checks the ring sets no `background-color`.
+ */
+export const OPERATOR_PROMISES_HIGHLIGHT_CLASS = 'ring-1 ring-inset ring-information-500'
+
+export function OperatorPromisesTable({
+  rows,
+  emptyMessage,
+  highlightedUserId = null,
+}: OperatorPromisesTableProps) {
   const { t, i18n } = useTranslation('common')
   const language = i18n.language
 
@@ -80,7 +116,18 @@ export function OperatorPromisesTable({ rows, emptyMessage }: OperatorPromisesTa
         // null only when the directory ships nothing usable — that ONE cell
         // degrades instead of dropping the operator's money from the report.
         render: (row) => (
-          <span className="inline-flex items-center gap-2 whitespace-nowrap">
+          <span
+            className="inline-flex items-center gap-2 whitespace-nowrap"
+            // The anchor a linking tab scrolls to, and the mark assistive
+            // technology reads; both exist only on the linked row.
+            {...(row.user_id === highlightedUserId
+              ? {
+                  id: operatorPromisesRowAnchorId(row.user_id),
+                  'data-highlighted': 'true',
+                  'aria-current': 'true' as const,
+                }
+              : {})}
+          >
             {row.fio ?? EMPTY}
             {!row.is_active && (
               // Text, not colour: the dimmed row alone would be invisible to a
@@ -206,7 +253,7 @@ export function OperatorPromisesTable({ rows, emptyMessage }: OperatorPromisesTa
         ),
       },
     ],
-    [t, language]
+    [t, language, highlightedUserId]
   )
 
   return (
@@ -218,8 +265,18 @@ export function OperatorPromisesTable({ rows, emptyMessage }: OperatorPromisesTa
       // Dismissed operators keep their place in the sort and are dimmed rather
       // than removed — the money they collected must not vanish from a
       // historical period (decision of 2026-08-19). `opacity` is deliberate:
-      // it is theme-independent, unlike any colour token.
-      rowClassName={(row) => (row.is_active ? undefined : 'opacity-60')}
+      // it is theme-independent, unlike any colour token. The linked
+      // operator's row gets a ring, never a background — see the constant for
+      // why a `bg-*` class here would lose to DataTable's own zebra
+      // background; both marks can apply at once.
+      rowClassName={(row) =>
+        [
+          row.is_active ? '' : 'opacity-60',
+          row.user_id === highlightedUserId ? OPERATOR_PROMISES_HIGHLIGHT_CLASS : '',
+        ]
+          .filter(Boolean)
+          .join(' ') || undefined
+      }
     />
   )
 }

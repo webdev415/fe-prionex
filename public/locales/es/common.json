@@ -9241,7 +9241,8 @@
         "promises-daily": "Promesas hasta fin de mes",
         "promises-feed": "Promesas",
         "callbacks": "Devoluciones de llamada",
-        "drains": "Fugas"
+        "drains": "Fugas",
+        "recorded-payments": "Pagos registrados"
       },
       "processing": {
         "dateFrom": "Fecha desde",
@@ -9492,6 +9493,10 @@
           "conversionVerified": "Conversión (verificado)"
         },
         "inactiveBadge": "baja",
+        "highlightedOperator": "Operador {{name}} resaltado",
+        "highlightedOperatorMissing": "El operador #{{id}} no tiene filas en este periodo",
+        "highlightedOperatorHidden": "El operador {{name}} está en el informe, pero no en esta subpestaña; su fila se muestra en la pestaña «Todos»",
+        "clearHighlight": "Quitar el resaltado",
         "totals": {
           "title": "Totales",
           "generatedAt": "Datos a fecha de {{value}}",
@@ -9664,6 +9669,64 @@
         "today": "Hoy",
         "thisWeek": "Esta semana",
         "thisMonth": "Este mes"
+      },
+      "recordedPayments": {
+        "dateFrom": "Fecha de confirmación desde",
+        "dateTo": "Fecha de confirmación hasta",
+        "invalidDate": "La fecha no es una fecha de calendario real; elija una fecha para sustituirla",
+        "invalidRange": "La fecha de inicio es posterior a la fecha de fin",
+        "rangeTooLong": "El rango de fechas no puede superar los 366 días",
+        "verifiedOnly": "Solo verificados",
+        "operators": "Responsable del cliente",
+        "allOperators": "Todos los operadores",
+        "operatorsTooMany": "Se pueden seleccionar como máximo {{max}} operadores; deseleccione algunos o borre el filtro",
+        "operatorsInvalid": "La lista de operadores del enlace está dañada; borre el filtro",
+        "serviceBadge": "de servicio",
+        "deletedClientBadge": "eliminado",
+        "openClient": "Cliente {{id}}",
+        "operatorPromisesLink": "Promesas del operador {{name}}",
+        "summary": "Pagos: {{count}} · Importe: {{amount}}",
+        "breakdown": {
+          "title": "Desglose por responsable del cliente",
+          "operator": "Operador",
+          "count": "Pagos",
+          "amount": "Importe",
+          "unresolved": "Sin responsable",
+          "capped": "El desglose por operadores no se ha calculado: el periodo seleccionado contiene demasiados clientes. Reduzca el periodo para ver el desglose y filtrar por operador.",
+          "truncated": "Solo se muestran los {{count}} operadores con mayor importe; el resto de las líneas del desglose se ha omitido. Reduzca el periodo.",
+          "filter": "Mostrar los pagos del operador {{name}}",
+          "clearFilter": "Mostrar todos los operadores",
+          "empty": "No hay pagos en el periodo seleccionado"
+        },
+        "status": {
+          "verified": "Verificado",
+          "cancelled": "Cancelado",
+          "pending": "Pendiente"
+        },
+        "columns": {
+          "contractNumber": "Número de contrato",
+          "inn": "NIF",
+          "amount": "Importe",
+          "paymentDate": "Fecha de pago",
+          "confirmationDate": "Fecha de confirmación (banco)",
+          "verifiedAt": "Verificado en el CRM",
+          "status": "Estado",
+          "client": "Cliente",
+          "recordedBy": "Registrado por",
+          "clientResponsible": "Responsable del cliente",
+          "paymentResponsible": "Responsable del pago",
+          "purchaseDate": "Fecha de compra",
+          "seller": "Contraparte",
+          "paymentMethod": "Método de pago",
+          "paymentType": "Tipo de pago"
+        },
+        "empty": "Ningún pago registrado coincide con estos filtros",
+        "forbidden": "No tiene permiso para ver este informe",
+        "unavailable": "Los datos de pagos, clientes o empleados no están disponibles temporalmente. Inténtelo de nuevo más tarde.",
+        "error": {
+          "title": "No se han podido cargar los datos",
+          "retry": "Reintentar"
+        }
       },
       "kpi": {
         "callsMade": "Llamadas realizadas",

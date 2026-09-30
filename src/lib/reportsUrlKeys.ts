@@ -46,8 +46,14 @@ export const REPORTS_URL_KEYS = {
   searcherFollowup: { dateFrom: 'if', dateTo: 'it', page: 'spg', pageSize: 'sps' },
   /** «Великий розрив» feed (communicationGap). */
   communicationGap: { sellFrom: 'gf', sellTo: 'gt', gapMin: 'gm', page: 'gpg', pageSize: 'gps' },
-  /** «Обіцянки по операторах» (operatorPromises). */
-  operatorPromises: { dateFrom: 'opf', dateTo: 'opt', department: 'opd' },
+  /**
+   * «Обіцянки по операторах» (operatorPromises). `opu` (Operator-Promises
+   * User) is the operator a sibling tab LINKS TO by `user_id` — the recorded
+   * payments tab (card 76) sends a reader here with the same window — and the
+   * tab answers it by highlighting and scrolling to that operator's row; it
+   * is never a filter (the roster arrives whole and is grouped client-side).
+   */
+  operatorPromises: { dateFrom: 'opf', dateTo: 'opt', department: 'opd', user: 'opu' },
   /**
    * «Вхід без відпрацювання» feed (inboundFollowup). `n` for iNbound: the
    * obvious `i…` spellings are the searcher feed's (`if`/`it`), and this feed
@@ -148,6 +154,31 @@ export const REPORTS_URL_KEYS = {
     hidePaid: 'drp',
     page: 'drpg',
     pageSize: 'drps',
+  },
+  /**
+   * «Внесені платежі» feed (recordedPayments, payment-service, card 76).
+   * "rp…" for Recorded Payments — the same initials scheme as `dr…`/`cb…`/
+   * `op…`. Every `p…` spelling is crowded already (`pf`/`pt`/`pg`/`ps` are the
+   * low-verification feed's, `pd…` the daily promises report's, `pr…` the
+   * promises feed's), so a feed about payments must NOT reach for a fourth
+   * `p…` prefix: the likeliest transplant on the page is a `pr…` key read by
+   * this tab, and `rp…` cannot be mistyped into one.
+   *
+   * `rpu` carries the operator filter (`user_ids` on the wire — the client's
+   * RESPONSIBLE employee, key B, matched by id and never by name) as a
+   * comma-separated list of ids; `rpv` is the «Тільки підтверджені» switch:
+   * present-as-"1" is on, absent is the backend default (off — ALL statuses,
+   * the source system's popup default). A shared link carries only choices
+   * somebody made; the default window (the current month in the profile
+   * zone) is never written into the URL.
+   */
+  recordedPayments: {
+    dateFrom: 'rpf',
+    dateTo: 'rpt',
+    operators: 'rpu',
+    verifiedOnly: 'rpv',
+    page: 'rppg',
+    pageSize: 'rpps',
   },
 } as const
 
