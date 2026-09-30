@@ -75,6 +75,8 @@ interface Step1LoanSourceProps {
 }
 
 const SALE_TYPE_CONFLICT_ID = 'new-fa-sale-type-conflict'
+const SALE_TYPE_HINT_ID = 'new-fa-sale-type-hint'
+const PURCHASE_DATE_HINT_ID = 'new-fa-purchase-date-hint'
 
 export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
   const { t } = useTranslation('common')
@@ -231,18 +233,20 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
   // A warning, not a block: a type that disagrees with the purchase date means a
   // slip in one of the two, and only the operator knows which. It can only come
   // from a type picked by hand — until then the type follows the date — and it
-  // is shown under both fields, since either may be the one to fix.
+  // is shown under both fields, since either may be the one to fix. Each copy
+  // has its own id, so the field above it can name it as its description.
   const saleTypeByDate = saleTypeByPurchaseDate(data.newFactoringAgreement.contract_purchase_date)
   const saleTypeContradictsDate =
     saleTypeByDate !== null && saleTypeByDate !== data.newFactoringAgreement.sale_type
-  const saleTypeDateHint = saleTypeContradictsDate ? (
-    <p className="text-warning-700 mt-1.5 text-xs">
-      {t(
-        'pages.imports.step1.factoringAgreement.saleTypeDateHint',
-        'The type does not match the purchase date: portfolios bought before 30.07.2026 were bought under factoring, from 30.07.2026 on — under assignment. Check the date or the type.'
-      )}
-    </p>
-  ) : null
+  const saleTypeDateHint = (id: string) =>
+    saleTypeContradictsDate ? (
+      <p id={id} className="text-warning-700 mt-1.5 text-xs">
+        {t(
+          'pages.imports.step1.factoringAgreement.saleTypeDateHint',
+          'The type does not match the purchase date: portfolios bought before 30.07.2026 were bought under factoring, from 30.07.2026 on — under assignment. Check the date or the type.'
+        )}
+      </p>
+    ) : null
 
   return (
     <div className="space-y-6">
@@ -437,7 +441,11 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
                         value={data.newFactoringAgreement.sale_type}
                         onValueChange={handleSaleTypeChange}
                       >
-                        <SelectTrigger className="w-full" id="new-fa-sale-type">
+                        <SelectTrigger
+                          className="w-full"
+                          id="new-fa-sale-type"
+                          aria-describedby={saleTypeContradictsDate ? SALE_TYPE_HINT_ID : undefined}
+                        >
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -448,7 +456,7 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
                           ))}
                         </SelectContent>
                       </Select>
-                      {saleTypeDateHint}
+                      {saleTypeDateHint(SALE_TYPE_HINT_ID)}
                     </div>
                     <Input
                       ref={agreementNumberRef}
@@ -600,7 +608,10 @@ export function Step1LoanSource({ data, onChange }: Step1LoanSourceProps) {
                           'Select contract purchase date'
                         )}
                       />
-                      {saleTypeDateHint}
+                      {/* Not tied to the date input: DateSelect takes no
+                          aria-describedby, so a screen reader hears this one
+                          through the type field's copy. */}
+                      {saleTypeDateHint(PURCHASE_DATE_HINT_ID)}
                     </div>
                   </div>
                 )}

@@ -543,6 +543,21 @@ describe('Step1LoanSource — type against the purchase date', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
+  // A screen reader hears the warning with the type field. Each copy has its
+  // own id; the date input cannot name its copy — DateSelect takes no
+  // aria-describedby.
+  it('describes the type field with the copy under it', () => {
+    renderStep(withDate('2026-07-29T12:00:00.000Z', 'cession'))
+
+    const typeField = saleTypeTrigger().parentElement as HTMLElement
+    const dateField = (document.querySelector('#new-fa-contract-purchase-date') as HTMLElement)
+      .parentElement as HTMLElement
+    expect(within(typeField).getByText(HINT)).toHaveAttribute('id', 'new-fa-sale-type-hint')
+    expect(within(dateField).getByText(HINT)).toHaveAttribute('id', 'new-fa-purchase-date-hint')
+    expect(saleTypeTrigger()).toHaveAttribute('aria-describedby', 'new-fa-sale-type-hint')
+    expect(saleTypeTrigger()).toHaveAccessibleDescription(HINT)
+  })
+
   it.each([
     ['factoring before 30.07.2026', '2026-07-29T12:00:00.000Z', 'factoring'],
     ['cession on 30.07.2026', '2026-07-30T12:00:00.000Z', 'cession'],
@@ -552,6 +567,7 @@ describe('Step1LoanSource — type against the purchase date', () => {
     renderStep(withDate(date, saleType))
 
     expect(screen.queryByText(HINT)).not.toBeInTheDocument()
+    expect(saleTypeTrigger()).not.toHaveAttribute('aria-describedby')
   })
 
   it('goes away once the type is switched to the one the date implies', async () => {
@@ -561,5 +577,6 @@ describe('Step1LoanSource — type against the purchase date', () => {
     await choose(user, saleTypeTrigger(), FACTORING)
 
     expect(screen.queryByText(HINT)).not.toBeInTheDocument()
+    expect(saleTypeTrigger()).not.toHaveAttribute('aria-describedby')
   })
 })
