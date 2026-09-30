@@ -214,9 +214,9 @@ function LocationProbe() {
   return <div data-testid="location-search">{location.search}</div>
 }
 
-function renderTab(initialEntries: string[] = ['/']) {
+function renderTab(initialEntries: string[] = ['/'], { gcTime }: { gcTime?: number } = {}) {
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
+    defaultOptions: { queries: { retry: false, ...(gcTime === undefined ? {} : { gcTime }) } },
   })
   return render(
     <QueryClientProvider client={queryClient}>
@@ -237,6 +237,7 @@ const breakdownLines = () => screen.getAllByTestId('recorded-payments-breakdown-
 const lastParams = (): Record<string, unknown> => ({
   ...mockGetFeed.mock.calls[mockGetFeed.mock.calls.length - 1][0],
 })
+const optionValues = () => Array.from(operatorSelect().options).map((o) => o.value)
 
 /**
  * `getErrorMessage` translates a coded detail through i18next's OWN `t`
@@ -594,25 +595,29 @@ describe('RecordedPaymentsTab', () => {
     await waitFor(() => expect(search()).toContain('rpu=101'))
     await waitFor(() => expect(search()).not.toContain('rppg='))
     await waitFor(() =>
-      expect(mockGetFeed).toHaveBeenLastCalledWith(
+      expect(mockGetFeed).toHaveBeenCalledWith(
         expect.objectContaining({ user_ids: [101], skip: 0 })
       )
     )
+    // From page 3 the tab had never fetched page 1 unfiltered, so the option
+    // list costs one request of its own here — the only case it does.
+    await waitFor(() => expect(mockGetFeed).toHaveBeenCalledTimes(3))
+    expect(mockGetFeed).toHaveBeenLastCalledWith(
+      expect.not.objectContaining({ user_ids: expect.anything() })
+    )
+    expect(lastParams()).toMatchObject({ skip: 0 })
   })
 
   it('keeps the whole option list after a filtered answer, and clears the filter as one URL update', async () => {
     // A filtered response carries only the filtered operator's line; the
-    // multi-select remembers the last unfiltered list for the same window so
-    // the operator can pick ANOTHER one without clearing first.
+    // multi-select subscribes to the unfiltered answer for the same window
+    // so the operator can pick ANOTHER one without clearing first.
     mockGetFeed
       .mockResolvedValueOnce(makeResponse([makeRow()]))
       .mockResolvedValue(
         makeResponse([makeRow()], { user_ids: [101], operator_breakdown: [OPERATOR_LINE] })
       )
 
-    // The window the fixture ECHOES: the unfiltered answer is found in the
-    // cache by its echo fields, as it would be in production where the echo
-    // is the request.
     renderTab(['/?rpf=2026-08-01&rpt=2026-08-31'])
     await screen.findByText('ДГ-12345')
 
@@ -632,11 +637,13 @@ describe('RecordedPaymentsTab', () => {
       expect(breakdownLines().every((line) => !line.hasAttribute('data-active'))).toBe(true)
     )
     // No third request: the unfiltered answer is still fresh (60 s) under the
-    // key the clear returns to, so React Query serves it from the cache.
+    // key the clear returns to, so React Query serves it from the cache. Nor
+    // was there one for the OPTIONS: the options query's key is the very
+    // request the click came from, deduped, not fetched again.
     expect(mockGetFeed).toHaveBeenCalledTimes(2)
   })
 
-  it('renders the breakdown block from the answer the summary came from — the cache feeds the options only', async () => {
+  it('renders the breakdown block from the answer the summary came from — the unfiltered answer feeds the options only', async () => {
     // The filtered answer carries one line, with DIFFERENT numbers from the
     // unfiltered answer's line for the same operator (a payment confirmed in
     // between). The block and the summary above it must be one response:
@@ -663,14 +670,13 @@ describe('RecordedPaymentsTab', () => {
     expect(Array.from(operatorSelect().options).map((o) => o.value)).toEqual(['6274', '101'])
   })
 
-  it('offers, under «Тільки підтверджені», the operators of the VERIFIED unfiltered answer — the cache is matched on the switch too', async () => {
+  it('offers, under «Тільки підтверджені», the operators of the VERIFIED unfiltered answer — the options query’s key carries the switch', async () => {
     // Three answers for one window: the unfiltered list (both operators),
     // the unfiltered list with the switch on (the service account has
     // nothing verified), then the filtered one. The options must come from
     // the second, never the first: same window, different switch, a
-    // different set of operators. Both unfiltered answers sit in the cache
-    // and the first was inserted first — a match that ignores the switch
-    // returns it.
+    // different set of operators. Both unfiltered answers sit in the cache;
+    // an options key without the switch would resolve to the first.
     mockGetFeed
       .mockResolvedValueOnce(makeResponse([makeRow()]))
       .mockResolvedValueOnce(
@@ -702,11 +708,12 @@ describe('RecordedPaymentsTab', () => {
     expect(Array.from(operatorSelect().options).map((o) => o.value)).toEqual(['101'])
   })
 
-  it('offers, after a window change, the operators of the NEW window — the cache is matched on the window too', async () => {
+  it('offers, after a window change, the operators of the NEW window — the options query’s key carries the window', async () => {
     // Same shape: the old window's unfiltered answer (both operators) stays
     // in the cache when the window shrinks to one where only Степченко
-    // collected. A match that ignores the window would offer, and the block
-    // would show, the OLD window's breakdown under the new window's summary.
+    // collected. An options key without the window would offer, and the
+    // block would show, the OLD window's breakdown under the new window's
+    // summary.
     mockGetFeed
       .mockResolvedValueOnce(makeResponse([makeRow()]))
       .mockResolvedValueOnce(
@@ -753,6 +760,159 @@ describe('RecordedPaymentsTab', () => {
       ['999', '999'],
     ])
     expect(Array.from(operatorSelect().selectedOptions).map((o) => o.value)).toEqual(['999'])
+  })
+
+  it('keeps every operator of the window on offer after the unfiltered answer was garbage-collected — the options are a SUBSCRIBED query', async () => {
+    // gcTime 0: a cache entry nobody observes is dropped on the next tick.
+    // The unfiltered answer loses its observer the moment the filter is
+    // applied (the main query moves to the filtered key), so an UNSUBSCRIBED
+    // read of the cache — the design this replaced — finds nothing on the
+    // next recompute, here a page change, and the list collapses to the
+    // selected operator: nobody can pick another one. The options query
+    // observes that key for as long as the filter is on, so the entry stays.
+    mockGetFeed.mockImplementation(async (params) =>
+      params.user_ids
+        ? makeResponse([makeRow({ contract_number: params.skip ? 'ДГ-99999' : 'ДГ-12345' })], {
+            user_ids: [101],
+            operator_breakdown: [OPERATOR_LINE],
+            total: 130,
+            page: params.skip ? 2 : 1,
+            page_size: 50,
+            total_pages: 3,
+          })
+        : makeResponse([makeRow()])
+    )
+
+    renderTab(['/?rpf=2026-08-01&rpt=2026-08-31'], { gcTime: 0 })
+    await screen.findByText('ДГ-12345')
+
+    await userEvent.click(within(breakdownLines()[1]).getByRole('button'))
+    await waitFor(() => expect(breakdownLines()).toHaveLength(1))
+    await waitFor(() => expect(optionValues()).toEqual(['6274', '101']))
+    expect(mockGetFeed).toHaveBeenCalledTimes(2)
+
+    // Let the gc tick pass before the next recompute.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20))
+    })
+
+    await userEvent.click(screen.getByTitle('2'))
+    await screen.findByText('ДГ-99999')
+    expect(optionValues()).toEqual(['6274', '101'])
+    // Paging under the filter cost ONE request: the options key has no page
+    // in it, so the page change did not touch it.
+    expect(mockGetFeed).toHaveBeenCalledTimes(3)
+  })
+
+  it('sends ONE request without an operator filter — the options query is not enabled', async () => {
+    // On page 2 the main key (skip 50) and the options key (skip 0) differ,
+    // so an options query enabled without a filter would show up here as a
+    // second request. With none, the main answer IS the unfiltered one.
+    mockGetFeed.mockResolvedValue(
+      makeResponse([makeRow()], { total: 130, page: 2, page_size: 50, total_pages: 3 })
+    )
+
+    renderTab(['/?rppg=2'])
+    await screen.findByText('ДГ-12345')
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20))
+    })
+
+    expect(mockGetFeed).toHaveBeenCalledTimes(1)
+    expect(lastParams()).toMatchObject({ skip: 50 })
+    expect(lastParams()).not.toHaveProperty('user_ids')
+    expect(optionValues()).toEqual(['6274', '101'])
+  })
+
+  it('follows the window and the switch under a filter — the options query’s key carries both', async () => {
+    // One fixture, keyed on the request: the unfiltered list of each window
+    // and switch is a different set of operators, the filtered answer is
+    // always the selected one's line. Every set contains 101 (selected), so
+    // a list that merely kept the selection would not tell them apart —
+    // the OTHER operator does.
+    const THIRD: OperatorBreakdownLine = {
+      user_id: 303,
+      full_name: 'Третяк Ігор',
+      is_service: false,
+      rows_count: 12,
+      amount: '3000.00',
+    }
+    const FOURTH: OperatorBreakdownLine = {
+      user_id: 404,
+      full_name: 'Четвертак Ніна',
+      is_service: false,
+      rows_count: 7,
+      amount: '700.00',
+    }
+    mockGetFeed.mockImplementation(async (params) => {
+      const lines = params.verified_only
+        ? [OPERATOR_LINE, FOURTH]
+        : params.date_to === '2026-08-15'
+          ? [OPERATOR_LINE, THIRD]
+          : [SERVICE_LINE, OPERATOR_LINE, UNRESOLVED_LINE]
+      return makeResponse([makeRow()], {
+        date_to: params.date_to,
+        verified_only: !!params.verified_only,
+        user_ids: params.user_ids ?? [],
+        operator_breakdown: params.user_ids ? lines.filter((l) => l.user_id === 101) : lines,
+      })
+    })
+
+    // A shared link WITH the filter: the filtered answer and the unfiltered
+    // list are both requested, and the list offers the whole window.
+    renderTab(['/?rpf=2026-08-01&rpt=2026-08-31&rpu=101'])
+    await screen.findByText('ДГ-12345')
+    await waitFor(() => expect(optionValues()).toEqual(['6274', '101']))
+    expect(mockGetFeed).toHaveBeenCalledTimes(2)
+    const unfilteredCalls = () =>
+      mockGetFeed.mock.calls.map(([params]) => params).filter((params) => !params.user_ids)
+    expect(unfilteredCalls()).toEqual([
+      expect.objectContaining({ date_from: '2026-08-01', date_to: '2026-08-31', skip: 0 }),
+    ])
+    expect(unfilteredCalls()[0]).not.toHaveProperty('verified_only')
+    // Only the selected operator's line in the block itself.
+    expect(breakdownLines()).toHaveLength(1)
+
+    // The window shrinks: the NEW window's operators, requested unfiltered.
+    fireEvent.change(dateInputs()[1], { target: { value: '2026-08-15' } })
+    await waitFor(() => expect(optionValues()).toEqual(['101', '303']))
+    expect(mockGetFeed).toHaveBeenCalledTimes(4)
+    expect(unfilteredCalls()[1]).toEqual(
+      expect.objectContaining({ date_to: '2026-08-15', skip: 0 })
+    )
+
+    // The switch goes on: the VERIFIED operators of that window.
+    await userEvent.click(verifiedOnlyCheckbox())
+    await waitFor(() => expect(optionValues()).toEqual(['101', '404']))
+    expect(mockGetFeed).toHaveBeenCalledTimes(6)
+    expect(unfilteredCalls()[2]).toEqual(
+      expect.objectContaining({ date_to: '2026-08-15', verified_only: true, skip: 0 })
+    )
+    // The block is still the filtered answer's, with the current key.
+    expect(breakdownLines()).toHaveLength(1)
+  })
+
+  it('names the selected operator from the filtered answer while the unfiltered list is unavailable', async () => {
+    // The unfiltered request fails, the filtered one does not: the tab is
+    // not in its error state, the multi-select shows the selected operator
+    // by NAME (the filtered answer's line), and the selection stays
+    // untickable.
+    mockGetFeed.mockImplementation(async (params) => {
+      if (!params.user_ids) throw makeHttpError(503, { detail: 'employee directory unavailable' })
+      return makeResponse([makeRow()], { user_ids: [101], operator_breakdown: [OPERATOR_LINE] })
+    })
+
+    renderTab(['/?rpu=101'])
+    await screen.findByText('ДГ-12345')
+    await waitFor(() => expect(mockGetFeed).toHaveBeenCalledTimes(2))
+
+    expect(Array.from(operatorSelect().options).map((o) => [o.value, o.textContent])).toEqual([
+      ['101', 'Степченко Олена'],
+    ])
+    expect(Array.from(operatorSelect().selectedOptions).map((o) => o.value)).toEqual(['101'])
+    expect(
+      screen.queryByRole('button', { name: 'pages.reports.recordedPayments.error.retry' })
+    ).not.toBeInTheDocument()
   })
 
   it('writes a multi-select change as a comma list and sends it as user_ids', async () => {

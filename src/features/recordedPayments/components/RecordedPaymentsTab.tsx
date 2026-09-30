@@ -52,21 +52,31 @@
  * that is inherited from the source system, documented, not reconciled.
  *
  * THE OPTION LIST OF THE OPERATOR MULTI-SELECT IS THE BREAKDOWN, not a users
- * directory: it costs no extra request, and it is exactly the operators who
- * HAVE payments in the window — the directory's ~1 400 users would be 93 %
- * noise for a filter whose point is drilling into this month's collections.
- * The cost of that choice is that a FILTERED response carries only the
- * filtered operators' lines, so the OPTION LIST is read from the last
- * UNFILTERED answer for the same window and switch — which React Query's
- * cache still holds (the click that applied the filter came from it), found
- * by the response's own echo fields rather than by rebuilding a query key:
- * arriving by the breakdown's own click keeps the full list, arriving by a
- * shared link with `rpu` set shows the selected operators until the filter
- * is cleared. An id selected but absent from the list (a link, or an
- * operator without payments after a window change) stays selectable under
- * its bare id so it can be unticked. ONLY the options come from the cache:
- * the breakdown BLOCK renders the current answer, filtered lines and all, so
- * its numbers and the summary above them are always one response.
+ * directory: it is exactly the operators who HAVE payments in the window —
+ * the directory's ~1 400 users would be 93 % noise for a filter whose point
+ * is drilling into this month's collections. The cost of that choice is that
+ * a FILTERED response carries only the filtered operators' lines, so under a
+ * filter the OPTION LIST comes from a SECOND, SUBSCRIBED query: the same hook
+ * on the same window and switch with NO operator filter (`user_ids` absent,
+ * page 1). Its key is the one the tab itself fetched before the click that
+ * applied the filter, and the one a "clear filter" returns to, so in both
+ * directions React Query serves it from the cache — no extra request on the
+ * common path — and while the filter is active that observer keeps the
+ * unfiltered answer ALIVE: it cannot be garbage-collected under the tab's
+ * feet (an unsubscribed cache read would have lost it after `gcTime` and
+ * collapsed the list to the selected operator on the next page or toggle).
+ * The query is enabled ONLY under a filter: without one the main answer IS
+ * the unfiltered one and feeds the options directly, so nothing is fetched
+ * twice. `keepPreviousData` holds the last list across a window or switch
+ * change instead of blinking to empty. Arriving by a shared link with `rpu`
+ * set therefore offers the whole window's operators too. While that answer
+ * is still loading, or if it failed, the options fall back to the FILTERED
+ * answer's own lines (the selected operators, by name); an id selected but
+ * absent from either list (a link, or an operator without payments after a
+ * window change) stays selectable under its bare id so it can be unticked.
+ * ONLY the options come from the second query: the breakdown BLOCK renders
+ * the current answer, filtered lines and all, so its numbers and the summary
+ * above them are always one response.
  *
  * ── «ТІЛЬКИ ПІДТВЕРДЖЕНІ» IS OFF BY DEFAULT ────────────────────────────────
  * `rpv` (→ `verified_only`) is a SERVER-side filter: the feed paginates, so
@@ -79,7 +89,6 @@
  */
 
 import { useMemo } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { Checkbox } from '@/components/ui/Checkbox'
@@ -102,14 +111,13 @@ import { formatMoneyAmount, formatNumber } from '@/lib/localeFormat'
 import { isWindowTooLong } from '@/lib/reportWindow'
 import { REPORTS_URL_KEYS } from '@/lib/reportsUrlKeys'
 import { useAuthStore } from '@/stores/authStore'
-import { recordedPaymentsFeedKeys, useRecordedPaymentsFeed } from '../hooks'
+import { useRecordedPaymentsFeed } from '../hooks'
 import { currentMonthToDateWindow } from '../lib/currentMonthWindow'
 import {
   MAX_OPERATOR_IDS,
   formatOperatorIdsParam,
   readOperatorIdsParam,
 } from '../lib/operatorIdsParam'
-import type { RecordedPaymentsFeedResponse } from '../types'
 import { OperatorBreakdown } from './OperatorBreakdown'
 import { RECORDED_PAYMENTS_COLUMN_COUNT, RecordedPaymentsTable } from './RecordedPaymentsTable'
 
@@ -236,47 +244,39 @@ export function RecordedPaymentsTab() {
   // defeat RecordedPaymentsTable's useMemo over its rows prop.
   const rows = useMemo(() => query.data?.rows ?? [], [query.data])
 
-  // The multi-select's OPTION LIST survives a filtered answer: the last
-  // UNFILTERED answer for the same window and switch is read back out of
-  // React Query's cache (see the docblock) — matched on the response's own
-  // echo fields, so no query key has to be rebuilt here and a different page
-  // of the same window qualifies (the breakdown is the whole selection's,
-  // not the page's). Every field of the match is load-bearing: without the
-  // window, a filtered view after a window change would offer last window's
-  // operators; without the switch, «Тільки підтверджені» would offer the
-  // operators who have nothing verified. No state and no effect: the cache
-  // IS the memory, and it forgets on its own schedule (gcTime). Recomputed
-  // when the answer changes, which is also when the cache may have gained
-  // the entry.
-  const queryClient = useQueryClient()
-  const unfilteredAnswer = useMemo(() => {
-    if (!query.data) return null
-    for (const [, cached] of queryClient.getQueriesData<RecordedPaymentsFeedResponse>({
-      queryKey: recordedPaymentsFeedKeys.all,
-    })) {
-      if (
-        cached &&
-        cached.project_id === projectId &&
-        cached.user_ids.length === 0 &&
-        !cached.breakdown_capped &&
-        cached.date_from === dateFrom &&
-        cached.date_to === dateTo &&
-        cached.verified_only === verifiedOnly
-      ) {
-        return cached
-      }
-    }
-    return null
-  }, [query.data, queryClient, projectId, dateFrom, dateTo, verifiedOnly])
-  const optionLines = useMemo(
-    () => (unfilteredAnswer ?? query.data)?.operator_breakdown ?? [],
-    [unfilteredAnswer, query.data]
-  )
+  // The multi-select's OPTION LIST survives a filtered answer: under a filter
+  // it comes from a second, SUBSCRIBED query for the same window and switch
+  // with no operator filter (see the docblock). Same hook, so the key is
+  // built the one way and matches the unfiltered request the tab already
+  // made — page 1 at the current page size, which is where the click that
+  // applied the filter came from and where "clear filter" returns to; React
+  // Query dedupes both. Enabled only under a filter: with none, the main
+  // answer is the unfiltered one. Every key field is load-bearing: without
+  // the window, a filtered view after a window change would offer last
+  // window's operators; without the switch, «Тільки підтверджені» would
+  // offer the operators who have nothing verified.
+  const hasOperatorFilter = operatorIds.length > 0
+  const optionsQuery = useRecordedPaymentsFeed({
+    projectId,
+    dateFrom,
+    dateTo,
+    userIds: [],
+    verifiedOnly,
+    skip: 0,
+    limit: pageSize,
+    timezone: userTimezone,
+    enabled: !hasFilterError && hasOperatorFilter,
+  })
+  // Loading (a shared link with `rpu` set, before the unfiltered answer
+  // lands) or failed: the filtered answer's own lines name the selected
+  // operators; the bare-id rule below covers the rest.
+  const optionsAnswer = hasOperatorFilter ? (optionsQuery.data ?? query.data) : query.data
+  const optionLines = useMemo(() => optionsAnswer?.operator_breakdown ?? [], [optionsAnswer])
 
   // The breakdown BLOCK is the CURRENT answer — the one the summary above it
-  // prints — never the cached one: a cached answer can be up to gcTime old,
-  // and "Платежів: 11" over a line saying 10 for the same operator is the
-  // invariant "the lines add up to the summary" visibly broken. Under a
+  // prints — never the options query's: that answer can be up to staleTime
+  // old, and "Платежів: 11" over a line saying 10 for the same operator is
+  // the invariant "the lines add up to the summary" visibly broken. Under a
   // filter the block therefore shows the filtered lines only; the whole
   // list lives in the multi-select.
   const breakdownLines = useMemo(() => query.data?.operator_breakdown ?? [], [query.data])
