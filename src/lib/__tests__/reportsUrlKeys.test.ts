@@ -51,7 +51,7 @@ describe('REPORTS_URL_KEYS', () => {
         page: 'gpg',
         pageSize: 'gps',
       },
-      operatorPromises: { dateFrom: 'opf', dateTo: 'opt', department: 'opd' },
+      operatorPromises: { dateFrom: 'opf', dateTo: 'opt', department: 'opd', user: 'opu' },
       inboundFollowup: { dateFrom: 'nf', dateTo: 'nt', page: 'npg', pageSize: 'nps' },
       contactTag: {
         viewDate: 'kd',
@@ -89,7 +89,38 @@ describe('REPORTS_URL_KEYS', () => {
         page: 'drpg',
         pageSize: 'drps',
       },
+      recordedPayments: {
+        dateFrom: 'rpf',
+        dateTo: 'rpt',
+        operators: 'rpu',
+        verifiedOnly: 'rpv',
+        page: 'rppg',
+        pageSize: 'rpps',
+      },
     })
+  })
+
+  it('keeps the recorded payments feed clear of every `p…` prefix it would naturally take', () => {
+    // A feed about PAYMENTS reaches for `p…` first, and every short `p…`
+    // spelling on the page is taken: `pf`/`pt`/`pg`/`ps` (low verification),
+    // `pd…` (daily promises), `pr…` (promises feed). The collision test above
+    // already fails on a reused key; this one records WHY the set is spelled
+    // `rp…`, so a later "tidy-up" rename cannot quietly walk it into a
+    // sibling's prefix — a `pr…` key read here would transplant the promises
+    // feed's filter into a payments list.
+    const recordedPaymentsKeys = Object.values<string>(REPORTS_URL_KEYS.recordedPayments)
+    for (const key of recordedPaymentsKeys) {
+      expect(key.startsWith('p')).toBe(false)
+    }
+    expect(recordedPaymentsKeys.every((key) => key.startsWith('rp'))).toBe(true)
+  })
+
+  it('gives the operator-promises tab a user key that only a LINK writes', () => {
+    // `opu` is how the recorded payments tab points at one operator's row by
+    // `user_id`; the tab itself has no user filter and never writes it. A
+    // sweep that "normalises" the non-paged sets by dropping the odd key out
+    // would silently break every operator link on the payments tab.
+    expect(REPORTS_URL_KEYS.operatorPromises.user).toBe('opu')
   })
 
   it('keeps the callbacks feed clear of the `c…` spellings it would naturally take', () => {
