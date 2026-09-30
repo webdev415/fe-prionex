@@ -1742,6 +1742,76 @@ describe('CreditApplicationDetailPage → решение заменяет пре
       expect(alerts[0].textContent).toBe('credit.decisionError.conditionalApprovalUnconfirmed')
       expect(panel.queryByText(DETAIL)).toBeNull()
     })
+
+    it('19-5f Q-7: справочник без AB-C-* — ни пустой рамки условий, ни строки «недоступні»; одобрение уходит', () => {
+      const withoutConditions = (): CodesState => ({
+        data: indexDecisionCodes({
+          version: 'book@no-conditional',
+          codes: DECISION_CODES_FIXTURE.codes.filter((entry) => entry.kind !== 'conditional'),
+        }),
+      })
+      // Положительный контроль: полный справочник рамку рисует — пустота ниже
+      // значит «рамки нет», а не «поиск её не видит».
+      expect(renderManual().getByText('credit.card.conditionalTitle').tagName).toBe('LEGEND')
+      cleanup()
+
+      const mutate = vi.fn()
+      const panel = renderManual({ mutate }, DECISION, withoutConditions())
+      expect(
+        panel.queryByText('credit.card.conditionalTitle'),
+        'an empty fieldset of conditions is drawn'
+      ).toBeNull()
+      expect(
+        panel.queryByText('credit.card.conditionalUnavailable'),
+        'a loaded directory is reported as not loaded'
+      ).toBeNull()
+      typeRationale(panel)
+      fireEvent.click(panel.getByRole('button', { name: 'credit.actions.saveDecision' }))
+      expect(mutate).toHaveBeenCalledTimes(1)
+      expect((mutate.mock.calls[0][0] as { outcome: string }).outcome).toBe('approved')
+
+      // Перезапрос справочника упал, а загруженный остался: он всё ещё загружен.
+      cleanup()
+      const stale = renderManual({}, DECISION, { ...withoutConditions(), isError: true })
+      expect(
+        stale.queryByText('credit.card.conditionalUnavailable'),
+        'a failed refetch over a loaded directory is reported as not loaded'
+      ).toBeNull()
+    })
+
+    it('19-5f Q-8: смена исхода снимает условия — «Направити на розгляд» без кодов, возврат на «Схвалити» с пустыми отметками', () => {
+      const mutate = vi.fn()
+      const panel = renderManual({ mutate })
+      const outcome = panel.getByRole('combobox')
+
+      fireEvent.click(panel.getByRole('checkbox', { name: /AB-C-02/ }))
+      fireEvent.change(outcome, { target: { value: 'referred' } })
+      typeRationale(panel)
+      fireEvent.click(panel.getByRole('button', { name: 'credit.actions.saveDecision' }))
+      expect(
+        mutate.mock.calls[0][0],
+        'the referral carries the condition codes chosen under «Approve»'
+      ).toEqual({ outcome: 'referred', rationale: RATIONALE })
+
+      fireEvent.change(outcome, { target: { value: 'approved' } })
+      expect(
+        panel
+          .getAllByRole('checkbox')
+          .filter((box) => (box as HTMLInputElement).checked)
+          .map((box) => box.closest('label')?.textContent?.split(' ')[0]),
+        'the conditions came back checked after the outcome changed'
+      ).toEqual([])
+      expect(
+        panel.queryByRole('button', { name: 'credit.actions.proposeConditional' }),
+        'the form still proposes a condition nobody sees checked'
+      ).toBeNull()
+      fireEvent.click(panel.getByRole('button', { name: 'credit.actions.saveDecision' }))
+      expect(Object.keys(mutate.mock.calls[1][0] as object).sort()).toEqual([
+        'final_amount_minor',
+        'outcome',
+        'rationale',
+      ])
+    })
   })
 
   /**
@@ -2183,6 +2253,49 @@ describe('CreditApplicationDetailPage → решение заменяет пре
       expectObscured(note)
       // Текст пункта — копирайт интерфейса, его запись читать должна.
       expectNotObscured(list.getByText(/credit\.checklistItem\.pay_document/))
+    })
+
+    it('19-5f C-12: снимок не той формы — карточка цела: условие без кодов, ступени и суммы, в ответах только правильные записи', () => {
+      renderDecision(
+        withDecision(
+          {
+            ...PROPOSAL,
+            conditional_stage: undefined,
+            input_snapshot: {
+              conditional: { codes: 'x' },
+              checklist: {
+                version: 'checklist@1',
+                items: [
+                  1,
+                  { key: 'pay_document', answer: 'yes', note: null },
+                  { key: 'id_photo_only', answer: 'maybe' },
+                ],
+              },
+            },
+          } as unknown as CreditDecision,
+          'referred'
+        ),
+        ['credit.decisions.decide', 'credit.decisions.confirm_conditional']
+      )
+
+      expect(screen.getByText('credit.fields.decidedAt')).toBeInTheDocument()
+      // Кодов нет (строка вместо списка), ступени нет — бейджа нет, суммы нет — «—».
+      expect(
+        conditionRow(),
+        'the condition row of a malformed snapshot shows invented codes or a stage badge'
+      ).toBe('credit.fields.conditionalCodescredit.card.proposedAmount amount=—')
+      expect(
+        screen.queryByRole('button', { name: 'credit.actions.confirmConditional' }),
+        'a proposal without a known stage offers the confirmation'
+      ).toBeNull()
+      const answers = checklistRow()?.querySelector('details')
+      expect(answers, 'the answer list is not in the «Чек-лист» row').toBeTruthy()
+      expect(
+        within(answers as HTMLElement)
+          .getAllByRole('listitem')
+          .map((li) => li.textContent),
+        'a malformed checklist entry reached the answer list'
+      ).toEqual(['credit.checklistItem.pay_document — credit.checklistAnswer.yes'])
     })
   })
 })

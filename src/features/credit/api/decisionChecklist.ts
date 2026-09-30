@@ -5,9 +5,10 @@
  * `Decision`). Без React, i18n и транспорта: производное от формы считается
  * здесь, а не `useMemo` со списком зависимостей.
  */
-import { CREDIT_CHECKLIST_KEYS } from './enums'
+import { CREDIT_CHECKLIST_ANSWERS, CREDIT_CHECKLIST_KEYS, CREDIT_CONDITIONAL_STAGES } from './enums'
 import type {
   CreditChecklistAnswer,
+  CreditChecklistItem,
   CreditChecklistKey,
   CreditConditionalStage,
   CreditDecision,
@@ -46,24 +47,64 @@ export function answeredCount(answers: CreditChecklistAnswers): number {
 }
 
 export interface CreditConditionalView {
-  stage: CreditConditionalStage
+  /** `null` — ступени нет или она незнакомая: бейджа нет, кнопки подтверждения тоже. */
+  stage: CreditConditionalStage | null
   codes: string[]
-  amountMinor: number
+  /** `null` — суммы в снимке нет или она не число: карточка печатает «—». */
+  amountMinor: number | null
 }
+
+type Json = Record<string, unknown>
+const isObject = (value: unknown): value is Json =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+const isOneOf = <T extends string>(values: readonly T[], value: unknown): value is T =>
+  (values as readonly unknown[]).includes(value)
 
 /**
  * Условие решения — из снимка (`input_snapshot.conditional`), а не по `kind`
  * справочника: у роли без права решать справочника нет, а условие она видеть
- * обязана. Ступень — поле модуля, снимок — запасом. Ключа нет — `null`.
+ * обязана. Ступень — поле модуля, снимок — запасом. Ключа нет или он не объект —
+ * `null`.
+ *
+ * Снимок читается терпимо, как `readScorecard`: тип описывает обещание
+ * контракта, а в `input_snapshot` лежит JSON модуля любой версии. Поле не той
+ * формы даёт пустое значение, а не падение карточки.
  */
 export function conditionalOf(decision: CreditDecision): CreditConditionalView | null {
-  const conditional = decision.input_snapshot?.conditional
-  if (!conditional) return null
+  const conditional: unknown = decision.input_snapshot?.conditional
+  if (!isObject(conditional)) return null
+  const stage = decision.conditional_stage ?? conditional.stage
+  const amount = conditional.amount_minor
   return {
-    stage: decision.conditional_stage ?? conditional.stage,
-    codes: conditional.codes,
-    amountMinor: conditional.amount_minor,
+    stage: isOneOf(CREDIT_CONDITIONAL_STAGES, stage) ? stage : null,
+    codes: Array.isArray(conditional.codes)
+      ? conditional.codes.filter((code): code is string => typeof code === 'string')
+      : [],
+    amountMinor: typeof amount === 'number' && Number.isFinite(amount) ? amount : null,
   }
+}
+
+/**
+ * Ответы чек-листа из снимка — только записи правильной формы: объект со
+ * строкой `key` и ответом из листа. Незнакомый `key` остаётся (показ подпишет
+ * его как прислано), незнакомый ответ и не-объект — отбрасываются. Примечание не
+ * строка — `null`. Порядок — ответа модуля.
+ */
+export function checklistItemsOf(decision: CreditDecision): CreditChecklistItem[] {
+  const checklist: unknown = decision.input_snapshot?.checklist
+  const items = isObject(checklist) ? checklist.items : undefined
+  if (!Array.isArray(items)) return []
+  return items.flatMap((item): CreditChecklistItem[] => {
+    if (!isObject(item) || typeof item.key !== 'string') return []
+    if (!isOneOf(CREDIT_CHECKLIST_ANSWERS, item.answer)) return []
+    return [
+      {
+        key: item.key as CreditChecklistKey,
+        answer: item.answer,
+        note: typeof item.note === 'string' ? item.note : null,
+      },
+    ]
+  })
 }
 
 /**

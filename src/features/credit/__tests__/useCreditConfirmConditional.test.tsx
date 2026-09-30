@@ -1,10 +1,12 @@
 /**
  * Подтверждение условного одобрения (19-5f): ключ идемпотентности и сброс кэша.
  *
- * Ключ живёт на ДЕЙСТВИЕ (подпись — `proposal_decision_id`), а не на вызов:
- * сетевой сбой без ответа — повтор с тем же ключом, модуль отдаёт реплей и не
- * выпускает второй договор; любой ответ сервера со статусом действие завершает.
- * После успеха сбрасываются карточка, списки, сводка и очередь — префиксом всех
+ * Ключ живёт на ДЕЙСТВИЕ (подпись — `proposal_decision_id`), а не на вызов.
+ * Исход не определён — сетевой сбой без ответа, `5xx`, `408`, `429`: договор мог
+ * уже выйти, повтор идёт с тем же ключом, модуль отдаёт реплей и не выпускает
+ * второй договор. Определённый отказ `4xx` (кроме `408`/`429`) и успех действие
+ * завершают — следующий вызов с новым ключом. После успеха сбрасываются
+ * карточка, списки, сводка и очередь — префиксом `creditKeys.queues()` всех
  * статусов: ключ очереди не лежит под списками заявок.
  *
  * Ключ не сравнивается с образцом: важно, совпадает ли он у повтора и
@@ -14,7 +16,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { ReactNode } from 'react'
 import { renderHook, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { useCreditConfirmConditional, useCreditManualDecision } from '../hooks/useCredit'
+import {
+  creditKeys,
+  useCreditConfirmConditional,
+  useCreditManualDecision,
+} from '../hooks/useCredit'
 import { CreditApiError, creditApi } from '../api/creditApi'
 import type { CreditDecision } from '../api/types'
 
@@ -46,6 +52,20 @@ const keyOfCall = (n: number) => confirmConditional.mock.calls[n][2]
 const invalidated = (spy: { mock: { calls: unknown[][] } }) =>
   spy.mock.calls.map(([filters]) => (filters as { queryKey: unknown[] }).queryKey)
 
+/**
+ * Очередь в кэше — настоящими ключами `creditKeys.queue` (без статуса и со
+ * статусами двери). Проверяется не литерал префикса, а то, что сброс достал
+ * КАЖДЫЙ из них: ключ статуса, собранный мимо `queues()`, остался бы свежим.
+ */
+const QUEUE_KEYS = [undefined, 'pending', 'in_review', 'done'].map((status) =>
+  creditKeys.queue(status)
+)
+const seedQueues = () => QUEUE_KEYS.forEach((key) => queryClient.setQueryData(key, []))
+const staleQueues = () =>
+  QUEUE_KEYS.filter((key) => !queryClient.getQueryState(key)?.isInvalidated).map((key) =>
+    key.join('/')
+  )
+
 beforeEach(() => {
   vi.clearAllMocks()
   queryClient = new QueryClient({
@@ -56,6 +76,7 @@ beforeEach(() => {
 describe('useCreditConfirmConditional', () => {
   it('H-5: успех — один вызов с proposal_decision_id и ключом; сброшены карточка, списки, сводка и префикс очереди', async () => {
     confirmConditional.mockResolvedValue(DECISION)
+    seedQueues()
     const spy = vi.spyOn(queryClient, 'invalidateQueries')
     const { result } = renderHook(() => useCreditConfirmConditional(APPLICATION), { wrapper })
 
@@ -78,7 +99,8 @@ describe('useCreditConfirmConditional', () => {
     expect(
       keys,
       'the queue is not reset — the «awaiting confirmation» badge stays until staleTime'
-    ).toContainEqual(['credit', 'queue'])
+    ).toContainEqual(creditKeys.queues())
+    expect(staleQueues(), 'a queue status was left fresh after the confirmation').toEqual([])
   })
 
   it('H-6: сетевой сбой без ответа — повтор несёт ТОТ ЖЕ ключ', async () => {
@@ -128,6 +150,51 @@ describe('useCreditConfirmConditional', () => {
     ).not.toBe(keyOfCall(1))
   })
 
+  it.each([502, 503, 408, 429])(
+    'H-10: ответ %i — исход не определён, повтор несёт ТОТ ЖЕ ключ',
+    async (status) => {
+      confirmConditional
+        .mockRejectedValueOnce(new CreditApiError('Синтетичний збій', status))
+        .mockResolvedValueOnce(DECISION)
+      const { result } = renderHook(() => useCreditConfirmConditional(APPLICATION), { wrapper })
+
+      await act(async () => {
+        await result.current.mutateAsync({ proposal_decision_id: PROPOSAL }).catch(() => undefined)
+      })
+      await act(async () => {
+        await result.current.mutateAsync({ proposal_decision_id: PROPOSAL })
+      })
+
+      expect(confirmConditional).toHaveBeenCalledTimes(2)
+      expect(
+        keyOfCall(1),
+        `after ${status} the retry left with a new key — the agreement may already exist, the module would issue a second one`
+      ).toBe(keyOfCall(0))
+    }
+  )
+
+  it.each([400, 403, 404, 409, 422])(
+    'H-11: ответ %i — отказ определён, повтор с НОВЫМ ключом',
+    async (status) => {
+      confirmConditional
+        .mockRejectedValueOnce(new CreditApiError('Синтетичний відказ', status, 'synthetic'))
+        .mockResolvedValueOnce(DECISION)
+      const { result } = renderHook(() => useCreditConfirmConditional(APPLICATION), { wrapper })
+
+      await act(async () => {
+        await result.current.mutateAsync({ proposal_decision_id: PROPOSAL }).catch(() => undefined)
+      })
+      await act(async () => {
+        await result.current.mutateAsync({ proposal_decision_id: PROPOSAL })
+      })
+
+      expect(
+        keyOfCall(1),
+        `after ${status} the retry kept the key — the module would replay the refusal`
+      ).not.toBe(keyOfCall(0))
+    }
+  )
+
   it('H-8: другое предложение — другое действие и другой ключ', async () => {
     confirmConditional.mockRejectedValue(new CreditApiError('Network Error'))
     const { result } = renderHook(() => useCreditConfirmConditional(APPLICATION), { wrapper })
@@ -148,6 +215,7 @@ describe('useCreditConfirmConditional', () => {
 describe('useCreditManualDecision', () => {
   it('H-9: успех — прежние три ключа и префикс очереди', async () => {
     decide.mockResolvedValue(DECISION)
+    seedQueues()
     const spy = vi.spyOn(queryClient, 'invalidateQueries')
     const { result } = renderHook(() => useCreditManualDecision(APPLICATION), { wrapper })
 
@@ -159,9 +227,9 @@ describe('useCreditManualDecision', () => {
     expect(keys).toContainEqual(['credit', 'applications', 'detail', APPLICATION])
     expect(keys).toContainEqual(['credit', 'applications'])
     expect(keys).toContainEqual(['credit', 'overview'])
-    expect(keys, 'a conditional proposal does not reach the queue until staleTime').toContainEqual([
-      'credit',
-      'queue',
-    ])
+    expect(keys, 'a conditional proposal does not reach the queue until staleTime').toContainEqual(
+      creditKeys.queues()
+    )
+    expect(staleQueues(), 'a queue status was left fresh after the decision').toEqual([])
   })
 })

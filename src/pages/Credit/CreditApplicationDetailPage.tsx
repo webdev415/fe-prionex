@@ -29,6 +29,7 @@ import {
   type CreditDecisionCodeIndex,
 } from '@/features/credit/api/decisionCodes'
 import {
+  checklistItemsOf,
   checklistPayload,
   conditionalOf,
   withoutConditionalCodes,
@@ -801,14 +802,20 @@ function ApplicationDecision({
     conditionalCodes.filter((id) => directory?.conditional.some((entry) => entry.id === id))
   )
   const proposing = outcome === 'approved' && conditionalChosen.length > 0
+  // Справочник загружен, а кодов условия в нём нет — ни пустой рамки, ни строки о
+  // недоступности: условий в книге просто нет, одобрение обычное.
+  const conditionalOffered = directory?.conditional ?? []
   // Условие отмечено, а справочник пропал — без блокировки ушло бы одобрение без условия.
   const conditionalLost = outcome === 'approved' && !directory && conditionalCodes.length > 0
 
   const submit = () => {
     const checklist = checklistPayload(answers, notes)
+    const sentOutcome = proposing ? 'referred' : outcome
     mutation.mutate({
-      outcome: proposing ? 'referred' : outcome,
+      outcome: sentOutcome,
       rationale: rationale.trim(),
+      // Ключи ниже — по ВЫБРАННОМУ исходу: предложение (`referred`) намеренно несёт
+      // `final_amount_minor` — из него модуль читает предложенную сумму.
       ...(outcome === 'approved' ? { final_amount_minor: Math.round(Number(amount) * 100) } : {}),
       ...(outcome === 'declined' ? { decline_codes: normalizeDecisionCodes(chosen) } : {}),
       ...(proposing ? { conditional_codes: conditionalChosen } : {}),
@@ -864,9 +871,11 @@ function ApplicationDecision({
                   )
                 })}
                 <span className="flex flex-wrap items-center gap-2 text-xs">
-                  <span className="bg-warning-100 text-warning-800 inline-flex h-6 items-center rounded-full px-2.5">
-                    {t(`credit.conditionalStage.${conditional.stage}`, conditional.stage)}
-                  </span>
+                  {conditional.stage && (
+                    <span className="bg-warning-100 text-warning-800 inline-flex h-6 items-center rounded-full px-2.5">
+                      {t(`credit.conditionalStage.${conditional.stage}`, conditional.stage)}
+                    </span>
+                  )}
                   <span>
                     {t('credit.card.proposedAmount', {
                       amount: money(conditional.amountMinor, decision.currency),
@@ -895,7 +904,7 @@ function ApplicationDecision({
             <Field label={t('credit.fields.checklist')}>
               <CreditDecisionChecklistView
                 completed={decision.checklist_completed}
-                items={decision.input_snapshot?.checklist?.items ?? []}
+                items={checklistItemsOf(decision)}
               />
             </Field>
           )}
@@ -994,7 +1003,12 @@ function ApplicationDecision({
               <select
                 className="border-input-border bg-card text-foreground h-10 rounded-md border px-3 text-sm"
                 value={outcome}
-                onChange={(event) => setOutcome(event.target.value as CreditDecisionOutcome)}
+                onChange={(event) => {
+                  setOutcome(event.target.value as CreditDecisionOutcome)
+                  // Условие — только под «Схвалити»: при смене исхода отметки уходят
+                  // с экрана, и в состоянии их тоже нет — возврат не вернёт их молча.
+                  setConditionalCodes([])
+                }}
               >
                 <option value="approved">{t('credit.actions.approve')}</option>
                 <option value="declined">{t('credit.actions.decline')}</option>
@@ -1098,12 +1112,12 @@ function ApplicationDecision({
           )}
 
           {outcome === 'approved' &&
-            (directory ? (
+            (conditionalOffered.length > 0 ? (
               <fieldset className="border-border mb-3 rounded-md border p-3">
                 <legend className="text-muted-foreground px-1 text-xs font-semibold">
                   {t('credit.card.conditionalTitle')}
                 </legend>
-                {directory.conditional.map((entry) => {
+                {conditionalOffered.map((entry) => {
                   const text = decisionCodeText(entry, language)
                   const note = decisionCodeNote(entry, language)
                   return (
@@ -1132,6 +1146,7 @@ function ApplicationDecision({
                 })}
               </fieldset>
             ) : (
+              !directory &&
               decisionCodes.isError && (
                 // Строка, а не плашка: одобрение без условия работает, а плашки
                 // `alert` панели считают отказы решения.
