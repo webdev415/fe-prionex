@@ -39,8 +39,8 @@ const baseLoan: LoanCardLoan = {
   creditBureauSentDate: null,
   closingCoefficient: null,
   needsManualClosureReview: false,
-  // A typed purchase, so zone 4 prints a word, not a second "—" beside the
-  // one the money test below looks for.
+  // A typed purchase, so the type line of zone 3 prints a word, not a second
+  // "—" beside the one the money test below looks for.
   saleType: 'factoring',
   agreementSaleType: 'factoring',
 }
@@ -184,11 +184,22 @@ const SALE_TYPE_LABEL = 'saleType.label'
 const DATE_FA = 'pages.clients.detail.tableHeaders.purchaseDateFa'
 const DATE_CESSION = 'pages.clients.detail.tableHeaders.purchaseDateCession'
 const DATE_GENERIC = 'pages.clients.detail.tableHeaders.purchaseDateGeneric'
+const ISSUE_DATE = 'pages.clients.detail.tableHeaders.issueDate'
+const DEBT_TERM = 'pages.clients.detail.tableHeaders.debtTerm'
+// One of the few keys the global mock translates (`src/test/setup.ts`).
+const LOAN_NUMBER = 'Loan Number'
 
-/** Zone 4's value: the SecRow sibling of the type label. */
+/** The type line's value (last line of zone 3): the SecRow sibling of its label. */
 const saleTypeValue = () => screen.getByText(SALE_TYPE_LABEL).nextElementSibling?.textContent
 
-describe('LoanCard — contract type zone', () => {
+/** The zone a label sits in: label → its line (MetaLine / AmountCell / SecRow) → zone. */
+const zoneOf = (label: string) => {
+  const zone = screen.getByText(label).parentElement?.parentElement
+  if (!zone) throw new Error(`no zone around "${label}"`)
+  return zone
+}
+
+describe('LoanCard — contract type in zone 3', () => {
   it.each([
     ['factoring', 'saleType.values.factoring', DATE_FA],
     ['cession', 'saleType.values.cession', DATE_CESSION],
@@ -212,7 +223,7 @@ describe('LoanCard — contract type zone', () => {
     ['cession', 'factoring', 'saleType.values.cession', DATE_FA],
     ['factoring', 'cession', 'saleType.values.factoring', DATE_CESSION],
   ])(
-    'a %s debt under a %s agreement: zone 4 from the debt, the date label from the agreement',
+    'a %s debt under a %s agreement: the type line from the debt, the date label from the agreement',
     (debtType, agreementType, word, date) => {
       renderCard({ saleType: debtType, agreementSaleType: agreementType })
 
@@ -228,10 +239,13 @@ describe('LoanCard — contract type zone', () => {
     ['absent (server not rolled out yet)', undefined],
     ['null', null],
     ['an unknown value', 'credit'],
-  ])('a debt whose own type is %s shows "—" in zone 4', (_label, saleType) => {
+  ])('a debt whose own type is %s shows "—" on the type line of zone 3', (_label, saleType) => {
     renderCard({ saleType })
 
     expect(saleTypeValue()).toBe('—')
+    // The line keeps its place under the dates — never an empty spot.
+    expect(zoneOf(SALE_TYPE_LABEL)).toBe(zoneOf(ISSUE_DATE))
+    expect(zoneOf(ISSUE_DATE).lastElementChild).toContainElement(screen.getByText(SALE_TYPE_LABEL))
   })
 
   it.each([
@@ -272,7 +286,7 @@ describe('LoanCard — contract type zone', () => {
     }
   )
 
-  it('a credit-module loan has neither the dates nor the type zone — and no dashes', () => {
+  it('a credit-module loan has no zone 3 — neither the dates nor the type — and no dashes', () => {
     const { container } = renderCard({
       origin: 'credit_module',
       saleType: null,
@@ -288,6 +302,75 @@ describe('LoanCard — contract type zone', () => {
       screen.queryByText('pages.clients.detail.tableHeaders.issueDate')
     ).not.toBeInTheDocument()
     expect(container.textContent).not.toContain('—')
+  })
+})
+
+/**
+ * #1617, remark 39431: the 2×2 grid put the dates under the meta and the type
+ * in a fourth zone. The card is ONE row of three zones again, the type being
+ * the last line of zone 3.
+ */
+describe('LoanCard — three zones in one row', () => {
+  it('zone 3 reads issue date, purchase date, debt term, then the contract type', () => {
+    renderCard({ saleType: 'cession', agreementSaleType: 'cession' })
+
+    const lines = Array.from(zoneOf(ISSUE_DATE).children, (l) => l.firstElementChild?.textContent)
+    expect(lines).toEqual([ISSUE_DATE, DATE_CESSION, DEBT_TERM, SALE_TYPE_LABEL])
+    expect(saleTypeValue()).toBe('saleType.values.cession')
+  })
+
+  it('the three zones share the card’s only row — no second row, no fourth zone', () => {
+    const { container } = renderCard({ saleType: 'cession' })
+    const card = container.firstElementChild as HTMLElement
+    const row = zoneOf(LOAN_NUMBER).parentElement
+
+    expect(zoneOf(LBL_PLAIN).parentElement).toBe(row)
+    expect(zoneOf(SALE_TYPE_LABEL).parentElement).toBe(row)
+    expect(row?.children).toHaveLength(3)
+    // Beside the row the card holds only the absolutely positioned "..." menu.
+    expect(card.children).toHaveLength(2)
+    expect(card.children[0]).toContainElement(screen.getByRole('button', { name: MORE_ACTIONS }))
+    expect(card.children[1]).toBe(row)
+  })
+
+  it('a credit-module loan keeps zones 1–2 in the same single row', () => {
+    renderCard({
+      origin: 'credit_module',
+      saleType: null,
+      agreementSaleType: null,
+      principalDebt: null,
+      currency: 'CAD',
+      lifecycleDetail: null,
+    })
+    const row = zoneOf(LOAN_NUMBER).parentElement
+
+    expect(zoneOf(LBL_PLAIN).parentElement).toBe(row)
+    expect(row?.children).toHaveLength(2)
+    expect(screen.queryByText(SALE_TYPE_LABEL)).not.toBeInTheDocument()
+  })
+
+  // jsdom computes no layout, so the fold is pinned by its classes: a card-wide
+  // container query folds the whole row, and `flex-wrap` — which drops one zone
+  // at a time ("2 + 1") — is not there to do it zone by zone.
+  it('folds the whole row into one column at the sum of the zone minimums', () => {
+    const { container } = renderCard()
+    const card = container.firstElementChild as HTMLElement
+    const row = zoneOf(LOAN_NUMBER).parentElement as HTMLElement
+    const zones = Array.from(row.children)
+    const px = (cls: string, re: RegExp) => Number(re.exec(cls)?.[1] ?? NaN)
+
+    expect(card).toHaveClass('@container')
+    expect(row).not.toHaveClass('flex-wrap')
+    const threshold = px(row.className, /@max-\[(\d+)px\]:flex-col/)
+    for (const zone of zones) expect(zone).toHaveClass(`@max-[${threshold}px]:flex-none`)
+
+    // The threshold is exactly what the row needs at its minimums: zones + the
+    // two 10px gaps (`gap-2.5`) + side padding. A changed minimum moves it.
+    expect(row).toHaveClass('gap-2.5')
+    const minimums = zones.reduce((sum, z) => sum + px(z.className, /\bmin-w-\[(\d+)px\]/), 0)
+    const padding = px(row.className, /\bpl-\[(\d+)px\]/) + px(row.className, /\bpr-\[(\d+)px\]/)
+    expect(minimums).toBe(170 + 342 + 200)
+    expect(threshold).toBe(minimums + 2 * 10 + padding)
   })
 })
 
