@@ -25,7 +25,10 @@ import {
   segmentedTabPanelId,
   type SegmentedTabItem,
 } from '@/components/ui/SegmentedTabs'
-import { TableSkeleton } from '@/components/ui/TableSkeleton'
+import {
+  ReportRefreshingOverlay,
+  ReportTableLoading,
+} from '@/features/report/components/ReportLoadingState'
 import { useFeedErrorMessage } from '@/hooks'
 import { isRealCalendarDate } from '@/lib/calendarDate'
 import { Icons } from '@/lib/icons'
@@ -244,7 +247,7 @@ export function ClientProcessingTab() {
         className="w-full"
       >
         {rangeErrorKey ? null : query.isLoading ? (
-          <TableSkeleton columns={9} rows={6} />
+          <ReportTableLoading columns={9} />
         ) : query.isError ? (
           <div className="border-border bg-card flex w-full flex-col items-center justify-center gap-4 rounded-xl border p-8">
             <Icons.Warning size={40} className="text-error-500" />
@@ -259,14 +262,7 @@ export function ClientProcessingTab() {
         ) : (
           <div className="relative w-full" aria-busy={isRefreshing || undefined}>
             <ProcessingTable rows={filteredRows} />
-            {isRefreshing && (
-              <div
-                data-testid="processing-refreshing"
-                className="bg-card/60 absolute inset-0 z-10 flex items-center justify-center rounded-xl"
-              >
-                <Icons.Spinner className="h-8 w-8" />
-              </div>
-            )}
+            {isRefreshing && <ReportRefreshingOverlay testId="processing-refreshing" />}
           </div>
         )}
       </div>

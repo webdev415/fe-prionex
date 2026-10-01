@@ -67,6 +67,7 @@ import { PromisesDailyTab } from '@/features/promisesDaily'
 import { PromisesFeedTab } from '@/features/promisesFeed'
 import { CallbacksFeedTab } from '@/features/callbacksFeed'
 import { DrainsFeedTab } from '@/features/drainsFeed'
+import { ReportLoadingStatus } from '@/features/report/components/ReportLoadingState'
 import { RecordedPaymentsTab } from '@/features/recordedPayments'
 import { SegmentedTabs, segmentedTabId, segmentedTabPanelId } from '@/components/ui/SegmentedTabs'
 
@@ -271,9 +272,19 @@ function DashboardTab() {
     )
   }
 
-  // Show full-page skeleton only on initial dashboard load.
+  // Show full-page skeleton only on initial dashboard load. A cold dashboard
+  // request takes 10–14 s on production, so the shared caption card with its
+  // elapsed counter sits over the skeleton (Kanbanboard#100), near its top:
+  // the page opens scrolled to the top, so that is where the eye is.
   if (isDashboardLoading && !dashboardData) {
-    return <ReportsDashboardPageSkeleton />
+    return (
+      <div className="relative flex flex-1 flex-col self-stretch">
+        <ReportsDashboardPageSkeleton />
+        <div className="pointer-events-none absolute inset-0 flex items-start justify-center pt-24">
+          <ReportLoadingStatus />
+        </div>
+      </div>
+    )
   }
 
   // Show error state

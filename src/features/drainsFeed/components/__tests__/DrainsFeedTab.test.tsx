@@ -972,6 +972,53 @@ describe('DrainsFeedTab', () => {
     ).toHaveAttribute('href', '/dashboard/clients/84213')
   })
 
+  it('shows the shared loading caption over the skeleton on the first load', async () => {
+    // Kanbanboard#100: every report tab shows the same caption card while its
+    // first answer is on the way — not the bare skeleton it used to.
+    let resolveFirst: (value: DrainsFeedResponse) => void = () => {}
+    mockGetFeed.mockImplementationOnce(
+      () => new Promise<DrainsFeedResponse>((resolve) => (resolveFirst = resolve))
+    )
+
+    renderTab()
+    expect(await screen.findByTestId('report-loading-status')).toBeInTheDocument()
+
+    resolveFirst(makeResponse([makeRow()]))
+    expect(await screen.findByText('Коваленко Іван Петрович')).toBeInTheDocument()
+    expect(screen.queryByTestId('report-loading-status')).not.toBeInTheDocument()
+  })
+
+  it('shows the shared loading caption while a new page loads over the old rows', async () => {
+    let resolveSecond: (value: DrainsFeedResponse) => void = () => {}
+    mockGetFeed
+      .mockResolvedValueOnce(
+        makeResponse([makeRow()], { total: 130, page: 1, page_size: 50, total_pages: 3 })
+      )
+      .mockImplementationOnce(
+        () => new Promise<DrainsFeedResponse>((resolve) => (resolveSecond = resolve))
+      )
+
+    renderTab()
+    await screen.findByText('Коваленко Іван Петрович')
+    expect(screen.queryByTestId('report-loading-status')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByTitle('2'))
+    expect(await screen.findByTestId('report-loading-status')).toBeInTheDocument()
+
+    resolveSecond(
+      makeResponse([makeRow({ employee_interacted: 'Оновленко Олег' })], {
+        total: 130,
+        page: 2,
+        page_size: 50,
+        total_pages: 3,
+      })
+    )
+    expect(await screen.findByText('Оновленко Олег')).toBeInTheDocument()
+    await waitFor(() =>
+      expect(screen.queryByTestId('report-loading-status')).not.toBeInTheDocument()
+    )
+  })
+
   it('marks previous rows as busy while a new page is loading', async () => {
     let resolveSecond: (value: DrainsFeedResponse) => void = () => {}
     mockGetFeed

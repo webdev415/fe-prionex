@@ -9242,6 +9242,10 @@
     },
     "reports": {
       "title": "Panel de informes",
+      "loading": {
+        "caption": "Cargando datos…",
+        "elapsed": "{{seconds}} s"
+      },
       "exporting": "Exportando...",
       "tabs": {
         "dashboard": "Panel",

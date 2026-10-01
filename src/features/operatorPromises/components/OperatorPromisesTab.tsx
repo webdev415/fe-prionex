@@ -56,7 +56,10 @@ import {
   segmentedTabPanelId,
   type SegmentedTabItem,
 } from '@/components/ui/SegmentedTabs'
-import { TableSkeleton } from '@/components/ui/TableSkeleton'
+import {
+  ReportRefreshingOverlay,
+  ReportTableLoading,
+} from '@/features/report/components/ReportLoadingState'
 import { useDateWindowFilters, useFeedErrorMessage } from '@/hooks'
 import { formatPickerDateAsYMD, getDateStringInTimezone } from '@/lib/dateUtils'
 import { Icons } from '@/lib/icons'
@@ -399,7 +402,7 @@ export function OperatorPromisesTab() {
         {hasFilterError ? null : query.isLoading ? (
           // The skeleton mirrors the real table's width — the count comes from
           // OperatorPromisesTable so the two cannot drift apart.
-          <TableSkeleton columns={OPERATOR_PROMISES_COLUMN_COUNT} rows={6} />
+          <ReportTableLoading columns={OPERATOR_PROMISES_COLUMN_COUNT} />
         ) : query.isError ? (
           <div className="border-border bg-card flex w-full flex-col items-center justify-center gap-4 rounded-xl border p-8">
             <Icons.Warning size={40} className="text-error-500" />
@@ -468,14 +471,7 @@ export function OperatorPromisesTab() {
                   : 'pages.reports.operatorPromises.empty'
               )}
             />
-            {isRefreshing && (
-              <div
-                data-testid="operator-promises-refreshing"
-                className="bg-card/60 absolute inset-0 z-10 flex items-center justify-center rounded-xl"
-              >
-                <Icons.Spinner className="h-8 w-8" />
-              </div>
-            )}
+            {isRefreshing && <ReportRefreshingOverlay testId="operator-promises-refreshing" />}
           </div>
         ) : null}
       </div>

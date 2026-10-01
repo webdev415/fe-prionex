@@ -33,7 +33,10 @@ import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/Button'
 import { DateSelect } from '@/components/ui/DateSelect'
 import { Pagination } from '@/components/ui/Pagination'
-import { TableSkeleton } from '@/components/ui/TableSkeleton'
+import {
+  ReportRefreshingOverlay,
+  ReportTableLoading,
+} from '@/features/report/components/ReportLoadingState'
 import {
   useDateWindowFilters,
   useFeedErrorMessage,
@@ -222,7 +225,7 @@ export function SearcherFollowupFeedTab() {
       {hasFilterError ? null : query.isLoading ? (
         // The skeleton mirrors the real table's width — the count comes from
         // SearcherFollowupTable so the two cannot drift apart.
-        <TableSkeleton columns={SEARCHER_FOLLOWUP_COLUMN_COUNT} rows={6} />
+        <ReportTableLoading columns={SEARCHER_FOLLOWUP_COLUMN_COUNT} />
       ) : query.isError ? (
         <div className="border-border bg-card flex w-full flex-col items-center justify-center gap-4 rounded-xl border p-8">
           <Icons.Warning size={40} className="text-error-500" />
@@ -259,14 +262,7 @@ export function SearcherFollowupFeedTab() {
               onPageSizeChange={filters.setPageSize}
             />
           )}
-          {isRefreshing && (
-            <div
-              data-testid="searcher-followup-refreshing"
-              className="bg-card/60 absolute inset-0 z-10 flex items-center justify-center rounded-xl"
-            >
-              <Icons.Spinner className="h-8 w-8" />
-            </div>
-          )}
+          {isRefreshing && <ReportRefreshingOverlay testId="searcher-followup-refreshing" />}
         </div>
       )}
     </div>

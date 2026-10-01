@@ -9204,6 +9204,10 @@
     },
     "reports": {
       "title": "Reports Dashboard",
+      "loading": {
+        "caption": "Loading data…",
+        "elapsed": "{{seconds}} s"
+      },
       "exporting": "Exporting...",
       "tabs": {
         "dashboard": "Dashboard",

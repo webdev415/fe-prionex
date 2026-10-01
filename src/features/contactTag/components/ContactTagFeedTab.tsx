@@ -108,7 +108,10 @@ import {
   segmentedTabPanelId,
   type SegmentedTabItem,
 } from '@/components/ui/SegmentedTabs'
-import { TableSkeleton } from '@/components/ui/TableSkeleton'
+import {
+  ReportRefreshingOverlay,
+  ReportTableLoading,
+} from '@/features/report/components/ReportLoadingState'
 import {
   useFeedErrorMessage,
   usePagedFeedPages,
@@ -567,7 +570,7 @@ export function ContactTagFeedTab() {
         {hasFilterError ? null : query.isLoading ? (
           // The skeleton mirrors the real table's width — the count comes from
           // ContactTagTable so the two cannot drift apart.
-          <TableSkeleton columns={CONTACT_TAG_COLUMN_COUNT} rows={6} />
+          <ReportTableLoading columns={CONTACT_TAG_COLUMN_COUNT} />
         ) : query.isError ? (
           <div className="border-border bg-card flex w-full flex-col items-center justify-center gap-4 rounded-xl border p-8">
             <Icons.Warning size={40} className="text-error-500" />
@@ -610,14 +613,7 @@ export function ContactTagFeedTab() {
                 onPageSizeChange={filters.setPageSize}
               />
             )}
-            {isRefreshing && (
-              <div
-                data-testid="contact-tag-refreshing"
-                className="bg-card/60 absolute inset-0 z-10 flex items-center justify-center rounded-xl"
-              >
-                <Icons.Spinner className="h-8 w-8" />
-              </div>
-            )}
+            {isRefreshing && <ReportRefreshingOverlay testId="contact-tag-refreshing" />}
           </div>
         )}
       </div>

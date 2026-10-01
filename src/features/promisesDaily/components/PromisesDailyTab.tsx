@@ -31,7 +31,10 @@ import { useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/Button'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { DateSelect } from '@/components/ui/DateSelect'
-import { TableSkeleton } from '@/components/ui/TableSkeleton'
+import {
+  ReportRefreshingOverlay,
+  ReportTableLoading,
+} from '@/features/report/components/ReportLoadingState'
 import { useDateWindowFilters, useFeedErrorMessage } from '@/hooks'
 import { formatDateTime } from '@/lib/localeFormat'
 import { formatPickerDateAsYMD, getDateStringInTimezone } from '@/lib/dateUtils'
@@ -282,7 +285,7 @@ export function PromisesDailyTab() {
           The ladder ends on `query.data`, not on an else: only an ANSWER may
           claim the window is empty. */}
       {hasFilterError ? null : query.isLoading ? (
-        <TableSkeleton columns={SKELETON_COLUMNS} rows={6} />
+        <ReportTableLoading columns={SKELETON_COLUMNS} />
       ) : query.isError ? (
         <div className="border-border bg-card flex w-full flex-col items-center justify-center gap-4 rounded-xl border p-8">
           <Icons.Warning size={40} className="text-error-500" />
@@ -317,14 +320,7 @@ export function PromisesDailyTab() {
             total={query.data.total}
             emptyMessage={t('pages.reports.promisesDaily.empty')}
           />
-          {isRefreshing && (
-            <div
-              data-testid="promises-daily-refreshing"
-              className="bg-card/60 absolute inset-0 z-10 flex items-center justify-center rounded-xl"
-            >
-              <Icons.Spinner className="h-8 w-8" />
-            </div>
-          )}
+          {isRefreshing && <ReportRefreshingOverlay testId="promises-daily-refreshing" />}
         </div>
       ) : null}
     </div>
