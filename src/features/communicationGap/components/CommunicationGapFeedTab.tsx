@@ -36,7 +36,10 @@ import { Button } from '@/components/ui/Button'
 import { DateSelect } from '@/components/ui/DateSelect'
 import { Input } from '@/components/ui/Input'
 import { Pagination } from '@/components/ui/Pagination'
-import { TableSkeleton } from '@/components/ui/TableSkeleton'
+import {
+  ReportRefreshingOverlay,
+  ReportTableLoading,
+} from '@/features/report/components/ReportLoadingState'
 import {
   useDateWindowFilters,
   useFeedErrorMessage,
@@ -308,7 +311,7 @@ export function CommunicationGapFeedTab() {
       {hasFilterError ? null : query.isLoading ? (
         // The skeleton mirrors the real table's width — the count comes from
         // CommunicationGapTable so the two cannot drift apart.
-        <TableSkeleton columns={COMMUNICATION_GAP_COLUMN_COUNT} rows={6} />
+        <ReportTableLoading columns={COMMUNICATION_GAP_COLUMN_COUNT} />
       ) : query.isError ? (
         <div className="border-border bg-card flex w-full flex-col items-center justify-center gap-4 rounded-xl border p-8">
           <Icons.Warning size={40} className="text-error-500" />
@@ -341,14 +344,7 @@ export function CommunicationGapFeedTab() {
               onPageSizeChange={filters.setPageSize}
             />
           )}
-          {isRefreshing && (
-            <div
-              data-testid="communication-gap-refreshing"
-              className="bg-card/60 absolute inset-0 z-10 flex items-center justify-center rounded-xl"
-            >
-              <Icons.Spinner className="h-8 w-8" />
-            </div>
-          )}
+          {isRefreshing && <ReportRefreshingOverlay testId="communication-gap-refreshing" />}
         </div>
       )}
     </div>

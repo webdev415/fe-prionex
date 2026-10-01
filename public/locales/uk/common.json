@@ -8546,6 +8546,10 @@
     },
     "reports": {
       "title": "Панель звітів",
+      "loading": {
+        "caption": "Завантаження даних…",
+        "elapsed": "{{seconds}} с"
+      },
       "exporting": "Експортується...",
       "tabs": {
         "dashboard": "Дашборд",
