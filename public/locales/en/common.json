@@ -6546,6 +6546,7 @@
             "no_active_promise": "No active payment promise",
             "no_activation_tag": "Template not configured: select a tag",
             "no_required_tag": "Client is missing the required tag",
+            "sale_type_mismatch": "This template is limited to another contract type",
             "unavailable": "Unavailable for this loan"
           },
           "hiddenTemplates": "Hidden templates unavailable for this credit: {{count}}",
@@ -7756,7 +7757,8 @@
           "includeRequisites": "Payment requisites",
           "includeSchedule": "Payment schedule table (RR)",
           "documentType": "Document type (for generation)",
-          "documentTypePlaceholder": "Not set — the operator picks manually"
+          "documentTypePlaceholder": "Not set — the operator picks manually",
+          "saleTypeHelp": "“All” — the template is available for any credit, including one with no contract type. “Factoring” or “Cession” — only for credits of that type, also in documents covering several credits and in automatic generation on closure."
         },
         "activationRules": {
           "always": "Always available",
@@ -7767,6 +7769,9 @@
           "rr_draft": "Restructuring: Draft",
           "promise_active": "Active payment promise",
           "tag_active": "Active tag"
+        },
+        "saleTypes": {
+          "all": "All"
         },
         "variableGroups": {
           "client": "Client",

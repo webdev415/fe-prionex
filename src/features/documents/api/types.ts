@@ -3,6 +3,7 @@
  */
 
 import type { ClientDocument } from '@/features/clients/api/documentApi'
+import type { DocumentTemplateSaleType } from '@/features/documents/saleType'
 
 export type DocumentAction = 'uploaded' | 'generated'
 
@@ -122,6 +123,12 @@ export interface DocumentTemplate {
    * type — the server rejects it otherwise.
    */
   auto_generate: boolean
+  /**
+   * Contract type the template is limited to, as the server sent it: older
+   * servers omit it, a newer one may send a type this screen does not know.
+   * Normalised at the edge — see `@/features/documents/saleType`.
+   */
+  sale_type?: string
 }
 
 /**
@@ -173,6 +180,8 @@ export interface DocumentTemplateCreatePayload {
   activation_tag_id?: number | null
   /** Generate on every loan closure; `closed_debt` rule + document type only. */
   auto_generate?: boolean
+  /** Contract type the template is limited to (`all` = any credit). */
+  sale_type?: DocumentTemplateSaleType
 }
 
 export interface DocumentTemplateUpdatePayload {
@@ -187,6 +196,8 @@ export interface DocumentTemplateUpdatePayload {
   activation_tag_id?: number | null
   /** Generate on every loan closure; `closed_debt` rule + document type only. */
   auto_generate?: boolean
+  /** Contract type the template is limited to (`all` = any credit). */
+  sale_type?: DocumentTemplateSaleType
 }
 
 /**
@@ -213,6 +224,8 @@ export interface DocumentTemplateTagOption {
  *   - `no_active_promise`— rule needs a live promise-to-pay, none found.
  *   - `no_activation_tag`— `tag_active` rule but the template has no tag set.
  *   - `no_required_tag`  — `tag_active` rule but the client lacks that tag.
+ *   - `sale_type_mismatch` — the credit's contract type does not match the
+ *                          template's `sale_type` (checked after the rule).
  * Unknown codes are tolerated and fall back to a generic message.
  */
 export type GenerationOptionReason =
@@ -223,6 +236,7 @@ export type GenerationOptionReason =
   | 'no_active_promise'
   | 'no_activation_tag'
   | 'no_required_tag'
+  | 'sale_type_mismatch'
 
 export interface GenerationTemplateDebt {
   debt_id: number
