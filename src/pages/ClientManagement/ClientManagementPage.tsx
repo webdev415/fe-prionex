@@ -2450,7 +2450,6 @@ export function ClientManagementPage() {
             open={tagModalOpen}
             clientId={selectedClientForTags.id}
             clientName={selectedClientForTags.name}
-            projectId={1}
             onClose={() => {
               setTagModalOpen(false)
               setSelectedClientForTags(null)

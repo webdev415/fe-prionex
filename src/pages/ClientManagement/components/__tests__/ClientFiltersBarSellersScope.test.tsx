@@ -28,15 +28,27 @@
  * sends and saves nothing of the previous project and restores the next
  * project's own set, as a first visit would: the header search is cleared with
  * it, and the loading skeleton covers the switch instead of an empty list.
+ * The switcher itself lives on the profile page, where this page is unmounted:
+ * it clears the header search as it switches, so the fresh mount in the next
+ * project goes without it (story 17-56b).
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Profiler, type ReactNode } from 'react'
 import { act, render, renderHook, screen, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
+import { authApi } from '@/features/auth/api/authApi'
+import { setAccessToken } from '@/lib/api'
 import { useAuthStore } from '@/stores/authStore'
 import { useSearchStore } from '@/stores/searchStore'
 import { sellersApi } from '@/features/sellers/api/sellersApi'
+import {
+  SWITCHER_PROJECTS,
+  meIn,
+  pickProject,
+  renderProjectSelector,
+  switchedTo,
+} from '@/test/projectSwitch'
 import type { User } from '@/types/api'
 import { ClientFiltersBar } from '../ClientFiltersBar'
 import { ClientManagementPage, type ClientFilters } from '../../ClientManagementPage'
@@ -177,6 +189,24 @@ function pageSellersCalls() {
 async function switchProjectLive(projectId: string) {
   act(() => setActiveProject(projectId))
   await afterRestore()
+}
+
+/**
+ * Switch the project on the profile page, where ProjectSelector is mounted and
+ * this page is not: the real switcher, its API stubbed.
+ */
+async function switchProjectOnProfilePage(projectId: number) {
+  const active = SWITCHER_PROJECTS.find((p) => p.id === projectId)
+  if (!active) throw new Error(`no project ${projectId} in the switcher`)
+  vi.spyOn(authApi, 'switchProject').mockResolvedValue(switchedTo(projectId) as never)
+  vi.spyOn(authApi, 'me').mockResolvedValue(meIn(projectId) as never)
+  const profile = renderProjectSelector()
+  pickProject(active.name)
+  await waitFor(() =>
+    expect(useAuthStore.getState().user?.active_project_id).toBe(String(projectId))
+  )
+  profile.unmount()
+  setAccessToken(null)
 }
 
 /** The page restores a saved set on the next tick — let it. */
@@ -555,6 +585,57 @@ describe('ClientManagementPage — a seller of another project never filters uns
     expect(commits.filter((c) => c.queryOff && c.emptyList)).toEqual([])
     // Once project 3's request has gone, its (empty) result is shown.
     expect(screen.getByText('pages.clients.noClientsFound')).toBeInTheDocument()
+  })
+
+  /**
+   * S-22: a header search in project 1, the page unmounted, a switch on the
+   * profile page, a fresh mount in project 3. Three scenes, one check each, so
+   * that a switcher that keeps the search fails every one of them.
+   */
+  async function searchThenSwitchOnProfilePage() {
+    const savedInProject3 = { portfolioFilter: [3], tagIdsFilter: [8] }
+    localStorage.setItem(SAVED_IN_PROJECT_3, JSON.stringify(savedInProject3))
+    setActiveProject('1')
+    const inProject1 = renderPage('/')
+    await afterRestore()
+    act(() => useSearchStore.setState({ searchQuery: '380501234567', searchType: 'phone' }))
+    // Control: in project 1 the header search does reach the request.
+    expect(clientsRequests().at(-1)).toMatchObject({ q: '380501234567', search_type: 'phone' })
+    inProject1.unmount()
+
+    await switchProjectOnProfilePage(3)
+
+    const setItem = vi.spyOn(Storage.prototype, 'setItem')
+    useClientsMock.mockClear()
+    renderPage('/')
+    await afterRestore()
+    return { savedInProject3, setItem }
+  }
+
+  it("S-22a: a header search, then a switch on the profile page: no request of the fresh mount in project 3 carries project 1's search", async () => {
+    await searchThenSwitchOnProfilePage()
+
+    expect(clientsRequests()).not.toHaveLength(0)
+    expect(clientsRequests().every((p) => p.q === undefined)).toBe(true)
+  })
+
+  it('S-22b: a header search, then a switch on the profile page: the fresh mount in project 3 restores its own set, without "assigned to me"', async () => {
+    await searchThenSwitchOnProfilePage()
+
+    expect(clientsRequests().at(-1)).toMatchObject({ seller_ids: '3', tag_ids: '8' })
+    expect(clientsRequests().at(-1)?.responsible_employee_ids).toBeUndefined()
+  })
+
+  it("S-22c: a header search, then a switch on the profile page: project 3's saved set is never overwritten by the search", async () => {
+    const { savedInProject3, setItem } = await searchThenSwitchOnProfilePage()
+
+    const underProject3 = setItem.mock.calls
+      .filter(([key]) => key === SAVED_IN_PROJECT_3)
+      .map(([, value]) => JSON.parse(value))
+    expect(underProject3.every((set) => !set.searchQuery)).toBe(true)
+    expect(JSON.parse(localStorage.getItem(SAVED_IN_PROJECT_3) ?? '{}')).toMatchObject(
+      savedInProject3
+    )
   })
 })
 

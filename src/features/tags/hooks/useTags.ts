@@ -45,9 +45,13 @@ export const tagsKeys = {
  * Fetch tags list
  *
  * @param projectId - Optional project ID filter
+ * @param options - `enabled: false` sends no request; the caller must not rely on a cached list
  * @returns React Query result with tags data
  */
-export function useTags(projectId?: number, options?: { includeHidden?: boolean }) {
+export function useTags(
+  projectId?: number,
+  options?: { includeHidden?: boolean; enabled?: boolean }
+) {
   const roleName = useAuthStore((state) => state.user?.active_role_name)
   const activeDepartmentId = useAuthStore((state) => state.user?.active_department_id)
   const includeHidden = options?.includeHidden ?? false
@@ -56,6 +60,7 @@ export function useTags(projectId?: number, options?: { includeHidden?: boolean 
     queryFn: () => tagsApi.getTags(projectId),
     select: (tags) => sortTagsByOrder(filterTagsForRole(tags, roleName, includeHidden)),
     staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled: options?.enabled ?? true,
   })
 }
 

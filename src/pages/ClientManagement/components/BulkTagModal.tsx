@@ -14,6 +14,7 @@ import { Checkbox } from '@/components/ui/Checkbox'
 import { TagBadge } from '@/components/ui/TagBadge'
 import { useTags, useBulkTagClients } from '@/features/tags/hooks/useTags'
 import { useAuthStore } from '@/stores/authStore'
+import { useActiveProjectId } from '@/hooks/useActiveProjectId'
 import { canRemoveProtectedTag } from '@/features/tags/utils/protected'
 import { toast } from 'sonner'
 
@@ -31,9 +32,13 @@ export function BulkTagModal({ open, clientIds, clientCount, action, onClose }: 
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([])
 
-  // Fetch tags - TODO: Get projectId from auth context
-  const projectId = 1 // Temporary hardcoded value
-  const { data: tags, isLoading } = useTags(projectId)
+  // The active project's tags. Without an active project nothing is asked for and the list
+  // stays empty — "select a project first" — even if the page's own tag queries cached a list
+  // under the same key.
+  const projectId = useActiveProjectId()
+  const hasProject = projectId !== undefined
+  const { data, isLoading } = useTags(projectId, { enabled: hasProject })
+  const tags = hasProject ? (data ?? []) : []
   const bulkTagMutation = useBulkTagClients()
 
   // Reset state when modal closes
@@ -113,7 +118,9 @@ export function BulkTagModal({ open, clientIds, clientCount, action, onClose }: 
               </div>
             ) : filteredTags?.length === 0 ? (
               <div className="text-muted-foreground py-4 text-center text-xs sm:text-sm">
-                {t('pages.clients.modals.bulkTag.noTagsFound', 'No tags found')}
+                {hasProject
+                  ? t('pages.clients.modals.bulkTag.noTagsFound', 'No tags found')
+                  : t('pages.clients.modals.bulkTag.selectProjectFirst', 'Select a project first')}
               </div>
             ) : (
               filteredTags?.map((tag) => {

@@ -6365,6 +6365,7 @@
           "searchTags": "Search tags...",
           "loadingTags": "Loading tags...",
           "noTagsFound": "No tags found",
+          "selectProjectFirst": "Select a project first",
           "tagsSelected": "tag(s) selected",
           "selectAtLeastOneTag": "Please select at least one tag",
           "cancel": "Cancel",
