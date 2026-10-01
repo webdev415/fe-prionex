@@ -17,47 +17,54 @@ import { saleTypeLabelKey, toSaleType } from '@/features/sellers/saleType'
 /**
  * KAN-993 — one loan rendered as a card row (supersedes the KAN-339 grid row).
  *
- * A purchased debt has four content zones in a 2×2 grid — meta | amounts over
- * dates | type — laid out as two wrapping rows of two:
+ * A purchased debt is ONE row of three content zones (design rule #993: the
+ * amounts of every card sit on one horizontal plane):
  *   - 1 meta/counterparty   flex 1 1 300px / min 170px   (grid 88px 1fr)
  *   - 2 amounts (3 cols)    flex 1 1 400px / min 342px
- *   - 3 secondary dates     flex 1 1 300px / min 200px   (grid 112px 1fr)
- *   - 4 contract type       flex 1 1 400px / min 312px   (grid 112px 1fr)
- *
- * Both rows break onto two lines at the same card width, so the divider
- * before the right column never jumps between them. A flex row wraps as soon
- * as the BASES of its zones plus the gap stop fitting, and both rows have the
- * SAME bases (300 | 400, 710px with the 10px gap) and the SAME side padding —
- * that is what makes them break together, and what resolves two zones on a
- * row to the same widths so the columns line up. The minimums play no part in
- * the break: they only floor a zone left alone on its line, and zone 2's
- * 342px is what sets the narrowest card. Zone 4's 312px mirrors the first
- * row's minimums (170 + 342 = 200 + 312) for symmetry, not for the break.
+ *   - 3 dates + type        flex 1 0 200px / min 200px   (grid 112px 1fr)
+ * Zone 3 reads issue date, purchase date, debt term and — last — the contract
+ * type the debt was bought under (#1617). There is no fourth zone and no
+ * second row: the type is one more line of the zone that already holds the
+ * purchase facts.
  *
  * Those bases are tuned so that at 100% zoom on a full-width panel nothing has
  * to wrap: the widest real counterparty stays on one line, and so does the
- * "including payments" line under the remaining-debt column. Type is 14px for
- * values, 12px for everything else.
+ * "including payments" line under the remaining-debt column. The dates block
+ * is deliberately the narrowest — its content is fixed-length — which is what
+ * pays for the other two. Type is 14px for values, 12px for everything else.
  *
- * A credit-module loan (ours, not bought) keeps the first row only — meta and
- * two amounts: it has no purchase dates and no purchase contract to show.
+ * A credit-module loan (ours, not bought) has zones 1–2 only — meta and two
+ * amounts: it has no purchase dates and no purchase contract to show.
  *
  * The "..." menu is NOT a zone: it is absolutely positioned at the card's
- * top-right, with the rows reserving right padding for it. As a flex item it
+ * top-right, with the row reserving right padding for it. As a flex item it
  * was the last thing in the row, so a narrow panel pushed it off the card
  * entirely and took every per-loan action with it.
  *
+ * How the row folds. The zones never wrap ONE BY ONE ("2 + 1" would push the
+ * dates under the amounts and break the plane): either all three sit in the
+ * row, or the card reads as one column 1 / 2 / 3. `flex-wrap` cannot do that —
+ * a flex line breaks as soon as the zones' BASES stop fitting (300 + 400 +
+ * 200, i.e. a 990px card), long before their minimums, and it drops one zone
+ * at a time. So the row does not wrap: zones 1–2 shrink from their bases down
+ * to their minimums, and the card is a size container (`@container`) whose
+ * `@max-[802px]:` variants turn the row into a column all at once. 802px is
+ * the smallest width inside the card's border (an 804px card) that holds the
+ * zones at their minimums: 170 + 342 + 200 + two 10px gaps + 18px left and
+ * 52px right padding. Change any of those and the threshold has to change
+ * with them (a test pins the sum). The query is on the card, not the
+ * viewport, because the card's width depends on the sidebar and the client
+ * panel's two-column split, not on the screen alone.
+ * In the column the two dividers of zone 2 turn horizontal and the zones drop
+ * their side padding so all three start at the same left edge.
+ *
  * Values WRAP rather than overflow: a long counterparty/loan number/label
- * breaks onto another line inside its own cell and the card grows in height.
- * The rows themselves also wrap — when the card is too narrow for two
- * columns, each row drops its right zone under its left one and the card reads
- * as one column (meta, amounts, dates, type) instead of overflowing, so the
- * page never scrolls horizontally (AC #2/#13). Equal bases and equal padding
- * make both rows break at the same width. The column definitions stay
- * identical on every card, which is what keeps the amounts on one plane and
- * the date values aligned across cards even when a neighbouring cell wraps.
- * Zones are top-aligned so a taller card doesn't shift its amounts block
- * relative to its neighbours.
+ * breaks onto another line inside its own cell and the card grows in height,
+ * so the page never scrolls horizontally (AC #2/#13). The column definitions
+ * stay identical on every card, which is what keeps the amounts on one plane
+ * and the date values aligned across cards even when a neighbouring cell
+ * wraps. Zones are top-aligned so a taller card doesn't shift its amounts
+ * block relative to its neighbours.
  *
  * Colored status badges are gone — status is conveyed by which section
  * (Open/Closed) the card sits in. Closed cards are veiled by a translucent
@@ -106,10 +113,10 @@ export type LoanCardLoan = {
   /**
    * Contract type the debt was bought under — the debt's own copy of
    * `sale_type` (the page falls back to its agreement's for a row written
-   * before the copy). Zone 4 prints it. Optional for the same reason as the
-   * three fields below, and read only through `toSaleType`: absent (server not
-   * rolled out yet), `null` or an unknown string all print "—". A
-   * credit-module loan never shows it.
+   * before the copy). The last line of zone 3 prints it. Optional for the same
+   * reason as the three fields below, and read only through `toSaleType`:
+   * absent (server not rolled out yet), `null` or an unknown string all print
+   * "—". A credit-module loan never shows it.
    */
   saleType?: string | null
   /**
@@ -359,9 +366,9 @@ export function LoanCard({
   // через `i18n.exists`: под тестовым моком словаря тот вернул бы сам ключ.
   const lifecycleKey =
     loan.lifecycleDetail != null ? LIFECYCLE_DETAIL_KEY.get(loan.lifecycleDetail) : undefined
-  // Zone 4 prints the debt's copy of the type. The purchase-date label names the
-  // agreement whose date it shows, so it reads the agreement's own type, not
-  // the debt's copy. The two differ only when
+  // Zone 3's last line prints the debt's copy of the type. The purchase-date
+  // label names the agreement whose date it shows, so it reads the agreement's
+  // own type, not the debt's copy. The two differ only when
   // an agreement's type is corrected apart from its debts' copies (board task
   // #1619). The label names an agreement only when there is an agreement date
   // to show — "by the assignment agreement: —" would name a document that is
@@ -414,8 +421,11 @@ export function LoanCard({
     <div
       role="button"
       tabIndex={0}
+      // `@container`: the row below folds by the card's own width (see the
+      // component doc). It sets no stacking context, so the inline tooltips
+      // still paint above the closed-card veil.
       className={cn(
-        'bg-card relative rounded-xl border transition-[color,background-color,border-color,opacity]',
+        'bg-card @container relative rounded-xl border transition-[color,background-color,border-color,opacity]',
         focused ? 'border-information-400 ring-information-400 ring-1' : 'border-border',
         // AC #8: focusing one card dims the rest for comparison.
         dimmed && 'opacity-[0.42] hover:opacity-70'
@@ -447,8 +457,8 @@ export function LoanCard({
       )}
 
       {/* "..." actions menu — not a zone. Absolutely positioned rather than a
-          flex item so it can never be pushed off a narrow card; the rows below
-          reserve `pr` for it. No z-index: on a closed card it sits under the
+          flex item so it can never be pushed off a narrow card; the row below
+          reserves `pr` for it. No z-index: on a closed card it sits under the
           veil like the rest of the content, and the veil is pointer-events-none
           so the trigger stays clickable. */}
       {/* z-10 is required, not decorative: the row below is `relative` and comes
@@ -493,21 +503,17 @@ export function LoanCard({
         </DropdownMenu>
       </div>
 
-      {/* `.loan-row`, first row of the grid: zones top-aligned so wrapping in
-          one cell doesn't shift a neighbour's vertical position (AC #3).
-          `flex-wrap` is the overflow escape hatch — the amounts drop under the
-          meta rather than pushing content past the card edge. The bottom
-          padding shrinks to the zone gap when the second row follows. */}
-      <div
-        className={cn(
-          'relative flex min-w-0 flex-wrap items-start gap-2.5 pt-3.5 pr-[52px] pl-[18px]',
-          isCreditModule ? 'pb-3.5' : 'pb-2.5'
-        )}
-      >
+      {/* `.loan-row` — the card's only row of zones: top-aligned so wrapping
+          in one cell doesn't shift a neighbour's vertical position (AC #3).
+          No `flex-wrap`: below 802px inside the card's border the whole row
+          becomes one column instead (see the component doc), and in it every zone
+          drops its flex basis (`flex-none`) — a 300px basis on a column axis
+          would be a 300px HEIGHT. */}
+      <div className="relative flex min-w-0 items-start gap-2.5 py-3.5 pr-[52px] pl-[18px] @max-[802px]:flex-col @max-[802px]:items-stretch">
         {/* Zone 1 — meta / counterparty. Basis is sized so a long counterparty
             ("Егроши (НП) - Финбуст (ЕГ-ФБ)", ~212px at 14px bold) stays on one
             line at 100% zoom; it still wraps rather than overflows if squeezed. */}
-        <div className="flex min-w-[170px] flex-[1_1_300px] flex-col gap-1">
+        <div className="flex min-w-[170px] flex-[1_1_300px] flex-col gap-1 @max-[802px]:flex-none">
           <MetaLine label={t('pages.clients.detail.tableHeaders.loanNumber')}>
             <span className="flex min-w-0 flex-wrap items-center gap-2">
               <span className="text-foreground min-w-0 text-[14px] font-bold break-words">
@@ -665,10 +671,10 @@ export function LoanCard({
             minmax(): they hold a common amount at the floor and grow with the
             card, keeping large values on one line whenever there is room.
             min-width matches the true content width (88+88+120 + 32 gap + 16
-            padding = 344) so the grid can never overflow its flex box. On a
-            purchased debt it is the grid's right column, so only its left edge
-            borders anything, and zone 4 below repeats that edge as the divider;
-            the credit-module row keeps its original two borders. */}
+            padding = 344) so the grid can never overflow its flex box. Both
+            edges carry a divider — from the meta and from the dates — and the
+            credit-module row keeps the same two even without zone 3. In the
+            folded column the dividers turn horizontal (`border-y`). */}
         {/* 🔴 У кредитной строки рисуются ДВЕ суммы из трёх, а не три с нулями.
             «Основний борг» проекция не несёт вовсе, и `money(null)` напечатал
             бы «—», а `Number(x ?? 0)` — «₴ 0.00»: ноль на экране есть ФАКТ
@@ -677,7 +683,7 @@ export function LoanCard({
             `totalToReturn` равен нулю, и общий путь включил бы ветку
             `hasPayments` с подписью «Including payments: ₴ 0.00». */}
         {isCreditModule ? (
-          <div className="border-border grid min-w-[342px] flex-[1_1_400px] grid-cols-[minmax(80px,1fr)_minmax(150px,1.8fr)] items-start gap-x-2 gap-y-[3px] border-x pr-1 pl-3">
+          <div className="border-border grid min-w-[342px] flex-[1_1_400px] grid-cols-[minmax(80px,1fr)_minmax(150px,1.8fr)] items-start gap-x-2 gap-y-[3px] border-x pr-1 pl-3 @max-[802px]:flex-none @max-[802px]:border-x-0 @max-[802px]:border-y @max-[802px]:py-2.5 @max-[802px]:pr-0 @max-[802px]:pl-0">
             <AmountCell
               label={t('pages.clients.detail.tableHeaders.loanAmount', 'Loan amount')}
               value={rowMoney(loan.principalAmount)}
@@ -688,7 +694,7 @@ export function LoanCard({
             />
           </div>
         ) : (
-          <div className="border-border grid min-w-[342px] flex-[1_1_400px] grid-cols-[minmax(80px,1fr)_minmax(80px,1fr)_minmax(150px,1.8fr)] items-start gap-x-2 gap-y-[3px] border-l pr-1 pl-3">
+          <div className="border-border grid min-w-[342px] flex-[1_1_400px] grid-cols-[minmax(80px,1fr)_minmax(80px,1fr)_minmax(150px,1.8fr)] items-start gap-x-2 gap-y-[3px] border-x pr-1 pl-3 @max-[802px]:flex-none @max-[802px]:border-x-0 @max-[802px]:border-y @max-[802px]:py-2.5 @max-[802px]:pr-0 @max-[802px]:pl-0">
             <AmountCell
               label={t('pages.clients.detail.tableHeaders.loanAmount', 'Loan amount')}
               value={money(loan.principalAmount)}
@@ -756,21 +762,22 @@ export function LoanCard({
             />
           </div>
         )}
-      </div>
 
-      {/* Second row of the grid — dates | contract type, on the same bases as
-          the first row so the columns line up.
+        {/* Zone 3 — purchase facts: issue date, purchase date, debt term and,
+            last, the contract type. min-width = 112px label col (fixed, so
+            values align vertically — AC #3) + 6px gap + ~65px for the widest
+            value ("31-07-2018") + 16px padding, so a date never has to break;
+            the type words are shorter than a date. It does not shrink: its
+            content is fixed-length, and the other two zones pay for the row.
+            The type line is always there on a purchased debt — "—" when the
+            type is unknown, never a missing line.
 
-          У кредитной строки ряда нет вовсе: ни даты выдачи в форме карточки,
-          ни даты покупки, ни срока долга, ни договора покупки у проекции нет,
-          и прочерки подряд читались бы как «данные потерялись». Даты кредита
-          живут в развёрнутой карте, а сам он уже помечен «кредит (наш)». */}
-      {!isCreditModule && (
-        <div className="relative flex min-w-0 flex-wrap items-start gap-2.5 pr-[52px] pb-3.5 pl-[18px]">
-          {/* Zone 3 — secondary dates. min-width = 112px label col (fixed, so
-              values align vertically — AC #3) + 6px gap + ~65px for the widest
-              value ("31-07-2018"), rounded up, so a date never has to break. */}
-          <div className="flex min-w-[200px] flex-[1_1_300px] flex-col gap-1">
+            У кредитной строки зоны нет вовсе: ни даты выдачи в форме карточки,
+            ни даты покупки, ни срока долга, ни договора покупки у проекции нет,
+            и прочерки подряд читались бы как «данные потерялись». Даты кредита
+            живут в развёрнутой карте, а сам он уже помечен «кредит (наш)». */}
+        {!isCreditModule && (
+          <div className="flex min-w-[200px] flex-[1_0_200px] flex-col gap-1 px-2 @max-[802px]:flex-none @max-[802px]:px-0">
             <SecRow
               label={t('pages.clients.detail.tableHeaders.issueDate')}
               value={loan.issueDate}
@@ -784,21 +791,13 @@ export function LoanCard({
                   : '—'
               }
             />
-          </div>
-
-          {/* Zone 4 — contract type, bottom right. Always present on a purchased
-              debt: "—" when the type is unknown, never an empty corner. Its
-              312px min-width mirrors the first row (170 + 342 = 200 + 312):
-              symmetry, not the break point — like the first row, this one
-              wraps by its bases (300 + 400 + gap). */}
-          <div className="border-border flex min-w-[312px] flex-[1_1_400px] flex-col gap-1 border-l pr-1 pl-3">
             <SecRow
               label={t('saleType.label', 'Contract type')}
               value={saleTypeKey ? t(saleTypeKey) : '—'}
             />
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* RR panel — collapsed by default, expands on chip click (AC #6).
           У кредита модуля её нет никогда — см. чип РР выше. */}
