@@ -755,3 +755,97 @@ describe('RecordPaymentModal — Draft RR (KAN-1120)', () => {
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ restructuringAgreementId: 12 }))
   })
 })
+
+/** The client card mounts this modal as soon as the client profile arrives,
+ *  and the loans come from a separate request that often lands later. Render
+ *  with no loans first, then hand them over, as the page does. */
+function renderThenLoadDebts(
+  debts: DebtDetail[],
+  props: Partial<React.ComponentProps<typeof RecordPaymentModal>> = {}
+) {
+  const onSave = vi.fn()
+  const modal = (loaded: DebtDetail[]) => (
+    <RecordPaymentModal
+      open={true}
+      onClose={vi.fn()}
+      customerName="Test Client"
+      currentDebt={5000}
+      debts={loaded}
+      clientId={42}
+      onSave={onSave}
+      {...props}
+    />
+  )
+  const view = render(modal([]))
+  view.rerender(modal(debts))
+  return { onSave }
+}
+
+/** Picked by hand, as an operator does: the RR auto-prefill depends on the
+ *  selected loan, which is exactly what is under test here. */
+function choosePartialPayment() {
+  fireEvent.click(screen.getByLabelText(`${K}.paymentTypeLabel`))
+  fireEvent.click(screen.getByText('pages.training.filters.paymentTypes.partial_payment'))
+}
+
+describe('RecordPaymentModal — a single loan that arrives after the modal', () => {
+  it('applies the only loan to an EasyPay payment', () => {
+    const { onSave } = renderThenLoadDebts([makeDebt({ id: 901 })])
+
+    selectEasyPay()
+    choosePartialPayment()
+    fillAmount('100')
+    clickSaveAsPending()
+
+    expect(onSave).toHaveBeenCalledTimes(1)
+    expect(onSave.mock.calls[0][0]).toMatchObject({ method: 'EasyPay', debtId: 901 })
+  })
+
+  it('counts only active loans for a user without verify_payments', () => {
+    const { onSave } = renderThenLoadDebts(
+      [makeDebt({ id: 901 }), makeDebt({ id: 902, status: 'closed' })],
+      { canVerify: false }
+    )
+
+    selectEasyPay()
+    choosePartialPayment()
+    fillAmount('100')
+    clickSaveAsPending()
+
+    expect(onSave.mock.calls[0][0]).toMatchObject({ method: 'EasyPay', debtId: 901 })
+  })
+
+  it('counts a closed loan as the only one for a user with verify_payments', () => {
+    const { onSave } = renderThenLoadDebts([makeDebt({ id: 902, status: 'closed' })], {
+      canVerify: true,
+    })
+
+    selectEasyPay()
+    choosePartialPayment()
+    fillAmount('100')
+    clickSaveAsPending()
+
+    expect(onSave.mock.calls[0][0]).toMatchObject({ method: 'EasyPay', debtId: 902 })
+  })
+
+  it('still asks for a choice when two loans are available', () => {
+    const { onSave } = renderThenLoadDebts([makeDebt({ id: 901 }), makeDebt({ id: 903 })])
+
+    selectEasyPay()
+    choosePartialPayment()
+    fillAmount('100')
+    clickSaveAsPending()
+
+    expect(onSave).not.toHaveBeenCalled()
+  })
+
+  it('applies the only loan to a bank transfer too', () => {
+    const { onSave } = renderThenLoadDebts([makeDebt({ id: 901 })])
+
+    choosePartialPayment()
+    fillAmount('100')
+    clickSaveAsPending()
+
+    expect(onSave.mock.calls[0][0]).toMatchObject({ method: 'Bank Transfer', debtId: 901 })
+  })
+})
