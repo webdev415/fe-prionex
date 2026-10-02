@@ -4,6 +4,8 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { EmployeeCard } from '@/features/employeeCard/types.card'
+import { useAuthStore } from '@/stores/authStore'
+import type { User } from '@/types/api'
 
 const removeSurvey = vi.hoisted(() => vi.fn())
 const reinstate = vi.hoisted(() => vi.fn())
@@ -145,10 +147,20 @@ describe('EmployeeCardPage', () => {
     expect(state.askedFor).toEqual({ userId: 7, projectId: null })
   })
 
-  it('carries the project the list was filtered by', () => {
-    renderAt('/dashboard/team-management/users/7?project_id=3&status=active')
+  /*
+   * The reader's active project decides what the card shows, not the list's
+   * project filter: switching project in the profile changes the department,
+   * position and group shown, and the filter only narrows the list.
+   */
+  it("asks for the reader's active project, not the list's filter", () => {
+    useAuthStore.setState({ user: { active_project_id: '5' } as unknown as User })
+    try {
+      renderAt('/dashboard/team-management/users/7?project_id=3&status=active')
 
-    expect(state.askedFor).toEqual({ userId: 7, projectId: 3 })
+      expect(state.askedFor).toEqual({ userId: 7, projectId: 5 })
+    } finally {
+      useAuthStore.setState({ user: null })
+    }
   })
 
   it('sends the reader back to the list they came from', () => {

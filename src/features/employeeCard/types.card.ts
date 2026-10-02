@@ -51,6 +51,18 @@ export interface WorkInformation {
   is_agent: boolean
 }
 
+/** One project the employee works on, with what they are there. */
+export interface ProjectAssignment {
+  project_id: number
+  project_name: string | null
+  role_id: number
+  position: string | null
+  department_id: number | null
+  department: string | null
+  group_id: number | null
+  group: string | null
+}
+
 export interface Relative {
   id: number
   kind: 'contact' | 'child'
@@ -105,6 +117,8 @@ export interface EmployeeCard {
   header: CardHeader
   personal: PersonalInformation
   work: WorkInformation
+  /** Every project the employee works on; `work` is the one shown. */
+  assignments?: ProjectAssignment[]
   contacts: Relative[]
   children: Relative[]
   additional: AdditionalInformation
@@ -147,6 +161,11 @@ export interface WorkInformationUpdate {
   asterisk_extension?: string | null
   dialer_extension?: string | null
   is_agent?: boolean
+  /**
+   * The whole set of projects. A project left out is removed from the
+   * employee, which clears their role and group there.
+   */
+  project_assignments?: { project_id: number; role_id: number; group_id: number | null }[]
 }
 
 export interface RelativeInput {

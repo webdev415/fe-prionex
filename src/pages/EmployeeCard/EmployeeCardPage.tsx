@@ -22,6 +22,7 @@ import { TerminationDialog } from './components/dialogs/TerminationDialog'
 import { WorkDialog } from './components/dialogs/WorkDialog'
 import { useConfirm } from '@/components/ui/useConfirm'
 import { useReinstate, useRemoveSurvey } from '@/features/employeeCard/hooks/useEmployeeCard'
+import { useAuthStore } from '@/stores/authStore'
 import { CARD_HEADER_OFFSET, useScrollSpy } from './hooks/useScrollSpy'
 import { useTailSpace } from './hooks/useTailSpace'
 
@@ -48,7 +49,12 @@ export function EmployeeCardPage() {
   const [searchParams] = useSearchParams()
 
   const employeeId = Number(userId)
-  const projectId = Number(searchParams.get('project') ?? searchParams.get('project_id')) || null
+  // The reader's active project decides which department, position and group
+  // the card shows; switching it in the profile changes them. The list's own
+  // project filter only narrows the list.
+  const projectId = useAuthStore((state) =>
+    state.user?.active_project_id ? Number(state.user.active_project_id) : null
+  )
   const listQuery = searchParams.toString()
 
   const { data, isLoading, isError } = useEmployeeCard(employeeId, projectId)
