@@ -41,6 +41,10 @@ ARG VITE_ASSISTANT_REPORT_TABLES_ENABLED
 # state is indistinguishable from "switched off on purpose".
 # Off unless the build is handed the literal "true".
 ARG VITE_CREDIT_MODULE_ENABLED
+# HUB chat settings in the role forms (board #1621, story 4) instead of the
+# «HUB chat role» field. Same rule and reason as the two flags above; off
+# unless the build is given "true"/"1" (src/features/roles/roleChatSettingsFlag.ts).
+ARG VITE_ROLE_CHAT_SETTINGS_ENABLED
 # Origin serving the hidden WebRTC softphone the CRM embeds as a background
 # iframe. Vite inlines it at build time, so it has to arrive as a build-arg to
 # take effect at all — a runtime env var on the server does nothing.
@@ -69,6 +73,7 @@ ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 ENV VITE_WS_URL=$VITE_WS_URL
 ENV VITE_ASSISTANT_REPORT_TABLES_ENABLED=$VITE_ASSISTANT_REPORT_TABLES_ENABLED
 ENV VITE_CREDIT_MODULE_ENABLED=$VITE_CREDIT_MODULE_ENABLED
+ENV VITE_ROLE_CHAT_SETTINGS_ENABLED=$VITE_ROLE_CHAT_SETTINGS_ENABLED
 ENV VITE_OPERATOR_PHONE_URL=$VITE_OPERATOR_PHONE_URL
 ENV VITE_OPENREPLAY_PROJECT_KEY=$VITE_OPENREPLAY_PROJECT_KEY
 ENV VITE_OPENREPLAY_INGEST_URL=$VITE_OPENREPLAY_INGEST_URL
