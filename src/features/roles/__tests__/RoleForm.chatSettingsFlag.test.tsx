@@ -259,7 +259,7 @@ describe('chat settings flag on: the chat settings instead of «Роль у ча
     const [, body] = mockApi.put.mock.calls[0]
 
     expect((body as Record<string, unknown>).chat_switches).toEqual({ ...OPERATOR, lead: true })
-    expect((body as Record<string, unknown>).home_plane).toBe('operator')
+    expect(keysOf(body)).not.toContain('home_plane')
     expect(keysOf(body)).not.toContain('hub_role')
   })
 

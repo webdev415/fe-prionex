@@ -302,7 +302,7 @@ describe('EditRoleForm - chat switches', () => {
     'download_files',
     'ai_assistant',
     'lead',
-  ] as const)('sends all eight switches and the screen when %s is flipped', async (key) => {
+  ] as const)('sends all eight switches, and not the screen, when %s is flipped', async (key) => {
     answerWith(catalog)
     const { container } = renderEdit()
     await controlsReady()
@@ -311,7 +311,7 @@ describe('EditRoleForm - chat switches', () => {
     const body = await save(container)
 
     expect(body.chat_switches).toEqual({ ...OPERATOR, [key]: !OPERATOR[key] })
-    expect(body.home_plane).toBe('operator')
+    expect(Object.keys(body)).not.toContain('home_plane')
     expect(Object.keys(body)).not.toContain('chat_template')
     expect(Object.keys(body)).not.toContain('hub_role')
   })
@@ -327,7 +327,7 @@ describe('EditRoleForm - chat switches', () => {
     expect(body.chat_switches).toEqual({ ...OPERATOR, client_dialogs: 'department' })
   })
 
-  it('sends the screen that was chosen, with the switches as they are', async () => {
+  it('sends the screen that was chosen, and not the switches', async () => {
     answerWith(catalog)
     const { container } = renderEdit()
     await controlsReady()
@@ -335,7 +335,7 @@ describe('EditRoleForm - chat switches', () => {
     await userEvent.selectOptions(screen.getByLabelText(SCREEN), 'legal')
     const body = await save(container)
 
-    expect(body.chat_switches).toEqual(OPERATOR)
+    expect(Object.keys(body)).not.toContain('chat_switches')
     expect(body.home_plane).toBe('legal')
   })
 
@@ -448,12 +448,14 @@ describe('EditRoleForm - a role whose chat settings are not filled', () => {
       await screen.findByRole('button', { name: 'Заповнити налаштування чату' })
     )
     expect(toggle('access')).not.toBeChecked()
+    expect(screen.getByLabelText(SCREEN)).toHaveValue('my_day')
     await userEvent.click(toggle('access'))
     await userEvent.click(toggle('download_files'))
     const body = await save(container)
 
     expect(body.chat_switches).toEqual({ ...NO_ACCESS, access: true, download_files: true })
-    expect(body.home_plane).toBe('my_day')
+    // The screen was not changed: the stored one stays (key absent = keep).
+    expect(Object.keys(body)).not.toContain('home_plane')
   })
 
   it('leaves them not filled when the filling is cancelled', async () => {
@@ -599,6 +601,7 @@ describe('EditRoleForm - chat refusals at their field', () => {
     await userEvent.selectOptions(screen.getByLabelText(SCREEN), 'control')
     const refused = await save(container)
     expect(refused.home_plane).toBe('control')
+    expect(Object.keys(refused)).not.toContain('chat_switches')
 
     const note = await screen.findByText(
       'Цю зміну налаштувань чату може зробити лише адміністратор HUB цього проєкту.'

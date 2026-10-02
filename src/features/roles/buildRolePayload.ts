@@ -30,10 +30,11 @@
  *   CURRENT catalogue offers it as assignable (a refetch may drop the pick or
  *   take `assignable` away) - no template is the default, so there is nothing
  *   to send for it;
- * - edit never sends `chat_template` (create only); it sends `chat_switches`
- *   (all eight) and `home_plane` only when the section may be edited and its
- *   values differ from what GET returned, or a role that is not filled is
- *   being filled.
+ * - edit never sends `chat_template` (create only); while the section may be
+ *   edited it sends `chat_switches` (all eight) only when they differ from
+ *   what GET returned or a role that is not filled is being filled, and
+ *   `home_plane` only when it differs from what GET returned - each field on
+ *   its own, never one just because the other changed.
  *
  * `stored` must be the role's value as the form renders it NOW, not a copy
  * taken when the form opened: the role detail is refetched under an open form.
@@ -93,8 +94,11 @@ export function chatTemplateCreatePatch(
 /**
  * "Differs" and not "was touched": under impersonation the API refuses ANY
  * chat key present, a stored value sent back too, so a section changed and
- * changed back must send nothing. When something differs both fields go out
- * (a resend of the stored screen or switches is a no-op for the API).
+ * changed back must send nothing. Each field goes out only when it differs
+ * (the switches also when a role that is not filled is being filled): a value
+ * nobody touched is never sent back, because a form that was not refetched
+ * would put it over what somebody else saved in the meantime. The API keeps a
+ * field whose key is absent.
  */
 export function chatUpdatePatch({
   editable,
@@ -108,12 +112,10 @@ export function chatUpdatePatch({
   draft: ChatDraft | null
 }): Pick<UpdateRoleInput, 'chat_switches' | 'home_plane'> {
   if (!editable || draft === null) return {}
-  if (
-    stored !== null &&
-    sameSwitches(draft.switches, stored) &&
-    draft.homePlane === storedHomePlane
-  ) {
-    return {}
+  const patch: Pick<UpdateRoleInput, 'chat_switches' | 'home_plane'> = {}
+  if (stored === null || !sameSwitches(draft.switches, stored)) {
+    patch.chat_switches = orderedSwitches(draft.switches)
   }
-  return { chat_switches: orderedSwitches(draft.switches), home_plane: draft.homePlane }
+  if (draft.homePlane !== storedHomePlane) patch.home_plane = draft.homePlane
+  return patch
 }

@@ -109,13 +109,14 @@ describe('chat_switches and home_plane on edit', () => {
     expect(Object.keys(patch({ draft: draft({ ...OPERATOR }) }))).toEqual([])
   })
 
-  it('sends all eight switches, in form order, and the screen when a switch changed', () => {
+  /*
+   * A field nobody changed is not sent back: a form that was not refetched
+   * would otherwise undo what somebody else saved in it meanwhile.
+   */
+  it('sends all eight switches, in form order, and not the screen when only a switch changed', () => {
     const body = patch({ draft: draft({ ...OPERATOR, client_dialogs: 'department' }) })
 
-    expect(body).toEqual({
-      chat_switches: { ...OPERATOR, client_dialogs: 'department' },
-      home_plane: 'operator',
-    })
+    expect(body).toEqual({ chat_switches: { ...OPERATOR, client_dialogs: 'department' } })
     expect(Object.keys(body.chat_switches ?? {})).toEqual([
       'access',
       'client_dialogs',
@@ -128,17 +129,27 @@ describe('chat_switches and home_plane on edit', () => {
     ])
   })
 
-  it('sends both when only the screen changed', () => {
-    expect(patch({ draft: draft(OPERATOR, 'my_day') })).toEqual({
-      chat_switches: OPERATOR,
-      home_plane: 'my_day',
+  it('sends only the screen when only the screen changed', () => {
+    expect(patch({ draft: draft(OPERATOR, 'my_day') })).toEqual({ home_plane: 'my_day' })
+  })
+
+  it('sends both when a switch and the screen changed', () => {
+    expect(patch({ draft: draft({ ...OPERATOR, lead: true }, 'control') })).toEqual({
+      chat_switches: { ...OPERATOR, lead: true },
+      home_plane: 'control',
     })
   })
 
-  it('fills a role that is not filled, even with the starting values', () => {
+  it('fills a role that is not filled with the switches, even the starting ones, and keeps its screen', () => {
     expect(
       patch({ stored: null, storedHomePlane: 'my_day', draft: draft(NO_ACCESS_SWITCHES, 'my_day') })
-    ).toEqual({ chat_switches: NO_ACCESS_SWITCHES, home_plane: 'my_day' })
+    ).toEqual({ chat_switches: NO_ACCESS_SWITCHES })
+  })
+
+  it('fills a role that is not filled with the screen too when the screen changed', () => {
+    expect(
+      patch({ stored: null, storedHomePlane: 'my_day', draft: draft(NO_ACCESS_SWITCHES, 'legal') })
+    ).toEqual({ chat_switches: NO_ACCESS_SWITCHES, home_plane: 'legal' })
   })
 
   it('sends nothing for a role that is not filled unless somebody fills it', () => {
