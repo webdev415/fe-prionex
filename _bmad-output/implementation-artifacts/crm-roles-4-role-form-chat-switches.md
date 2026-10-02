@@ -1,6 +1,6 @@
 # Story crm-roles-4: форма роли — восемь переключателей чата и экран роли, «Роль у чаті (HUB)» убрана из формы (fe-prionex) — за флагом сборки `VITE_ROLE_CHAT_SETTINGS_ENABLED`
 
-Status: review (builder 02.10, review round 1 applied 02.10, review round 2 — флаг сборки — applied 02.10; curator acceptance and DEV check pending)
+Status: done
 
 - Epic: «Роли чата = роли CRM» (CAP-2, CAP-5, CAP-7)
 - Story key: `crm-roles-4`
@@ -409,3 +409,61 @@ rc=0; `git diff --check` rc=0. Полный vitest и `vite build` не запу
   (= выключен), включить на стенде нельзя. Записано в `deferred-work.md` («Deferred from: story crm-roles-4,
   review round 2»).
 - API не сообщает причину `assignable: false` у шаблона (HUB-админ или имперсонация).
+
+**Curator record 02.10.2026 (ceo-prionex-71):** PR fe #380 → `main` merge `46772a9b` (13:21 CEST), голова
+`af413578`: коммиты `716b3fc7` (сборка + review rounds 1–2), `dfdda5c4` (round 3 = бот раунд 1, review 1186: три
+Low исправлены, Medium отклонён), `af413578` (round 4 = бот раунд 2, review 1187: Medium принят — при правке
+только экрана уходили и старые переключатели, затирание чужой правки; каждое поле чата уходит, только если само
+изменилось, при заполнении `home_plane` — только при смене); approve бота — review 1190 (13:19 CEST, на
+`af413578`). Пара sync(dev) #382 → `dev` merge `32bffcbb` (13:32 CEST; cherry-pick `2ea3c813`, `a3e95c29`,
+`60878626`), голова `dev` `0d98369c` её содержит. Проводка флага на `main` и `dev`: шаг `role_chat_flag` в
+`.forgejo/workflows/build.yml` + `build-args`, `ARG` / `ENV` в `Dockerfile.prod`, строки
+`VITE_ROLE_CHAT_SETTINGS_ENABLED=false` в трёх `.env*.example`. Образ DEV собран с переменной репозитория
+`VITE_ROLE_CHAT_SETTINGS_ENABLED_DEV=true`; `_PREPROD` / `_PROD` не заведены = off (PRE-PROD / PROD — прежнее поле
+«Роль у чаті (HUB)»). Доска: #1621, комментарий куратора 40709 (история 4 на DEV).
+
+Живая проверка на CRM DEV 02.10 15:55–16:15 CEST (`https://crm.dev.crm-prionex.online`, qa_admin, headless
+Chrome; проект 1 Technofinance; две роли под проверку — 27 «QA F1-dev check 02.10 (delete me)» и 28 «… b» — по
+одному праву, людей 0, обе заархивированы; Lawyer и synth-роли не менялись; результаты и скриншоты —
+scratchpad сессии `accept/F1-dev/results.json`):
+
+| AC | Итог | Что видно |
+|---|---|---|
+| AC1 секция, значения из GET | PASS | Lawyer (id 10): восемь переключателей в порядке `SWITCH_KEYS` и экран (6 значений), значения совпадают с `GET /admin/roles/10` |
+| AC2 что уходит | PASS | только переключатель — PUT с `chat_switches` (8 ключей) без `home_plane` / `hub_role` / `chat_template` (роли 27, 28); только экран — PUT с `home_plane` без `chat_switches`, переключатели API сохранил (роль 28). «Оба в одном сохранении» живьём не делали — юнит-тесты |
+| AC3 правила недоступности | PASS | «Лише чат (бот)» и «Доступ до чату» выкл блокируют нужные элементы с пояснением; показ `CHAT_SWITCHES_CONFLICT` словами не проверен (нужен отказ API) |
+| AC4 «не заповнено» | PASS | роль 28 без шаблона (`chat_switches: null`): подсказка «ще не заповнено» и кнопка «Заповнити налаштування чату»; после заполнения PUT несёт только `chat_switches`, без `home_plane`, экран остался `my_day`, `chat_set_follows_hub_role` → false; затем смена только экрана — PUT только с `home_plane` |
+| AC5 только чтение | PARTIAL | форма просмотра — текст, 0 элементов, каталог не запрашивается; «Налаштування чату змінені вручну» видна у роли 28, у роли 27 пропадает после возврата переключателя (`follows` снова true); каталог 403 (проект 2 Spain Test Project) — секция только для чтения с пояснением. Не проверено: пользователь без `manage_roles`, impersonation. Провалов нет |
+| AC6 шаблон только при создании | PASS | 9 кодов с подписями; с `employee` — POST 201 с `chat_template`, без `hub_role` / `chat_switches` / `home_plane`, набор заполнен из шаблона; без выбора ключа `chat_template` в POST нет, роль «не заповнена». Пометка «потрібен адміністратор HUB» не проверена: у qa_admin все 9 `assignable: true` |
+| AC7 «Роль у чаті (HUB)» убрана | PASS | в create / edit / view поля нет; ни в одном из 2 POST и 5 PUT нет `hub_role`; столбец в списке остался, как задумано |
+| AC8 отказы словами | не проверено | отказ из UI не вызвать (AC3 не даёт собрать конфликт, qa_admin — HUB-админ, impersonation не применялась); тексты кодов — юнит-тесты |
+| AC9 столбец списка | PASS | «Чат (HUB)» так / ні совпадает с `chat_access` в `GET /admin/roles`; «—» в UI не видели (API отдавал `null` у роли 28 до заполнения) |
+| AC10 тексты и тесты | вне живой проверки | юнит-тесты и паритет словарей — CI PR #380 |
+| AC11 флаг сборки | PASS (ветка on) | сборка DEV ведёт себя как флаг on; ветка off на DEV не видна — юнит-тесты |
+
+Что уходило в живых запросах (тела запросов из логов проверки `flow_c-log.json` / `flow_d-log.json`; в каждом
+PUT кроме чат-полей — обычные поля формы `name` / `description` / `permission_ids` / `access_levels` /
+`department_id`; `hub_role` нет ни в одном):
+
+| Шаг | Запрос → ответ | Чат-ключи в теле | Ответ API |
+|---|---|---|---|
+| роль 27, создание с шаблоном `employee` | `POST /admin/roles` → 201 | `chat_template: employee` (без `chat_switches` / `home_plane`) | набор из шаблона: доступ, группы, файлы, ИИ вкл, диалоги `none`, экран `my_day`; `follows: true` |
+| роль 27, «Завантажувати файли» выкл | `PUT /admin/roles/27` → 200 | `chat_switches` (8 ключей, `download_files: false`) | `follows: false` |
+| роль 27, «Завантажувати файли» снова вкл | `PUT /admin/roles/27` → 200 | `chat_switches` (8 ключей, `download_files: true`) | как после создания, `follows: true` |
+| роль 28, создание без шаблона | `POST /admin/roles` → 201 | нет (ни `chat_template`, ни других) | `chat_switches: null`, `chat_template: null`, экран `my_day` |
+| роль 28, «Заповнити…» + доступ вкл | `PUT /admin/roles/28` → 200 | `chat_switches` (8 ключей, только `access: true`), без `home_plane` | набор сохранён, экран `my_day`, `follows: false` |
+| роль 28, только экран `my_day` → `operator` | `PUT /admin/roles/28` → 200 | `home_plane: operator`, без `chat_switches` | экран `operator`, переключатели не тронуты |
+| роль 28, только «Завантажувати файли» вкл | `PUT /admin/roles/28` → 200 | `chat_switches` (8 ключей, `download_files: true`), без `home_plane` | экран остался `operator` |
+| роли 27 и 28, архив | `POST /admin/roles/{id}/archive` → 200 | — | обе роли вне активного списка |
+
+Побочные находки: роль без разрешений молча не сохраняется (текст валидации далеко ниже видимой области) — старое
+поведение, не эта история, доска #1687; «`chat_access: null` в GET одной роли» — в ответах детали ключа нет вовсе
+(контракт api 2b), запись в api-prionex `deferred-work.md`; PUT шлёт `department_id: 0`, POST — `null` (API отвечает
+`null` в обоих; старое, общее поле формы); каталог 403 в проектах 2 и 3 — секция только для чтения, права роли в той
+же форме редактируются (принимает ли API такой PUT — не проверялось); на 390 px текст выбора шаблона обрезается
+(нативный select, косметика); учётку qa_admin периодически выбивала параллельная сессия (процесс проверки, не
+продукт). Хвосты — `deferred-work.md` («Deferred from: story crm-roles-4, curator DEV acceptance»).
+
+**Вопрос владельцу (открыт):** включать флаг на PROD вместе с историей 13 HUB или раньше, с подсказкой в форме. До
+ответа PRE-PROD / PROD собираются без флага. Status review → **done**: приёмка на DEV была; выкат на PROD с флагом —
+решение владельца.
