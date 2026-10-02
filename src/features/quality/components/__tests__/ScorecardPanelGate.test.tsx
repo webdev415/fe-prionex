@@ -9,8 +9,14 @@ import { ScorecardPanel } from '../ScorecardPanel'
 const history: { data: unknown[] } = { data: [] }
 const activeScorecard: { data: unknown; isLoading: boolean } = { data: undefined, isLoading: false }
 
+/** Scorecard ids the panel asked to load — which card it chose to open. */
+const requestedScorecardIds: (number | null)[] = []
+
 vi.mock('../../hooks/useScorecards', () => ({
-  useScorecard: () => activeScorecard,
+  useScorecard: (id: number | null) => {
+    requestedScorecardIds.push(id)
+    return activeScorecard
+  },
   useScorecardHistoryForCall: () => history,
   useCreateScorecard: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useSendScorecard: () => ({ mutateAsync: vi.fn(), isPending: false }),
@@ -49,12 +55,19 @@ beforeEach(() => {
 
 /** A completed card already on the call, with a one-criterion snapshot. */
 function existingCompleted() {
-  history.data = [{ id: 9, status: 'completed', created_at: '2026-07-22T21:30:00Z' }]
+  history.data = [
+    // trainer_id is the mocked viewer: the panel opens the viewer's own
+    // card, and a call can now carry a colleague's alongside it.
+    { id: 9, trainer_id: 7, status: 'completed', created_at: '2026-07-22T21:30:00Z' },
+  ]
   activeScorecard.data = {
     id: 9,
     call_id: 'c1',
     operator_id: 41,
-    trainer_id: 99,
+    // The viewer's own card. The panel only ever opens the viewer's card for
+    // editing, so a card belonging to someone else with canEdit true is a
+    // state that cannot arise.
+    trainer_id: 7,
     status: 'completed',
     weighted_score: 4,
     overall_comment: null,
@@ -95,5 +108,31 @@ describe('ScorecardPanel assignment gate', () => {
     expect(screen.getByText('pages.training.scorecard.sendToOperator')).toBeInTheDocument()
     expect(screen.queryByText('pages.training.scorecard.markCompleted')).not.toBeInTheDocument()
     expect(screen.getByText('pages.training.scorecard.saveChanges')).toBeInTheDocument()
+  })
+
+  it("opens the viewer's own card, not the newest one on the call", () => {
+    // A colleague scored the call more recently. Opening theirs is what the
+    // API now refuses to let the viewer save, and what it silently overwrote
+    // before that. This pins the wiring: the helper being correct on its own
+    // proves nothing about which card the panel asks for.
+    history.data = [
+      { id: 30, trainer_id: 99, status: 'completed', created_at: '2026-07-23T10:00:00Z' },
+      { id: 20, trainer_id: 7, status: 'draft', created_at: '2026-07-22T21:30:00Z' },
+    ]
+    requestedScorecardIds.length = 0
+    render(<ScorecardPanel callId="c1" operatorId={41} canEdit />)
+    expect(requestedScorecardIds).toContain(20)
+    expect(requestedScorecardIds).not.toContain(30)
+  })
+
+  it("will not offer to save a colleague's card, even when assigned", () => {
+    // A call carries one card per evaluator. Should anything pin a colleague's
+    // card here, the API refuses the write — so offering Save produces a 403
+    // the trainer can do nothing about.
+    existingCompleted()
+    activeScorecard.data = { ...(activeScorecard.data as object), trainer_id: 99 }
+    render(<ScorecardPanel callId="c1" operatorId={41} canEdit />)
+    expect(screen.queryByText('pages.training.scorecard.saveChanges')).not.toBeInTheDocument()
+    expect(screen.queryByText('pages.training.scorecard.sendToOperator')).not.toBeInTheDocument()
   })
 })

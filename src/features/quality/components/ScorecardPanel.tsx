@@ -23,6 +23,7 @@ import {
 } from '../hooks/useScorecards'
 import { useTemplates } from '../hooks/useTemplates'
 import { isDisputeReasonRequested, resolveDisputeThreshold } from '../lib/dispute'
+import { ownScorecardId } from '../lib/ownScorecard'
 import { computeWeightedScorePreview } from '../lib/scoringPreview'
 import { normalizeCriterionScale } from '../types'
 import type { Criterion, Section } from '../types'
@@ -61,7 +62,8 @@ export function ScorecardPanel({
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null)
   const [showTemplateOverride, setShowTemplateOverride] = useState(false)
   const [forcePicker, setForcePicker] = useState(false)
-  const existingScorecardId = historyQuery.data?.[0]?.id ?? null
+  const viewerId = useAuthStore((s) => s.user?.id)
+  const existingScorecardId = ownScorecardId(historyQuery.data, viewerId)
   const activeScorecardId = pinnedScorecardId ?? manuallySelectedId ?? existingScorecardId ?? null
   const isChangingType = forcePicker && existingScorecardId != null
   const activeQuery = useScorecard(activeScorecardId, activeScorecardId != null)
@@ -152,18 +154,22 @@ export function ScorecardPanel({
 
   const [locked, setLocked] = useState(false)
   const status = activeScorecard?.status ?? 'draft'
-  const currentUserId = useAuthStore((s) => s.user?.id)
   const isOriginatingTrainer =
-    activeScorecard != null &&
-    currentUserId != null &&
-    Number(currentUserId) === activeScorecard.trainer_id
+    activeScorecard != null && viewerId != null && Number(viewerId) === activeScorecard.trainer_id
   // Assignment-based gate (new model) governs editing at any status; the backend
   // enforces the same rule with a 403. Legacy callers fall back to
   // originating-trainer + draft-only.
+  //
+  // Authorship is a precondition for both, and for every other write action. A
+  // card belongs to the evaluator who made it and the API refuses writes to
+  // anyone else's, so offering Save or Send on a colleague's card only produces
+  // a 403 the trainer cannot act on. An absent card is a new evaluation, which
+  // is theirs by definition.
+  const ownsActiveCard = activeScorecard == null || isOriginatingTrainer
   const canEdit =
-    canEditProp != null
-      ? canEditProp && !locked
-      : status === 'draft' && !locked && isOriginatingTrainer
+    (canEditProp != null ? canEditProp : status === 'draft' && isOriginatingTrainer) &&
+    !locked &&
+    ownsActiveCard
 
   const handleSaveDraft = async () => {
     await draft.flush()
@@ -509,11 +515,9 @@ export function ScorecardPanel({
           </>
         ) : null}
 
-        {(
-          canEditProp != null
-            ? canEditProp && locked
-            : status === 'draft' && locked && isOriginatingTrainer
-        ) ? (
+        {(canEditProp != null
+          ? canEditProp && locked
+          : status === 'draft' && locked && isOriginatingTrainer) && ownsActiveCard ? (
           <Button
             variant="primary"
             size="md"
@@ -524,11 +528,9 @@ export function ScorecardPanel({
           </Button>
         ) : null}
 
-        {(
-          canEditProp != null
-            ? canEditProp && (status === 'completed' || status === 'sent')
-            : status === 'completed' && isOriginatingTrainer
-        ) ? (
+        {(canEditProp != null
+          ? canEditProp && (status === 'completed' || status === 'sent')
+          : status === 'completed' && isOriginatingTrainer) && ownsActiveCard ? (
           <Button
             variant="primary"
             size="md"
