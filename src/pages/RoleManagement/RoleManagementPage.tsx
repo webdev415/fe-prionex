@@ -11,6 +11,8 @@ import { useRoles, useHubRoles } from '@/features/roles'
 import type { ApiRole } from '@/features/roles/types'
 import { hasHubRoleField } from '@/features/roles/hubRoles'
 import { HubRoleValue } from '@/features/roles/components/HubRoleValue'
+import { chatAccessLabel } from '@/features/roles/chatRoleSet'
+import { isRoleChatSettingsEnabled } from '@/features/roles/roleChatSettingsFlag'
 import { useProjects } from '@/features/projects'
 import {
   DataTable,
@@ -120,6 +122,23 @@ export function RoleManagementPage() {
     render: (role) => <HubRoleValue code={role.hub_role} status={hubCatalog.status} />,
   }
 
+  // Board #1621: whether the role has HUB chat access (`chat_access` of the
+  // list): yes / no / «—» while its chat settings are not filled. Shown only
+  // on a build that shows the chat settings in the role forms
+  // (VITE_ROLE_CHAT_SETTINGS_ENABLED), and only when the backend sends the
+  // field: from one that predates it, «—» on every row would claim that no
+  // role is filled.
+  const showChatAccess = isRoleChatSettingsEnabled() && roles.some((role) => 'chat_access' in role)
+  const chatAccessColumn: Column<ApiRole> = {
+    key: 'chat_access',
+    header: t('pages.roles.chat.list.header', 'Chat (HUB)'),
+    align: 'center',
+    render: (role) => {
+      const label = chatAccessLabel(role.chat_access)
+      return <span>{t(label.labelKey, label.fallback)}</span>
+    },
+  }
+
   const columns: Column<ApiRole>[] = [
     {
       key: 'name',
@@ -132,6 +151,7 @@ export function RoleManagementPage() {
       render: (role) => <span className="font-medium">{role.description || '—'}</span>,
     },
     ...(showHubRole ? [hubRoleColumn] : []),
+    ...(showChatAccess ? [chatAccessColumn] : []),
     {
       key: 'user_count',
       header: t('pages.roles.tableHeaders.users'),

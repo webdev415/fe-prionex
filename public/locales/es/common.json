@@ -4665,6 +4665,109 @@
           "admin": "Administrador de HUB"
         }
       },
+      "chat": {
+        "title": "Chat (HUB)",
+        "hint": "Qué pueden hacer en el chat de HUB las personas con este rol.",
+        "notFilled": "La configuración del chat de este rol aún no está completada: el acceso a HUB sigue las reglas anteriores.",
+        "fill": "Completar la configuración del chat",
+        "cancelFill": "Dejar la configuración del chat sin completar",
+        "editedByHand": "La configuración del chat se cambió a mano",
+        "readOnlyNoRight": "Solo quien gestiona los roles de este proyecto puede cambiar la configuración del chat.",
+        "readOnlyCatalogue": "Los valores para elegir no están disponibles ahora, así que la configuración del chat solo se muestra.",
+        "readOnlyImpersonating": "Mientras actúa como otro usuario la configuración del chat solo se muestra.",
+        "yes": "Sí",
+        "no": "No",
+        "homePlane": "Pantalla del rol",
+        "homePlaneHint": "La pantalla que HUB abre a las personas con este rol.",
+        "switches": {
+          "access": {
+            "label": "Acceso al chat",
+            "hint": "Desactivado: las personas con este rol no tienen chat ni canales automáticos."
+          },
+          "client_dialogs": {
+            "label": "Diálogos con clientes",
+            "hint": "De quién son los diálogos con clientes visibles: ninguno, propios, del departamento o todos."
+          },
+          "create_groups": {
+            "label": "Crear grupos",
+            "hint": "Crear chats de grupo y reenviar mensajes."
+          },
+          "dept_channel_admin": {
+            "label": "Administrador del canal del departamento",
+            "hint": "Administra los canales automáticos de su departamento y de sus grupos."
+          },
+          "download_files": {
+            "label": "Descargar archivos",
+            "hint": "Descargar archivos del chat."
+          },
+          "ai_assistant": {
+            "label": "Asistente de IA",
+            "hint": "Usar el asistente de IA (también en los diálogos con clientes, mientras estén activados)."
+          },
+          "chat_only": {
+            "label": "Solo chat (bot)",
+            "hint": "Un conjunto de bot: solo canales, mensajes y archivos, sin canales automáticos."
+          },
+          "lead": {
+            "label": "Permisos de responsable",
+            "hint": "Crear y archivar canales, gestionar bots, exportar informes."
+          }
+        },
+        "clientDialogs": {
+          "none": "Ninguno",
+          "my": "Propios",
+          "department": "Del departamento",
+          "all": "Todos"
+        },
+        "homePlanes": {
+          "operator": "Mis clientes",
+          "legal": "Mis casos",
+          "training": "Mis grupos",
+          "quality": "Cola de evaluación",
+          "control": "Control del equipo",
+          "my_day": "Mi día"
+        },
+        "template": {
+          "label": "Plantilla de permisos del chat",
+          "none": "Sin elegir: la configuración del chat queda sin completar",
+          "needsHubAdmin": "se requiere un administrador de HUB",
+          "hint": "Los permisos de chat del nuevo rol se copian de la plantilla una sola vez; después los cambian los interruptores de chat del rol.",
+          "impersonating": "Mientras actúa como otro usuario no se puede elegir una plantilla de permisos del chat: el rol se crea con la configuración del chat sin completar."
+        },
+        "templates": {
+          "employee": "Empleado",
+          "operator": "Operador",
+          "supervisor": "Responsable",
+          "admin": "Administrador",
+          "lawyer": "Abogado",
+          "training_workspace": "Formador",
+          "ai_agent": "Bot",
+          "quality_workspace": "Control de calidad",
+          "none": "Sin acceso al chat"
+        },
+        "list": {
+          "header": "Chat (HUB)",
+          "yes": "sí",
+          "no": "no",
+          "notFilled": "—"
+        },
+        "errors": {
+          "invalid": "Los interruptores del chat se enviaron incompletos o con valores erróneos. Recargue la página e inténtelo de nuevo.",
+          "conflict": "Estos interruptores contradicen el acceso al chat o «Solo chat».",
+          "broken": "El conjunto guardado no se puede mostrar con estos interruptores. Desactive el acceso al chat y guarde el rol; luego actívelo, ajuste los interruptores y guárdelo de nuevo.",
+          "homePlaneUnknown": "No existe esa pantalla de rol.",
+          "templateUnknown": "No existe esa plantilla de permisos del chat.",
+          "templateImmutable": "La plantilla de permisos del chat solo se elige al crear el rol.",
+          "templateConflict": "La plantilla de permisos del chat y el rol en el chat (HUB) no coinciden sobre el administrador de HUB.",
+          "unknownHubRole": "Este rol en el chat (HUB) borraría la configuración del chat del rol.",
+          "adminRequired": "Solo un administrador de HUB de este proyecto puede hacer este cambio en el chat.",
+          "impersonating": "Mientras actúa como otro usuario no se puede cambiar la configuración del chat."
+        },
+        "lockedByAccess": "El acceso al chat está desactivado, así que los demás interruptores están desactivados y no se pueden cambiar.",
+        "lockedByChatOnly": "«Solo chat (bot)» fija por sí mismo los diálogos, grupos, archivos, IA, permisos de responsable y administrador del canal del departamento; no se pueden cambiar mientras esté activado.",
+        "unreadable": "La configuración del chat guardada de este rol no se puede mostrar. Se deja como está; consulte a un administrador.",
+        "outdated": "La configuración del chat de este rol se cambió mientras tanto; sus cambios en esta sección se descartaron y se muestran los valores guardados."
+      },
       "validation": {
         "nameRequired": "El nombre del rol es obligatorio",
         "permissionsRequired": "Seleccione al menos un permiso"

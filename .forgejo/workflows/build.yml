@@ -778,6 +778,47 @@ jobs:
           echo "Credit block for '${ENVIRONMENT}': ${CREDIT} (repository variable VITE_CREDIT_MODULE_ENABLED_${SUFFIX})"
           { echo "credit_enabled<<__EOF__"; printf '%s\n' "$CREDIT"; echo "__EOF__"; } >> "$GITHUB_OUTPUT"
 
+      # HUB chat settings in the role forms (board #1621, story 4) instead of
+      # the «HUB chat role» field (rule 28.5: old and new coexist until the flag
+      # is flipped per stand, rollout story 13).
+      #
+      # Same shape as the credit-block step above and for the same reasons: a
+      # BOOLEAN feature flag, so an unset or empty variable means `false` (the
+      # old field - the correct state for every environment not switched on)
+      # and the build goes on; a value that is neither `true` nor `false` fails
+      # the build instead of silently meaning OFF.
+      - name: Select the role chat settings flag for this environment
+        id: role_chat_flag
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+          ROLE_CHAT_DEV: ${{ vars.VITE_ROLE_CHAT_SETTINGS_ENABLED_DEV }}
+          ROLE_CHAT_PREPROD: ${{ vars.VITE_ROLE_CHAT_SETTINGS_ENABLED_PREPROD }}
+          ROLE_CHAT_PROD: ${{ vars.VITE_ROLE_CHAT_SETTINGS_ENABLED_PROD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$ENVIRONMENT" in
+            dev)     ROLE_CHAT="${ROLE_CHAT_DEV:-}" ;;
+            preprod) ROLE_CHAT="${ROLE_CHAT_PREPROD:-}" ;;
+            prod)    ROLE_CHAT="${ROLE_CHAT_PROD:-}" ;;
+            *) echo "FAIL: unknown environment '${ENVIRONMENT}'."; exit 1 ;;
+          esac
+
+          SUFFIX="$(printf '%s' "$ENVIRONMENT" | tr '[:lower:]' '[:upper:]')"
+          ROLE_CHAT="${ROLE_CHAT:-false}"
+
+          case "$ROLE_CHAT" in
+            true|false) ;;
+            *)
+              echo "FAIL: VITE_ROLE_CHAT_SETTINGS_ENABLED_${SUFFIX} is '${ROLE_CHAT}'."
+              echo "  Only 'true' or 'false' are accepted, so that a typo fails here"
+              echo "  instead of silently leaving the old «HUB chat role» field in place."
+              exit 1 ;;
+          esac
+
+          echo "Role chat settings for '${ENVIRONMENT}': ${ROLE_CHAT} (repository variable VITE_ROLE_CHAT_SETTINGS_ENABLED_${SUFFIX})"
+          { echo "role_chat_enabled<<__EOF__"; printf '%s\n' "$ROLE_CHAT"; echo "__EOF__"; } >> "$GITHUB_OUTPUT"
+
       - name: Compute tags from the checked-out commit
         id: tags
         # 🔴 `inputs.ref` reaches this script through `env:`, NEVER through
@@ -1461,6 +1502,7 @@ jobs:
             VITE_WS_URL=${{ steps.app_urls.outputs.ws_url }}
             VITE_OPERATOR_PHONE_URL=${{ steps.phone.outputs.phone_url }}
             VITE_CREDIT_MODULE_ENABLED=${{ steps.credit_flag.outputs.credit_enabled }}
+            VITE_ROLE_CHAT_SETTINGS_ENABLED=${{ steps.role_chat_flag.outputs.role_chat_enabled }}
             VITE_OPENREPLAY_PROJECT_KEY=${{ steps.openreplay.outputs.project_key }}
             VITE_OPENREPLAY_INGEST_URL=${{ steps.openreplay.outputs.ingest }}
             VITE_OPENREPLAY_PRIVATE_MODE=${{ steps.openreplay.outputs.private_mode }}

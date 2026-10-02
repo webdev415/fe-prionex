@@ -5171,3 +5171,15 @@ traffic goes, not a cosmetic one. **Removal trigger:** the prod bundle resolves 
   script indefinitely. Cosmetic: it is human-run, nothing schedules it, and `#d51` §2 measured that
   nothing can. **Removal trigger:** if the generator is ever wired into anything unattended — at
   which point the timeout stops being cosmetic.
+
+---
+
+## Deferred from: story crm-roles-4, review round 2 (2026-10-02)
+
+- 🟡 **`VITE_ASSISTANT_REPORT_TABLES_ENABLED` never reaches a Forgejo-built image.** `Dockerfile.prod`
+  declares the `ARG` / `ENV` pair (`Dockerfile.prod:35`), but the `build-args` block of the image step in
+  `.forgejo/workflows/build.yml` does not pass it — only the legacy `.github/workflows/CD.yml:167` does. Every
+  Forgejo CI image therefore has it empty (= off), and no stand can switch the assistant report tables on.
+  Found while wiring `VITE_ROLE_CHAT_SETTINGS_ENABLED` the way `VITE_CREDIT_MODULE_ENABLED` is wired (a
+  per-environment `vars.*_<ENV>` step + build-arg, pinned by a `?raw` test). Confidence: high (grep of
+  `.forgejo/**`). **Owner: curator / whoever owns the assistant report tables.**

@@ -1,7 +1,8 @@
 /**
- * The roles table's «Роль у чаті (HUB)» column (KAN-1476).
+ * The roles table's «Роль у чаті (HUB)» column (KAN-1476), and its «Чат (HUB)»
+ * column (board #1621) on a build with VITE_ROLE_CHAT_SETTINGS_ENABLED on.
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
@@ -9,7 +10,13 @@ import type { ApiRole, HubRoleCatalog } from '@/features/roles/types'
 
 const mockApi = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() }))
 
-vi.mock('@/lib/api', () => ({ api: mockApi, default: mockApi }))
+// The real module behind the stubbed client: the role forms read the auth
+// store (manage_roles, impersonation), which wires itself to the api module.
+vi.mock('@/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/api')>()),
+  api: mockApi,
+  default: mockApi,
+}))
 
 vi.mock('@/features/projects', () => ({
   useProjects: () => ({
@@ -45,6 +52,7 @@ vi.mock('react-i18next', async () => {
 })
 
 const { RoleManagementPage } = await import('../RoleManagementPage')
+const { ROLE_CHAT_SETTINGS_FLAG } = await import('@/features/roles/roleChatSettingsFlag')
 
 const HUB_ROLES_URL = '/api/v1/admin/roles/hub-roles'
 
@@ -114,6 +122,10 @@ beforeEach(() => {
   mockApi.get.mockReset()
 })
 
+afterEach(() => {
+  vi.unstubAllEnvs()
+})
+
 describe('RoleManagementPage - HUB chat role column', () => {
   it('names each role’s HUB chat role, and an empty one as "not set"', async () => {
     answerWith(withHubRole, catalog)
@@ -164,5 +176,66 @@ describe('RoleManagementPage - HUB chat role column', () => {
 
     await screen.findByText('Андеррайтер')
     expect(screen.getAllByText('Роль у чаті (HUB)').length).toBeGreaterThan(0)
+  })
+})
+
+const withChatAccess = [
+  apiRole({ id: 1, name: 'Admin', is_default: true, hub_role: 'admin', chat_access: true }),
+  apiRole({
+    id: 2,
+    name: 'Андеррайтер',
+    description: 'Перевіряє заявки',
+    is_default: false,
+    hub_role: 'operator',
+    chat_access: null,
+  }),
+  apiRole({
+    id: 3,
+    name: 'Тестова',
+    is_default: false,
+    hub_role: 'none',
+    chat_access: false,
+  }),
+]
+
+describe('RoleManagementPage - chat access column, chat settings flag off', () => {
+  it('has no «Чат (HUB)» column even when the backend sends the field', async () => {
+    vi.stubEnv(ROLE_CHAT_SETTINGS_FLAG, 'false')
+    answerWith(withChatAccess, catalog)
+    renderPage()
+
+    await screen.findByText('Андеррайтер')
+    expect(screen.getAllByText('Роль у чаті (HUB)').length).toBeGreaterThan(0)
+    expect(screen.queryByText('Чат (HUB)')).not.toBeInTheDocument()
+  })
+})
+
+describe('RoleManagementPage - chat access column (board #1621), chat settings flag on', () => {
+  beforeEach(() => {
+    vi.stubEnv(ROLE_CHAT_SETTINGS_FLAG, 'true')
+  })
+
+  it('says per role whether it has chat access, and «—» while it is not filled', async () => {
+    answerWith(withChatAccess, catalog)
+    renderPage()
+
+    const underwriter = (await screen.findByText('Андеррайтер')).closest('tr') as HTMLElement
+    const admin = screen.getByText('Admin').closest('tr') as HTMLElement
+    const blocked = screen.getByText('Тестова').closest('tr') as HTMLElement
+
+    expect(screen.getAllByText('Чат (HUB)').length).toBeGreaterThan(0)
+    expect(within(admin).getByText('так')).toBeInTheDocument()
+    expect(within(blocked).getByText('ні')).toBeInTheDocument()
+    expect(within(underwriter).getByText('—')).toBeInTheDocument()
+  })
+
+  it('has the column only when the backend sends the field', async () => {
+    // withHubRole carries no chat_access: a backend that predates the field.
+    answerWith(withHubRole, catalog)
+    renderPage()
+
+    await screen.findByText('Андеррайтер')
+    expect(screen.getAllByText('Роль у чаті (HUB)').length).toBeGreaterThan(0)
+    expect(screen.queryByText('Чат (HUB)')).not.toBeInTheDocument()
   })
 })

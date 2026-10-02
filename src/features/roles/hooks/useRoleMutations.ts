@@ -39,12 +39,14 @@ export function useCreateRole() {
     },
     onError: (error) => {
       toast.error(getErrorMessage(error))
-      // KAN-1476: the backend refused the HUB chat role the form sent. Ask the
-      // catalogue again: the form hides the field (HUB_ROLE_DISABLED) or
-      // narrows it, and it shows - and sends - only a value the fresh
-      // catalogue still offers as assignable (effectiveHubRoleValue). The form
-      // also drops its pick on such a refusal, so a retry of the same save goes
-      // through without the refused value rather than being refused again.
+      // KAN-1476 / board #1621: the backend refused a HUB value the form sent
+      // (the HUB chat role; with VITE_ROLE_CHAT_SETTINGS_ENABLED the
+      // template, screen, switches) as not allowed or unknown. Ask the
+      // catalogue again: the form shows - and sends - only a value the fresh
+      // catalogue still offers as assignable (effectiveHubRoleValue /
+      // effectiveChatTemplate), and it drops the pick or what the caller may
+      // not set (dropsChatDraft), so a retry of the same save goes through
+      // rather than being refused again.
       if (isStaleHubCatalogueRefusal(error)) {
         queryClient.invalidateQueries({ queryKey: rolesKeys.hubRolesAll() })
       }

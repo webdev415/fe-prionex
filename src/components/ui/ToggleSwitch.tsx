@@ -13,6 +13,9 @@ interface ToggleSwitchProps {
   disabled?: boolean
   className?: string
   ariaLabel?: string
+  /** Ids of the elements that describe the switch (a hint, a refusal). */
+  ariaDescribedBy?: string
+  ariaInvalid?: boolean
 }
 
 export function ToggleSwitch({
@@ -21,6 +24,8 @@ export function ToggleSwitch({
   disabled = false,
   className,
   ariaLabel,
+  ariaDescribedBy,
+  ariaInvalid,
 }: ToggleSwitchProps) {
   return (
     <button
@@ -28,6 +33,8 @@ export function ToggleSwitch({
       role="switch"
       aria-checked={checked}
       aria-label={ariaLabel}
+      aria-describedby={ariaDescribedBy}
+      aria-invalid={ariaInvalid || undefined}
       disabled={disabled}
       onClick={() => !disabled && onChange(!checked)}
       className={cn(
