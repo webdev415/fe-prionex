@@ -150,7 +150,7 @@
     "HUB_ADMIN_ALIAS_REQUIRES_HUB_ADMIN": "A role named «admin» or «administrator» gets HUB administrator rights — only a HUB administrator of this project can give a role that name.",
     "HUB_ADMIN_ASSIGNMENT_REQUIRES_HUB_ADMIN": "This role gives HUB administrator rights — only a HUB administrator of this project can assign people to it.",
     "HUB_ROLE_DEFAULT_LOCKED": "The HUB chat role of a default role cannot be changed.",
-    "HUB_ROLE_FORBIDDEN_WHILE_IMPERSONATING": "While acting as another user you cannot change HUB chat rights — the chat role, switches, screen or template — or assign people to HUB administrator roles.",
+    "HUB_ROLE_FORBIDDEN_WHILE_IMPERSONATING": "While acting as another user you cannot change HUB chat rights or assign people to HUB administrator roles.",
     "CHAT_SWITCHES_INVALID": "The chat switches were sent incomplete or with wrong values. Reload the page and try again.",
     "CHAT_SWITCHES_CONFLICT": "The chat switches contradict each other: without chat access, or with «Chat only», the other switches must be off.",
     "CHAT_SET_BROKEN": "The stored chat set of this role cannot be shown by the switches. Turn chat access off and save the role, then turn it on, set the switches and save again.",

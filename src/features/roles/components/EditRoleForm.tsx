@@ -45,6 +45,7 @@ import {
   NO_ACCESS_SWITCHES,
   chatRefusal,
   dropsChatDraft,
+  orderedSwitches,
   storedChatSwitches,
   type ChatDraft,
 } from '../chatRoleSet'
@@ -132,7 +133,12 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
   // saved), the draft is dropped and the section says so: resending it would
   // silently undo the other change. A section that stops being editable
   // drops its draft too, so a hidden draft can never come back and be sent.
-  const storedKey = JSON.stringify([role.chat_switches ?? null, storedHomePlane])
+  // The key is built from the values read, not the raw object: a refetch that
+  // returns the same values with the keys in another order is no change.
+  const storedKey = JSON.stringify([
+    stored.kind === 'filled' ? orderedSwitches(stored.switches) : stored.kind,
+    storedHomePlane,
+  ])
   const [chatDraft, setChatDraft] = useState<{ value: ChatDraft; base: string } | null>(null)
   const [chatDraftOutdated, setChatDraftOutdated] = useState(false)
   if (chatDraft !== null && (!chatEditable || chatDraft.base !== storedKey)) {

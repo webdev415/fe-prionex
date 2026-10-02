@@ -298,6 +298,46 @@ rc=0 (10); `git diff --check` rc=0. Полный vitest и `vite build` не з�
 (`HUB_CHAT_SET_MODE=on`), когда правки переключателей реально доходят до HUB, — или раньше, с подсказкой в форме,
 что изменения дойдут до HUB после включения? До решения PROD собирается без флага (поле «Роль у чаті (HUB)»).
 
+### Review round 3 (bot round 1, 02.10)
+
+Основание: ревью бота Олега на PR CRM/fe-prionex#380 (раунд 1, review id 1186, head `716b3fc7`) — один Medium и
+три Low.
+
+Исправлено (три Low):
+1. **Просмотр роли говорил «не заполнено» о нечитаемом наборе.** `ViewRoleForm.tsx` читал `chat_switches` через
+   `readChatSwitches` и не передавал `unreadable`: значение, которое есть, но не восемь переключателей, выглядело
+   как незаполненное. Теперь как в `EditRoleForm`: `storedChatSwitches(role.chat_switches)` →
+   `switches = filled ? switches : null`, `unreadable = kind === 'unreadable'`. Тест: describe «ViewRoleForm -
+   chat settings» — строка, пустой объект и объект с частью ключей показывают `pages.roles.chat.unreadable`, а не
+   `notFilled` (3, `it.each`); случай `null` → `notFilled` уже был («says a role is not filled…»).
+2. **Ключ черновика зависел от порядка ключей сырого объекта.** `storedKey` в `EditRoleForm.tsx` строился из
+   `JSON.stringify(role.chat_switches)`: повторная загрузка с теми же значениями в другом порядке ключей сбрасывала
+   черновик и показывала «тим часом змінили». Теперь ключ из прочитанных значений:
+   `[filled ? orderedSwitches(switches) : kind, storedHomePlane]`. Тест: describe «EditRoleForm - review round 1» —
+   рефетч с теми же значениями в обратном порядке ключей черновик сохраняет, «outdated» не показывает, PUT несёт
+   черновик. Рефетч с другим значением сбрасывает — тест «drops a draft when the stored values change…» уже был.
+3. **Текст `HUB_ROLE_FORBIDDEN_WHILE_IMPERSONATING` перечислял элементы формы с флагом** («роль у чаті,
+   перемикачі, екран чи шаблон»), которых без флага нет. Формулировка в `public/locales/{uk,en,es}/errors.json`
+   стала нейтральной для обоих путей: «не можна змінювати права в чаті (HUB) і призначати на ролі адміністратора
+   HUB» (en / es — тот же смысл). Допущение round 2 о текстах `errors.json` для этого кода этим уточнено.
+   `HUB_ROLE_ADMIN_REQUIRES_HUB_ADMIN` не тронут: его расширенный текст описывает причины api (отказ из-за
+   админского набора чата приходит и без флага — история 2a). Тестов на точный текст кода нет (grep по строке).
+
+Отклонено (Medium, решение куратора): «PUT шлёт неизменённые переключатели» — по фактам api не дефект:
+`switch_edit` в `services/auth/app/domain/chat_role_set.py` сравнивает присланные значения с сохранёнными и
+неизменённые правкой не считает, `chat_edit_needs_hub_admin` при этом возвращает False. `buildRolePayload.ts` /
+`chatUpdatePatch` не менялись.
+
+Красный до правки: 4 новых теста на компонентах HEAD `716b3fc7` — rc=1, 4 failed (тест порядка ключей падает на
+`toBeChecked`: черновик сброшен).
+
+Проверки round 3 (под `flock … systemd-run … CPUQuota=300% MemoryMax=10G`, по коду возврата):
+`npx vitest run src/features/roles src/pages/RoleManagement` rc=0 — 12 файлов, 260 passed
+(`RoleForm.chatSwitches.test.tsx` 51); сторожа словарей `src/lib/__tests__/spanishLocaleParity.test.ts` +
+`errors.codes.test.ts` rc=0 (33), `hubRoleErrorCodes.test.ts` — в прогоне roles; `npx tsc -b` rc=0;
+`npx eslint --max-warnings=0` по трём изменённым TS-файлам rc=0; `npx prettier --check` по ним и трём словарям
+rc=0; `git diff --check` rc=0. Полный vitest и `vite build` не запускал (CI).
+
 ## Tails
 
 - Столбец «Роль у чаті (HUB)» в списке ролей оставлен как был (история сняла поле с формы, не со списка); рядом

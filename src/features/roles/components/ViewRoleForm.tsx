@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next'
 import { usePermissions } from '../hooks/useRoleMutations'
 import { useHubRoles } from '../hooks/useHubRoles'
 import { hasHubRoleField } from '../hubRoles'
-import { DEFAULT_HOME_PLANE, chatCatalogView, readChatSwitches } from '../chatRoleSet'
+import { DEFAULT_HOME_PLANE, chatCatalogView, storedChatSwitches } from '../chatRoleSet'
 import { isRoleChatSettingsEnabled } from '../roleChatSettingsFlag'
 import type { RoleDetailResponse } from '../types'
 import { ChatSettingsSection } from './ChatSettingsSection'
@@ -37,6 +37,9 @@ export function ViewRoleForm({ role }: ViewRoleFormProps) {
   const chatSettingsOn = isRoleChatSettingsEnabled()
   const showHubRole = !chatSettingsOn && hasHubRoleField(role)
   const hubCatalog = useHubRoles(showHubRole ? role.project_id : undefined)
+  // As in EditRoleForm: a stored value that is not the eight switches is
+  // said as unreadable, not as "not filled".
+  const stored = storedChatSwitches(role.chat_switches)
 
   // Get selected permission IDs from role
   const selectedPermissionIds = useMemo(
@@ -113,11 +116,12 @@ export function ViewRoleForm({ role }: ViewRoleFormProps) {
       {/* HUB chat settings (board #1621) - read only */}
       {chatSettingsOn && (
         <ChatSettingsSection
-          switches={readChatSwitches(role.chat_switches)}
+          switches={stored.kind === 'filled' ? stored.switches : null}
           homePlane={role.home_plane ?? DEFAULT_HOME_PLANE}
           editable={false}
           catalog={NO_CATALOG}
           followsHubRole={role.chat_set_follows_hub_role}
+          unreadable={stored.kind === 'unreadable'}
         />
       )}
 

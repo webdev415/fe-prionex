@@ -150,7 +150,7 @@
     "HUB_ADMIN_ALIAS_REQUIRES_HUB_ADMIN": "Un rol llamado «admin» o «administrator» obtiene permisos de administrador de HUB — solo un administrador de HUB de este proyecto puede darle ese nombre.",
     "HUB_ADMIN_ASSIGNMENT_REQUIRES_HUB_ADMIN": "Este rol da permisos de administrador de HUB — solo un administrador de HUB de este proyecto puede asignarle personas.",
     "HUB_ROLE_DEFAULT_LOCKED": "El rol en el chat (HUB) de un rol predeterminado no se puede cambiar.",
-    "HUB_ROLE_FORBIDDEN_WHILE_IMPERSONATING": "Mientras actúa como otro usuario no puede cambiar los permisos del chat (HUB) —rol en el chat, interruptores, pantalla o plantilla— ni asignar personas a roles de administrador de HUB.",
+    "HUB_ROLE_FORBIDDEN_WHILE_IMPERSONATING": "Mientras actúa como otro usuario no puede cambiar los permisos del chat (HUB) ni asignar personas a roles de administrador de HUB.",
     "CHAT_SWITCHES_INVALID": "Los interruptores del chat se enviaron incompletos o con valores erróneos. Recargue la página e inténtelo de nuevo.",
     "CHAT_SWITCHES_CONFLICT": "Los interruptores del chat se contradicen: sin acceso al chat, o con «Solo chat», los demás interruptores deben estar desactivados.",
     "CHAT_SET_BROKEN": "El conjunto de chat guardado de este rol no se puede mostrar con los interruptores. Desactive el acceso al chat y guarde el rol; luego actívelo, ajuste los interruptores y guárdelo de nuevo.",

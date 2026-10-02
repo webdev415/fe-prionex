@@ -639,6 +639,31 @@ describe('ViewRoleForm - chat settings', () => {
     ).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Заповнити налаштування чату' })).toBeNull()
   })
+
+  it.each([
+    ['a string', 'operator'],
+    ['an object with no switches', {}],
+    ['an object with some of them', { access: true }],
+  ])('says a stored value it cannot read (%s) as unreadable, not as not filled', (_, value) => {
+    answerWith(catalog)
+    renderWithClient(
+      <ViewRoleForm
+        role={role({ chat_switches: value as unknown as ChatSwitches })}
+        projectName="Техно"
+      />
+    )
+
+    expect(
+      screen.getByText(
+        'Збережені налаштування чату цієї ролі не вдається показати. Їх залишено як є; зверніться до адміністратора.'
+      )
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        'Налаштування чату для цієї ролі ще не заповнено: доступ у HUB поки визначається як раніше.'
+      )
+    ).toBeNull()
+  })
 })
 
 describe('CreateRoleForm - chat template', () => {
@@ -863,6 +888,23 @@ describe('EditRoleForm - review round 1', () => {
     rerenderWith(role())
 
     expect(toggle('lead')).toBeChecked()
+    expect((await save(container)).chat_switches).toEqual({ ...OPERATOR, lead: true })
+  })
+
+  it('keeps a draft when the refetch returns the same values with the keys in another order', async () => {
+    answerWith(catalog)
+    const { container, rerenderWith } = renderEditable(role())
+    await controlsReady()
+    const reordered = Object.fromEntries(
+      Object.entries(OPERATOR).reverse()
+    ) as unknown as ChatSwitches
+    expect(JSON.stringify(reordered)).not.toBe(JSON.stringify(OPERATOR))
+
+    await userEvent.click(toggle('lead'))
+    rerenderWith(role({ chat_switches: reordered }))
+
+    expect(toggle('lead')).toBeChecked()
+    expect(screen.queryByText(/тим часом змінили/)).toBeNull()
     expect((await save(container)).chat_switches).toEqual({ ...OPERATOR, lead: true })
   })
 
