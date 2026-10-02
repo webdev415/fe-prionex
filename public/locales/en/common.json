@@ -4657,6 +4657,109 @@
           "admin": "HUB administrator"
         }
       },
+      "chat": {
+        "title": "Chat (HUB)",
+        "hint": "What people with this role may do in the HUB chat.",
+        "notFilled": "The chat settings of this role are not filled yet: HUB access still follows the old rules.",
+        "fill": "Fill in the chat settings",
+        "cancelFill": "Leave the chat settings not filled",
+        "editedByHand": "The chat settings were changed by hand",
+        "readOnlyNoRight": "Only someone who manages the roles of this project can change the chat settings.",
+        "readOnlyCatalogue": "The values to choose from are not available right now, so the chat settings are shown only.",
+        "readOnlyImpersonating": "While acting as another user the chat settings are shown only.",
+        "yes": "Yes",
+        "no": "No",
+        "homePlane": "Role screen",
+        "homePlaneHint": "The screen HUB opens for people with this role.",
+        "switches": {
+          "access": {
+            "label": "Chat access",
+            "hint": "Off: people with this role have no chat and no auto-channels."
+          },
+          "client_dialogs": {
+            "label": "Client dialogues",
+            "hint": "Whose client dialogues are visible: none, own, department or all."
+          },
+          "create_groups": {
+            "label": "Create groups",
+            "hint": "Create group chats and forward messages."
+          },
+          "dept_channel_admin": {
+            "label": "Department channel admin",
+            "hint": "Administers the auto-channels of its department and its groups."
+          },
+          "download_files": {
+            "label": "Download files",
+            "hint": "Download files from the chat."
+          },
+          "ai_assistant": {
+            "label": "AI assistant",
+            "hint": "Use the AI assistant (in client dialogues too, while those are on)."
+          },
+          "chat_only": {
+            "label": "Chat only (bot)",
+            "hint": "A bot set: channels, messages and files only; no auto-channels."
+          },
+          "lead": {
+            "label": "Lead rights",
+            "hint": "Create and archive channels, manage bots, export reports."
+          }
+        },
+        "clientDialogs": {
+          "none": "None",
+          "my": "Own",
+          "department": "Department",
+          "all": "All"
+        },
+        "homePlanes": {
+          "operator": "My clients",
+          "legal": "My cases",
+          "training": "My groups",
+          "quality": "Review queue",
+          "control": "Team control",
+          "my_day": "My day"
+        },
+        "template": {
+          "label": "Chat permission template",
+          "none": "Not chosen — the chat settings stay not filled",
+          "needsHubAdmin": "a HUB administrator is required",
+          "hint": "The chat permissions of the new role are copied from the template once; later the chat switches of the role change them.",
+          "impersonating": "While acting as another user no chat template can be chosen: the role is created with the chat settings not filled."
+        },
+        "templates": {
+          "employee": "Employee",
+          "operator": "Operator",
+          "supervisor": "Manager",
+          "admin": "Administrator",
+          "lawyer": "Lawyer",
+          "training_workspace": "Trainer",
+          "ai_agent": "Bot",
+          "quality_workspace": "Quality control",
+          "none": "No chat access"
+        },
+        "list": {
+          "header": "Chat (HUB)",
+          "yes": "yes",
+          "no": "no",
+          "notFilled": "—"
+        },
+        "errors": {
+          "invalid": "The chat switches were sent incomplete or with wrong values. Reload the page and try again.",
+          "conflict": "These switches contradict chat access or «Chat only».",
+          "broken": "The stored chat set cannot be shown by these switches. Turn chat access off and save the role, then turn it on, set the switches and save again.",
+          "homePlaneUnknown": "There is no such role screen.",
+          "templateUnknown": "There is no such chat template.",
+          "templateImmutable": "The chat template is chosen only when a role is created.",
+          "templateConflict": "The chat template and the HUB chat role disagree on HUB administrator.",
+          "unknownHubRole": "This HUB chat role would erase the chat settings of the role.",
+          "adminRequired": "Only a HUB administrator of this project can make this chat change.",
+          "impersonating": "While acting as another user the chat settings cannot be changed."
+        },
+        "lockedByAccess": "Chat access is off, so the other switches are off and cannot be changed.",
+        "lockedByChatOnly": "«Chat only (bot)» sets the dialogues, groups, files, AI, lead rights and department channel admin itself; they cannot be changed while it is on.",
+        "unreadable": "The stored chat settings of this role cannot be shown. They are left as they are; ask an administrator.",
+        "outdated": "The chat settings of this role were changed meanwhile; your changes in this section were dropped and the stored values are shown."
+      },
       "validation": {
         "nameRequired": "Role name is required",
         "permissionsRequired": "Please select at least one permission"

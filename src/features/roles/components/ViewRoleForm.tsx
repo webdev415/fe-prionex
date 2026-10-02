@@ -10,8 +10,14 @@ import { useTranslation } from 'react-i18next'
 import { usePermissions } from '../hooks/useRoleMutations'
 import { useHubRoles } from '../hooks/useHubRoles'
 import { hasHubRoleField } from '../hubRoles'
+import { DEFAULT_HOME_PLANE, chatCatalogView, storedChatSwitches } from '../chatRoleSet'
+import { isRoleChatSettingsEnabled } from '../roleChatSettingsFlag'
 import type { RoleDetailResponse } from '../types'
+import { ChatSettingsSection } from './ChatSettingsSection'
 import { HubRoleValue } from './HubRoleValue'
+
+/** The view offers no choice, so it reads no catalogue. */
+const NO_CATALOG = chatCatalogView({ isPending: true, isError: false, data: undefined })
 
 interface ViewRoleFormProps {
   role: RoleDetailResponse
@@ -21,9 +27,19 @@ interface ViewRoleFormProps {
 export function ViewRoleForm({ role }: ViewRoleFormProps) {
   const { t } = useTranslation('common')
   const { data: permissionsData, isLoading: loadingPermissions } = usePermissions()
-  // KAN-1476: the row exists only when the backend knows the field at all.
-  const showHubRole = hasHubRoleField(role)
+  // Board #1621, rule 28.5: one of two, by the build flag
+  // (roleChatSettingsFlag.ts).
+  // - on: the HUB chat settings, read only. The view needs no values to
+  //   choose from, so it does not ask the catalogue (which needs
+  //   manage_roles); «Роль у чаті (HUB)» is not shown.
+  // - off - KAN-1476: the HUB chat role row exists only when the backend
+  //   knows the field at all.
+  const chatSettingsOn = isRoleChatSettingsEnabled()
+  const showHubRole = !chatSettingsOn && hasHubRoleField(role)
   const hubCatalog = useHubRoles(showHubRole ? role.project_id : undefined)
+  // As in EditRoleForm: a stored value that is not the eight switches is
+  // said as unreadable, not as "not filled".
+  const stored = storedChatSwitches(role.chat_switches)
 
   // Get selected permission IDs from role
   const selectedPermissionIds = useMemo(
@@ -96,6 +112,18 @@ export function ViewRoleForm({ role }: ViewRoleFormProps) {
             : t('pages.roles.forms.customRole')}
         </span>
       </div>
+
+      {/* HUB chat settings (board #1621) - read only */}
+      {chatSettingsOn && (
+        <ChatSettingsSection
+          switches={stored.kind === 'filled' ? stored.switches : null}
+          homePlane={role.home_plane ?? DEFAULT_HOME_PLANE}
+          editable={false}
+          catalog={NO_CATALOG}
+          followsHubRole={role.chat_set_follows_hub_role}
+          unreadable={stored.kind === 'unreadable'}
+        />
+      )}
 
       {/* HUB chat role (KAN-1476) */}
       {showHubRole && (

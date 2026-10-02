@@ -6,10 +6,19 @@
  * - Default roles: name/description are read-only (backend prevents changes)
  * - Custom roles: name/description are editable
  * - Permissions: always editable (no backend restriction)
- * - HUB chat role (KAN-1476): shown only while the catalogue is enabled; read
- *   only for default roles and for a value the caller may not grant (see
- *   hubRoleLock); sent only when somebody changed it to a value the current
- *   catalogue offers (see effectiveHubRoleValue and buildRolePayload.ts)
+ * - HUB chat rights: one of two, by the build flag VITE_ROLE_CHAT_SETTINGS_ENABLED
+ *   (roleChatSettingsFlag.ts):
+ *   - off: HUB chat role (KAN-1476): shown only while the catalogue is
+ *     enabled; read only for default roles and for a value the caller may not
+ *     grant (see hubRoleLock); sent only when somebody changed it to a value
+ *     the current catalogue offers (see effectiveHubRoleValue and
+ *     buildRolePayload.ts)
+ *   - on: HUB chat settings (board #1621): the eight switches and the role
+ *     screen as GET returned them; editable with manage_roles while the
+ *     catalogue's values are known, shown as text otherwise; sent only when
+ *     they differ from the stored ones or fill a role that is not filled (see
+ *     buildRolePayload.ts). «Роль у чаті (HUB)» is not in the form, and
+ *     hub_role is never sent.
  */
 
 import { useState, useMemo, useEffect } from 'react'
@@ -20,16 +29,30 @@ import { z } from 'zod'
 import { useUpdateRole } from '../hooks/useRoleMutations'
 import { usePermissions } from '../hooks/useRoleMutations'
 import { useHubRoles } from '../hooks/useHubRoles'
+import { useHasPermission } from '@/hooks/usePermissions'
+import { useAuthStore } from '@/stores/authStore'
+import { PERMISSIONS } from '@/constants/permissions'
 import { useDepartments } from '@/features/departments'
 import { Label } from '@/components/ui/Label'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { Alert } from '@/components/ui/Alert'
 import { Checkbox } from '@/components/ui/Checkbox'
-import type { RoleDetailResponse } from '../types'
+import type { RoleDetailResponse, UpdateRoleInput } from '../types'
 import { ACCESS_LEVEL_OPTIONS, DEFAULT_ACCESS_LEVEL, isTabAccessPermission } from '../accessLevels'
+import {
+  DEFAULT_HOME_PLANE,
+  NO_ACCESS_SWITCHES,
+  chatRefusal,
+  dropsChatDraft,
+  orderedSwitches,
+  storedChatSwitches,
+  type ChatDraft,
+} from '../chatRoleSet'
 import { effectiveHubRoleValue, hubRoleLock, isStaleHubCatalogueRefusal } from '../hubRoles'
-import { hubRoleUpdatePatch } from '../buildRolePayload'
+import { chatUpdatePatch, hubRoleUpdatePatch } from '../buildRolePayload'
+import { isRoleChatSettingsEnabled } from '../roleChatSettingsFlag'
+import { ChatSettingsSection } from './ChatSettingsSection'
 import { HubRoleSelect } from './HubRoleSelect'
 import { getErrorMessage } from '@/lib/errors'
 
@@ -65,24 +88,73 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
 
   const isDefaultRole = role.is_default
 
-  // KAN-1476: HUB chat role; '' is "not set". The select shows the stored
-  // value until somebody picks one, and only a pick is ever sent. The stored
-  // value is read from `role` on every render, never copied at mount:
+  // Board #1621, rule 28.5: the chat settings replace «Роль у чаті (HUB)»
+  // only on a build with the flag on; off, the form is as it was before them.
+  // Both states are prepared on every render (hooks may not depend on it).
+  const chatSettingsOn = isRoleChatSettingsEnabled()
+  const catalog = useHubRoles(role.project_id)
+
+  // Flag off - KAN-1476: HUB chat role; '' is "not set". The select shows the
+  // stored value until somebody picks one, and only a pick is ever sent. The
+  // stored value is read from `role` on every render, never copied at mount:
   // EditRoleModal renders the cached detail first and its background refetch
   // hands this form a new `role`. A copy would send the old value back with a
   // save of permissions only, as if somebody had chosen it. The pick, in
   // turn, holds only while the current catalogue offers it as assignable -
   // otherwise the select shows, and the save sends, the stored value again.
-  const hubCatalog = useHubRoles(role.project_id)
   const storedHubRole = role.hub_role ?? null
   const [hubRolePick, setHubRolePick] = useState<string | null>(null)
-  const hubLock = hubRoleLock(hubCatalog.options, storedHubRole, isDefaultRole)
+  const hubLock = hubRoleLock(catalog.options, storedHubRole, isDefaultRole)
   const hubRole = effectiveHubRoleValue({
-    options: hubCatalog.options,
+    options: catalog.options,
     stored: storedHubRole,
     pick: hubRolePick,
     lock: hubLock,
   })
+
+  // Flag on - board #1621: the HUB chat settings. The section shows the
+  // stored values until somebody changes one, and only such a draft is ever
+  // sent. The stored values are read from `role` on every render, never
+  // copied at mount: EditRoleModal renders the cached detail first and its
+  // background refetch hands this form a new `role`; a copy would send the
+  // old values back with a save of permissions only. The values to choose
+  // from come from the catalogue - without them the section shows text only.
+  const canManageRoles = useHasPermission(PERMISSIONS.SYSTEM.MANAGE_ROLES)
+  // Under impersonation the API refuses any chat field (403
+  // HUB_ROLE_FORBIDDEN_WHILE_IMPERSONATING), so the section shows values only.
+  const impersonating = useAuthStore((state) => state.isImpersonating)
+  const chatEditable =
+    chatSettingsOn && canManageRoles && !impersonating && catalog.chat.status === 'ready'
+  const stored = storedChatSwitches(role.chat_switches)
+  const storedSwitches = stored.kind === 'filled' ? stored.switches : null
+  const storedHomePlane = role.home_plane ?? DEFAULT_HOME_PLANE
+  // The draft remembers the stored values it was started from. When those
+  // change under the open form (the detail is refetched - somebody else
+  // saved), the draft is dropped and the section says so: resending it would
+  // silently undo the other change. A section that stops being editable
+  // drops its draft too, so a hidden draft can never come back and be sent.
+  // The key is built from the values read, not the raw object: a refetch that
+  // returns the same values with the keys in another order is no change.
+  const storedKey = JSON.stringify([
+    stored.kind === 'filled' ? orderedSwitches(stored.switches) : stored.kind,
+    storedHomePlane,
+  ])
+  const [chatDraft, setChatDraft] = useState<{ value: ChatDraft; base: string } | null>(null)
+  const [chatDraftOutdated, setChatDraftOutdated] = useState(false)
+  if (chatDraft !== null && (!chatEditable || chatDraft.base !== storedKey)) {
+    setChatDraft(null)
+    setChatDraftOutdated(chatDraft.base !== storedKey)
+  }
+  const draft =
+    chatDraft !== null && chatEditable && chatDraft.base === storedKey ? chatDraft.value : null
+  const startDraft = (value: ChatDraft) => {
+    setChatDraft({ value, base: storedKey })
+    setChatDraftOutdated(false)
+  }
+  // A chat refusal is said once, in the section (not again in the alert).
+  // Without the section every refusal stays in the alert, as before it.
+  const refusal =
+    chatSettingsOn && updateMutation.isError ? chatRefusal(updateMutation.error) : null
 
   // Initialize selected permissions from role
   const initialPermissions = useMemo(
@@ -178,17 +250,23 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
       name?: string
       description?: string
       department_id?: number | null
-      hub_role?: string | null
-    } = {
+    } & UpdateRoleInput = {
       permission_ids: selectedPermissions,
       access_levels,
-      ...hubRoleUpdatePatch({
-        status: hubCatalog.status,
-        lock: hubLock,
-        stored: storedHubRole,
-        selected: hubRole,
-        options: hubCatalog.options,
-      }),
+      ...(chatSettingsOn
+        ? chatUpdatePatch({
+            editable: chatEditable,
+            stored: storedSwitches,
+            storedHomePlane,
+            draft,
+          })
+        : hubRoleUpdatePatch({
+            status: catalog.status,
+            lock: hubLock,
+            stored: storedHubRole,
+            selected: hubRole,
+            options: catalog.options,
+          })),
     }
 
     // Only include name/description/department for custom roles (backend allows this)
@@ -209,10 +287,18 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
           onSuccess()
         },
         onError: (error) => {
-          // The backend refused the HUB chat role itself: drop the pick, so the
-          // select shows the stored value a retry leaves alone, and the
-          // refusal stays said in words below.
-          if (isStaleHubCatalogueRefusal(error)) setHubRolePick(null)
+          if (chatSettingsOn) {
+            // The caller may not make this chat change now (403): drop the
+            // draft, so the section shows the stored values a retry leaves
+            // alone, and the refusal stays said in words. A 422 keeps the
+            // draft, to be corrected.
+            if (dropsChatDraft(chatRefusal(error))) setChatDraft(null)
+          } else if (isStaleHubCatalogueRefusal(error)) {
+            // The backend refused the HUB chat role itself: drop the pick, so
+            // the select shows the stored value a retry leaves alone, and the
+            // refusal stays said in words below.
+            setHubRolePick(null)
+          }
         },
       }
     )
@@ -313,15 +399,45 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
         </div>
       )}
 
-      {/* HUB chat role (KAN-1476) - only while the catalogue offers it */}
-      <HubRoleSelect
-        catalog={hubCatalog}
-        value={hubRole}
-        onChange={setHubRolePick}
-        stored={storedHubRole}
-        lock={hubLock}
-        disabled={updateMutation.isPending}
-      />
+      {chatSettingsOn ? (
+        // HUB chat settings (board #1621)
+        <ChatSettingsSection
+          switches={draft ? draft.switches : storedSwitches}
+          homePlane={draft ? draft.homePlane : storedHomePlane}
+          editable={chatEditable}
+          catalog={catalog.chat}
+          followsHubRole={role.chat_set_follows_hub_role}
+          unreadable={stored.kind === 'unreadable'}
+          outdated={chatDraftOutdated}
+          filling={storedSwitches === null && draft !== null}
+          onFill={() =>
+            startDraft({ switches: { ...NO_ACCESS_SWITCHES }, homePlane: storedHomePlane })
+          }
+          onCancelFill={() => setChatDraft(null)}
+          onChange={(switches, homePlane) => startDraft({ switches, homePlane })}
+          disabled={updateMutation.isPending}
+          refusal={refusal}
+          readOnlyNote={
+            !canManageRoles || catalog.chat.forbidden
+              ? 'noRight'
+              : impersonating
+                ? 'impersonating'
+                : catalog.chat.status === 'unavailable'
+                  ? 'catalogue'
+                  : null
+          }
+        />
+      ) : (
+        // HUB chat role (KAN-1476) - only while the catalogue offers it
+        <HubRoleSelect
+          catalog={catalog}
+          value={hubRole}
+          onChange={setHubRolePick}
+          stored={storedHubRole}
+          lock={hubLock}
+          disabled={updateMutation.isPending}
+        />
+      )}
 
       {/* Permissions Section (Always Editable - No Backend Restriction) */}
       <div>
@@ -408,7 +524,7 @@ export function EditRoleForm({ role, projectName, onSuccess }: EditRoleFormProps
       </div>
 
       {/* Error Alert */}
-      {updateMutation.isError && (
+      {updateMutation.isError && refusal === null && (
         <Alert variant="error">
           <p className="text-sm">
             {updateMutation.error

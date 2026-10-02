@@ -292,12 +292,18 @@ export function describeHubRole(
  * may be out of date), and the form drops its pick: the select goes back to
  * the stored value, the refusal is said in words, and a retry of the same
  * save goes through without the refused value.
+ *
+ * Board #1621: the same holds for the chat values of the role form - a
+ * template (CHAT_TEMPLATE_UNKNOWN) or a screen (HOME_PLANE_UNKNOWN) the API no
+ * longer knows means the cached catalogue offered a value it should not have.
  */
 const STALE_CATALOGUE_CODES: ReadonlySet<string> = new Set([
   'HUB_ROLE_DISABLED',
   'HUB_ROLE_UNKNOWN',
   'HUB_ROLE_ADMIN_REQUIRES_HUB_ADMIN',
   'HUB_ROLE_FORBIDDEN_WHILE_IMPERSONATING',
+  'CHAT_TEMPLATE_UNKNOWN',
+  'HOME_PLANE_UNKNOWN',
 ])
 
 export function isStaleHubCatalogueRefusal(error: unknown): boolean {

@@ -2,6 +2,11 @@
  * «Роль у чаті (HUB)» in the role forms (KAN-1476), driven through the real
  * rolesApi against a stubbed HTTP client: what the forms show for each state of
  * the catalogue, and - above all - what they send.
+ *
+ * Board #1621, rule 28.5: this is the path of a build with
+ * VITE_ROLE_CHAT_SETTINGS_ENABLED off (the default, PROD today) - the forms
+ * as they were before the chat settings. The flag-on path, where the field is
+ * gone, is RoleForm.hubRoleGone.test.tsx / RoleForm.chatSwitches.test.tsx.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
@@ -17,7 +22,13 @@ const mockApi = vi.hoisted(() => ({
   delete: vi.fn(),
 }))
 
-vi.mock('@/lib/api', () => ({ api: mockApi, default: mockApi }))
+// The real module behind the stubbed client: the role forms read the auth
+// store (manage_roles, impersonation), which wires itself to the api module.
+vi.mock('@/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/api')>()),
+  api: mockApi,
+  default: mockApi,
+}))
 
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
@@ -66,6 +77,7 @@ const { EditRoleForm } = await import('../components/EditRoleForm')
 const { CreateRoleForm } = await import('../components/CreateRoleForm')
 const { ViewRoleForm } = await import('../components/ViewRoleForm')
 const { rolesKeys } = await import('../hooks/useRoles')
+const { ROLE_CHAT_SETTINGS_FLAG } = await import('../roleChatSettingsFlag')
 
 const PROJECT = 5
 const HUB_ROLES_URL = '/api/v1/admin/roles/hub-roles'
@@ -79,9 +91,13 @@ const NOT_SET = 'Не задано — за назвою ролі'
  */
 const LOCKED_NOT_ASSIGNABLE =
   'Це значення вам зараз недоступне для вибору, тож змінити його тут не можна.'
-/** HUB_ROLE_ADMIN_REQUIRES_HUB_ADMIN as uk/errors.json words it. */
+/**
+ * HUB_ROLE_ADMIN_REQUIRES_HUB_ADMIN as uk/errors.json words it. Board #1621
+ * widened the sentence (the API sends the code for the chat settings too);
+ * it still names the «Адміністратор HUB» chat role this path refuses.
+ */
 const ADMIN_REFUSAL =
-  'Надати або зняти роль «Адміністратор HUB» може лише адміністратор HUB цього проєкту.'
+  'Цю зміну може зробити лише адміністратор HUB цього проєкту: вона стосується прав адміністратора HUB (роль «Адміністратор HUB», набір прав адміністратора або всі діалоги з клієнтами).'
 
 const enabledCatalog: HubRoleCatalog = {
   mode: 'on',
@@ -213,6 +229,8 @@ async function submitEdit(container: HTMLElement) {
 }
 
 beforeEach(() => {
+  // The build of PROD today: the chat settings switched off.
+  vi.stubEnv(ROLE_CHAT_SETTINGS_FLAG, 'false')
   mockApi.get.mockReset()
   mockApi.post.mockReset()
   mockApi.put.mockReset()
@@ -221,6 +239,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.unstubAllEnvs()
   vi.clearAllMocks()
   // Restores the i18next.t spy of a test even when that test failed half way,
   // so no later test reads a stubbed translator.
