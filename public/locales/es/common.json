@@ -13079,7 +13079,8 @@
         "parameters": "Configuración del módulo",
         "integrations": "Integraciones",
         "switches": "Interruptores de emergencia",
-        "site": "Sitio"
+        "site": "Sitio",
+        "postbacks": "Postbacks de socios"
       },
       "needRiskManager": "Esta sección está disponible para el gestor de riesgos: contiene los umbrales y la configuración de los productos.",
       "mutationDisabled": "La edición requiere un segundo aprobador (UW-04) — disponible cuando lleguen los roles del CRM (WS-20).",
@@ -13856,6 +13857,34 @@
       "errorForbidden": "No tiene permiso para ver los documentos de la sección de crédito.",
       "errorGeneric": "No se pudo abrir el documento (código {{status}}).",
       "tabBlocked": "La pestaña nueva no se abrió, así que el documento se entregó como descarga de archivo."
+    },
+    "postbacks": {
+      "helper": "Reglas de postback del lado del servidor: cuando una solicitud o un préstamo llega con el utm_source del socio, el módulo envía una solicitud GET a la URL del socio con las macros sustituidas.",
+      "forbidden": "Sin permiso para los postbacks. Lo concede el administrador del CRM.",
+      "refreshFailed": "No se pudo actualizar la lista de reglas: se muestra el último estado cargado. Vuelva a cargar la página más tarde.",
+      "unknownValue": "valor desconocido",
+      "trigger": {
+        "new_lead": "Nuevo lead",
+        "new_loan": "Nuevo préstamo"
+      },
+      "rules": {
+        "name": "Nombre",
+        "trigger": "Disparador",
+        "url": "URL del socio",
+        "goal": "Objetivo (goal)",
+        "currency": "Moneda",
+        "active": "Activa",
+        "updatedAt": "Modificada",
+        "actions": "Acciones",
+        "empty": "Todavía no hay reglas",
+        "copyUrl": "Copiar URL",
+        "toggle": "Activar o desactivar la regla «{{name}}»",
+        "toggleFailed": "No se pudo cambiar el estado de la regla: el interruptor volvió a su posición anterior. Inténtelo de nuevo.",
+        "delete": "Eliminar",
+        "deleteTitle": "¿Eliminar la regla «{{name}}»?",
+        "deleteMessage": "Las nuevas solicitudes y préstamos ya no se enviarán al socio por esta regla. Los registros del log de postbacks de la regla se conservan.",
+        "deleteFailed": "No se pudo eliminar la regla. Inténtelo de nuevo."
+      }
     }
   },
   "toasts": {
