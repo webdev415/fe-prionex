@@ -10,19 +10,24 @@
  *  - удаление — только через подтверждение в опасном тоне, строка исчезает после
  *    ответа;
  *  - ключ идемпотентности — на нажатие: два нажатия — два ключа, повтор того же
- *    действия (те же переменные мутации) — тот же ключ; сетевой отказ сам не
- *    повторяется — повтор мутаций здесь боевой, как в `main.tsx`;
+ *    действия (те же переменные мутации) — тот же ключ; сетевой отказ
+ *    повторяется один раз тем же ключом — повтор мутаций здесь боевой, как в
+ *    `main.tsx` (читает `transportCode` транспорта раздела);
  *  - без права записи переключатели выключены, кнопок удаления нет;
  *  - адрес партнёра — под замазкой записи и не в атрибутах, полный — в
  *    подсказке (тоже под замазкой) и копированием;
- *  - неизвестный модулю триггер — сырым значением с пометкой.
+ *  - неизвестный модулю триггер — сырым значением с пометкой;
+ *  - (a2, замечания бота по a1) отказ действия называет правило и снимается
+ *    стартом другого действия, а идущий запрос этот сброс не трогает; пока
+ *    строка удаляется, её переключатель и «Змінити» выключены; скелет загрузки —
+ *    по числу колонок; без права записи нет «Додати правило» и «Змінити».
  *
  * Хуки настоящие, QueryClient живой (`gcTime: Infinity` — без таймера сборки
  * кэша, который пережил бы jsdom), подменён только транспорт: проверяется
  * граница нажатия, которую держат хуки, а не заглушка хуков.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { act, cleanup, render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import {
   MutationObserver as QueryMutationObserver,
@@ -34,17 +39,25 @@ import { CreditPostbacksSection } from '../components/CreditPostbacksSection'
 import { CreditApiError, toCreditError } from '@/features/credit/api/creditApi'
 import { creditPostbacksApi, type CreditPostbackRule } from '@/features/credit/api/postbacks'
 import { expectObscured } from '@/test/piiHelpers'
+import { MAIN_PREDICATE_LINES, MAIN_SOURCE, isMutationRetryable } from '@/test/mutationRetry'
 
 vi.mock('@/features/credit/api/postbacks', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/features/credit/api/postbacks')>()
   return {
     ...actual,
-    creditPostbacksApi: { rules: vi.fn(), updateRule: vi.fn(), deleteRule: vi.fn() },
+    creditPostbacksApi: {
+      rules: vi.fn(),
+      createRule: vi.fn(),
+      updateRule: vi.fn(),
+      deleteRule: vi.fn(),
+    },
   }
 })
 
 vi.mock('@/components/ui/TableSkeleton', () => ({
-  TableSkeleton: () => <div data-testid="table-skeleton" />,
+  TableSkeleton: ({ columns }: { columns?: number }) => (
+    <div data-testid="table-skeleton" data-columns={columns} />
+  ),
 }))
 
 const api = vi.mocked(creditPostbacksApi)
@@ -96,32 +109,10 @@ function serveRules(rules: CreditPostbackRule[]): void {
 }
 
 /**
- * Повтор мутаций — боевой: копия предиката `main.tsx` (тот его не экспортирует и
- * при импорте монтирует приложение). Сцена «предикат — копия боевого» сверяет
- * эти строки с исходником, чтобы копия не разошлась с оригиналом молча.
+ * Повтор мутаций — боевой: копия предиката `main.tsx` из `@/test/mutationRetry`.
+ * Сцена «предикат — копия боевого» сверяет её строки с исходником, чтобы копия
+ * не разошлась с оригиналом молча.
  */
-const MUTATION_NETWORK_ERROR_CODES = new Set(['ECONNABORTED', 'ETIMEDOUT', 'ERR_NETWORK'])
-const isMutationRetryable = (error: unknown): boolean => {
-  const axiosError = error as AxiosError | undefined
-  if (!axiosError || axiosError.response) return false
-  return Boolean(axiosError.code && MUTATION_NETWORK_ERROR_CODES.has(axiosError.code))
-}
-const MAIN_PREDICATE_LINES = [
-  "const MUTATION_NETWORK_ERROR_CODES = new Set(['ECONNABORTED', 'ETIMEDOUT', 'ERR_NETWORK'])",
-  '  if (!axiosError || axiosError.response) return false',
-  '  return Boolean(axiosError.code && MUTATION_NETWORK_ERROR_CODES.has(axiosError.code))',
-  'retry: (failureCount, error) => failureCount < 1 && isMutationRetryable(error),',
-]
-
-/** Исходник `main.tsx` — глобом Vite с `?raw`: модуль не исполняется. */
-const MAIN_SOURCE = Object.values(
-  import.meta.glob('../../../main.tsx', {
-    query: '?raw',
-    import: 'default',
-    eager: true,
-  }) as Record<string, string>
-)[0]
-
 function renderSection(canWrite = true): QueryClient {
   const client = new QueryClient({
     defaultOptions: {
@@ -142,6 +133,8 @@ function renderSection(canWrite = true): QueryClient {
 }
 
 const DELETE = 'credit.postbacks.rules.delete'
+const ADD = 'credit.postbacks.form.add'
+const EDIT = 'credit.postbacks.form.edit'
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -176,11 +169,11 @@ describe('список правил: пять исходов (AC-a4)', () => {
     }
   })
 
-  it('пусто: «Правил ще немає», кнопки добавления в a1 нет', async () => {
+  it('пусто: «Правил ще немає» и одна кнопка — «Додати правило»', async () => {
     serveRules([])
     renderSection()
     expect(await screen.findByText('credit.postbacks.rules.empty')).toBeInTheDocument()
-    expect(screen.queryAllByRole('button')).toHaveLength(0)
+    expect(screen.getAllByRole('button').map((button) => button.textContent)).toEqual([ADD])
   })
 
   it('403: своё объяснение, а не экран «модуль недоступен»', async () => {
@@ -202,6 +195,24 @@ describe('список правил: пять исходов (AC-a4)', () => {
     renderSection()
     expect(screen.getByTestId('table-skeleton')).toBeInTheDocument()
     expect(screen.queryByText('credit.postbacks.rules.empty')).not.toBeInTheDocument()
+  })
+
+  it.each([
+    [true, '9'],
+    [false, '8'],
+  ])('скелет — столько колонок, сколько у таблицы (право записи: %s → %s)', async (canWrite, n) => {
+    serveRules([rule()])
+    const pending = new Promise<never>(() => {})
+    api.rules.mockImplementation(() => pending)
+    renderSection(canWrite)
+    expect(screen.getByTestId('table-skeleton')).toHaveAttribute('data-columns', n)
+
+    // Контроль: у загруженной таблицы ровно столько же заголовков.
+    serveRules([rule()])
+    cleanup()
+    renderSection(canWrite)
+    await screen.findByText('Partner one — lead')
+    expect(screen.getAllByRole('columnheader')).toHaveLength(Number(n))
   })
 
   it.each([
@@ -334,33 +345,49 @@ describe('вкл/выкл (AC-a7)', () => {
     expect(api.updateRule.mock.calls[1][1]).toEqual({ active: true })
   })
 
-  it('сетевой отказ сам не повторяется; повтор того же действия несёт тот же ключ', async () => {
-    // Так транспорт раздела отдаёт сетевой отказ: `toCreditError` без `code` axios.
+  it('сетевой отказ без ответа (transportCode) — боевой предикат повторяет его тем же ключом', async () => {
+    // Так транспорт раздела отдаёт сетевой отказ: `code` пуст, код axios — в `transportCode`.
     const networkError = toCreditError(new AxiosError('Network Error', 'ERR_NETWORK'))
     expect(networkError).toBeInstanceOf(CreditApiError)
+    expect(networkError.transportCode).toBe('ERR_NETWORK')
     api.updateRule.mockRejectedValueOnce(networkError)
+    renderSection()
+    fireEvent.click(await screen.findByRole('switch'))
+
+    await waitFor(() => expect(api.updateRule).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(screen.getByRole('switch')).toBeEnabled())
+    expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'false')
+    expect(screen.queryByText('credit.postbacks.rules.toggleFailed')).not.toBeInTheDocument()
+    const [first, retried] = api.updateRule.mock.calls
+    expect(retried).toEqual(first)
+  })
+
+  it('сеть не вернулась и после автоповтора; повтор того же действия несёт тот же ключ', async () => {
+    const networkError = () => toCreditError(new AxiosError('Network Error', 'ERR_NETWORK'))
+    api.updateRule.mockRejectedValueOnce(networkError()).mockRejectedValueOnce(networkError())
     const client = renderSection()
     fireEvent.click(await screen.findByRole('switch'))
 
-    // Боевой предикат повтора такой отказ не повторяет: один запрос и сообщение.
+    // Автоповтор один: два запроса с одним ключом, затем сообщение.
     expect(await screen.findByText('credit.postbacks.rules.toggleFailed')).toBeInTheDocument()
-    expect(api.updateRule).toHaveBeenCalledTimes(1)
+    expect(api.updateRule).toHaveBeenCalledTimes(2)
 
-    // Повтор того же действия — ручной `mutate` с теми же переменными мутации
-    // (так же пошёл бы любой будущий автоповтор): ключ прежний, модуль не
-    // выполнит действие дважды (Р-18-13d-9).
+    // Повтор того же действия — ручной `mutate` с теми же переменными мутации:
+    // ключ прежний, модуль не выполнит действие дважды (Р-18-13d-9).
     const [failed] = client.getMutationCache().getAll()
     await act(async () => {
       await new QueryMutationObserver(client, failed.options).mutate(failed.state.variables)
     })
-    expect(api.updateRule).toHaveBeenCalledTimes(2)
-    const [first, repeated] = api.updateRule.mock.calls.map((call) => call[2])
-    expect(repeated).toBe(first)
-    expect(api.updateRule.mock.calls[1][1]).toEqual({ active: false })
+    expect(api.updateRule).toHaveBeenCalledTimes(3)
+    const keys = api.updateRule.mock.calls.map((call) => call[2])
+    expect(new Set(keys).size).toBe(1)
+    expect(api.updateRule.mock.calls[2][1]).toEqual({ active: false })
   })
 
   it('предикат повтора сцен — копия боевого из main.tsx', () => {
     for (const line of MAIN_PREDICATE_LINES) expect(MAIN_SOURCE).toContain(line)
+    // Отказ с ответом — не сетевой сбой: не повторяется.
+    expect(isMutationRetryable(new CreditApiError('Boom', 500))).toBe(false)
   })
 })
 
@@ -421,6 +448,8 @@ describe('без права записи (AC-a7, Р-18-13d-8)', () => {
     expect(toggles).toHaveLength(2)
     for (const toggle of toggles) expect(toggle).toBeDisabled()
     expect(screen.queryByRole('button', { name: DELETE })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: EDIT })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: ADD })).not.toBeInTheDocument()
 
     fireEvent.click(toggles[0])
     expect(api.updateRule).not.toHaveBeenCalled()
@@ -431,6 +460,95 @@ describe('без права записи (AC-a7, Р-18-13d-8)', () => {
     renderSection(true)
     await screen.findByText('Loan rule')
     expect(screen.getAllByRole('button', { name: DELETE })).toHaveLength(2)
+    expect(screen.getAllByRole('button', { name: EDIT })).toHaveLength(2)
+    expect(screen.getByRole('button', { name: ADD })).toBeEnabled()
     for (const toggle of screen.getAllByRole('switch')) expect(toggle).toBeEnabled()
+  })
+})
+
+describe('замечания бота по a1 (К-3 а, б)', () => {
+  async function confirmDelete(index = 0): Promise<void> {
+    fireEvent.click(screen.getAllByRole('button', { name: DELETE })[index])
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: DELETE }))
+  }
+
+  it('отказ вкл/выкл называет правило', async () => {
+    api.updateRule.mockRejectedValue(new CreditApiError('Boom', 500))
+    renderSection()
+    fireEvent.click(await screen.findByRole('switch'))
+    const banner = (await screen.findByText(/credit\.postbacks\.rules\.toggleFailed/)).closest(
+      '[role="alert"]'
+    ) as HTMLElement
+    expect(banner.textContent).toContain('«Partner one — lead»')
+  })
+
+  it('отказ удаления называет правило', async () => {
+    api.deleteRule.mockRejectedValue(new CreditApiError('Boom', 500))
+    renderSection()
+    await screen.findByText('Partner one — lead')
+    await confirmDelete()
+    const banner = (await screen.findByText(/credit\.postbacks\.rules\.deleteFailed/)).closest(
+      '[role="alert"]'
+    ) as HTMLElement
+    expect(banner.textContent).toContain('«Partner one — lead»')
+  })
+
+  it('отказ вкл/выкл снимается стартом удаления, и наоборот', async () => {
+    serveRules([rule(), rule({ id: 'r-2', name: 'Loan rule', trigger: 'new_loan' })])
+    api.updateRule.mockRejectedValueOnce(new CreditApiError('Boom', 500))
+    api.deleteRule.mockRejectedValueOnce(new CreditApiError('Boom', 500))
+    renderSection()
+    await screen.findByText('Loan rule')
+
+    fireEvent.click(screen.getAllByRole('switch')[0])
+    expect(await screen.findByText(/rules\.toggleFailed/)).toBeInTheDocument()
+
+    await confirmDelete(1)
+    expect(await screen.findByText(/rules\.deleteFailed/)).toBeInTheDocument()
+    expect(screen.queryByText(/rules\.toggleFailed/)).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getAllByRole('switch')[0])
+    await waitFor(() => expect(screen.queryByText(/rules\.deleteFailed/)).not.toBeInTheDocument())
+  })
+
+  it('пока строка удаляется, её переключатель и «Змінити» выключены; соседняя строка — нет', async () => {
+    serveRules([rule(), rule({ id: 'r-2', name: 'Loan rule', trigger: 'new_loan' })])
+    api.deleteRule.mockImplementation(() => new Promise(() => {}))
+    renderSection()
+    await screen.findByText('Loan rule')
+    await confirmDelete(0)
+
+    await waitFor(() => expect(screen.getAllByRole('switch')[0]).toBeDisabled())
+    expect(screen.getAllByRole('button', { name: EDIT })[0]).toBeDisabled()
+    expect(screen.getAllByRole('switch')[1]).toBeEnabled()
+    expect(screen.getAllByRole('button', { name: EDIT })[1]).toBeEnabled()
+
+    fireEvent.click(screen.getAllByRole('switch')[0])
+    expect(api.updateRule).not.toHaveBeenCalled()
+  })
+
+  it('вкл/выкл другой строки во время удаления не снимает защиту строки и не теряет отказ', async () => {
+    serveRules([rule(), rule({ id: 'r-2', name: 'Loan rule', trigger: 'new_loan' })])
+    let refuse: (error: Error) => void = () => {}
+    api.deleteRule.mockImplementation(
+      () => new Promise<CreditPostbackRule>((_resolve, reject) => (refuse = reject))
+    )
+    renderSection()
+    await screen.findByText('Loan rule')
+    await confirmDelete(0)
+    await waitFor(() => expect(screen.getAllByRole('switch')[0]).toBeDisabled())
+
+    // Удаление A ещё в пути — переключаем B.
+    fireEvent.click(screen.getAllByRole('switch')[1])
+    await waitFor(() => expect(api.updateRule).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(screen.getAllByRole('switch')[1]).toBeEnabled())
+    expect(screen.getAllByRole('switch')[0]).toBeDisabled()
+    expect(screen.getAllByRole('button', { name: EDIT })[0]).toBeDisabled()
+
+    await act(async () => refuse(new CreditApiError('Boom', 500)))
+    const banner = (await screen.findByText(/credit\.postbacks\.rules\.deleteFailed/)).closest(
+      '[role="alert"]'
+    ) as HTMLElement
+    expect(banner.textContent).toContain('«Partner one — lead»')
   })
 })
