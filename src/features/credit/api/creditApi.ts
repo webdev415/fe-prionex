@@ -51,7 +51,7 @@ import type {
  */
 export const CREDIT_API_BASE_URL = import.meta.env.VITE_CREDIT_API_BASE_URL ?? ''
 
-const CREDIT_PREFIX = '/api/v1/credit'
+export const CREDIT_PREFIX = '/api/v1/credit'
 
 /**
  * Уборка за прежней схемой доступа.
@@ -130,7 +130,7 @@ export class CreditApiError extends Error {
   }
 }
 
-function toCreditError(error: unknown): CreditApiError {
+export function toCreditError(error: unknown): CreditApiError {
   const axiosError = error as AxiosError<{
     title?: string
     detail?: string

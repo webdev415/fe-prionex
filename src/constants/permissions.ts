@@ -52,6 +52,9 @@ export const PERMISSIONS = {
     PARAMETERS_PROPOSE: 'credit.parameters.propose',
     PARAMETERS_APPROVE: 'credit.parameters.approve',
     PRODUCTS_VIEW: 'credit.products.read',
+    // Постбеки партнерам (18-13d): миграция auth 100, двери модуля 18-13b.
+    POSTBACKS_VIEW: 'credit.partner_postbacks.read',
+    POSTBACKS_WRITE: 'credit.partner_postbacks.write',
   },
 
   /**
@@ -589,6 +592,8 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   'credit.parameters.propose': 'Propose a change to a decision-engine parameter',
   'credit.parameters.approve': 'Approve a proposed parameter change (second approver, UW-04)',
   'credit.products.read': 'View the credit product catalogue and versions',
+  'credit.partner_postbacks.read': 'View partner postback rules and their delivery log',
+  'credit.partner_postbacks.write': 'Create, edit, switch on/off and delete partner postback rules',
 
   // Clients
   view_clients: 'View client data and information',

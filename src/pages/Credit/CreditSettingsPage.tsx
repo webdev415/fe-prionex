@@ -1,6 +1,7 @@
 /**
  * Настройки кредитного модуля: продукты, параметры решения, интеграции,
- * рубильники и сайт (владелец сайта и вход в его админку, 17-40b).
+ * рубильники, сайт (владелец сайта и вход в его админку, 17-40b) и постбеки
+ * партнерам (18-13d).
  *
  * Композиция — как у настроек CRM (`pages/AiSettings`): заголовок, пояснение и
  * секции, каждая из которых сама решает, что показать текущей роли. Вкладка
@@ -16,12 +17,13 @@ import { CreditParametersSection } from './components/CreditParametersSection'
 import { CreditIntegrationsSection } from './components/CreditIntegrationsSection'
 import { CreditSwitchesSection } from './components/CreditSwitchesSection'
 import { CreditSiteSection } from './components/CreditSiteSection'
+import { CreditPostbacksSection } from './components/CreditPostbacksSection'
 import { Alert } from '@/components/ui/Alert'
 import { useCreditSectionEnabled } from '@/features/credit/hooks/useCredit'
 import { PERMISSIONS } from '@/constants/permissions'
-import { useHasAnyPermission } from '@/hooks/usePermissions'
+import { useHasAnyPermission, useHasPermission } from '@/hooks/usePermissions'
 
-type SettingsTab = 'products' | 'parameters' | 'integrations' | 'switches' | 'site'
+type SettingsTab = 'products' | 'parameters' | 'integrations' | 'switches' | 'site' | 'postbacks'
 
 export function CreditSettingsPage() {
   const { t } = useTranslation('common')
@@ -35,21 +37,27 @@ export function CreditSettingsPage() {
     PERMISSIONS.SITE.CONTENT_EDIT,
     PERMISSIONS.SITE.CONTENT_PUBLISH,
   ])
-  // Контент-менеджер сайта без кредитных прав попадает сюда только ради
-  // сайта (маршрут пускает его по праву на контент): вкладки модуля ему были
-  // бы стеной отказов, поэтому у него остаётся одна вкладка. Набор прав —
-  // тот же, что у маршрута `credit/settings` без прав на сайт.
+  // Контент-менеджер сайта или маркетолог без кредитных прав попадает сюда
+  // только ради сайта или постбеков (маршрут пускает его по своему праву):
+  // вкладки модуля ему были бы стеной отказов, поэтому у него остаются только
+  // свои вкладки. Набор прав — тот же, что у маршрута `credit/settings` без
+  // прав на сайт и постбеки.
   const hasCreditSettingsAccess = useHasAnyPermission([
     PERMISSIONS.CREDIT.PARAMETERS_VIEW,
     PERMISSIONS.CREDIT.PRODUCTS_VIEW,
     PERMISSIONS.CREDIT.APPLICATIONS_VIEW,
     PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
   ])
-  const siteOnly = canSeeSite && !hasCreditSettingsAccess
+  // Постбеки партнерам (18-13d) — права пропуска CRM, а не сводки модуля:
+  // сводка требует `credit.loans.read`, и маркетолог без кредитных прав ловил
+  // бы 403 на каждый заход (Р-18-13d-3).
+  const canSeePostbacks = useHasPermission(PERMISSIONS.CREDIT.POSTBACKS_VIEW)
+  const canWritePostbacks = useHasPermission(PERMISSIONS.CREDIT.POSTBACKS_WRITE)
+  const moduleOff = (canSeeSite || canSeePostbacks) && !hasCreditSettingsAccess
 
   // Кредитный модуль такому человеку ничего не покажет — и спрашивать его
   // незачем: каждый запрос был бы 403 от credit-service в логах шлюза.
-  const { data: overview } = useCreditOverview({ enabled: !siteOnly })
+  const { data: overview } = useCreditOverview({ enabled: !moduleOff })
 
   // Права приходят от самого модуля: продукты и параметры — риск-менеджеру.
   // UI повторяет ту же матрицу, но не подменяет её: отказ всё равно придёт
@@ -62,7 +70,7 @@ export function CreditSettingsPage() {
   // остаётся открытой при выключенном разделе, она обязана сказать почему:
   // иначе риск-менеджер видит работающие настройки внутри «выключенного»
   // модуля и не понимает, в каком состоянии система.
-  const sectionEnabled = useCreditSectionEnabled(!siteOnly)
+  const sectionEnabled = useCreditSectionEnabled(!moduleOff)
 
   const moduleTabs = [
     { id: 'products' as const, label: t('credit.settings.tabs.products') },
@@ -76,9 +84,11 @@ export function CreditSettingsPage() {
       : []),
   ]
   const siteTab = { id: 'site' as const, label: t('credit.settings.tabs.site') }
-  const tabs: Array<{ id: SettingsTab; label: string }> = siteOnly
-    ? [siteTab]
-    : [...moduleTabs, ...(canSeeSite ? [siteTab] : [])]
+  const postbacksTab = { id: 'postbacks' as const, label: t('credit.settings.tabs.postbacks') }
+  const crmTabs = [...(canSeeSite ? [siteTab] : []), ...(canSeePostbacks ? [postbacksTab] : [])]
+  const tabs: Array<{ id: SettingsTab; label: string }> = moduleOff
+    ? crmTabs
+    : [...moduleTabs, ...crmTabs]
 
   const current = (tabs.find((item) => item.id === tab)?.id ?? tabs[0].id) as SettingsTab
 
@@ -100,8 +110,9 @@ export function CreditSettingsPage() {
         />
 
         {/* Рубильник раздела модуля к сайту отношения не имеет: на вкладке
-            «Сайт» предупреждение о нём сбивало бы с толку. */}
-        {!sectionEnabled && current !== 'site' && (
+            «Сайт» предупреждение о нём сбивало бы с толку. Постбеки модуль шлёт
+            и при выключенном разделе — рубильник прячет экраны, не события. */}
+        {!sectionEnabled && current !== 'site' && current !== 'postbacks' && (
           <Alert variant="warning" className="mt-4">
             {t('credit.switches.sectionOffHere')}
           </Alert>
@@ -116,6 +127,7 @@ export function CreditSettingsPage() {
           {current === 'integrations' && <CreditIntegrationsSection overview={overview} />}
           {current === 'switches' && <CreditSwitchesSection overview={overview} />}
           {current === 'site' && <CreditSiteSection />}
+          {current === 'postbacks' && <CreditPostbacksSection canWrite={canWritePostbacks} />}
         </div>
       </div>
     </TooltipProvider>
