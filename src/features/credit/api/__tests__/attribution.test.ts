@@ -140,6 +140,30 @@ describe('метки: прочие (marketing_other)', () => {
     // Положительный контроль: глобал восстановлен, графемы снова считаются.
     expect('Segmenter' in Intl).toBe(true)
   })
+
+  it('разбивка на графемы создаётся один раз, а не на каждую метку (хвост 18-13c-a)', () => {
+    const Original = Intl.Segmenter
+    let made = 0
+    class Counting extends Original {
+      constructor(...args: ConstructorParameters<typeof Intl.Segmenter>) {
+        super(...args)
+        made += 1
+      }
+    }
+    const intl = Intl as unknown as { Segmenter: typeof Intl.Segmenter }
+    intl.Segmenter = Counting
+    try {
+      const family = '\u{1F468}‍\u{1F469}‍\u{1F467}'
+      for (let i = 0; i < 3; i += 1) {
+        expect(truncateAttribution(`${'a'.repeat(255)}${family}bb`)).toBe(
+          `${'a'.repeat(255)}${family}…`
+        )
+      }
+    } finally {
+      intl.Segmenter = Original
+    }
+    expect(made, 'Intl.Segmenter создаётся на каждый вызов').toBe(1)
+  })
 })
 
 describe('метки: фильтры списка', () => {

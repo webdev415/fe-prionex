@@ -251,12 +251,22 @@ async function toCreditErrorFromBody(error: unknown): Promise<CreditApiError> {
 
 /**
  * Содержимое документа по пути двери. Blob'ом, а не ссылкой: ручке нужны
- * заголовки авторизации. Параметров нет: проект модуль берёт из пропуска.
+ * заголовки авторизации. У документа параметров нет: проект модуль берёт из
+ * пропуска. Выгрузка заявок (18-13c-b) передаёт фильтры — повторяемый `status`,
+ * как у `get`, — и свой таймаут.
  */
-async function fetchDocumentContent(path: string): Promise<CreditDocumentContent> {
+async function fetchDocumentContent(
+  path: string,
+  query?: { params: Record<string, unknown>; timeout: number }
+): Promise<CreditDocumentContent> {
   try {
     const response = await creditHttp.get<Blob>(`${CREDIT_PREFIX}${path}`, {
       responseType: 'blob',
+      ...(query && {
+        params: query.params,
+        paramsSerializer: { indexes: null },
+        timeout: query.timeout,
+      }),
     })
     return {
       blob: response.data,
@@ -314,20 +324,87 @@ function dateRange(params: CreditApplicationsParams): Record<string, string> {
   return range
 }
 
+/** Фильтры выгрузки — фильтры списка без страницы: файл несёт все заявки под фильтром. */
+export type CreditApplicationsExportParams = Omit<CreditApplicationsParams, 'limit' | 'cursor'>
+
+/** Файл выгрузки: байты как прислал модуль (BOM, `\r\n`) и имя для сохранения. */
+export interface CreditApplicationsExport {
+  blob: Blob
+  filename: string
+}
+
+/**
+ * Модуль собирает до 10 000 строк одним ответом — общих 30 с может не хватить.
+ * Только у выгрузки: прочим дверям долгий таймаут спрятал бы зависший запрос.
+ * Настоящий предел — Kong `read_timeout` 60 с у credit-service (api-prionex
+ * `config/kong/init-kong.sh`) и nginx фронта (умолчание 60 с): 55 с — чтобы отказ
+ * приходил от клиента предсказуемо, а не 504 шлюза. Поднять можно только вместе
+ * с Kong и nginx (api-prionex), хвост.
+ */
+const EXPORT_TIMEOUT_MS = 55_000
+
+/**
+ * Выборка заявок — одна для списка и выгрузки (К-6): контракт обещает «файл =
+ * список под теми же параметрами», и фронт держит это одним построителем, а не
+ * двумя копиями. Страница (`limit`/`cursor`) — только у списка; порядок ключей
+ * списка прежний.
+ */
+function applicationsQuery(
+  params: CreditApplicationsExportParams,
+  page?: { limit: number; cursor?: string }
+): Record<string, unknown> {
+  return {
+    status: params.status,
+    query: params.query || undefined,
+    sort: params.sort,
+    ...page,
+    ...dateRange(params),
+    ...attributionFilters(params),
+  }
+}
+
+/**
+ * Имя файла выгрузки — из `Content-Disposition` модуля (ASCII, день по
+ * календарю юрисдикции заявок); иное имя или его нет — день по часам браузера.
+ * Принимаются только `[A-Za-z0-9_.-]`: имя не несёт путей и символов,
+ * подменяющих видимое.
+ */
+function exportFilename(disposition: string): string {
+  const named = /filename\s*=\s*"?([\w.-]+)"?\s*(?:;|$)/i.exec(disposition)?.[1]
+  if (named) return named
+  const now = new Date()
+  const day = [now.getFullYear(), now.getMonth() + 1, now.getDate()]
+    .map((part) => String(part).padStart(2, '0'))
+    .join('-')
+  return `credit-applications-${day}.csv`
+}
+
 export const creditApi = {
   /** Сводка стенда: счётчики по статусам и права текущей роли. */
   overview: () => get<CreditOverview>('/admin/overview'),
 
   applications: (params: CreditApplicationsParams) =>
-    get<CreditPage<CreditApplicationSummary>>('/applications', {
-      status: params.status,
-      query: params.query || undefined,
-      sort: params.sort,
-      limit: params.limit ?? 25,
-      cursor: params.cursor,
-      ...dateRange(params),
-      ...attributionFilters(params),
-    }),
+    get<CreditPage<CreditApplicationSummary>>(
+      '/applications',
+      applicationsQuery(params, { limit: params.limit ?? 25, cursor: params.cursor })
+    ),
+
+  /**
+   * Выгрузка заявок CSV — `exportInternalApplications` (18-13x, контракт 0.1.45),
+   * право `credit.applications.export`. Выборка — та же, что у `applications`,
+   * без страницы. Сверх предела модуля — `422` с числами `details.total` и
+   * `details.max_rows`; разбор отказа — `toCreditErrorFromBody` (тело blob'ом).
+   * Blob не перекодируется: BOM в начале держит кириллицу в Excel.
+   */
+  exportApplications: async (
+    params: CreditApplicationsExportParams
+  ): Promise<CreditApplicationsExport> => {
+    const { blob, disposition } = await fetchDocumentContent('/applications/export', {
+      params: applicationsQuery(params),
+      timeout: EXPORT_TIMEOUT_MS,
+    })
+    return { blob, filename: exportFilename(disposition) }
+  },
 
   application: (applicationId: string) =>
     get<CreditApplicationDetail>(`/applications/${applicationId}`),
