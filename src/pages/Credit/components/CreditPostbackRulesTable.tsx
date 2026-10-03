@@ -40,10 +40,16 @@ export function CreditPostbackRulesTable({
   rules,
   canWrite,
   onEdit,
+  conflict,
+  onAction,
 }: {
   rules: CreditPostbackRule[]
   canWrite: boolean
   onEdit?: (rule: CreditPostbackRule) => void
+  /** Имя правила, правку которого модуль отклонил 409 (форма закрыта). */
+  conflict?: string
+  /** Старт вкл/выкл или удаления — снять баннер `conflict`. */
+  onAction?: () => void
 }) {
   const { t } = useTranslation('common')
   const toggle = useToggleCreditPostbackRule()
@@ -100,6 +106,7 @@ export function CreditPostbackRulesTable({
           checked={toggle.pending?.id === rule.id ? toggle.pending.active : rule.active}
           onChange={(active) => {
             remove.reset()
+            onAction?.()
             toggle.run({ id: rule.id, name: rule.name, active })
           }}
           disabled={!canWrite || toggle.isPending || deleting(rule)}
@@ -145,6 +152,12 @@ export function CreditPostbackRulesTable({
 
   return (
     <>
+      {conflict && (
+        <Alert variant="error" className="mb-3">
+          {failedName({ name: conflict })}
+          {t('credit.postbacks.form.conflict')}
+        </Alert>
+      )}
       {toggle.error && (
         <Alert variant="error" className="mb-3">
           {failedName(toggle.failed)}
@@ -168,6 +181,7 @@ export function CreditPostbackRulesTable({
         onConfirm={() => {
           if (confirming) {
             toggle.reset()
+            onAction?.()
             remove.run({ id: confirming.id, name: confirming.name })
           }
           setConfirming(null)

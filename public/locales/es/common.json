@@ -13916,7 +13916,9 @@
         "cancel": "Cancelar",
         "save": "Guardar",
         "saveFailed": "No se pudo guardar la regla. Inténtelo de nuevo.",
-        "conflict": "Otro usuario cambió la regla: actualice la lista",
+        "conflict": "Otro usuario cambió la regla: la lista se ha actualizado, abra «Editar» de nuevo",
+        "mayExist": "Puede que la regla ya se haya creado en el intento anterior: actualice la lista y compruébelo",
+        "outcomeUnknown": "Resultado desconocido: puede que la regla se haya creado. Reintentar es seguro: no se creará un duplicado.",
         "errors": {
           "url_too_long": "La URL tiene más de 2000 caracteres.",
           "url_control_character": "La URL contiene un carácter invisible o de control (espacio, tabulación).",

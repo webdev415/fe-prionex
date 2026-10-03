@@ -5,13 +5,18 @@
  *  - клиент зеркалит три проверки модуля: без `{click_id}`, чужой макрос (по
  *    имени), `{amount}` у «Новий лід» — ошибка у поля URL и «Зберегти» неактивна;
  *  - 422 модуля раскладывается по полям: `errors[].field` → поле, текст — по
- *    `details.reason`; без поля — общий `Alert` с текстом Problem;
- *  - ключ создания живёт на действие с неизменным телом: повтор после сетевого
- *    отказа — тот же ключ, правка после 422 — новый, новое открытие — новый;
- *    повтор мутаций — боевой предикат `main.tsx` (сетевой отказ транспорта
- *    раздела — `transportCode` — повторяется один раз), а не `retry` теста;
+ *    `details.reason`; без поля — общий `Alert` с текстом Problem; правка поля
+ *    снимает и общий отказ;
+ *  - ключ создания живёт на открытие формы: повтор после сетевого отказа — тот
+ *    же ключ, правка после 422 — новый, правка после неизвестного исхода (нет
+ *    ответа, 5xx, 429) — тот же до закрытия формы и предупреждение «правило
+ *    могло быть создано», 409 `idempotency_key_reused` на повторе — свой текст;
+ *    новое открытие — новый ключ; повтор мутаций — боевой предикат `main.tsx`
+ *    (сетевой отказ транспорта раздела — `transportCode` — повторяется один
+ *    раз), а не `retry` теста;
+ *  - имя и `utm_source` уходят без пробелов по краям;
  *  - правка шлёт `PATCH` только изменённых полей, ключ — на нажатие; 409 —
- *    «правило змінив інший користувач» и перечитка списка;
+ *    форма закрыта, таблица называет правило, список перечитан;
  *  - пока запрос в пути, форма выключена и не закрывается;
  *  - подсказка макросов из ответа двери, вставка в позицию курсора, пример ТЗ;
  *    подстановки значений на клиенте нет; поле URL и текст его ошибки под
@@ -212,6 +217,16 @@ describe('создание (AC-a5)', () => {
     await waitFor(() => expect(api.createRule).toHaveBeenCalledTimes(1))
     expect(api.createRule.mock.calls[0][0].active).toBe(false)
   })
+
+  it('имя уходит без пробелов по краям', async () => {
+    renderSection()
+    const dialog = await openCreate()
+    fill(dialog)
+    type(field(dialog, 'credit.postbacks.rules.name'), '  Rule  ')
+    fireEvent.click(saveButton(dialog))
+    await waitFor(() => expect(api.createRule).toHaveBeenCalledTimes(1))
+    expect(api.createRule.mock.calls[0][0].name).toBe('Rule')
+  })
 })
 
 describe('клиентские проверки адреса (AC-a5, Р-18-13d-6)', () => {
@@ -310,6 +325,30 @@ describe('отказы модуля (AC-a5, К-2)', () => {
     const alert = await within(dialog).findByRole('alert')
     expect(alert).toHaveTextContent('Правило постбека не прошло проверку')
   })
+
+  it.each([
+    [
+      '409 idempotency_key_reused',
+      new CreditApiError('Idempotency key reused', 409, 'idempotency_key_reused'),
+      'credit.postbacks.form.mayExist',
+    ],
+    [
+      '422 без поля',
+      refused422([{ field: null, code: 'invalid_value' }]),
+      'Правило постбека не прошло проверку',
+    ],
+  ])('общий отказ (%s) снимается правкой поля', async (_name, refusal, text) => {
+    api.createRule.mockRejectedValueOnce(refusal)
+    renderSection()
+    const dialog = await openCreate()
+    fill(dialog)
+    fireEvent.click(saveButton(dialog))
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(text)
+
+    type(field(dialog, 'credit.postbacks.rules.goal'), '1')
+    expect(within(dialog).queryByText(text)).toBeNull()
+    expect(within(dialog).queryByRole('alert')).toBeNull()
+  })
 })
 
 describe('ключ идемпотентности создания (AC-a5, Р-18-13d-9, К-4) — боевой повтор', () => {
@@ -363,6 +402,113 @@ describe('ключ идемпотентности создания (AC-a5, Р-18
     expect(second).not.toBe(first)
   })
 
+  it.each([
+    [
+      'сеть без ответа и автоповтор',
+      () =>
+        api.createRule.mockRejectedValueOnce(networkError()).mockRejectedValueOnce(networkError()),
+      2,
+    ],
+    ['503', () => api.createRule.mockRejectedValueOnce(new CreditApiError('Unavailable', 503)), 1],
+    ['429', () => api.createRule.mockRejectedValueOnce(new CreditApiError('Too many', 429)), 1],
+  ])(
+    'исход неизвестен (%s), правка поля, повтор — тот же ключ (модуль мог правило создать)',
+    async (_name, refuse, attempts) => {
+      refuse()
+      renderSection()
+      const dialog = await openCreate()
+      fill(dialog)
+      fireEvent.click(saveButton(dialog))
+      await within(dialog).findByText('credit.postbacks.form.saveFailed')
+      expect(api.createRule).toHaveBeenCalledTimes(attempts)
+
+      type(field(dialog, 'credit.postbacks.rules.goal'), '1')
+      fireEvent.click(saveButton(dialog))
+      await waitFor(() => expect(api.createRule).toHaveBeenCalledTimes(attempts + 1))
+      const keys = api.createRule.mock.calls.map((call) => call[1])
+      expect(keys[attempts]).toBe(keys[0])
+      expect(api.createRule.mock.calls[attempts][0].goal).toBe('1')
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    }
+  )
+
+  it('предупреждение только при неизвестном исходе: после 422 — нет, после 503 — есть и переживает правку', async () => {
+    api.createRule
+      .mockRejectedValueOnce(
+        refused422([{ field: 'goal', code: 'invalid_value' }], { goal: ['goal_format'] })
+      )
+      .mockRejectedValueOnce(new CreditApiError('Unavailable', 503))
+    renderSection()
+    const dialog = await openCreate()
+    fill(dialog)
+    type(field(dialog, 'credit.postbacks.rules.goal'), 'abc')
+    fireEvent.click(saveButton(dialog))
+    await within(dialog).findByText('credit.postbacks.form.errors.goal_format')
+    expect(within(dialog).queryByRole('status')).toBeNull()
+
+    type(field(dialog, 'credit.postbacks.rules.goal'), '1')
+    fireEvent.click(saveButton(dialog))
+    const status = await within(dialog).findByRole('status')
+    expect(status).toHaveTextContent('credit.postbacks.form.outcomeUnknown')
+    expect(within(dialog).getByText('credit.postbacks.form.saveFailed')).toBeInTheDocument()
+
+    // Правка снимает общий отказ, но исход по-прежнему неизвестен.
+    type(field(dialog, 'credit.postbacks.rules.goal'), '2')
+    expect(within(dialog).queryByText('credit.postbacks.form.saveFailed')).toBeNull()
+    expect(within(dialog).getByRole('status')).toHaveTextContent(
+      'credit.postbacks.form.outcomeUnknown'
+    )
+  })
+
+  it('исход неизвестен, правка, повтор тем же ключом — 409 idempotency_key_reused: «правило могло быть создано», форма открыта, список перечитан', async () => {
+    api.createRule
+      .mockRejectedValueOnce(new CreditApiError('Unavailable', 503))
+      .mockRejectedValueOnce(
+        new CreditApiError('Idempotency key reused', 409, 'idempotency_key_reused')
+      )
+    renderSection()
+    const dialog = await openCreate()
+    fill(dialog)
+    fireEvent.click(saveButton(dialog))
+    await within(dialog).findByRole('status')
+    const before = api.rules.mock.calls.length
+
+    type(field(dialog, 'credit.postbacks.rules.goal'), '1')
+    fireEvent.click(saveButton(dialog))
+    expect(await within(dialog).findByText('credit.postbacks.form.mayExist')).toBeInTheDocument()
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    // Флаг неизвестного исхода держится до закрытия формы.
+    expect(within(dialog).getByRole('status')).toBeInTheDocument()
+    await waitFor(() => expect(api.rules.mock.calls.length).toBeGreaterThan(before))
+    const [first, second] = api.createRule.mock.calls.map((call) => call[1])
+    expect(second).toBe(first)
+  })
+
+  it('исход неизвестен, правка, 422 схемы, правка, повтор — ключ тот же до закрытия формы', async () => {
+    api.createRule
+      .mockRejectedValueOnce(new CreditApiError('Unavailable', 503))
+      .mockRejectedValueOnce(
+        refused422([{ field: 'goal', code: 'invalid_value' }], { goal: ['goal_format'] })
+      )
+    renderSection()
+    const dialog = await openCreate()
+    fill(dialog)
+    fireEvent.click(saveButton(dialog))
+    await within(dialog).findByRole('status')
+
+    type(field(dialog, 'credit.postbacks.rules.goal'), 'abc')
+    fireEvent.click(saveButton(dialog))
+    await within(dialog).findByText('credit.postbacks.form.errors.goal_format')
+    expect(within(dialog).getByRole('status')).toBeInTheDocument()
+
+    type(field(dialog, 'credit.postbacks.rules.goal'), '1')
+    fireEvent.click(saveButton(dialog))
+    await waitFor(() => expect(api.createRule).toHaveBeenCalledTimes(3))
+    const [first, second, third] = api.createRule.mock.calls.map((call) => call[1])
+    expect([second, third]).toEqual([first, first])
+    expect(api.createRule.mock.calls[2][0].goal).toBe('1')
+  })
+
   it('новое открытие формы — новый ключ', async () => {
     api.createRule.mockRejectedValueOnce(networkError()).mockRejectedValueOnce(networkError())
     renderSection()
@@ -413,16 +559,50 @@ describe('правка (AC-a5)', () => {
     expect(await screen.findByText('Renamed')).toBeInTheDocument()
   })
 
-  it('409 — «правило змінив інший користувач», список перечитан', async () => {
-    api.updateRule.mockRejectedValueOnce(new CreditApiError('Conflict', 409, 'conflict'))
+  /** PATCH отклонён 409: другой пользователь успел переименовать правило. */
+  async function conflictOnEdit(): Promise<number> {
+    api.updateRule.mockImplementationOnce(async () => {
+      server = server.map((item) => ({ ...item, name: 'Changed elsewhere' }))
+      throw new CreditApiError('Conflict', 409, 'conflict')
+    })
     renderSection()
     const dialog = await openEdit()
     const before = api.rules.mock.calls.length
     type(field(dialog, 'credit.postbacks.rules.name'), 'Renamed')
     fireEvent.click(saveButton(dialog))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    return before
+  }
 
-    expect(await within(dialog).findByText('credit.postbacks.form.conflict')).toBeInTheDocument()
+  it('409 — форма закрыта, таблица называет правило, список перечитан; «Змінити» — свежая копия', async () => {
+    const before = await conflictOnEdit()
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      '«Partner one — lead» — credit.postbacks.form.conflict'
+    )
     await waitFor(() => expect(api.rules.mock.calls.length).toBeGreaterThan(before))
+    expect(await screen.findByText('Changed elsewhere')).toBeInTheDocument()
+
+    const reopened = await openEdit()
+    expect(field(reopened, 'credit.postbacks.rules.name').value).toBe('Changed elsewhere')
+    expect(screen.queryByText(/credit\.postbacks\.form\.conflict/)).toBeNull()
+  })
+
+  it('баннер 409 снимается стартом вкл/выкл', async () => {
+    await conflictOnEdit()
+    expect(screen.getByText(/credit\.postbacks\.form\.conflict/)).toBeInTheDocument()
+    fireEvent.click(await screen.findByRole('switch'))
+    expect(screen.queryByText(/credit\.postbacks\.form\.conflict/)).toBeNull()
+  })
+
+  it('правка только пробелами по краям имени — отправлять нечего', async () => {
+    renderSection()
+    const dialog = await openEdit()
+    type(field(dialog, 'credit.postbacks.rules.name'), '  Partner one — lead  ')
+    expect(saveButton(dialog)).toBeDisabled()
+    type(field(dialog, 'credit.postbacks.rules.name'), '  Renamed  ')
+    fireEvent.click(saveButton(dialog))
+    await waitFor(() => expect(api.updateRule).toHaveBeenCalledTimes(1))
+    expect(api.updateRule.mock.calls[0][1]).toEqual({ name: 'Renamed' })
   })
 
   it.each([

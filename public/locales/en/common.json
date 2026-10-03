@@ -13871,7 +13871,9 @@
         "cancel": "Cancel",
         "save": "Save",
         "saveFailed": "Could not save the rule. Try again.",
-        "conflict": "Another user changed the rule — refresh the list",
+        "conflict": "Another user changed the rule — the list is refreshed, open “Edit” again",
+        "mayExist": "The rule may already have been created by the previous attempt — refresh the list and check",
+        "outcomeUnknown": "The outcome is unknown: the rule may have been created. Retrying is safe — no duplicate will be created.",
         "errors": {
           "url_too_long": "The URL is longer than 2000 characters.",
           "url_control_character": "The URL contains an invisible or control character (space, tab).",

@@ -10,12 +10,12 @@
  * (`main.tsx`) повторяет сетевой отказ (`transportCode` у `CreditApiError`) один
  * раз — с теми же переменными мутации, значит с тем же ключом.
  *
- * Создание из формы (a2) — иначе: ключ живёт на действие с НЕИЗМЕННЫМ телом
- * (модуль кладёт тело в отпечаток ключа; см. `useSaveCreditPostbackRule`).
+ * Создание из формы (a2) — иначе: ключ живёт на открытие формы и меняется только
+ * после определённого отказа (см. `useSaveCreditPostbackRule`).
  */
 import { useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { newIdempotencyKey } from '../api/creditApi'
+import { CreditApiError, newIdempotencyKey } from '../api/creditApi'
 import {
   creditPostbacksApi,
   type CreditPostbackRule,
@@ -94,22 +94,39 @@ export function useDeleteCreditPostbackRule() {
   )
 }
 
-type SaveCallbacks = { onSuccess: () => void; onError: (error: Error) => void }
+/**
+ * Определённый отказ — ответ 4xx, кроме 408 и 429: модуль правило не создал.
+ * Нет ответа (сеть, таймаут), 5xx, 408, 429 — исход неизвестен. Копия
+ * `isSettledRefusal` из `useCredit.ts` (там она не экспортируется).
+ */
+function isSettledRefusal(error: unknown): boolean {
+  if (!(error instanceof CreditApiError) || error.status === undefined) return false
+  return error.status < 500 && error.status !== 408 && error.status !== 429
+}
+
+/** `unsettled` — у создания с открытия формы был неизвестный исход: правило могло появиться. */
+type SaveCallbacks = { onSuccess: () => void; onError: (error: Error, unsettled: boolean) => void }
 
 /**
  * Сохранение формы правила: без `ruleId` — создание, с ним — правка.
  *
- * Ключ создания (Р-18-13d-9) минтится при открытии формы (монтаж хука) и живёт,
- * пока тело не меняется: повтор неизменённого тела после сетевого отказа несёт
- * тот же ключ — модуль отдаст первый ответ, дубля правила не будет. Ключ, уже
- * ушедший с одним телом, с другим не годится (модуль ответит 409), поэтому
- * любая правка поля после отправки (`edited`) минтит новый. Правка (PATCH) —
- * ключ на нажатие, как у вкл/выкл.
+ * Ключ создания (Р-18-13d-9) минтится при открытии формы (монтаж хука). Модуль
+ * кладёт тело в отпечаток ключа: тот же ключ с тем же телом — первый ответ, с
+ * другим — 409 `idempotency_key_reused`. Отсюда два случая:
+ *  - определённый отказ (422, 409, 403…) — правила нет; правка поля после него
+ *    (`edited`) — новое действие и новый ключ;
+ *  - исход неизвестен (нет ответа, 5xx, 408, 429) — модуль мог правило создать,
+ *    поэтому ключ держится до закрытия формы, даже после следующих определённых
+ *    отказов (422 схемы модуль отдаёт раньше сверки ключа): повтор либо создаст
+ *    правило, либо получит первый ответ или 409 — второго правила не будет
+ *    (ревью бота, Б-1).
+ * Правка (PATCH) — ключ на нажатие, как у вкл/выкл.
  */
 export function useSaveCreditPostbackRule(ruleId?: string) {
   const queryClient = useQueryClient()
   const [createKey, setCreateKey] = useState(() => newIdempotencyKey('fe-postback-rule'))
-  const keySent = useRef(false)
+  const keyRefused = useRef(false)
+  const unsettled = useRef(false)
   const mutation = useMutation({
     mutationFn: ({ body, key }: { body: CreditPostbackRulePatch; key: string }) =>
       ruleId
@@ -120,14 +137,19 @@ export function useSaveCreditPostbackRule(ruleId?: string) {
     },
   })
   return {
-    save: (body: CreditPostbackRulePatch, callbacks: SaveCallbacks) => {
-      keySent.current = !ruleId
+    save: (body: CreditPostbackRulePatch, { onSuccess, onError }: SaveCallbacks) => {
+      keyRefused.current = false
       const key = ruleId ? newIdempotencyKey('fe-postback-rule') : createKey
-      mutation.mutate({ body, key }, callbacks)
+      const refused = (error: Error) => {
+        if (!ruleId && !isSettledRefusal(error)) unsettled.current = true
+        keyRefused.current = !ruleId && !unsettled.current
+        onError(error, unsettled.current)
+      }
+      mutation.mutate({ body, key }, { onSuccess, onError: refused })
     },
     edited: () => {
-      if (!keySent.current) return
-      keySent.current = false
+      if (!keyRefused.current) return
+      keyRefused.current = false
       setCreateKey(newIdempotencyKey('fe-postback-rule'))
     },
     isPending: mutation.isPending,

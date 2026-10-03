@@ -23,6 +23,12 @@ export function CreditPostbacksSection({ canWrite }: { canWrite: boolean }) {
   const { data, isLoading, error } = useCreditPostbackRules()
   // Форма монтируется на каждое открытие: новое открытие — новый ключ создания.
   const [editing, setEditing] = useState<CreditPostbackRule | 'new' | null>(null)
+  // 409 правки: форма закрыта, таблица называет правило; снимается следующим действием.
+  const [conflict, setConflict] = useState<string>()
+  const open = (target: CreditPostbackRule | 'new') => {
+    setConflict(undefined)
+    setEditing(target)
+  }
 
   // Колонки таблицы: восемь у всех и «Дії» у держателя права записи.
   if (isLoading) return <TableSkeleton columns={canWrite ? 9 : 8} />
@@ -46,17 +52,27 @@ export function CreditPostbacksSection({ canWrite }: { canWrite: boolean }) {
       )}
       {canWrite && (
         <div className="mb-3 flex justify-end">
-          <Button size="sm" onClick={() => setEditing('new')}>
+          <Button size="sm" onClick={() => open('new')}>
             {t('credit.postbacks.form.add')}
           </Button>
         </div>
       )}
-      <CreditPostbackRulesTable rules={data?.items ?? []} canWrite={canWrite} onEdit={setEditing} />
+      <CreditPostbackRulesTable
+        rules={data?.items ?? []}
+        canWrite={canWrite}
+        onEdit={open}
+        conflict={conflict}
+        onAction={() => setConflict(undefined)}
+      />
       {canWrite && editing && data && (
         <CreditPostbackRuleForm
           rule={editing === 'new' ? undefined : editing}
           list={data}
           onClose={() => setEditing(null)}
+          onConflict={(name) => {
+            setConflict(name)
+            setEditing(null)
+          }}
         />
       )}
     </>

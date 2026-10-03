@@ -42,7 +42,7 @@ import { useSaveCreditPostbackRule } from '@/features/credit/hooks/useCreditPost
 const FIELDS = ['name', 'trigger', 'utm_source', 'url_template', 'goal', 'currency'] as const
 type Field = (typeof FIELDS)[number]
 type Draft = Record<Field, string> & { active: boolean }
-type Refusal = { fields: Partial<Record<Field, string>>; general?: string }
+type Refusal = { fields: Partial<Record<Field, string>>; general?: string; unsettled?: boolean }
 
 /** Пример адреса из ТЗ — только текст подсказки. */
 const EXAMPLE_URL =
@@ -60,17 +60,18 @@ function draftOf(rule?: CreditPostbackRule): Draft {
   }
 }
 
-/** Тело двери: края `utm_source` срезаются, пустые goal и валюта — их отсутствие. */
+/** Тело двери: края имени и `utm_source` срезаются, пустые goal и валюта — их отсутствие. */
 function bodyOf(draft: Draft): CreditPostbackRuleInput {
   return {
     ...draft,
+    name: draft.name.trim(),
     utm_source: draft.utm_source.trim(),
     goal: draft.goal.trim() || null,
     currency: draft.currency.trim() || null,
   }
 }
 
-/** Правка шлёт только изменённые поля. */
+/** Правка шлёт только изменённые поля — сравнение по телу двери, после среза краёв. */
 function changedOf(body: CreditPostbackRuleInput, rule: CreditPostbackRule) {
   const keys = Object.keys(body) as Array<keyof CreditPostbackRuleInput>
   return Object.fromEntries(
@@ -82,11 +83,14 @@ export function CreditPostbackRuleForm({
   rule,
   list,
   onClose,
+  onConflict,
 }: {
   /** Нет — создание. */
   rule?: CreditPostbackRule
   list: CreditPostbackRuleList
   onClose: () => void
+  /** 409 правки: копия правила устарела — форма закрывается, раздел называет правило. */
+  onConflict: (name: string) => void
 }) {
   const { t } = useTranslation('common')
   const save = useSaveCreditPostbackRule(rule?.id)
@@ -101,11 +105,16 @@ export function CreditPostbackRuleForm({
       ? `${t('credit.postbacks.form.errors.url_macro_unknown')} ${problem.macros.join(', ')}`
       : t(`credit.postbacks.form.errors.${problem.reason}`)
 
-  /** Правка поля снимает отказ модуля с этого поля и старит ушедший ключ. */
+  /**
+   * Правка поля снимает общий отказ и отказ модуля с этого поля; ключ создания
+   * меняет хук (только после определённого отказа). Предупреждение о неизвестном
+   * исходе остаётся: исход и после правки неизвестен.
+   */
   const edit = (patch: Partial<Draft>) => {
     setDraft((current) => ({ ...current, ...patch }))
     setRefusal((current) => ({
       ...current,
+      general: undefined,
       fields: Object.fromEntries(
         Object.entries(current.fields).filter(([field]) => !(field in patch))
       ),
@@ -128,8 +137,9 @@ export function CreditPostbackRuleForm({
 
   const refusalOf = (error: Error): Refusal => {
     const failure = error instanceof CreditApiError ? error : undefined
-    if (rule && failure?.status === 409)
-      return { fields: {}, general: t('credit.postbacks.form.conflict') }
+    // Тот же ключ с другим телом: прошлая попытка с неизвестным исходом могла создать правило.
+    if (failure?.status === 409 && failure.code === 'idempotency_key_reused')
+      return { fields: {}, general: t('credit.postbacks.form.mayExist') }
     if (failure?.status !== 422)
       return { fields: {}, general: t('credit.postbacks.form.saveFailed') }
     const reasons = (failure.details?.reason ?? {}) as Record<string, unknown>
@@ -166,7 +176,13 @@ export function CreditPostbackRuleForm({
 
   const submit = () => {
     setRefusal({ fields: {} })
-    save.save(patch, { onSuccess: onClose, onError: (error) => setRefusal(refusalOf(error)) })
+    save.save(patch, {
+      onSuccess: onClose,
+      onError: (error, unsettled) => {
+        if (rule && error instanceof CreditApiError && error.status === 409) onConflict(rule.name)
+        else setRefusal({ ...refusalOf(error), unsettled })
+      },
+    })
   }
 
   const triggerLabel = (code: string) =>
@@ -272,6 +288,11 @@ export function CreditPostbackRuleForm({
             error={refusal.fields.currency}
           />
         </fieldset>
+        {refusal.unsettled && (
+          <Alert variant="warning" role="status" className="mt-4">
+            {t('credit.postbacks.form.outcomeUnknown')}
+          </Alert>
+        )}
       </ModalContent>
       <ModalFooter>
         <Button variant="cancel" onClick={close} disabled={save.isPending}>
