@@ -22,7 +22,11 @@ import type {
   CreditQueueStatus,
 } from './types'
 import { CREDIT_APPLICATION_STAGES, CREDIT_STAGE_STATES } from './applicationStages'
-import { CREDIT_POSTBACK_TRIGGERS } from './postbacks'
+import {
+  CREDIT_POSTBACK_MACROS,
+  CREDIT_POSTBACK_RULE_REASONS,
+  CREDIT_POSTBACK_TRIGGERS,
+} from './postbackEnums'
 
 /**
  * Типы проводок журнала (JournalEntry.entry_type).
@@ -684,4 +688,8 @@ export const CREDIT_DYNAMIC_NAMESPACES: Record<string, readonly string[]> = {
   // Триггеры постбеков партнерам (18-13d) — снимок контракта модуля, страж
   // `creditPostbackContract.test.ts`; строки — под `credit.postbacks.trigger`.
   'postbacks.trigger': CREDIT_POSTBACK_TRIGGERS,
+  // Подсказка макросов формы правила (18-13d-a2) и уточнения отказа модуля
+  // (`details.reason` 422) под полями формы — тоже коды контракта.
+  'postbacks.macro': CREDIT_POSTBACK_MACROS,
+  'postbacks.form.errors': CREDIT_POSTBACK_RULE_REASONS,
 }

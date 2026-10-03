@@ -3,7 +3,10 @@
  *
  * Вкл/выкл — одним нажатием: обратимо и видно в списке (Р-18-13d-8). Удаление
  * необратимо — только через подтверждение. Без права записи переключатели
- * выключены, кнопки удаления в разметке нет. Форма создания и правки — a2.
+ * выключены, кнопок «Змінити» и «Видалити» в разметке нет. Пока строка
+ * удаляется, её переключатель и кнопки выключены: правка удаляемого правила
+ * получила бы 404. Отказ действия называет правило и снимается стартом
+ * другого действия.
  *
  * Адрес правила часто несёт токен партнёра (Р-18-13d-11): ячейка под замазкой
  * записи сессий, полный адрес — в подсказке (`PiiTooltip`, текст тоже под
@@ -36,14 +39,25 @@ function shortUrl(url: string): string {
 export function CreditPostbackRulesTable({
   rules,
   canWrite,
+  onEdit,
+  conflict,
+  onAction,
 }: {
   rules: CreditPostbackRule[]
   canWrite: boolean
+  onEdit?: (rule: CreditPostbackRule) => void
+  /** Имя правила, правку которого модуль отклонил 409 (форма закрыта). */
+  conflict?: string
+  /** Старт вкл/выкл или удаления — снять баннер `conflict`. */
+  onAction?: () => void
 }) {
   const { t } = useTranslation('common')
   const toggle = useToggleCreditPostbackRule()
   const remove = useDeleteCreditPostbackRule()
   const [confirming, setConfirming] = useState<CreditPostbackRule | null>(null)
+  const deleting = (rule: CreditPostbackRule) => remove.pending?.id === rule.id
+  const failedName = (failed?: { name: string }) =>
+    failed ? <span className="font-medium">«{failed.name}» — </span> : null
 
   const columns: Column<CreditPostbackRule>[] = [
     { key: 'name', header: t('credit.postbacks.rules.name'), render: (rule) => rule.name },
@@ -90,8 +104,12 @@ export function CreditPostbackRulesTable({
         <ToggleSwitch
           // На время запроса — новое положение; отказ вернёт прежнее из кэша.
           checked={toggle.pending?.id === rule.id ? toggle.pending.active : rule.active}
-          onChange={(active) => toggle.run({ id: rule.id, active })}
-          disabled={!canWrite || toggle.isPending}
+          onChange={(active) => {
+            remove.reset()
+            onAction?.()
+            toggle.run({ id: rule.id, name: rule.name, active })
+          }}
+          disabled={!canWrite || toggle.isPending || deleting(rule)}
           ariaLabel={t('credit.postbacks.rules.toggle', { name: rule.name })}
         />
       ),
@@ -108,14 +126,24 @@ export function CreditPostbackRulesTable({
             header: <span className="sr-only">{t('credit.postbacks.rules.actions')}</span>,
             align: 'right' as const,
             render: (rule: CreditPostbackRule) => (
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={remove.isPending}
-                onClick={() => setConfirming(rule)}
-              >
-                {t('credit.postbacks.rules.delete')}
-              </Button>
+              <span className="inline-flex gap-1">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={deleting(rule)}
+                  onClick={() => onEdit?.(rule)}
+                >
+                  {t('credit.postbacks.form.edit')}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={remove.isPending}
+                  onClick={() => setConfirming(rule)}
+                >
+                  {t('credit.postbacks.rules.delete')}
+                </Button>
+              </span>
             ),
           },
         ]
@@ -124,13 +152,21 @@ export function CreditPostbackRulesTable({
 
   return (
     <>
+      {conflict && (
+        <Alert variant="error" className="mb-3">
+          {failedName({ name: conflict })}
+          {t('credit.postbacks.form.conflict')}
+        </Alert>
+      )}
       {toggle.error && (
         <Alert variant="error" className="mb-3">
+          {failedName(toggle.failed)}
           {t('credit.postbacks.rules.toggleFailed')}
         </Alert>
       )}
       {remove.error && (
         <Alert variant="error" className="mb-3">
+          {failedName(remove.failed)}
           {t('credit.postbacks.rules.deleteFailed')}
         </Alert>
       )}
@@ -143,7 +179,11 @@ export function CreditPostbackRulesTable({
         confirmLabel={t('credit.postbacks.rules.delete')}
         onCancel={() => setConfirming(null)}
         onConfirm={() => {
-          if (confirming) remove.run({ id: confirming.id })
+          if (confirming) {
+            toggle.reset()
+            onAction?.()
+            remove.run({ id: confirming.id, name: confirming.name })
+          }
           setConfirming(null)
         }}
       />
