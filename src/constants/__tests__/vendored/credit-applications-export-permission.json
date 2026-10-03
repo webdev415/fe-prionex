@@ -1,0 +1,11 @@
+{
+  "source_repo": "CRM/api-prionex",
+  "source_ref": "main",
+  "source_commit_sha": "502636730e49a51b6f803dea8e2e27023c2ac40f",
+  "source_path": "services/auth/alembic/versions/20261002_1200_100_credit_export_postback_permissions.py",
+  "source_sha256": "d4757dc3765b2b790788475873ca835e69b9f2bc0f01b6b39339a9b78baf7b31",
+  "captured_at": "2026-10-03T17:15:03+00:00",
+  "captured_by": "builder-1813c-b (18-13c-b), git show 50263673:services/auth/alembic/versions/20261002_1200_100_credit_export_postback_permissions.py",
+  "permissions": ["credit.applications.export"],
+  "sha256": "7d3d011375bbc690c1cb529f3dca7c652e1049b7b96f36a39b60e8bda0c27dce"
+}

@@ -6,7 +6,7 @@
  * swap - a field quietly reverting to Select would put one back.
  */
 
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 
 beforeAll(() => {
@@ -163,5 +163,36 @@ describe('ProfileSettingsPage work format form state', () => {
 
     await waitFor(() => expect(updateMyProfile).toHaveBeenCalled())
     expect(updateMyProfile.mock.calls[0][0].work_format).toBe('remote')
+  })
+})
+
+// Story 17-66a: the own profile reads the same `timezoneOptions` as the user forms,
+// so a Canadian operator sees the zone of the province, not a raw IANA string.
+describe('ProfileSettingsPage time zone of a Canadian operator', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    user.timezone = 'America/Edmonton'
+    render(<ProfileSettingsPage />)
+  })
+
+  afterEach(() => {
+    user.timezone = 'Europe/Kyiv'
+  })
+
+  it('shows a stored Canadian zone by its label and offers the provinces', async () => {
+    const trigger = openField('timezone')
+    expect(trigger).toHaveTextContent('America/Edmonton (MST/MDT) — Alberta')
+
+    const menu = await screen.findByRole('menu')
+    const labels = within(menu)
+      .getAllByRole('menuitem')
+      .map((item) => item.textContent?.trim())
+    expect(labels).toEqual(
+      expect.arrayContaining([
+        'America/Edmonton (MST/MDT) — Alberta',
+        'America/Toronto (EST/EDT) — Ontario',
+        'America/Vancouver (PST/PDT) — British Columbia',
+      ])
+    )
   })
 })

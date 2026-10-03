@@ -12811,7 +12811,8 @@
       "copy": "Copy",
       "showMore": "Show more",
       "proposeConditional": "Propose a conditional approval",
-      "confirmConditional": "Confirm the conditional approval"
+      "confirmConditional": "Confirm the conditional approval",
+      "exportCsv": "Export CSV"
     },
     "metrics": {
       "requested": "Requested (page)",
@@ -12827,7 +12828,10 @@
       "searchPlaceholder": "Application number or email",
       "empty": "No applications match the filter",
       "statusCountsHint": "Status counts cover the whole section and ignore search, dates and attribution labels.",
-      "dateRangeNotApplied": "Date filter not applied: the start date is later than the end date. The list is shown without this range."
+      "dateRangeNotApplied": "Date filter not applied: the start date is later than the end date. The list is shown without this range.",
+      "exporting": "Exporting…",
+      "exportTooLarge": "{{total}} applications match the filter, the limit is {{max}} — narrow the filter",
+      "exportFailed": "Export failed: {{message}}"
     },
     "loans": {
       "title": "Loans",

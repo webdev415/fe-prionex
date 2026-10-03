@@ -12856,7 +12856,8 @@
       "copy": "Copiar",
       "showMore": "Mostrar más",
       "proposeConditional": "Proponer una aprobación condicional",
-      "confirmConditional": "Confirmar la aprobación condicional"
+      "confirmConditional": "Confirmar la aprobación condicional",
+      "exportCsv": "Exportar CSV"
     },
     "metrics": {
       "requested": "Solicitado (página)",
@@ -12872,7 +12873,10 @@
       "searchPlaceholder": "Número de solicitud o correo electrónico",
       "empty": "Ninguna solicitud coincide con el filtro",
       "statusCountsHint": "Los contadores de estado abarcan toda la sección y no tienen en cuenta la búsqueda, las fechas ni las etiquetas de atribución.",
-      "dateRangeNotApplied": "Filtro de fechas no aplicado: la fecha inicial es posterior a la final. La lista se muestra sin este rango."
+      "dateRangeNotApplied": "Filtro de fechas no aplicado: la fecha inicial es posterior a la final. La lista se muestra sin este rango.",
+      "exporting": "Exportando…",
+      "exportTooLarge": "{{total}} solicitudes coinciden con el filtro, el límite es {{max}}: acote el filtro",
+      "exportFailed": "No se pudo exportar: {{message}}"
     },
     "loans": {
       "title": "Créditos",

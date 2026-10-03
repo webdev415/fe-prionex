@@ -72,9 +72,25 @@ export function otherAttributionTags(
     .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
 }
 
+let graphemes: { ctor: typeof Intl.Segmenter; segmenter: Intl.Segmenter } | undefined
+
+/**
+ * Разбивка на графемы — одна на всё время жизни страницы, а не на каждый вызов
+ * (строк «Інші мітки» бывают десятки). Кеш привязан к самому конструктору: без
+ * `Intl.Segmenter` — откат на кодовые точки, ничего не запоминается.
+ */
+function graphemeSegmenter(): Intl.Segmenter | null {
+  if (!('Segmenter' in Intl)) return null
+  if (graphemes?.ctor !== Intl.Segmenter) {
+    const segmenter = new Intl.Segmenter('und', { granularity: 'grapheme' })
+    graphemes = { ctor: Intl.Segmenter, segmenter }
+  }
+  return graphemes.segmenter
+}
+
 /** Длинное значение — первые `max` графем (без `Intl.Segmenter` — кодовых точек) и `…`. */
 export function truncateAttribution(value: string, max = ATTRIBUTION_MAX_SHOWN): string {
-  const segmenter = 'Segmenter' in Intl && new Intl.Segmenter('und', { granularity: 'grapheme' })
+  const segmenter = graphemeSegmenter()
   const chars = segmenter ? Array.from(segmenter.segment(value), (g) => g.segment) : [...value]
   return chars.length > max ? `${chars.slice(0, max).join('')}…` : value
 }

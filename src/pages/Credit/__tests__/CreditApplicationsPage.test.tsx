@@ -12,9 +12,10 @@
  *    перевёрнутая пара не уходит вовсе;
  *  - колонка шага появляется по данным модуля, а не по релизу фронта.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, useLocation, useNavigationType } from 'react-router-dom'
+import { AxiosError } from 'axios'
 import { CreditApplicationsPage } from '../CreditApplicationsPage'
 import { CreditLoansPage } from '../CreditLoansPage'
 import { CreditUnderwritingQueuePage } from '../CreditUnderwritingQueuePage'
@@ -24,7 +25,9 @@ import {
   useCreditOverview,
   useCreditUnderwritingQueue,
 } from '@/features/credit/hooks/useCredit'
-import { CreditApiError } from '@/features/credit/api/creditApi'
+import { CreditApiError, creditApi } from '@/features/credit/api/creditApi'
+import { downloadBlob } from '@/features/messaging/utils/downloadBlob'
+import { useAuthStore } from '@/stores/authStore'
 import {
   CREDIT_APPLICATION_STATUSES,
   type CreditApplicationsParams,
@@ -38,6 +41,25 @@ import {
 // notifyManager, которые срабатывают уже после teardown jsdom и падают в
 // чужом тест-файле («window is not defined»). Странице всё равно, откуда
 // данные, — проверяем ровно её поведение.
+// Сохранение файла — браузерное (ссылка + клик): в тесте видно только, ЧТО отдали.
+vi.mock('@/features/messaging/utils/downloadBlob', () => ({ downloadBlob: vi.fn() }))
+
+// Мок перевода общий (ключ как текст), кроме сообщений выгрузки (18-13c-b): у них
+// числа и причина — суть сообщения, поэтому подстановки печатаются рядом с ключом.
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, vars?: unknown) =>
+      key.startsWith('credit.applications.export') && vars && typeof vars === 'object'
+        ? `${key} ${Object.entries(vars)
+            .map(([name, value]) => `${name}=${String(value)}`)
+            .join(' ')}`
+        : key,
+    i18n: { language: 'en', changeLanguage: vi.fn() },
+  }),
+  // Стор авторизации (права для кнопки выгрузки) тянет `src/lib/i18n.ts`.
+  initReactI18next: { type: '3rdParty', init: vi.fn() },
+}))
+
 vi.mock('@/features/credit/hooks/useCredit', () => ({
   useCreditOverview: vi.fn(),
   useCreditApplications: vi.fn(),
@@ -1135,5 +1157,297 @@ describe('18-13c: фильтры меток', () => {
     for (const key of TAG_PARAMS) {
       expect(params?.[key], `${key} ушёл в хук без фильтра`).toBeUndefined()
     }
+  })
+})
+
+/**
+ * 18-13c-b: выгрузка CSV на экране.
+ *
+ * Кнопка — только с правом `credit.applications.export` из пропуска CRM. Клик
+ * сначала применяет набранное (К-3), и файл просится с той же выборкой, что у
+ * списка, без страницы (К-6): маркетолог получает ровно то, что видит. Отказы:
+ * «слишком много» с числами модуля — строкой у кнопки; прочие — плашкой над
+ * таблицей, отдельной от ошибки списка (К-5).
+ */
+describe('18-13c-b: выгрузка CSV', () => {
+  const EXPORT = { name: 'credit.actions.exportCsv' }
+  const EXPORTING = { name: 'credit.applications.exporting' }
+  const BLOB = new Blob(['﻿number\r\n'], { type: 'text/csv' })
+  const FILE = { blob: BLOB, filename: 'credit-applications-2026-10-03.csv' }
+
+  function signIn(permissions: string[]): void {
+    useAuthStore.setState({
+      user: { id: '1', username: 'u', projects: [], permissions } as never,
+    })
+  }
+  const exportSpy = () => vi.spyOn(creditApi, 'exportApplications')
+  /** Выборка списка без страницы — то, что обязано уйти в выгрузку. */
+  function listSelection(): Record<string, unknown> {
+    const params = { ...lastListParams() } as Record<string, unknown>
+    delete params.limit
+    delete params.cursor
+    return params
+  }
+  function listResult(total: number, error: Error | null = null) {
+    vi.mocked(useCreditApplications).mockReturnValue({
+      data: { items: total ? [ROW] : [], next_cursor: null, total },
+      isLoading: false,
+      error,
+    } as ReturnType<typeof useCreditApplications>)
+  }
+
+  beforeEach(() => {
+    vi.mocked(useCreditOverview).mockReset()
+    vi.mocked(useCreditApplications).mockReset()
+    vi.mocked(downloadBlob).mockReset()
+    vi.mocked(useCreditOverview).mockReturnValue({ data: OVERVIEW, error: null } as ReturnType<
+      typeof useCreditOverview
+    >)
+    listResult(1)
+    signIn(['credit.applications.read', 'credit.applications.export'])
+  })
+  afterEach(() => {
+    vi.restoreAllMocks()
+    useAuthStore.setState({ user: null })
+  })
+
+  it('без права выгрузки кнопки нет, список работает', async () => {
+    signIn(['credit.applications.read'])
+    renderPage()
+    expect(await screen.findByText('DEMO-202608-03A17C')).toBeInTheDocument()
+    expect(screen.queryByRole('button', EXPORT)).toBeNull()
+  })
+
+  it('с правом — кнопка «Експорт CSV» рядом с поиском, файл = выборка списка без страницы', async () => {
+    const spy = exportSpy().mockResolvedValue(FILE)
+    renderPage(
+      '/dashboard/credit/applications?status=referred&utm_source=google&created_from=2026-08-31&sort=-created_at&page=2'
+    )
+    await screen.findByText('DEMO-202608-03A17C')
+    const button = screen.getByRole('button', EXPORT)
+    expect(button.closest('form'), 'кнопка не в карточке фильтров').toBe(
+      screen.getByRole('button', { name: 'credit.actions.search' }).closest('form')
+    )
+    fireEvent.click(button)
+    await waitFor(() => expect(vi.mocked(downloadBlob)).toHaveBeenCalledTimes(1))
+    expect(spy).toHaveBeenCalledTimes(1)
+    const sent = spy.mock.calls[0][0] as Record<string, unknown>
+    expect(sent, 'выборка выгрузки разошлась с выборкой списка').toEqual(listSelection())
+    expect('limit' in sent || 'cursor' in sent, 'страница ушла в выгрузку').toBe(false)
+    expect(sent.utm_source).toBe('google')
+    expect(sent.status).toEqual(['referred'])
+    expect(vi.mocked(downloadBlob), 'сохранён не тот blob или не то имя').toHaveBeenCalledWith(
+      BLOB,
+      'credit-applications-2026-10-03.csv'
+    )
+  })
+
+  it('черновик кампании без «Пошук» — в выгрузке кампания из черновика, и список её применил', async () => {
+    const spy = exportSpy().mockResolvedValue(FILE)
+    renderPage()
+    await screen.findByText('DEMO-202608-03A17C')
+    fireEvent.change(screen.getByLabelText('credit.filters.utmCampaign'), {
+      target: { value: ' camp-a ' },
+    })
+    expect(lastListParams()?.utm_campaign, 'черновик ушёл в список без применения').toBeUndefined()
+    fireEvent.click(screen.getByRole('button', EXPORT))
+    await waitFor(() => expect(spy).toHaveBeenCalledTimes(1))
+    expect(spy.mock.calls[0][0].utm_campaign, 'выгрузка взяла прежний фильтр, а не набранный').toBe(
+      'camp-a'
+    )
+    await waitFor(() => {
+      expect(lastListParams()?.utm_campaign, 'список не применил черновик — файл ≠ экран').toBe(
+        'camp-a'
+      )
+    })
+  })
+
+  it('пустой список (total 0) — кнопка недоступна', async () => {
+    listResult(0)
+    renderPage()
+    await screen.findByText('credit.applications.empty')
+    expect(screen.getByRole('button', EXPORT)).toBeDisabled()
+  })
+
+  it('во время запроса кнопка «Експортуємо…» недоступна, второй клик второго запроса не шлёт', async () => {
+    let finish: (value: typeof FILE) => void = () => undefined
+    const spy = exportSpy().mockImplementation(() => new Promise((resolve) => (finish = resolve)))
+    renderPage()
+    await screen.findByText('DEMO-202608-03A17C')
+    fireEvent.click(screen.getByRole('button', EXPORT))
+    const busy = await screen.findByRole('button', EXPORTING)
+    expect(busy).toBeDisabled()
+    fireEvent.click(busy)
+    expect(spy, 'второй клик во время запроса отправил второй запрос').toHaveBeenCalledTimes(1)
+    finish(FILE)
+    await waitFor(() => expect(screen.getByRole('button', EXPORT)).toBeEnabled())
+    expect(vi.mocked(downloadBlob)).toHaveBeenCalledTimes(1)
+  })
+
+  it('422 с числами модуля — строка «звузьте фільтр» с total и max, файла и плашки нет', async () => {
+    exportSpy().mockRejectedValue(
+      new CreditApiError('too many', 422, 'validation_failed', undefined, {
+        total: 10001,
+        max_rows: 10000,
+      })
+    )
+    renderPage()
+    await screen.findByText('DEMO-202608-03A17C')
+    fireEvent.click(screen.getByRole('button', EXPORT))
+    const line = await screen.findByRole('status')
+    expect(line.textContent).toBe('credit.applications.exportTooLarge total=10001 max=10000')
+    expect(vi.mocked(downloadBlob)).not.toHaveBeenCalled()
+    expect(screen.queryByText(/credit\.applications\.exportFailed/)).toBeNull()
+  })
+
+  it('после 422 смена фильтра («Пошук» с другой кампанией) убирает строку «слишком много»', async () => {
+    exportSpy().mockRejectedValue(
+      new CreditApiError('too many', 422, 'validation_failed', undefined, {
+        total: 10001,
+        max_rows: 10000,
+      })
+    )
+    renderPage()
+    await screen.findByText('DEMO-202608-03A17C')
+    fireEvent.click(screen.getByRole('button', EXPORT))
+    expect((await screen.findByRole('status')).textContent).toContain('total=10001')
+    fireEvent.change(screen.getByLabelText('credit.filters.utmCampaign'), {
+      target: { value: 'camp-b' },
+    })
+    expect(screen.getByRole('status'), 'строка ушла от набора, а не от применения').toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'credit.actions.search' }))
+    await waitFor(() => expect(lastListParams()?.utm_campaign).toBe('camp-b'))
+    expect(screen.queryByRole('status'), 'числа прежнего фильтра остались рядом с новым').toBeNull()
+  })
+
+  it('после exportFailed «Скинути» убирает плашку выгрузки', async () => {
+    exportSpy().mockRejectedValue(new CreditApiError('Модуль недоступен', 503))
+    renderPage('/dashboard/credit/applications?utm_source=google')
+    await screen.findByText('DEMO-202608-03A17C')
+    fireEvent.click(screen.getByRole('button', EXPORT))
+    const failed = 'credit.applications.exportFailed message=Модуль недоступен'
+    expect(await screen.findByText(failed)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'credit.actions.reset' }))
+    await waitFor(() => expect(lastListParams()?.utm_source).toBeUndefined())
+    expect(screen.queryByText(failed), 'плашка прежней выборки осталась после сброса').toBeNull()
+  })
+
+  it('черновик при ?page=2 — «Експорт» возвращает список на первую страницу', async () => {
+    exportSpy().mockResolvedValue(FILE)
+    renderPage('/dashboard/credit/applications?page=2')
+    await screen.findByText('DEMO-202608-03A17C')
+    expect(lastListParams()?.cursor, 'сцена не про то: старт не со второй страницы').toBeDefined()
+    fireEvent.change(screen.getByLabelText('credit.filters.utmCampaign'), {
+      target: { value: 'camp-a' },
+    })
+    fireEvent.click(screen.getByRole('button', EXPORT))
+    await waitFor(() => expect(lastListParams()?.utm_campaign).toBe('camp-a'))
+    expect(lastListParams()?.cursor, 'новая выборка открыта со второй страницы').toBeUndefined()
+  })
+
+  it('без черновика при ?page=2 — «Експорт» страницу не трогает (контроль)', async () => {
+    exportSpy().mockResolvedValue(FILE)
+    renderPage('/dashboard/credit/applications?page=2')
+    await screen.findByText('DEMO-202608-03A17C')
+    const cursor = lastListParams()?.cursor
+    expect(cursor, 'сцена не про то: старт не со второй страницы').toBeDefined()
+    fireEvent.click(screen.getByRole('button', EXPORT))
+    await waitFor(() => expect(vi.mocked(downloadBlob)).toHaveBeenCalledTimes(1))
+    expect(lastListParams()?.cursor, 'выгрузка без смены выборки сбросила страницу').toBe(cursor)
+  })
+
+  it.each([
+    ['403', new CreditApiError('Нет права', 403, 'forbidden'), 'Нет права'],
+    ['503', new CreditApiError('Модуль недоступен', 503), 'Модуль недоступен'],
+    [
+      'таймаут',
+      new CreditApiError(
+        'timeout of 55000ms exceeded',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        'ECONNABORTED'
+      ),
+      'timeout of 55000ms exceeded',
+    ],
+    [
+      '422 без чисел',
+      new CreditApiError('bad sort', 422, 'validation_failed', undefined, { total: '10001' }),
+      'bad sort',
+    ],
+    ['ошибка вне модуля', new AxiosError('Network Error', 'ERR_NETWORK'), 'Network Error'],
+  ] as Array<[string, Error, string]>)(
+    '%s — плашка exportFailed с текстом отказа, файла и строки «слишком много» нет',
+    async (_case, failure, message) => {
+      exportSpy().mockRejectedValue(failure)
+      renderPage()
+      await screen.findByText('DEMO-202608-03A17C')
+      fireEvent.click(screen.getByRole('button', EXPORT))
+      expect(
+        await screen.findByText(`credit.applications.exportFailed message=${message}`)
+      ).toBeInTheDocument()
+      expect(vi.mocked(downloadBlob)).not.toHaveBeenCalled()
+      expect(screen.queryByRole('status')).toBeNull()
+      expect(screen.getByRole('button', EXPORT), 'кнопка осталась выключенной').toBeEnabled()
+    }
+  )
+
+  it('плашка выгрузки отдельна от ошибки списка: обе видны, текст списка не подменён', async () => {
+    listResult(1, new Error('own request failed'))
+    exportSpy().mockRejectedValue(new CreditApiError('Модуль недоступен', 503))
+    renderPage()
+    expect(await screen.findByText('own request failed')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', EXPORT))
+    expect(
+      await screen.findByText('credit.applications.exportFailed message=Модуль недоступен')
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('own request failed'),
+      'ошибку списка заменил отказ выгрузки'
+    ).toBeInTheDocument()
+  })
+
+  it('без отказа выгрузки плашки выгрузки нет, а ошибка списка — своя', async () => {
+    listResult(1, new Error('own request failed'))
+    renderPage()
+    expect(await screen.findByText('own request failed')).toBeInTheDocument()
+    expect(screen.queryByText(/credit\.applications\.exportFailed/)).toBeNull()
+  })
+})
+
+/**
+ * Хвост 18-13c-a (бот, Low-1): поля меток следуют за ссылкой, когда она меняется
+ * не набором. «Назад/вперёд» сценой не закреплено: `useURLState` сам возвращает
+ * ссылку к своему значению заменой (замер 03.10, находка вне зоны), и на экране
+ * этот путь сегодня недостижим; подстройка полей та же и сработает, как только
+ * хук примет внешнюю смену.
+ */
+describe('18-13c-b: поля меток ↔ ссылка', () => {
+  beforeEach(() => {
+    vi.mocked(useCreditOverview).mockReset()
+    vi.mocked(useCreditApplications).mockReset()
+    vi.mocked(useCreditOverview).mockReturnValue({ data: OVERVIEW, error: null } as ReturnType<
+      typeof useCreditOverview
+    >)
+    vi.mocked(useCreditApplications).mockReturnValue({
+      data: { items: [ROW], next_cursor: null, total: 1 },
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useCreditApplications>)
+  })
+
+  const field = (labelKey: string) => screen.getByLabelText(labelKey) as HTMLInputElement
+
+  it('мусор, вычищенный из ссылки, уходит и из поля', async () => {
+    renderPageWithUrl('/dashboard/credit/applications?utm_source=%20%20&status=referred')
+    await screen.findByText('DEMO-202608-03A17C')
+    await waitFor(() => {
+      expect(screen.getByTestId('url').textContent).not.toContain('utm_source=')
+    })
+    expect(
+      field('credit.filters.utmSource').value,
+      'поле держит мусор, которого нет в ссылке'
+    ).toBe('')
   })
 })

@@ -42,6 +42,8 @@ export const PERMISSIONS = {
   CREDIT: {
     APPLICATIONS_VIEW: 'credit.applications.read',
     APPLICATIONS_WRITE: 'credit.applications.write',
+    // Выгрузка заявок CSV с рекламными метками: 18-13c-b, миграция auth 100.
+    APPLICATIONS_EXPORT: 'credit.applications.export',
     DECISIONS_DECIDE: 'credit.decisions.decide',
     // Второй человек условного одобрения: 19-5a, миграция auth 098.
     DECISIONS_CONFIRM_CONDITIONAL: 'credit.decisions.confirm_conditional',
@@ -582,6 +584,8 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   // Credit module (WS-20)
   'credit.applications.read': 'View credit applications and their cards',
   'credit.applications.write': 'Create and edit credit applications on behalf of a client',
+  'credit.applications.export':
+    'Export credit applications with attribution labels (CSV, no personal data)',
   'credit.decisions.decide': 'Make a manual underwriting decision on an application',
   'credit.decisions.confirm_conditional':
     'Confirm a conditional approval proposed by another underwriter (second person)',
