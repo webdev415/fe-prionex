@@ -26,7 +26,11 @@ import type {
   CreditApplicantApplication,
   CreditApplicantApplications,
   CreditApplicationDetail,
+  CreditApplicationMarketing,
+  CreditApplicationsParams,
   CreditApplicationStatus,
+  CreditApplicationSummary,
+  CreditAttributionConsent,
   CreditConditionalStage,
   CreditDecision,
   CreditDecisionCodeEntry,
@@ -378,3 +382,26 @@ export type _snapshot_has_checklist = Assert<Has<CreditDecisionSnapshot, 'checkl
 export type _queue_item_has_awaiting_confirmation = Assert<
   Has<CreditQueueItem, 'awaiting_confirmation'>
 >
+
+/* ─── Рекламные метки заявки (контракт модуля 0.1.44, 18-13 → 18-13c) ─────
+   Сверено с `main` модуля 61379af4 — `ApplicationMarketing`, `ApplicationSummary`,
+   `InternalApplication`, параметры `listInternalApplications`. Поля в типах
+   необязательны (стенд старше 18-13 их не шлёт): утверждается наличие. */
+/** Панель «Джерело трафіку» читает метки отсюда (карточка наследует строку); без поля девять строк молча `(not set)`. */
+export type _summary_has_marketing = Assert<Has<CreditApplicationSummary, 'marketing'>>
+/** «Інші мітки» — только отсюда; без поля `fbclid`/`sub_id` пропадут из карточки без ошибки. */
+export type _detail_has_marketing_other = Assert<Has<CreditApplicationDetail, 'marketing_other'>>
+/** Постбек партнёру и фильтр сверяются по `click_id`; переименование оставит строку пустой. */
+export type _marketing_has_click_id = Assert<Has<CreditApplicationMarketing, 'click_id'>>
+/** Строки согласия и времени клика стоят на этих именах (план писал `consent_state`/`clicked_at`). */
+export type _marketing_has_consent_ads = Assert<Has<CreditApplicationMarketing, 'consent_ads'>>
+export type _marketing_has_click_at = Assert<Has<CreditApplicationMarketing, 'click_at'>>
+/** Подписи согласия переводятся по трём значениям; новое значение покажется как есть. */
+export type _consent_granted = Assert<Includes<CreditAttributionConsent, 'granted'>>
+export type _consent_denied = Assert<Includes<CreditAttributionConsent, 'denied'>>
+export type _consent_unknown = Assert<Includes<CreditAttributionConsent, 'unknown'>>
+/** Четыре фильтра списка уходят этими именами; без параметра фильтр на экране врал бы. */
+export type _params_utm_source = Assert<Has<CreditApplicationsParams, 'utm_source'>>
+export type _params_utm_campaign = Assert<Has<CreditApplicationsParams, 'utm_campaign'>>
+export type _params_click_id = Assert<Has<CreditApplicationsParams, 'click_id'>>
+export type _params_has_click_id = Assert<Has<CreditApplicationsParams, 'has_click_id'>>

@@ -12826,7 +12826,7 @@
       "total": "{{count}} total",
       "searchPlaceholder": "Application number or email",
       "empty": "No applications match the filter",
-      "statusCountsHint": "Status counts cover the whole section and ignore search and dates.",
+      "statusCountsHint": "Status counts cover the whole section and ignore search, dates and attribution labels.",
       "dateRangeNotApplied": "Date filter not applied: the start date is later than the end date. The list is shown without this range."
     },
     "loans": {
@@ -12949,7 +12949,8 @@
       "confirmTitle": "Confirm the conditional approval?",
       "confirmMessage": "The application will be approved for {{amount}} with conditions {{codes}}, and an agreement will be issued for the client to sign. The confirmation cannot be undone.",
       "confirmNotAuthor": "Someone other than the author of the proposal confirms.",
-      "conditionalConfirmed": "The conditional approval is confirmed."
+      "conditionalConfirmed": "The conditional approval is confirmed.",
+      "attribution": "Traffic source"
     },
     "scorecard": {
       "title": "Scorecard breakdown",
@@ -13413,7 +13414,14 @@
       "updatedFrom": "Last activity from",
       "updatedTo": "Last activity to",
       "calendarHint": "Day boundaries follow the calendar of the application's province (Alberta — Edmonton time), not your local time. The Created and Last activity columns show your local time.",
-      "rangeInverted": "The start date is later than the end date — this range is not applied."
+      "rangeInverted": "The start date is later than the end date — this range is not applied.",
+      "utmSource": "Source (utm_source)",
+      "utmCampaign": "Campaign (utm_campaign)",
+      "clickId": "Partner click (click_id)",
+      "hasClickId": "Partner click",
+      "hasClickIdAny": "All",
+      "hasClickIdYes": "With click_id",
+      "hasClickIdNo": "Without click_id"
     },
     "unavailable": {
       "title": "The credit module is not deployed on this stand",
@@ -13812,6 +13820,14 @@
       "errorForbidden": "You do not have permission to view credit section documents.",
       "errorGeneric": "Could not open the document (code {{status}}).",
       "tabBlocked": "The new tab did not open, so the document was handed over as a file download."
+    },
+    "attribution": {
+      "otherTags": "Other tags",
+      "consent": {
+        "granted": "Granted",
+        "denied": "Denied",
+        "unknown": "Unknown"
+      }
     },
     "postbacks": {
       "helper": "Server-side postback rules: when an application or a loan comes with the partner's utm_source, the module sends a GET request to the partner's URL with the macros filled in.",

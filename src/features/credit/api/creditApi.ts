@@ -13,6 +13,7 @@
  */
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios'
 import { getAccessToken } from '@/lib/api'
+import { attributionFilters } from './attribution'
 import type {
   ClientLoanCardPage,
   ClientLoanCardParams,
@@ -303,6 +304,7 @@ export const creditApi = {
       limit: params.limit ?? 25,
       cursor: params.cursor,
       ...dateRange(params),
+      ...attributionFilters(params),
     }),
 
   application: (applicationId: string) =>

@@ -886,3 +886,254 @@ describe('контракт обзора 0.1.26', () => {
     )
   })
 })
+
+// ───────────────────────────────────────────────────────────────────────────
+// 18-13c — фильтры меток. Отбор делает модуль (`listInternalApplications`):
+// фильтр по одной странице врал бы. Текст меток применяется вместе с поиском —
+// по «Пошук» и выбором дня, — «click_id є/немає» применяется сразу, как день.
+// Значения живут в ссылке: её пересылают коллеге.
+describe('18-13c: фильтры меток', () => {
+  beforeEach(() => {
+    vi.mocked(useCreditOverview).mockReset()
+    vi.mocked(useCreditApplications).mockReset()
+    vi.mocked(useCreditOverview).mockReturnValue({ data: OVERVIEW, error: null } as ReturnType<
+      typeof useCreditOverview
+    >)
+    vi.mocked(useCreditApplications).mockReturnValue({
+      data: { items: [ROW], next_cursor: null, total: 1 },
+      isLoading: false,
+      error: null,
+    } as ReturnType<typeof useCreditApplications>)
+  })
+
+  const TEXT_FIELDS: Array<[string, 'utm_source' | 'utm_campaign' | 'click_id']> = [
+    ['credit.filters.utmSource', 'utm_source'],
+    ['credit.filters.utmCampaign', 'utm_campaign'],
+    ['credit.filters.clickId', 'click_id'],
+  ]
+  const TAG_PARAMS = ['utm_source', 'utm_campaign', 'click_id', 'has_click_id'] as const
+
+  const field = (labelKey: string) => screen.getByLabelText(labelKey) as HTMLInputElement
+  const hasClickSelect = () =>
+    screen.getByLabelText('credit.filters.hasClickId') as HTMLSelectElement
+  const search = () =>
+    fireEvent.click(screen.getByRole('button', { name: 'credit.actions.search' }))
+
+  it('три поля и список «click_id» — с подписями из словаря, список из трёх вариантов', async () => {
+    renderPage()
+    await screen.findByText('DEMO-202608-03A17C')
+    for (const [labelKey] of TEXT_FIELDS) {
+      expect(field(labelKey).tagName, `${labelKey} — не поле ввода`).toBe('INPUT')
+    }
+    const options = Array.from(hasClickSelect().options).map((option) => [
+      option.value,
+      option.textContent,
+    ])
+    expect(options).toEqual([
+      ['', 'credit.filters.hasClickIdAny'],
+      ['true', 'credit.filters.hasClickIdYes'],
+      ['false', 'credit.filters.hasClickIdNo'],
+    ])
+  })
+
+  it.each(TEXT_FIELDS)(
+    'поле %s уходит в запрос по «Пошук» обрезанным, пишется в ссылку и возвращает на страницу 1',
+    async (labelKey, key) => {
+      renderPageWithUrl('/dashboard/credit/applications?page=3')
+      await screen.findByText('DEMO-202608-03A17C')
+      expect(lastListParams()?.cursor, 'сцена не про то: старт не с третьей страницы').toBeDefined()
+      fireEvent.change(field(labelKey), { target: { value: '  partner1 ' } })
+      // Положительный контроль: набранное без «Пошук» в запрос не ушло.
+      expect(lastListParams()?.[key], `${key} ушёл в запрос без «Пошук»`).toBeUndefined()
+      search()
+      await waitFor(() => {
+        expect(lastListParams()?.[key], `${labelKey} не дошло до запроса`).toBe('partner1')
+      })
+      const params = lastListParams()
+      for (const other of TAG_PARAMS) {
+        if (other === key) continue
+        expect(params?.[other], `${labelKey} записало чужой ключ ${other}`).toBeUndefined()
+      }
+      expect(params?.cursor, `${labelKey} не вернуло на первую страницу`).toBeUndefined()
+      await waitFor(() => {
+        expect(screen.getByTestId('url').textContent, `${key} не попал в ссылку`).toContain(
+          `${key}=partner1`
+        )
+      })
+    }
+  )
+
+  it('пробельная метка по «Пошук» не уходит', async () => {
+    renderPage()
+    await screen.findByText('DEMO-202608-03A17C')
+    fireEvent.change(field('credit.filters.utmCampaign'), { target: { value: '   ' } })
+    fireEvent.change(field('credit.filters.utmSource'), { target: { value: 'google' } })
+    search()
+    await waitFor(() => {
+      expect(lastListParams()?.utm_source).toBe('google')
+    })
+    expect(lastListParams()?.utm_campaign, 'пробельный utm_campaign ушёл в запрос').toBeUndefined()
+  })
+
+  it('выбор дня применяет и набранные, но не отправленные метки', async () => {
+    renderPage()
+    await screen.findByText('DEMO-202608-03A17C')
+    fireEvent.change(field('credit.filters.utmSource'), { target: { value: 'google' } })
+    fireEvent.change(field('credit.filters.clickId'), { target: { value: 'ck-1' } })
+    expect(lastListParams()?.utm_source).toBeUndefined()
+    fireEvent.change(dayField('credit.filters.createdFrom'), { target: { value: '2026-08-31' } })
+    await waitFor(() => {
+      expect(lastListParams()?.created_from).toBe('2026-08-31')
+    })
+    expect(
+      lastListParams()?.utm_source,
+      'выбор дня потерял набранный utm_source: в поле одно, в запросе другое'
+    ).toBe('google')
+    expect(lastListParams()?.click_id, 'выбор дня потерял набранный click_id').toBe('ck-1')
+  })
+
+  it.each([
+    ['false', false],
+    ['true', true],
+  ] as Array<[string, boolean]>)(
+    'список «click_id» = %s применяется сразу, без «Пошук», и возвращает на страницу 1',
+    async (value, expected) => {
+      renderPageWithUrl('/dashboard/credit/applications?page=3')
+      await screen.findByText('DEMO-202608-03A17C')
+      expect(lastListParams()?.has_click_id, 'фильтр стоит до выбора').toBeUndefined()
+      fireEvent.change(hasClickSelect(), { target: { value } })
+      await waitFor(() => {
+        expect(lastListParams()?.has_click_id, 'выбор не дошёл до запроса').toBe(expected)
+      })
+      expect(lastListParams()?.cursor, 'выбор не вернул на первую страницу').toBeUndefined()
+      await waitFor(() => {
+        expect(screen.getByTestId('url').textContent).toContain(`has_click_id=${value}`)
+      })
+    }
+  )
+
+  it('ссылка с метками открывает список уже отфильтрованным', async () => {
+    renderPage('/dashboard/credit/applications?click_id=abc&has_click_id=true&utm_source=google')
+    await screen.findByText('DEMO-202608-03A17C')
+    const params = lastListParams()
+    expect(params?.click_id, 'click_id из ссылки не дошёл до запроса').toBe('abc')
+    expect(params?.has_click_id, 'has_click_id из ссылки не дошёл до запроса').toBe(true)
+    expect(params?.utm_source).toBe('google')
+    expect(field('credit.filters.clickId').value, 'поле click_id не из ссылки').toBe('abc')
+    expect(field('credit.filters.utmSource').value).toBe('google')
+    expect(hasClickSelect().value, 'список click_id не из ссылки').toBe('true')
+  })
+
+  it('мусор в has_click_id ссылки фильтром не становится', async () => {
+    renderPage('/dashboard/credit/applications?has_click_id=yes')
+    await screen.findByText('DEMO-202608-03A17C')
+    expect(lastListParams()?.has_click_id, '«yes» из ссылки стал фильтром').toBeUndefined()
+    expect(hasClickSelect().value).toBe('')
+  })
+
+  it('три поля меток ограничены пределом модуля: maxlength = 512', async () => {
+    renderPage()
+    await screen.findByText('DEMO-202608-03A17C')
+    for (const [labelKey] of TEXT_FIELDS) {
+      expect(field(labelKey).getAttribute('maxlength'), `${labelKey} без предела 512`).toBe('512')
+    }
+  })
+
+  // Мусор в ссылке — тем же правилом, что дни: в запрос не уходит, сужением не
+  // считается и из ссылки уходит заменой (пересланная, она несла бы фильтр, которого нет).
+  it.each([
+    ['пробельный utm_source', 'utm_source', '%20%20'],
+    ['click_id длиннее 512', 'click_id', 'x'.repeat(513)],
+    ['has_click_id=yes', 'has_click_id', 'yes'],
+  ] as Array<[string, (typeof TAG_PARAMS)[number], string]>)(
+    'мусор в ссылке (%s): не фильтр, без подписи счётчиков, уходит из ссылки',
+    async (_case, key, raw) => {
+      renderPageWithUrl(`/dashboard/credit/applications?status=referred&${key}=${raw}`)
+      await screen.findByText('DEMO-202608-03A17C')
+      const sent = vi.mocked(useCreditApplications).mock.calls.map(([params]) => params?.[key])
+      expect(
+        sent.every((value) => value === undefined),
+        `мусор ${key} ушёл в хук`
+      ).toBe(true)
+      expect(
+        screen.queryByText('credit.applications.statusCountsHint'),
+        `мусор ${key} посчитан сужением списка`
+      ).toBeNull()
+      await waitFor(() => {
+        expect(
+          screen.getByTestId('url').textContent,
+          `мусор ${key} остался в ссылке`
+        ).not.toContain(`${key}=`)
+      })
+      const url = screen.getByTestId('url').textContent ?? ''
+      // Положительный контроль: остальная ссылка на месте, а не стёрта целиком.
+      expect(url, 'вместе с мусором из ссылки ушёл статус').toContain('status=referred')
+      expect(url.startsWith('REPLACE '), `ссылка поправлена новым шагом истории: ${url}`).toBe(true)
+    }
+  )
+
+  it('выбор в списке «click_id» применяет и набранные, но не отправленные метки', async () => {
+    renderPage()
+    await screen.findByText('DEMO-202608-03A17C')
+    fireEvent.change(field('credit.filters.utmSource'), { target: { value: ' google ' } })
+    expect(lastListParams()?.utm_source, 'набранное ушло без применения').toBeUndefined()
+    fireEvent.change(hasClickSelect(), { target: { value: 'false' } })
+    await waitFor(() => {
+      expect(lastListParams()?.has_click_id, 'выбор не дошёл до запроса').toBe(false)
+    })
+    expect(
+      lastListParams()?.utm_source,
+      'выбор в списке потерял набранный utm_source: в поле одно, в запросе другое'
+    ).toBe('google')
+  })
+
+  it('«Скинути» чистит четыре поля и четыре параметра ссылки', async () => {
+    renderPageWithUrl(
+      '/dashboard/credit/applications?utm_source=a&utm_campaign=b&click_id=c&has_click_id=false'
+    )
+    await screen.findByText('DEMO-202608-03A17C')
+    // Положительный контроль: метки из ссылки стоят.
+    expect(lastListParams()?.has_click_id).toBe(false)
+    fireEvent.click(screen.getByRole('button', { name: 'credit.actions.reset' }))
+    await waitFor(() => {
+      const params = lastListParams()
+      for (const key of TAG_PARAMS) {
+        expect(params?.[key], `«Скинути» не очистил ${key}`).toBeUndefined()
+      }
+    })
+    for (const [labelKey] of TEXT_FIELDS) {
+      expect(field(labelKey).value, `«Скинути» не очистил поле ${labelKey}`).toBe('')
+    }
+    expect(hasClickSelect().value, '«Скинути» не очистил список click_id').toBe('')
+    await waitFor(() => {
+      const url = screen.getByTestId('url').textContent ?? ''
+      for (const key of TAG_PARAMS) {
+        expect(url, `«Скинути» оставил ${key} в ссылке`).not.toContain(`${key}=`)
+      }
+    })
+  })
+
+  it.each([
+    '?utm_source=google',
+    '?utm_campaign=camp-a',
+    '?click_id=abc',
+    '?has_click_id=true',
+    '?has_click_id=false',
+  ])('при сужении меткой (%s) подпись счётчиков видна', async (searchPart) => {
+    renderPage(`/dashboard/credit/applications${searchPart}`)
+    await screen.findByText('DEMO-202608-03A17C')
+    expect(
+      screen.queryByText('credit.applications.statusCountsHint'),
+      `список сужен меткой (${searchPart}), а подписи, что счётчики по всему разделу, нет`
+    ).not.toBeNull()
+  })
+
+  it('без меток в ссылке ключей меток в запросе нет', async () => {
+    renderPage()
+    await screen.findByText('DEMO-202608-03A17C')
+    const params = lastListParams()
+    for (const key of TAG_PARAMS) {
+      expect(params?.[key], `${key} ушёл в хук без фильтра`).toBeUndefined()
+    }
+  })
+})
