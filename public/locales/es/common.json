@@ -12871,7 +12871,7 @@
       "total": "{{count}} en total",
       "searchPlaceholder": "Número de solicitud o correo electrónico",
       "empty": "Ninguna solicitud coincide con el filtro",
-      "statusCountsHint": "Los contadores de estado abarcan toda la sección y no tienen en cuenta la búsqueda ni las fechas.",
+      "statusCountsHint": "Los contadores de estado abarcan toda la sección y no tienen en cuenta la búsqueda, las fechas ni las etiquetas de atribución.",
       "dateRangeNotApplied": "Filtro de fechas no aplicado: la fecha inicial es posterior a la final. La lista se muestra sin este rango."
     },
     "loans": {
@@ -12994,7 +12994,8 @@
       "confirmTitle": "¿Confirmar la aprobación condicional?",
       "confirmMessage": "La solicitud se aprobará por {{amount}} con las condiciones {{codes}} y se emitirá un contrato para que lo firme el cliente. La confirmación no se puede deshacer.",
       "confirmNotAuthor": "Confirma otra persona, no el autor de la propuesta.",
-      "conditionalConfirmed": "La aprobación condicional está confirmada."
+      "conditionalConfirmed": "La aprobación condicional está confirmada.",
+      "attribution": "Origen del tráfico"
     },
     "scorecard": {
       "title": "Desglose de la puntuación",
@@ -13457,7 +13458,14 @@
       "updatedFrom": "Última actividad desde",
       "updatedTo": "Última actividad hasta",
       "calendarHint": "Los límites del día siguen el calendario de la provincia de la solicitud (Alberta: hora de Edmonton), no su hora local. Las columnas Creado y Última actividad muestran su hora local.",
-      "rangeInverted": "La fecha inicial es posterior a la final: este rango no se aplica."
+      "rangeInverted": "La fecha inicial es posterior a la final: este rango no se aplica.",
+      "utmSource": "Fuente (utm_source)",
+      "utmCampaign": "Campaña (utm_campaign)",
+      "clickId": "Clic del socio (click_id)",
+      "hasClickId": "Clic del socio",
+      "hasClickIdAny": "Todos",
+      "hasClickIdYes": "Con click_id",
+      "hasClickIdNo": "Sin click_id"
     },
     "unavailable": {
       "title": "El módulo de crédito no está desplegado en este entorno",
@@ -13856,6 +13864,14 @@
       "errorForbidden": "No tiene permiso para ver los documentos de la sección de crédito.",
       "errorGeneric": "No se pudo abrir el documento (código {{status}}).",
       "tabBlocked": "La pestaña nueva no se abrió, así que el documento se entregó como descarga de archivo."
+    },
+    "attribution": {
+      "otherTags": "Otras etiquetas",
+      "consent": {
+        "granted": "Concedido",
+        "denied": "Denegado",
+        "unknown": "Desconocido"
+      }
     }
   },
   "toasts": {

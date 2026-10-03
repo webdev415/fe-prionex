@@ -105,3 +105,72 @@ describe('creditApi.applications — даты на проводе', () => {
     expect(url, 'limit по умолчанию не ушёл').toContain('limit=25')
   })
 })
+
+/**
+ * Метки (18-13c): `utm_source`, `utm_campaign`, `click_id`, `has_click_id` —
+ * параметры двери `listInternalApplications` (контракт 0.1.44). Тем же
+ * правилом, что даты: нет значения — нет ключа; совпадение и регистр решает
+ * модуль, фронт только обрезает края и не переписывает значение.
+ */
+describe('creditApi.applications — метки на проводе', () => {
+  const TAG_KEYS = ['utm_source', 'utm_campaign', 'click_id', 'has_click_id'] as const
+  let harness: ReturnType<typeof intercept>
+
+  beforeEach(() => {
+    harness = intercept()
+  })
+  afterEach(() => harness.restore())
+
+  function sent(): InternalAxiosRequestConfig {
+    const config = harness.configs[0]
+    expect(config, 'адаптер не получил запрос — проверять нечего').toBeDefined()
+    return config
+  }
+
+  it('заданные метки уходят обрезанными, пустая — без ключа', async () => {
+    await creditApi.applications({
+      utm_source: ' google ',
+      utm_campaign: '',
+      click_id: 'abc',
+      has_click_id: true,
+    })
+    const config = sent()
+    expect(config.params?.utm_source, 'края utm_source не обрезаны').toBe('google')
+    expect(config.params?.click_id).toBe('abc')
+    expect('utm_campaign' in config.params, 'пустой utm_campaign ушёл в запрос').toBe(false)
+    const url = creditHttp.getUri(config)
+    expect(url).toContain('utm_source=google')
+    expect(url).toContain('click_id=abc')
+    expect(url, 'has_click_id не ушёл строкой true').toContain('has_click_id=true')
+    expect(url, 'метка ушла массивом, а не одиночной строкой').not.toMatch(/utm_source%5B|\[\]/)
+  })
+
+  it('has_click_id: false уходит явно — это фильтр «без клика», а не его отсутствие', async () => {
+    await creditApi.applications({ has_click_id: false })
+    expect(creditHttp.getUri(sent())).toContain('has_click_id=false')
+  })
+
+  it('click_id не переписывается: регистр значим', async () => {
+    await creditApi.applications({ click_id: 'AbC-1' })
+    expect(sent().params?.click_id).toBe('AbC-1')
+  })
+
+  it('пробельная метка — не значение: ключа нет', async () => {
+    await creditApi.applications({ utm_source: '   ', utm_campaign: ' ', click_id: '  ' })
+    const { params } = sent()
+    for (const key of TAG_KEYS) {
+      expect(key in params, `пробельный ${key} ушёл в запрос`).toBe(false)
+    }
+  })
+
+  it('без меток запрос прежний: ни одного ключа меток', async () => {
+    await creditApi.applications({ status: ['referred'], query: 'demo' })
+    const { params } = sent()
+    for (const key of TAG_KEYS) {
+      expect(key in params, `ключ ${key} ушёл в запрос без значения`).toBe(false)
+    }
+    // Положительный контроль: прежние параметры на месте.
+    expect(params.query).toBe('demo')
+    expect(params.limit).toBe(25)
+  })
+})
