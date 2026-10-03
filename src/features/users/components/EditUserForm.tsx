@@ -13,6 +13,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useUpdateUser } from '../hooks/useUpdateUser'
 import {
   AGENT_EXTENSION_REQUIRED_MESSAGE,
+  timezoneOptions,
   updateUserSchema,
   type UpdateUserFormData,
 } from '../schemas/userSchemas'
@@ -409,19 +410,11 @@ export function EditUserForm({ user, onSuccess }: EditUserFormProps) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Europe/Kyiv">Europe/Kyiv (EET/EEST)</SelectItem>
-                    <SelectItem value="UTC">UTC (Coordinated Universal Time)</SelectItem>
-                    <SelectItem value="America/New_York">America/New York (EST/EDT)</SelectItem>
-                    <SelectItem value="America/Chicago">America/Chicago (CST/CDT)</SelectItem>
-                    <SelectItem value="America/Denver">America/Denver (MST/MDT)</SelectItem>
-                    <SelectItem value="America/Los_Angeles">
-                      America/Los Angeles (PST/PDT)
-                    </SelectItem>
-                    <SelectItem value="Europe/London">Europe/London (GMT/BST)</SelectItem>
-                    <SelectItem value="Europe/Paris">Europe/Paris (CET/CEST)</SelectItem>
-                    <SelectItem value="Europe/Kiev">Europe/Kiev (EET/EEST)</SelectItem>
-                    <SelectItem value="Asia/Tokyo">Asia/Tokyo (JST)</SelectItem>
-                    <SelectItem value="Australia/Sydney">Australia/Sydney (AEST/AEDT)</SelectItem>
+                    {timezoneOptions.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               )}
