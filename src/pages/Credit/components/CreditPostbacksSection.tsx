@@ -5,7 +5,8 @@
  * `credit.loans.read`, которого у маркетолога нет. Видимость вкладки решает
  * страница и передаёт сюда право записи; сервер без права всё равно ответит 403.
  * Без права записи кнопок «Додати правило» и «Змінити» в разметке нет. Лог —
- * под тем же правом чтения (К-1), подвкладка живёт в URL (`pb_view`).
+ * под тем же правом чтения (К-1), подвкладка живёт в URL (`pb_view`); на «Правила»
+ * фильтры лога (`pb_*`) из ссылки снимаются — невидимыми они в ней не нужны.
  */
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -14,7 +15,6 @@ import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { SegmentedTabs, segmentedTabId, segmentedTabPanelId } from '@/components/ui/SegmentedTabs'
 import { TableSkeleton } from '@/components/ui/TableSkeleton'
-import { useURLState } from '@/hooks/useURLState'
 import { CreditApiError } from '@/features/credit/api/creditApi'
 import {
   POSTBACK_LOG_FILTER_KEYS as FILTER_KEYS,
@@ -34,8 +34,8 @@ import { CreditPostbackRulesTable } from './CreditPostbackRulesTable'
 
 export function CreditPostbacksSection({ canWrite }: { canWrite: boolean }) {
   const { t } = useTranslation('common')
-  const [viewParam, setView] = useURLState<string>('pb_view', 'rules')
-  const view = viewParam === 'log' ? 'log' : 'rules'
+  const [params, setParams] = useSearchParams()
+  const view = params.get('pb_view') === 'log' ? 'log' : 'rules'
   return (
     <>
       <SegmentedTabs
@@ -48,7 +48,12 @@ export function CreditPostbacksSection({ canWrite }: { canWrite: boolean }) {
           { id: 'log' as const, label: t('credit.postbacks.log.tabs.log') },
         ]}
         value={view}
-        onChange={setView}
+        onChange={(id) => {
+          const next = new URLSearchParams(params)
+          if (id === 'rules') FILTER_KEYS.forEach((key) => next.delete(`pb_${key}`))
+          next.set('pb_view', id)
+          setParams(next, { replace: true })
+        }}
       />
       <div
         role="tabpanel"
@@ -131,21 +136,20 @@ function PostbackLogView() {
   ) as PostbackLogFilterValues
   const { filters, actionInvalid, rangeInverted } = postbackLogRequest(values)
   // Стек курсоров страниц — в состоянии экрана, не в URL (К-6): курсор живёт
-  // одну сессию. Любая смена фильтров, и сброс тоже, начинает с первой страницы.
+  // одну сессию. Смена фильтров запроса, и сброс тоже, начинает с первой страницы;
+  // ввод, который запрос не меняет (недописанный UUID), страницу не сбрасывает (Б-2).
+  // Сброс — здесь же, не эффектом: иначе один рендер ушёл бы с новыми фильтрами и
+  // старым курсором.
   const [stack, setStack] = useState<string[]>([])
   const change = (patch: Partial<PostbackLogFilterValues>) => {
-    setStack([])
-    setParams(
-      (prev) => {
-        const next = new URLSearchParams(prev)
-        for (const [key, value] of Object.entries(patch)) {
-          if (value?.trim()) next.set(`pb_${key}`, value)
-          else next.delete(`pb_${key}`)
-        }
-        return next
-      },
-      { replace: true }
-    )
+    const nextFilters = postbackLogRequest({ ...values, ...patch }).filters
+    if (JSON.stringify(nextFilters) !== JSON.stringify(filters)) setStack([])
+    const next = new URLSearchParams(params)
+    for (const [key, value] of Object.entries(patch)) {
+      if (value?.trim()) next.set(`pb_${key}`, value)
+      else next.delete(`pb_${key}`)
+    }
+    setParams(next, { replace: true })
   }
 
   const rules = useCreditPostbackRules()

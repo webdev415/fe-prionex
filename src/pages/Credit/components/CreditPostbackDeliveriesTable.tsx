@@ -16,6 +16,8 @@ import { Link } from 'react-router-dom'
 import { DataTable, type Column } from '@/components/ui/DataTable'
 import { PiiTooltip } from '@/components/ui/PiiTooltip'
 import { formatDateTime } from '@/lib/formatters'
+import { PERMISSIONS } from '@/constants/permissions'
+import { useHasAnyPermission } from '@/hooks/usePermissions'
 import { CREDIT_DYNAMIC_NAMESPACES } from '@/features/credit/api/enums'
 import type { CreditPostbackDelivery, CreditPostbackRule } from '@/features/credit/api/postbacks'
 import { CopyButton } from './CreditCardHeader'
@@ -28,6 +30,7 @@ const CARD_BY_TRIGGER: Record<string, string> = {
   new_lead: '/dashboard/credit/applications/',
   new_loan: '/dashboard/credit/loans/',
 }
+const { CREDIT, SYSTEM } = PERMISSIONS
 
 export function CreditPostbackDeliveriesTable({
   items,
@@ -41,6 +44,12 @@ export function CreditPostbackDeliveriesTable({
 }) {
   const { t } = useTranslation('common')
   const deleted = (ruleId: string) => rules && !rules.some((rule) => rule.id === ruleId)
+  // Ссылка на карточку — только тому, кому её маршрут открыт (`PermissionRoute` в
+  // routes/index.tsx); остальным — номер и копирование ID (ревью бота, Б-1).
+  const canOpen: Record<string, boolean> = {
+    new_lead: useHasAnyPermission([CREDIT.APPLICATIONS_VIEW, SYSTEM.MANAGE_SETTINGS]),
+    new_loan: useHasAnyPermission([CREDIT.LOANS_VIEW, SYSTEM.MANAGE_SETTINGS]),
+  }
 
   /**
    * Подпись кода из словаря или сырой код с пометкой «невідоме значення». Известен
@@ -96,7 +105,7 @@ export function CreditPostbackDeliveriesTable({
       header: t('credit.postbacks.log.columns.action'),
       render: (row) => {
         const text = row.action_number ?? row.action_id
-        const card = CARD_BY_TRIGGER[row.trigger]
+        const card = canOpen[row.trigger] && CARD_BY_TRIGGER[row.trigger]
         return card ? (
           <Link
             to={`${card}${encodeURIComponent(row.action_id)}`}
@@ -166,7 +175,6 @@ export function CreditPostbackDeliveriesTable({
       key: 'attempts',
       header: t('credit.postbacks.log.columns.attempts'),
       align: 'right',
-      render: (row) => row.attempts,
     },
   ]
 

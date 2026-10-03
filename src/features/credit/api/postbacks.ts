@@ -210,10 +210,5 @@ export const creditPostbacksApi = {
     ),
   /** Лог отправок: страница по курсору, фильтры — серверные (Р-18-13d-10). */
   listDeliveries: (params: CreditPostbackDeliveryParams) =>
-    call(() =>
-      creditHttp.get<CreditPostbackDeliveryList>(DELIVERIES, {
-        params,
-        paramsSerializer: { indexes: null },
-      })
-    ),
+    call(() => creditHttp.get<CreditPostbackDeliveryList>(DELIVERIES, { params })),
 }

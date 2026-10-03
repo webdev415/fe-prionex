@@ -385,7 +385,7 @@ describe('лог отправок (18-13d-b) — дверь listPartnerPostbackD
   const RULE_ID = '9b0f6a1e-2c3d-4e5f-8a9b-0c1d2e3f4a5b'
   const ACTION_ID = '1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f'
 
-  /** Строка запроса так, как её соберёт axios с сериализатором вызова. */
+  /** Строка запроса так, как её соберёт axios из конфига вызова. */
   const query = (config: InternalAxiosRequestConfig) =>
     new URL(creditHttp.getUri(config), 'http://crm.test').searchParams
 

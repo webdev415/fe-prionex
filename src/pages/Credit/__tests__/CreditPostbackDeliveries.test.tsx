@@ -3,19 +3,22 @@
  *
  * Что держим (AC-b1…AC-b6, К-1…К-8):
  *  - подвкладка читается из URL (`pb_view`, по умолчанию «Правила»); лог не
- *    запрашивается, пока его не открыли;
+ *    запрашивается, пока его не открыли; на «Правила» фильтры лога из ссылки
+ *    снимаются (ревью бота, Б-3);
  *  - пять фильтров — серверные: каждый уходит параметром двери под её именем,
  *    состояние — из `pb_*` ссылки; мусор и недописанный UUID в запрос не уходят,
  *    перевёрнутый период — целиком; строки страницы на клиенте не отбираются;
  *  - таблица: подписи исходов, причин и кодов `last_error`, сырой код с пометкой
  *    у неизвестного; «сторновано» — по `reversed_at`, не по причине пропуска;
- *    ссылка на карточку заявки или кредита по триггеру; правило вне списка —
+ *    ссылка на карточку заявки или кредита по триггеру — только зрителю с правом
+ *    её маршрута, остальным номер и копирование ID (Б-1); правило вне списка —
  *    «видалено»;
  *  - итоговый URL — под замазкой записи, полный — копированием, не в атрибутах;
  *    у пропуска — «—»;
  *  - «Назад / Далі» по стеку курсоров, «Далі» выключена без `next_cursor`, смена
  *    фильтра (и возврат к прежнему набору) — снова первая страница; размер
- *    страницы 25; прежняя страница держится только при листании тех же фильтров;
+ *    страницы 25; ввод, не меняющий запрос (недописанный UUID), страницу не
+ *    сбрасывает (Б-2); прежняя страница держится только при листании тех же фильтров;
  *    после сбоя страницы «Назад» остаётся;
  *  - «Оновити» и возврат на вкладку браузера перечитывают, таймера нет;
  *  - 403, сеть/5xx, пусто (с фильтрами и без), сбой перечитки при данных.
@@ -27,7 +30,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, useLocation } from 'react-router-dom'
 import { CreditPostbacksSection } from '../components/CreditPostbacksSection'
 import { CreditApiError } from '@/features/credit/api/creditApi'
 import {
@@ -36,6 +39,7 @@ import {
   type CreditPostbackDeliveryList,
   type CreditPostbackRule,
 } from '@/features/credit/api/postbacks'
+import { useAuthStore } from '@/stores/authStore'
 import { expectObscured } from '@/test/piiHelpers'
 
 vi.mock('@/features/credit/api/postbacks', async (importOriginal) => {
@@ -121,6 +125,18 @@ function serveRules(): void {
   })
 }
 
+/** Права CRM зрителя (JWT активного проекта): по ним таблица решает ссылку на карточку. */
+function signIn(permissions: string[]): void {
+  useAuthStore.setState({
+    user: { id: '1', username: 'u', projects: [], active_project_id: '7', permissions } as never,
+  })
+}
+
+/** Строка запроса текущего адреса — по ней видно, что осталось в ссылке. */
+function SearchProbe() {
+  return <output data-testid="search">{useLocation().search}</output>
+}
+
 function renderLog(search = '?pb_view=log'): QueryClient {
   const client = new QueryClient({
     defaultOptions: {
@@ -138,6 +154,7 @@ function renderLog(search = '?pb_view=log'): QueryClient {
     <MemoryRouter initialEntries={[`/dashboard/credit/settings${search}`]}>
       <QueryClientProvider client={client}>
         <CreditPostbacksSection canWrite={false} />
+        <SearchProbe />
       </QueryClientProvider>
     </MemoryRouter>
   )
@@ -161,6 +178,7 @@ beforeEach(() => {
 
 afterEach(() => {
   focusManager.setFocused(undefined)
+  useAuthStore.setState({ user: null })
 })
 
 describe('подвкладки «Правила / Лог» (AC-b1, К-1)', () => {
@@ -193,6 +211,25 @@ describe('подвкладки «Правила / Лог» (AC-b1, К-1)', () =>
     await screen.findByText('credit.postbacks.rules.name')
     fireEvent.click(screen.getByRole('tab', { name: LOG_TAB }))
     expect(await screen.findByText('APP-0001')).toBeInTheDocument()
+  })
+
+  it('на «Правила» фильтры лога уходят из ссылки; обратно в «Лог» — без фильтров', async () => {
+    renderLog(`?pb_view=log&pb_rule=${RULE_ID}&pb_outcome=failed`)
+    await waitFor(() => expect(lastCall()).toMatchObject({ status: 'failed', rule_id: RULE_ID }))
+
+    fireEvent.click(screen.getByRole('tab', { name: RULES_TAB }))
+    await screen.findByText('credit.postbacks.rules.name')
+    const search = new URLSearchParams(screen.getByTestId('search').textContent ?? '')
+    expect(search.get('pb_view')).toBe('rules')
+    expect(search.has('pb_rule')).toBe(false)
+    expect(search.has('pb_outcome')).toBe(false)
+
+    fireEvent.click(screen.getByRole('tab', { name: LOG_TAB }))
+    await screen.findByText('APP-0001')
+    expect(screen.getByLabelText('credit.postbacks.log.filters.outcome')).toHaveValue('')
+    expect(screen.getByLabelText('credit.postbacks.log.filters.rule')).toHaveValue('')
+    expect(lastCall()).toMatchObject({ status: undefined, rule_id: undefined, cursor: undefined })
+    expect(screen.getByRole('button', { name: PREV })).toBeDisabled()
   })
 })
 
@@ -416,6 +453,7 @@ describe('таблица лога (AC-b2, К-3, сторно)', () => {
   })
 
   it('заявка/кредит — номер со ссылкой на карточку по триггеру; неизвестный — текст', async () => {
+    signIn(['credit.partner_postbacks.read', 'credit.applications.read', 'credit.loans.read'])
     api.listDeliveries.mockResolvedValue(
       page([
         delivery({ id: 1, action_number: 'APP-0001' }),
@@ -434,6 +472,59 @@ describe('таблица лога (AC-b2, К-3, сторно)', () => {
     )
     const unknown = screen.getByText(LOAN_ID)
     expect(unknown.closest('a')).toBeNull()
+  })
+
+  describe('ссылка на карточку — только зрителю с правом её маршрута (ревью бота, Б-1)', () => {
+    const serveBoth = () =>
+      api.listDeliveries.mockResolvedValue(
+        page([
+          delivery({ id: 1, action_number: 'APP-0001' }),
+          delivery({ id: 2, action_number: 'LN-0002', trigger: 'new_loan', action_id: LOAN_ID }),
+        ])
+      )
+    const cellOf = (text: string) => screen.getByText(text).closest('td') as HTMLElement
+
+    it('только право постбеков — ссылок нет, номер и копирование ID действия', async () => {
+      const writeText = vi.fn()
+      Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+      signIn(['credit.partner_postbacks.read'])
+      serveBoth()
+      renderLog()
+      await screen.findByText('APP-0001')
+      for (const [text, id] of [
+        ['APP-0001', APP_ID],
+        ['LN-0002', LOAN_ID],
+      ]) {
+        const cell = cellOf(text)
+        expect(within(cell).queryByRole('link')).not.toBeInTheDocument()
+        fireEvent.click(
+          within(cell).getByRole('button', { name: 'credit.postbacks.log.copyActionId' })
+        )
+        expect(writeText).toHaveBeenLastCalledWith(id)
+      }
+    })
+
+    it('право заявок — ссылка на заявку есть, на кредит без права кредитов — нет', async () => {
+      signIn(['credit.partner_postbacks.read', 'credit.applications.read'])
+      serveBoth()
+      renderLog()
+      expect(await screen.findByRole('link', { name: 'APP-0001' })).toHaveAttribute(
+        'href',
+        `/dashboard/credit/applications/${APP_ID}`
+      )
+      expect(within(cellOf('LN-0002')).queryByRole('link')).not.toBeInTheDocument()
+    })
+
+    it('manage_settings — обе ссылки', async () => {
+      signIn(['credit.partner_postbacks.read', 'manage_settings'])
+      serveBoth()
+      renderLog()
+      expect(await screen.findByRole('link', { name: 'APP-0001' })).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'LN-0002' })).toHaveAttribute(
+        'href',
+        `/dashboard/credit/loans/${LOAN_ID}`
+      )
+    })
   })
 
   it('правило вне списка правил — именем записи с пометкой «видалено»', async () => {
@@ -529,6 +620,32 @@ describe('страницы по курсору (AC-b4, К-6)', () => {
     })
     await waitFor(() => expect(lastCall()).toMatchObject({ status: 'sent', cursor: undefined }))
     expect(await screen.findByText('PAGE-1')).toBeInTheDocument()
+  })
+
+  it('недописанный UUID страницу не сбрасывает; дописанный — первая страница', async () => {
+    api.listDeliveries.mockImplementation(async (params) =>
+      params.cursor === 'c2'
+        ? page([delivery({ id: 2, action_number: 'PAGE-2' })], null)
+        : page([delivery({ id: 1, action_number: 'PAGE-1' })], 'c2')
+    )
+    renderLog()
+    await screen.findByText('PAGE-1')
+    fireEvent.click(screen.getByRole('button', { name: NEXT }))
+    await screen.findByText('PAGE-2')
+    const calls = api.listDeliveries.mock.calls.length
+
+    const field = screen.getByLabelText('credit.postbacks.log.filters.action')
+    fireEvent.change(field, { target: { value: APP_ID.slice(0, 8) } })
+    await screen.findByText('credit.postbacks.log.filters.actionInvalid')
+    expect(screen.getByText('PAGE-2')).toBeInTheDocument()
+    expect(api.listDeliveries.mock.calls.length).toBe(calls)
+    expect(lastCall()).toMatchObject({ cursor: 'c2', action_id: undefined })
+    expect(screen.getByRole('button', { name: PREV })).toBeEnabled()
+
+    fireEvent.change(field, { target: { value: APP_ID } })
+    await waitFor(() => expect(lastCall()).toMatchObject({ action_id: APP_ID, cursor: undefined }))
+    expect(await screen.findByText('PAGE-1')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: PREV })).toBeDisabled()
   })
 
   it('«Далі» → фильтр → «Скинути» — первая страница, а не прежняя вторая', async () => {
