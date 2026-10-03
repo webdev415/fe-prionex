@@ -13034,7 +13034,8 @@
         "parameters": "Module settings",
         "integrations": "Integrations",
         "switches": "Kill switches",
-        "site": "Site"
+        "site": "Site",
+        "postbacks": "Partner postbacks"
       },
       "needRiskManager": "This section is available to the risk manager: it holds the thresholds and the product configuration.",
       "mutationDisabled": "Editing requires a second approver (UW-04) — available once CRM roles land (WS-20).",
@@ -13811,6 +13812,34 @@
       "errorForbidden": "You do not have permission to view credit section documents.",
       "errorGeneric": "Could not open the document (code {{status}}).",
       "tabBlocked": "The new tab did not open, so the document was handed over as a file download."
+    },
+    "postbacks": {
+      "helper": "Server-side postback rules: when an application or a loan comes with the partner's utm_source, the module sends a GET request to the partner's URL with the macros filled in.",
+      "forbidden": "No access to postbacks. The CRM administrator grants it.",
+      "refreshFailed": "Could not refresh the rule list — showing the last loaded state. Reload the page later.",
+      "unknownValue": "unknown value",
+      "trigger": {
+        "new_lead": "New lead",
+        "new_loan": "New loan"
+      },
+      "rules": {
+        "name": "Name",
+        "trigger": "Trigger",
+        "url": "Partner URL",
+        "goal": "Goal",
+        "currency": "Currency",
+        "active": "Active",
+        "updatedAt": "Updated",
+        "actions": "Actions",
+        "empty": "No rules yet",
+        "copyUrl": "Copy URL",
+        "toggle": "Switch the rule “{{name}}” on or off",
+        "toggleFailed": "Could not change the rule state — the switch is back in its previous position. Try again.",
+        "delete": "Delete",
+        "deleteTitle": "Delete the rule “{{name}}”?",
+        "deleteMessage": "New applications and loans will no longer be sent to the partner under this rule. The postback log entries of the rule are kept.",
+        "deleteFailed": "Could not delete the rule. Try again."
+      }
     }
   },
   "toasts": {

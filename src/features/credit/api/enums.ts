@@ -22,6 +22,7 @@ import type {
   CreditQueueStatus,
 } from './types'
 import { CREDIT_APPLICATION_STAGES, CREDIT_STAGE_STATES } from './applicationStages'
+import { CREDIT_POSTBACK_TRIGGERS } from './postbacks'
 
 /**
  * Типы проводок журнала (JournalEntry.entry_type).
@@ -680,4 +681,7 @@ export const CREDIT_DYNAMIC_NAMESPACES: Record<string, readonly string[]> = {
   // витрины): подпись подставляется динамически, и событие без строки в
   // словаре доехало бы до оператора машинным именем.
   portalEvent: CREDIT_PORTAL_EVENTS,
+  // Триггеры постбеков партнерам (18-13d) — снимок контракта модуля, страж
+  // `creditPostbackContract.test.ts`; строки — под `credit.postbacks.trigger`.
+  'postbacks.trigger': CREDIT_POSTBACK_TRIGGERS,
 }

@@ -5,7 +5,8 @@
  * настоящий словарь живёт в миграции 082 auth-сервиса api-prionex и содержит
  * семнадцать имён. Миграция 098 (19-5a) добавила восемнадцатое — право
  * подтверждения условного одобрения; оно лежит ВТОРЫМ снимком со своим
- * провенансом, а словарь стража — объединение снимков (19-5f). Опечатка в константе или тихое появление в гейте имени,
+ * провенансом, а словарь стража — объединение снимков (19-5f). Миграция 100
+ * (18-13d) — права постбеков партнерам, ТРЕТИЙ снимок по тому же образцу. Опечатка в константе или тихое появление в гейте имени,
  * которого backend не выдаёт, проходят CI зелёными — и оператор получает пункт
  * меню, который никогда не откроется, либо, наоборот, теряет доступ.
  *
@@ -37,6 +38,7 @@ import { describe, it, expect } from 'vitest'
 import { PERMISSIONS } from '../permissions'
 import snapshot from './vendored/credit-w1-permissions.json'
 import snapshot098 from './vendored/credit-confirm-conditional-permission.json'
+import snapshot100 from './vendored/credit-postbacks-permissions.json'
 import {
   OUT_OF_W1_VALUES,
   PERMISSION_NAME_RE,
@@ -46,10 +48,15 @@ import {
 } from './creditPermissionSets'
 
 /**
- * Словарь W1 — объединение снимков: 082 (17 имён) и 098 (19-5a, 1 имя). Снимок
- * 082 не переписывается: его провенанс — один файл миграции.
+ * Словарь W1 — объединение снимков: 082 (17 имён), 098 (19-5a, 1 имя) и 100
+ * (18-13d, 2 имени постбеков). Снимок 082 не переписывается: его провенанс —
+ * один файл миграции.
  */
-const W1 = new Set<string>([...snapshot.permissions, ...snapshot098.permissions])
+const W1 = new Set<string>([
+  ...snapshot.permissions,
+  ...snapshot098.permissions,
+  ...snapshot100.permissions,
+])
 
 /** Сырой текст снимка — для проверок, которые `JSON.parse` уже не видит. */
 const SNAPSHOT_RAW = Object.values(
@@ -66,11 +73,19 @@ const SNAPSHOT_098_RAW = Object.values(
     eager: true,
   }) as Record<string, string>
 )[0]
+const SNAPSHOT_100_RAW = Object.values(
+  import.meta.glob('./vendored/credit-postbacks-permissions.json', {
+    query: '?raw',
+    import: 'default',
+    eager: true,
+  }) as Record<string, string>
+)[0]
 
 /** Каждый снимок — со своим сырым текстом и своим ожидаемым счётом имён. */
 const SNAPSHOTS = [
   { label: '082', snap: snapshot, raw: SNAPSHOT_RAW, expected: 17 },
   { label: '098 (19-5a)', snap: snapshot098, raw: SNAPSHOT_098_RAW, expected: 1 },
+  { label: '100 (18-13d)', snap: snapshot100, raw: SNAPSHOT_100_RAW, expected: 2 },
 ]
 
 /** Четыре области нормы. Пути относительные от `src/constants/__tests__/`. */
@@ -443,6 +458,51 @@ describe('T-FE-2-02 право подтверждения условного о�
   })
 })
 
+describe('T-FE-2-02 права постбеков партнерам (18-13d-a1)', () => {
+  it('P-1: оба права употреблены на странице настроек и принадлежат третьему снимку', () => {
+    const onSettings = new Set(
+      identifierUses()
+        .filter((u) => u.file.endsWith('pages/Credit/CreditSettingsPage.tsx'))
+        .map((u) => u.value)
+    )
+    for (const name of ['credit.partner_postbacks.read', 'credit.partner_postbacks.write']) {
+      expect(onSettings.has(name), `страница настроек не проверяет ${name}`).toBe(true)
+      expect(snapshot100.permissions, `снимок 100 потерял ${name}`).toContain(name)
+    }
+  })
+
+  it('P-2: право чтения стоит в обоих файлах-гейтах — маршрут и меню', () => {
+    for (const gate of ['routes/index.tsx', 'components/layout/DashboardLayout.tsx']) {
+      const uses = identifierUses().filter(
+        (u) => u.file.endsWith(gate) && u.value === 'credit.partner_postbacks.read'
+      )
+      expect(uses.length, `${gate}: нет права чтения постбеков`).toBeGreaterThan(0)
+    }
+  })
+
+  it('P-3: третий снимок не пересекается с 082 и 098', () => {
+    const both = snapshot100.permissions.filter(
+      (name) => snapshot.permissions.includes(name) || snapshot098.permissions.includes(name)
+    )
+    expect(both, `имя числится в двух снимках: ${both.join(', ')}`).toEqual([])
+  })
+
+  it('P-4 контроль: подменённое имя в копии третьего снимка краснит множество', () => {
+    const mutated = snapshot100.permissions.map((p) =>
+      p === 'credit.partner_postbacks.read' ? 'credit.partner_postback.read' : p
+    )
+    expect(mutated).not.toEqual(snapshot100.permissions)
+    const strays = straysOf(
+      [...identifierUses(), ...bareUses()],
+      new Set([...snapshot.permissions, ...snapshot098.permissions, ...mutated])
+    )
+    expect(
+      strays.some((s) => s.startsWith('credit.partner_postbacks.read')),
+      'контроль не покраснел: страж принял право чтения постбеков без снимка'
+    ).toBe(true)
+  })
+})
+
 describe('T-FE-2-02 отрицательные контроли (копии в памяти, файл снимка не трогается)', () => {
   it('подменённое имя в копии снимка краснит И множество, И самохеш', async () => {
     const mutated = snapshot.permissions.map((p) =>
@@ -544,11 +604,12 @@ describe('T-FE-2-02 отрицательные контроли (копии в �
     // Общий порог >=4 при этом ОСТАЁТСЯ выполненным за счёт меню — ровно тот
     // случай, ради которого якоря считаются на файл. Счёт — по меню: с 19-5f
     // карточка заявки несёт пятое имя (право подтверждения), и сумма по всем
-    // файлам перестала бы быть заслугой меню.
+    // файлам перестала бы быть заслугой меню. С 18-13d в меню пятое имя —
+    // право чтения постбеков (пункт «Настройки» и вход при выключенном разделе).
     const menuOnly = withoutRoutes.filter((u) =>
       u.file.endsWith('components/layout/DashboardLayout.tsx')
     )
-    expect(new Set(menuOnly.map((u) => u.value)).size).toBe(4)
+    expect(new Set(menuOnly.map((u) => u.value)).size).toBe(5)
     const lost = missingIdentifierAnchors(withoutRoutes)
     expect(
       lost,
