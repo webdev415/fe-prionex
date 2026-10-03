@@ -10,11 +10,19 @@
  *    нет (Р-18-13d-5), иначе копия разошлась бы с `creditApi.ts` молча.
  *
  * Свой адаптер, а не мок модуля: проверяем то, что реально соберёт axios.
+ *
+ * a2: создание — `POST` с ключом вызывающего; `checkPostbackUrl` — зеркало трёх
+ * проверок модуля таблицей; отказ модуля несёт `details` (уточнения 422) и код
+ * сетевого отказа axios (`transportCode`) — аддитивно, прежние поля как были;
+ * перечни — в файле без импортов, `enums.ts` транспорт не тянет.
  */
 import { describe, it, expect, afterEach } from 'vitest'
 import { AxiosError, type AxiosAdapter, type InternalAxiosRequestConfig } from 'axios'
-import { CREDIT_PREFIX, CreditApiError, creditHttp } from '../creditApi'
-import { creditPostbacksApi, isKnownPostbackTrigger } from '../postbacks'
+import { CREDIT_PREFIX, CreditApiError, creditApi, creditHttp, toCreditError } from '../creditApi'
+import { CREDIT_DYNAMIC_NAMESPACES } from '../enums'
+import * as postbackEnums from '../postbackEnums'
+import * as postbacks from '../postbacks'
+import { checkPostbackUrl, creditPostbacksApi, isKnownPostbackTrigger } from '../postbacks'
 
 /** Исходник транспорта — глобом Vite с `?raw` (средства Node уронили бы `tsc -b`). */
 const SOURCE = Object.values(
@@ -25,6 +33,15 @@ const SOURCE = Object.values(
 )[0]
 
 const RULES_PATH = '/api/v1/credit/admin/partner-postbacks/rules'
+
+/** Исходники перечней и реестра пространств — тем же глобом. */
+const ENUM_SOURCES = import.meta.glob(['../postbackEnums.ts', '../enums.ts'], {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+}) as Record<string, string>
+const sourceOf = (name: string) =>
+  Object.entries(ENUM_SOURCES).find(([path]) => path.endsWith(`/${name}`))?.[1] ?? ''
 
 type Reply = { status: number; data: unknown }
 
@@ -163,5 +180,202 @@ describe('isKnownPostbackTrigger', () => {
     expect(isKnownPostbackTrigger('new_lead')).toBe(true)
     expect(isKnownPostbackTrigger('new_loan')).toBe(true)
     expect(isKnownPostbackTrigger('loan_repaid')).toBe(false)
+  })
+})
+
+describe('создание правила (a2)', () => {
+  it('POST тела формы с ключом вызывающего', async () => {
+    const seen = serve({ status: 201, data: RULE })
+    const input = {
+      name: RULE.name,
+      active: true,
+      trigger: 'new_lead',
+      utm_source: 'partner1',
+      url_template: RULE.url_template,
+      goal: '1',
+      currency: null,
+    }
+
+    await expect(creditPostbacksApi.createRule(input, 'fe-postback-rule:k-3')).resolves.toEqual(
+      RULE
+    )
+
+    expect(seen[0].method).toBe('post')
+    expect(seen[0].url).toBe(RULES_PATH)
+    expect(JSON.parse(String(seen[0].data))).toEqual(input)
+    expect(seen[0].headers.get('Idempotency-Key')).toBe('fe-postback-rule:k-3')
+  })
+})
+
+describe('checkPostbackUrl — зеркало трёх проверок модуля (Р-18-13d-6)', () => {
+  const LIST = {
+    triggers: [
+      { code: 'new_lead', amount_allowed: false },
+      { code: 'new_loan', amount_allowed: true },
+    ],
+    macros: ['click_id', 'action_id', 'goal', 'amount', 'currency'],
+  }
+  const BASE = 'https://p.example/pb'
+
+  it.each([
+    ['всё на месте', `${BASE}?c={click_id}&a={action_id}&g={goal}`, 'new_lead', []],
+    ['сумма на кредите', `${BASE}?c={click_id}&s={amount}&cur={currency}`, 'new_loan', []],
+    ['без {click_id}', `${BASE}?a={action_id}`, 'new_lead', ['url_click_id_required']],
+    [
+      '{click_id} в пути, не в query',
+      `${BASE}/{click_id}?a=1`,
+      'new_lead',
+      ['url_click_id_required'],
+    ],
+    ['{click_id} после #', `${BASE}?a=1#{click_id}`, 'new_lead', ['url_click_id_required']],
+    ['неизвестный макрос', `${BASE}?c={click_id}&x={foo}`, 'new_lead', ['url_macro_unknown']],
+    ['непарная скобка', `${BASE}?c={click_id}&x={goal`, 'new_lead', ['url_macro_unknown']],
+    [
+      '{amount} на лиде',
+      `${BASE}?c={click_id}&s={amount}`,
+      'new_lead',
+      ['url_macro_not_for_trigger'],
+    ],
+    ['{amount} без триггера — решит модуль', `${BASE}?c={click_id}&s={amount}`, '', []],
+    ['{amount} у неизвестного триггера — решит модуль', `${BASE}?c={click_id}&s={amount}`, 'x', []],
+  ])('%s', (_name, url, trigger, expected) => {
+    expect(checkPostbackUrl(url, trigger, LIST).map((problem) => problem.reason)).toEqual(expected)
+  })
+
+  it('неизвестный макрос назван по имени', () => {
+    expect(checkPostbackUrl(`${BASE}?c={click_id}&x={foo}&y={bar}`, 'new_lead', LIST)).toEqual([
+      { reason: 'url_macro_unknown', macros: ['{foo}', '{bar}'] },
+    ])
+  })
+
+  it('перечень макросов — из ответа двери: новый макрос модуля принят, пропавший — нет', () => {
+    const list = { ...LIST, macros: ['click_id', 'sub_id'] }
+    expect(checkPostbackUrl(`${BASE}?c={click_id}&s={sub_id}`, 'new_lead', list)).toEqual([])
+    expect(checkPostbackUrl(`${BASE}?c={click_id}&g={goal}`, 'new_lead', list)).toEqual([
+      { reason: 'url_macro_unknown', macros: ['{goal}'] },
+    ])
+  })
+
+  it('признак «допускает {amount}» — из ответа двери, а не из снимка', () => {
+    const list = { ...LIST, triggers: [{ code: 'new_lead', amount_allowed: true }] }
+    expect(checkPostbackUrl(`${BASE}?c={click_id}&s={amount}`, 'new_lead', list)).toEqual([])
+  })
+})
+
+describe('отказ модуля: details и код сетевого отказа (К-1, аддитивно)', () => {
+  const PROBLEM_422 = {
+    title: 'Validation failed',
+    detail: 'Правило постбека не прошло проверку',
+    code: 'validation_failed',
+    errors: [{ field: 'url_template', code: 'invalid_value' }],
+    details: { reason: { url_template: ['url_macro_outside_query'] } },
+  }
+
+  it('422 — details доходят до CreditApiError, прежние поля как были', async () => {
+    serve({ status: 422, data: PROBLEM_422 })
+    const error = (await creditPostbacksApi
+      .createRule({} as never, 'k')
+      .catch((caught: unknown) => caught)) as CreditApiError
+
+    expect(error).toBeInstanceOf(CreditApiError)
+    expect(error.details).toEqual(PROBLEM_422.details)
+    expect(error.status).toBe(422)
+    expect(error.code).toBe('validation_failed')
+    expect(error.fields).toEqual(PROBLEM_422.errors)
+    expect(error.message).toBe(PROBLEM_422.detail)
+    expect(error.transportCode).toBeUndefined()
+  })
+
+  it('details не объектом — уточнений нет', () => {
+    for (const details of ['x', ['a'], null]) {
+      const error = toCreditError(
+        new AxiosError('Bad', 'ERR_BAD_REQUEST', undefined, null, {
+          data: { details },
+          status: 422,
+        } as never)
+      )
+      expect(error.details).toBeUndefined()
+    }
+  })
+
+  it.each(['ERR_NETWORK', 'ECONNABORTED', 'ETIMEDOUT'])(
+    'сетевой отказ %s без ответа — код в transportCode, code Problem пуст',
+    (code) => {
+      const error = toCreditError(new AxiosError('Network Error', code))
+      expect(error.transportCode).toBe(code)
+      expect(error.code).toBeUndefined()
+      expect(error.status).toBeUndefined()
+    }
+  )
+
+  it('отказ с ответом — transportCode пуст: это не сетевой сбой', async () => {
+    serve({ status: 503, data: { title: 'Unavailable' } })
+    const error = (await creditPostbacksApi
+      .rules()
+      .catch((caught: unknown) => caught)) as CreditApiError
+    expect(error.status).toBe(503)
+    expect(error.transportCode).toBeUndefined()
+  })
+
+  it('тело отказа blob-ом (содержимое документа) — details и transportCode тем же путём', async () => {
+    const blob = new Blob([JSON.stringify(PROBLEM_422)], { type: 'application/problem+json' })
+    serve({ status: 422, data: blob })
+    const refused = (await creditApi
+      .applicationDocumentContent('a-1', 'd-1')
+      .catch((caught: unknown) => caught)) as CreditApiError
+    expect(refused.details).toEqual(PROBLEM_422.details)
+    expect(refused.code).toBe('validation_failed')
+
+    const previous = creditHttp.defaults.adapter
+    creditHttp.defaults.adapter = async (config) => {
+      throw new AxiosError('Network Error', 'ERR_NETWORK', config)
+    }
+    try {
+      const offline = (await creditApi
+        .applicationDocumentContent('a-1', 'd-1')
+        .catch((caught: unknown) => caught)) as CreditApiError
+      expect(offline.transportCode).toBe('ERR_NETWORK')
+    } finally {
+      creditHttp.defaults.adapter = previous
+    }
+  })
+
+  it('прежний вызов конструктора — без новых полей', () => {
+    const error = new CreditApiError('Boom', 500, 'x', [{ field: 'a' }])
+    expect([error.status, error.code, error.fields]).toEqual([500, 'x', [{ field: 'a' }]])
+    expect(error.details).toBeUndefined()
+    expect(error.transportCode).toBeUndefined()
+  })
+})
+
+describe('перечни — в файле без импортов (К-3в)', () => {
+  it('postbackEnums.ts ничего не импортирует', () => {
+    const source = sourceOf('postbackEnums.ts')
+    expect(source.length, 'глоб потерял postbackEnums.ts').toBeGreaterThan(0)
+    expect(source).not.toMatch(/^\s*import\b/m)
+  })
+
+  it('enums.ts берёт перечни постбеков из postbackEnums, а не из транспорта', () => {
+    const source = sourceOf('enums.ts')
+    expect(source).toContain("from './postbackEnums'")
+    expect(source).not.toMatch(/from '\.\/postbacks'/)
+  })
+
+  it('postbacks.ts реэкспортирует те же перечни — прежние импортёры не сломаны', () => {
+    expect(postbacks.CREDIT_POSTBACK_TRIGGERS).toBe(postbackEnums.CREDIT_POSTBACK_TRIGGERS)
+    expect(postbacks.CREDIT_POSTBACK_AMOUNT_TRIGGERS).toBe(
+      postbackEnums.CREDIT_POSTBACK_AMOUNT_TRIGGERS
+    )
+    expect(postbacks.CREDIT_POSTBACK_MACROS).toBe(postbackEnums.CREDIT_POSTBACK_MACROS)
+    expect(postbacks.isKnownPostbackTrigger).toBe(postbackEnums.isKnownPostbackTrigger)
+  })
+})
+
+describe('пространства словаря формы зарегистрированы (К-6)', () => {
+  it('postbacks.macro — перечень макросов, postbacks.form.errors — уточнения отказа', () => {
+    expect(CREDIT_DYNAMIC_NAMESPACES['postbacks.macro']).toBe(postbackEnums.CREDIT_POSTBACK_MACROS)
+    expect(CREDIT_DYNAMIC_NAMESPACES['postbacks.form.errors']).toBe(
+      postbackEnums.CREDIT_POSTBACK_RULE_REASONS
+    )
   })
 })

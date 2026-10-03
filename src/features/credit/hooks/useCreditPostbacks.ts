@@ -7,16 +7,21 @@
  * действия (ручной `mutate` с теми же переменными, будущий автоповтор) несёт тот
  * же ключ — модуль отдаёт первый ответ и не выполняет действие дважды. Второе
  * нажатие — новое действие и новый ключ. Глобальный автоповтор мутаций
- * (`main.tsx`) сегодня `CreditApiError` не повторяет: транспорт раздела не
- * переносит `code` сетевого отказа axios, поэтому после моргнувшей сети оператор
- * видит отказ и нажимает ещё раз — уже с новым ключом.
+ * (`main.tsx`) повторяет сетевой отказ (`transportCode` у `CreditApiError`) один
+ * раз — с теми же переменными мутации, значит с тем же ключом.
+ *
+ * Создание из формы (a2) — иначе: ключ живёт на действие с НЕИЗМЕННЫМ телом
+ * (модуль кладёт тело в отпечаток ключа; см. `useSaveCreditPostbackRule`).
  */
+import { useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { newIdempotencyKey } from '../api/creditApi'
 import {
   creditPostbacksApi,
   type CreditPostbackRule,
+  type CreditPostbackRuleInput,
   type CreditPostbackRuleList,
+  type CreditPostbackRulePatch,
 } from '../api/postbacks'
 
 export const creditPostbackKeys = {
@@ -32,7 +37,8 @@ export function useCreditPostbackRules() {
   })
 }
 
-type RuleTarget = { id: string }
+/** Имя едет в переменных мутации — им баннер отказа называет правило. */
+type RuleTarget = { id: string; name: string }
 
 /**
  * Ответ двери сразу кладётся в кэш (без мигания старым значением), затем список
@@ -58,9 +64,18 @@ function useRuleMutation<V extends RuleTarget>(
   })
   return {
     run: (vars: V) => mutation.mutate({ vars, key: newIdempotencyKey('fe-postback-rule') }),
+    /**
+     * Снять показанный отказ прошлого нажатия (старт другого действия). Идущий
+     * запрос не трогается: `reset()` TanStack отвязал бы от него наблюдатель —
+     * пропали бы `isPending` (защита строки) и отказ, который ещё придёт.
+     */
+    reset: () => {
+      if (mutation.isError) mutation.reset()
+    },
     isPending: mutation.isPending,
     pending: mutation.isPending ? mutation.variables?.vars : undefined,
     error: mutation.error,
+    failed: mutation.isError ? mutation.variables?.vars : undefined,
   }
 }
 
@@ -77,4 +92,44 @@ export function useDeleteCreditPostbackRule() {
     ({ id }, key) => creditPostbacksApi.deleteRule(id, key),
     (items, _rule, { id }) => items.filter((item) => item.id !== id)
   )
+}
+
+type SaveCallbacks = { onSuccess: () => void; onError: (error: Error) => void }
+
+/**
+ * Сохранение формы правила: без `ruleId` — создание, с ним — правка.
+ *
+ * Ключ создания (Р-18-13d-9) минтится при открытии формы (монтаж хука) и живёт,
+ * пока тело не меняется: повтор неизменённого тела после сетевого отказа несёт
+ * тот же ключ — модуль отдаст первый ответ, дубля правила не будет. Ключ, уже
+ * ушедший с одним телом, с другим не годится (модуль ответит 409), поэтому
+ * любая правка поля после отправки (`edited`) минтит новый. Правка (PATCH) —
+ * ключ на нажатие, как у вкл/выкл.
+ */
+export function useSaveCreditPostbackRule(ruleId?: string) {
+  const queryClient = useQueryClient()
+  const [createKey, setCreateKey] = useState(() => newIdempotencyKey('fe-postback-rule'))
+  const keySent = useRef(false)
+  const mutation = useMutation({
+    mutationFn: ({ body, key }: { body: CreditPostbackRulePatch; key: string }) =>
+      ruleId
+        ? creditPostbacksApi.updateRule(ruleId, body, key)
+        : creditPostbacksApi.createRule(body as CreditPostbackRuleInput, key),
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: creditPostbackKeys.rules() })
+    },
+  })
+  return {
+    save: (body: CreditPostbackRulePatch, callbacks: SaveCallbacks) => {
+      keySent.current = !ruleId
+      const key = ruleId ? newIdempotencyKey('fe-postback-rule') : createKey
+      mutation.mutate({ body, key }, callbacks)
+    },
+    edited: () => {
+      if (!keySent.current) return
+      keySent.current = false
+      setCreateKey(newIdempotencyKey('fe-postback-rule'))
+    },
+    isPending: mutation.isPending,
+  }
 }

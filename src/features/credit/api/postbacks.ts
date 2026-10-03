@@ -46,22 +46,53 @@ export type CreditPostbackRulePatch = Partial<
   >
 >
 
-/** Триггеры контракта (`PartnerPostbackRule.trigger`). */
-export const CREDIT_POSTBACK_TRIGGERS = ['new_lead', 'new_loan'] as const
-/** Триггеры, допускающие `{amount}` (контракт: «`{amount}` — только у `new_loan`»). */
-export const CREDIT_POSTBACK_AMOUNT_TRIGGERS = ['new_loan'] as const
-/** Макросы адреса (`PartnerPostbackRuleList.macros`). */
-export const CREDIT_POSTBACK_MACROS = [
-  'click_id',
-  'action_id',
-  'goal',
-  'amount',
-  'currency',
-] as const
+// Перечни живут в файле без импортов (`enums.ts` берёт их, не таща транспорт);
+// здесь — реэкспорт для прежних импортёров.
+export {
+  CREDIT_POSTBACK_AMOUNT_TRIGGERS,
+  CREDIT_POSTBACK_MACROS,
+  CREDIT_POSTBACK_TRIGGERS,
+  isKnownPostbackTrigger,
+} from './postbackEnums'
 
-/** Есть ли у кода подпись в словаре; нет — экран пишет код сырым с пометкой. */
-export function isKnownPostbackTrigger(code: string): boolean {
-  return (CREDIT_POSTBACK_TRIGGERS as readonly string[]).includes(code)
+/** Тело создания (`PartnerPostbackRuleCreate`). */
+export type CreditPostbackRuleInput = Required<CreditPostbackRulePatch>
+
+/** Отказ клиентской проверки адреса — коды те же, что `details.reason` модуля. */
+export type PostbackUrlProblem =
+  | { reason: 'url_click_id_required' }
+  | { reason: 'url_macro_unknown'; macros: string[] }
+  | { reason: 'url_macro_not_for_trigger' }
+
+const MACRO = /\{([^{}]*)\}/g
+
+/**
+ * Зеркало трёх проверок модуля (Р-18-13d-6), чтобы не гонять запрос впустую.
+ * Правда — у модуля: схема, хост, макрос вне query и прочее решает его 422.
+ * Перечни — из ответа списка (`macros`, `triggers`), а не из своей копии.
+ */
+export function checkPostbackUrl(
+  template: string,
+  trigger: string,
+  list: Pick<CreditPostbackRuleList, 'triggers' | 'macros'>
+): PostbackUrlProblem[] {
+  const problems: PostbackUrlProblem[] = []
+  const unknown = [...template.matchAll(MACRO)]
+    .filter((match) => !list.macros.includes(match[1]))
+    .map((match) => match[0])
+  const rest = template.replace(MACRO, '')
+  if (unknown.length > 0 || rest.includes('{') || rest.includes('}')) {
+    problems.push({ reason: 'url_macro_unknown', macros: unknown })
+  }
+  // Модуль ищет `{click_id}` в query-строке: после первого `?` и до `#`.
+  const head = template.split('#')[0]
+  const query = head.includes('?') ? head.slice(head.indexOf('?') + 1) : ''
+  if (!query.includes('{click_id}')) problems.push({ reason: 'url_click_id_required' })
+  const known = list.triggers.find((item) => item.code === trigger)
+  if (template.includes('{amount}') && known && !known.amount_allowed) {
+    problems.push({ reason: 'url_macro_not_for_trigger' })
+  }
+  return problems
 }
 
 const RULES = `${CREDIT_PREFIX}/admin/partner-postbacks/rules`
@@ -79,6 +110,8 @@ const withKey = (key: string) => ({ headers: { 'Idempotency-Key': key } })
 
 export const creditPostbacksApi = {
   rules: () => call(() => creditHttp.get<CreditPostbackRuleList>(RULES)),
+  createRule: (input: CreditPostbackRuleInput, key: string) =>
+    call(() => creditHttp.post<CreditPostbackRule>(RULES, input, withKey(key))),
   updateRule: (id: string, patch: CreditPostbackRulePatch, key: string) =>
     call(() =>
       creditHttp.patch<CreditPostbackRule>(

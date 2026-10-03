@@ -13855,6 +13855,44 @@
         "deleteTitle": "Delete the rule “{{name}}”?",
         "deleteMessage": "New applications and loans will no longer be sent to the partner under this rule. The postback log entries of the rule are kept.",
         "deleteFailed": "Could not delete the rule. Try again."
+      },
+      "form": {
+        "add": "Add rule",
+        "edit": "Edit",
+        "createTitle": "New postback rule",
+        "editTitle": "Edit postback rule",
+        "chooseTrigger": "Choose a trigger",
+        "macrosHint": "Macros: click to insert into the URL at the cursor. The module fills in the values when sending.",
+        "macroRequired": "required",
+        "macroAmountOnly": "only for “New loan”",
+        "example": "Example:",
+        "goalHint": "1 — lead, 2 — new loan",
+        "currencyHint": "e.g. CAD, UAH; empty — the currency of the application or loan",
+        "cancel": "Cancel",
+        "save": "Save",
+        "saveFailed": "Could not save the rule. Try again.",
+        "conflict": "Another user changed the rule — refresh the list",
+        "errors": {
+          "url_too_long": "The URL is longer than 2000 characters.",
+          "url_control_character": "The URL contains an invisible or control character (space, tab).",
+          "url_unparseable": "The URL cannot be parsed (port, IPv6 brackets, a character in the host name).",
+          "url_scheme": "Only https URLs are accepted.",
+          "url_userinfo": "The URL must not carry a login or password before the host.",
+          "url_host_not_public": "The host is internal, reserved or not public.",
+          "url_macro_unknown": "Unknown macro or unpaired brace — only the macros from the hint are allowed.",
+          "url_macro_outside_query": "Macros are allowed only in the parameters after “?”, not in the domain or path.",
+          "url_click_id_required": "The {click_id} macro is required in the URL parameters.",
+          "url_macro_not_for_trigger": "The {amount} macro is allowed only for the “New loan” trigger.",
+          "goal_format": "Goal is one to nine digits.",
+          "currency_format": "Currency is three uppercase Latin letters, e.g. CAD."
+        }
+      },
+      "macro": {
+        "click_id": "partner's click ID from the application",
+        "action_id": "application or loan ID",
+        "goal": "goal of the rule",
+        "amount": "loan amount",
+        "currency": "currency of the rule or of the application or loan"
       }
     }
   },

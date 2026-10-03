@@ -115,19 +115,35 @@ export class CreditApiError extends Error {
   readonly status?: number
   readonly code?: string
   readonly fields?: Array<{ field?: string; message?: string }>
+  /** `details` Problem — расширение модуля (у 422 правила постбека — `details.reason`). */
+  readonly details?: Record<string, unknown>
+  /** Код отказа axios без ответа (`ERR_NETWORK`, `ECONNABORTED`, `ETIMEDOUT`). */
+  readonly transportCode?: string
 
   constructor(
     message: string,
     status?: number,
     code?: string,
-    fields?: Array<{ field?: string; message?: string }>
+    fields?: Array<{ field?: string; message?: string }>,
+    details?: Record<string, unknown>,
+    transportCode?: string
   ) {
     super(message)
     this.name = 'CreditApiError'
     this.status = status
     this.code = code
     this.fields = fields
+    this.details = details
+    this.transportCode = transportCode
   }
+}
+
+/** `details` Problem, если это объект; иначе — нет уточнений. */
+function problemDetails(payload: { details?: unknown } | undefined) {
+  const details = payload?.details
+  return details && typeof details === 'object' && !Array.isArray(details)
+    ? (details as Record<string, unknown>)
+    : undefined
 }
 
 export function toCreditError(error: unknown): CreditApiError {
@@ -136,13 +152,16 @@ export function toCreditError(error: unknown): CreditApiError {
     detail?: string
     code?: string
     errors?: Array<{ field?: string; message?: string }>
+    details?: unknown
   }>
   const payload = axiosError.response?.data
   return new CreditApiError(
     payload?.detail || payload?.title || axiosError.message || 'Ошибка кредитного модуля',
     axiosError.response?.status,
     payload?.code,
-    payload?.errors
+    payload?.errors,
+    problemDetails(payload),
+    axiosError.response ? undefined : axiosError.code
   )
 }
 
@@ -180,6 +199,7 @@ type ProblemBody = {
   detail?: string
   code?: string
   errors?: Array<{ field?: string; message?: string }>
+  details?: unknown
 }
 
 /**
@@ -223,7 +243,9 @@ async function toCreditErrorFromBody(error: unknown): Promise<CreditApiError> {
     payload?.detail || payload?.title || axiosError.message || 'Ошибка кредитного модуля',
     axiosError.response?.status,
     typeof payload?.code === 'string' ? payload.code : undefined,
-    payload?.errors
+    payload?.errors,
+    problemDetails(payload),
+    axiosError.response ? undefined : axiosError.code
   )
 }
 
