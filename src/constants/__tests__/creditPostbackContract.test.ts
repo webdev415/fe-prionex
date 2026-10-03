@@ -12,9 +12,12 @@
  * Страж сверяет перечни с vendored-снимком контракта
  * (`./vendored/credit-postback-contract.json`), подписи снимка — с его
  * списками, и регистрацию пространства триггеров — с перечнем. Живой контракт
- * тест не открывает: пересъёмка — по README рядом со снимком. Исходы и причины
- * пропуска сняты сразу (их показывает лог, 18-13d-b) — их сверку с перечнем
- * добавит та единица.
+ * тест не открывает: пересъёмка — по README рядом со снимком.
+ *
+ * 18-13d-b: лог сверяет и свои перечни — исходы, причины пропуска и коды
+ * `last_error` (у последних enum в схеме нет: модуль называет их в описании
+ * двери лога, снимок держит строки источника). Пространства исходов, причин и
+ * ошибок зарегистрированы — строку словаря на каждый код требует `i18nKeys`.
  */
 import { describe, it, expect } from 'vitest'
 import snapshot from './vendored/credit-postback-contract.json'
@@ -24,6 +27,12 @@ import {
   CREDIT_POSTBACK_MACROS,
   CREDIT_POSTBACK_TRIGGERS,
 } from '@/features/credit/api/postbacks'
+// Перечни лога (18-13d-b) postbacks.ts не реэкспортирует: прежних импортёров у них нет.
+import {
+  CREDIT_POSTBACK_LAST_ERRORS,
+  CREDIT_POSTBACK_OUTCOMES,
+  CREDIT_POSTBACK_SKIP_REASONS,
+} from '@/features/credit/api/postbackEnums'
 import { isCommitSha, isSha256Hex } from './creditPermissionSets'
 
 /** Снимок как словарь: имена списков и их подписей читаются по строке. */
@@ -49,11 +58,23 @@ const LISTS: Array<{ name: string; schema: string; size: number; values?: readon
     size: 5,
     values: CREDIT_POSTBACK_MACROS,
   },
-  { name: 'outcomes', schema: 'PartnerPostbackDelivery.properties.status.enum', size: 5 },
+  {
+    name: 'outcomes',
+    schema: 'PartnerPostbackDelivery.properties.status.enum',
+    size: 5,
+    values: CREDIT_POSTBACK_OUTCOMES,
+  },
   {
     name: 'skip_reasons',
     schema: 'PartnerPostbackDelivery.properties.skip_reason.enum',
     size: 3,
+    values: CREDIT_POSTBACK_SKIP_REASONS,
+  },
+  {
+    name: 'last_errors',
+    schema: 'paths./api/v1/credit/admin/partner-postbacks/deliveries.get.description',
+    size: 10,
+    values: CREDIT_POSTBACK_LAST_ERRORS,
   },
 ]
 
@@ -87,6 +108,10 @@ describe('снимок перечней постбеков: происхожде
 
   it('проза «`{amount}` — только у `new_loan`» названа диапазоном строк источника', () => {
     expect(snapshot.source_lines.amount_triggers).toMatch(/^\d+-\d+$/)
+  })
+
+  it('коды `last_error` (проза описания двери лога) названы диапазоном строк источника', () => {
+    expect(snapshot.source_lines.last_errors).toMatch(/^\d+-\d+$/)
   })
 
   it.each(LISTS)('$name: схема источника названа', ({ name, schema }) => {
@@ -134,11 +159,14 @@ describe('перечни postbacks.ts равны снимку контракта
     }
   )
 
-  it('сверяются все три перечня a1 — выборка не усохла', () => {
+  it('сверяются все шесть перечней (a1 и лог b) — выборка не усохла', () => {
     expect(LISTS.filter((list) => list.values).map((list) => list.name)).toEqual([
       'triggers',
       'amount_triggers',
       'macros',
+      'outcomes',
+      'skip_reasons',
+      'last_errors',
     ])
   })
 })
@@ -150,5 +178,15 @@ describe('пространство триггеров зарегистриров
     const registered = CREDIT_DYNAMIC_NAMESPACES['postbacks.trigger']
     expect(registered, 'пространство postbacks.trigger не зарегистрировано').toBeDefined()
     expect(sorted(registered ?? [])).toEqual(sorted(CREDIT_POSTBACK_TRIGGERS))
+  })
+
+  it.each([
+    ['postbacks.outcome', CREDIT_POSTBACK_OUTCOMES],
+    ['postbacks.skipReason', CREDIT_POSTBACK_SKIP_REASONS],
+    ['postbacks.lastError', CREDIT_POSTBACK_LAST_ERRORS],
+  ] as const)('%s (лог, 18-13d-b) — в реестре и равно своему перечню', (namespace, values) => {
+    const registered = CREDIT_DYNAMIC_NAMESPACES[namespace]
+    expect(registered, `пространство ${namespace} не зарегистрировано`).toBeDefined()
+    expect(sorted(registered ?? [])).toEqual(sorted(values))
   })
 })

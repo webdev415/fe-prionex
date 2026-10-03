@@ -23,8 +23,11 @@ import type {
 } from './types'
 import { CREDIT_APPLICATION_STAGES, CREDIT_STAGE_STATES } from './applicationStages'
 import {
+  CREDIT_POSTBACK_LAST_ERRORS,
   CREDIT_POSTBACK_MACROS,
+  CREDIT_POSTBACK_OUTCOMES,
   CREDIT_POSTBACK_RULE_REASONS,
+  CREDIT_POSTBACK_SKIP_REASONS,
   CREDIT_POSTBACK_TRIGGERS,
 } from './postbackEnums'
 
@@ -692,4 +695,8 @@ export const CREDIT_DYNAMIC_NAMESPACES: Record<string, readonly string[]> = {
   // (`details.reason` 422) под полями формы — тоже коды контракта.
   'postbacks.macro': CREDIT_POSTBACK_MACROS,
   'postbacks.form.errors': CREDIT_POSTBACK_RULE_REASONS,
+  // Лог отправок (18-13d-b): исходы, причины пропуска и коды ошибки модуля.
+  'postbacks.outcome': CREDIT_POSTBACK_OUTCOMES,
+  'postbacks.skipReason': CREDIT_POSTBACK_SKIP_REASONS,
+  'postbacks.lastError': CREDIT_POSTBACK_LAST_ERRORS,
 }

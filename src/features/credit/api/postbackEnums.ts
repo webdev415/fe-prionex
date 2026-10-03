@@ -39,6 +39,37 @@ export const CREDIT_POSTBACK_RULE_REASONS = [
   'currency_format',
 ] as const
 
+/** Исходы строки лога (`PartnerPostbackDelivery.status`, 18-13d-b). */
+export const CREDIT_POSTBACK_OUTCOMES = [
+  'pending',
+  'sent',
+  'simulated',
+  'failed',
+  'skipped',
+] as const
+/** Причины пропуска (`PartnerPostbackDelivery.skip_reason`). */
+export const CREDIT_POSTBACK_SKIP_REASONS = [
+  'click_id_missing',
+  'click_id_invalid',
+  'loan_reversed',
+] as const
+/**
+ * Коды `last_error` — enum у поля нет, модуль называет их в описании двери лога
+ * (`listPartnerPostbackDeliveries`); текст ответа партнёра модуль не хранит.
+ */
+export const CREDIT_POSTBACK_LAST_ERRORS = [
+  'redirect_not_followed',
+  'http_4xx',
+  'http_5xx',
+  'network',
+  'dns_unresolved',
+  'private_address',
+  'egress_denied',
+  'invalid_url',
+  'sender_error',
+  'retries_exhausted',
+] as const
+
 /** Есть ли у кода подпись в словаре; нет — экран пишет код сырым с пометкой. */
 export function isKnownPostbackTrigger(code: string): boolean {
   return (CREDIT_POSTBACK_TRIGGERS as readonly string[]).includes(code)

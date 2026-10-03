@@ -1,21 +1,23 @@
 {
   "source_repo": "CRM/credit-module",
   "source_ref": "main",
-  "source_commit_sha": "61379af4e2a54c3a9f135400316dfdaa4d03a326",
+  "source_commit_sha": "270150e5f6b5fa927a96aeafcef5b5f7180744fa",
   "source_path": "contracts/openapi.yaml",
-  "source_sha256": "4773efbdd065f08388e1ab41b70029a495fbeb45b9b0b6a63aafaeb65c5e04c0",
+  "source_sha256": "b145cdd03c1ba1a6761058f1420e89d8217ff46c763a6934a7563f4e7773d0a8",
   "source_schemas": {
     "triggers": "PartnerPostbackRule.properties.trigger.enum",
     "amount_triggers": "paths./api/v1/credit/admin/partner-postbacks/rules.post.description",
     "macros": "PartnerPostbackRuleList.properties.macros.items.enum",
     "outcomes": "PartnerPostbackDelivery.properties.status.enum",
-    "skip_reasons": "PartnerPostbackDelivery.properties.skip_reason.enum"
+    "skip_reasons": "PartnerPostbackDelivery.properties.skip_reason.enum",
+    "last_errors": "paths./api/v1/credit/admin/partner-postbacks/deliveries.get.description"
   },
   "source_lines": {
-    "amount_triggers": "2837-2838"
+    "amount_triggers": "2990-2991",
+    "last_errors": "3126-3128"
   },
-  "captured_at": "2026-10-03T06:10:03+00:00",
-  "captured_by": "builder-1813d-a1",
+  "captured_at": "2026-10-03T17:51:04+00:00",
+  "captured_by": "builder-1813d-b",
   "triggers": ["new_lead", "new_loan"],
   "triggers_sha256": "1a0cae6ee555324eac4e60027aec72c7b14b7790f898b3a124d474d329f6188d",
   "amount_triggers": ["new_loan"],
@@ -25,5 +27,18 @@
   "outcomes": ["failed", "pending", "sent", "simulated", "skipped"],
   "outcomes_sha256": "cd934dbafa405830c6b8d55203be96382d992589b48ca03fc3ef29d9111a7e71",
   "skip_reasons": ["click_id_invalid", "click_id_missing", "loan_reversed"],
-  "skip_reasons_sha256": "bdcecdafb7271a1050b687801de113951a7ec3615378ab2e87c2612e106f6c23"
+  "skip_reasons_sha256": "bdcecdafb7271a1050b687801de113951a7ec3615378ab2e87c2612e106f6c23",
+  "last_errors": [
+    "dns_unresolved",
+    "egress_denied",
+    "http_4xx",
+    "http_5xx",
+    "invalid_url",
+    "network",
+    "private_address",
+    "redirect_not_followed",
+    "retries_exhausted",
+    "sender_error"
+  ],
+  "last_errors_sha256": "92bdc1883d701c65499dcdd3d98027ad06d6749f17d9745b784f5ef7a19ec24a"
 }

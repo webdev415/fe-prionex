@@ -18,7 +18,7 @@
  *    спрашивает, а предупреждение о выключенном разделе на вкладке не висит.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { CreditSettingsPage } from '../CreditSettingsPage'
 import { useAuthStore } from '@/stores/authStore'
@@ -286,8 +286,12 @@ describe('CreditSettingsPage', () => {
   describe('вкладка «Постбеки партнерам» (18-13d-a1)', () => {
     const READ = 'credit.partner_postbacks.read'
     const WRITE = 'credit.partner_postbacks.write'
+    // Вкладки страницы — в её полосе: у вкладки постбеков своя полоса
+    // «Правила / Лог» (18-13d-b), её вкладки страницей не считаются.
     const tabNames = async () =>
-      (await screen.findAllByRole('tab')).map((tab) => tab.textContent ?? '')
+      within(await screen.findByRole('tablist', { name: 'credit.settings.title' }))
+        .getAllByRole('tab')
+        .map((tab) => tab.textContent ?? '')
 
     it('маркетологу с одним правом чтения — ровно одна вкладка, модуль не спрашивается', async () => {
       mockOverview([])

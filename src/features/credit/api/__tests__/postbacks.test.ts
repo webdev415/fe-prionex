@@ -379,3 +379,144 @@ describe('пространства словаря формы зарегистр�
     )
   })
 })
+
+describe('лог отправок (18-13d-b) — дверь listPartnerPostbackDeliveries', () => {
+  const DELIVERIES_PATH = '/api/v1/credit/admin/partner-postbacks/deliveries'
+  const RULE_ID = '9b0f6a1e-2c3d-4e5f-8a9b-0c1d2e3f4a5b'
+  const ACTION_ID = '1c2d3e4f-5a6b-4c7d-8e9f-0a1b2c3d4e5f'
+
+  /** Строка запроса так, как её соберёт axios с сериализатором вызова. */
+  const query = (config: InternalAxiosRequestConfig) =>
+    new URL(creditHttp.getUri(config), 'http://crm.test').searchParams
+
+  it('GET под группой admin: фильтры — имена параметров двери, limit и cursor', async () => {
+    const page = { items: [], next_cursor: null }
+    const seen = serve({ status: 200, data: page })
+
+    await expect(
+      creditPostbacksApi.listDeliveries({
+        rule_id: RULE_ID,
+        status: 'skipped',
+        trigger: 'new_lead',
+        action_id: ACTION_ID,
+        created_from: '2026-10-01',
+        created_to: '2026-10-03',
+        limit: postbacks.CREDIT_POSTBACK_LOG_PAGE_SIZE,
+        cursor: '42',
+      })
+    ).resolves.toEqual(page)
+
+    expect(seen).toHaveLength(1)
+    expect(seen[0].method).toBe('get')
+    expect(seen[0].url).toBe(DELIVERIES_PATH)
+    const params = query(seen[0])
+    expect(Object.fromEntries(params)).toEqual({
+      rule_id: RULE_ID,
+      status: 'skipped',
+      trigger: 'new_lead',
+      action_id: ACTION_ID,
+      created_from: '2026-10-01',
+      created_to: '2026-10-03',
+      limit: '25',
+      cursor: '42',
+    })
+    // Повторяемых параметров нет: у каждого имени — ровно одно значение.
+    expect([...params.keys()]).toHaveLength(new Set(params.keys()).size)
+  })
+
+  it('размер страницы — умолчание двери, 25', () => {
+    expect(postbacks.CREDIT_POSTBACK_LOG_PAGE_SIZE).toBe(25)
+  })
+
+  it('незаданный фильтр в запрос не уходит', async () => {
+    const seen = serve({ status: 200, data: { items: [], next_cursor: null } })
+
+    await creditPostbacksApi.listDeliveries({ limit: 25, status: undefined, cursor: undefined })
+
+    expect(Object.fromEntries(query(seen[0]))).toEqual({ limit: '25' })
+  })
+
+  it('отказ двери — CreditApiError тем же разбором', async () => {
+    serve({ status: 403, data: { title: 'Forbidden', code: 'forbidden' } })
+
+    const error = await creditPostbacksApi
+      .listDeliveries({ limit: 25 })
+      .catch((caught: unknown) => caught)
+
+    expect(error).toBeInstanceOf(CreditApiError)
+    expect((error as CreditApiError).status).toBe(403)
+  })
+
+  // Подпись «известен ли код» таблица лога берёт из этого реестра (вместо isKnown*):
+  // сырой код с пометкой у неизвестного держит сцена таблицы CreditPostbackDeliveries.
+  it('перечни лога зарегистрированы пространствами словаря', () => {
+    expect(CREDIT_DYNAMIC_NAMESPACES['postbacks.outcome']).toBe(
+      postbackEnums.CREDIT_POSTBACK_OUTCOMES
+    )
+    expect(CREDIT_DYNAMIC_NAMESPACES['postbacks.skipReason']).toBe(
+      postbackEnums.CREDIT_POSTBACK_SKIP_REASONS
+    )
+    expect(CREDIT_DYNAMIC_NAMESPACES['postbacks.lastError']).toBe(
+      postbackEnums.CREDIT_POSTBACK_LAST_ERRORS
+    )
+  })
+})
+
+describe('postbackLogRequest — поля фильтров лога → параметры двери (Р-18-13d-10)', () => {
+  const UUID_A = '9b0f6a1e-2c3d-4e5f-8a9b-0c1d2e3f4a5b'
+  const EMPTY = { rule: '', outcome: '', trigger: '', action: '', from: '', to: '' }
+
+  it('пустые поля — ни одного фильтра', () => {
+    expect(postbacks.postbackLogRequest(EMPTY)).toEqual({
+      filters: {
+        rule_id: undefined,
+        status: undefined,
+        trigger: undefined,
+        action_id: undefined,
+        created_from: undefined,
+        created_to: undefined,
+      },
+      rangeInverted: false,
+      actionInvalid: false,
+    })
+  })
+
+  it('годные значения уходят под именами двери; ID обрезается по краям', () => {
+    const { filters } = postbacks.postbackLogRequest({
+      rule: UUID_A,
+      outcome: 'failed',
+      trigger: 'new_loan',
+      action: ` ${UUID_A} `,
+      from: '2026-10-01',
+      to: '2026-10-01',
+    })
+    expect(filters).toEqual({
+      rule_id: UUID_A,
+      status: 'failed',
+      trigger: 'new_loan',
+      action_id: UUID_A,
+      created_from: '2026-10-01',
+      created_to: '2026-10-01',
+    })
+  })
+
+  it('мусор ссылки не уходит: не-UUID, чужой исход и триггер, дата не YYYY-MM-DD', () => {
+    const result = postbacks.postbackLogRequest({
+      rule: 'r-1',
+      outcome: 'bounced',
+      trigger: 'loan_repaid',
+      action: '9b0f6a1e',
+      from: '01.10.2026',
+      to: '',
+    })
+    expect(Object.values(result.filters).every((value) => value === undefined)).toBe(true)
+    expect(result.actionInvalid).toBe(true)
+  })
+
+  it('перевёрнутый период не уходит целиком и помечен', () => {
+    const result = postbacks.postbackLogRequest({ ...EMPTY, from: '2026-10-05', to: '2026-10-01' })
+    expect(result.rangeInverted).toBe(true)
+    expect(result.filters.created_from).toBeUndefined()
+    expect(result.filters.created_to).toBeUndefined()
+  })
+})
