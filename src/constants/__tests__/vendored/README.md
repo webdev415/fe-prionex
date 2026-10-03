@@ -181,7 +181,8 @@ for k in ['zum_failure_codes','module_failure_codes','module_failure_code_patter
 Файл читает `../creditW1Permissions.test.ts` третьим снимком — так же, как 098: словарь стража
 — объединение трёх снимков, проверки канона, списка, провенанса и самохеша идут на каждом.
 Миграция 100 вносит три имени; третье, `credit.applications.export`, этому экрану не нужно и в
-снимок не взято — его снимает та единица, что его употребит (счёт снимка — 2, не 3).
+снимок не взято — его снял четвёртый снимок `credit-applications-export-permission.json`
+(18-13c-b, раздел ниже; счёт этого снимка — 2, не 3).
 
 ### Как проверить, что снимок не протух
 
@@ -200,6 +201,41 @@ git show "$SHA:$F" | grep -o 'credit\.partner_postbacks\.[a-z_]*' | sort -u
 python3 -c "import json,hashlib,sys; d=json.load(open(sys.argv[1])); \
 print(hashlib.sha256('\n'.join(sorted(d['permissions'])).encode()).hexdigest() == d['sha256'])" \
   src/constants/__tests__/vendored/credit-postbacks-permissions.json
+```
+
+## `credit-applications-export-permission.json` — право выгрузки заявок CSV (18-13c-b)
+
+| Что | Значение |
+|---|---|
+| Источник | `CRM/api-prionex`, ветка `main` |
+| Путь в источнике | `services/auth/alembic/versions/20261002_1200_100_credit_export_postback_permissions.py` |
+| Коммит съёмки | поле `source_commit_sha` в самом файле (`main` с миграцией 100 — тот же, что у снимка постбеков) |
+| Кто снял / когда | поля `captured_by` / `captured_at` |
+| Сколько имён | 1 |
+
+Файл читает `../creditW1Permissions.test.ts` четвёртым снимком — так же, как 098: словарь стража
+— объединение четырёх снимков, проверки канона, списка, провенанса и самохеша идут на каждом.
+Источник тот же файл миграции 100, что у `credit-postbacks-permissions.json`: снимки делят его
+по экранам (постбеки — два имени, выгрузка — одно), страж провенанс между снимками не сверяет.
+Право употреблено на странице списка заявок — кнопка «Експорт CSV» (`useHasPermission`).
+
+### Как проверить, что снимок не протух
+
+```bash
+# в клоне api-prionex; SHA — из поля source_commit_sha
+SHA=502636730e49a51b6f803dea8e2e27023c2ac40f
+F=services/auth/alembic/versions/20261002_1200_100_credit_export_postback_permissions.py
+
+# 1. sha256 источника — обязан совпасть с полем source_sha256
+git show "$SHA:$F" | sha256sum
+
+# 2. имя выгрузки в миграции — обязано совпасть с полем permissions
+git show "$SHA:$F" | grep -o 'credit\.applications\.export' | sort -u
+
+# 3. подпись списка — обязана совпасть с полем sha256
+python3 -c "import json,hashlib,sys; d=json.load(open(sys.argv[1])); \
+print(hashlib.sha256('\n'.join(sorted(d['permissions'])).encode()).hexdigest() == d['sha256'])" \
+  src/constants/__tests__/vendored/credit-applications-export-permission.json
 ```
 
 ## `credit-postback-contract.json` — перечни постбеков партнерам (18-13d)

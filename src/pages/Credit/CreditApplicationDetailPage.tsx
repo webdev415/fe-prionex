@@ -527,6 +527,12 @@ function AttributionPanel({ application }: { application: CreditApplicationDetai
           ? t('credit.attribution.consent.unknown')
           : value
   const notSet = <span className="text-muted-foreground">{ATTRIBUTION_NOT_SET}</span>
+  // Время клика, которое не разбирается, — та же пустота, что `null`: `(not set)`,
+  // а не прочерк форматтера (`formatDateTime` отдаёт «—» на любой непарсимой строке).
+  const clickAt = (value: string) => {
+    const shown = formatDateTime(value)
+    return shown === '—' ? notSet : shown
+  }
 
   return (
     <Panel title={t('credit.card.attribution')}>
@@ -538,7 +544,7 @@ function AttributionPanel({ application }: { application: CreditApplicationDetai
             : key === 'consent_ads'
               ? consentLabel(value)
               : key === 'click_at'
-                ? formatDateTime(value)
+                ? clickAt(value)
                 : value
         return (
           <Field key={key} label={key}>

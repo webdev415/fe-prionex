@@ -2407,6 +2407,36 @@ describe('CreditApplicationDetailPage → 18-13c: источник трафик�
     }
   )
 
+  /** Значение строки — подстановка «не задано» (приглушённый `(not set)`), а не текст как пришёл. */
+  function expectNotSetSubstituted(label: string): void {
+    const body = attributionSection().querySelector(':scope > div') as HTMLElement
+    const row = Array.from(body.querySelectorAll(':scope > div')).find(
+      (candidate) => candidate.children[0]?.textContent === label
+    )
+    expect(row, `строки ${label} нет`).toBeDefined()
+    const value = row?.children[1] as HTMLElement
+    expect(value.textContent, `строка ${label} показала не (not set)`).toBe('(not set)')
+    expect(
+      value.querySelector('.text-muted-foreground'),
+      `строка ${label}: (not set) не приглушён — это значение как пришло, а не подстановка`
+    ).not.toBeNull()
+  }
+
+  it('буквальный (NOT SET) в любом регистре и с пробелами — подстановка, а не значение как есть', () => {
+    renderPage(
+      withTags({ marketing: { ...NO_TAGS, utm_source: ' (NOT SET) ', utm_medium: '(not set)' } })
+    )
+    expectNotSetSubstituted('utm_source')
+    expectNotSetSubstituted('utm_medium')
+    // Положительный контроль: пустые строки — та же подстановка.
+    expectNotSetSubstituted('utm_term')
+  })
+
+  it('непарсимое время клика — (not set), а не прочерк форматтера', () => {
+    renderPage(withTags({ marketing: { ...NO_TAGS, click_at: 'not-a-date' } }))
+    expectNotSetSubstituted('click_at')
+  })
+
   it.each([
     ['denied', 'credit.attribution.consent.denied'],
     ['unknown', 'credit.attribution.consent.unknown'],
