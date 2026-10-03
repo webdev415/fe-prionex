@@ -174,8 +174,8 @@ export type CreateUserFormData = z.infer<typeof createUserSchema>
 export type UpdateUserFormData = z.infer<typeof updateUserSchema>
 
 /**
- * Common timezone options
- * Note: In production, this should be a comprehensive list or fetched from an API
+ * The curated list of time zones offered by the user forms, Profile settings and
+ * the UBKI settings: a zone added here appears in all of them (story 17-66a).
  */
 export const timezoneOptions = [
   { value: 'Europe/Kyiv', label: 'Europe/Kyiv (EET/EEST)' }, // Default per backend
@@ -184,6 +184,12 @@ export const timezoneOptions = [
   { value: 'America/Chicago', label: 'America/Chicago (CST/CDT)' },
   { value: 'America/Denver', label: 'America/Denver (MST/MDT)' },
   { value: 'America/Los_Angeles', label: 'America/Los Angeles (PST/PDT)' },
+  { value: 'America/Edmonton', label: 'America/Edmonton (MST/MDT) — Alberta' },
+  { value: 'America/Toronto', label: 'America/Toronto (EST/EDT) — Ontario' },
+  { value: 'America/Vancouver', label: 'America/Vancouver (PST/PDT) — British Columbia' },
+  { value: 'America/Regina', label: 'America/Regina (CST) — Saskatchewan' },
+  { value: 'America/Winnipeg', label: 'America/Winnipeg (CST/CDT) — Manitoba' },
+  { value: 'America/Halifax', label: 'America/Halifax (AST/ADT) — Atlantic' },
   { value: 'Europe/London', label: 'Europe/London (GMT/BST)' },
   { value: 'Europe/Madrid', label: 'Europe/Madrid (CET/CEST)' },
   { value: 'Europe/Paris', label: 'Europe/Paris (CET/CEST)' },
