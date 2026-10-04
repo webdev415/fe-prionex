@@ -12167,7 +12167,7 @@
         "surveys": "Respuestas de la encuesta",
         "termination": "Baja",
         "removeProjectsTitle": "¿Quitar del proyecto?",
-        "removeProjectsMessage": "Se quitará al empleado de: {{projects}}. Se borrarán su puesto y su grupo allí, y el cambio quedará registrado en la cronología.",
+        "removeProjectsMessage": "Se quitará al empleado de: {{projects}}. Se borrarán su puesto y su grupo allí.",
         "removeProjectsConfirm": "Quitar",
         "otherProject": "Otro proyecto"
       },
