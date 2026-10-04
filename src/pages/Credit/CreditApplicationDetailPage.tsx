@@ -58,6 +58,7 @@ import { CreditFlagList } from './components/CreditFlagList'
 import { CreditStageProgress } from './components/CreditStageProgress'
 import { CreditClientLink } from './components/CreditClientLink'
 import { CreditPriorApplications } from './components/CreditPriorApplications'
+import { CreditLegalTrail } from './components/CreditLegalTrail'
 import { CreditApplicationTimeline } from './components/CreditApplicationTimeline'
 import { CreditCommunications } from './components/CreditCommunications'
 import { collectApplicationFlags } from '@/features/credit/api/applicantFlags'
@@ -1390,6 +1391,8 @@ function ApplicationSignAndConsents({ application }: { application: CreditApplic
           </ul>
         </>
       )}
+      {/* След показанных правовых текстов — вне условия согласий: они независимы. */}
+      <CreditLegalTrail value={application.legal_texts_shown} />
     </>
   )
 }

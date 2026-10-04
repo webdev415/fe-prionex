@@ -13225,7 +13225,31 @@
       "marketing": "Marketing",
       "ibv_provider": "Bank verification provider",
       "pad": "Pre-authorised debit",
-      "credit_check": "Credit check"
+      "credit_check": "Credit check",
+      "e_copy": "Electronic copy of the agreement",
+      "privacy_policy": "Privacy Policy"
+    },
+    "legalTrail": {
+      "title": "Legal texts shown",
+      "empty": "No record of legal texts shown was submitted",
+      "source": {
+        "legalTexts": "Site legal text",
+        "siteDocuments": "Site document"
+      },
+      "door": {
+        "intake": "Before submitting the application",
+        "sign": "Before signing"
+      },
+      "columns": {
+        "subject": "Text",
+        "source": "Source",
+        "version": "Version",
+        "locale": "Language",
+        "shownAt": "Shown",
+        "receivedAt": "Received",
+        "sha256": "Fingerprint",
+        "door": "Stage"
+      }
     },
     "entryType": {
       "disbursement": "Disbursement",

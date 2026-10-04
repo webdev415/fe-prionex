@@ -38,6 +38,7 @@ import type {
   CreditDocumentMeta,
   CreditIdentityKey,
   CreditJournalEntry,
+  CreditLegalTextShown,
   CreditLoanDetail,
   CreditLoanRailOperations,
   CreditLoanStatus,
@@ -405,3 +406,23 @@ export type _params_utm_source = Assert<Has<CreditApplicationsParams, 'utm_sourc
 export type _params_utm_campaign = Assert<Has<CreditApplicationsParams, 'utm_campaign'>>
 export type _params_click_id = Assert<Has<CreditApplicationsParams, 'click_id'>>
 export type _params_has_click_id = Assert<Has<CreditApplicationsParams, 'has_click_id'>>
+
+/* ─── След показанных правовых текстов (контракт модуля 0.1.48, 18-4a → 18-4e) ─
+   Сверено с `main` модуля 45c4d6b2 — `LegalTextShownRecord` (`openapi.yaml:7426`),
+   `InternalApplication.legal_texts_shown` (`:9502`, required `:9290`). Поле карточки
+   в типе необязательно (стенд старше 0.1.48 его не шлёт): утверждается наличие.
+   `door` (18-4c, 0.1.49) не утверждается — в контракте его ещё нет. */
+/** Блок «Показані правові тексти» читает только это поле; переименование спрячет блок на всех заявках молча. */
+export type _detail_has_legal_texts_shown = Assert<
+  Has<CreditApplicationDetail, 'legal_texts_shown'>
+>
+/** Отпечаток и кнопка «копировать» для сверки с журналом CMS — по этому полю; без него «—» у каждой строки. */
+export type _legal_text_has_sha256 = Assert<Has<CreditLegalTextShown, 'sha256'>>
+/** «#N» в столбце «Версія» — постоянный адрес версии на стенде CMS; без поля строку не найти в журнале. */
+export type _legal_text_has_publication_id = Assert<Has<CreditLegalTextShown, 'publication_id'>>
+/** «vN» в столбце «Версія»; без поля юрист не отличит редакцию текста. */
+export type _legal_text_has_version_no = Assert<Has<CreditLegalTextShown, 'version_no'>>
+/** Столбец «Показано» — только часы сайта; переименование скроет столбец у каждой заявки. */
+export type _legal_text_has_shown_at = Assert<Has<CreditLegalTextShown, 'shown_at'>>
+/** «Отримано» — момент приёма модулем; без поля во всех строках «—». */
+export type _legal_text_has_received_at = Assert<Has<CreditLegalTextShown, 'received_at'>>
