@@ -244,23 +244,25 @@ print(hashlib.sha256('\n'.join(sorted(d['permissions'])).encode()).hexdigest() =
 |---|---|
 | Источник | `CRM/credit-module`, ветка `main` |
 | Путь в источнике | `contracts/openapi.yaml` |
-| Коммит съёмки | поле `source_commit_sha` в самом файле (мерж 18-13b, контракт 0.1.44) |
+| Коммит съёмки | поле `source_commit_sha` в самом файле (`main` модуля, контракт 0.1.46; первая съёмка a1 — 0.1.44) |
 | Схемы | поле `source_schemas`: список снимка → схема контракта |
-| Строки прозы | поле `source_lines` — «`{amount}` — только у `new_loan`» в описании `createPartnerPostbackRule` |
+| Строки прозы | поле `source_lines` — «`{amount}` — только у `new_loan`» в описании `createPartnerPostbackRule`; коды `last_error` в описании `listPartnerPostbackDeliveries` (enum в схеме у поля нет) |
 | Кто снял / когда | поля `captured_by` / `captured_at` |
-| Сколько значений | триггеров 2, триггеров с `{amount}` 1, макросов 5, исходов 5, причин пропуска 3 |
+| Сколько значений | триггеров 2, триггеров с `{amount}` 1, макросов 5, исходов 5, причин пропуска 3, кодов `last_error` 10 |
 
 Файл читает `../creditPostbackContract.test.ts`: перечни `src/features/credit/api/postbacks.ts`
-обязаны совпасть со списками снимка множеством, подписи списков — сойтись, а пространство
-`postbacks.trigger` — быть зарегистрированным в `CREDIT_DYNAMIC_NAMESPACES` (строки словаря на
-каждый триггер сторожит `i18nKeys.test.ts`). Значения в ответе модуля — открытые строки:
-триггер вне снимка экран показывает как есть с пометкой «невідоме значення».
+(все шесть, включая исходы, причины пропуска и коды `last_error` лога 18-13d-b) обязаны
+совпасть со списками снимка множеством, подписи списков — сойтись, а пространства
+`postbacks.trigger`, `postbacks.outcome`, `postbacks.skipReason`, `postbacks.lastError` — быть
+зарегистрированными в `CREDIT_DYNAMIC_NAMESPACES` (строки словаря на каждый код сторожит
+`i18nKeys.test.ts`). Значения в ответе модуля — открытые строки: код вне снимка экран
+показывает как есть с пометкой «невідоме значення».
 
 ### Как проверить, что снимок не протух
 
 ```bash
 # в клоне credit-module; SHA — из поля source_commit_sha
-SHA=61379af4e2a54c3a9f135400316dfdaa4d03a326
+SHA=270150e5f6b5fa927a96aeafcef5b5f7180744fa
 
 # 1. sha256 источника — обязан совпасть с полем source_sha256
 git show "$SHA:contracts/openapi.yaml" | sha256sum
@@ -275,15 +277,16 @@ print(sorted(s["PartnerPostbackRuleList"]["properties"]["macros"]["items"]["enum
 print(sorted(s["PartnerPostbackDelivery"]["properties"]["status"]["enum"]))
 print(sorted(v for v in s["PartnerPostbackDelivery"]["properties"]["skip_reason"]["enum"] if v))
 '
-# триггеры с {amount} — проза, строки source_lines
-git show "$SHA:contracts/openapi.yaml" | sed -n 2837,2838p
+# триггеры с {amount} и коды last_error — проза, строки source_lines
+git show "$SHA:contracts/openapi.yaml" | sed -n 2990,2991p
+git show "$SHA:contracts/openapi.yaml" | sed -n 3126,3128p
 
 # 3. подписи списков — обязаны совпасть с полями <список>_sha256
 python3 -c "import json,hashlib,sys; d=json.load(open(sys.argv[1])); \
 print(all(hashlib.sha256('\n'.join(sorted(d[k])).encode()).hexdigest() == d[k + '_sha256'] \
-for k in ['triggers','amount_triggers','macros','outcomes','skip_reasons']))" \
+for k in ['triggers','amount_triggers','macros','outcomes','skip_reasons','last_errors']))" \
   src/constants/__tests__/vendored/credit-postback-contract.json
 ```
 
-Пересъёмка обязательна, когда модуль добавил триггер, макрос, исход или причину пропуска: до
-неё экран покажет новое значение сырым с пометкой, без подписи.
+Пересъёмка обязательна, когда модуль добавил триггер, макрос, исход, причину пропуска или код
+`last_error`: до неё экран покажет новое значение сырым с пометкой, без подписи.

@@ -35,6 +35,8 @@ import {
   QueryClientProvider,
 } from '@tanstack/react-query'
 import { AxiosError } from 'axios'
+// Секция держит подвкладку в URL (`pb_view`, 18-13d-b) — нужен роутер.
+import { MemoryRouter } from 'react-router-dom'
 import { CreditPostbacksSection } from '../components/CreditPostbacksSection'
 import { CreditApiError, toCreditError } from '@/features/credit/api/creditApi'
 import { creditPostbacksApi, type CreditPostbackRule } from '@/features/credit/api/postbacks'
@@ -125,9 +127,11 @@ function renderSection(canWrite = true): QueryClient {
     },
   })
   render(
-    <QueryClientProvider client={client}>
-      <CreditPostbacksSection canWrite={canWrite} />
-    </QueryClientProvider>
+    <MemoryRouter>
+      <QueryClientProvider client={client}>
+        <CreditPostbacksSection canWrite={canWrite} />
+      </QueryClientProvider>
+    </MemoryRouter>
   )
   return client
 }

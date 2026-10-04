@@ -13944,6 +13944,71 @@
         "goal": "objetivo de la regla",
         "amount": "importe del préstamo",
         "currency": "moneda de la regla o de la solicitud o del préstamo"
+      },
+      "log": {
+        "tabs": {
+          "rules": "Reglas",
+          "log": "Registro"
+        },
+        "helper": "Registro de envíos de postbacks a socios: qué se envió, cuándo, a quién y con qué resultado. Los más recientes primero.",
+        "refresh": "Actualizar",
+        "refreshFailed": "No se pudo actualizar el registro: se muestra el último estado cargado. Inténtelo de nuevo más tarde.",
+        "empty": "Todavía no hubo postbacks",
+        "emptyFiltered": "Nada coincide con los filtros. Restablezca los filtros para ver todas las entradas.",
+        "prev": "Atrás",
+        "next": "Siguiente",
+        "deleted": "eliminada",
+        "reversed": "revertido",
+        "sentAt": "Enviado",
+        "nextAttemptAt": "Próximo intento",
+        "copyActionId": "Copiar ID",
+        "columns": {
+          "createdAt": "Fecha y hora",
+          "rule": "Regla",
+          "trigger": "Disparador",
+          "action": "Solicitud / préstamo",
+          "outcome": "Resultado",
+          "response": "Código de respuesta / error",
+          "url": "URL final",
+          "attempts": "Intentos"
+        },
+        "filters": {
+          "rule": "Regla",
+          "outcome": "Resultado",
+          "trigger": "Disparador",
+          "action": "ID de solicitud o préstamo (UUID)",
+          "from": "Desde (UTC)",
+          "to": "Hasta (UTC)",
+          "all": "Todos",
+          "reset": "Restablecer filtros",
+          "utc": "El período se cuenta en días UTC, como lo hace el módulo.",
+          "inverted": "La fecha «desde» es posterior a la fecha «hasta»: el período no se aplica.",
+          "actionInvalid": "No es un UUID completo: el filtro por ID no se aplica."
+        }
+      },
+      "outcome": {
+        "pending": "pendiente de envío",
+        "sent": "enviado",
+        "simulated": "enviado en modo de prueba",
+        "failed": "error",
+        "skipped": "omitido"
+      },
+      "skipReason": {
+        "click_id_missing": "Sin click_id",
+        "click_id_invalid": "click_id no válido",
+        "loan_reversed": "Desembolso revertido"
+      },
+      "lastError": {
+        "redirect_not_followed": "el socio respondió con una redirección (no se sigue)",
+        "http_4xx": "el socio rechazó la solicitud (4xx)",
+        "http_5xx": "error del lado del socio (5xx)",
+        "network": "error de red",
+        "dns_unresolved": "no se encontró la dirección del socio (DNS)",
+        "private_address": "la dirección apunta a una red privada: bloqueada",
+        "egress_denied": "solicitud saliente denegada",
+        "invalid_url": "URL no válida",
+        "sender_error": "error interno del remitente",
+        "retries_exhausted": "reintentos agotados"
       }
     }
   },

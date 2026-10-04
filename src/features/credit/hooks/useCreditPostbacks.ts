@@ -17,7 +17,9 @@ import { useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CreditApiError, newIdempotencyKey } from '../api/creditApi'
 import {
+  CREDIT_POSTBACK_LOG_PAGE_SIZE,
   creditPostbacksApi,
+  type CreditPostbackDeliveryFilters,
   type CreditPostbackRule,
   type CreditPostbackRuleInput,
   type CreditPostbackRuleList,
@@ -27,12 +29,41 @@ import {
 export const creditPostbackKeys = {
   all: ['credit', 'postbacks'] as const,
   rules: () => [...creditPostbackKeys.all, 'rules'] as const,
+  deliveries: (filters: CreditPostbackDeliveryFilters, cursor?: string) =>
+    [...creditPostbackKeys.all, 'deliveries', filters, cursor ?? null] as const,
 }
 
 export function useCreditPostbackRules() {
   return useQuery({
     queryKey: creditPostbackKeys.rules(),
     queryFn: () => creditPostbacksApi.rules(),
+    retry: false,
+  })
+}
+
+/**
+ * Лог отправок (18-13d-b): страница по курсору. Пока грузится следующая страница
+ * тех же фильтров — на экране прежняя (`placeholderData`); под новыми фильтрами
+ * чужие строки не держим — там скелет. Таймера нет (К-7): модуль шлёт пачками по
+ * расписанию; свежее — по кнопке «Оновити» и при возврате на вкладку браузера.
+ * Возврат перечитывает всегда (`'always'`): общее `staleTime` (5 мин) иначе
+ * глушило бы его, а общее `refetchOnWindowFocus` в `main.tsx` выключено.
+ */
+export function useCreditPostbackDeliveries(
+  filters: CreditPostbackDeliveryFilters,
+  cursor?: string
+) {
+  return useQuery({
+    queryKey: creditPostbackKeys.deliveries(filters, cursor),
+    queryFn: () =>
+      creditPostbacksApi.listDeliveries({
+        ...filters,
+        limit: CREDIT_POSTBACK_LOG_PAGE_SIZE,
+        cursor,
+      }),
+    placeholderData: (prev, prevQuery) =>
+      JSON.stringify(prevQuery?.queryKey[3]) === JSON.stringify(filters) ? prev : undefined,
+    refetchOnWindowFocus: 'always',
     retry: false,
   })
 }

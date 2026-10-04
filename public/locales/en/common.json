@@ -13899,6 +13899,71 @@
         "goal": "goal of the rule",
         "amount": "loan amount",
         "currency": "currency of the rule or of the application or loan"
+      },
+      "log": {
+        "tabs": {
+          "rules": "Rules",
+          "log": "Log"
+        },
+        "helper": "Partner postback delivery log: what was sent, when, to whom and with what result. Newest first.",
+        "refresh": "Refresh",
+        "refreshFailed": "Could not refresh the log — showing the last loaded state. Try again later.",
+        "empty": "No postbacks yet",
+        "emptyFiltered": "Nothing matches the filters. Reset the filters to see all entries.",
+        "prev": "Back",
+        "next": "Next",
+        "deleted": "deleted",
+        "reversed": "reversed",
+        "sentAt": "Sent",
+        "nextAttemptAt": "Next attempt",
+        "copyActionId": "Copy ID",
+        "columns": {
+          "createdAt": "Date and time",
+          "rule": "Rule",
+          "trigger": "Trigger",
+          "action": "Application / loan",
+          "outcome": "Result",
+          "response": "Response code / error",
+          "url": "Final URL",
+          "attempts": "Attempts"
+        },
+        "filters": {
+          "rule": "Rule",
+          "outcome": "Result",
+          "trigger": "Trigger",
+          "action": "Application or loan ID (UUID)",
+          "from": "From date (UTC)",
+          "to": "To date (UTC)",
+          "all": "All",
+          "reset": "Reset filters",
+          "utc": "The period is counted in UTC days, as the module does.",
+          "inverted": "The \"from\" date is later than the \"to\" date — the period is not applied.",
+          "actionInvalid": "This is not a full UUID — the ID filter is not applied."
+        }
+      },
+      "outcome": {
+        "pending": "waiting to be sent",
+        "sent": "sent",
+        "simulated": "sent in test mode",
+        "failed": "failed",
+        "skipped": "skipped"
+      },
+      "skipReason": {
+        "click_id_missing": "No click_id",
+        "click_id_invalid": "Invalid click_id",
+        "loan_reversed": "Disbursement reversed"
+      },
+      "lastError": {
+        "redirect_not_followed": "partner replied with a redirect (not followed)",
+        "http_4xx": "partner rejected the request (4xx)",
+        "http_5xx": "error on the partner side (5xx)",
+        "network": "network error",
+        "dns_unresolved": "partner address not found (DNS)",
+        "private_address": "address points to a private network — blocked",
+        "egress_denied": "outgoing request denied",
+        "invalid_url": "invalid URL",
+        "sender_error": "internal sender error",
+        "retries_exhausted": "retries exhausted"
       }
     }
   },
