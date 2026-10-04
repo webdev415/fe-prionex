@@ -12126,7 +12126,7 @@
         "surveys": "Survey answers",
         "termination": "Termination",
         "removeProjectsTitle": "Remove from the project?",
-        "removeProjectsMessage": "The employee will be removed from: {{projects}}. Their position and group there will be cleared, and the change recorded in the chronology.",
+        "removeProjectsMessage": "The employee will be removed from: {{projects}}. Their position and group there will be cleared.",
         "removeProjectsConfirm": "Remove",
         "otherProject": "Other project"
       },
