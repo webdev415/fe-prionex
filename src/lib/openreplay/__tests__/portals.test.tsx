@@ -13,10 +13,6 @@
  * test: nothing else here fails loudly.
  */
 
-/// <reference types="node" />
-import { readFileSync, readdirSync } from 'node:fs'
-import { join } from 'node:path'
-
 import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { createPortal } from 'react-dom'
@@ -90,24 +86,37 @@ describe('react-datepicker (step 5.4)', () => {
   // runner whenever two Unit Tests jobs (push + pull_request) share it — nine
   // red runs in a row on one PR. A plain directory walk with `node:fs` reads
   // the same files in well under a second and does not depend on the runner's
-  // load. The Node types are not in the browser type set (`tsconfig.app.json`
-  // → `types: ["vite/client"]`), hence the explicit reference on top of the
-  // file; `tsc -b` accepts it.
-  it('still renders inline, with no portal to mark', { timeout: 60_000 }, () => {
+  // load. The Node modules come in through a computed dynamic import: the
+  // browser type set (`tsconfig.app.json` → `types: ["vite/client"]`) must stay
+  // free of Node globals (a `/// <reference types="node" />` would leak them
+  // into every app file — see noServiceCredentialsInSrc.test.ts), so the
+  // specifier is assembled at runtime and the surface is typed by hand.
+  it('still renders inline, with no portal to mark', { timeout: 60_000 }, async () => {
     // The step is a CHECK, not a change: `withPortal` and `portalId` are not
     // used anywhere in `src/`, so the calendar renders in place and ordinary
     // inheritance covers it. This test is what makes that a fact with an expiry
     // date rather than a sentence in a document — the day somebody adds
     // `withPortal`, it fails and phase 5 gets revisited.
-    // Vitest serves modules under a root-relative URL (`/src/…`), so the
-    // repository root comes from the working directory, which Vitest sets to
-    // the project root (`vitest.config.ts` lives there).
-    const src = join(process.cwd(), 'src')
+    type Entry = { name: string; isDirectory(): boolean; isFile(): boolean }
+    type Fs = {
+      readdirSync(dir: string, options: { withFileTypes: true }): Entry[]
+      readFileSync(path: string, encoding: 'utf8'): string
+    }
+    const node = async <T,>(name: string): Promise<T> =>
+      (await import(/* @vite-ignore */ `node:${name}`)) as T
+    const { readdirSync, readFileSync } = await node<Fs>('fs')
+    const { cwd } = await node<{ cwd(): string }>('process')
+    // Vitest serves modules under a root-relative URL (`/src/…`), so
+    // `import.meta.url` is not a filesystem path. The suite runs from the
+    // repository root (`npm run test:run`, CI); started elsewhere, the scan
+    // finds no `src/` and the `scanned` guard below fails loudly.
+    const root = cwd()
+    const src = `${root}/src`
     const offenders: string[] = []
     let scanned = 0
     const walk = (dir: string): void => {
       for (const entry of readdirSync(dir, { withFileTypes: true })) {
-        const path = join(dir, entry.name)
+        const path = `${dir}/${entry.name}`
         if (entry.isDirectory()) {
           if (entry.name !== '__tests__') walk(path)
           continue
@@ -116,7 +125,7 @@ describe('react-datepicker (step 5.4)', () => {
           continue
         scanned += 1
         if (/\bwithPortal\b|\bportalId\b/.test(readFileSync(path, 'utf8')))
-          offenders.push(path.slice(process.cwd().length))
+          offenders.push(path.slice(root.length))
       }
     }
     walk(src)
