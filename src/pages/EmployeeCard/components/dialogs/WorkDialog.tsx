@@ -68,9 +68,13 @@ function heldGroup(assignment: Starting): HeldOption | undefined {
  * only when it differs from what the dialog opened on: a save of the hire
  * date or the manager alone leaves every membership as it is.
  *
- * A project the reader may not see into comes with its id but without its
- * names. It is shown under a neutral name, cannot be unticked here, and goes
- * back exactly as it came.
+ * The card lists every membership the person has, whatever the reader may
+ * see (the contract is written on `EmployeeCard.assignments`), so the set
+ * built here leaves nobody off a project by accident. A project the reader
+ * may not see into comes marked `restricted`, with its ids but without its
+ * names: it is shown under a neutral name, cannot be unticked here, and goes
+ * back exactly as it came. A project that merely has no name (archived,
+ * unnamed) is shown under the same neutral name but edits like any other.
  *
  * A server older than the project list (no `assignments` on the card) edits
  * one project only and ignores `project_assignments`. Against one the dialog
@@ -117,9 +121,13 @@ export function WorkDialog({ card, projectId, open, onClose }: WorkDialogProps) 
   // the server could take: the section is left out and nothing of it is sent.
   const editsProjects = !legacy || initial.length > 0
 
-  // Projects the server names for the reader by id only: kept as they are.
+  /*
+   * Projects the server marks as closed to the reader: kept as they are. The
+   * flag decides it, not a missing name - a project can lack a name for
+   * other reasons, and such a one stays the reader's to change.
+   */
   const locked = useMemo(
-    () => (card.assignments ?? []).filter((assignment) => assignment.project_name === null),
+    () => (card.assignments ?? []).filter((assignment) => assignment.restricted === true),
     [card.assignments]
   )
   const lockedOne = (id: number) => locked.find((assignment) => assignment.project_id === id)
@@ -152,7 +160,7 @@ export function WorkDialog({ card, projectId, open, onClose }: WorkDialogProps) 
         (projectGroups[id] ?? null) !== (start.groups[id] ?? null)
     )
 
-  /** One project as it is sent; a locked one exactly as it came. */
+  /** One project as it is sent; a restricted one exactly as it came. */
   const entry = (id: number) => {
     const kept = lockedOne(id)
     return kept
@@ -163,7 +171,8 @@ export function WorkDialog({ card, projectId, open, onClose }: WorkDialogProps) 
   /*
    * The projects to offer: every one the reader can list, plus any the person
    * already works on that is not among them, so a current project never
-   * disappears from the dialog just because the list leaves it out. An older
+   * disappears from the dialog just because the list leaves it out. One with
+   * no name - restricted or not - is shown under a neutral one. An older
    * server can only change the project the card shows, so only that one.
    */
   const projects = useMemo(() => {
@@ -327,8 +336,8 @@ export function WorkDialog({ card, projectId, open, onClose }: WorkDialogProps) 
                 <span className="text-muted-foreground text-xs">
                   {t('pages.users.forms.rolePerProject')}
                 </span>
-                {/* A locked project has nothing here to choose: its position
-                    and group are not the reader's to see. */}
+                {/* A restricted project has nothing here to choose: its
+                    position and group are not the reader's to see. */}
                 {selectedProjects
                   .filter((id) => !lockedOne(id))
                   .map((id) => {

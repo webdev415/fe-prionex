@@ -562,26 +562,43 @@ describe('WorkDialog: positions and groups', () => {
 })
 
 /*
- * A project the reader may not see into comes with its ids but without its
- * names. It stays in the set, under a neutral name, and goes back as it came:
- * leaving it out would take the person off a project the reader never saw.
+ * A project the reader may not see into comes marked `restricted`, with its
+ * ids but without its names. It stays in the set, under a neutral name, and
+ * goes back as it came: leaving it out would take the person off a project
+ * the reader never saw.
  */
+const unseen: ProjectAssignment = {
+  project_id: 9,
+  project_name: null,
+  role_id: 55,
+  position: null,
+  department_id: 6,
+  department: null,
+  group_id: 77,
+  group: null,
+  restricted: true,
+}
+
+/*
+ * A project that merely has no name - archived, unnamed - from a server that
+ * does not mark it restricted. Nothing about it is closed to the reader.
+ */
+const nameless: ProjectAssignment = {
+  project_id: 12,
+  project_name: null,
+  role_id: 30,
+  position: 'Sideline',
+  department_id: null,
+  department: null,
+  group_id: null,
+  group: null,
+}
+
 describe('WorkDialog: a project the reader may not see into', () => {
   beforeEach(() => {
     state.saved.mockReset()
     state.rejectWith = null
   })
-
-  const unseen: ProjectAssignment = {
-    project_id: 9,
-    project_name: null,
-    role_id: 55,
-    position: null,
-    department_id: 6,
-    department: null,
-    group_id: 77,
-    group: null,
-  }
 
   it('shows it under a neutral name, ticked and locked, and sends it back as it came', async () => {
     render(
@@ -614,7 +631,10 @@ describe('WorkDialog: a project the reader may not see into', () => {
     render(
       <WorkDialog
         card={card({
-          assignments: [technofinance(), { ...sidework, project_name: null, position: null }],
+          assignments: [
+            technofinance(),
+            { ...sidework, project_name: null, position: null, restricted: true },
+          ],
         })}
         projectId={3}
         open
@@ -634,6 +654,95 @@ describe('WorkDialog: a project the reader may not see into', () => {
       screen.queryByText('pages.employeeCard.dialogs.removeProjectsTitle')
     ).not.toBeInTheDocument()
     expect(state.saved.mock.calls[0][0]).not.toHaveProperty('project_assignments')
+  })
+})
+
+describe('WorkDialog: a project with no name, and the set as a whole', () => {
+  beforeEach(() => {
+    state.saved.mockReset()
+    state.rejectWith = null
+  })
+
+  /*
+   * A missing name alone closes nothing: only the flag does. Such a project is
+   * shown under the neutral name, keeps its row, and can be taken off.
+   */
+  it('lets a project that merely has no name be edited and taken off', async () => {
+    render(
+      <WorkDialog
+        card={card({ assignments: [technofinance(), nameless] })}
+        projectId={3}
+        open
+        onClose={vi.fn()}
+      />
+    )
+
+    expect(otherProjectBox()).toBeChecked()
+    expect(otherProjectBox()).toBeEnabled()
+    // Its own row, with the position it holds.
+    expect(screen.getByText('pages.employeeCard.dialogs.otherProject:')).toBeInTheDocument()
+    expect(screen.getAllByText('Sideline').length).toBeGreaterThan(0)
+
+    await userEvent.click(otherProjectBox())
+    expect(otherProjectBox()).not.toBeChecked()
+    await save()
+
+    expect(state.saved).not.toHaveBeenCalled()
+    await userEvent.click(
+      within(removalDialog()).getByRole('button', {
+        name: 'pages.employeeCard.dialogs.removeProjectsConfirm',
+      })
+    )
+
+    expect(state.saved).toHaveBeenCalledWith(
+      expect.objectContaining({
+        project_assignments: [{ project_id: 3, role_id: 10, group_id: null }],
+      })
+    )
+  })
+
+  /*
+   * The set replaces every membership, so it is built from the whole list the
+   * card carries: what goes is exactly every project listed there, less those
+   * taken off and plus those added - restricted and nameless ones included.
+   */
+  it('sends every project the card listed, less those taken off, plus those added', async () => {
+    const assignments: ProjectAssignment[] = [
+      technofinance(),
+      { ...sidework, project_id: 8, project_name: 'Hidden project' },
+      unseen,
+      nameless,
+    ]
+    render(<WorkDialog card={card({ assignments })} projectId={3} open onClose={vi.fn()} />)
+
+    await userEvent.click(projectBox('Hidden project'))
+    await addProject('Sidework', 'Sideline')
+    await save()
+    await userEvent.click(
+      within(removalDialog()).getByRole('button', {
+        name: 'pages.employeeCard.dialogs.removeProjectsConfirm',
+      })
+    )
+
+    const sent = state.saved.mock.calls[0][0].project_assignments as {
+      project_id: number
+      role_id: number
+      group_id: number | null
+    }[]
+    const byId = (a: number, b: number) => a - b
+    const expected = [...assignments.map((one) => one.project_id).filter((id) => id !== 8), 4].sort(
+      byId
+    )
+    expect(sent.map((one) => one.project_id).sort(byId)).toEqual(expected)
+    // Every project kept goes back with what it had; the added one with its pick.
+    expect(sent).toEqual(
+      expect.arrayContaining([
+        { project_id: 3, role_id: 10, group_id: null },
+        { project_id: 9, role_id: 55, group_id: 77 },
+        { project_id: 12, role_id: 30, group_id: null },
+        { project_id: 4, role_id: 30, group_id: null },
+      ])
+    )
   })
 })
 
