@@ -35,8 +35,8 @@ vi.mock('@/features/employeeCard/hooks/useEmployeeCard', () => ({
   }),
 }))
 
-vi.mock('@/features/departments', () => ({
-  useDepartments: () => ({ data: { departments: [{ id: 1, name: 'Collections' }] } }),
+vi.mock('@/features/projects', () => ({
+  useProjects: () => ({ data: { projects: [{ id: 3, name: 'Technofinance' }] } }),
 }))
 
 vi.mock('@/features/roles', () => {

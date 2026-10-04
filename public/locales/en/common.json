@@ -12124,7 +12124,11 @@
         "attachFile": "Attach a document (PDF or Word, up to 10 MB)",
         "searchManager": "Search by name",
         "surveys": "Survey answers",
-        "termination": "Termination"
+        "termination": "Termination",
+        "removeProjectsTitle": "Remove from the project?",
+        "removeProjectsMessage": "The employee will be removed from: {{projects}}. Their position and group there will be cleared, and the change recorded in the chronology.",
+        "removeProjectsConfirm": "Remove",
+        "otherProject": "Other project"
       },
       "tabs": {
         "showEarlier": "Show earlier sections",
