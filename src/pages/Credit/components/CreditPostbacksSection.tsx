@@ -134,7 +134,7 @@ function PostbackLogView() {
   const values = Object.fromEntries(
     FILTER_KEYS.map((key) => [key, params.get(`pb_${key}`) ?? ''])
   ) as PostbackLogFilterValues
-  const { filters, actionInvalid, rangeInverted } = postbackLogRequest(values)
+  const { filters, actionInvalid, rangeInverted, from, to } = postbackLogRequest(values)
   // Стек курсоров страниц — в состоянии экрана, не в URL (К-6): курсор живёт
   // одну сессию. Смена фильтров запроса, и сброс тоже, начинает с первой страницы;
   // ввод, который запрос не меняет (недописанный UUID), страницу не сбрасывает (Б-2).
@@ -156,6 +156,9 @@ function PostbackLogView() {
   const { data, isLoading, isFetching, isPlaceholderData, error, refetch } =
     useCreditPostbackDeliveries(filters, stack.at(-1))
   const forbidden = error instanceof CreditApiError && error.status === 403
+  // 422 — ответ развёрнутого модуля по делу (фильтр отвергнут), а не «модуль не
+  // развёрнут» (Р-18-13d-b2fix-2); общий CreditModuleUnavailable не трогаем.
+  const rejected = error instanceof CreditApiError && error.status === 422
   // «За фільтрами нічого» — только если фильтр ушёл в запрос или поле помечено негодным.
   const narrowed = Object.values(filters).some(Boolean) || actionInvalid || rangeInverted
   const pageButton = (label: string, disabled: boolean, cursors: string[]) => (
@@ -172,8 +175,9 @@ function PostbackLogView() {
           {t('credit.postbacks.log.refresh')}
         </Button>
       </div>
+      {/* Поля дат — проверенные значения: отброшенная дата видна пустой (Р-18-13d-b2fix-1). */}
       <CreditPostbackDeliveriesFilters
-        values={values}
+        values={{ ...values, from, to }}
         rules={rules.data?.items ?? []}
         onChange={change}
         onReset={() => change(Object.fromEntries(FILTER_KEYS.map((key) => [key, ''])))}
@@ -183,6 +187,8 @@ function PostbackLogView() {
       ) : error && !data ? (
         forbidden ? (
           <Alert variant="warning">{t('credit.postbacks.forbidden')}</Alert>
+        ) : rejected ? (
+          <Alert variant="warning">{t('credit.postbacks.log.filterRejected')}</Alert>
         ) : (
           <CreditModuleUnavailable error={error} />
         )

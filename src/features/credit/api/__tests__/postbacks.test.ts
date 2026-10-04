@@ -476,6 +476,8 @@ describe('postbackLogRequest — поля фильтров лога → пара
         created_from: undefined,
         created_to: undefined,
       },
+      from: '',
+      to: '',
       rangeInverted: false,
       actionInvalid: false,
     })
@@ -511,6 +513,43 @@ describe('postbackLogRequest — поля фильтров лога → пара
     })
     expect(Object.values(result.filters).every((value) => value === undefined)).toBe(true)
     expect(result.actionInvalid).toBe(true)
+  })
+
+  // 18-13d-b2fix, AC-1: форма YYYY-MM-DD мало — только существующие сутки 2000–2100.
+  it.each([
+    '2026-13-45',
+    '2026-02-30',
+    '2026-00-10',
+    '2026-04-31',
+    '1999-12-31',
+    '2101-01-01',
+    '2026-1-01',
+    '2025-02-29',
+    '0000-00-00',
+    '',
+  ])('несуществующие сутки %j — ни в «з», ни в «по»', (day) => {
+    const result = postbacks.postbackLogRequest({ ...EMPTY, from: day, to: day })
+    expect(result.filters.created_from).toBeUndefined()
+    expect(result.filters.created_to).toBeUndefined()
+    expect(result.rangeInverted).toBe(false)
+  })
+
+  it.each(['2026-10-04', '2024-02-29', '2000-01-01', '2100-12-31'])(
+    'существующие сутки %j уходят как есть',
+    (day) => {
+      const { filters } = postbacks.postbackLogRequest({ ...EMPTY, from: day, to: day })
+      expect(filters.created_from).toBe(day)
+      expect(filters.created_to).toBe(day)
+    }
+  )
+
+  it('негодная «з» не мешает годной «по», и наоборот', () => {
+    expect(
+      postbacks.postbackLogRequest({ ...EMPTY, from: '2026-13-45', to: '2026-10-01' }).filters
+    ).toMatchObject({ created_from: undefined, created_to: '2026-10-01' })
+    expect(
+      postbacks.postbackLogRequest({ ...EMPTY, from: '2026-10-01', to: '2026-02-30' }).filters
+    ).toMatchObject({ created_from: '2026-10-01', created_to: undefined })
   })
 
   it('перевёрнутый период не уходит целиком и помечен', () => {

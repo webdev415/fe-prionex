@@ -13983,6 +13983,7 @@
         "refreshFailed": "No se pudo actualizar el registro: se muestra el último estado cargado. Inténtelo de nuevo más tarde.",
         "empty": "Todavía no hubo postbacks",
         "emptyFiltered": "Nada coincide con los filtros. Restablezca los filtros para ver todas las entradas.",
+        "filterRejected": "El módulo no aceptó el filtro: restablezca los filtros.",
         "prev": "Atrás",
         "next": "Siguiente",
         "deleted": "eliminada",

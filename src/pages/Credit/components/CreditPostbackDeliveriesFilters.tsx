@@ -21,6 +21,11 @@ import {
 
 type Key = keyof PostbackLogFilterValues
 
+// Предел годных суток, как в `postbackLogRequest` (Р-18-13d-b2fix-1): календарь
+// не даст выбрать дату, которую запрос всё равно отбросит.
+const FIRST_DAY = '2000-01-01'
+const LAST_DAY = '2100-12-31'
+
 export function CreditPostbackDeliveriesFilters({
   values,
   rules,
@@ -35,7 +40,7 @@ export function CreditPostbackDeliveriesFilters({
   const { t } = useTranslation('common')
   const id = useId()
   // Недописанный UUID и перевёрнутый период в запрос не ушли — поля это показывают.
-  const { filters, actionInvalid, rangeInverted } = postbackLogRequest(values)
+  const { filters, actionInvalid, rangeInverted, from, to } = postbackLogRequest(values)
   const field = (key: Key, label: string, control: ReactNode) => (
     <div className="text-muted-foreground flex flex-col gap-1.5 text-xs">
       <label htmlFor={`${id}-${key}`}>{label}</label>
@@ -98,11 +103,13 @@ export function CreditPostbackDeliveriesFilters({
       })}
       {text('from', t('credit.postbacks.log.filters.from'), {
         ...range,
-        max: values.to || undefined,
+        min: FIRST_DAY,
+        max: to || LAST_DAY,
       })}
       {text('to', t('credit.postbacks.log.filters.to'), {
         ...range,
-        min: values.from || undefined,
+        min: from || FIRST_DAY,
+        max: LAST_DAY,
       })}
       <Button type="button" variant="ghost" onClick={onReset}>
         {t('credit.postbacks.log.filters.reset')}

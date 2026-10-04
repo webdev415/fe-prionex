@@ -13938,6 +13938,7 @@
         "refreshFailed": "Could not refresh the log — showing the last loaded state. Try again later.",
         "empty": "No postbacks yet",
         "emptyFiltered": "Nothing matches the filters. Reset the filters to see all entries.",
+        "filterRejected": "The module did not accept the filter — reset the filters.",
         "prev": "Back",
         "next": "Next",
         "deleted": "deleted",

@@ -309,6 +309,35 @@ describe('фильтры — серверные, из ссылки (AC-b3, К-2,
     expect(screen.getByText('credit.postbacks.log.filters.inverted')).toBeInTheDocument()
   })
 
+  it('несуществующая дата ссылки (pb_from=2026-13-45) — не в запросе, поле пустое, лог виден (18-13d-b2fix, AC-2)', async () => {
+    renderLog('?pb_view=log&pb_from=2026-13-45&pb_to=2026-02-30')
+    expect(await screen.findByText('APP-0001')).toBeInTheDocument()
+    expect(lastCall()).toMatchObject({ created_from: undefined, created_to: undefined })
+    expect(screen.getByLabelText('credit.postbacks.log.filters.from')).toHaveValue('')
+    expect(screen.getByLabelText('credit.postbacks.log.filters.to')).toHaveValue('')
+    expect(screen.queryByText('credit.unavailable.title')).not.toBeInTheDocument()
+    expect(screen.queryByText('credit.postbacks.log.filters.inverted')).not.toBeInTheDocument()
+  })
+
+  it('дата ссылки вне 2000–2100 — поле пустое, как в запросе (18-13d-b2fix r1, К-1)', async () => {
+    renderLog('?pb_view=log&pb_from=1999-12-31&pb_to=2101-01-01')
+    expect(await screen.findByText('APP-0001')).toBeInTheDocument()
+    expect(lastCall()).toMatchObject({ created_from: undefined, created_to: undefined })
+    expect(screen.getByLabelText('credit.postbacks.log.filters.from')).toHaveValue('')
+    expect(screen.getByLabelText('credit.postbacks.log.filters.to')).toHaveValue('')
+  })
+
+  it('поля дат несут предел 2000–2100; соседняя граница — от проверенной даты (К-1)', async () => {
+    renderLog('?pb_view=log&pb_from=2026-10-01&pb_to=2101-01-01')
+    await screen.findByText('APP-0001')
+    const from = screen.getByLabelText('credit.postbacks.log.filters.from')
+    const to = screen.getByLabelText('credit.postbacks.log.filters.to')
+    expect(from).toHaveAttribute('min', '2000-01-01')
+    expect(from).toHaveAttribute('max', '2100-12-31')
+    expect(to).toHaveAttribute('min', '2026-10-01')
+    expect(to).toHaveAttribute('max', '2100-12-31')
+  })
+
   it('клиентской фильтрации нет: строка, не совпадающая с фильтром, показана', async () => {
     api.listDeliveries.mockResolvedValue(page([delivery({ status: 'sent' })]))
     renderLog('?pb_view=log&pb_outcome=skipped')
@@ -783,6 +812,36 @@ describe('состояния (AC-b5)', () => {
     api.listDeliveries.mockRejectedValue(new CreditApiError('Bad gateway', 502, 'bad_gateway'))
     renderLog()
     expect(await screen.findByText('credit.unavailable.title')).toBeInTheDocument()
+  })
+
+  it('422 двери — «фильтр не принят модулем», не «модуль не развёрнут» (18-13d-b2fix, AC-3)', async () => {
+    api.listDeliveries.mockRejectedValue(
+      new CreditApiError('Unprocessable', 422, 'validation_error')
+    )
+    renderLog('?pb_view=log&pb_outcome=failed')
+    expect(await screen.findByText('credit.postbacks.log.filterRejected')).toBeInTheDocument()
+    expect(screen.queryByText('credit.unavailable.title')).not.toBeInTheDocument()
+    expect(screen.queryByText('credit.postbacks.forbidden')).not.toBeInTheDocument()
+  })
+
+  it.each([
+    ['503', new CreditApiError('Unavailable', 503, 'unavailable')],
+    [
+      'сетевой сбой',
+      new CreditApiError(
+        'Network Error',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        'ERR_NETWORK'
+      ),
+    ],
+  ])('%s — по-прежнему «модуль недоступен», не «фильтр не принят»', async (_name, failure) => {
+    api.listDeliveries.mockRejectedValue(failure)
+    renderLog()
+    expect(await screen.findByText('credit.unavailable.title')).toBeInTheDocument()
+    expect(screen.queryByText('credit.postbacks.log.filterRejected')).not.toBeInTheDocument()
   })
 
   it('пусто без фильтров — «постбеків ще не було»; с фильтром — «за фільтрами нічого»', async () => {
