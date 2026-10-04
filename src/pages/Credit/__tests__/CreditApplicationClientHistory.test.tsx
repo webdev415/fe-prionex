@@ -548,6 +548,58 @@ describe('вкладка «Історія»: хронология модуля',
   })
 })
 
+// ──────────────────────────────── след правовых текстов (18-4e, L) ────
+
+describe('вкладка «Історія»: показанные правовые тексты', () => {
+  const TRAIL = [
+    {
+      source: 'legal-texts',
+      subject: 'sign.max_cost',
+      publication_id: 63,
+      version_no: 1,
+      sha256: 'c'.repeat(64),
+      locale: 'en',
+      shown_at: null,
+      received_at: '2026-09-01T09:00:00+00:00',
+    },
+  ]
+  const withTrail = (extra: object) => ({ ...APPLICATION, ...extra }) as CreditApplicationDetail
+
+  it.each([
+    ['поля нет', {}],
+    ['null', { legal_texts_shown: null }],
+    ['объект', { legal_texts_shown: {} }],
+    ['строка', { legal_texts_shown: 'x' }],
+  ])('L-1: %s — блока нет, согласия на месте', (_name, extra) => {
+    renderPage(withTrail(extra))
+    openHistory()
+    const text = historyPanel().textContent ?? ''
+    expect(text).not.toContain('credit.legalTrail.title')
+    expect(text).not.toContain('credit.legalTrail.empty')
+    expect(text).toContain('credit.consent.terms')
+  })
+
+  it('L-2: пустой след — подзаголовок и «следа нет» под согласиями', () => {
+    renderPage(withTrail({ legal_texts_shown: [] }))
+    openHistory()
+    const text = historyPanel().textContent ?? ''
+    expect(text).toContain('credit.legalTrail.empty')
+    expect(text.indexOf('credit.card.consents')).toBeGreaterThanOrEqual(0)
+    expect(text.indexOf('credit.legalTrail.title')).toBeGreaterThan(
+      text.indexOf('credit.consent.terms')
+    )
+  })
+
+  it('L-3: след без согласий — блок есть, списка согласий нет', () => {
+    renderPage(withTrail({ consents: [], legal_texts_shown: TRAIL }))
+    openHistory()
+    const panel = historyPanel()
+    expect(panel.textContent).toContain('credit.legalTrail.title')
+    expect(within(panel).getByRole('table').textContent).toContain('sign.max_cost')
+    expect(panel.textContent).not.toContain('credit.card.consents')
+  })
+})
+
 // ─────────────────────────────────────────────── коммуникации (C) ────
 
 describe('вкладка «Історія»: коммуникации', () => {

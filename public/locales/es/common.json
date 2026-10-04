@@ -13270,7 +13270,31 @@
       "marketing": "Marketing",
       "ibv_provider": "Proveedor de verificación bancaria",
       "pad": "Domiciliación bancaria",
-      "credit_check": "Comprobación crediticia"
+      "credit_check": "Comprobación crediticia",
+      "e_copy": "Copia electrónica del contrato",
+      "privacy_policy": "Política de privacidad"
+    },
+    "legalTrail": {
+      "title": "Textos legales mostrados",
+      "empty": "No se registraron textos legales mostrados",
+      "source": {
+        "legalTexts": "Texto legal del sitio",
+        "siteDocuments": "Documento del sitio"
+      },
+      "door": {
+        "intake": "Antes de enviar la solicitud",
+        "sign": "Antes de firmar"
+      },
+      "columns": {
+        "subject": "Texto",
+        "source": "Fuente",
+        "version": "Versión",
+        "locale": "Idioma",
+        "shownAt": "Mostrado",
+        "receivedAt": "Recibido",
+        "sha256": "Huella",
+        "door": "Etapa"
+      }
     },
     "entryType": {
       "disbursement": "Desembolso",

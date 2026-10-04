@@ -394,6 +394,30 @@ export interface CreditPortalEventRecord {
   details?: Record<string, unknown>
 }
 
+/**
+ * Строка следа показанных правовых текстов — `LegalTextShownRecord`
+ * (`openapi.yaml:7426` модуля 0.1.48, `45c4d6b2`; все восемь полей required).
+ * Экран читает поле только через `readLegalTrail` (`legalTrail.ts`): тип — то,
+ * что обещает контракт, а не то, во что верит рендер.
+ */
+export interface CreditLegalTextShown {
+  /** `legal-texts | site-documents` по контракту; иное экран показывает как пришло. */
+  source: string
+  /** Ключ строки CMS (`sign.max_cost`) или вид документа (`privacy_policy`) — не переводится. */
+  subject: string
+  /** `id` строки журнала публикаций CMS — постоянный адрес версии на стенде CMS. */
+  publication_id: number
+  version_no: number
+  sha256: string
+  locale: string
+  /** Часы сайта; `null` — сайт момент не назвал. */
+  shown_at: string | null
+  /** Момент приёма заявки модулем. */
+  received_at: string
+  /** Этап показа (`intake | sign`) — появится в 0.1.49 (18-4c); в 0.1.48 поля нет. */
+  door?: string
+}
+
 /** Карточка заявки целиком (InternalApplication + анкета и документы). */
 export interface CreditApplicationDetail extends CreditApplicationSummary {
   project_id: number
@@ -443,6 +467,12 @@ export interface CreditApplicationDetail extends CreditApplicationSummary {
   decision?: CreditDecision
   ibv?: CreditIbv
   sign_evidence?: CreditSignEvidence
+  /**
+   * След правовых текстов сайта, показанных до подачи (18-4a), в порядке приёма.
+   * required в 0.1.48 (`openapi.yaml:9290`); `?` — стенд старше контракта не шлёт,
+   * и тогда блока нет вовсе (у такого модуля следа быть не может).
+   */
+  legal_texts_shown?: CreditLegalTextShown[]
 }
 
 /**

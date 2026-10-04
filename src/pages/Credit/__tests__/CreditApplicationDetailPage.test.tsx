@@ -2524,3 +2524,37 @@ describe('CreditApplicationDetailPage → 18-13c: источник трафик�
     expect(leaked, 'значение метки в атрибуте — запись сессии его не маскирует').toHaveLength(0)
   })
 })
+
+describe('CreditApplicationDetailPage → 18-4e: виды согласий и след правовых текстов', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  const openHistory = () =>
+    fireEvent.click(screen.getByRole('tab', { name: 'credit.tabs.history' }))
+
+  it('AC-6: `privacy_policy` и `e_copy` подписаны словарём, незнакомый вид — как пришёл', () => {
+    // Мок отвечает запасным значением только при отсутствии ключа в настоящих
+    // словарях: ключ на экране = строка в словаре есть.
+    renderPage({
+      ...APPLICATION,
+      consents: [
+        { kind: 'privacy_policy', text_version: 'privacy-v1-2026-10-04', granted: true },
+        { kind: 'e_copy', text_version: 'e-copy-v1', granted: true },
+        { kind: 'future_kind', text_version: 'future-v1', granted: false },
+      ],
+    } as CreditApplicationDetail)
+    openHistory()
+    expect(screen.getByText('credit.consent.privacy_policy')).toBeInTheDocument()
+    expect(screen.getByText('credit.consent.e_copy')).toBeInTheDocument()
+    expect(screen.getByText('future_kind')).toBeInTheDocument()
+    expect(screen.queryByText('credit.consent.future_kind')).toBeNull()
+  })
+
+  it('AC-9: снимок CA-000208 без следа и согласий — блока следа нет', () => {
+    renderPage()
+    openHistory()
+    expect(screen.queryByText('credit.legalTrail.title')).toBeNull()
+    expect(screen.queryByText('credit.legalTrail.empty')).toBeNull()
+  })
+})
