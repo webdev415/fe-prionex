@@ -79,24 +79,59 @@ describe('a toast is marked, not the Toaster', () => {
 })
 
 describe('react-datepicker (step 5.4)', () => {
-  // The scan below reads EVERY `src/**/*.tsx` as raw text, so its time grows
-  // with the repository, not with the subject: 4.4 s alone on a workstation,
-  // over the default 20 s on the CI runner once the credit frontend (+67 files)
-  // landed (three red runs in a row, 21.09.2026). The bound is generous on
-  // purpose — the test is a repository scan, not a rendering benchmark.
+  // The scan below reads EVERY `src/**/*.tsx` as text, so its time grows with
+  // the repository, not with the subject. Until 04.10.2026 it went through
+  // `import.meta.glob(…, { query: '?raw' })` — one Vite module transform per
+  // file: 4.4 s alone on a workstation, but over the 60 s bound on the CI
+  // runner whenever two Unit Tests jobs (push + pull_request) share it — nine
+  // red runs in a row on one PR. A plain directory walk with `node:fs` reads
+  // the same files in well under a second and does not depend on the runner's
+  // load. The Node modules come in through a computed dynamic import: the
+  // browser type set (`tsconfig.app.json` → `types: ["vite/client"]`) must stay
+  // free of Node globals (a `/// <reference types="node" />` would leak them
+  // into every app file — see noServiceCredentialsInSrc.test.ts), so the
+  // specifier is assembled at runtime and the surface is typed by hand.
   it('still renders inline, with no portal to mark', { timeout: 60_000 }, async () => {
     // The step is a CHECK, not a change: `withPortal` and `portalId` are not
     // used anywhere in `src/`, so the calendar renders in place and ordinary
     // inheritance covers it. This test is what makes that a fact with an expiry
     // date rather than a sentence in a document — the day somebody adds
     // `withPortal`, it fails and phase 5 gets revisited.
-    const modules = import.meta.glob('/src/**/*.tsx', { query: '?raw', import: 'default' })
-    const offenders: string[] = []
-    for (const [path, load] of Object.entries(modules)) {
-      if (path.includes('__tests__') || /\.(test|spec)\.tsx$/.test(path)) continue
-      const text = (await load()) as string
-      if (/\bwithPortal\b|\bportalId\b/.test(text)) offenders.push(path)
+    type Entry = { name: string; isDirectory(): boolean; isFile(): boolean }
+    type Fs = {
+      readdirSync(dir: string, options: { withFileTypes: true }): Entry[]
+      readFileSync(path: string, encoding: 'utf8'): string
     }
+    const node = async <T,>(name: string): Promise<T> =>
+      (await import(/* @vite-ignore */ `node:${name}`)) as T
+    const { readdirSync, readFileSync } = await node<Fs>('fs')
+    const { cwd } = await node<{ cwd(): string }>('process')
+    // Vitest serves modules under a root-relative URL (`/src/…`), so
+    // `import.meta.url` is not a filesystem path. The suite runs from the
+    // repository root (`npm run test:run`, CI); started elsewhere, the scan
+    // finds no `src/` and the `scanned` guard below fails loudly.
+    const root = cwd()
+    const src = `${root}/src`
+    const offenders: string[] = []
+    let scanned = 0
+    const walk = (dir: string): void => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const path = `${dir}/${entry.name}`
+        if (entry.isDirectory()) {
+          if (entry.name !== '__tests__') walk(path)
+          continue
+        }
+        if (!entry.isFile() || !/\.tsx$/.test(entry.name) || /\.(test|spec)\.tsx$/.test(entry.name))
+          continue
+        scanned += 1
+        if (/\bwithPortal\b|\bportalId\b/.test(readFileSync(path, 'utf8')))
+          offenders.push(path.slice(root.length))
+      }
+    }
+    walk(src)
+    // Guard against the scan silently going blind (a moved directory, a glob
+    // that matches nothing): the repository has hundreds of components.
+    expect(scanned).toBeGreaterThan(500)
     expect(
       offenders,
       'A datepicker moved into a portal — inheritance no longer reaches its ' +
