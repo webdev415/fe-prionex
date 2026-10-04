@@ -1,11 +1,12 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { EmployeeCard, ProjectAssignment } from '@/features/employeeCard/types.card'
 
 const state = vi.hoisted(() => ({
   saved: vi.fn(),
   rejectWith: null as unknown,
+  operatorsFor: undefined as number | null | undefined,
 }))
 
 vi.mock('@/features/employeeCard/hooks/useEmployeeCard', () => ({
@@ -51,6 +52,14 @@ vi.mock('@/features/roles', () => ({
                 department_name: 'Collections',
                 is_active: true,
               },
+              // Deactivated: never offered to somebody who does not hold it.
+              {
+                id: 12,
+                name: 'Retired post',
+                department_id: 1,
+                department_name: 'Collections',
+                is_active: false,
+              },
             ]
           : [{ id: 30, name: 'Sideline', department_id: null, is_active: true }],
     },
@@ -72,12 +81,15 @@ vi.mock('@/features/groups', () => ({
 }))
 
 vi.mock('@/features/users/hooks/useUsers', () => ({
-  useOperators: () => ({
-    data: [
-      { id: 7, full_name: 'Olena Kovalchuk', username: 'olena' },
-      { id: 9, full_name: 'Serhiy Lytvyn', username: 'serhiy' },
-    ],
-  }),
+  useOperators: (projectId: number | null | undefined) => {
+    state.operatorsFor = projectId
+    return {
+      data: [
+        { id: 7, full_name: 'Olena Kovalchuk', username: 'olena' },
+        { id: 9, full_name: 'Serhiy Lytvyn', username: 'serhiy' },
+      ],
+    }
+  },
 }))
 
 const { WorkDialog } = await import('../components/dialogs/WorkDialog')
@@ -110,6 +122,23 @@ const sidework: ProjectAssignment = {
 const projectBox = (name: string) => screen.getByRole('checkbox', { name })
 const agentBox = () => screen.getByRole('checkbox', { name: 'pages.employeeCard.fields.isAgent' })
 const save = () => userEvent.click(screen.getByRole('button', { name: 'actions.save' }))
+// With one project ticked: its position, then its group; the manager comes last.
+const roleSelect = () => screen.getAllByRole('combobox')[0]
+const groupSelect = () => screen.getAllByRole('combobox')[1]
+const removalDialog = () =>
+  screen.getByRole('dialog', { name: 'pages.employeeCard.dialogs.removeProjectsTitle' })
+const otherProjectBox = () =>
+  screen.getByRole('checkbox', { name: 'pages.employeeCard.dialogs.otherProject' })
+
+/** Tick a project and choose its position: the picker still "not assigned". */
+async function addProject(name: string, position: string) {
+  await userEvent.click(projectBox(name))
+  const unassigned = screen
+    .getAllByRole('combobox')
+    .find((box) => box.textContent?.includes('pages.users.forms.notAssigned'))!
+  await userEvent.click(unassigned)
+  await userEvent.click(screen.getByRole('option', { name: position }))
+}
 
 beforeAll(() => {
   if (!Element.prototype.hasPointerCapture) {
@@ -196,7 +225,11 @@ describe('WorkDialog: projects', () => {
     expect(screen.getAllByText('Sideline').length).toBeGreaterThan(0)
   })
 
-  it('sends the whole set unchanged when only something else was edited', async () => {
+  /*
+   * The set replaces every membership, so it goes only when it was changed: a
+   * save of something else must not touch the projects at all.
+   */
+  it('leaves the projects out when only something else was edited', async () => {
     render(
       <WorkDialog
         card={card({ assignments: [technofinance({ group_id: 20 }), sidework] })}
@@ -206,22 +239,50 @@ describe('WorkDialog: projects', () => {
       />
     )
 
+    await userEvent.click(agentBox())
+    await save()
+
+    // Nothing was taken off, so nothing is asked.
+    expect(
+      screen.queryByText('pages.employeeCard.dialogs.removeProjectsTitle')
+    ).not.toBeInTheDocument()
+    const sent = state.saved.mock.calls[0][0]
+    expect(sent).toEqual(expect.objectContaining({ is_agent: true }))
+    expect(sent).not.toHaveProperty('project_assignments')
+    expect(sent).not.toHaveProperty('role_id')
+    expect(sent).not.toHaveProperty('project_id')
+  })
+
+  it('sends the whole set once any of it changes', async () => {
+    render(
+      <WorkDialog
+        card={card({ assignments: [technofinance({ group_id: 20 }), sidework] })}
+        projectId={3}
+        open
+        onClose={vi.fn()}
+      />
+    )
+
+    await userEvent.click(groupSelect())
+    await userEvent.click(screen.getByRole('option', { name: 'Evening shift' }))
     await save()
 
     expect(state.saved).toHaveBeenCalledWith(
       expect.objectContaining({
         project_assignments: [
-          { project_id: 3, role_id: 10, group_id: 20 },
+          { project_id: 3, role_id: 10, group_id: 21 },
           { project_id: 4, role_id: 30, group_id: null },
         ],
       })
     )
-    const sent = state.saved.mock.calls[0][0]
-    expect(sent).not.toHaveProperty('role_id')
-    expect(sent).not.toHaveProperty('project_id')
   })
 
-  it('removes a project that is unticked', async () => {
+  /*
+   * One click on a checkbox, then a save for some other reason, would take
+   * the person off a project and clear their position and group there - so
+   * it is asked first.
+   */
+  it('asks before removing a project that is unticked, then removes it', async () => {
     render(
       <WorkDialog
         card={card({ assignments: [technofinance(), sidework] })}
@@ -234,11 +295,40 @@ describe('WorkDialog: projects', () => {
     await userEvent.click(projectBox('Sidework'))
     await save()
 
+    expect(state.saved).not.toHaveBeenCalled()
+    expect(removalDialog()).toHaveTextContent('pages.employeeCard.dialogs.removeProjectsMessage')
+
+    await userEvent.click(
+      within(removalDialog()).getByRole('button', {
+        name: 'pages.employeeCard.dialogs.removeProjectsConfirm',
+      })
+    )
+
     expect(state.saved).toHaveBeenCalledWith(
       expect.objectContaining({
         project_assignments: [{ project_id: 3, role_id: 10, group_id: null }],
       })
     )
+  })
+
+  it('sends nothing when removing a project is called off', async () => {
+    render(
+      <WorkDialog
+        card={card({ assignments: [technofinance(), sidework] })}
+        projectId={3}
+        open
+        onClose={vi.fn()}
+      />
+    )
+
+    await userEvent.click(projectBox('Sidework'))
+    await save()
+    await userEvent.click(within(removalDialog()).getByRole('button', { name: /cancel/i }))
+
+    expect(state.saved).not.toHaveBeenCalled()
+    expect(
+      screen.queryByRole('dialog', { name: 'pages.employeeCard.dialogs.removeProjectsTitle' })
+    ).not.toBeInTheDocument()
   })
 
   it('adds a ticked project once it has a position', async () => {
@@ -285,8 +375,7 @@ describe('WorkDialog: projects', () => {
   it('sends the group chosen in a project', async () => {
     render(<WorkDialog card={card()} projectId={3} open onClose={vi.fn()} />)
 
-    // Position, then group, for the one project; the manager picker comes last.
-    await userEvent.click(screen.getAllByRole('combobox')[1])
+    await userEvent.click(groupSelect())
     await userEvent.click(screen.getByRole('option', { name: 'Evening shift' }))
     await save()
 
@@ -314,19 +403,364 @@ describe('WorkDialog: projects', () => {
 
     expect(projectBox('Hidden project')).toBeChecked()
   })
+})
 
-  it('falls back to the shown project when the server sends no list', async () => {
+describe('WorkDialog: positions and groups', () => {
+  beforeEach(() => {
+    state.saved.mockReset()
+    state.rejectWith = null
+  })
+
+  /*
+   * A deactivated group is not in the active list, but it is still where the
+   * person sits. Without it the field would open empty while the old id is
+   * still what gets saved.
+   */
+  it('still opens on a group that is no longer offered, and keeps it', async () => {
     render(
-      <WorkDialog card={card({ assignments: undefined })} projectId={3} open onClose={vi.fn()} />
+      <WorkDialog
+        card={card({ assignments: [technofinance({ group_id: 99, group: 'Dormant shift' })] })}
+        projectId={3}
+        open
+        onClose={vi.fn()}
+      />
     )
 
-    expect(projectBox('Technofinance')).toBeChecked()
+    expect(groupSelect()).toHaveTextContent('Dormant shift')
+
+    // Saved with the set once the set changes: the kept group goes back as is.
+    await addProject('Sidework', 'Sideline')
     await save()
+
+    expect(state.saved).toHaveBeenCalledWith(
+      expect.objectContaining({
+        project_assignments: [
+          { project_id: 3, role_id: 10, group_id: 99 },
+          { project_id: 4, role_id: 30, group_id: null },
+        ],
+      })
+    )
+  })
+
+  it('still opens on a position that has been deactivated, with its groups', async () => {
+    render(
+      <WorkDialog
+        card={card({
+          assignments: [
+            technofinance({
+              role_id: 12,
+              position: 'Retired post',
+              group_id: 20,
+              group: 'Morning shift',
+            }),
+          ],
+        })}
+        projectId={3}
+        open
+        onClose={vi.fn()}
+      />
+    )
+
+    expect(roleSelect()).toHaveTextContent('Retired post (Collections)')
+    expect(groupSelect()).toHaveTextContent('Morning shift')
+
+    await addProject('Sidework', 'Sideline')
+    await save()
+
+    expect(state.saved).toHaveBeenCalledWith(
+      expect.objectContaining({
+        project_assignments: [
+          { project_id: 3, role_id: 12, group_id: 20 },
+          { project_id: 4, role_id: 30, group_id: null },
+        ],
+      })
+    )
+  })
+
+  it('never offers a deactivated position to somebody who does not hold it', async () => {
+    render(<WorkDialog card={card()} projectId={3} open onClose={vi.fn()} />)
+
+    await userEvent.click(roleSelect())
+
+    expect(
+      screen.getByRole('option', { name: 'Senior Operator (Collections)' })
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: /Retired post/ })).not.toBeInTheDocument()
+  })
+
+  it('sends "no group" as null, so it is removed rather than kept', async () => {
+    render(
+      <WorkDialog
+        card={card({ assignments: [technofinance({ group_id: 20, group: 'Morning shift' })] })}
+        projectId={3}
+        open
+        onClose={vi.fn()}
+      />
+    )
+
+    await userEvent.click(groupSelect())
+    await userEvent.click(screen.getByRole('option', { name: 'pages.users.forms.noGroup' }))
+    await save()
+
     expect(state.saved).toHaveBeenCalledWith(
       expect.objectContaining({
         project_assignments: [{ project_id: 3, role_id: 10, group_id: null }],
       })
     )
+  })
+
+  it('clears the group when the position changes under it', async () => {
+    render(
+      <WorkDialog
+        card={card({ assignments: [technofinance({ group_id: 20, group: 'Morning shift' })] })}
+        projectId={3}
+        open
+        onClose={vi.fn()}
+      />
+    )
+
+    await userEvent.click(roleSelect())
+    await userEvent.click(screen.getByRole('option', { name: 'Senior Operator (Collections)' }))
+    await save()
+
+    expect(state.saved).toHaveBeenCalledWith(
+      expect.objectContaining({
+        project_assignments: [{ project_id: 3, role_id: 11, group_id: null }],
+      })
+    )
+  })
+
+  /*
+   * A group never sits outside a department. An assignment that somehow
+   * carries one without a department opens on no group rather than holding a
+   * value behind a field it does not show.
+   */
+  it('sends no stale group for a position with no department', async () => {
+    render(
+      <WorkDialog
+        card={card({ assignments: [{ ...sidework, group_id: 20, group: 'Morning shift' }] })}
+        projectId={4}
+        open
+        onClose={vi.fn()}
+      />
+    )
+
+    expect(screen.queryByText(/pages\.users\.forms\.group/)).not.toBeInTheDocument()
+
+    await addProject('Technofinance', 'Operator (Collections)')
+    await save()
+
+    expect(state.saved).toHaveBeenCalledWith(
+      expect.objectContaining({
+        project_assignments: [
+          { project_id: 4, role_id: 30, group_id: null },
+          { project_id: 3, role_id: 10, group_id: null },
+        ],
+      })
+    )
+  })
+})
+
+/*
+ * A project the reader may not see into comes with its ids but without its
+ * names. It stays in the set, under a neutral name, and goes back as it came:
+ * leaving it out would take the person off a project the reader never saw.
+ */
+describe('WorkDialog: a project the reader may not see into', () => {
+  beforeEach(() => {
+    state.saved.mockReset()
+    state.rejectWith = null
+  })
+
+  const unseen: ProjectAssignment = {
+    project_id: 9,
+    project_name: null,
+    role_id: 55,
+    position: null,
+    department_id: 6,
+    department: null,
+    group_id: 77,
+    group: null,
+  }
+
+  it('shows it under a neutral name, ticked and locked, and sends it back as it came', async () => {
+    render(
+      <WorkDialog
+        card={card({ assignments: [technofinance(), unseen] })}
+        projectId={3}
+        open
+        onClose={vi.fn()}
+      />
+    )
+
+    expect(otherProjectBox()).toBeChecked()
+    expect(otherProjectBox()).toBeDisabled()
+
+    await userEvent.click(roleSelect())
+    await userEvent.click(screen.getByRole('option', { name: 'Senior Operator (Collections)' }))
+    await save()
+
+    expect(state.saved).toHaveBeenCalledWith(
+      expect.objectContaining({
+        project_assignments: [
+          { project_id: 3, role_id: 11, group_id: null },
+          { project_id: 9, role_id: 55, group_id: 77 },
+        ],
+      })
+    )
+  })
+
+  it('keeps it locked even when the reader can list the project, with no row to edit', async () => {
+    render(
+      <WorkDialog
+        card={card({
+          assignments: [technofinance(), { ...sidework, project_name: null, position: null }],
+        })}
+        projectId={3}
+        open
+        onClose={vi.fn()}
+      />
+    )
+
+    expect(screen.queryByRole('checkbox', { name: 'Sidework' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Sideline')).not.toBeInTheDocument()
+
+    await userEvent.click(otherProjectBox())
+    expect(otherProjectBox()).toBeChecked()
+
+    await save()
+
+    expect(
+      screen.queryByText('pages.employeeCard.dialogs.removeProjectsTitle')
+    ).not.toBeInTheDocument()
+    expect(state.saved.mock.calls[0][0]).not.toHaveProperty('project_assignments')
+  })
+})
+
+/*
+ * A server older than the project list sends no `assignments` and ignores
+ * `project_assignments`: it edits the one project the card shows, from the
+ * single-project fields. Sending the list to it would report a save that
+ * changed nothing.
+ */
+describe('WorkDialog: a server without the project list', () => {
+  beforeEach(() => {
+    state.saved.mockReset()
+    state.rejectWith = null
+  })
+
+  it('offers only the project the card shows and sends it the old way', async () => {
+    render(
+      <WorkDialog card={card({ assignments: undefined })} projectId={3} open onClose={vi.fn()} />
+    )
+
+    expect(projectBox('Technofinance')).toBeChecked()
+    expect(screen.queryByRole('checkbox', { name: 'Sidework' })).not.toBeInTheDocument()
+
+    await userEvent.click(roleSelect())
+    await userEvent.click(screen.getByRole('option', { name: 'Senior Operator (Collections)' }))
+    await save()
+
+    expect(state.saved).toHaveBeenCalledWith(
+      expect.objectContaining({ project_id: 3, role_id: 11, group_id: null })
+    )
+    expect(state.saved.mock.calls[0][0]).not.toHaveProperty('project_assignments')
+  })
+
+  it('leaves the project fields out when only something else was edited', async () => {
+    render(
+      <WorkDialog
+        card={card({
+          assignments: undefined,
+          work: { ...card().work, group_id: 20, group: 'Morning shift' },
+        })}
+        projectId={3}
+        open
+        onClose={vi.fn()}
+      />
+    )
+
+    expect(groupSelect()).toHaveTextContent('Morning shift')
+
+    await userEvent.click(agentBox())
+    await save()
+
+    const sent = state.saved.mock.calls[0][0]
+    expect(sent).toEqual(expect.objectContaining({ is_agent: true }))
+    expect(sent).not.toHaveProperty('project_id')
+    expect(sent).not.toHaveProperty('role_id')
+    expect(sent).not.toHaveProperty('group_id')
+    expect(sent).not.toHaveProperty('project_assignments')
+  })
+
+  it('starts on the shown project even without a position there, and asks for one', async () => {
+    render(
+      <WorkDialog
+        card={card({
+          assignments: undefined,
+          work: {
+            ...card().work,
+            role_id: null,
+            position: null,
+            department_id: null,
+            department: null,
+          },
+        })}
+        projectId={3}
+        open
+        onClose={vi.fn()}
+      />
+    )
+
+    expect(projectBox('Technofinance')).toBeChecked()
+
+    await save()
+
+    expect(state.saved).not.toHaveBeenCalled()
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'pages.users.forms.errors.assignRoleForEachProject'
+    )
+
+    await userEvent.click(roleSelect())
+    await userEvent.click(screen.getByRole('option', { name: 'Operator (Collections)' }))
+    await save()
+
+    expect(state.saved).toHaveBeenCalledWith(
+      expect.objectContaining({ project_id: 3, role_id: 10, group_id: null })
+    )
+  })
+
+  it('leaves projects out when the card shows none, and still saves the rest', async () => {
+    render(
+      <WorkDialog
+        card={card({
+          assignments: undefined,
+          work: {
+            ...card().work,
+            project_id: null,
+            project_name: null,
+            role_id: null,
+            position: null,
+            department_id: null,
+            department: null,
+          },
+        })}
+        projectId={3}
+        open
+        onClose={vi.fn()}
+      />
+    )
+
+    expect(screen.queryByText('pages.users.forms.assignProjects')).not.toBeInTheDocument()
+
+    await userEvent.click(agentBox())
+    await save()
+
+    const sent = state.saved.mock.calls[0][0]
+    expect(sent).toEqual(expect.objectContaining({ is_agent: true }))
+    expect(sent).not.toHaveProperty('project_assignments')
+    expect(sent).not.toHaveProperty('project_id')
+    expect(sent).not.toHaveProperty('role_id')
   })
 })
 
@@ -397,6 +831,26 @@ describe('WorkDialog: the rest of the section', () => {
     await userEvent.click(screen.getByRole('button', { name: 'actions.save' }))
 
     expect(state.saved).toHaveBeenCalledWith(expect.objectContaining({ is_agent: true }))
+  })
+
+  /*
+   * The manager is somebody on the employee's own project - the one the card
+   * shows - not on whichever project the reader happens to have active.
+   */
+  it("lists managers from the employee's project, the reader's only without one", () => {
+    const { unmount } = render(<WorkDialog card={card()} projectId={5} open onClose={vi.fn()} />)
+    expect(state.operatorsFor).toBe(3)
+    unmount()
+
+    render(
+      <WorkDialog
+        card={card({ work: { ...card().work, project_id: null, project_name: null } })}
+        projectId={5}
+        open
+        onClose={vi.fn()}
+      />
+    )
+    expect(state.operatorsFor).toBe(5)
   })
 
   it('never offers somebody as their own manager', async () => {

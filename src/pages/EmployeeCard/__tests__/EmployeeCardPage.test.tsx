@@ -163,6 +163,17 @@ describe('EmployeeCardPage', () => {
     }
   })
 
+  it('treats an active project id that is not a number as none, not NaN', () => {
+    useAuthStore.setState({ user: { active_project_id: 'not-a-number' } as unknown as User })
+    try {
+      renderAt('/dashboard/team-management/users/7')
+
+      expect(state.askedFor).toEqual({ userId: 7, projectId: null })
+    } finally {
+      useAuthStore.setState({ user: null })
+    }
+  })
+
   it('sends the reader back to the list they came from', () => {
     renderAt('/dashboard/team-management/users/7?project_id=3&status=active')
 

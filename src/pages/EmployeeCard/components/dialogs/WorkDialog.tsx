@@ -5,10 +5,14 @@ import { DateSelect } from '@/components/ui/DateSelect'
 import { Input } from '@/components/ui/Input'
 import '@/components/ui/DateSelect.theme.css'
 import { SearchableSelect } from '@/components/ui/SearchableSelect'
+import { useConfirm } from '@/components/ui/useConfirm'
 import { useUpdateWork } from '@/features/employeeCard/hooks/useEmployeeCard'
 import type { EmployeeCard, ProjectAssignment } from '@/features/employeeCard/types.card'
 import { useProjects } from '@/features/projects'
-import { ProjectRoleGroupRow } from '@/features/users/components/ProjectRoleGroupRow'
+import {
+  ProjectRoleGroupRow,
+  type HeldOption,
+} from '@/features/users/components/ProjectRoleGroupRow'
 import { useOperators } from '@/features/users/hooks/useUsers'
 import { formatPickerDateAsYMD, parsePickerYMD } from '@/lib/dateUtils'
 import { SectionDialog } from './SectionDialog'
@@ -25,6 +29,32 @@ const FORM_ID = 'employee-card-work'
 const NOBODY = 'none'
 const MANAGER_FIELD = 'employee-card-manager'
 
+/** Where the person works, as the dialog starts from it. */
+type Starting = Omit<ProjectAssignment, 'role_id'> & { role_id: number | null }
+
+/** A position or group id per project id. */
+type PerProject = Record<number, number | undefined>
+
+/** The position as the row lists one: its name, and its department beside it. */
+function heldRole(assignment: Starting): HeldOption | undefined {
+  if (assignment.role_id === null) return undefined
+  const name = assignment.position ?? String(assignment.role_id)
+  return {
+    id: assignment.role_id,
+    name: assignment.department ? `${name} (${assignment.department})` : name,
+    departmentId: assignment.department_id,
+  }
+}
+
+function heldGroup(assignment: Starting): HeldOption | undefined {
+  if (assignment.group_id === null) return undefined
+  return {
+    id: assignment.group_id,
+    name: assignment.group ?? String(assignment.group_id),
+    departmentId: assignment.department_id,
+  }
+}
+
 /**
  * The Personnel Data dialog.
  *
@@ -34,69 +64,124 @@ const MANAGER_FIELD = 'employee-card-manager'
  * person from it and clears their position and group there.
  *
  * It goes the same way the user-management screen sends it, so assignments
- * are reconciled and the move reaches the chronology once.
+ * are reconciled and the move reaches the chronology once. The set is sent
+ * only when it differs from what the dialog opened on: a save of the hire
+ * date or the manager alone leaves every membership as it is.
+ *
+ * A project the reader may not see into comes with its id but without its
+ * names. It is shown under a neutral name, cannot be unticked here, and goes
+ * back exactly as it came.
+ *
+ * A server older than the project list (no `assignments` on the card) edits
+ * one project only and ignores `project_assignments`. Against one the dialog
+ * offers just the project the card shows and sends that project's position
+ * and group the old way, so nothing chosen here is silently dropped.
  */
 export function WorkDialog({ card, projectId, open, onClose }: WorkDialogProps) {
   const { t } = useTranslation()
   const mutation = useUpdateWork(card.header.id, projectId)
   const { save, error, saving } = useSectionSave(mutation, onClose)
+  const { confirm, confirmDialog } = useConfirm()
 
   const { data: projectsData } = useProjects()
-  const { data: people } = useOperators(projectId ?? card.work.project_id)
+  // The manager is somebody on the employee's own project - the one the card
+  // shows - and the reader's only when the employee is not on it.
+  const { data: people } = useOperators(card.work.project_id ?? projectId)
+
+  // An older server sends no list of projects and edits one project only.
+  const legacy = card.assignments === undefined
 
   /*
-   * Where the person works now. An older server sends no list, so the one
-   * project shown on the card stands in for it.
+   * Where the person works now. Without the list, the project the card shows
+   * stands in for it - with or without a position there, which then has to be
+   * chosen before saving rather than leaving the dialog with no project.
    */
-  const initial: ProjectAssignment[] = useMemo(
-    () =>
-      card.assignments ??
-      (card.work.project_id && card.work.role_id
-        ? [
-            {
-              project_id: card.work.project_id,
-              project_name: card.work.project_name,
-              role_id: card.work.role_id,
-              position: card.work.position,
-              department_id: card.work.department_id,
-              department: card.work.department,
-              group_id: card.work.group_id,
-              group: card.work.group,
-            },
-          ]
-        : []),
-    [card.assignments, card.work]
-  )
+  const initial: Starting[] = useMemo(() => {
+    if (card.assignments) return card.assignments
+    if (!card.work.project_id) return []
+    return [
+      {
+        project_id: card.work.project_id,
+        project_name: card.work.project_name,
+        role_id: card.work.role_id,
+        position: card.work.position,
+        department_id: card.work.department_id,
+        department: card.work.department,
+        group_id: card.work.group_id,
+        group: card.work.group,
+      },
+    ]
+  }, [card.assignments, card.work])
 
-  const [selectedProjects, setSelectedProjects] = useState<number[]>(() =>
-    initial.map((assignment) => assignment.project_id)
+  // With an older server and no project on the card, there is nothing here
+  // the server could take: the section is left out and nothing of it is sent.
+  const editsProjects = !legacy || initial.length > 0
+
+  // Projects the server names for the reader by id only: kept as they are.
+  const locked = useMemo(
+    () => (card.assignments ?? []).filter((assignment) => assignment.project_name === null),
+    [card.assignments]
   )
-  const [projectRoles, setProjectRoles] = useState<Record<number, number | undefined>>(() =>
-    Object.fromEntries(initial.map((a) => [a.project_id, a.role_id]))
-  )
-  const [projectGroups, setProjectGroups] = useState<Record<number, number | undefined>>(() =>
-    Object.fromEntries(initial.map((a) => [a.project_id, a.group_id ?? undefined]))
-  )
+  const lockedOne = (id: number) => locked.find((assignment) => assignment.project_id === id)
+
+  /*
+   * The section as it opened, so a save can tell whether it was touched at
+   * all. A group never sits outside a department, and one held behind a field
+   * that is not shown would still be sent.
+   */
+  const [start] = useState(() => ({
+    projects: initial.map((assignment) => assignment.project_id),
+    roles: Object.fromEntries(
+      initial.map((a) => [a.project_id, a.role_id ?? undefined])
+    ) as PerProject,
+    groups: Object.fromEntries(
+      initial.map((a) => [a.project_id, a.department_id ? (a.group_id ?? undefined) : undefined])
+    ) as PerProject,
+  }))
+  const [selectedProjects, setSelectedProjects] = useState<number[]>(start.projects)
+  const [projectRoles, setProjectRoles] = useState(start.roles)
+  const [projectGroups, setProjectGroups] = useState(start.groups)
   const [projectsError, setProjectsError] = useState<string | null>(null)
+
+  const membershipChanged =
+    selectedProjects.length !== start.projects.length ||
+    selectedProjects.some(
+      (id) =>
+        !start.projects.includes(id) ||
+        projectRoles[id] !== start.roles[id] ||
+        (projectGroups[id] ?? null) !== (start.groups[id] ?? null)
+    )
+
+  /** One project as it is sent; a locked one exactly as it came. */
+  const entry = (id: number) => {
+    const kept = lockedOne(id)
+    return kept
+      ? { project_id: id, role_id: kept.role_id, group_id: kept.group_id }
+      : { project_id: id, role_id: projectRoles[id] as number, group_id: projectGroups[id] ?? null }
+  }
 
   /*
    * The projects to offer: every one the reader can list, plus any the person
    * already works on that is not among them, so a current project never
-   * disappears from the dialog just because the list leaves it out.
+   * disappears from the dialog just because the list leaves it out. An older
+   * server can only change the project the card shows, so only that one.
    */
   const projects = useMemo(() => {
-    const listed = (projectsData?.projects ?? []).map((project) => ({
-      id: project.id,
-      name: project.name,
-    }))
+    const isLocked = (id: number) => locked.some((assignment) => assignment.project_id === id)
+    const listed = legacy
+      ? []
+      : (projectsData?.projects ?? [])
+          .filter((project) => !isLocked(project.id))
+          .map((project) => ({ id: project.id, name: project.name, locked: false }))
     const held = initial
       .filter((assignment) => !listed.some((project) => project.id === assignment.project_id))
       .map((assignment) => ({
         id: assignment.project_id,
-        name: assignment.project_name ?? String(assignment.project_id),
+        name: assignment.project_name ?? t('pages.employeeCard.dialogs.otherProject'),
+        locked: isLocked(assignment.project_id),
       }))
     return [...listed, ...held]
-  }, [projectsData?.projects, initial])
+  }, [legacy, projectsData?.projects, initial, locked, t])
 
   const toggleProject = (id: number, checked: boolean) => {
     setProjectsError(null)
@@ -141,30 +226,72 @@ export function WorkDialog({ card, projectId, open, onClose }: WorkDialogProps) 
       error={error}
       onClose={onClose}
     >
+      {confirmDialog}
       <form
         id={FORM_ID}
         className="grid gap-4 sm:grid-cols-2"
-        onSubmit={(event) => {
+        onSubmit={async (event) => {
           event.preventDefault()
-          // As in the "Add employee" form: at least one project, and a
-          // position in each. Nobody is left without a project from here.
-          if (selectedProjects.length === 0) {
-            setProjectsError(t('pages.users.forms.errors.selectAtLeastOneProject'))
-            return
+          if (editsProjects) {
+            // As in the "Add employee" form: at least one project, and a
+            // position in each. Nobody is left without a project from here.
+            if (selectedProjects.length === 0) {
+              setProjectsError(t('pages.users.forms.errors.selectAtLeastOneProject'))
+              return
+            }
+            if (selectedProjects.some((id) => projectRoles[id] === undefined)) {
+              setProjectsError(t('pages.users.forms.errors.assignRoleForEachProject'))
+              return
+            }
+            setProjectsError(null)
           }
-          if (selectedProjects.some((id) => projectRoles[id] === undefined)) {
-            setProjectsError(t('pages.users.forms.errors.assignRoleForEachProject'))
-            return
+
+          /*
+           * Asked before saving, not after: one click on a checkbox, then a
+           * save for some other reason, takes the person off a project and
+           * clears their position and group there. Nothing brings those back
+           * but somebody who remembers them.
+           */
+          const dropped = initial.filter(
+            (assignment) => !selectedProjects.includes(assignment.project_id)
+          )
+          if (dropped.length > 0) {
+            const agreed = await confirm({
+              title: t('pages.employeeCard.dialogs.removeProjectsTitle'),
+              message: t('pages.employeeCard.dialogs.removeProjectsMessage', {
+                projects: dropped
+                  .map(
+                    (assignment) =>
+                      projects.find((project) => project.id === assignment.project_id)?.name ??
+                      String(assignment.project_id)
+                  )
+                  .join(', '),
+              }),
+              confirmLabel: t('pages.employeeCard.dialogs.removeProjectsConfirm'),
+              tone: 'danger',
+            })
+            if (!agreed) return
           }
-          setProjectsError(null)
+
+          const [shown] = selectedProjects
           void save({
-            // The whole set: a project left out is removed, and its position
-            // and group with it. A group of null clears one.
-            project_assignments: selectedProjects.map((id) => ({
-              project_id: id,
-              role_id: projectRoles[id] as number,
-              group_id: projectGroups[id] ?? null,
-            })),
+            // Untouched, the section is not sent: the server then leaves
+            // every membership as it is.
+            ...(!editsProjects || !membershipChanged
+              ? {}
+              : legacy
+                ? // One project, the old way: the server reads these and not
+                  // the list. A group of null clears one.
+                  {
+                    project_id: shown,
+                    role_id: projectRoles[shown] as number,
+                    group_id: projectGroups[shown] ?? null,
+                  }
+                : {
+                    // The whole set: a project left out is removed, and its
+                    // position and group with it. A group of null clears one.
+                    project_assignments: selectedProjects.map(entry),
+                  }),
             manager_user_id: managerId === NOBODY ? null : Number(managerId),
             hired_at: hiredAt || null,
             // Empty clears it. Sent as null rather than omitted, so somebody
@@ -175,53 +302,67 @@ export function WorkDialog({ card, projectId, open, onClose }: WorkDialogProps) 
           })
         }}
       >
-        <div className="space-y-3 sm:col-span-2">
-          <span className="text-muted-foreground text-xs">
-            {t('pages.users.forms.assignProjects')}
-          </span>
-          <div className="flex flex-wrap gap-4">
-            {projects.map((project) => (
-              <label
-                key={project.id}
-                className="text-foreground flex cursor-pointer items-center gap-2 text-sm"
-              >
-                <Checkbox
-                  checked={selectedProjects.includes(project.id)}
-                  onCheckedChange={(checked) => toggleProject(project.id, checked === true)}
-                />
-                <span>{project.name}</span>
-              </label>
-            ))}
-          </div>
-          {selectedProjects.length > 0 && (
-            <div className="space-y-3">
-              <span className="text-muted-foreground text-xs">
-                {t('pages.users.forms.rolePerProject')}
-              </span>
-              {selectedProjects.map((id) => (
-                <ProjectRoleGroupRow
-                  key={id}
-                  projectId={id}
-                  projectName={projects.find((project) => project.id === id)?.name}
-                  selectedRoleId={projectRoles[id]}
-                  selectedGroupId={projectGroups[id]}
-                  onRoleChange={(roleId) => {
-                    setProjectsError(null)
-                    setProjectRoles((prev) => ({ ...prev, [id]: roleId }))
-                  }}
-                  onGroupChange={(groupId) =>
-                    setProjectGroups((prev) => ({ ...prev, [id]: groupId }))
-                  }
-                />
+        {editsProjects && (
+          <div className="space-y-3 sm:col-span-2">
+            <span className="text-muted-foreground text-xs">
+              {t('pages.users.forms.assignProjects')}
+            </span>
+            <div className="flex flex-wrap gap-4">
+              {projects.map((project) => (
+                <label
+                  key={project.id}
+                  className="text-foreground flex cursor-pointer items-center gap-2 text-sm"
+                >
+                  <Checkbox
+                    checked={selectedProjects.includes(project.id)}
+                    disabled={project.locked}
+                    onCheckedChange={(checked) => toggleProject(project.id, checked === true)}
+                  />
+                  <span>{project.name}</span>
+                </label>
               ))}
             </div>
-          )}
-          {projectsError && (
-            <p role="alert" className="text-error-500 text-sm">
-              {projectsError}
-            </p>
-          )}
-        </div>
+            {selectedProjects.some((id) => !lockedOne(id)) && (
+              <div className="space-y-3">
+                <span className="text-muted-foreground text-xs">
+                  {t('pages.users.forms.rolePerProject')}
+                </span>
+                {/* A locked project has nothing here to choose: its position
+                    and group are not the reader's to see. */}
+                {selectedProjects
+                  .filter((id) => !lockedOne(id))
+                  .map((id) => {
+                    // What the person holds there now stays offered even once it
+                    // has been deactivated, so the row opens on what is saved.
+                    const current = initial.find((assignment) => assignment.project_id === id)
+                    return (
+                      <ProjectRoleGroupRow
+                        key={id}
+                        projectId={id}
+                        projectName={projects.find((project) => project.id === id)?.name}
+                        selectedRoleId={projectRoles[id]}
+                        selectedGroupId={projectGroups[id]}
+                        heldRole={current && heldRole(current)}
+                        heldGroup={current && heldGroup(current)}
+                        onRoleChange={(roleId) => {
+                          setProjectsError(null)
+                          setProjectRoles((prev) => ({ ...prev, [id]: roleId }))
+                        }}
+                        onGroupChange={(groupId) =>
+                          setProjectGroups((prev) => ({ ...prev, [id]: groupId }))
+                        }
+                      />
+                    )
+                  })}
+              </div>
+            )}
+            {projectsError && (
+              <p role="alert" className="text-error-500 text-sm">
+                {projectsError}
+              </p>
+            )}
+          </div>
+        )}
 
         <div className="space-y-1.5">
           {/* A real label, not a span beside it: the picker is a button rather

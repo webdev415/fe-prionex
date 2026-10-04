@@ -12156,7 +12156,11 @@
         "attachFile": "Додати документ (PDF або Word, до 10 МБ)",
         "searchManager": "Пошук за іменем",
         "surveys": "Відповіді опитування",
-        "termination": "Звільнення"
+        "termination": "Звільнення",
+        "removeProjectsTitle": "Прибрати з проєкту?",
+        "removeProjectsMessage": "Співробітника буде прибрано з: {{projects}}. Посаду й групу там буде очищено, а зміну записано в хронологію.",
+        "removeProjectsConfirm": "Прибрати",
+        "otherProject": "Інший проєкт"
       },
       "tabs": {
         "showEarlier": "Показати попередні розділи",
