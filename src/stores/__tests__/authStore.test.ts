@@ -271,3 +271,21 @@ describe('exitImpersonation — only a definitive rejection tears the session do
     expectSessionKept()
   })
 })
+
+describe('logout when the session is already gone server-side', () => {
+  it('resolves and clears the session even though the server answers 401', async () => {
+    // A password change ends the session, so the logout that follows is
+    // refused. Callers redirect after `await logout()`; a rejection skipped it.
+    vi.mocked(authApi.logout).mockRejectedValueOnce(
+      Object.assign(new Error('401'), { response: { status: 401 } })
+    )
+    setAccessToken('h.eyJzdWIiOiI3In0.s')
+    useAuthStore.setState({ isAuthenticated: true, user: { id: '7' } as never })
+
+    await expect(useAuthStore.getState().logout()).resolves.toBeUndefined()
+
+    expect(getAccessToken()).toBeNull()
+    expect(useAuthStore.getState().isAuthenticated).toBe(false)
+    expect(useAuthStore.getState().user).toBeNull()
+  })
+})

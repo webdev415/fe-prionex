@@ -76,7 +76,12 @@ export function GuestRoute({ children }: GuestRouteProps) {
       } | null
     )?.from
     if (fromLocation) {
-      return `${fromLocation.pathname}${fromLocation.search ?? ''}${fromLocation.hash ?? ''}`
+      // Filtered like returnUrl: ProtectedRoute records the page it bounced
+      // from, and that can be /change-password, where a user whose password
+      // is already changed must not be sent back after signing in.
+      return safeReturnUrl(
+        `${fromLocation.pathname}${fromLocation.search ?? ''}${fromLocation.hash ?? ''}`
+      )
     }
     return '/dashboard'
   }
