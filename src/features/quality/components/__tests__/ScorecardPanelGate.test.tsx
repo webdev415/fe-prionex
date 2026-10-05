@@ -125,6 +125,32 @@ describe('ScorecardPanel assignment gate', () => {
     expect(requestedScorecardIds).not.toContain(30)
   })
 
+  it("shows a colleague's evaluation to a view-only user instead of hiding it", () => {
+    // A supervisor (canEdit=false) opening a scored call must see the score.
+    // Resolving only the viewer's own card left activeScorecardId null, which
+    // took the early return and told them the call was theirs to score —
+    // except they could not, so they saw nothing at all.
+    existingCompleted()
+    history.data = [
+      { id: 30, trainer_id: 99, status: 'completed', created_at: '2026-07-23T10:00:00Z' },
+    ]
+    activeScorecard.data = { ...(activeScorecard.data as object), id: 30, trainer_id: 99 }
+    requestedScorecardIds.length = 0
+    render(<ScorecardPanel callId="c1" operatorId={41} canEdit={false} />)
+    expect(requestedScorecardIds).toContain(30)
+    expect(screen.queryByText('pages.training.scorecard.notAssigned')).toBeInTheDocument()
+    expect(screen.queryByText('pages.training.scorecard.saveChanges')).not.toBeInTheDocument()
+  })
+
+  it("lets an assigned trainer add their own evaluation beside a colleague's", () => {
+    existingCompleted()
+    activeScorecard.data = { ...(activeScorecard.data as object), trainer_id: 99 }
+    render(<ScorecardPanel callId="c1" operatorId={41} canEdit />)
+    // Read-only on theirs, but not a dead end: the picker stays reachable.
+    expect(screen.queryByText('pages.training.scorecard.saveChanges')).not.toBeInTheDocument()
+    expect(screen.getByText('pages.training.scorecard.scoreItYourself')).toBeInTheDocument()
+  })
+
   it("will not offer to save a colleague's card, even when assigned", () => {
     // A call carries one card per evaluator. Should anything pin a colleague's
     // card here, the API refuses the write — so offering Save produces a 403

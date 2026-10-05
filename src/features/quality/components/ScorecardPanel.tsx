@@ -63,9 +63,17 @@ export function ScorecardPanel({
   const [showTemplateOverride, setShowTemplateOverride] = useState(false)
   const [forcePicker, setForcePicker] = useState(false)
   const viewerId = useAuthStore((s) => s.user?.id)
-  const existingScorecardId = ownScorecardId(historyQuery.data, viewerId)
+  // Which card to *edit* and which to *show* are different questions once a
+  // call can carry several. Editing is always the viewer's own card; showing
+  // falls back to whatever the call has, so a supervisor opening a scored call
+  // sees the evaluation rather than being told there is none.
+  const ownCardId = ownScorecardId(historyQuery.data, viewerId)
+  const newestOnCallId = historyQuery.data?.[0]?.id ?? null
+  const existingScorecardId = ownCardId ?? newestOnCallId
   const activeScorecardId = pinnedScorecardId ?? manuallySelectedId ?? existingScorecardId ?? null
-  const isChangingType = forcePicker && existingScorecardId != null
+  // Replacing a colleague's card is not a type change — nothing of the
+  // viewer's is being cleared, they are starting their own evaluation.
+  const isChangingType = forcePicker && ownCardId != null
   const activeQuery = useScorecard(activeScorecardId, activeScorecardId != null)
   const createMutation = useCreateScorecard()
   const updateMutation = useUpdateScorecard()
@@ -308,7 +316,7 @@ export function ScorecardPanel({
         ) : null}
 
         <div className="flex flex-wrap gap-2">
-          {isChangingType ? (
+          {forcePicker && existingScorecardId != null ? (
             <Button
               variant="cancel"
               size="md"
@@ -361,7 +369,7 @@ export function ScorecardPanel({
         </span>
       </header>
 
-      {canEdit ? (
+      {canEdit || (canEditProp === true && !ownsActiveCard) ? (
         <button
           type="button"
           onClick={() => {
@@ -371,7 +379,9 @@ export function ScorecardPanel({
           }}
           className="text-muted-foreground hover:text-foreground self-start text-xs underline-offset-2 hover:underline"
         >
-          {t('pages.training.scorecard.changeType', '← Change scorecard type')}
+          {ownsActiveCard
+            ? t('pages.training.scorecard.changeType', '← Change scorecard type')
+            : t('pages.training.scorecard.scoreItYourself', 'Add your own evaluation')}
         </button>
       ) : null}
 
