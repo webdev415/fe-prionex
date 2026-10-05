@@ -116,6 +116,10 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const DAY = /^(\d{4})-(\d{2})-(\d{2})$/
 const oneOf = (list: readonly string[], value: string) => (list.includes(value) ? value : undefined)
 
+/** Предел годных суток лога (Р-18-13d-b2fix-1); им же ограничены поля дат. */
+export const POSTBACK_LOG_FIRST_DAY = '2000-01-01'
+export const POSTBACK_LOG_LAST_DAY = '2100-12-31'
+
 /**
  * Дата ссылки годна, только если это существующие сутки (Р-18-13d-b2fix-1):
  * год 2000–2100, месяц и день по календарю. Разбор без переноса — `Date`
@@ -127,7 +131,8 @@ function calendarDay(value: string): string {
   const [year, month, day] = match.slice(1).map(Number)
   const date = new Date(Date.UTC(year, month - 1, day))
   const real = date.getUTCMonth() === month - 1 && date.getUTCDate() === day
-  return real && year >= 2000 && year <= 2100 ? value : ''
+  const inRange = value >= POSTBACK_LOG_FIRST_DAY && value <= POSTBACK_LOG_LAST_DAY
+  return real && inRange ? value : ''
 }
 
 /**
@@ -135,8 +140,8 @@ function calendarDay(value: string): string {
  * недописанный UUID в запрос не уходят (модуль ответил бы 422); перевёрнутый
  * период («з» позже «по») — тоже, целиком. Даты — сутки UTC, как считает дверь;
  * несуществующие сутки (`2026-02-30`) — тот же мусор. Проверенные `from`/`to`
- * возвращаются: поля показывают ровно то, что ушло в проверку (дата вне
- * 2000–2100 браузером не сбрасывается — её пустим сами).
+ * дают пару пределов полям; `fromInvalid`/`toInvalid` — введено непусто, но не
+ * годно (промежуточный год набора `0002-10-04`, мусор ссылки).
  */
 export function postbackLogRequest(values: PostbackLogFilterValues) {
   const action = values.action.trim()
@@ -151,7 +156,15 @@ export function postbackLogRequest(values: PostbackLogFilterValues) {
     created_from: rangeInverted ? undefined : from || undefined,
     created_to: rangeInverted ? undefined : to || undefined,
   }
-  return { filters, from, to, rangeInverted, actionInvalid: action !== '' && !UUID.test(action) }
+  return {
+    filters,
+    from,
+    to,
+    fromInvalid: values.from !== '' && !from,
+    toInvalid: values.to !== '' && !to,
+    rangeInverted,
+    actionInvalid: action !== '' && !UUID.test(action),
+  }
 }
 
 /** Тело создания (`PartnerPostbackRuleCreate`). */

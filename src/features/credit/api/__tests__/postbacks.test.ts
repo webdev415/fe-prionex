@@ -478,6 +478,8 @@ describe('postbackLogRequest — поля фильтров лога → пара
       },
       from: '',
       to: '',
+      fromInvalid: false,
+      toInvalid: false,
       rangeInverted: false,
       actionInvalid: false,
     })
@@ -550,6 +552,23 @@ describe('postbackLogRequest — поля фильтров лога → пара
     expect(
       postbacks.postbackLogRequest({ ...EMPTY, from: '2026-10-01', to: '2026-02-30' }).filters
     ).toMatchObject({ created_from: '2026-10-01', created_to: undefined })
+  })
+
+  // r2 (ревью бота, High): промежуточный год набора помечен негодным, но не стёрт.
+  it.each(['0002-10-04', '0020-10-04', '0202-10-04', '2026-13-45'])(
+    'введённая негодная дата %j — помечена, в запрос не уходит',
+    (day) => {
+      const result = postbacks.postbackLogRequest({ ...EMPTY, from: day, to: day })
+      expect(result).toMatchObject({ fromInvalid: true, toInvalid: true })
+      expect(result.filters).toMatchObject({ created_from: undefined, created_to: undefined })
+    }
+  )
+
+  it('предел суток — одна пара констант (r2, Low)', () => {
+    expect([postbacks.POSTBACK_LOG_FIRST_DAY, postbacks.POSTBACK_LOG_LAST_DAY]).toEqual([
+      '2000-01-01',
+      '2100-12-31',
+    ])
   })
 
   it('перевёрнутый период не уходит целиком и помечен', () => {

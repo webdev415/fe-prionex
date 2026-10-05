@@ -8,7 +8,7 @@
  * под тем же правом чтения (К-1), подвкладка живёт в URL (`pb_view`); на «Правила»
  * фильтры лога (`pb_*`) из ссылки снимаются — невидимыми они в ней не нужны.
  */
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { Alert } from '@/components/ui/Alert'
@@ -134,13 +134,16 @@ function PostbackLogView() {
   const values = Object.fromEntries(
     FILTER_KEYS.map((key) => [key, params.get(`pb_${key}`) ?? ''])
   ) as PostbackLogFilterValues
-  const { filters, actionInvalid, rangeInverted, from, to } = postbackLogRequest(values)
+  const { filters, actionInvalid, rangeInverted, fromInvalid, toInvalid } =
+    postbackLogRequest(values)
   // Стек курсоров страниц — в состоянии экрана, не в URL (К-6): курсор живёт
   // одну сессию. Смена фильтров запроса, и сброс тоже, начинает с первой страницы;
   // ввод, который запрос не меняет (недописанный UUID), страницу не сбрасывает (Б-2).
   // Сброс — здесь же, не эффектом: иначе один рендер ушёл бы с новыми фильтрами и
   // старым курсором.
   const [stack, setStack] = useState<string[]>([])
+  // Адрес, записанный самим `change`, — чтобы чистка ссылки ниже его не трогала.
+  const own = useRef<string | null>(null)
   const change = (patch: Partial<PostbackLogFilterValues>) => {
     const nextFilters = postbackLogRequest({ ...values, ...patch }).filters
     if (JSON.stringify(nextFilters) !== JSON.stringify(filters)) setStack([])
@@ -149,18 +152,31 @@ function PostbackLogView() {
       if (value?.trim()) next.set(`pb_${key}`, value)
       else next.delete(`pb_${key}`)
     }
+    own.current = next.toString()
     setParams(next, { replace: true })
   }
+  // Негодная дата ссылки (правленой, пересланной) снимается из адреса один раз —
+  // когда адрес пришёл извне. Свою запись из `change` пропускаем: при наборе года
+  // браузер шлёт 0002-10-04, 0020-…, и стереть их значит не дать набрать дату (К-2).
+  const search = params.toString()
+  useEffect(() => {
+    if (search === own.current || !(fromInvalid || toInvalid)) return
+    const next = new URLSearchParams(search)
+    if (fromInvalid) next.delete('pb_from')
+    if (toInvalid) next.delete('pb_to')
+    setParams(next, { replace: true })
+  }, [search, fromInvalid, toInvalid, setParams])
 
   const rules = useCreditPostbackRules()
   const { data, isLoading, isFetching, isPlaceholderData, error, refetch } =
     useCreditPostbackDeliveries(filters, stack.at(-1))
   const forbidden = error instanceof CreditApiError && error.status === 403
-  // 422 — ответ развёрнутого модуля по делу (фильтр отвергнут), а не «модуль не
-  // развёрнут» (Р-18-13d-b2fix-2); общий CreditModuleUnavailable не трогаем.
-  const rejected = error instanceof CreditApiError && error.status === 422
   // «За фільтрами нічого» — только если фильтр ушёл в запрос или поле помечено негодным.
-  const narrowed = Object.values(filters).some(Boolean) || actionInvalid || rangeInverted
+  const sent = Object.values(filters).some(Boolean)
+  const narrowed = sent || actionInvalid || rangeInverted || fromInvalid || toInvalid
+  // 422 при ушедшем фильтре — ответ развёрнутого модуля по делу (фильтр отвергнут),
+  // а не «модуль не развёрнут» (Р-18-13d-b2fix-2); без фильтра — как прежде.
+  const rejected = sent && error instanceof CreditApiError && error.status === 422
   const pageButton = (label: string, disabled: boolean, cursors: string[]) => (
     <Button size="sm" variant="outline" disabled={disabled} onClick={() => setStack(cursors)}>
       {label}
@@ -175,9 +191,8 @@ function PostbackLogView() {
           {t('credit.postbacks.log.refresh')}
         </Button>
       </div>
-      {/* Поля дат — проверенные значения: отброшенная дата видна пустой (Р-18-13d-b2fix-1). */}
       <CreditPostbackDeliveriesFilters
-        values={{ ...values, from, to }}
+        values={values}
         rules={rules.data?.items ?? []}
         onChange={change}
         onReset={() => change(Object.fromEntries(FILTER_KEYS.map((key) => [key, ''])))}
@@ -199,7 +214,9 @@ function PostbackLogView() {
             <Alert variant="warning" className="mb-3">
               {forbidden
                 ? t('credit.postbacks.forbidden')
-                : t('credit.postbacks.log.refreshFailed')}
+                : rejected
+                  ? t('credit.postbacks.log.filterRejected')
+                  : t('credit.postbacks.log.refreshFailed')}
             </Alert>
           )}
           <CreditPostbackDeliveriesTable

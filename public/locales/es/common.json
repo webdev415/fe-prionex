@@ -14012,7 +14012,8 @@
           "reset": "Restablecer filtros",
           "utc": "El período se cuenta en días UTC, como lo hace el módulo.",
           "inverted": "La fecha «desde» es posterior a la fecha «hasta»: el período no se aplica.",
-          "actionInvalid": "No es un UUID completo: el filtro por ID no se aplica."
+          "actionInvalid": "No es un UUID completo: el filtro por ID no se aplica.",
+          "dateInvalid": "Ese día no existe o está fuera de 2000–2100: el filtro por fecha no se aplica."
         }
       },
       "outcome": {
