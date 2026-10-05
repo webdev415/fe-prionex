@@ -163,6 +163,9 @@ function renderLog(search = '?pb_view=log'): QueryClient {
 
 /** Параметры последнего вызова двери лога. */
 const lastCall = () => api.listDeliveries.mock.calls.at(-1)?.[0]
+/** Параметры текущего адреса (по `SearchProbe`). */
+const searchNow = () => new URLSearchParams(screen.getByTestId('search').textContent ?? '')
+const DATE_INVALID = 'credit.postbacks.log.filters.dateInvalid'
 
 const LOG_TAB = 'credit.postbacks.log.tabs.log'
 const RULES_TAB = 'credit.postbacks.log.tabs.rules'
@@ -307,6 +310,77 @@ describe('фильтры — серверные, из ссылки (AC-b3, К-2,
       created_to: undefined,
     })
     expect(screen.getByText('credit.postbacks.log.filters.inverted')).toBeInTheDocument()
+  })
+
+  it('несуществующая дата ссылки (pb_from=2026-13-45) — не в запросе, поле пустое, лог виден (18-13d-b2fix, AC-2)', async () => {
+    renderLog('?pb_view=log&pb_from=2026-13-45&pb_to=2026-02-30')
+    expect(await screen.findByText('APP-0001')).toBeInTheDocument()
+    expect(lastCall()).toMatchObject({ created_from: undefined, created_to: undefined })
+    expect(screen.getByLabelText('credit.postbacks.log.filters.from')).toHaveValue('')
+    expect(screen.getByLabelText('credit.postbacks.log.filters.to')).toHaveValue('')
+    expect(screen.queryByText('credit.unavailable.title')).not.toBeInTheDocument()
+    expect(screen.queryByText('credit.postbacks.log.filters.inverted')).not.toBeInTheDocument()
+    expect(searchNow().has('pb_from')).toBe(false)
+    expect(searchNow().has('pb_to')).toBe(false)
+  })
+
+  it.each([
+    ['1999-12-31', '2101-01-01'],
+    ['2026-13-45', '2026-02-30'],
+  ])(
+    'негодная дата ссылки (pb_from=%s) снимается из адреса при загрузке, поле пустое (r2, К-2)',
+    async (from, to) => {
+      renderLog(`?pb_view=log&pb_outcome=failed&pb_from=${from}&pb_to=${to}`)
+      expect(await screen.findByText('APP-0001')).toBeInTheDocument()
+      expect(lastCall()).toMatchObject({ created_from: undefined, created_to: undefined })
+      await waitFor(() => expect(searchNow().has('pb_from')).toBe(false))
+      expect(searchNow().has('pb_to')).toBe(false)
+      expect(searchNow().get('pb_outcome')).toBe('failed')
+      expect(screen.getByLabelText('credit.postbacks.log.filters.from')).toHaveValue('')
+      expect(screen.getByLabelText('credit.postbacks.log.filters.to')).toHaveValue('')
+      expect(screen.queryByText(DATE_INVALID)).not.toBeInTheDocument()
+    }
+  )
+
+  it('набор года по цифрам — поле не стирается, в запрос уходит только итоговая дата (r2, High)', async () => {
+    renderLog()
+    await screen.findByText('APP-0001')
+    const field = screen.getByLabelText('credit.postbacks.log.filters.from')
+    for (const value of ['0002-10-04', '0020-10-04', '0202-10-04']) {
+      fireEvent.change(field, { target: { value } })
+      expect(field).toHaveValue(value)
+      expect(searchNow().get('pb_from')).toBe(value)
+    }
+    expect(api.listDeliveries.mock.calls.every(([call]) => !call?.created_from)).toBe(true)
+    fireEvent.change(field, { target: { value: '2026-10-04' } })
+    expect(field).toHaveValue('2026-10-04')
+    await waitFor(() => expect(lastCall()).toMatchObject({ created_from: '2026-10-04' }))
+  })
+
+  it('промежуточное значение — поле помечено негодным с подсказкой, даты нет в запросе (r2)', async () => {
+    renderLog()
+    await screen.findByText('APP-0001')
+    const field = screen.getByLabelText('credit.postbacks.log.filters.to')
+    fireEvent.change(field, { target: { value: '0020-10-04' } })
+    expect(field).toHaveAttribute('aria-invalid', 'true')
+    const hint = await screen.findByText(DATE_INVALID)
+    expect(field.getAttribute('aria-describedby')).toContain(hint.id)
+    expect(lastCall()?.created_to).toBeUndefined()
+    fireEvent.change(field, { target: { value: '2026-10-04' } })
+    await waitFor(() => expect(lastCall()).toMatchObject({ created_to: '2026-10-04' }))
+    expect(field).toHaveAttribute('aria-invalid', 'false')
+    expect(screen.queryByText(DATE_INVALID)).not.toBeInTheDocument()
+  })
+
+  it('поля дат несут предел 2000–2100; соседняя граница — от проверенной даты (К-1)', async () => {
+    renderLog('?pb_view=log&pb_from=2026-10-01&pb_to=2101-01-01')
+    await screen.findByText('APP-0001')
+    const from = screen.getByLabelText('credit.postbacks.log.filters.from')
+    const to = screen.getByLabelText('credit.postbacks.log.filters.to')
+    expect(from).toHaveAttribute('min', '2000-01-01')
+    expect(from).toHaveAttribute('max', '2100-12-31')
+    expect(to).toHaveAttribute('min', '2026-10-01')
+    expect(to).toHaveAttribute('max', '2100-12-31')
   })
 
   it('клиентской фильтрации нет: строка, не совпадающая с фильтром, показана', async () => {
@@ -783,6 +857,57 @@ describe('состояния (AC-b5)', () => {
     api.listDeliveries.mockRejectedValue(new CreditApiError('Bad gateway', 502, 'bad_gateway'))
     renderLog()
     expect(await screen.findByText('credit.unavailable.title')).toBeInTheDocument()
+  })
+
+  it('422 двери — «фильтр не принят модулем», не «модуль не развёрнут» (18-13d-b2fix, AC-3)', async () => {
+    api.listDeliveries.mockRejectedValue(
+      new CreditApiError('Unprocessable', 422, 'validation_error')
+    )
+    renderLog('?pb_view=log&pb_outcome=failed')
+    expect(await screen.findByText('credit.postbacks.log.filterRejected')).toBeInTheDocument()
+    expect(screen.queryByText('credit.unavailable.title')).not.toBeInTheDocument()
+    expect(screen.queryByText('credit.postbacks.forbidden')).not.toBeInTheDocument()
+  })
+
+  it('422 без фильтра в запросе — как прежде «модуль недоступен» (r2, Medium)', async () => {
+    api.listDeliveries.mockRejectedValue(
+      new CreditApiError('Unprocessable', 422, 'validation_error')
+    )
+    renderLog()
+    expect(await screen.findByText('credit.unavailable.title')).toBeInTheDocument()
+    expect(screen.queryByText('credit.postbacks.log.filterRejected')).not.toBeInTheDocument()
+  })
+
+  it('422 перечитки при данных и ушедшем фильтре — «фильтр не принят», не «сбой перечитки» (r2)', async () => {
+    renderLog('?pb_view=log&pb_outcome=failed')
+    await screen.findByText('APP-0001')
+    api.listDeliveries.mockRejectedValue(
+      new CreditApiError('Unprocessable', 422, 'validation_error')
+    )
+    fireEvent.click(screen.getByRole('button', { name: REFRESH }))
+    expect(await screen.findByText('credit.postbacks.log.filterRejected')).toBeInTheDocument()
+    expect(screen.getByText('APP-0001')).toBeInTheDocument()
+    expect(screen.queryByText('credit.postbacks.log.refreshFailed')).not.toBeInTheDocument()
+  })
+
+  it.each([
+    ['503', new CreditApiError('Unavailable', 503, 'unavailable')],
+    [
+      'сетевой сбой',
+      new CreditApiError(
+        'Network Error',
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        'ERR_NETWORK'
+      ),
+    ],
+  ])('%s — по-прежнему «модуль недоступен», не «фильтр не принят»', async (_name, failure) => {
+    api.listDeliveries.mockRejectedValue(failure)
+    renderLog('?pb_view=log&pb_outcome=failed')
+    expect(await screen.findByText('credit.unavailable.title')).toBeInTheDocument()
+    expect(screen.queryByText('credit.postbacks.log.filterRejected')).not.toBeInTheDocument()
   })
 
   it('пусто без фильтров — «постбеків ще не було»; с фильтром — «за фільтрами нічого»', async () => {

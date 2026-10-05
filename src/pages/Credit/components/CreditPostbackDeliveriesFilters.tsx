@@ -14,6 +14,8 @@ import { Input } from '@/components/ui/Input'
 import { CREDIT_POSTBACK_OUTCOMES } from '@/features/credit/api/postbackEnums'
 import {
   CREDIT_POSTBACK_TRIGGERS,
+  POSTBACK_LOG_FIRST_DAY as FIRST_DAY,
+  POSTBACK_LOG_LAST_DAY as LAST_DAY,
   postbackLogRequest,
   type CreditPostbackRule,
   type PostbackLogFilterValues,
@@ -34,8 +36,10 @@ export function CreditPostbackDeliveriesFilters({
 }) {
   const { t } = useTranslation('common')
   const id = useId()
-  // Недописанный UUID и перевёрнутый период в запрос не ушли — поля это показывают.
-  const { filters, actionInvalid, rangeInverted } = postbackLogRequest(values)
+  // Недописанный UUID, негодная дата и перевёрнутый период в запрос не ушли — поля
+  // это показывают. В полях — сырой ввод: набор года (0002-…, 0020-…) не стирается.
+  const { filters, actionInvalid, rangeInverted, from, to, fromInvalid, toInvalid } =
+    postbackLogRequest(values)
   const field = (key: Key, label: string, control: ReactNode) => (
     <div className="text-muted-foreground flex flex-col gap-1.5 text-xs">
       <label htmlFor={`${id}-${key}`}>{label}</label>
@@ -71,7 +75,12 @@ export function CreditPostbackDeliveriesFilters({
         {...props}
       />
     )
-  const range = { type: 'date', 'aria-invalid': rangeInverted, 'aria-describedby': `${id}-range` }
+  // Календарь не даст выбрать дату вне предела, которую запрос всё равно отбросит.
+  const range = (invalid: boolean) => ({
+    type: 'date',
+    'aria-invalid': rangeInverted || invalid,
+    'aria-describedby': invalid ? `${id}-range ${id}-date-hint` : `${id}-range`,
+  })
   const ruleOptions = rules.map((rule): [string, string] => [rule.id, rule.name])
   // Правило из ссылки, которого нет в списке (удалено), остаётся выбранным своим ID;
   // негодный ID (не UUID) в запрос не ушёл — и вариантом не показывается.
@@ -97,12 +106,14 @@ export function CreditPostbackDeliveriesFilters({
         'aria-describedby': actionInvalid ? `${id}-action-hint` : undefined,
       })}
       {text('from', t('credit.postbacks.log.filters.from'), {
-        ...range,
-        max: values.to || undefined,
+        ...range(fromInvalid),
+        min: FIRST_DAY,
+        max: to || LAST_DAY,
       })}
       {text('to', t('credit.postbacks.log.filters.to'), {
-        ...range,
-        min: values.from || undefined,
+        ...range(toInvalid),
+        min: from || FIRST_DAY,
+        max: LAST_DAY,
       })}
       <Button type="button" variant="ghost" onClick={onReset}>
         {t('credit.postbacks.log.filters.reset')}
@@ -112,6 +123,11 @@ export function CreditPostbackDeliveriesFilters({
           ? t('credit.postbacks.log.filters.inverted')
           : t('credit.postbacks.log.filters.utc')}
       </p>
+      {(fromInvalid || toInvalid) && (
+        <p id={`${id}-date-hint`} className="text-error-500 w-full text-xs" role="alert">
+          {t('credit.postbacks.log.filters.dateInvalid')}
+        </p>
+      )}
       {actionInvalid && (
         <p id={`${id}-action-hint`} className="text-error-500 w-full text-xs" role="alert">
           {t('credit.postbacks.log.filters.actionInvalid')}

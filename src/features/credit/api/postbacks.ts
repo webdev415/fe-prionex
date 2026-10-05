@@ -113,18 +113,40 @@ export const POSTBACK_LOG_FILTER_KEYS = [
 export type PostbackLogFilterValues = Record<(typeof POSTBACK_LOG_FILTER_KEYS)[number], string>
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-const DAY = /^\d{4}-\d{2}-\d{2}$/
+const DAY = /^(\d{4})-(\d{2})-(\d{2})$/
 const oneOf = (list: readonly string[], value: string) => (list.includes(value) ? value : undefined)
+
+/** Предел годных суток лога (Р-18-13d-b2fix-1); им же ограничены поля дат. */
+export const POSTBACK_LOG_FIRST_DAY = '2000-01-01'
+export const POSTBACK_LOG_LAST_DAY = '2100-12-31'
+
+/**
+ * Дата ссылки годна, только если это существующие сутки (Р-18-13d-b2fix-1):
+ * год 2000–2100, месяц и день по календарю. Разбор без переноса — `Date`
+ * молча превращает `2026-13-45` в 2027 год; сверяем месяц и день обратно.
+ */
+function calendarDay(value: string): string {
+  const match = DAY.exec(value)
+  if (!match) return ''
+  const [year, month, day] = match.slice(1).map(Number)
+  const date = new Date(Date.UTC(year, month - 1, day))
+  const real = date.getUTCMonth() === month - 1 && date.getUTCDate() === day
+  const inRange = value >= POSTBACK_LOG_FIRST_DAY && value <= POSTBACK_LOG_LAST_DAY
+  return real && inRange ? value : ''
+}
 
 /**
  * Поля фильтров → параметры двери лога. Мусор из вручную правленой ссылки и
  * недописанный UUID в запрос не уходят (модуль ответил бы 422); перевёрнутый
- * период («з» позже «по») — тоже, целиком. Даты — сутки UTC, как считает дверь.
+ * период («з» позже «по») — тоже, целиком. Даты — сутки UTC, как считает дверь;
+ * несуществующие сутки (`2026-02-30`) — тот же мусор. Проверенные `from`/`to`
+ * дают пару пределов полям; `fromInvalid`/`toInvalid` — введено непусто, но не
+ * годно (промежуточный год набора `0002-10-04`, мусор ссылки).
  */
 export function postbackLogRequest(values: PostbackLogFilterValues) {
   const action = values.action.trim()
-  const from = DAY.test(values.from) ? values.from : ''
-  const to = DAY.test(values.to) ? values.to : ''
+  const from = calendarDay(values.from)
+  const to = calendarDay(values.to)
   const rangeInverted = Boolean(from && to && from > to)
   const filters: CreditPostbackDeliveryFilters = {
     rule_id: UUID.test(values.rule) ? values.rule : undefined,
@@ -134,7 +156,15 @@ export function postbackLogRequest(values: PostbackLogFilterValues) {
     created_from: rangeInverted ? undefined : from || undefined,
     created_to: rangeInverted ? undefined : to || undefined,
   }
-  return { filters, rangeInverted, actionInvalid: action !== '' && !UUID.test(action) }
+  return {
+    filters,
+    from,
+    to,
+    fromInvalid: values.from !== '' && !from,
+    toInvalid: values.to !== '' && !to,
+    rangeInverted,
+    actionInvalid: action !== '' && !UUID.test(action),
+  }
 }
 
 /** Тело создания (`PartnerPostbackRuleCreate`). */
