@@ -13938,6 +13938,7 @@
         "refreshFailed": "Could not refresh the log — showing the last loaded state. Try again later.",
         "empty": "No postbacks yet",
         "emptyFiltered": "Nothing matches the filters. Reset the filters to see all entries.",
+        "filterRejected": "The module did not accept the filter — reset the filters.",
         "prev": "Back",
         "next": "Next",
         "deleted": "deleted",
@@ -13966,7 +13967,8 @@
           "reset": "Reset filters",
           "utc": "The period is counted in UTC days, as the module does.",
           "inverted": "The \"from\" date is later than the \"to\" date — the period is not applied.",
-          "actionInvalid": "This is not a full UUID — the ID filter is not applied."
+          "actionInvalid": "This is not a full UUID — the ID filter is not applied.",
+          "dateInvalid": "No such day, or it is outside 2000–2100 — the date filter is not applied."
         }
       },
       "outcome": {
