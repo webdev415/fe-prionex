@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { AuthLayout } from '@/components/layout'
@@ -14,6 +14,7 @@ export default function ForceChangePasswordPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const storeLogout = useAuthStore((state) => state.logout)
+  const user = useAuthStore((state) => state.user)
 
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -74,6 +75,12 @@ export default function ForceChangePasswordPage() {
     await storeLogout()
     queryClient.clear()
     navigate('/login')
+  }
+
+  // Reached with a password that no longer has to change -- a refresh, a
+  // bookmark, a stale redirect: there is nothing to set, so go on.
+  if (user && !user.mustChangePassword) {
+    return <Navigate to="/dashboard" replace />
   }
 
   return (

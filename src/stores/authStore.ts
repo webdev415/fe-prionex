@@ -312,6 +312,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
     try {
       await authApi.logout()
+    } catch {
+      // The session can already be gone server-side -- a password change ends
+      // it -- and the call is then answered 401. Everything below clears it
+      // locally either way, so a rejected call must not reach the caller: it
+      // would skip the caller's redirect to /login.
     } finally {
       setAccessToken(null)
       cancelSessionHeartbeat()
