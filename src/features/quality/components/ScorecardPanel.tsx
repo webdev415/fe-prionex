@@ -1,11 +1,16 @@
 ﻿/**
  * ScorecardPanel — the scorecard editor for one call.
  *
- * A call has at most one scorecard, so an existing card is always opened
- * (whatever its status) and the create picker only appears when there is none,
- * or when the trainer explicitly switches the scorecard type (which clears the
- * scores). Renders the template with collapsible sections, per-criterion inputs
- * (binary toggle or 0..5 buttons), comment fields and a status indicator.
+ * A call carries one scorecard **per evaluator**, so two questions are kept
+ * apart: which card the viewer may edit — always their own — and which card to
+ * show, their own if they have one and otherwise the newest on the call, read
+ * only. Hiding a colleague's evaluation would tell a supervisor the call was
+ * never scored.
+ *
+ * The create picker appears when the viewer has no card of their own, or when
+ * they explicitly switch their own scorecard's type (which clears its scores).
+ * Renders the template with collapsible sections, per-criterion inputs (binary
+ * toggle or 0..5 buttons), comment fields and a status indicator.
  */
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -34,7 +39,9 @@ const SCRIPT_STAGES_SECTION_KEY = 'script_stages'
 interface ScorecardPanelProps {
   callId: string
   operatorId: number
-  /** When set, the panel opens that scorecard rather than the latest draft. */
+  /** When set, the panel opens that scorecard rather than resolving the
+   *  viewer's own. Writes still require authorship, so pinning someone else's
+   *  card shows it read-only. */
   scorecardId?: number | null
   /** Assignment-based write gate. When provided it fully governs edit rights at
    *  any status (the trainer may edit + re-send). When omitted, the legacy
@@ -369,7 +376,7 @@ export function ScorecardPanel({
         </span>
       </header>
 
-      {canEdit || (canEditProp === true && !ownsActiveCard) ? (
+      {canEdit || (canEditProp !== false && !ownsActiveCard) ? (
         <button
           type="button"
           onClick={() => {

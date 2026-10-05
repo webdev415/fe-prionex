@@ -142,6 +142,20 @@ describe('ScorecardPanel assignment gate', () => {
     expect(screen.queryByText('pages.training.scorecard.saveChanges')).not.toBeInTheDocument()
   })
 
+  it("lets a legacy caller add their own evaluation beside a colleague's", () => {
+    // CallReviewLayout mounts the panel with no canEdit at all. Gating the
+    // link on canEdit === true left those callers read-only on a colleague's
+    // card with no way out, though the create itself allows them through.
+    existingCompleted()
+    history.data = [
+      { id: 30, trainer_id: 99, status: 'completed', created_at: '2026-07-23T10:00:00Z' },
+    ]
+    activeScorecard.data = { ...(activeScorecard.data as object), id: 30, trainer_id: 99 }
+    render(<ScorecardPanel callId="c1" operatorId={41} />)
+    expect(screen.getByText('pages.training.scorecard.scoreItYourself')).toBeInTheDocument()
+    expect(screen.queryByText('pages.training.scorecard.saveChanges')).not.toBeInTheDocument()
+  })
+
   it("lets an assigned trainer add their own evaluation beside a colleague's", () => {
     existingCompleted()
     activeScorecard.data = { ...(activeScorecard.data as object), trainer_id: 99 }
