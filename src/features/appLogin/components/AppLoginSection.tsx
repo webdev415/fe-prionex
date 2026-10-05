@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/Tooltip'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/stores/authStore'
@@ -222,9 +223,30 @@ export function AppLoginSection({ className }: AppLoginSectionProps) {
       </div>
 
       <div className="flex flex-col gap-1">
-        <span className="text-foreground text-sm leading-tight font-semibold">
-          {t('appLogin.section.title')}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-foreground text-sm leading-tight font-semibold">
+            {t('appLogin.section.title')}
+          </span>
+          {/* The short line below follows the 2FA section; the full text is on hover. */}
+          <TooltipProvider delayDuration={200}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={t('appLogin.section.detailsAria')}
+                  className="text-muted-foreground hover:text-foreground focus-visible:ring-primary-500 inline-flex shrink-0 rounded-full focus-visible:ring-2 focus-visible:outline-none"
+                >
+                  <Icons.Info size={14} strokeWidth={1.5} aria-hidden />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs text-left whitespace-normal">
+                {status?.device_ip_bypass === true
+                  ? t('appLogin.section.details')
+                  : t('appLogin.section.detailsNoBypass')}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
         <span className="text-muted-foreground text-xs leading-snug sm:text-sm">
           {/* «From any network» only when this stand really skips the IP
               whitelist for a bound phone (a separate server flag). */}

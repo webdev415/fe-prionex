@@ -80,10 +80,37 @@ export interface CreditConditionalSnapshot {
   confirmed_at?: string
 }
 
+/** Согласие на рекламные cookie на момент отправки заявки (`ApplicationMarketing.consent_ads`). */
+export type CreditAttributionConsent = 'granted' | 'denied' | 'unknown'
+
+/**
+ * Рекламные метки заявки (ApplicationMarketing, контракт модуля 0.1.44, 18-13):
+ * девять ключей присутствуют всегда, `null` — метки не было или модуль её
+ * отбросил при приёме. Показ пустоты как `(not set)` — дело CRM (`attribution.ts`).
+ */
+export interface CreditApplicationMarketing {
+  utm_source: string | null
+  utm_medium: string | null
+  utm_campaign: string | null
+  utm_content: string | null
+  utm_term: string | null
+  gclid: string | null
+  /** Идентификатор клика партнёра, как прислан: по нему уходит постбек. */
+  click_id: string | null
+  consent_ads: CreditAttributionConsent | null
+  /** Момент клика, RFC 3339 со смещением. */
+  click_at: string | null
+}
+
 /** Строка списка заявок (ApplicationSummary). */
 export interface CreditApplicationSummary {
   application_id: string
   number: string
+  /**
+   * Метки заявки. В контракте `required`, здесь `?`: стенд модуля старше 18-13
+   * поля не пришлёт, и карточка обязана показать `(not set)`, а не упасть.
+   */
+  marketing?: CreditApplicationMarketing
   status: CreditApplicationStatus
   product_code: string
   channel: string
@@ -367,9 +394,38 @@ export interface CreditPortalEventRecord {
   details?: Record<string, unknown>
 }
 
+/**
+ * Строка следа показанных правовых текстов — `LegalTextShownRecord`
+ * (`openapi.yaml:7426` модуля 0.1.48, `45c4d6b2`; все восемь полей required).
+ * Экран читает поле только через `readLegalTrail` (`legalTrail.ts`): тип — то,
+ * что обещает контракт, а не то, во что верит рендер.
+ */
+export interface CreditLegalTextShown {
+  /** `legal-texts | site-documents` по контракту; иное экран показывает как пришло. */
+  source: string
+  /** Ключ строки CMS (`sign.max_cost`) или вид документа (`privacy_policy`) — не переводится. */
+  subject: string
+  /** `id` строки журнала публикаций CMS — постоянный адрес версии на стенде CMS. */
+  publication_id: number
+  version_no: number
+  sha256: string
+  locale: string
+  /** Часы сайта; `null` — сайт момент не назвал. */
+  shown_at: string | null
+  /** Момент приёма заявки модулем. */
+  received_at: string
+  /** Этап показа (`intake | sign`) — появится в 0.1.49 (18-4c); в 0.1.48 поля нет. */
+  door?: string
+}
+
 /** Карточка заявки целиком (InternalApplication + анкета и документы). */
 export interface CreditApplicationDetail extends CreditApplicationSummary {
   project_id: number
+  /**
+   * Прочие присланные метки (`fbclid`, `sub_id`, …) — ключи вне девяти
+   * `marketing`; `null` — прочих не было. Только в карточке. `?` — как у `marketing`.
+   */
+  marketing_other?: Record<string, string> | null
   /** Телефон клиента приходит на самой заявке: анкета его не дублирует. */
   client_phone?: string | null
   /** null до перехода approved → contracted (upsert клиента, C-08). */
@@ -411,6 +467,12 @@ export interface CreditApplicationDetail extends CreditApplicationSummary {
   decision?: CreditDecision
   ibv?: CreditIbv
   sign_evidence?: CreditSignEvidence
+  /**
+   * След правовых текстов сайта, показанных до подачи (18-4a), в порядке приёма.
+   * required в 0.1.48 (`openapi.yaml:9290`); `?` — стенд старше контракта не шлёт,
+   * и тогда блока нет вовсе (у такого модуля следа быть не может).
+   */
+  legal_texts_shown?: CreditLegalTextShown[]
 }
 
 /**
@@ -1142,6 +1204,15 @@ export interface CreditApplicationsParams {
   created_to?: string
   updated_from?: string
   updated_to?: string
+  /**
+   * Фильтры меток (18-13): точное совпадение, не подстрока. Регистр и края у
+   * `utm_*` не различает модуль, у `click_id` регистр значим. Пусто — ключа нет.
+   */
+  utm_source?: string
+  utm_campaign?: string
+  click_id?: string
+  /** `true` — только заявки с `click_id`, `false` — только без; нет — все. */
+  has_click_id?: boolean
 }
 
 export interface CreditLoansParams {

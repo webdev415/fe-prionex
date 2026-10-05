@@ -167,3 +167,126 @@ for k in ['zum_failure_codes','module_failure_codes','module_failure_code_patter
   `source_sha256`, `source_lines`, `captured_at`, `captured_by` и подписи списков.
 
 Секретов и данных клиентов в файле нет: это публичные имена кодов и статусов провайдера.
+
+## `credit-postbacks-permissions.json` — права постбеков партнерам (18-13d)
+
+| Что | Значение |
+|---|---|
+| Источник | `CRM/api-prionex`, ветка `main` |
+| Путь в источнике | `services/auth/alembic/versions/20261002_1200_100_credit_export_postback_permissions.py` |
+| Коммит съёмки | поле `source_commit_sha` в самом файле (`main` с миграцией 100) |
+| Кто снял / когда | поля `captured_by` / `captured_at` |
+| Сколько имён | 2 |
+
+Файл читает `../creditW1Permissions.test.ts` третьим снимком — так же, как 098: словарь стража
+— объединение трёх снимков, проверки канона, списка, провенанса и самохеша идут на каждом.
+Миграция 100 вносит три имени; третье, `credit.applications.export`, этому экрану не нужно и в
+снимок не взято — его снял четвёртый снимок `credit-applications-export-permission.json`
+(18-13c-b, раздел ниже; счёт этого снимка — 2, не 3).
+
+### Как проверить, что снимок не протух
+
+```bash
+# в клоне api-prionex; SHA — из поля source_commit_sha
+SHA=502636730e49a51b6f803dea8e2e27023c2ac40f
+F=services/auth/alembic/versions/20261002_1200_100_credit_export_postback_permissions.py
+
+# 1. sha256 источника — обязан совпасть с полем source_sha256
+git show "$SHA:$F" | sha256sum
+
+# 2. имена постбеков в миграции — обязаны совпасть с полем permissions
+git show "$SHA:$F" | grep -o 'credit\.partner_postbacks\.[a-z_]*' | sort -u
+
+# 3. подпись списка — обязана совпасть с полем sha256
+python3 -c "import json,hashlib,sys; d=json.load(open(sys.argv[1])); \
+print(hashlib.sha256('\n'.join(sorted(d['permissions'])).encode()).hexdigest() == d['sha256'])" \
+  src/constants/__tests__/vendored/credit-postbacks-permissions.json
+```
+
+## `credit-applications-export-permission.json` — право выгрузки заявок CSV (18-13c-b)
+
+| Что | Значение |
+|---|---|
+| Источник | `CRM/api-prionex`, ветка `main` |
+| Путь в источнике | `services/auth/alembic/versions/20261002_1200_100_credit_export_postback_permissions.py` |
+| Коммит съёмки | поле `source_commit_sha` в самом файле (`main` с миграцией 100 — тот же, что у снимка постбеков) |
+| Кто снял / когда | поля `captured_by` / `captured_at` |
+| Сколько имён | 1 |
+
+Файл читает `../creditW1Permissions.test.ts` четвёртым снимком — так же, как 098: словарь стража
+— объединение четырёх снимков, проверки канона, списка, провенанса и самохеша идут на каждом.
+Источник тот же файл миграции 100, что у `credit-postbacks-permissions.json`: снимки делят его
+по экранам (постбеки — два имени, выгрузка — одно), страж провенанс между снимками не сверяет.
+Право употреблено на странице списка заявок — кнопка «Експорт CSV» (`useHasPermission`).
+
+### Как проверить, что снимок не протух
+
+```bash
+# в клоне api-prionex; SHA — из поля source_commit_sha
+SHA=502636730e49a51b6f803dea8e2e27023c2ac40f
+F=services/auth/alembic/versions/20261002_1200_100_credit_export_postback_permissions.py
+
+# 1. sha256 источника — обязан совпасть с полем source_sha256
+git show "$SHA:$F" | sha256sum
+
+# 2. имя выгрузки в миграции — обязано совпасть с полем permissions
+git show "$SHA:$F" | grep -o 'credit\.applications\.export' | sort -u
+
+# 3. подпись списка — обязана совпасть с полем sha256
+python3 -c "import json,hashlib,sys; d=json.load(open(sys.argv[1])); \
+print(hashlib.sha256('\n'.join(sorted(d['permissions'])).encode()).hexdigest() == d['sha256'])" \
+  src/constants/__tests__/vendored/credit-applications-export-permission.json
+```
+
+## `credit-postback-contract.json` — перечни постбеков партнерам (18-13d)
+
+| Что | Значение |
+|---|---|
+| Источник | `CRM/credit-module`, ветка `main` |
+| Путь в источнике | `contracts/openapi.yaml` |
+| Коммит съёмки | поле `source_commit_sha` в самом файле (`main` модуля, контракт 0.1.46; первая съёмка a1 — 0.1.44) |
+| Схемы | поле `source_schemas`: список снимка → схема контракта |
+| Строки прозы | поле `source_lines` — «`{amount}` — только у `new_loan`» в описании `createPartnerPostbackRule`; коды `last_error` в описании `listPartnerPostbackDeliveries` (enum в схеме у поля нет) |
+| Кто снял / когда | поля `captured_by` / `captured_at` |
+| Сколько значений | триггеров 2, триггеров с `{amount}` 1, макросов 5, исходов 5, причин пропуска 3, кодов `last_error` 10 |
+
+Файл читает `../creditPostbackContract.test.ts`: перечни `src/features/credit/api/postbacks.ts`
+(все шесть, включая исходы, причины пропуска и коды `last_error` лога 18-13d-b) обязаны
+совпасть со списками снимка множеством, подписи списков — сойтись, а пространства
+`postbacks.trigger`, `postbacks.outcome`, `postbacks.skipReason`, `postbacks.lastError` — быть
+зарегистрированными в `CREDIT_DYNAMIC_NAMESPACES` (строки словаря на каждый код сторожит
+`i18nKeys.test.ts`). Значения в ответе модуля — открытые строки: код вне снимка экран
+показывает как есть с пометкой «невідоме значення».
+
+### Как проверить, что снимок не протух
+
+```bash
+# в клоне credit-module; SHA — из поля source_commit_sha
+SHA=270150e5f6b5fa927a96aeafcef5b5f7180744fa
+
+# 1. sha256 источника — обязан совпасть с полем source_sha256
+git show "$SHA:contracts/openapi.yaml" | sha256sum
+
+# 2. перечни — обязаны совпасть со списками снимка (сортировка — как в снимке)
+git show "$SHA:contracts/openapi.yaml" | python3 -c '
+import sys, yaml
+d = yaml.safe_load(sys.stdin)
+s = d["components"]["schemas"]
+print(sorted(s["PartnerPostbackRule"]["properties"]["trigger"]["enum"]))
+print(sorted(s["PartnerPostbackRuleList"]["properties"]["macros"]["items"]["enum"]))
+print(sorted(s["PartnerPostbackDelivery"]["properties"]["status"]["enum"]))
+print(sorted(v for v in s["PartnerPostbackDelivery"]["properties"]["skip_reason"]["enum"] if v))
+'
+# триггеры с {amount} и коды last_error — проза, строки source_lines
+git show "$SHA:contracts/openapi.yaml" | sed -n 2990,2991p
+git show "$SHA:contracts/openapi.yaml" | sed -n 3126,3128p
+
+# 3. подписи списков — обязаны совпасть с полями <список>_sha256
+python3 -c "import json,hashlib,sys; d=json.load(open(sys.argv[1])); \
+print(all(hashlib.sha256('\n'.join(sorted(d[k])).encode()).hexdigest() == d[k + '_sha256'] \
+for k in ['triggers','amount_triggers','macros','outcomes','skip_reasons','last_errors']))" \
+  src/constants/__tests__/vendored/credit-postback-contract.json
+```
+
+Пересъёмка обязательна, когда модуль добавил триггер, макрос, исход, причину пропуска или код
+`last_error`: до неё экран покажет новое значение сырым с пометкой, без подписи.

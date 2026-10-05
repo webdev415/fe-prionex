@@ -49,8 +49,8 @@ describe('app-login translation keys', () => {
     expect(keys.filter((key) => typeof lookup(dictionary, key) !== 'string')).toEqual([])
   })
 
-  it('the Ukrainian section says the bound phone skips only the IP restriction', () => {
-    expect(lookup(uk, 'appLogin.section.description')).toMatch(/IP-адрес/)
+  it('the Ukrainian section details say the bound phone skips only the IP restriction', () => {
+    expect(lookup(uk, 'appLogin.section.details')).toMatch(/IP-адрес/)
     expect(lookup(uk, 'appLogin.section.title')).toBe('Вхід через мобільний застосунок')
   })
 })

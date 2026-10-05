@@ -283,11 +283,19 @@ export function useCreditDecisionCodes(enabled: boolean) {
 /**
  * Ручное решение андеррайтера. После успеха инвалидируем карточку, списки и
  * сводку: статус заявки изменился, и счётчики в шапке обязаны это показать.
+ *
+ * 🔴 `retry: false` — не стиль. Ключ идемпотентности минтится в
+ * `creditApi.decide` на каждый вызов: глобальный повтор (`main.tsx` повторяет
+ * сетевой отказ без ответа) ушёл бы с НОВЫМ ключом, и если первое решение модуль
+ * принял, а ответ потерялся, решение записалось бы дважды. Повторяет только
+ * человек повторным нажатием. Ключ на действие, как у
+ * `useCreditConfirmConditional`, — отдельная единица.
  */
 export function useCreditManualDecision(applicationId: string) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (payload: ManualDecisionPayload) => creditApi.decide(applicationId, payload),
+    retry: false,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: creditKeys.application(applicationId) })
       void queryClient.invalidateQueries({ queryKey: creditKeys.applications() })

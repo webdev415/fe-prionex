@@ -5171,3 +5171,36 @@ traffic goes, not a cosmetic one. **Removal trigger:** the prod bundle resolves 
   script indefinitely. Cosmetic: it is human-run, nothing schedules it, and `#d51` §2 measured that
   nothing can. **Removal trigger:** if the generator is ever wired into anything unattended — at
   which point the timeout stops being cosmetic.
+
+---
+
+## Deferred from: story crm-roles-4, review round 2 (2026-10-02)
+
+- 🟡 **`VITE_ASSISTANT_REPORT_TABLES_ENABLED` never reaches a Forgejo-built image.** `Dockerfile.prod`
+  declares the `ARG` / `ENV` pair (`Dockerfile.prod:35`), but the `build-args` block of the image step in
+  `.forgejo/workflows/build.yml` does not pass it — only the legacy `.github/workflows/CD.yml:167` does. Every
+  Forgejo CI image therefore has it empty (= off), and no stand can switch the assistant report tables on.
+  Found while wiring `VITE_ROLE_CHAT_SETTINGS_ENABLED` the way `VITE_CREDIT_MODULE_ENABLED` is wired (a
+  per-environment `vars.*_<ENV>` step + build-arg, pinned by a `?raw` test). Confidence: high (grep of
+  `.forgejo/**`). **Owner: curator / whoever owns the assistant report tables.**
+
+---
+
+## Deferred from: story crm-roles-4, curator DEV acceptance (2026-10-02)
+
+- 🟡 **A role with zero permissions cannot be saved, and the form does not say why.** On «synth Оператор
+  Дайлер» (id 18, 0 permissions) «Зберегти» sends no PUT, the dialog stays open, no toast; the message
+  «Оберіть щонайменше один дозвіл» is in the DOM ~1726 px down, under the 180-row permission list
+  (`EditRoleForm.tsx` ~:521, `permission_ids` min(1) ~:71), and the form does not scroll to it. Predates
+  crm-roles-4 (old behaviour, not behind the flag). Board **#1687**. Confidence: high (live, CRM DEV
+  02.10.2026). **Owner: fe (board #1687).**
+- ⚪ **«`chat_access: null` in the single-role GET» is not an fe defect.** `GET /admin/roles/{id}` and the
+  POST / PUT responses do not carry `chat_access` at all — api `RoleDetailResponse` has no such field, by
+  the contract of api story 2b (AC6: only the role list has it); the live check read the missing key as
+  null. The form reads `chat_switches`, not `chat_access`. Recorded on the api side (api-prionex
+  `docs/implementation-artifacts/deferred-work.md`, section «эпик «Роли чата = роли CRM» — 02.10.2026
+  вечер»). **Owner: api curator, optional.**
+- ⚪ **Minor, seen in the same check.** At 390 px the native template select cuts its text («Не обрано —
+  налаштування чату залишат…», cosmetic); the edit form sends `department_id: 0` for a role without a
+  department while the create form sends `null` (the API answers `null` either way; old, general form
+  field). **Owner: nobody yet — next touch of the role forms.**

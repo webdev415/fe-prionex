@@ -4657,6 +4657,109 @@
           "admin": "HUB administrator"
         }
       },
+      "chat": {
+        "title": "Chat (HUB)",
+        "hint": "What people with this role may do in the HUB chat.",
+        "notFilled": "The chat settings of this role are not filled yet: HUB access still follows the old rules.",
+        "fill": "Fill in the chat settings",
+        "cancelFill": "Leave the chat settings not filled",
+        "editedByHand": "The chat settings were changed by hand",
+        "readOnlyNoRight": "Only someone who manages the roles of this project can change the chat settings.",
+        "readOnlyCatalogue": "The values to choose from are not available right now, so the chat settings are shown only.",
+        "readOnlyImpersonating": "While acting as another user the chat settings are shown only.",
+        "yes": "Yes",
+        "no": "No",
+        "homePlane": "Role screen",
+        "homePlaneHint": "The screen HUB opens for people with this role.",
+        "switches": {
+          "access": {
+            "label": "Chat access",
+            "hint": "Off: people with this role have no chat and no auto-channels."
+          },
+          "client_dialogs": {
+            "label": "Client dialogues",
+            "hint": "Whose client dialogues are visible: none, own, department or all."
+          },
+          "create_groups": {
+            "label": "Create groups",
+            "hint": "Create group chats and forward messages."
+          },
+          "dept_channel_admin": {
+            "label": "Department channel admin",
+            "hint": "Administers the auto-channels of its department and its groups."
+          },
+          "download_files": {
+            "label": "Download files",
+            "hint": "Download files from the chat."
+          },
+          "ai_assistant": {
+            "label": "AI assistant",
+            "hint": "Use the AI assistant (in client dialogues too, while those are on)."
+          },
+          "chat_only": {
+            "label": "Chat only (bot)",
+            "hint": "A bot set: channels, messages and files only; no auto-channels."
+          },
+          "lead": {
+            "label": "Lead rights",
+            "hint": "Create and archive channels, manage bots, export reports."
+          }
+        },
+        "clientDialogs": {
+          "none": "None",
+          "my": "Own",
+          "department": "Department",
+          "all": "All"
+        },
+        "homePlanes": {
+          "operator": "My clients",
+          "legal": "My cases",
+          "training": "My groups",
+          "quality": "Review queue",
+          "control": "Team control",
+          "my_day": "My day"
+        },
+        "template": {
+          "label": "Chat permission template",
+          "none": "Not chosen — the chat settings stay not filled",
+          "needsHubAdmin": "a HUB administrator is required",
+          "hint": "The chat permissions of the new role are copied from the template once; later the chat switches of the role change them.",
+          "impersonating": "While acting as another user no chat template can be chosen: the role is created with the chat settings not filled."
+        },
+        "templates": {
+          "employee": "Employee",
+          "operator": "Operator",
+          "supervisor": "Manager",
+          "admin": "Administrator",
+          "lawyer": "Lawyer",
+          "training_workspace": "Trainer",
+          "ai_agent": "Bot",
+          "quality_workspace": "Quality control",
+          "none": "No chat access"
+        },
+        "list": {
+          "header": "Chat (HUB)",
+          "yes": "yes",
+          "no": "no",
+          "notFilled": "—"
+        },
+        "errors": {
+          "invalid": "The chat switches were sent incomplete or with wrong values. Reload the page and try again.",
+          "conflict": "These switches contradict chat access or «Chat only».",
+          "broken": "The stored chat set cannot be shown by these switches. Turn chat access off and save the role, then turn it on, set the switches and save again.",
+          "homePlaneUnknown": "There is no such role screen.",
+          "templateUnknown": "There is no such chat template.",
+          "templateImmutable": "The chat template is chosen only when a role is created.",
+          "templateConflict": "The chat template and the HUB chat role disagree on HUB administrator.",
+          "unknownHubRole": "This HUB chat role would erase the chat settings of the role.",
+          "adminRequired": "Only a HUB administrator of this project can make this chat change.",
+          "impersonating": "While acting as another user the chat settings cannot be changed."
+        },
+        "lockedByAccess": "Chat access is off, so the other switches are off and cannot be changed.",
+        "lockedByChatOnly": "«Chat only (bot)» sets the dialogues, groups, files, AI, lead rights and department channel admin itself; they cannot be changed while it is on.",
+        "unreadable": "The stored chat settings of this role cannot be shown. They are left as they are; ask an administrator.",
+        "outdated": "The chat settings of this role were changed meanwhile; your changes in this section were dropped and the stored values are shown."
+      },
       "validation": {
         "nameRequired": "Role name is required",
         "permissionsRequired": "Please select at least one permission"
@@ -12021,7 +12124,11 @@
         "attachFile": "Attach a document (PDF or Word, up to 10 MB)",
         "searchManager": "Search by name",
         "surveys": "Survey answers",
-        "termination": "Termination"
+        "termination": "Termination",
+        "removeProjectsTitle": "Remove from the project?",
+        "removeProjectsMessage": "The employee will be removed from: {{projects}}. Their position and group there will be cleared.",
+        "removeProjectsConfirm": "Remove",
+        "otherProject": "Other project"
       },
       "tabs": {
         "showEarlier": "Show earlier sections",
@@ -12708,7 +12815,8 @@
       "copy": "Copy",
       "showMore": "Show more",
       "proposeConditional": "Propose a conditional approval",
-      "confirmConditional": "Confirm the conditional approval"
+      "confirmConditional": "Confirm the conditional approval",
+      "exportCsv": "Export CSV"
     },
     "metrics": {
       "requested": "Requested (page)",
@@ -12723,8 +12831,11 @@
       "total": "{{count}} total",
       "searchPlaceholder": "Application number or email",
       "empty": "No applications match the filter",
-      "statusCountsHint": "Status counts cover the whole section and ignore search and dates.",
-      "dateRangeNotApplied": "Date filter not applied: the start date is later than the end date. The list is shown without this range."
+      "statusCountsHint": "Status counts cover the whole section and ignore search, dates and attribution labels.",
+      "dateRangeNotApplied": "Date filter not applied: the start date is later than the end date. The list is shown without this range.",
+      "exporting": "Exporting…",
+      "exportTooLarge": "{{total}} applications match the filter, the limit is {{max}} — narrow the filter",
+      "exportFailed": "Export failed: {{message}}"
     },
     "loans": {
       "title": "Loans",
@@ -12846,7 +12957,8 @@
       "confirmTitle": "Confirm the conditional approval?",
       "confirmMessage": "The application will be approved for {{amount}} with conditions {{codes}}, and an agreement will be issued for the client to sign. The confirmation cannot be undone.",
       "confirmNotAuthor": "Someone other than the author of the proposal confirms.",
-      "conditionalConfirmed": "The conditional approval is confirmed."
+      "conditionalConfirmed": "The conditional approval is confirmed.",
+      "attribution": "Traffic source"
     },
     "scorecard": {
       "title": "Scorecard breakdown",
@@ -12931,7 +13043,8 @@
         "parameters": "Module settings",
         "integrations": "Integrations",
         "switches": "Kill switches",
-        "site": "Site"
+        "site": "Site",
+        "postbacks": "Partner postbacks"
       },
       "needRiskManager": "This section is available to the risk manager: it holds the thresholds and the product configuration.",
       "mutationDisabled": "Editing requires a second approver (UW-04) — available once CRM roles land (WS-20).",
@@ -13112,7 +13225,31 @@
       "marketing": "Marketing",
       "ibv_provider": "Bank verification provider",
       "pad": "Pre-authorised debit",
-      "credit_check": "Credit check"
+      "credit_check": "Credit check",
+      "e_copy": "Electronic copy of the agreement",
+      "privacy_policy": "Privacy Policy"
+    },
+    "legalTrail": {
+      "title": "Legal texts shown",
+      "empty": "No record of legal texts shown was submitted",
+      "source": {
+        "legalTexts": "Site legal text",
+        "siteDocuments": "Site document"
+      },
+      "door": {
+        "intake": "Before submitting the application",
+        "sign": "Before signing"
+      },
+      "columns": {
+        "subject": "Text",
+        "source": "Source",
+        "version": "Version",
+        "locale": "Language",
+        "shownAt": "Shown",
+        "receivedAt": "Received",
+        "sha256": "Fingerprint",
+        "door": "Stage"
+      }
     },
     "entryType": {
       "disbursement": "Disbursement",
@@ -13309,7 +13446,14 @@
       "updatedFrom": "Last activity from",
       "updatedTo": "Last activity to",
       "calendarHint": "Day boundaries follow the calendar of the application's province (Alberta — Edmonton time), not your local time. The Created and Last activity columns show your local time.",
-      "rangeInverted": "The start date is later than the end date — this range is not applied."
+      "rangeInverted": "The start date is later than the end date — this range is not applied.",
+      "utmSource": "Source (utm_source)",
+      "utmCampaign": "Campaign (utm_campaign)",
+      "clickId": "Partner click (click_id)",
+      "hasClickId": "Partner click",
+      "hasClickIdAny": "All",
+      "hasClickIdYes": "With click_id",
+      "hasClickIdNo": "Without click_id"
     },
     "unavailable": {
       "title": "The credit module is not deployed on this stand",
@@ -13708,6 +13852,147 @@
       "errorForbidden": "You do not have permission to view credit section documents.",
       "errorGeneric": "Could not open the document (code {{status}}).",
       "tabBlocked": "The new tab did not open, so the document was handed over as a file download."
+    },
+    "attribution": {
+      "otherTags": "Other tags",
+      "consent": {
+        "granted": "Granted",
+        "denied": "Denied",
+        "unknown": "Unknown"
+      }
+    },
+    "postbacks": {
+      "helper": "Server-side postback rules: when an application or a loan comes with the partner's utm_source, the module sends a GET request to the partner's URL with the macros filled in.",
+      "forbidden": "No access to postbacks. The CRM administrator grants it.",
+      "refreshFailed": "Could not refresh the rule list — showing the last loaded state. Reload the page later.",
+      "unknownValue": "unknown value",
+      "trigger": {
+        "new_lead": "New lead",
+        "new_loan": "New loan"
+      },
+      "rules": {
+        "name": "Name",
+        "trigger": "Trigger",
+        "url": "Partner URL",
+        "goal": "Goal",
+        "currency": "Currency",
+        "active": "Active",
+        "updatedAt": "Updated",
+        "actions": "Actions",
+        "empty": "No rules yet",
+        "copyUrl": "Copy URL",
+        "toggle": "Switch the rule “{{name}}” on or off",
+        "toggleFailed": "Could not change the rule state — the switch is back in its previous position. Try again.",
+        "delete": "Delete",
+        "deleteTitle": "Delete the rule “{{name}}”?",
+        "deleteMessage": "New applications and loans will no longer be sent to the partner under this rule. The postback log entries of the rule are kept.",
+        "deleteFailed": "Could not delete the rule. Try again."
+      },
+      "form": {
+        "add": "Add rule",
+        "edit": "Edit",
+        "createTitle": "New postback rule",
+        "editTitle": "Edit postback rule",
+        "chooseTrigger": "Choose a trigger",
+        "macrosHint": "Macros: click to insert into the URL at the cursor. The module fills in the values when sending.",
+        "macroRequired": "required",
+        "macroAmountOnly": "only for “New loan”",
+        "example": "Example:",
+        "goalHint": "1 — lead, 2 — new loan",
+        "currencyHint": "e.g. CAD, UAH; empty — the currency of the application or loan",
+        "cancel": "Cancel",
+        "save": "Save",
+        "saveFailed": "Could not save the rule. Try again.",
+        "conflict": "Another user changed the rule — the list is refreshed, open “Edit” again",
+        "mayExist": "The rule may already have been created by the previous attempt — refresh the list and check",
+        "outcomeUnknown": "The outcome is unknown: the rule may have been created. Retrying is safe — no duplicate will be created.",
+        "errors": {
+          "url_too_long": "The URL is longer than 2000 characters.",
+          "url_control_character": "The URL contains an invisible or control character (space, tab).",
+          "url_unparseable": "The URL cannot be parsed (port, IPv6 brackets, a character in the host name).",
+          "url_scheme": "Only https URLs are accepted.",
+          "url_userinfo": "The URL must not carry a login or password before the host.",
+          "url_host_not_public": "The host is internal, reserved or not public.",
+          "url_macro_unknown": "Unknown macro or unpaired brace — only the macros from the hint are allowed.",
+          "url_macro_outside_query": "Macros are allowed only in the parameters after “?”, not in the domain or path.",
+          "url_click_id_required": "The {click_id} macro is required in the URL parameters.",
+          "url_macro_not_for_trigger": "The {amount} macro is allowed only for the “New loan” trigger.",
+          "goal_format": "Goal is one to nine digits.",
+          "currency_format": "Currency is three uppercase Latin letters, e.g. CAD."
+        }
+      },
+      "macro": {
+        "click_id": "partner's click ID from the application",
+        "action_id": "application or loan ID",
+        "goal": "goal of the rule",
+        "amount": "loan amount",
+        "currency": "currency of the rule or of the application or loan"
+      },
+      "log": {
+        "tabs": {
+          "rules": "Rules",
+          "log": "Log"
+        },
+        "helper": "Partner postback delivery log: what was sent, when, to whom and with what result. Newest first.",
+        "refresh": "Refresh",
+        "refreshFailed": "Could not refresh the log — showing the last loaded state. Try again later.",
+        "empty": "No postbacks yet",
+        "emptyFiltered": "Nothing matches the filters. Reset the filters to see all entries.",
+        "prev": "Back",
+        "next": "Next",
+        "deleted": "deleted",
+        "reversed": "reversed",
+        "sentAt": "Sent",
+        "nextAttemptAt": "Next attempt",
+        "copyActionId": "Copy ID",
+        "columns": {
+          "createdAt": "Date and time",
+          "rule": "Rule",
+          "trigger": "Trigger",
+          "action": "Application / loan",
+          "outcome": "Result",
+          "response": "Response code / error",
+          "url": "Final URL",
+          "attempts": "Attempts"
+        },
+        "filters": {
+          "rule": "Rule",
+          "outcome": "Result",
+          "trigger": "Trigger",
+          "action": "Application or loan ID (UUID)",
+          "from": "From date (UTC)",
+          "to": "To date (UTC)",
+          "all": "All",
+          "reset": "Reset filters",
+          "utc": "The period is counted in UTC days, as the module does.",
+          "inverted": "The \"from\" date is later than the \"to\" date — the period is not applied.",
+          "actionInvalid": "This is not a full UUID — the ID filter is not applied."
+        }
+      },
+      "outcome": {
+        "pending": "waiting to be sent",
+        "sent": "sent",
+        "simulated": "sent in test mode",
+        "failed": "failed",
+        "skipped": "skipped"
+      },
+      "skipReason": {
+        "click_id_missing": "No click_id",
+        "click_id_invalid": "Invalid click_id",
+        "loan_reversed": "Disbursement reversed"
+      },
+      "lastError": {
+        "redirect_not_followed": "partner replied with a redirect (not followed)",
+        "http_4xx": "partner rejected the request (4xx)",
+        "http_5xx": "error on the partner side (5xx)",
+        "network": "network error",
+        "dns_unresolved": "partner address not found (DNS)",
+        "private_address": "address points to a private network — blocked",
+        "egress_denied": "outgoing request denied",
+        "invalid_url": "invalid URL",
+        "sender_error": "internal sender error",
+        "retries_exhausted": "retries exhausted"
+      }
     }
   },
   "toasts": {

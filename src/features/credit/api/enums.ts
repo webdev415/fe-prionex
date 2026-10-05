@@ -22,6 +22,14 @@ import type {
   CreditQueueStatus,
 } from './types'
 import { CREDIT_APPLICATION_STAGES, CREDIT_STAGE_STATES } from './applicationStages'
+import {
+  CREDIT_POSTBACK_LAST_ERRORS,
+  CREDIT_POSTBACK_MACROS,
+  CREDIT_POSTBACK_OUTCOMES,
+  CREDIT_POSTBACK_RULE_REASONS,
+  CREDIT_POSTBACK_SKIP_REASONS,
+  CREDIT_POSTBACK_TRIGGERS,
+} from './postbackEnums'
 
 /**
  * Типы проводок журнала (JournalEntry.entry_type).
@@ -620,6 +628,24 @@ export const CREDIT_MAIL_EVENTS = [
   'code_sent',
 ] as const satisfies readonly (typeof CREDIT_PORTAL_EVENTS)[number][]
 
+/**
+ * Виды согласия заявки — зеркало `Consent.kind` контракта модуля 0.1.48
+ * (`openapi.yaml:7871`, `main` 45c4d6b2). Чужой список: подпись подставляется
+ * динамически (`t(`credit.consent.${kind}`, kind)`), и вид без строки доезжает до
+ * оператора машинным именем — так уже доехал `e_copy` (0.1.26).
+ */
+export const CREDIT_CONSENT_KINDS = [
+  'terms',
+  'personal_data',
+  'e_signature',
+  'credit_bureau',
+  'marketing',
+  'ibv_provider',
+  'pad',
+  'e_copy',
+  'privacy_policy',
+] as const
+
 /** Пространство словаря → значения, которые в него подставляются. */
 export const CREDIT_DYNAMIC_NAMESPACES: Record<string, readonly string[]> = {
   entryType: CREDIT_ENTRY_TYPES,
@@ -676,8 +702,22 @@ export const CREDIT_DYNAMIC_NAMESPACES: Record<string, readonly string[]> = {
   // называет вслух по телефону.
   stage: CREDIT_APPLICATION_STAGES,
   stageState: CREDIT_STAGE_STATES,
+  // Виды согласия в карточке заявки (18-4e): без пространства страж не видел,
+  // что `e_copy` и `privacy_policy` показываются машинным именем.
+  consent: CREDIT_CONSENT_KINDS,
   // События сайта в хронологии карточки заявки — тоже чужой список (реестр
   // витрины): подпись подставляется динамически, и событие без строки в
   // словаре доехало бы до оператора машинным именем.
   portalEvent: CREDIT_PORTAL_EVENTS,
+  // Триггеры постбеков партнерам (18-13d) — снимок контракта модуля, страж
+  // `creditPostbackContract.test.ts`; строки — под `credit.postbacks.trigger`.
+  'postbacks.trigger': CREDIT_POSTBACK_TRIGGERS,
+  // Подсказка макросов формы правила (18-13d-a2) и уточнения отказа модуля
+  // (`details.reason` 422) под полями формы — тоже коды контракта.
+  'postbacks.macro': CREDIT_POSTBACK_MACROS,
+  'postbacks.form.errors': CREDIT_POSTBACK_RULE_REASONS,
+  // Лог отправок (18-13d-b): исходы, причины пропуска и коды ошибки модуля.
+  'postbacks.outcome': CREDIT_POSTBACK_OUTCOMES,
+  'postbacks.skipReason': CREDIT_POSTBACK_SKIP_REASONS,
+  'postbacks.lastError': CREDIT_POSTBACK_LAST_ERRORS,
 }

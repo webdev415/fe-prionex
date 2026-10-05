@@ -42,6 +42,8 @@ export const PERMISSIONS = {
   CREDIT: {
     APPLICATIONS_VIEW: 'credit.applications.read',
     APPLICATIONS_WRITE: 'credit.applications.write',
+    // Выгрузка заявок CSV с рекламными метками: 18-13c-b, миграция auth 100.
+    APPLICATIONS_EXPORT: 'credit.applications.export',
     DECISIONS_DECIDE: 'credit.decisions.decide',
     // Второй человек условного одобрения: 19-5a, миграция auth 098.
     DECISIONS_CONFIRM_CONDITIONAL: 'credit.decisions.confirm_conditional',
@@ -52,6 +54,9 @@ export const PERMISSIONS = {
     PARAMETERS_PROPOSE: 'credit.parameters.propose',
     PARAMETERS_APPROVE: 'credit.parameters.approve',
     PRODUCTS_VIEW: 'credit.products.read',
+    // Постбеки партнерам (18-13d): миграция auth 100, двери модуля 18-13b.
+    POSTBACKS_VIEW: 'credit.partner_postbacks.read',
+    POSTBACKS_WRITE: 'credit.partner_postbacks.write',
   },
 
   /**
@@ -579,6 +584,8 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   // Credit module (WS-20)
   'credit.applications.read': 'View credit applications and their cards',
   'credit.applications.write': 'Create and edit credit applications on behalf of a client',
+  'credit.applications.export':
+    'Export credit applications with attribution labels (CSV, no personal data)',
   'credit.decisions.decide': 'Make a manual underwriting decision on an application',
   'credit.decisions.confirm_conditional':
     'Confirm a conditional approval proposed by another underwriter (second person)',
@@ -589,6 +596,8 @@ export const PERMISSION_DESCRIPTIONS: Record<Permission, string> = {
   'credit.parameters.propose': 'Propose a change to a decision-engine parameter',
   'credit.parameters.approve': 'Approve a proposed parameter change (second approver, UW-04)',
   'credit.products.read': 'View the credit product catalogue and versions',
+  'credit.partner_postbacks.read': 'View partner postback rules and their delivery log',
+  'credit.partner_postbacks.write': 'Create, edit, switch on/off and delete partner postback rules',
 
   // Clients
   view_clients: 'View client data and information',

@@ -1,8 +1,9 @@
 /**
- * Every refusal code the HUB chat-role backend (CRM-2) and the project scope
- * (CRM-1/CRM-3) can answer with has a sentence in all three languages
- * (KAN-1476). Without one, `translateErrorCode` falls back to the server's
- * English detail and a Ukrainian admin reads English.
+ * Every refusal code the HUB chat-role backend (CRM-2), the project scope
+ * (CRM-1/CRM-3) and the chat settings of a role (board #1621, stories 2a/2b)
+ * can answer with has a sentence in all three languages (KAN-1476). Without
+ * one, `translateErrorCode` falls back to the server's English detail and a
+ * Ukrainian admin reads English.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import i18n from '@/lib/i18n'
@@ -20,6 +21,14 @@ const CODES = [
   'HUB_ROLE_DEFAULT_LOCKED',
   'HUB_ROLE_FORBIDDEN_WHILE_IMPERSONATING',
   'PROJECT_SCOPE_DENIED',
+  'CHAT_SWITCHES_INVALID',
+  'CHAT_SWITCHES_CONFLICT',
+  'CHAT_SET_BROKEN',
+  'HOME_PLANE_UNKNOWN',
+  'CHAT_TEMPLATE_IMMUTABLE',
+  'CHAT_TEMPLATE_UNKNOWN',
+  'CHAT_TEMPLATE_CONFLICT',
+  'CHAT_SET_UNKNOWN_HUB_ROLE',
 ] as const
 
 type Codes = { codes: Record<string, string> }
@@ -52,6 +61,11 @@ describe('HUB chat-role refusal codes', () => {
     }
   })
 
+  /*
+   * The chat refusals carry params (missing, conflicts, field, ...): the
+   * sentence must not depend on them - the form says the details at the field
+   * (chatRoleSet.chatRefusal), the alert says the code.
+   */
   it.each(CODES)('%s reaches the reader in Ukrainian through getErrorMessage', (code) => {
     vi.spyOn(i18n, 't').mockImplementation(((key: string, options?: Record<string, unknown>) =>
       options?.ns === 'errors' && key === `codes.${code}`
@@ -59,7 +73,10 @@ describe('HUB chat-role refusal codes', () => {
         : ((options?.defaultValue as string) ?? key)) as unknown as typeof i18n.t)
     const error = Object.assign(new Error('Request failed with status code 403'), {
       isAxiosError: true,
-      response: { status: 403, data: { detail: 'English server text', code } },
+      response: {
+        status: 403,
+        data: { detail: 'English server text', code, params: { field: 'chat_switches' } },
+      },
     })
 
     expect(getErrorMessage(error)).toBe((ukErrors as Codes).codes[code])

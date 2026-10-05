@@ -206,3 +206,31 @@ describe('19-5f: шаблоны чек-листа и условия несут �
     }
   )
 })
+
+describe('18-13c-b: сообщения выгрузки CSV несут свои плейсхолдеры', () => {
+  // Та же слепота: мок `t` теста страницы печатает переменные из кода, а не шаблон
+  // словаря. Потерянный `{{total}}`/`{{max}}` дал бы маркетологу «звузьте фільтр»
+  // без чисел, потерянный `{{message}}` — отказ без причины.
+  const dictionaries = [
+    ['uk', uk],
+    ['en', en],
+    ['es', es],
+  ] as const
+
+  const TEMPLATES: Array<[string, string[]]> = [
+    ['applications.exportTooLarge', ['{{total}}', '{{max}}']],
+    ['applications.exportFailed', ['{{message}}']],
+  ]
+
+  it.each(dictionaries)('%s: 18-13c-b — плейсхолдеры выгрузки на месте', (lang, dictionary) => {
+    for (const [key, placeholders] of TEMPLATES) {
+      const value = lookup(dictionary, `credit.${key}`)
+      expect(typeof value, `${lang} credit.${key} is not a string`).toBe('string')
+      for (const placeholder of placeholders) {
+        expect(String(value), `${lang} ${key} lost the ${placeholder} placeholder`).toContain(
+          placeholder
+        )
+      }
+    }
+  })
+})

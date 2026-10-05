@@ -21,6 +21,7 @@ import * as hooks from '@/features/credit/hooks/useCredit'
 import { CreditApiError } from '@/features/credit/api/creditApi'
 import { indexDecisionCodes } from '@/features/credit/api/decisionCodes'
 import { formatCreditMoney } from '@/features/credit/api/money'
+import { formatDateTime } from '@/lib/formatters'
 import ukCommon from '@/../public/locales/uk/common.json'
 import {
   DECISION_CODES_FIXTURE,
@@ -32,6 +33,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { CREDIT_CHECKLIST_HINTED, CREDIT_CHECKLIST_KEYS } from '@/features/credit/api/enums'
 import type {
   CreditApplicationDetail,
+  CreditApplicationMarketing,
   CreditDecision,
   CreditDecisionCodeEntry,
   CreditDecisionCodesRegistry,
@@ -2297,5 +2299,262 @@ describe('CreditApplicationDetailPage → решение заменяет пре
         'a malformed checklist entry reached the answer list'
       ).toEqual(['credit.checklistItem.pay_document — credit.checklistAnswer.yes'])
     })
+  })
+})
+
+/**
+ * 18-13c: панель «Джерело трафіку» во вкладке «Анкета».
+ *
+ * Девять строк всегда — семь меток ТЗ, согласие и время клика; пустая метка —
+ * буквальное `(not set)`, как в GA4 и выгрузке, в какой бы форме пустота ни
+ * пришла. Подписи — имена полей. Метки — чужой ввод: на экран только текстом.
+ * Клик-идентификаторы и прочие метки — под маской записи сессии, UTM — открыты.
+ * Значения синтетические.
+ */
+describe('CreditApplicationDetailPage → 18-13c: источник трафика', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  const NO_TAGS: CreditApplicationMarketing = {
+    utm_source: null,
+    utm_medium: null,
+    utm_campaign: null,
+    utm_content: null,
+    utm_term: null,
+    gclid: null,
+    click_id: null,
+    consent_ads: null,
+    click_at: null,
+  }
+  const CLICK_AT = '2026-10-02T10:15:00-06:00'
+  const TAGGED: CreditApplicationMarketing = {
+    ...NO_TAGS,
+    utm_source: 'partner1',
+    utm_medium: 'cpa',
+    click_id: 'abc123',
+    consent_ads: 'granted',
+    click_at: CLICK_AT,
+  }
+  const ROW_KEYS = [
+    'utm_source',
+    'utm_medium',
+    'utm_campaign',
+    'utm_content',
+    'utm_term',
+    'gclid',
+    'click_id',
+    'consent_ads',
+    'click_at',
+  ]
+
+  function withTags(patch: Record<string, unknown>): CreditApplicationDetail {
+    return { ...APPLICATION, ...patch } as unknown as CreditApplicationDetail
+  }
+
+  function attributionSection(): HTMLElement {
+    const section = screen.getByText('credit.card.attribution').closest('section')
+    expect(section, 'панели «Джерело трафіку» нет во вкладке «Анкета»').not.toBeNull()
+    return section as HTMLElement
+  }
+
+  /** Строки панели по порядку: [подпись, значение]. Подзаголовок «Інші мітки» строкой не считается. */
+  function attributionRows(): Array<[string, string]> {
+    const body = attributionSection().querySelector(':scope > div') as HTMLElement
+    return Array.from(body.querySelectorAll(':scope > div')).map((row) => [
+      row.children[0]?.textContent ?? '',
+      row.children[1]?.textContent ?? '',
+    ])
+  }
+
+  it('AC-1: девять строк в порядке ТЗ — метки, (not set), подпись согласия, время клика', () => {
+    renderPage(withTags({ marketing: TAGGED }))
+    expect(attributionRows()).toEqual([
+      ['utm_source', 'partner1'],
+      ['utm_medium', 'cpa'],
+      ['utm_campaign', '(not set)'],
+      ['utm_content', '(not set)'],
+      ['utm_term', '(not set)'],
+      ['gclid', '(not set)'],
+      ['click_id', 'abc123'],
+      ['consent_ads', 'credit.attribution.consent.granted'],
+      ['click_at', formatDateTime(CLICK_AT)],
+    ])
+  })
+
+  it('панель стоит сразу за «Дохід і позика»', () => {
+    renderPage(withTags({ marketing: TAGGED }))
+    const income = screen.getByText('credit.card.incomeAndLoan').closest('section')
+    expect(income?.nextElementSibling, 'панель меток не следует за «Дохід і позика»').toBe(
+      attributionSection()
+    )
+  })
+
+  it.each([
+    ['все девять null', { marketing: NO_TAGS }],
+    ['поля marketing нет (стенд до 18-13)', {}],
+    ['пробельная строка', { marketing: { utm_source: '  ' } }],
+    ['буквальный (not set)', { marketing: { ...NO_TAGS, utm_source: '(not set)' } }],
+  ] as Array<[string, Record<string, unknown>]>)(
+    'AC-1: %s — во всех девяти строках (not set)',
+    (_form, patch) => {
+      renderPage(withTags(patch))
+      const rows = attributionRows()
+      expect(rows.map(([label]) => label)).toEqual(ROW_KEYS)
+      for (const [label, value] of rows) {
+        expect(value, `строка ${label} показала не (not set)`).toBe('(not set)')
+      }
+    }
+  )
+
+  /** Значение строки — подстановка «не задано» (приглушённый `(not set)`), а не текст как пришёл. */
+  function expectNotSetSubstituted(label: string): void {
+    const body = attributionSection().querySelector(':scope > div') as HTMLElement
+    const row = Array.from(body.querySelectorAll(':scope > div')).find(
+      (candidate) => candidate.children[0]?.textContent === label
+    )
+    expect(row, `строки ${label} нет`).toBeDefined()
+    const value = row?.children[1] as HTMLElement
+    expect(value.textContent, `строка ${label} показала не (not set)`).toBe('(not set)')
+    expect(
+      value.querySelector('.text-muted-foreground'),
+      `строка ${label}: (not set) не приглушён — это значение как пришло, а не подстановка`
+    ).not.toBeNull()
+  }
+
+  it('буквальный (NOT SET) в любом регистре и с пробелами — подстановка, а не значение как есть', () => {
+    renderPage(
+      withTags({ marketing: { ...NO_TAGS, utm_source: ' (NOT SET) ', utm_medium: '(not set)' } })
+    )
+    expectNotSetSubstituted('utm_source')
+    expectNotSetSubstituted('utm_medium')
+    // Положительный контроль: пустые строки — та же подстановка.
+    expectNotSetSubstituted('utm_term')
+  })
+
+  it('непарсимое время клика — (not set), а не прочерк форматтера', () => {
+    renderPage(withTags({ marketing: { ...NO_TAGS, click_at: 'not-a-date' } }))
+    expectNotSetSubstituted('click_at')
+  })
+
+  it.each([
+    ['denied', 'credit.attribution.consent.denied'],
+    ['unknown', 'credit.attribution.consent.unknown'],
+    ['later_value', 'later_value'],
+  ])('согласие %s показывается как %s', (consent, shown) => {
+    renderPage(withTags({ marketing: { ...NO_TAGS, consent_ads: consent } }))
+    expect(new Map(attributionRows()).get('consent_ads')).toBe(shown)
+  })
+
+  it('AC-2: прочие метки — под подзаголовком, по алфавиту, после девяти строк', () => {
+    renderPage(withTags({ marketing: TAGGED, marketing_other: { sub_id: 's1', fbclid: 'f1' } }))
+    expect(within(attributionSection()).getByText('credit.attribution.otherTags')).toBeVisible()
+    const rows = attributionRows()
+    expect(rows).toHaveLength(11)
+    expect(rows.slice(9)).toEqual([
+      ['fbclid', 'f1'],
+      ['sub_id', 's1'],
+    ])
+  })
+
+  it.each([
+    ['marketing_other = null', { marketing: TAGGED, marketing_other: null }],
+    ['marketing_other = {}', { marketing: TAGGED, marketing_other: {} }],
+    ['поля marketing_other нет', { marketing: TAGGED }],
+  ] as Array<[string, Record<string, unknown>]>)(
+    'AC-2: %s — подзаголовка «Інші мітки» нет, строк ровно девять',
+    (_form, patch) => {
+      renderPage(withTags(patch))
+      expect(
+        within(attributionSection()).queryByText('credit.attribution.otherTags'),
+        'подзаголовок прочих меток без прочих меток: взяты из marketing?'
+      ).toBeNull()
+      expect(attributionRows()).toHaveLength(9)
+    }
+  )
+
+  it('AC-2: gclid и click_id под маской записи сессии, UTM — открыты', () => {
+    renderPage(withTags({ marketing: { ...TAGGED, gclid: 'gcl-test-1' } }))
+    const section = within(attributionSection())
+    expectObscured(section.getByText('abc123'))
+    expectObscured(section.getByText('gcl-test-1'))
+    expectNotObscured(section.getByText('partner1'))
+    expectNotObscured(section.getByText('cpa'))
+  })
+
+  it('AC-2: прочая метка под маской и длиннее 256 знаков обрезана с многоточием', () => {
+    const long = 'z'.repeat(300)
+    renderPage(withTags({ marketing: NO_TAGS, marketing_other: { fbclid: 'f1', note: long } }))
+    const rows = new Map(attributionRows())
+    expect(rows.get('note')).toBe(`${'z'.repeat(256)}…`)
+    expectObscured(within(attributionSection()).getByText('f1'))
+  })
+
+  it('прочая метка: ключ из 64 знаков без пробелов переносится, а не наезжает на значение', () => {
+    const key = 'very_long_affiliate_sub_identifier_key_'.padEnd(64, 'x')
+    renderPage(withTags({ marketing: NO_TAGS, marketing_other: { [key]: 'v1' } }))
+    const label = within(attributionSection()).getByText(key)
+    expect(label.closest('.break-all'), 'подпись прочей метки без переноса').not.toBeNull()
+    // Положительный контроль: строка та же — подпись и значение на своих местах.
+    expect(new Map(attributionRows()).get(key)).toBe('v1')
+  })
+
+  it('метка — чужой ввод: только текст, без ссылок, разметки и атрибутов со значением', () => {
+    const markup = '<b>bold</b>'
+    const link = 'https://evil.example/landing'
+    renderPage(
+      withTags({
+        marketing: { ...NO_TAGS, utm_source: markup, utm_campaign: link },
+        marketing_other: { sub_id: markup },
+      })
+    )
+    const section = attributionSection()
+    expect(within(section).getAllByText(markup), 'разметка метки не показана текстом').toHaveLength(
+      2
+    )
+    expect(section.querySelector('b'), 'метка исполнена как разметка').toBeNull()
+    expect(within(section).queryAllByRole('link'), 'метка стала ссылкой').toHaveLength(0)
+    const leaked = Array.from(section.querySelectorAll('[title], [aria-label]')).filter((node) =>
+      [markup, link].some(
+        (value) =>
+          (node.getAttribute('title') ?? '').includes(value) ||
+          (node.getAttribute('aria-label') ?? '').includes(value)
+      )
+    )
+    expect(leaked, 'значение метки в атрибуте — запись сессии его не маскирует').toHaveLength(0)
+  })
+})
+
+describe('CreditApplicationDetailPage → 18-4e: виды согласий и след правовых текстов', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  const openHistory = () =>
+    fireEvent.click(screen.getByRole('tab', { name: 'credit.tabs.history' }))
+
+  it('AC-6: `privacy_policy` и `e_copy` подписаны словарём, незнакомый вид — как пришёл', () => {
+    // Мок отвечает запасным значением только при отсутствии ключа в настоящих
+    // словарях: ключ на экране = строка в словаре есть.
+    renderPage({
+      ...APPLICATION,
+      consents: [
+        { kind: 'privacy_policy', text_version: 'privacy-v1-2026-10-04', granted: true },
+        { kind: 'e_copy', text_version: 'e-copy-v1', granted: true },
+        { kind: 'future_kind', text_version: 'future-v1', granted: false },
+      ],
+    } as CreditApplicationDetail)
+    openHistory()
+    expect(screen.getByText('credit.consent.privacy_policy')).toBeInTheDocument()
+    expect(screen.getByText('credit.consent.e_copy')).toBeInTheDocument()
+    expect(screen.getByText('future_kind')).toBeInTheDocument()
+    expect(screen.queryByText('credit.consent.future_kind')).toBeNull()
+  })
+
+  it('AC-9: снимок CA-000208 без следа и согласий — блока следа нет', () => {
+    renderPage()
+    openHistory()
+    expect(screen.queryByText('credit.legalTrail.title')).toBeNull()
+    expect(screen.queryByText('credit.legalTrail.empty')).toBeNull()
   })
 })

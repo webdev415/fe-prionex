@@ -51,6 +51,34 @@ export interface WorkInformation {
   is_agent: boolean
 }
 
+/** One project the employee works on, with what they are there. */
+export interface ProjectAssignment {
+  project_id: number
+  /**
+   * Null for a restricted entry, and also for a project that simply has no
+   * name (archived, unnamed). A missing name alone does not make an entry
+   * restricted: only `restricted` does.
+   */
+  project_name: string | null
+  role_id: number
+  position: string | null
+  department_id: number | null
+  department: string | null
+  group_id: number | null
+  group: string | null
+  /**
+   * True when the reader may not see into this project. The server marks an
+   * entry so only with the project scope enforced
+   * (`AUTH_PROJECT_SCOPE_MODE=enforce`) and the reader holding no right
+   * there; otherwise it is false. A restricted entry keeps its ids
+   * (`project_id`, `role_id`, `department_id`, `group_id`) while
+   * `project_name`, `position`, `department` and `group` are null. The client
+   * cannot change it and sends it back in `project_assignments` exactly as it
+   * came. A server older than the flag leaves it out.
+   */
+  restricted?: boolean
+}
+
 export interface Relative {
   id: number
   kind: 'contact' | 'child'
@@ -105,6 +133,22 @@ export interface EmployeeCard {
   header: CardHeader
   personal: PersonalInformation
   work: WorkInformation
+  /**
+   * Every project the employee works on; `work` is the one shown.
+   *
+   * The contract (api-prionex PR #645, schema `ProjectAssignment`): this is
+   * always the complete set of the employee's live memberships, by id,
+   * whatever the reader may see. The server never filters it by the reader's
+   * project scope. A project the reader may not see into is still listed,
+   * marked `restricted: true`, with its ids and without its names, and the
+   * client sends such an entry back unchanged. That completeness is what lets
+   * a `project_assignments` save, which replaces the whole set, be built from
+   * this list without taking the person off a project the reader never saw.
+   *
+   * Left out by a server older than the project list, which edits one project
+   * only.
+   */
+  assignments?: ProjectAssignment[]
   contacts: Relative[]
   children: Relative[]
   additional: AdditionalInformation
@@ -147,6 +191,13 @@ export interface WorkInformationUpdate {
   asterisk_extension?: string | null
   dialer_extension?: string | null
   is_agent?: boolean
+  /**
+   * The whole set of projects. A project left out is removed from the
+   * employee, which clears their role and group there. Built from
+   * `EmployeeCard.assignments`, which is complete; a restricted entry goes
+   * back exactly as it came.
+   */
+  project_assignments?: { project_id: number; role_id: number; group_id: number | null }[]
 }
 
 export interface RelativeInput {

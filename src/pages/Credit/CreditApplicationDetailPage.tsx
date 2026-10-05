@@ -23,6 +23,14 @@ import {
 } from '@/features/credit/hooks/useCredit'
 import { CreditApiError } from '@/features/credit/api/creditApi'
 import {
+  ATTRIBUTION_MASKED,
+  ATTRIBUTION_NOT_SET,
+  ATTRIBUTION_ROWS,
+  attributionValue,
+  otherAttributionTags,
+  truncateAttribution,
+} from '@/features/credit/api/attribution'
+import {
   decisionCodeNote,
   decisionCodeText,
   normalizeDecisionCodes,
@@ -50,6 +58,7 @@ import { CreditFlagList } from './components/CreditFlagList'
 import { CreditStageProgress } from './components/CreditStageProgress'
 import { CreditClientLink } from './components/CreditClientLink'
 import { CreditPriorApplications } from './components/CreditPriorApplications'
+import { CreditLegalTrail } from './components/CreditLegalTrail'
 import { CreditApplicationTimeline } from './components/CreditApplicationTimeline'
 import { CreditCommunications } from './components/CreditCommunications'
 import { collectApplicationFlags } from '@/features/credit/api/applicantFlags'
@@ -87,7 +96,7 @@ const UNFINISHED_STATUSES = ['draft', 'in_progress', 'identity_check', 'data_col
 
 const money = formatCreditMoney
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children }: { label: React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="flex gap-3 py-1.5 text-sm">
       <span className="text-muted-foreground w-52 shrink-0">{label}</span>
@@ -430,6 +439,8 @@ function ApplicationForm({ application }: { application: CreditApplicationDetail
         <Field label={t('credit.fields.jurisdiction')}>{application.jurisdiction}</Field>
       </Panel>
 
+      <AttributionPanel application={application} />
+
       <Panel title={t('credit.card.links')}>
         <Field label={t('credit.fields.clientId')}>
           {/* Раньше здесь стояло «клієнта ще не створено», и это обещало, что
@@ -494,6 +505,68 @@ function ApplicationForm({ application }: { application: CreditApplicationDetail
         />
       </Panel>
     </>
+  )
+}
+
+/**
+ * Источник трафика (18-13c): девять строк всегда, пустая — `(not set)`.
+ * Подписи — имена полей, а не перевод: маркетолог сверяет их с GA4, Google Ads
+ * и кабинетом партнёра строка в строку. Метки — чужой ввод: только текст, без
+ * ссылок и без атрибутов со значением (атрибуты запись сессии не маскирует).
+ * Клик-идентификаторы — под маской; прочие метки тоже: среди них `fbclid`,
+ * `msclkid` — такие же ключи профиля человека в чужой сети.
+ */
+function AttributionPanel({ application }: { application: CreditApplicationDetail }) {
+  const { t } = useTranslation('common')
+  const other = otherAttributionTags(application.marketing_other)
+  const consentLabel = (value: string) =>
+    value === 'granted'
+      ? t('credit.attribution.consent.granted')
+      : value === 'denied'
+        ? t('credit.attribution.consent.denied')
+        : value === 'unknown'
+          ? t('credit.attribution.consent.unknown')
+          : value
+  const notSet = <span className="text-muted-foreground">{ATTRIBUTION_NOT_SET}</span>
+  // Время клика, которое не разбирается, — та же пустота, что `null`: `(not set)`,
+  // а не прочерк форматтера (`formatDateTime` отдаёт «—» на любой непарсимой строке).
+  const clickAt = (value: string) => {
+    const shown = formatDateTime(value)
+    return shown === '—' ? notSet : shown
+  }
+
+  return (
+    <Panel title={t('credit.card.attribution')}>
+      {ATTRIBUTION_ROWS.map((key) => {
+        const value = attributionValue(application.marketing, key)
+        const shown =
+          value === null
+            ? notSet
+            : key === 'consent_ads'
+              ? consentLabel(value)
+              : key === 'click_at'
+                ? clickAt(value)
+                : value
+        return (
+          <Field key={key} label={key}>
+            {ATTRIBUTION_MASKED.has(key) ? <Pii>{shown}</Pii> : shown}
+          </Field>
+        )
+      })}
+      {other.length > 0 && (
+        <>
+          <h3 className="text-muted-foreground mt-3 mb-1 text-xs font-semibold">
+            {t('credit.attribution.otherTags')}
+          </h3>
+          {/* Ключ — чужой ввод до 64 знаков без пробелов: переносится, а не наезжает на значение. */}
+          {other.map(([key, value]) => (
+            <Field key={key} label={<span className="break-all">{key}</span>}>
+              <Pii>{truncateAttribution(value)}</Pii>
+            </Field>
+          ))}
+        </>
+      )}
+    </Panel>
   )
 }
 
@@ -1318,6 +1391,8 @@ function ApplicationSignAndConsents({ application }: { application: CreditApplic
           </ul>
         </>
       )}
+      {/* След показанных правовых текстов — вне условия согласий: они независимы. */}
+      <CreditLegalTrail value={application.legal_texts_shown} />
     </>
   )
 }

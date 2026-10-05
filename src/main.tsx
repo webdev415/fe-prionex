@@ -13,6 +13,7 @@ import { AppLoadingFallback } from '@/components/ui/AppLoadingFallback'
 import { setupThemeStorageListener, useThemeStore } from '@/stores/themeStore'
 import { startOpenReplay } from '@/lib/openreplay'
 import { bindOperatorIdentity } from '@/lib/openreplay/identify'
+import type { CreditApiError } from '@/features/credit/api/creditApi'
 
 // Ensure theme store module evaluates (applies attrs from localStorage).
 void useThemeStore.getState()
@@ -28,6 +29,9 @@ const MUTATION_NETWORK_ERROR_CODES = new Set(['ECONNABORTED', 'ETIMEDOUT', 'ERR_
 const isMutationRetryable = (error: unknown): boolean => {
   const axiosError = error as AxiosError | undefined
   if (!axiosError || axiosError.response) return false
+  // The credit section's transport keeps the axios code in `transportCode`.
+  const transportCode = (error as CreditApiError).transportCode
+  if (transportCode && MUTATION_NETWORK_ERROR_CODES.has(transportCode)) return true
   return Boolean(axiosError.code && MUTATION_NETWORK_ERROR_CODES.has(axiosError.code))
 }
 

@@ -988,6 +988,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               // 17-40b: там вкладка «Сайт» — вход в админку сайта.
               PERMISSIONS.SITE.CONTENT_EDIT,
               PERMISSIONS.SITE.CONTENT_PUBLISH,
+              // 18-13d: и вкладка «Постбеки партнерам».
+              PERMISSIONS.CREDIT.POSTBACKS_VIEW,
             ],
             mode: 'any' as const,
           },
@@ -1243,7 +1245,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           // держателя права на контент сайта или `manage_settings`: там вкладка
           // «Сайт», а рубильник модуля к сайту отношения не имеет; и сама
           // страница настроек калиткой не закрыта (иначе рубильник односторонний).
-          // Без подпунктов родитель пропадает ниже, как раньше.
+          // Постбеки партнерам (18-13d) модуль шлёт и при выключенном разделе —
+          // их держатель тоже сохраняет вход. Без подпунктов родитель пропадает
+          // ниже, как раньше.
           if (item.path === '/dashboard/credit' && !creditSectionEnabled) {
             const keepsSiteEntry = hasPermission(
               undefined,
@@ -1251,6 +1255,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 PERMISSIONS.SYSTEM.MANAGE_SETTINGS,
                 PERMISSIONS.SITE.CONTENT_EDIT,
                 PERMISSIONS.SITE.CONTENT_PUBLISH,
+                PERMISSIONS.CREDIT.POSTBACKS_VIEW,
               ],
               'any'
             )

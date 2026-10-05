@@ -4665,6 +4665,109 @@
           "admin": "Administrador de HUB"
         }
       },
+      "chat": {
+        "title": "Chat (HUB)",
+        "hint": "Qué pueden hacer en el chat de HUB las personas con este rol.",
+        "notFilled": "La configuración del chat de este rol aún no está completada: el acceso a HUB sigue las reglas anteriores.",
+        "fill": "Completar la configuración del chat",
+        "cancelFill": "Dejar la configuración del chat sin completar",
+        "editedByHand": "La configuración del chat se cambió a mano",
+        "readOnlyNoRight": "Solo quien gestiona los roles de este proyecto puede cambiar la configuración del chat.",
+        "readOnlyCatalogue": "Los valores para elegir no están disponibles ahora, así que la configuración del chat solo se muestra.",
+        "readOnlyImpersonating": "Mientras actúa como otro usuario la configuración del chat solo se muestra.",
+        "yes": "Sí",
+        "no": "No",
+        "homePlane": "Pantalla del rol",
+        "homePlaneHint": "La pantalla que HUB abre a las personas con este rol.",
+        "switches": {
+          "access": {
+            "label": "Acceso al chat",
+            "hint": "Desactivado: las personas con este rol no tienen chat ni canales automáticos."
+          },
+          "client_dialogs": {
+            "label": "Diálogos con clientes",
+            "hint": "De quién son los diálogos con clientes visibles: ninguno, propios, del departamento o todos."
+          },
+          "create_groups": {
+            "label": "Crear grupos",
+            "hint": "Crear chats de grupo y reenviar mensajes."
+          },
+          "dept_channel_admin": {
+            "label": "Administrador del canal del departamento",
+            "hint": "Administra los canales automáticos de su departamento y de sus grupos."
+          },
+          "download_files": {
+            "label": "Descargar archivos",
+            "hint": "Descargar archivos del chat."
+          },
+          "ai_assistant": {
+            "label": "Asistente de IA",
+            "hint": "Usar el asistente de IA (también en los diálogos con clientes, mientras estén activados)."
+          },
+          "chat_only": {
+            "label": "Solo chat (bot)",
+            "hint": "Un conjunto de bot: solo canales, mensajes y archivos, sin canales automáticos."
+          },
+          "lead": {
+            "label": "Permisos de responsable",
+            "hint": "Crear y archivar canales, gestionar bots, exportar informes."
+          }
+        },
+        "clientDialogs": {
+          "none": "Ninguno",
+          "my": "Propios",
+          "department": "Del departamento",
+          "all": "Todos"
+        },
+        "homePlanes": {
+          "operator": "Mis clientes",
+          "legal": "Mis casos",
+          "training": "Mis grupos",
+          "quality": "Cola de evaluación",
+          "control": "Control del equipo",
+          "my_day": "Mi día"
+        },
+        "template": {
+          "label": "Plantilla de permisos del chat",
+          "none": "Sin elegir: la configuración del chat queda sin completar",
+          "needsHubAdmin": "se requiere un administrador de HUB",
+          "hint": "Los permisos de chat del nuevo rol se copian de la plantilla una sola vez; después los cambian los interruptores de chat del rol.",
+          "impersonating": "Mientras actúa como otro usuario no se puede elegir una plantilla de permisos del chat: el rol se crea con la configuración del chat sin completar."
+        },
+        "templates": {
+          "employee": "Empleado",
+          "operator": "Operador",
+          "supervisor": "Responsable",
+          "admin": "Administrador",
+          "lawyer": "Abogado",
+          "training_workspace": "Formador",
+          "ai_agent": "Bot",
+          "quality_workspace": "Control de calidad",
+          "none": "Sin acceso al chat"
+        },
+        "list": {
+          "header": "Chat (HUB)",
+          "yes": "sí",
+          "no": "no",
+          "notFilled": "—"
+        },
+        "errors": {
+          "invalid": "Los interruptores del chat se enviaron incompletos o con valores erróneos. Recargue la página e inténtelo de nuevo.",
+          "conflict": "Estos interruptores contradicen el acceso al chat o «Solo chat».",
+          "broken": "El conjunto guardado no se puede mostrar con estos interruptores. Desactive el acceso al chat y guarde el rol; luego actívelo, ajuste los interruptores y guárdelo de nuevo.",
+          "homePlaneUnknown": "No existe esa pantalla de rol.",
+          "templateUnknown": "No existe esa plantilla de permisos del chat.",
+          "templateImmutable": "La plantilla de permisos del chat solo se elige al crear el rol.",
+          "templateConflict": "La plantilla de permisos del chat y el rol en el chat (HUB) no coinciden sobre el administrador de HUB.",
+          "unknownHubRole": "Este rol en el chat (HUB) borraría la configuración del chat del rol.",
+          "adminRequired": "Solo un administrador de HUB de este proyecto puede hacer este cambio en el chat.",
+          "impersonating": "Mientras actúa como otro usuario no se puede cambiar la configuración del chat."
+        },
+        "lockedByAccess": "El acceso al chat está desactivado, así que los demás interruptores están desactivados y no se pueden cambiar.",
+        "lockedByChatOnly": "«Solo chat (bot)» fija por sí mismo los diálogos, grupos, archivos, IA, permisos de responsable y administrador del canal del departamento; no se pueden cambiar mientras esté activado.",
+        "unreadable": "La configuración del chat guardada de este rol no se puede mostrar. Se deja como está; consulte a un administrador.",
+        "outdated": "La configuración del chat de este rol se cambió mientras tanto; sus cambios en esta sección se descartaron y se muestran los valores guardados."
+      },
       "validation": {
         "nameRequired": "El nombre del rol es obligatorio",
         "permissionsRequired": "Seleccione al menos un permiso"
@@ -12062,7 +12165,11 @@
         "attachFile": "Adjuntar un documento (PDF o Word, hasta 10 MB)",
         "searchManager": "Buscar por nombre",
         "surveys": "Respuestas de la encuesta",
-        "termination": "Baja"
+        "termination": "Baja",
+        "removeProjectsTitle": "¿Quitar del proyecto?",
+        "removeProjectsMessage": "Se quitará al empleado de: {{projects}}. Se borrarán su puesto y su grupo allí.",
+        "removeProjectsConfirm": "Quitar",
+        "otherProject": "Otro proyecto"
       },
       "tabs": {
         "showEarlier": "Mostrar secciones anteriores",
@@ -12753,7 +12860,8 @@
       "copy": "Copiar",
       "showMore": "Mostrar más",
       "proposeConditional": "Proponer una aprobación condicional",
-      "confirmConditional": "Confirmar la aprobación condicional"
+      "confirmConditional": "Confirmar la aprobación condicional",
+      "exportCsv": "Exportar CSV"
     },
     "metrics": {
       "requested": "Solicitado (página)",
@@ -12768,8 +12876,11 @@
       "total": "{{count}} en total",
       "searchPlaceholder": "Número de solicitud o correo electrónico",
       "empty": "Ninguna solicitud coincide con el filtro",
-      "statusCountsHint": "Los contadores de estado abarcan toda la sección y no tienen en cuenta la búsqueda ni las fechas.",
-      "dateRangeNotApplied": "Filtro de fechas no aplicado: la fecha inicial es posterior a la final. La lista se muestra sin este rango."
+      "statusCountsHint": "Los contadores de estado abarcan toda la sección y no tienen en cuenta la búsqueda, las fechas ni las etiquetas de atribución.",
+      "dateRangeNotApplied": "Filtro de fechas no aplicado: la fecha inicial es posterior a la final. La lista se muestra sin este rango.",
+      "exporting": "Exportando…",
+      "exportTooLarge": "{{total}} solicitudes coinciden con el filtro, el límite es {{max}}: acote el filtro",
+      "exportFailed": "No se pudo exportar: {{message}}"
     },
     "loans": {
       "title": "Créditos",
@@ -12891,7 +13002,8 @@
       "confirmTitle": "¿Confirmar la aprobación condicional?",
       "confirmMessage": "La solicitud se aprobará por {{amount}} con las condiciones {{codes}} y se emitirá un contrato para que lo firme el cliente. La confirmación no se puede deshacer.",
       "confirmNotAuthor": "Confirma otra persona, no el autor de la propuesta.",
-      "conditionalConfirmed": "La aprobación condicional está confirmada."
+      "conditionalConfirmed": "La aprobación condicional está confirmada.",
+      "attribution": "Origen del tráfico"
     },
     "scorecard": {
       "title": "Desglose de la puntuación",
@@ -12976,7 +13088,8 @@
         "parameters": "Configuración del módulo",
         "integrations": "Integraciones",
         "switches": "Interruptores de emergencia",
-        "site": "Sitio"
+        "site": "Sitio",
+        "postbacks": "Postbacks de socios"
       },
       "needRiskManager": "Esta sección está disponible para el gestor de riesgos: contiene los umbrales y la configuración de los productos.",
       "mutationDisabled": "La edición requiere un segundo aprobador (UW-04) — disponible cuando lleguen los roles del CRM (WS-20).",
@@ -13157,7 +13270,31 @@
       "marketing": "Marketing",
       "ibv_provider": "Proveedor de verificación bancaria",
       "pad": "Domiciliación bancaria",
-      "credit_check": "Comprobación crediticia"
+      "credit_check": "Comprobación crediticia",
+      "e_copy": "Copia electrónica del contrato",
+      "privacy_policy": "Política de privacidad"
+    },
+    "legalTrail": {
+      "title": "Textos legales mostrados",
+      "empty": "No se registraron textos legales mostrados",
+      "source": {
+        "legalTexts": "Texto legal del sitio",
+        "siteDocuments": "Documento del sitio"
+      },
+      "door": {
+        "intake": "Antes de enviar la solicitud",
+        "sign": "Antes de firmar"
+      },
+      "columns": {
+        "subject": "Texto",
+        "source": "Fuente",
+        "version": "Versión",
+        "locale": "Idioma",
+        "shownAt": "Mostrado",
+        "receivedAt": "Recibido",
+        "sha256": "Huella",
+        "door": "Etapa"
+      }
     },
     "entryType": {
       "disbursement": "Desembolso",
@@ -13354,7 +13491,14 @@
       "updatedFrom": "Última actividad desde",
       "updatedTo": "Última actividad hasta",
       "calendarHint": "Los límites del día siguen el calendario de la provincia de la solicitud (Alberta: hora de Edmonton), no su hora local. Las columnas Creado y Última actividad muestran su hora local.",
-      "rangeInverted": "La fecha inicial es posterior a la final: este rango no se aplica."
+      "rangeInverted": "La fecha inicial es posterior a la final: este rango no se aplica.",
+      "utmSource": "Fuente (utm_source)",
+      "utmCampaign": "Campaña (utm_campaign)",
+      "clickId": "Clic del socio (click_id)",
+      "hasClickId": "Clic del socio",
+      "hasClickIdAny": "Todos",
+      "hasClickIdYes": "Con click_id",
+      "hasClickIdNo": "Sin click_id"
     },
     "unavailable": {
       "title": "El módulo de crédito no está desplegado en este entorno",
@@ -13753,6 +13897,147 @@
       "errorForbidden": "No tiene permiso para ver los documentos de la sección de crédito.",
       "errorGeneric": "No se pudo abrir el documento (código {{status}}).",
       "tabBlocked": "La pestaña nueva no se abrió, así que el documento se entregó como descarga de archivo."
+    },
+    "attribution": {
+      "otherTags": "Otras etiquetas",
+      "consent": {
+        "granted": "Concedido",
+        "denied": "Denegado",
+        "unknown": "Desconocido"
+      }
+    },
+    "postbacks": {
+      "helper": "Reglas de postback del lado del servidor: cuando una solicitud o un préstamo llega con el utm_source del socio, el módulo envía una solicitud GET a la URL del socio con las macros sustituidas.",
+      "forbidden": "Sin permiso para los postbacks. Lo concede el administrador del CRM.",
+      "refreshFailed": "No se pudo actualizar la lista de reglas: se muestra el último estado cargado. Vuelva a cargar la página más tarde.",
+      "unknownValue": "valor desconocido",
+      "trigger": {
+        "new_lead": "Nuevo lead",
+        "new_loan": "Nuevo préstamo"
+      },
+      "rules": {
+        "name": "Nombre",
+        "trigger": "Disparador",
+        "url": "URL del socio",
+        "goal": "Objetivo (goal)",
+        "currency": "Moneda",
+        "active": "Activa",
+        "updatedAt": "Modificada",
+        "actions": "Acciones",
+        "empty": "Todavía no hay reglas",
+        "copyUrl": "Copiar URL",
+        "toggle": "Activar o desactivar la regla «{{name}}»",
+        "toggleFailed": "No se pudo cambiar el estado de la regla: el interruptor volvió a su posición anterior. Inténtelo de nuevo.",
+        "delete": "Eliminar",
+        "deleteTitle": "¿Eliminar la regla «{{name}}»?",
+        "deleteMessage": "Las nuevas solicitudes y préstamos ya no se enviarán al socio por esta regla. Los registros del log de postbacks de la regla se conservan.",
+        "deleteFailed": "No se pudo eliminar la regla. Inténtelo de nuevo."
+      },
+      "form": {
+        "add": "Añadir regla",
+        "edit": "Editar",
+        "createTitle": "Nueva regla de postback",
+        "editTitle": "Editar regla de postback",
+        "chooseTrigger": "Elija un disparador",
+        "macrosHint": "Macros: haga clic para insertarlas en la URL donde está el cursor. El módulo sustituye los valores al enviar.",
+        "macroRequired": "obligatoria",
+        "macroAmountOnly": "solo para «Nuevo préstamo»",
+        "example": "Ejemplo:",
+        "goalHint": "1 — lead, 2 — nuevo préstamo",
+        "currencyHint": "p. ej. CAD, UAH; vacío — la moneda de la solicitud o del préstamo",
+        "cancel": "Cancelar",
+        "save": "Guardar",
+        "saveFailed": "No se pudo guardar la regla. Inténtelo de nuevo.",
+        "conflict": "Otro usuario cambió la regla: la lista se ha actualizado, abra «Editar» de nuevo",
+        "mayExist": "Puede que la regla ya se haya creado en el intento anterior: actualice la lista y compruébelo",
+        "outcomeUnknown": "Resultado desconocido: puede que la regla se haya creado. Reintentar es seguro: no se creará un duplicado.",
+        "errors": {
+          "url_too_long": "La URL tiene más de 2000 caracteres.",
+          "url_control_character": "La URL contiene un carácter invisible o de control (espacio, tabulación).",
+          "url_unparseable": "No se puede analizar la URL (puerto, corchetes IPv6, un carácter en el nombre del host).",
+          "url_scheme": "Solo se aceptan URL https.",
+          "url_userinfo": "La URL no debe llevar usuario ni contraseña antes del host.",
+          "url_host_not_public": "El host es interno, reservado o no público.",
+          "url_macro_unknown": "Macro desconocida o llave sin pareja: solo se permiten las macros de la ayuda.",
+          "url_macro_outside_query": "Las macros solo se permiten en los parámetros después de «?», no en el dominio ni en la ruta.",
+          "url_click_id_required": "La macro {click_id} es obligatoria en los parámetros de la URL.",
+          "url_macro_not_for_trigger": "La macro {amount} solo se permite con el disparador «Nuevo préstamo».",
+          "goal_format": "El objetivo son de uno a nueve dígitos.",
+          "currency_format": "La moneda son tres letras latinas mayúsculas, p. ej. CAD."
+        }
+      },
+      "macro": {
+        "click_id": "ID de clic del socio de la solicitud",
+        "action_id": "ID de la solicitud o del préstamo",
+        "goal": "objetivo de la regla",
+        "amount": "importe del préstamo",
+        "currency": "moneda de la regla o de la solicitud o del préstamo"
+      },
+      "log": {
+        "tabs": {
+          "rules": "Reglas",
+          "log": "Registro"
+        },
+        "helper": "Registro de envíos de postbacks a socios: qué se envió, cuándo, a quién y con qué resultado. Los más recientes primero.",
+        "refresh": "Actualizar",
+        "refreshFailed": "No se pudo actualizar el registro: se muestra el último estado cargado. Inténtelo de nuevo más tarde.",
+        "empty": "Todavía no hubo postbacks",
+        "emptyFiltered": "Nada coincide con los filtros. Restablezca los filtros para ver todas las entradas.",
+        "prev": "Atrás",
+        "next": "Siguiente",
+        "deleted": "eliminada",
+        "reversed": "revertido",
+        "sentAt": "Enviado",
+        "nextAttemptAt": "Próximo intento",
+        "copyActionId": "Copiar ID",
+        "columns": {
+          "createdAt": "Fecha y hora",
+          "rule": "Regla",
+          "trigger": "Disparador",
+          "action": "Solicitud / préstamo",
+          "outcome": "Resultado",
+          "response": "Código de respuesta / error",
+          "url": "URL final",
+          "attempts": "Intentos"
+        },
+        "filters": {
+          "rule": "Regla",
+          "outcome": "Resultado",
+          "trigger": "Disparador",
+          "action": "ID de solicitud o préstamo (UUID)",
+          "from": "Desde (UTC)",
+          "to": "Hasta (UTC)",
+          "all": "Todos",
+          "reset": "Restablecer filtros",
+          "utc": "El período se cuenta en días UTC, como lo hace el módulo.",
+          "inverted": "La fecha «desde» es posterior a la fecha «hasta»: el período no se aplica.",
+          "actionInvalid": "No es un UUID completo: el filtro por ID no se aplica."
+        }
+      },
+      "outcome": {
+        "pending": "pendiente de envío",
+        "sent": "enviado",
+        "simulated": "enviado en modo de prueba",
+        "failed": "error",
+        "skipped": "omitido"
+      },
+      "skipReason": {
+        "click_id_missing": "Sin click_id",
+        "click_id_invalid": "click_id no válido",
+        "loan_reversed": "Desembolso revertido"
+      },
+      "lastError": {
+        "redirect_not_followed": "el socio respondió con una redirección (no se sigue)",
+        "http_4xx": "el socio rechazó la solicitud (4xx)",
+        "http_5xx": "error del lado del socio (5xx)",
+        "network": "error de red",
+        "dns_unresolved": "no se encontró la dirección del socio (DNS)",
+        "private_address": "la dirección apunta a una red privada: bloqueada",
+        "egress_denied": "solicitud saliente denegada",
+        "invalid_url": "URL no válida",
+        "sender_error": "error interno del remitente",
+        "retries_exhausted": "reintentos agotados"
+      }
     }
   },
   "toasts": {

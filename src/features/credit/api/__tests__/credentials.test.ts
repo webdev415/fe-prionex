@@ -149,6 +149,11 @@ const CALLS: Array<{ name: string; invoke: () => Promise<unknown> }> = [
     invoke: () => creditApi.applicationDocumentContent('a1', 'd1'),
   },
   { name: 'loanDocumentContent', invoke: () => creditApi.loanDocumentContent('l1', 'd1') },
+  // 18-13c-b: выгрузка заявок CSV — та же дверь под пропуском, фильтры в `params`.
+  {
+    name: 'exportApplications',
+    invoke: () => creditApi.exportApplications({ status: ['referred'], utm_source: 'google' }),
+  },
 ]
 
 /** Весь запрос одной строкой: заголовки, адрес, параметры, тело. */

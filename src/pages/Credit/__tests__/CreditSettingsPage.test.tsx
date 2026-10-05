@@ -12,10 +12,13 @@
  *    единственная (вкладки модуля были бы ему стеной отказов);
  *  - (r4, решение куратора) вкладку решают права JWT АКТИВНОГО проекта: право,
  *    которое есть только в проекте-владельце, вкладку из другого проекта не
- *    открывает, и настройки сайта у такого человека не спрашиваются.
+ *    открывает, и настройки сайта у такого человека не спрашиваются;
+ *  - (18-13d-a1) вкладку «Постбеки партнерам» открывает право чтения постбеков из
+ *    пропуска CRM; маркетологу без кредитных прав модуль сводку и рубильник не
+ *    спрашивает, а предупреждение о выключенном разделе на вкладке не висит.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { CreditSettingsPage } from '../CreditSettingsPage'
 import { useAuthStore } from '@/stores/authStore'
@@ -27,6 +30,8 @@ import {
 } from '@/features/credit/hooks/useCredit'
 import type { CreditOverview, CreditParameter, CreditProduct } from '@/features/credit/api/types'
 import { useSiteAdminSettings } from '@/features/siteAdmin/hooks'
+import { useCreditPostbackRules } from '@/features/credit/hooks/useCreditPostbacks'
+import type { CreditPostbackRule } from '@/features/credit/api/postbacks'
 
 // Мокаем хуки, а не HTTP: живой QueryClient оставлял таймеры notifyManager,
 // которые падали уже после teardown jsdom в чужом тест-файле.
@@ -64,6 +69,28 @@ vi.mock('@/features/siteAdmin/hooks', () => ({
   useUpdateSiteAdminSettings: () => ({ mutate: vi.fn(), isPending: false, isError: false }),
   useSiteAdminHandoff: () => ({ mutate: vi.fn(), reset: vi.fn(), isPending: false }),
 }))
+
+// Вкладка постбеков (18-13d) ходит в свои двери модуля; хуки — заглушки, как выше.
+vi.mock('@/features/credit/hooks/useCreditPostbacks', () => ({
+  useCreditPostbackRules: vi.fn(),
+  useToggleCreditPostbackRule: () => ({ run: vi.fn(), isPending: false, error: null }),
+  useDeleteCreditPostbackRule: () => ({ run: vi.fn(), isPending: false, error: null }),
+}))
+
+const POSTBACK_RULE: CreditPostbackRule = {
+  id: 'r-1',
+  name: 'Partner one — lead',
+  active: true,
+  trigger: 'new_lead',
+  utm_source: 'partner1',
+  url_template: 'https://partner.example/pb?clickid={click_id}',
+  goal: '1',
+  currency: null,
+  created_at: '2026-10-02T10:00:00Z',
+  updated_at: '2026-10-02T10:00:00Z',
+  created_by: 7,
+  updated_by: 7,
+}
 
 const PRODUCT: CreditProduct = {
   code: 'CA_AB_PAYDAY',
@@ -144,6 +171,12 @@ describe('CreditSettingsPage', () => {
       isLoading: false,
       error: null,
     } as ReturnType<typeof useCreditParameters>)
+    vi.mocked(useCreditPostbackRules).mockReturnValue({
+      data: { items: [POSTBACK_RULE], triggers: [], macros: [] },
+      isLoading: false,
+      error: null,
+    } as unknown as ReturnType<typeof useCreditPostbackRules>)
+    vi.mocked(useCreditSectionEnabled).mockReturnValue(true)
   })
 
   afterEach(() => {
@@ -248,6 +281,116 @@ describe('CreditSettingsPage', () => {
     await screen.findByText('CA_AB_PAYDAY')
     expect(vi.mocked(useCreditOverview)).toHaveBeenCalledWith({ enabled: true })
     expect(vi.mocked(useCreditSectionEnabled)).toHaveBeenCalledWith(true)
+  })
+
+  describe('вкладка «Постбеки партнерам» (18-13d-a1)', () => {
+    const READ = 'credit.partner_postbacks.read'
+    const WRITE = 'credit.partner_postbacks.write'
+    // Вкладки страницы — в её полосе: у вкладки постбеков своя полоса
+    // «Правила / Лог» (18-13d-b), её вкладки страницей не считаются.
+    const tabNames = async () =>
+      within(await screen.findByRole('tablist', { name: 'credit.settings.title' }))
+        .getAllByRole('tab')
+        .map((tab) => tab.textContent ?? '')
+
+    it('маркетологу с одним правом чтения — ровно одна вкладка, модуль не спрашивается', async () => {
+      mockOverview([])
+      signIn([READ])
+      renderPage()
+      expect(await tabNames()).toEqual(['credit.settings.tabs.postbacks'])
+      expect(await screen.findByText('Partner one — lead')).toBeInTheDocument()
+      // Сводка требует `credit.loans.read`: каждый заход маркетолога был бы 403.
+      expect(vi.mocked(useCreditOverview)).toHaveBeenCalledWith({ enabled: false })
+      expect(vi.mocked(useCreditOverview)).not.toHaveBeenCalledWith({ enabled: true })
+      expect(vi.mocked(useCreditSectionEnabled)).toHaveBeenCalledWith(false)
+      expect(vi.mocked(useCreditSectionEnabled)).not.toHaveBeenCalledWith(true)
+    })
+
+    it('контент-менеджер с правом чтения постбеков — «Сайт» и «Постбеки», без вкладок модуля', async () => {
+      mockOverview([])
+      signIn(['site.content.edit', READ])
+      renderPage()
+      expect(await tabNames()).toEqual([
+        'credit.settings.tabs.site',
+        'credit.settings.tabs.postbacks',
+      ])
+      expect(vi.mocked(useCreditOverview)).toHaveBeenCalledWith({ enabled: false })
+    })
+
+    it('кредитный оператор без права постбеков — прежние вкладки, постбеков нет', async () => {
+      mockOverview(['credit.applications.read'])
+      signIn(['credit.applications.read'])
+      renderPage()
+      expect(await tabNames()).toEqual([
+        'credit.settings.tabs.products',
+        'credit.settings.tabs.parameters',
+        'credit.settings.tabs.integrations',
+      ])
+      expect(vi.mocked(useCreditPostbackRules)).not.toHaveBeenCalled()
+    })
+
+    it('риск-менеджер с правом постбеков — прежние вкладки и «Постбеки» последней', async () => {
+      mockOverview(['credit.products.read', 'credit.parameters.read', 'credit.switches.read'])
+      signIn(['credit.products.read', 'credit.parameters.read', READ])
+      renderPage()
+      expect(await tabNames()).toEqual([
+        'credit.settings.tabs.products',
+        'credit.settings.tabs.parameters',
+        'credit.settings.tabs.integrations',
+        'credit.settings.tabs.switches',
+        'credit.settings.tabs.postbacks',
+      ])
+      expect(vi.mocked(useCreditOverview)).toHaveBeenCalledWith({ enabled: true })
+    })
+
+    it('без права ссылка ?tab=postbacks открывает первую доступную вкладку', async () => {
+      mockOverview(['credit.products.read'])
+      signIn(['credit.products.read'])
+      renderPage('/dashboard/credit/settings?tab=postbacks')
+      expect(await screen.findByText('CA_AB_PAYDAY')).toBeInTheDocument()
+      expect(screen.getByRole('tab', { name: 'credit.settings.tabs.products' })).toHaveAttribute(
+        'aria-selected',
+        'true'
+      )
+      expect(screen.queryByText('Partner one — lead')).not.toBeInTheDocument()
+    })
+
+    it('раздел выключен — на вкладке постбеков предупреждения нет, на вкладке модуля есть', async () => {
+      vi.mocked(useCreditSectionEnabled).mockReturnValue(false)
+      mockOverview(['credit.products.read'])
+      signIn(['credit.products.read', READ])
+      renderPage('/dashboard/credit/settings?tab=postbacks')
+      expect(await screen.findByText('Partner one — lead')).toBeInTheDocument()
+      expect(screen.queryByText('credit.switches.sectionOffHere')).not.toBeInTheDocument()
+    })
+
+    it('контроль: то же выключение на вкладке продуктов предупреждение показывает', async () => {
+      vi.mocked(useCreditSectionEnabled).mockReturnValue(false)
+      mockOverview(['credit.products.read'])
+      signIn(['credit.products.read', READ])
+      renderPage('/dashboard/credit/settings?tab=products')
+      expect(await screen.findByText('credit.switches.sectionOffHere')).toBeInTheDocument()
+    })
+
+    it('право записи из пропуска доходит до списка: без него кнопки удаления нет', async () => {
+      mockOverview([])
+      signIn([READ])
+      renderPage('/dashboard/credit/settings?tab=postbacks')
+      await screen.findByText('Partner one — lead')
+      expect(
+        screen.queryByRole('button', { name: 'credit.postbacks.rules.delete' })
+      ).not.toBeInTheDocument()
+      expect(screen.getByRole('switch')).toBeDisabled()
+    })
+
+    it('с правом записи — кнопка удаления есть и переключатель доступен', async () => {
+      mockOverview([])
+      signIn([READ, WRITE])
+      renderPage('/dashboard/credit/settings?tab=postbacks')
+      await screen.findByText('Partner one — lead')
+      expect(screen.getByRole('button', { name: 'credit.postbacks.rules.delete' })).toBeEnabled()
+      expect(screen.getByRole('switch')).toBeEnabled()
+    })
   })
 
   it('интеграции показывают честный статус «не подключено», а не зелёную галочку', async () => {

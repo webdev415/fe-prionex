@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { AxiosError, AxiosHeaders } from 'axios'
+import enAuth from '@/../public/locales/en/auth.json'
 import type { AppLoginDevice, AppLoginStatus } from '../types'
 
 vi.mock('react-i18next', async () => (await import('./appLoginI18nMock')).appLoginI18nMock())
@@ -265,13 +266,57 @@ describe('AppLoginSection', () => {
   it('promises «from any network» only when the stand skips the IP whitelist', () => {
     statusMock.mockReturnValue(loaded({ ...OFF, device_ip_bypass: false }))
     const { unmount } = render(<AppLoginSection />)
-    expect(screen.getByText(/still follows the IP address restriction/)).toBeInTheDocument()
+    expect(screen.getByText(enAuth.appLogin.section.descriptionNoBypass)).toBeInTheDocument()
     expect(screen.queryByText(/from any network/)).not.toBeInTheDocument()
     unmount()
 
     statusMock.mockReturnValue(loaded({ ...OFF, device_ip_bypass: true }))
     render(<AppLoginSection />)
+    expect(screen.getByText(enAuth.appLogin.section.description)).toBeInTheDocument()
     expect(screen.getByText(/from any network/)).toBeInTheDocument()
+  })
+
+  describe('the (i) next to the title', () => {
+    const INFO = 'More about sign-in through the mobile app'
+
+    it.each([
+      ['skips the IP whitelist', true, enAuth.appLogin.section.details],
+      ['keeps the IP whitelist', false, enAuth.appLogin.section.detailsNoBypass],
+    ])('stand %s: the full text shows on hover', async (_case, bypass, full) => {
+      statusMock.mockReturnValue(loaded({ ...OFF, device_ip_bypass: bypass }))
+      const user = userEvent.setup()
+      render(<AppLoginSection />)
+
+      // The long text is not on the card until asked for.
+      expect(screen.queryByText(full)).not.toBeInTheDocument()
+      expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+
+      await user.hover(screen.getByRole('button', { name: INFO }))
+      expect(await screen.findByRole('tooltip')).toHaveTextContent(full)
+    })
+
+    it('the stand without the bypass never promises «from any network» on hover', async () => {
+      statusMock.mockReturnValue(loaded({ ...OFF, device_ip_bypass: false }))
+      const user = userEvent.setup()
+      render(<AppLoginSection />)
+
+      await user.hover(screen.getByRole('button', { name: INFO }))
+      const tooltip = await screen.findByRole('tooltip')
+      expect(tooltip).toHaveTextContent(/still follows the IP address restriction/)
+      expect(tooltip).not.toHaveTextContent(/from any network/)
+    })
+
+    it('opens from the keyboard too', async () => {
+      statusMock.mockReturnValue(loaded(OFF))
+      const user = userEvent.setup()
+      render(<AppLoginSection />)
+
+      await user.tab()
+      expect(screen.getByRole('button', { name: INFO })).toHaveFocus()
+      expect(await screen.findByRole('tooltip')).toHaveTextContent(
+        enAuth.appLogin.section.detailsNoBypass
+      )
+    })
   })
 
   it('password accepted: grouped code, QR, countdown and the waiting line', async () => {

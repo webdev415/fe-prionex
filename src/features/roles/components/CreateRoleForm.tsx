@@ -14,14 +14,18 @@ import { useCreateRole } from '../hooks/useRoleMutations'
 import { usePermissions } from '../hooks/useRoleMutations'
 import { useHubRoles } from '../hooks/useHubRoles'
 import { useDepartments } from '@/features/departments'
+import { useAuthStore } from '@/stores/authStore'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { Label } from '@/components/ui/Label'
 import { Alert } from '@/components/ui/Alert'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { ACCESS_LEVEL_OPTIONS, DEFAULT_ACCESS_LEVEL, isTabAccessPermission } from '../accessLevels'
-import { hubRoleCreatePatch } from '../buildRolePayload'
+import { chatTemplateCreatePatch, hubRoleCreatePatch } from '../buildRolePayload'
+import { chatRefusal, dropsChatDraft, effectiveChatTemplate } from '../chatRoleSet'
 import { effectiveHubRoleValue, isStaleHubCatalogueRefusal } from '../hubRoles'
+import { isRoleChatSettingsEnabled } from '../roleChatSettingsFlag'
+import { ChatTemplateSelect } from './ChatTemplateSelect'
 import { HubRoleSelect } from './HubRoleSelect'
 import { getErrorMessage } from '@/lib/errors'
 
@@ -51,19 +55,38 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
   const [selectedPermissions, setSelectedPermissions] = useState<number[]>([])
   // KAN-757: per-tab access level keyed by permission_id.
   const [accessLevels, setAccessLevels] = useState<Record<number, string>>({})
-  // KAN-1476: HUB chat role; '' is "not set". The select shows - and the
-  // save sends - the pick only while the current catalogue still offers it
-  // as assignable: the catalogue is refetched under the open form (after a
-  // refused save among others), and a pick it dropped falls back to "not set"
-  // instead of hiding behind the first option while it is sent again.
-  const hubCatalog = useHubRoles(projectId)
+  // Board #1621, rule 28.5: the chat template replaces «Роль у чаті (HUB)»
+  // only on a build with the flag on; off, the form is as it was before it.
+  // Both states are prepared on every render (hooks may not depend on it).
+  const chatSettingsOn = isRoleChatSettingsEnabled()
+  const catalog = useHubRoles(projectId)
+  // Flag off - KAN-1476: HUB chat role; '' is "not set". The select shows -
+  // and the save sends - the pick only while the current catalogue still
+  // offers it as assignable: the catalogue is refetched under the open form
+  // (after a refused save among others), and a pick it dropped falls back to
+  // "not set" instead of hiding behind the first option while it is sent
+  // again.
   const [hubRolePick, setHubRolePick] = useState('')
   const hubRole = effectiveHubRoleValue({
-    options: hubCatalog.options,
+    options: catalog.options,
     stored: null,
     pick: hubRolePick,
     lock: null,
   })
+  // Flag on - board #1621: the chat template the new role's chat set is
+  // copied from; '' is "none" (the role is created not filled). The select
+  // shows - and the save sends - the pick only while the current catalogue
+  // still offers it as assignable, for the same reason.
+  // Under impersonation the API refuses any template: none is offered or sent.
+  const impersonating = useAuthStore((state) => state.isImpersonating)
+  const [templatePick, setTemplatePick] = useState('')
+  const chatTemplate = impersonating
+    ? ''
+    : effectiveChatTemplate(templatePick, catalog.chat.templates)
+  // A chat refusal is said once, at the template (not again in the alert).
+  // Without the template every refusal stays in the alert, as before it.
+  const refusal =
+    chatSettingsOn && createMutation.isError ? chatRefusal(createMutation.error) : null
 
   // Group permissions by category
   const permissions = useMemo(
@@ -128,17 +151,26 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
         department_id: data.department_id,
         permission_ids: selectedPermissions,
         access_levels,
-        ...hubRoleCreatePatch(hubCatalog.status, hubRole, hubCatalog.options),
+        ...(chatSettingsOn
+          ? chatTemplateCreatePatch(catalog.chat, chatTemplate)
+          : hubRoleCreatePatch(catalog.status, hubRole, catalog.options)),
       },
       {
         onSuccess: () => {
           onSuccess()
         },
         onError: (error) => {
-          // The backend refused the HUB chat role itself: drop the pick, so the
-          // select shows what a retry will send (nothing), and the refusal
-          // stays said in words below.
-          if (isStaleHubCatalogueRefusal(error)) setHubRolePick('')
+          if (chatSettingsOn) {
+            // The caller may not create a role from that template now: drop
+            // the pick, so the select shows what a retry will send (no
+            // template), and the refusal stays said in words at the field.
+            if (dropsChatDraft(chatRefusal(error))) setTemplatePick('')
+          } else if (isStaleHubCatalogueRefusal(error)) {
+            // The backend refused the HUB chat role itself: drop the pick, so
+            // the select shows what a retry will send (nothing), and the
+            // refusal stays said in words below.
+            setHubRolePick('')
+          }
         },
       }
     )
@@ -215,13 +247,25 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
         )}
       </div>
 
-      {/* HUB chat role (KAN-1476) - only while the catalogue offers it */}
-      <HubRoleSelect
-        catalog={hubCatalog}
-        value={hubRole}
-        onChange={setHubRolePick}
-        disabled={createMutation.isPending}
-      />
+      {chatSettingsOn ? (
+        // HUB chat template (board #1621) - create only, while the catalogue offers it
+        <ChatTemplateSelect
+          catalog={catalog.chat}
+          value={chatTemplate}
+          onChange={setTemplatePick}
+          disabled={createMutation.isPending}
+          refusal={refusal}
+          impersonating={impersonating}
+        />
+      ) : (
+        // HUB chat role (KAN-1476) - only while the catalogue offers it
+        <HubRoleSelect
+          catalog={catalog}
+          value={hubRole}
+          onChange={setHubRolePick}
+          disabled={createMutation.isPending}
+        />
+      )}
 
       {/* Permissions Section */}
       <div>
@@ -308,7 +352,7 @@ export function CreateRoleForm({ projectId, onSuccess, onCancel: _onCancel }: Cr
       </div>
 
       {/* Error Alert */}
-      {createMutation.isError && (
+      {createMutation.isError && refusal === null && (
         <Alert variant="error">
           <p className="text-sm">
             {createMutation.error

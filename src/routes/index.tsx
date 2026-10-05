@@ -420,6 +420,8 @@ export const router = createBrowserRouter([
               // настроек — контент-менеджер без кредитных прав обязан дойти.
               PERMISSIONS.SITE.CONTENT_EDIT,
               PERMISSIONS.SITE.CONTENT_PUBLISH,
+              // 18-13d: вкладка «Постбеки партнерам» — маркетологу без кредитных прав.
+              PERMISSIONS.CREDIT.POSTBACKS_VIEW,
             ]}
             mode="any"
           >

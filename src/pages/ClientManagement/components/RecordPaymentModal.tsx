@@ -190,9 +190,20 @@ export function RecordPaymentModal({
         .sort((a, b) => a.id - b.id),
     [debts, canVerify]
   )
-  const [selectedDebtId, setSelectedDebtId] = useState<number | null>(
+  // What the operator picked. The initial value only helps when the loans are
+  // already there on the first render; the client card mounts this modal as
+  // soon as the profile arrives, and the loans often land after it.
+  const [pickedDebtId, setPickedDebtId] = useState<number | null>(
     () => selectableDebts[0]?.id ?? null
   )
+  // The loan the payment is recorded against: the pick while it is still
+  // selectable, otherwise the only selectable loan. With one loan there is no
+  // picker to fix it by hand, and EasyPay cannot be saved without a loan.
+  const selectedDebtId = selectableDebts.some((d) => d.id === pickedDebtId)
+    ? pickedDebtId
+    : selectableDebts.length === 1
+      ? selectableDebts[0].id
+      : null
 
   const selectedDebt = useMemo(
     () => selectableDebts.find((d) => d.id === selectedDebtId) ?? null,
@@ -394,7 +405,7 @@ export function RecordPaymentModal({
     setUpdateBalance(false)
     setAmountError(null)
     setPaymentMethodDetails('')
-    setSelectedDebtId(selectableDebts[0]?.id ?? null)
+    setPickedDebtId(selectableDebts[0]?.id ?? null)
     setPaymentType('')
     setPaymentTypeDirty(false)
     setPaymentTypeError(null)
@@ -414,7 +425,7 @@ export function RecordPaymentModal({
     setUpdateBalance(false)
     setAmountError(null)
     setPaymentMethodDetails('')
-    setSelectedDebtId(selectableDebts[0]?.id ?? null)
+    setPickedDebtId(selectableDebts[0]?.id ?? null)
     setPaymentType('')
     setPaymentTypeDirty(false)
     setPaymentTypeError(null)
@@ -508,7 +519,7 @@ export function RecordPaymentModal({
                     </Label>
                     <Select
                       value={selectedDebtId ? String(selectedDebtId) : ''}
-                      onValueChange={(value) => setSelectedDebtId(Number(value))}
+                      onValueChange={(value) => setPickedDebtId(Number(value))}
                     >
                       <SelectTrigger className="w-full rounded-md">
                         <SelectValue

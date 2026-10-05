@@ -27,6 +27,19 @@ import {
   totalPagesOf,
 } from '@/features/credit/api/pagination'
 import { useCreditApplications, useCreditOverview } from '@/features/credit/hooks/useCredit'
+import {
+  CreditApiError,
+  creditApi,
+  type CreditApplicationsExportParams,
+} from '@/features/credit/api/creditApi'
+import { downloadBlob } from '@/features/messaging/utils/downloadBlob'
+import { useHasPermission } from '@/hooks/usePermissions'
+import { PERMISSIONS } from '@/constants/permissions'
+import {
+  ATTRIBUTION_FILTER_MAX,
+  hasClickIdFrom,
+  normalizeAttributionFilter,
+} from '@/features/credit/api/attribution'
 import { applicationStatusCount, buildApplicationMetrics } from '@/features/credit/api/metrics'
 import { formatCreditMoney } from '@/features/credit/api/money'
 import {
@@ -126,6 +139,30 @@ export function CreditApplicationsPage() {
   const [createdTo, setCreatedTo] = useURLState<string>('created_to', '')
   const [updatedFrom, setUpdatedFrom] = useURLState<string>('updated_from', '')
   const [updatedTo, setUpdatedTo] = useURLState<string>('updated_to', '')
+  // Метки (18-13c): текст применяется вместе с поиском, «click_id есть/нет» — сразу.
+  const [utmSource, setUtmSource] = useURLState<string>('utm_source', '')
+  const [utmCampaign, setUtmCampaign] = useURLState<string>('utm_campaign', '')
+  const [clickId, setClickId] = useURLState<string>('click_id', '')
+  const [hasClickIdParam, setHasClickIdParam] = useURLState<string>('has_click_id', '')
+  const appliedTags = { utmSource, utmCampaign, clickId }
+  const [tagDrafts, setTagDrafts] = useState(appliedTags)
+  // Ссылка сменилась не набором (чистка мусора; «назад/вперёд» — когда его примет
+  // `useURLState`, сегодня он возвращает ссылку сам) — поля меток следуют за ней,
+  // иначе в поле одно, а в запросе другое. Подстройка в рендере, не эффектом.
+  const appliedTagsKey = JSON.stringify(appliedTags)
+  const [syncedTagsKey, setSyncedTagsKey] = useState(appliedTagsKey)
+  if (syncedTagsKey !== appliedTagsKey) {
+    setSyncedTagsKey(appliedTagsKey)
+    setTagDrafts(appliedTags)
+  }
+  // Метки — нормализованные: одни и те же для запроса, выгрузки и подписи «список сужен».
+  const tagsFrom = (values: typeof tagDrafts) => ({
+    utm_source: normalizeAttributionFilter(values.utmSource) || undefined,
+    utm_campaign: normalizeAttributionFilter(values.utmCampaign) || undefined,
+    click_id: normalizeAttributionFilter(values.clickId) || undefined,
+    has_click_id: hasClickIdFrom(hasClickIdParam),
+  })
+  const tags = tagsFrom(appliedTags)
   const rangeHintId = useId()
   const page = parsePage(pageParam)
   const pageSize = parsePageSize(pageSizeParam)
@@ -146,14 +183,48 @@ export function CreditApplicationsPage() {
   const updated = dayRange(updatedFromDay, updatedToDay)
   // Счётчики «таблеток» — по всему разделу (сводка), а список сужают поиск и
   // даты: тогда числа и «усього N» расходятся по построению, и это подписано.
-  const countsNarrowed = Boolean(query || created.from || created.to || updated.from || updated.to)
+  const countsNarrowed =
+    Boolean(query || created.from || created.to || updated.from || updated.to) ||
+    Object.values(tags).some((value) => value !== undefined)
+  /** Выборка без страницы — одна для списка и выгрузки (К-6): файл = список под теми же фильтрами. */
+  const selectionFor = (
+    search: string,
+    tagValues: typeof tagDrafts
+  ): CreditApplicationsExportParams => ({
+    status: statuses.length ? statuses : undefined,
+    query: search || undefined,
+    sort: sortParam || undefined,
+    created_from: created.from,
+    created_to: created.to,
+    updated_from: updated.from,
+    updated_to: updated.to,
+    ...tagsFrom(tagValues),
+  })
+  const applied = selectionFor(query, appliedTags)
+  /** Набранный поиск и метки — в ссылку; пустое уходит из неё. */
+  const applyDrafts = () => {
+    setQuery(searchDraft.trim())
+    setUtmSource(tagDrafts.utmSource.trim())
+    setUtmCampaign(tagDrafts.utmCampaign.trim())
+    setClickId(tagDrafts.clickId.trim())
+  }
   // Выбор дня применяет и набранный поиск: иначе на экране в поле один поиск,
   // а в запросе — прежний, и оператор читает список не по тому, что видит.
   const pickDay = (setDay: (day: string) => void, day: string) => {
     setDay(day)
-    setQuery(searchDraft.trim())
+    applyDrafts()
     setPageParam('1')
   }
+  const tagField = (label: string, draft: keyof typeof tagDrafts) => (
+    <label className="text-muted-foreground flex flex-col gap-1.5 text-xs">
+      {label}
+      <Input
+        maxLength={ATTRIBUTION_FILTER_MAX}
+        value={tagDrafts[draft]}
+        onChange={(event) => setTagDrafts((prev) => ({ ...prev, [draft]: event.target.value }))}
+      />
+    </label>
+  )
 
   // Мусор вместо дня (вручную правленая ссылка) поле не показывает и в запрос не
   // шлёт — значит, и в ссылке ему не место: пересланная коллеге, она несла бы
@@ -164,6 +235,10 @@ export function CreditApplicationsPage() {
     if (createdTo && !createdToDay) setCreatedTo('')
     if (updatedFrom && !updatedFromDay) setUpdatedFrom('')
     if (updatedTo && !updatedToDay) setUpdatedTo('')
+    if (utmSource && !normalizeAttributionFilter(utmSource)) setUtmSource('')
+    if (utmCampaign && !normalizeAttributionFilter(utmCampaign)) setUtmCampaign('')
+    if (clickId && !normalizeAttributionFilter(clickId)) setClickId('')
+    if (hasClickIdParam && hasClickIdFrom(hasClickIdParam) === undefined) setHasClickIdParam('')
   }, [
     createdFrom,
     createdFromDay,
@@ -177,6 +252,14 @@ export function CreditApplicationsPage() {
     setCreatedTo,
     setUpdatedFrom,
     setUpdatedTo,
+    utmSource,
+    utmCampaign,
+    clickId,
+    hasClickIdParam,
+    setUtmSource,
+    setUtmCampaign,
+    setClickId,
+    setHasClickIdParam,
   ])
 
   const { data: overview, error: overviewError } = useCreditOverview()
@@ -185,15 +268,9 @@ export function CreditApplicationsPage() {
     isLoading,
     error,
   } = useCreditApplications({
-    status: statuses.length ? statuses : undefined,
-    query: query || undefined,
-    sort: sortParam || undefined,
+    ...applied,
     limit: pageSize,
     cursor: cursorForPage(page, pageSize),
-    created_from: created.from,
-    created_to: created.to,
-    updated_from: updated.from,
-    updated_to: updated.to,
   })
 
   // Мемоизуем сам массив: `page?.items ?? []` создаёт новую ссылку на каждый
@@ -201,6 +278,45 @@ export function CreditApplicationsPage() {
   const items = useMemo(() => pageData?.items ?? [], [pageData])
   const page_total = pageData?.total
   const metrics = useMemo(() => buildApplicationMetrics(overview, items), [overview, items])
+
+  // Выгрузка CSV (18-13c-b): только с правом из пропуска CRM, не из сводки модуля.
+  const canExport = useHasPermission(PERMISSIONS.CREDIT.APPLICATIONS_EXPORT)
+  const [exporting, setExporting] = useState(false)
+  const [exportTooLarge, setExportTooLarge] = useState<{ total: number; max: number } | null>(null)
+  const [exportFailed, setExportFailed] = useState<string | null>(null)
+  // Отказ выгрузки говорит о выборке, с которой просили файл: сменилась применённая
+  // выборка (поиск, метки, статусы, дни, «Скинути») — сообщение уходит, иначе числа
+  // модуля стоят рядом с другим фильтром. Подстройка в рендере, как у меток.
+  const appliedKey = JSON.stringify(applied)
+  const [exportKey, setExportKey] = useState(appliedKey)
+  if (exportKey !== appliedKey && (exportTooLarge || exportFailed !== null)) {
+    setExportTooLarge(null)
+    setExportFailed(null)
+  }
+  /** Набранное применяется, и файл просится с теми же значениями: файл = то, что на экране. */
+  const exportCsv = async () => {
+    if (exporting) return
+    const selection = selectionFor(searchDraft.trim(), tagDrafts)
+    if (JSON.stringify(selection) !== JSON.stringify(applied)) setPageParam('1')
+    setExportKey(JSON.stringify(selection))
+    applyDrafts()
+    setExporting(true)
+    setExportTooLarge(null)
+    setExportFailed(null)
+    try {
+      const { blob, filename } = await creditApi.exportApplications(selection)
+      downloadBlob(blob, filename)
+    } catch (caught) {
+      const details = caught instanceof CreditApiError ? caught.details : undefined
+      const total = details?.total
+      const max = details?.max_rows
+      // «Слишком много» — только с числами модуля; прочие отказы — текстом модуля.
+      if (typeof total === 'number' && typeof max === 'number') setExportTooLarge({ total, max })
+      else setExportFailed(caught instanceof Error ? caught.message : String(caught))
+    } finally {
+      setExporting(false)
+    }
+  }
 
   const toggleStatus = (status: string) => {
     const next = new Set(statuses as string[])
@@ -420,7 +536,7 @@ export function CreditApplicationsPage() {
           noValidate
           onSubmit={(event) => {
             event.preventDefault()
-            setQuery(searchDraft.trim())
+            applyDrafts()
             setPageParam('1')
           }}
         >
@@ -463,6 +579,25 @@ export function CreditApplicationsPage() {
             describedBy={rangeHintId}
             onDay={(day) => pickDay(setUpdatedTo, day)}
           />
+          {tagField(t('credit.filters.utmSource'), 'utmSource')}
+          {tagField(t('credit.filters.utmCampaign'), 'utmCampaign')}
+          {tagField(t('credit.filters.clickId'), 'clickId')}
+          <label className="text-muted-foreground flex flex-col gap-1.5 text-xs">
+            {t('credit.filters.hasClickId')}
+            <select
+              className="border-input-border bg-card text-foreground h-10 rounded-md border px-3 text-sm"
+              value={tags.has_click_id === undefined ? '' : String(tags.has_click_id)}
+              onChange={(event) => {
+                setHasClickIdParam(event.target.value)
+                applyDrafts()
+                setPageParam('1')
+              }}
+            >
+              <option value="">{t('credit.filters.hasClickIdAny')}</option>
+              <option value="true">{t('credit.filters.hasClickIdYes')}</option>
+              <option value="false">{t('credit.filters.hasClickIdNo')}</option>
+            </select>
+          </label>
           <Button type="submit" variant="white-secondary">
             {t('credit.actions.search')}
           </Button>
@@ -478,11 +613,31 @@ export function CreditApplicationsPage() {
               setCreatedTo('')
               setUpdatedFrom('')
               setUpdatedTo('')
+              setTagDrafts({ utmSource: '', utmCampaign: '', clickId: '' })
+              setUtmSource('')
+              setUtmCampaign('')
+              setClickId('')
+              setHasClickIdParam('')
               setPageParam('1')
             }}
           >
             {t('credit.actions.reset')}
           </Button>
+          {canExport && (
+            <Button
+              type="button"
+              variant="white-secondary"
+              disabled={exporting || page_total === 0}
+              onClick={() => void exportCsv()}
+            >
+              {exporting ? t('credit.applications.exporting') : t('credit.actions.exportCsv')}
+            </Button>
+          )}
+          {exportTooLarge && (
+            <p role="status" className="text-error-500 self-center text-xs">
+              {t('credit.applications.exportTooLarge', exportTooLarge)}
+            </p>
+          )}
         </form>
         {(created.inverted || updated.inverted) && (
           <p id={rangeHintId} className="text-error-500 mt-2 text-xs">
@@ -499,6 +654,12 @@ export function CreditApplicationsPage() {
       {(created.inverted || updated.inverted) && (
         <Alert variant="error" className="mb-4">
           {t('credit.applications.dateRangeNotApplied')}
+        </Alert>
+      )}
+
+      {exportFailed !== null && (
+        <Alert variant="error" className="mb-4">
+          {t('credit.applications.exportFailed', { message: exportFailed })}
         </Alert>
       )}
 
