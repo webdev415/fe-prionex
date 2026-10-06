@@ -1,11 +1,16 @@
 ﻿/**
  * ScorecardPanel — the scorecard editor for one call.
  *
- * A call has at most one scorecard, so an existing card is always opened
- * (whatever its status) and the create picker only appears when there is none,
- * or when the trainer explicitly switches the scorecard type (which clears the
- * scores). Renders the template with collapsible sections, per-criterion inputs
- * (binary toggle or 0..5 buttons), comment fields and a status indicator.
+ * A call carries one scorecard **per evaluator**, so two questions are kept
+ * apart: which card the viewer may edit — always their own — and which card to
+ * show, their own if they have one and otherwise the newest on the call, read
+ * only. Hiding a colleague's evaluation would tell a supervisor the call was
+ * never scored.
+ *
+ * The create picker appears when the viewer has no card of their own, or when
+ * they explicitly switch their own scorecard's type (which clears its scores).
+ * Renders the template with collapsible sections, per-criterion inputs (binary
+ * toggle or 0..5 buttons), comment fields and a status indicator.
  */
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -23,6 +28,7 @@ import {
 } from '../hooks/useScorecards'
 import { useTemplates } from '../hooks/useTemplates'
 import { isDisputeReasonRequested, resolveDisputeThreshold } from '../lib/dispute'
+import { ownScorecardId } from '../lib/ownScorecard'
 import { computeWeightedScorePreview } from '../lib/scoringPreview'
 import { normalizeCriterionScale } from '../types'
 import type { Criterion, Section } from '../types'
@@ -33,7 +39,9 @@ const SCRIPT_STAGES_SECTION_KEY = 'script_stages'
 interface ScorecardPanelProps {
   callId: string
   operatorId: number
-  /** When set, the panel opens that scorecard rather than the latest draft. */
+  /** When set, the panel opens that scorecard rather than resolving the
+   *  viewer's own. Writes still require authorship, so pinning someone else's
+   *  card shows it read-only. */
   scorecardId?: number | null
   /** Assignment-based write gate. When provided it fully governs edit rights at
    *  any status (the trainer may edit + re-send). When omitted, the legacy
@@ -61,9 +69,18 @@ export function ScorecardPanel({
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null)
   const [showTemplateOverride, setShowTemplateOverride] = useState(false)
   const [forcePicker, setForcePicker] = useState(false)
-  const existingScorecardId = historyQuery.data?.[0]?.id ?? null
+  const viewerId = useAuthStore((s) => s.user?.id)
+  // Which card to *edit* and which to *show* are different questions once a
+  // call can carry several. Editing is always the viewer's own card; showing
+  // falls back to whatever the call has, so a supervisor opening a scored call
+  // sees the evaluation rather than being told there is none.
+  const ownCardId = ownScorecardId(historyQuery.data, viewerId)
+  const newestOnCallId = historyQuery.data?.[0]?.id ?? null
+  const existingScorecardId = ownCardId ?? newestOnCallId
   const activeScorecardId = pinnedScorecardId ?? manuallySelectedId ?? existingScorecardId ?? null
-  const isChangingType = forcePicker && existingScorecardId != null
+  // Replacing a colleague's card is not a type change — nothing of the
+  // viewer's is being cleared, they are starting their own evaluation.
+  const isChangingType = forcePicker && ownCardId != null
   const activeQuery = useScorecard(activeScorecardId, activeScorecardId != null)
   const createMutation = useCreateScorecard()
   const updateMutation = useUpdateScorecard()
@@ -152,18 +169,22 @@ export function ScorecardPanel({
 
   const [locked, setLocked] = useState(false)
   const status = activeScorecard?.status ?? 'draft'
-  const currentUserId = useAuthStore((s) => s.user?.id)
   const isOriginatingTrainer =
-    activeScorecard != null &&
-    currentUserId != null &&
-    Number(currentUserId) === activeScorecard.trainer_id
+    activeScorecard != null && viewerId != null && Number(viewerId) === activeScorecard.trainer_id
   // Assignment-based gate (new model) governs editing at any status; the backend
   // enforces the same rule with a 403. Legacy callers fall back to
   // originating-trainer + draft-only.
+  //
+  // Authorship is a precondition for both, and for every other write action. A
+  // card belongs to the evaluator who made it and the API refuses writes to
+  // anyone else's, so offering Save or Send on a colleague's card only produces
+  // a 403 the trainer cannot act on. An absent card is a new evaluation, which
+  // is theirs by definition.
+  const ownsActiveCard = activeScorecard == null || isOriginatingTrainer
   const canEdit =
-    canEditProp != null
-      ? canEditProp && !locked
-      : status === 'draft' && !locked && isOriginatingTrainer
+    (canEditProp != null ? canEditProp : status === 'draft' && isOriginatingTrainer) &&
+    !locked &&
+    ownsActiveCard
 
   const handleSaveDraft = async () => {
     await draft.flush()
@@ -302,7 +323,7 @@ export function ScorecardPanel({
         ) : null}
 
         <div className="flex flex-wrap gap-2">
-          {isChangingType ? (
+          {forcePicker && existingScorecardId != null ? (
             <Button
               variant="cancel"
               size="md"
@@ -355,7 +376,7 @@ export function ScorecardPanel({
         </span>
       </header>
 
-      {canEdit ? (
+      {canEdit || (canEditProp !== false && !ownsActiveCard) ? (
         <button
           type="button"
           onClick={() => {
@@ -365,7 +386,9 @@ export function ScorecardPanel({
           }}
           className="text-muted-foreground hover:text-foreground self-start text-xs underline-offset-2 hover:underline"
         >
-          {t('pages.training.scorecard.changeType', '← Change scorecard type')}
+          {ownsActiveCard
+            ? t('pages.training.scorecard.changeType', '← Change scorecard type')
+            : t('pages.training.scorecard.scoreItYourself', 'Add your own evaluation')}
         </button>
       ) : null}
 
@@ -509,11 +532,9 @@ export function ScorecardPanel({
           </>
         ) : null}
 
-        {(
-          canEditProp != null
-            ? canEditProp && locked
-            : status === 'draft' && locked && isOriginatingTrainer
-        ) ? (
+        {(canEditProp != null
+          ? canEditProp && locked
+          : status === 'draft' && locked && isOriginatingTrainer) && ownsActiveCard ? (
           <Button
             variant="primary"
             size="md"
@@ -524,11 +545,9 @@ export function ScorecardPanel({
           </Button>
         ) : null}
 
-        {(
-          canEditProp != null
-            ? canEditProp && (status === 'completed' || status === 'sent')
-            : status === 'completed' && isOriginatingTrainer
-        ) ? (
+        {(canEditProp != null
+          ? canEditProp && (status === 'completed' || status === 'sent')
+          : status === 'completed' && isOriginatingTrainer) && ownsActiveCard ? (
           <Button
             variant="primary"
             size="md"

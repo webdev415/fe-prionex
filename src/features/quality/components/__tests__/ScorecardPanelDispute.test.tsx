@@ -37,7 +37,11 @@ vi.mock('@/stores/authStore', () => ({
  * preview 4/5, i.e. 80 on the 0-100 axis the badge and threshold work in.
  */
 function seedScorecard(overrides: Record<string, unknown> = {}) {
-  history.data = [{ id: 9, status: 'completed', created_at: '2026-08-20T10:00:00Z' }]
+  history.data = [
+    // trainer_id is the mocked viewer: the panel opens the viewer's own
+    // card, and a call can now carry a colleague's alongside it.
+    { id: 9, trainer_id: 7, status: 'completed', created_at: '2026-08-20T10:00:00Z' },
+  ]
   activeScorecard.data = {
     id: 9,
     call_id: 'c1',

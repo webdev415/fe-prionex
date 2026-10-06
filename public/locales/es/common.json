@@ -2381,6 +2381,7 @@
         "chooseTemplate": "Elegir una plantilla específica",
         "hideTemplatePicker": "Ocultar lista de plantillas",
         "changeType": "← Cambiar tipo de hoja de evaluación",
+        "scoreItYourself": "Añadir tu propia evaluación",
         "readOnlyNotOwner": "Solo lectura: únicamente el formador que creó esta hoja de evaluación puede editarla.",
         "unsaved": "Cambios sin guardar",
         "unsavedConfirm": "Tiene cambios sin guardar que se perderán. ¿Cerrar de todos modos?",

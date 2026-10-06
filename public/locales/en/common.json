@@ -2374,6 +2374,7 @@
         "chooseTemplate": "Choose a specific template",
         "hideTemplatePicker": "Hide template list",
         "changeType": "← Change scorecard type",
+        "scoreItYourself": "Add your own evaluation",
         "readOnlyNotOwner": "Read-only — only the trainer who created this scorecard can edit it.",
         "unsaved": "Unsaved changes",
         "unsavedConfirm": "You have unsaved changes that will be lost. Close anyway?",

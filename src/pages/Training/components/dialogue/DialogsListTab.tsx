@@ -80,7 +80,6 @@ function categoryOf(call: CallMonitoringItem): ScorecardCategory {
 interface Selected {
   callId: string
   operatorId: number
-  scorecardId?: number
   createdAt?: string
   operatorName?: string
   talkDurationSec?: number | null
@@ -318,7 +317,10 @@ export function DialogsListTab() {
     setSelected({
       callId: call.call_id,
       operatorId,
-      scorecardId: call.scorecard_id ?? undefined,
+      // Deliberately not pinned to `call.scorecard_id`. That column holds one
+      // card per call — the last evaluator to save — so pinning it opens a
+      // colleague's assessment. Selecting a row names the call; the panel
+      // decides which card on it belongs to the viewer.
       createdAt: call.initiated_at,
       operatorName: operatorByExtension.get(call.agent_extension)?.name,
       talkDurationSec: call.talk_duration,
@@ -540,7 +542,6 @@ export function DialogsListTab() {
         <CallReviewPanel
           callId={selected?.callId}
           operatorId={selected?.operatorId}
-          scorecardId={selected?.scorecardId}
           createdAt={selected?.createdAt}
           operatorName={selected?.operatorName}
           talkDurationSec={selected?.talkDurationSec}
