@@ -1,0 +1,24 @@
+{
+  "project_id": 1,
+  "month": "2026-11",
+  "timezone": "Europe/Kyiv",
+  "window_from": null,
+  "window_to": null,
+  "rows": [],
+  "meta": {
+    "source": null,
+    "live_days": [],
+    "config_hash": "f6e819d64371dc1e9c742f10697d44f29ace782151d1aa648d194255a0920ba3",
+    "algorithm_version": 1,
+    "break_threshold_seconds": 600,
+    "red_threshold_seconds": 4800,
+    "lunch_deduction_seconds": 3600,
+    "weekdays_in_period": 0,
+    "holidays": [],
+    "holidays_excluded": false,
+    "holidays_unavailable": false,
+    "department_ids": [4, 2, 3],
+    "departments_not_found": []
+  },
+  "generated_at": "2026-10-06T07:20:09Z"
+}

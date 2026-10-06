@@ -1,0 +1,83 @@
+{
+  "project_id": 1,
+  "day": "2026-09-17",
+  "timezone": "Europe/Kyiv",
+  "user_id": 90002,
+  "fio": "Петренко Андрій Сергійович",
+  "is_active": true,
+  "department_id": 4,
+  "department_name": "Стягнення",
+  "group_id": 502,
+  "group_name": "Стягнення-2",
+  "first_event_at": "2026-09-17T05:58:03.412000Z",
+  "last_event_at": "2026-09-17T15:01:27.905000Z",
+  "working_seconds": 29004,
+  "breaks_count": 4,
+  "breaks_total_seconds": 6124,
+  "max_break_seconds": 3854,
+  "is_red": true,
+  "breaks": [
+    {
+      "start_at": "2026-09-17T07:41:15.120000Z",
+      "end_at": "2026-09-17T07:55:02.884000Z",
+      "duration_seconds": 828,
+      "before": {
+        "source": "call",
+        "label": "outbound → 380000000011: answered"
+      },
+      "after": {
+        "source": "ta",
+        "label": "Дзвінок боржнику - Контакт - Обіцянка оплати"
+      }
+    },
+    {
+      "start_at": "2026-09-17T09:30:44Z",
+      "end_at": "2026-09-17T10:34:58.317000Z",
+      "duration_seconds": 3854,
+      "before": {
+        "source": "audit",
+        "label": "client view client.id: 700123"
+      },
+      "after": {
+        "source": "call",
+        "label": "outbound → 380000000012: no_answer"
+      }
+    },
+    {
+      "start_at": "2026-09-17T11:12:09.500000Z",
+      "end_at": "2026-09-17T11:24:40.250000Z",
+      "duration_seconds": 751,
+      "before": {
+        "source": "ta",
+        "label": "Дзвінок боржнику - Неконтакт - "
+      },
+      "after": {
+        "source": "audit",
+        "label": "client update client.id: 700456"
+      }
+    },
+    {
+      "start_at": "2026-09-17T13:05:00Z",
+      "end_at": "2026-09-17T13:16:31.600000Z",
+      "duration_seconds": 692,
+      "before": {
+        "source": "call",
+        "label": "inbound → 380000000013: answered"
+      },
+      "after": {
+        "source": "call",
+        "label": "outbound → 380000000014: busy"
+      }
+    }
+  ],
+  "meta": {
+    "source": "snapshot",
+    "day_closed": true,
+    "config_hash": "f6e819d64371dc1e9c742f10697d44f29ace782151d1aa648d194255a0920ba3",
+    "algorithm_version": 1,
+    "break_threshold_seconds": 600,
+    "red_threshold_seconds": 4800,
+    "lunch_deduction_seconds": 3600
+  },
+  "generated_at": "2026-09-17T23:49:12Z"
+}

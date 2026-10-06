@@ -97,6 +97,8 @@ describe('REPORTS_URL_KEYS', () => {
         page: 'rppg',
         pageSize: 'rpps',
       },
+      workday: { day: 'wd', calls: 'wdc' },
+      workmonth: { month: 'wm' },
     })
   })
 

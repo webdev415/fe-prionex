@@ -1,0 +1,12 @@
+{
+  "status": 400,
+  "headers": {},
+  "body": {
+    "detail": "day must not be before 2026-06-01: activity history before that date is incomplete",
+    "code": "WORKDAY_BEFORE_HISTORY",
+    "params": {
+      "param": "day",
+      "history_from": "2026-06-01"
+    }
+  }
+}

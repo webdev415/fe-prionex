@@ -43,6 +43,8 @@ export const FEED_ERROR_KEY_PREFIXES = {
   callbacksFeed: 'pages.reports.callbacksFeed',
   drainsFeed: 'pages.reports.drainsFeed',
   recordedPayments: 'pages.reports.recordedPayments',
+  workday: 'pages.reports.workday',
+  workmonth: 'pages.reports.workmonth',
 } as const
 
 /** A tab that is registered above — see the constant's docstring. */
