@@ -1,7 +1,7 @@
 /**
  * ReportsDashboardPage Component
  *
- * Main page for viewing reports. Hosts fifteen tabs (active tab in the URL via
+ * Main page for viewing reports. Hosts seventeen tabs (active tab in the URL via
  * `?tab=…`): the reports dashboard with KPIs and agent performance metrics
  * (default), the "Відпрацювання за ЦД" client processing report, the
  * "Верифікація 3-х осіб" third-party verification report, the
@@ -14,7 +14,8 @@
  * "Вихідні дзвінки" outbound calls report, the
  * "Обіцянки до кінця місяця" daily promises report, the
  * "Обіцянки" promises feed, the "Перезвони" callbacks feed, the
- * "Зливи" drains feed and the "Внесені платежі" recorded payments feed.
+ * "Зливи" drains feed, the "Внесені платежі" recorded payments feed and the
+ * "Робочий день з розривами" / "Робочий місяць з розривами" workday reports.
  */
 
 import { useState, useMemo, useEffect } from 'react'
@@ -69,6 +70,7 @@ import { CallbacksFeedTab } from '@/features/callbacksFeed'
 import { DrainsFeedTab } from '@/features/drainsFeed'
 import { ReportLoadingStatus } from '@/features/report/components/ReportLoadingState'
 import { RecordedPaymentsTab } from '@/features/recordedPayments'
+import { WorkdayTab, WorkmonthTab } from '@/features/workday'
 import { SegmentedTabs, segmentedTabId, segmentedTabPanelId } from '@/components/ui/SegmentedTabs'
 
 // ============================================================================
@@ -525,6 +527,12 @@ const REPORT_TABS = [
   // its question — the operators who work promises, callbacks and drains
   // read what was collected right after.
   'recorded-payments',
+  // The two operator-discipline reports (Cards 73 + 74, KAN-KB-31): when the
+  // day started and ended and the breaks in between, per day and per month.
+  // Last because they are not part of the promise/payment family above; the
+  // day tab sits first, the month tab is its roll-up.
+  'workday',
+  'workmonth',
 ] as const
 type ReportsTab = (typeof REPORT_TABS)[number]
 
@@ -656,6 +664,10 @@ export function ReportsDashboardPage() {
           <DrainsFeedTab />
         ) : activeTab === 'recorded-payments' ? (
           <RecordedPaymentsTab />
+        ) : activeTab === 'workday' ? (
+          <WorkdayTab />
+        ) : activeTab === 'workmonth' ? (
+          <WorkmonthTab />
         ) : (
           <DashboardTab />
         )}

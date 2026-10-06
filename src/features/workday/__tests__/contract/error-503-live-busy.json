@@ -1,0 +1,13 @@
+{
+  "status": 503,
+  "headers": {
+    "Retry-After": "20"
+  },
+  "body": {
+    "detail": "Workday report is saturated: no live-build slot came free within 20 s (WORKDAY_LIVE_BUILD_SLOT_WAIT_SECONDS); retry shortly",
+    "code": "WORKDAY_LIVE_BUSY",
+    "params": {
+      "retry_after_seconds": 20
+    }
+  }
+}

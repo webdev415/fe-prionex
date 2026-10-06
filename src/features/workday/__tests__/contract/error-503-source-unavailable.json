@@ -1,0 +1,14 @@
+{
+  "status": 503,
+  "headers": {
+    "Retry-After": "60"
+  },
+  "body": {
+    "detail": "Activity pulse (audit-service) is unavailable; the day cannot be computed safely",
+    "code": "WORKDAY_SOURCE_UNAVAILABLE",
+    "params": {
+      "source": "audit",
+      "retry_after_seconds": 60
+    }
+  }
+}

@@ -103,6 +103,12 @@ vi.mock('@/features/recordedPayments', () => ({
   RecordedPaymentsTab: () => <div data-testid="recorded-payments-tab" />,
 }))
 
+// …and for the two workday reports (features/workday).
+vi.mock('@/features/workday', () => ({
+  WorkdayTab: () => <div data-testid="workday-tab" />,
+  WorkmonthTab: () => <div data-testid="workmonth-tab" />,
+}))
+
 vi.mock('@/stores/authStore', () => ({
   useAuthStore: (selector: (s: unknown) => unknown) =>
     selector({
@@ -188,6 +194,8 @@ const callbacksFeedTab = () => screen.getByRole('tab', { name: 'pages.reports.ta
 const drainsFeedTab = () => screen.getByRole('tab', { name: 'pages.reports.tabs.drains' })
 const recordedPaymentsTab = () =>
   screen.getByRole('tab', { name: 'pages.reports.tabs.recorded-payments' })
+const workdayTab = () => screen.getByRole('tab', { name: 'pages.reports.tabs.workday' })
+const workmonthTab = () => screen.getByRole('tab', { name: 'pages.reports.tabs.workmonth' })
 
 describe('ReportsDashboardPage (tab host)', () => {
   it('renders the processing report panel for ?tab=processing', () => {
@@ -718,7 +726,32 @@ describe('ReportsDashboardPage (tab host)', () => {
     expect(screen.getByTestId('location-search').textContent).toContain('rppg=2')
   })
 
-  it('offers all fifteen report tabs in a fixed order', () => {
+  it.each([
+    ['workday', 'workday-tab', '/reports?tab=workday'],
+    ['workmonth', 'workmonth-tab', '/reports?tab=workmonth'],
+  ])('renders the %s panel for its ?tab=', (tab, testId, entry) => {
+    renderPage([entry])
+
+    expect(screen.getByTestId(testId)).toBeInTheDocument()
+    expect(screen.queryByTestId('agent-performance-table')).not.toBeInTheDocument()
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('id', `reports-panel-${tab}`)
+  })
+
+  it('keeps the workday and workmonth filters when switching tabs', async () => {
+    renderPage(['/reports?tab=workday&wd=2026-09-17&wdc=cumulative&wm=2026-09'])
+    expect(screen.getByTestId('workday-tab')).toBeInTheDocument()
+
+    await userEvent.click(workmonthTab())
+    expect(screen.getByTestId('workmonth-tab')).toBeInTheDocument()
+    await userEvent.click(workdayTab())
+    expect(screen.getByTestId('workday-tab')).toBeInTheDocument()
+
+    expect(search()).toContain('wd=2026-09-17')
+    expect(search()).toContain('wdc=cumulative')
+    expect(search()).toContain('wm=2026-09')
+  })
+
+  it('offers all seventeen report tabs in a fixed order', () => {
     // The strip is the only place the tab set is visible at a glance; a new
     // report must be ADDED here rather than replace a sibling.
     renderPage()
@@ -751,6 +784,10 @@ describe('ReportsDashboardPage (tab host)', () => {
       // …and the recorded payments feed last — the money that ARRIVED, the
       // family's answer after its three questions.
       'pages.reports.tabs.recorded-payments',
+      // …and the two operator-discipline reports (Cards 73 + 74) after the
+      // promise/payment family: the day, then its monthly roll-up.
+      'pages.reports.tabs.workday',
+      'pages.reports.tabs.workmonth',
     ])
   })
 

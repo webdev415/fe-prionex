@@ -1,0 +1,14 @@
+{
+  "status": 503,
+  "headers": {
+    "Retry-After": "35"
+  },
+  "body": {
+    "detail": "Workday report: the live computation deadline (35 s, WORKDAY_LIVE_COMPUTE_DEADLINE_SECONDS) was exceeded; retry later",
+    "code": "WORKDAY_LIVE_DEADLINE",
+    "params": {
+      "deadline_seconds": 35,
+      "retry_after_seconds": 35
+    }
+  }
+}

@@ -180,6 +180,19 @@ export const REPORTS_URL_KEYS = {
     page: 'rppg',
     pageSize: 'rpps',
   },
+  /**
+   * «Робочий день з розривами» (workday, Cards 73 + 74). "wd…" for WorkDay.
+   * `wd` is the Kyiv calendar day (absent = today in Kyiv, never written by
+   * default); `wdc` the call-metrics window: absent = the backend default
+   * (`day`), "cumulative" = from the 1st of the month — a shared link carries
+   * only choices somebody made.
+   */
+  workday: { day: 'wd', calls: 'wdc' },
+  /**
+   * «Робочий місяць з розривами» (workmonth). "wm" for WorkMonth, `YYYY-MM`
+   * (absent = the current month in Kyiv).
+   */
+  workmonth: { month: 'wm' },
 } as const
 
 export type ReportsUrlKeyOwner = keyof typeof REPORTS_URL_KEYS

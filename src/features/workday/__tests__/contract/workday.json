@@ -1,0 +1,115 @@
+{
+  "project_id": 1,
+  "day": "2026-09-17",
+  "calls": "day",
+  "timezone": "Europe/Kyiv",
+  "rows": [
+    {
+      "user_id": 90004,
+      "fio": "Шевчук Дмитро Олегович",
+      "is_active": true,
+      "department_id": 3,
+      "department_name": "Дайлер",
+      "group_id": null,
+      "group_name": null,
+      "first_event_at": "2026-09-17T06:15:30Z",
+      "last_event_at": "2026-09-17T13:40:10Z",
+      "working_seconds": 23080,
+      "breaks_count": 2,
+      "breaks_total_seconds": 1984,
+      "max_break_seconds": 1210,
+      "is_red": false,
+      "calls": {
+        "answer_count": 0,
+        "answer_duration_seconds": 0,
+        "quality_count": 0,
+        "quality_duration_seconds": 0,
+        "avg_duration_per_answered_seconds": null
+      }
+    },
+    {
+      "user_id": 90001,
+      "fio": "Іваненко Олена Петрівна",
+      "is_active": true,
+      "department_id": 4,
+      "department_name": "Стягнення",
+      "group_id": 501,
+      "group_name": "Стягнення-1",
+      "first_event_at": "2026-09-17T05:52:10Z",
+      "last_event_at": "2026-09-17T15:08:40Z",
+      "working_seconds": 29790,
+      "breaks_count": 3,
+      "breaks_total_seconds": 2710,
+      "max_break_seconds": 1325,
+      "is_red": false,
+      "calls": {
+        "answer_count": 41,
+        "answer_duration_seconds": 3920,
+        "quality_count": 27,
+        "quality_duration_seconds": 3510,
+        "avg_duration_per_answered_seconds": 95
+      }
+    },
+    {
+      "user_id": 90002,
+      "fio": "Петренко Андрій Сергійович",
+      "is_active": true,
+      "department_id": 4,
+      "department_name": "Стягнення",
+      "group_id": 502,
+      "group_name": "Стягнення-2",
+      "first_event_at": "2026-09-17T05:58:03.412000Z",
+      "last_event_at": "2026-09-17T15:01:27.905000Z",
+      "working_seconds": 29004,
+      "breaks_count": 4,
+      "breaks_total_seconds": 6124,
+      "max_break_seconds": 3854,
+      "is_red": true,
+      "calls": {
+        "answer_count": 18,
+        "answer_duration_seconds": 1462,
+        "quality_count": 9,
+        "quality_duration_seconds": 1170,
+        "avg_duration_per_answered_seconds": 81
+      }
+    },
+    {
+      "user_id": 90003,
+      "fio": "Коваль Марія Іванівна",
+      "is_active": true,
+      "department_id": 2,
+      "department_name": "ТП",
+      "group_id": 503,
+      "group_name": "ТП-1",
+      "first_event_at": "2026-09-17T06:01:00Z",
+      "last_event_at": "2026-09-17T14:47:55Z",
+      "working_seconds": 28015,
+      "breaks_count": 0,
+      "breaks_total_seconds": 0,
+      "max_break_seconds": 0,
+      "is_red": false,
+      "calls": {
+        "answer_count": 52,
+        "answer_duration_seconds": 4410,
+        "quality_count": 38,
+        "quality_duration_seconds": 4105,
+        "avg_duration_per_answered_seconds": 84
+      }
+    }
+  ],
+  "meta": {
+    "source": "snapshot",
+    "day_closed": true,
+    "config_hash": "f6e819d64371dc1e9c742f10697d44f29ace782151d1aa648d194255a0920ba3",
+    "algorithm_version": 1,
+    "break_threshold_seconds": 600,
+    "red_threshold_seconds": 4800,
+    "lunch_deduction_seconds": 3600,
+    "department_ids": [4, 2, 3],
+    "departments_not_found": [],
+    "calls_from": "2026-09-17",
+    "calls_to": "2026-09-17",
+    "calls_unavailable": false
+  },
+  "generated_at": "2026-09-17T23:49:12Z"
+}

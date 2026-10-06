@@ -1,0 +1,11 @@
+{
+  "status": 404,
+  "headers": {},
+  "body": {
+    "detail": "Operator 90099 is not in this project's workday report population",
+    "code": "WORKDAY_OPERATOR_NOT_FOUND",
+    "params": {
+      "user_id": 90099
+    }
+  }
+}

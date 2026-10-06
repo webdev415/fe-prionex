@@ -9365,7 +9365,9 @@
         "promises-feed": "Promesas",
         "callbacks": "Devoluciones de llamada",
         "drains": "Fugas",
-        "recorded-payments": "Pagos registrados"
+        "recorded-payments": "Pagos registrados",
+        "workday": "Jornada con pausas",
+        "workmonth": "Mes laboral con pausas"
       },
       "processing": {
         "dateFrom": "Fecha desde",
@@ -9970,6 +9972,127 @@
         "largestPayment": "Pago más alto",
         "noData": "No hay datos disponibles",
         "noPaymentMethods": "No hay datos de métodos de pago"
+      },
+      "workday": {
+        "day": "Fecha del informe",
+        "invalidDay": "La fecha no es una fecha de calendario válida — elija una fecha para reemplazarla",
+        "calls": {
+          "label": "Llamadas",
+          "day": "Del día",
+          "cumulative": "Acumulado",
+          "cumulativeHint": "Las columnas de llamadas son acumuladas del {{from}} al {{to}}; las pausas son del día seleccionado."
+        },
+        "timezoneHint": "Horas en hora de Kiev.",
+        "columns": {
+          "operator": "Operador",
+          "department": "Departamento",
+          "group": "Grupo",
+          "start": "Inicio del día",
+          "end": "Fin del día",
+          "workingHours": "Horas trabajadas",
+          "breaksCount": "Pausas",
+          "breaksTotal": "Tiempo de pausas, min",
+          "maxBreak": "Pausa máx., min",
+          "callsCount": "Llamadas",
+          "callsDuration": "Duración",
+          "qualityCount": "De calidad",
+          "qualityDuration": "Duración de calidad",
+          "callsAvg": "Promedio"
+        },
+        "inactiveBadge": "baja",
+        "redRowLabel": "(pausas por encima del límite)",
+        "soFar": "hasta ahora",
+        "dayRunning": "El día sigue en curso: las cifras son parciales y el tiempo trabajado es el del momento del cálculo.",
+        "callsUnavailable": "Los datos de llamadas no están disponibles ahora — las columnas de llamadas están vacías. Las pausas están completas.",
+        "legend": "En rojo, los operadores cuyas pausas suman más de {{red}} min. Una pausa es una inactividad de más de {{gap}} min.",
+        "empty": "No hay actividad de operadores de los departamentos del informe en este día.",
+        "unavailable": "El informe no está disponible temporalmente. Inténtelo más tarde.",
+        "forbidden": "No tiene permisos para ver este informe",
+        "error": {
+          "title": "No se pudo cargar el informe",
+          "retry": "Reintentar"
+        },
+        "notAvailable": {
+          "title": "Informe no disponible",
+          "body": "El informe «Jornada / mes laboral con pausas» aún no está activado en este entorno."
+        },
+        "operatorNotFound": "Este operador no forma parte del informe de este proyecto.",
+        "retryAfter": "Vuelva a intentarlo en unos {{seconds}} s.",
+        "sources": {
+          "ta": "Acción",
+          "audit": "Auditoría",
+          "call": "Llamada"
+        },
+        "breaks": {
+          "title": "Pausas del {{date}}",
+          "columns": {
+            "start": "Inicio",
+            "end": "Fin",
+            "duration": "Duración, min",
+            "before": "Antes",
+            "after": "Después"
+          },
+          "dayRange": "Inicio – fin del día",
+          "summary": "Pausas: cantidad / total / máx., min",
+          "summaryValue": "{{breaks}} / {{total}} / {{max}}",
+          "roundingHint": "Los minutos por fila pueden diferir del total en 1–2 min por redondeo.",
+          "noBreaks": "No hubo pausas de más de {{minutes}} min en este día.",
+          "noActivity": "El operador no tuvo actividad en este día."
+        },
+        "orgHint": "El departamento y el grupo son los actuales para todos los días; los operadores dados de baja están marcados."
+      },
+      "workmonth": {
+        "month": "Mes del informe",
+        "invalidMonth": "El mes del enlace no es válido — elija un mes para reemplazarlo",
+        "columns": {
+          "operator": "Operador",
+          "department": "Departamento",
+          "group": "Grupo",
+          "workingHours": "Horas trabajadas",
+          "breaksCount": "Pausas",
+          "breaksTotal": "Tiempo de pausas, min",
+          "maxBreak": "Pausa máx., min",
+          "daysWithActivity": "Días con actividad",
+          "average": "Pausa media por día, min"
+        },
+        "redRowLabel": "(pausa media por encima del límite)",
+        "window": "Periodo: {{from}} – {{to}}. Días laborables en el periodo: {{days}}.",
+        "holidaysUnavailable": "El calendario de festivos del proyecto no está disponible — los festivos no se marcan en la lista de días.",
+        "legend": "En rojo, los operadores cuya pausa media por día con actividad supera {{red}} min. Los totales cubren solo días laborables.",
+        "empty": "No hay actividad de operadores de los departamentos del informe este mes.",
+        "emptyWindow": "Este mes aún no tiene días completados.",
+        "unavailable": "El informe no está disponible temporalmente. Inténtelo más tarde.",
+        "forbidden": "No tiene permisos para ver este informe",
+        "error": {
+          "title": "No se pudo cargar el informe",
+          "retry": "Reintentar"
+        },
+        "notReady": {
+          "title": "El mes aún se está recalculando",
+          "body": "Días aún sin recalcular: {{days}}. La tarea nocturna los reconstruirá — inténtelo más tarde."
+        },
+        "days": {
+          "title": "Días de {{month}}",
+          "columns": {
+            "date": "Fecha",
+            "flags": "Marcas",
+            "start": "Inicio del día",
+            "end": "Fin del día",
+            "workingHours": "Horas trabajadas",
+            "breaksCount": "Pausas",
+            "breaksTotal": "Tiempo de pausas, min",
+            "maxBreak": "Pausa máx., min"
+          },
+          "flags": {
+            "weekend": "Fin de semana",
+            "holiday": "Festivo",
+            "noActivity": "Sin actividad",
+            "outOfWindow": "Fuera del periodo"
+          },
+          "totalsHint": "Los días atenuados no cuentan en los totales.",
+          "showOutOfWindow": "Mostrar días fuera del periodo",
+          "empty": "Este mes aún no tiene días completados."
+        }
       }
     },
     "scoringConfiguration": {

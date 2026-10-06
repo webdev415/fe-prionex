@@ -1,0 +1,12 @@
+{
+  "status": 400,
+  "headers": {},
+  "body": {
+    "detail": "day must not be after today in Europe/Kyiv (2026-10-06)",
+    "code": "WORKDAY_DAY_IN_FUTURE",
+    "params": {
+      "day": "2026-10-07",
+      "today": "2026-10-06"
+    }
+  }
+}

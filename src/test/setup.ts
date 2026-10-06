@@ -315,6 +315,19 @@ vi.mock('react-i18next', () => ({
       if (key === 'pages.aiAssistant.onexContextClientFallback') {
         return `${key}:${String(vars?.id)}`
       }
+      // Same shape, same reason: the workday tabs' lines carry NUMBERS that
+      // come from the answer — the red threshold from `meta` (never a
+      // constant), the seconds of a 503's retry hint, the stale-day count —
+      // and the number is the whole point of each line.
+      if (key === 'pages.reports.workday.legend' || key === 'pages.reports.workmonth.legend') {
+        return `${key}:${String(vars?.red)}`
+      }
+      if (key === 'pages.reports.workday.retryAfter') {
+        return `${key}:${String(vars?.seconds)}`
+      }
+      if (key === 'pages.reports.workmonth.notReady.body') {
+        return `${key}:${String(vars?.days)}`
+      }
       // Map translation keys to readable text for testing
       const translations: Record<string, string> = {
         'login.title': 'Sign In',

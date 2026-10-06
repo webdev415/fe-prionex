@@ -170,6 +170,14 @@
     "CONTACT_RESTRICTION_NOT_LIFTED": "Esta restricción de contacto está vigente: no hay ningún levantamiento que deshacer.",
     "CONTACT_RESTRICTION_ALREADY_REINSTATED": "Este levantamiento ya se ha deshecho: la restricción ya se volvió a poner en vigor.",
     "PROJECT_CANADA_DISABLED": "Los proyectos en dólares canadienses o en Canadá todavía no están disponibles aquí. Elija otra moneda u otro país.",
-    "SALE_TYPE_CONFLICT": "Este vendedor ya tiene un contrato con este número de otro tipo."
+    "SALE_TYPE_CONFLICT": "Este vendedor ya tiene un contrato con este número de otro tipo.",
+    "WORKDAY_BEFORE_HISTORY": "Los datos solo están disponibles desde el {{history_from}}: el historial de actividad anterior está incompleto.",
+    "WORKDAY_DAY_IN_FUTURE": "La fecha no puede ser posterior a hoy ({{today}}).",
+    "WORKDAY_OPERATOR_NOT_FOUND": "Este operador no forma parte del informe de este proyecto.",
+    "WORKDAY_MONTH_NOT_READY": "El mes aún se está recalculando ({{stale_count}} días). Inténtelo más tarde.",
+    "WORKDAY_LIVE_BUSY": "El informe está ocupado en este momento.",
+    "WORKDAY_LIVE_DEADLINE": "El cálculo del informe está tardando demasiado.",
+    "WORKDAY_SOURCE_UNAVAILABLE": "Una de las fuentes de datos del informe no está disponible temporalmente.",
+    "WORKDAY_HOLIDAYS_UNAVAILABLE": "El calendario de festivos del proyecto no está disponible temporalmente."
   }
 }

@@ -1,0 +1,7 @@
+{
+  "status": 400,
+  "headers": {},
+  "body": {
+    "detail": "Unknown IANA timezone: 'Europe/Atlantis'"
+  }
+}

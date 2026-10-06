@@ -9327,7 +9327,9 @@
         "promises-feed": "Promises",
         "callbacks": "Callbacks",
         "drains": "Drains",
-        "recorded-payments": "Recorded payments"
+        "recorded-payments": "Recorded payments",
+        "workday": "Workday with breaks",
+        "workmonth": "Work month with breaks"
       },
       "processing": {
         "dateFrom": "Date from",
@@ -9931,6 +9933,127 @@
         "largestPayment": "Largest Payment",
         "noData": "No data available",
         "noPaymentMethods": "No payment methods data"
+      },
+      "workday": {
+        "day": "Report date",
+        "invalidDay": "The date is not a valid calendar date — pick a date to replace it",
+        "calls": {
+          "label": "Calls",
+          "day": "For the day",
+          "cumulative": "Cumulative",
+          "cumulativeHint": "Call columns are cumulative for {{from}} – {{to}}; breaks are for the selected day."
+        },
+        "timezoneHint": "Times are Kyiv time.",
+        "columns": {
+          "operator": "Operator",
+          "department": "Department",
+          "group": "Group",
+          "start": "Day start",
+          "end": "Day end",
+          "workingHours": "Working hours",
+          "breaksCount": "Breaks",
+          "breaksTotal": "Break time, min",
+          "maxBreak": "Longest break, min",
+          "callsCount": "Calls",
+          "callsDuration": "Duration",
+          "qualityCount": "Quality",
+          "qualityDuration": "Quality duration",
+          "callsAvg": "Average"
+        },
+        "inactiveBadge": "dismissed",
+        "redRowLabel": "(breaks over the limit)",
+        "soFar": "so far",
+        "dayRunning": "The day is still running: the figures are partial, working time is as of the calculation.",
+        "callsUnavailable": "Call data is unavailable right now — the call columns are empty. Breaks are complete.",
+        "legend": "Operators whose breaks add up to more than {{red}} min are outlined in red. A break is a pause longer than {{gap}} min.",
+        "empty": "No operator activity in the report departments on this day.",
+        "unavailable": "The report is temporarily unavailable. Please try again later.",
+        "forbidden": "You do not have permission to view this report",
+        "error": {
+          "title": "Failed to load the report",
+          "retry": "Retry"
+        },
+        "notAvailable": {
+          "title": "Report not available",
+          "body": "The «Workday / work month with breaks» report is not enabled in this environment yet."
+        },
+        "operatorNotFound": "This operator is not in the report population of this project.",
+        "retryAfter": "Try again in about {{seconds}} s.",
+        "sources": {
+          "ta": "Action",
+          "audit": "Audit",
+          "call": "Call"
+        },
+        "breaks": {
+          "title": "Breaks on {{date}}",
+          "columns": {
+            "start": "Start",
+            "end": "End",
+            "duration": "Duration, min",
+            "before": "Before",
+            "after": "After"
+          },
+          "dayRange": "Day start – end",
+          "summary": "Breaks: count / total / longest, min",
+          "summaryValue": "{{breaks}} / {{total}} / {{max}}",
+          "roundingHint": "Per-row minutes may differ from the total by 1–2 min due to rounding.",
+          "noBreaks": "No breaks longer than {{minutes}} min on this day.",
+          "noActivity": "The operator had no activity on this day."
+        },
+        "orgHint": "Department and group are the current ones for every day; dismissed operators are marked."
+      },
+      "workmonth": {
+        "month": "Report month",
+        "invalidMonth": "The month in the link is not valid — pick a month to replace it",
+        "columns": {
+          "operator": "Operator",
+          "department": "Department",
+          "group": "Group",
+          "workingHours": "Working hours",
+          "breaksCount": "Breaks",
+          "breaksTotal": "Break time, min",
+          "maxBreak": "Longest break, min",
+          "daysWithActivity": "Days with activity",
+          "average": "Average break per day, min"
+        },
+        "redRowLabel": "(average break over the limit)",
+        "window": "Period: {{from}} – {{to}}. Working days in the period: {{days}}.",
+        "holidaysUnavailable": "The project holiday calendar is unavailable — holidays are not marked in the day list.",
+        "legend": "Operators whose average break per active day exceeds {{red}} min are outlined in red. Totals cover weekdays only.",
+        "empty": "No operator activity in the report departments this month.",
+        "emptyWindow": "This month has no completed days yet.",
+        "unavailable": "The report is temporarily unavailable. Please try again later.",
+        "forbidden": "You do not have permission to view this report",
+        "error": {
+          "title": "Failed to load the report",
+          "retry": "Retry"
+        },
+        "notReady": {
+          "title": "The month is still being recalculated",
+          "body": "Days not recalculated yet: {{days}}. The nightly job will rebuild them — please try again later."
+        },
+        "days": {
+          "title": "Days of {{month}}",
+          "columns": {
+            "date": "Date",
+            "flags": "Flags",
+            "start": "Day start",
+            "end": "Day end",
+            "workingHours": "Working hours",
+            "breaksCount": "Breaks",
+            "breaksTotal": "Break time, min",
+            "maxBreak": "Longest break, min"
+          },
+          "flags": {
+            "weekend": "Weekend",
+            "holiday": "Holiday",
+            "noActivity": "No activity",
+            "outOfWindow": "Outside the period"
+          },
+          "totalsHint": "Dimmed days are not counted in the totals.",
+          "showOutOfWindow": "Show days outside the period",
+          "empty": "This month has no completed days yet."
+        }
       }
     },
     "scoringConfiguration": {
